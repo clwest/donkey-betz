@@ -3725,6 +3725,310 @@ def list_sessions(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def get_project_sessions(request, project_id):
+    """
+    Get all AI sessions associated with a specific project
+    Session 97: Option 3 - Session Browser in Projects Tab
+
+    Returns sessions with their content counts and last activity
+    """
+    try:
+        from content.models import AISession, ImageHistory, VideoHistory, CreativeProject
+        from django.db.models import Q
+
+        # Verify project exists and belongs to user
+        try:
+            project = CreativeProject.objects.get(id=project_id, user=request.user)
+        except CreativeProject.DoesNotExist:
+            return Response({
+                'error': 'Project not found'
+            }, status=404)
+
+        # Get all sessions that have content linked to this project
+        # This includes sessions where images/videos were added to the project
+        image_session_ids = ImageHistory.objects.filter(
+            user=request.user,
+            project_id=project_id
+        ).values_list('session_id', flat=True).distinct()
+
+        video_session_ids = VideoHistory.objects.filter(
+            user=request.user,
+            project_id=project_id
+        ).values_list('session_id', flat=True).distinct()
+
+        # Combine session IDs
+        session_ids = set(list(image_session_ids) + list(video_session_ids))
+
+        # Remove None values (content without sessions)
+        session_ids.discard(None)
+
+        # Get session objects
+        sessions = AISession.objects.filter(
+            id__in=session_ids,
+            user=request.user
+        ).order_by('-last_activity')
+
+        # Format sessions
+        sessions_data = []
+        for session in sessions:
+            # Count content in this project from this session
+            project_images = ImageHistory.objects.filter(
+                session=session,
+                project_id=project_id
+            ).count()
+
+            project_videos = VideoHistory.objects.filter(
+                session=session,
+                project_id=project_id
+            ).count()
+
+            sessions_data.append({
+                'session_id': str(session.session_id),
+                'title': session.title or 'Untitled Session',
+                'created_at': session.created_at.isoformat(),
+                'last_activity': session.last_activity.isoformat(),
+                'total_images': session.total_images,
+                'total_videos': session.total_videos,
+                'total_audio': session.total_audio,
+                'project_images': project_images,  # Images from this session in this project
+                'project_videos': project_videos,  # Videos from this session in this project
+                'has_project': session.project_id is not None,
+                'conversation_length': len(session.conversation_transcript or '[]')
+            })
+
+        return Response({
+            'success': True,
+            'project': {
+                'id': str(project.id),
+                'name': project.name
+            },
+            'sessions': sessions_data,
+            'total_sessions': len(sessions_data)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Get project sessions error: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_session_analytics(request):
+    """
+    Get comprehensive analytics about user's AI sessions
+    Session 97: Option 4 - Session Analytics Dashboard
+
+    Returns:
+    - Most used prompts/keywords
+    - Content type distribution
+    - Average session duration
+    - Most productive sessions
+    - Style preferences
+    - Time-based activity patterns
+    """
+    try:
+        from content.models import AISession, ImageHistory, VideoHistory
+        from django.db.models import Count, Avg, Sum, Q
+        from django.db.models.functions import TruncDate
+        from collections import Counter
+        import json
+
+        user = request.user
+
+        # Get all sessions
+        sessions = AISession.objects.filter(user=user)
+        total_sessions = sessions.count()
+
+        if total_sessions == 0:
+            return Response({
+                'success': True,
+                'total_sessions': 0,
+                'message': 'No sessions yet'
+            })
+
+        # Content type distribution
+        total_images = sum(s.total_images for s in sessions)
+        total_videos = sum(s.total_videos for s in sessions)
+        total_audio = sum(s.total_audio for s in sessions)
+        total_content = total_images + total_videos + total_audio
+
+        # Sessions with projects
+        sessions_with_projects = sessions.filter(project__isnull=False).count()
+
+        # Most productive sessions (by total content)
+        most_productive = []
+        for session in sessions.order_by('-total_images', '-total_videos', '-total_audio')[:5]:
+            content_count = session.total_images + session.total_videos + session.total_audio
+            if content_count > 0:
+                most_productive.append({
+                    'session_id': str(session.session_id),
+                    'title': session.title or 'Untitled Session',
+                    'total_content': content_count,
+                    'images': session.total_images,
+                    'videos': session.total_videos,
+                    'audio': session.total_audio,
+                    'created_at': session.created_at.isoformat()
+                })
+
+        # Average content per session
+        avg_images = total_images / total_sessions if total_sessions > 0 else 0
+        avg_videos = total_videos / total_sessions if total_sessions > 0 else 0
+        avg_audio = total_audio / total_sessions if total_sessions > 0 else 0
+
+        # Most common styles (from ImageHistory)
+        style_counter = Counter()
+        for img in ImageHistory.objects.filter(user=user).exclude(style__isnull=True).exclude(style=''):
+            if img.style:
+                style_counter[img.style] += 1
+
+        top_styles = [{'style': style, 'count': count} for style, count in style_counter.most_common(10)]
+
+        # Most common models
+        model_counter = Counter()
+        for img in ImageHistory.objects.filter(user=user).exclude(model_used__isnull=True).exclude(model_used=''):
+            if img.model_used:
+                model_counter[img.model_used] += 1
+
+        top_models = [{'model': model, 'count': count} for model, count in model_counter.most_common(5)]
+
+        # Activity by day of week
+        from datetime import datetime
+        activity_by_day = {
+            'Monday': 0, 'Tuesday': 0, 'Wednesday': 0, 'Thursday': 0,
+            'Friday': 0, 'Saturday': 0, 'Sunday': 0
+        }
+        for session in sessions:
+            day_name = session.created_at.strftime('%A')
+            activity_by_day[day_name] += 1
+
+        # Recent activity (last 7 days)
+        from datetime import timedelta
+        from django.utils import timezone
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        recent_sessions = sessions.filter(created_at__gte=seven_days_ago).count()
+        recent_content = ImageHistory.objects.filter(
+            user=user,
+            created_at__gte=seven_days_ago
+        ).count() + VideoHistory.objects.filter(
+            user=user,
+            created_at__gte=seven_days_ago
+        ).count()
+
+        # Most common prompt keywords (extract from session titles)
+        keyword_counter = Counter()
+        for session in sessions:
+            if session.title:
+                # Simple keyword extraction (split by common words)
+                words = session.title.lower().split()
+                # Filter out common words
+                stop_words = {'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during'}
+                keywords = [w for w in words if w not in stop_words and len(w) > 3]
+                keyword_counter.update(keywords)
+
+        top_keywords = [{'keyword': kw, 'count': count} for kw, count in keyword_counter.most_common(15)]
+
+        return Response({
+            'success': True,
+            'overview': {
+                'total_sessions': total_sessions,
+                'total_content': total_content,
+                'total_images': total_images,
+                'total_videos': total_videos,
+                'total_audio': total_audio,
+                'sessions_with_projects': sessions_with_projects,
+                'avg_images_per_session': round(avg_images, 2),
+                'avg_videos_per_session': round(avg_videos, 2),
+                'avg_audio_per_session': round(avg_audio, 2)
+            },
+            'content_distribution': {
+                'images_percentage': round((total_images / total_content * 100) if total_content > 0 else 0, 1),
+                'videos_percentage': round((total_videos / total_content * 100) if total_content > 0 else 0, 1),
+                'audio_percentage': round((total_audio / total_content * 100) if total_content > 0 else 0, 1)
+            },
+            'most_productive_sessions': most_productive,
+            'style_preferences': top_styles,
+            'model_usage': top_models,
+            'activity_by_day': activity_by_day,
+            'recent_activity': {
+                'sessions_last_7_days': recent_sessions,
+                'content_last_7_days': recent_content
+            },
+            'top_keywords': top_keywords
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Get session analytics error: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_session(request, session_id):
+    """
+    Delete an AI session and optionally its associated content
+    Session 97: Delete session functionality
+
+    Query parameters:
+    - delete_content: 'true' to also delete images/videos/audio from this session
+    """
+    try:
+        from content.models import AISession, ImageHistory, VideoHistory
+
+        # Get the session
+        try:
+            session = AISession.objects.get(session_id=session_id, user=request.user)
+        except AISession.DoesNotExist:
+            return Response({
+                'error': 'Session not found'
+            }, status=404)
+
+        # Check if user wants to delete content too
+        delete_content = request.query_params.get('delete_content', 'false').lower() == 'true'
+
+        session_title = session.title or 'Untitled Session'
+        content_counts = {
+            'images': session.total_images,
+            'videos': session.total_videos,
+            'audio': session.total_audio
+        }
+
+        if delete_content:
+            # Delete all content from this session
+            images_deleted = ImageHistory.objects.filter(session=session).delete()[0]
+            videos_deleted = VideoHistory.objects.filter(session=session).delete()[0]
+            # Audio would go here when implemented
+
+            logger.info(f"🗑️ Deleted session '{session_title}' and its content: {images_deleted} images, {videos_deleted} videos")
+        else:
+            # Just unlink content from session (keep content, remove session reference)
+            ImageHistory.objects.filter(session=session).update(session=None)
+            VideoHistory.objects.filter(session=session).update(session=None)
+
+            logger.info(f"🗑️ Deleted session '{session_title}', content preserved")
+
+        # Delete the session itself
+        session.delete()
+
+        return Response({
+            'success': True,
+            'message': f"Session '{session_title}' deleted successfully",
+            'content_deleted': delete_content,
+            'content_counts': content_counts
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Delete session error: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_featured_examples(request):
     """
     Get curated featured examples for the Examples Gallery

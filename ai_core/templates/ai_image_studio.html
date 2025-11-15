@@ -4601,6 +4601,30 @@
                     <small class="text-muted">Sessions automatically save content and can create projects when you generate 3+ images or 1+ video</small>
                 </div>
 
+                <!-- Session 97: Option 4 - Analytics Dashboard -->
+                <div class="mb-4">
+                    <button class="btn btn-lg w-100"
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#analytics-panel"
+                            onclick="loadSessionAnalytics()">
+                        📊 View Analytics Dashboard
+                    </button>
+
+                    <div class="collapse mt-3" id="analytics-panel">
+                        <div class="card" style="background: #1a1a1a; border: 2px solid #f093fb;">
+                            <div class="card-body" id="analytics-content">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border" style="color: #f093fb;" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Loading analytics...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Filters & Controls -->
                 <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                     <div class="card-body">
@@ -17584,6 +17608,22 @@
                     </div>
                 </div>
 
+                <!-- Session 97: Option 3 - Project Sessions Browser -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="color: #f59e0b;">📝 AI Sessions</h5>
+                        <button class="btn btn-sm btn-info" onclick="refreshProjectSessions('${project.id}')" title="Refresh sessions">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div id="project-sessions-${project.id}" class="row g-3">
+                        <div class="col-12 text-center py-4">
+                            <div class="spinner-border text-warning" role="status"></div>
+                            <p class="mt-2 text-muted">Loading sessions...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Workflows (Session 62: Phase C.4 - Added Create New + Execute All) -->
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -17641,6 +17681,8 @@
 
             // Session 63: Auto-load project assets after rendering
             setTimeout(() => refreshProjectAssets(project.id), 500);
+            // Session 97: Auto-load project sessions after rendering
+            setTimeout(() => refreshProjectSessions(project.id), 600);
         }
 
         /**
@@ -17724,6 +17766,382 @@
                 container.innerHTML = `
                     <div class="col-12 text-center py-4">
                         <p class="text-danger">Error loading assets</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Session 97: Option 3 - Fetch and display project sessions
+         */
+        async function refreshProjectSessions(projectId) {
+            const container = document.getElementById(`project-sessions-${projectId}`);
+            if (!container) return;
+
+            try {
+                // Show loading state
+                container.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <div class="spinner-border text-warning" role="status"></div>
+                        <p class="mt-2 text-muted">Loading sessions...</p>
+                    </div>
+                `;
+
+                // Fetch project sessions
+                const response = await fetch(`/api/v1/sessions/project/${projectId}/`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.sessions && data.sessions.length > 0) {
+                    // Render session cards
+                    container.innerHTML = data.sessions.map(session => {
+                        const createdDate = new Date(session.created_at);
+                        const lastActivity = new Date(session.last_activity);
+
+                        return `
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05)); border: 2px solid rgba(251, 191, 36, 0.3); transition: all 0.3s ease;">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0" style="color: #fbbf24; flex-grow: 1;">
+                                            📝 ${session.title}
+                                        </h6>
+                                        <button class="btn btn-sm"
+                                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 0.25rem 0.75rem;"
+                                                onclick="resumeSessionFromProject('${session.session_id}', '${session.title}')"
+                                                title="Resume this session">
+                                            ▶️ Resume
+                                        </button>
+                                    </div>
+
+                                    <div class="small text-muted mb-3">
+                                        <div>📅 Created: ${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString()}</div>
+                                        <div>🕒 Last activity: ${lastActivity.toLocaleDateString()} ${lastActivity.toLocaleTimeString()}</div>
+                                    </div>
+
+                                    <div class="d-flex gap-2 mb-2">
+                                        ${session.project_images > 0 ? `
+                                            <span class="badge" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                                🖼️ ${session.project_images} image${session.project_images !== 1 ? 's' : ''} in this project
+                                            </span>
+                                        ` : ''}
+                                        ${session.project_videos > 0 ? `
+                                            <span class="badge" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);">
+                                                🎬 ${session.project_videos} video${session.project_videos !== 1 ? 's' : ''} in this project
+                                            </span>
+                                        ` : ''}
+                                    </div>
+
+                                    <div class="small text-muted">
+                                        Total across all projects:
+                                        ${session.total_images > 0 ? `🖼️ ${session.total_images}` : ''}
+                                        ${session.total_videos > 0 ? ` 🎬 ${session.total_videos}` : ''}
+                                        ${session.total_audio > 0 ? ` 🎤 ${session.total_audio}` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+
+                    console.log(`✅ Loaded ${data.sessions.length} sessions for project ${projectId}`);
+                } else {
+                    // No sessions yet
+                    container.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <p class="text-muted">📭 No AI sessions linked to this project yet.</p>
+                            <p class="small text-muted">Generate content using AI Assistant and it will be automatically linked to this project!</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error loading project sessions:', error);
+                container.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <p class="text-danger">Error loading sessions</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Session 97: Option 3 - Resume session from project view
+         */
+        async function resumeSessionFromProject(sessionId, sessionTitle) {
+            console.log(`📝 Resuming session ${sessionId} from project view...`);
+
+            // Close the project modal
+            if (projectManagement && projectManagement.detailModal) {
+                projectManagement.detailModal.hide();
+            }
+
+            // Switch to AI Assistant tab
+            const assistantTab = document.getElementById('assistant-tab');
+            if (assistantTab) {
+                assistantTab.click();
+            }
+
+            // Wait a moment for tab to activate
+            setTimeout(() => {
+                // Call the existing resumeSession function
+                resumeSession(sessionId, sessionTitle);
+            }, 300);
+        }
+
+        /**
+         * Session 97: Option 4 - Load session analytics
+         */
+        let analyticsLoaded = false;
+        async function loadSessionAnalytics() {
+            if (analyticsLoaded) return; // Only load once
+
+            const container = document.getElementById('analytics-content');
+
+            try {
+                const response = await fetch('/api/v1/sessions/analytics/', {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-danger">Error loading analytics</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (data.total_sessions === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-muted">📭 No sessions to analyze yet!</p>
+                            <p class="small text-muted">Start using the AI Assistant to generate analytics.</p>
+                        </div>
+                    `;
+                    analyticsLoaded = true;
+                    return;
+                }
+
+                // Build comprehensive analytics dashboard
+                container.innerHTML = `
+                    <!-- Overview Section -->
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">📊 Overview</h5>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="card text-center h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                    <div class="card-body">
+                                        <h3 class="mb-1">${data.overview.total_sessions}</h3>
+                                        <small>Total Sessions</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center h-100" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white;">
+                                    <div class="card-body">
+                                        <h3 class="mb-1">${data.overview.total_content}</h3>
+                                        <small>Total Content</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center h-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                                    <div class="card-body">
+                                        <h3 class="mb-1">${data.overview.sessions_with_projects}</h3>
+                                        <small>With Projects</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center h-100" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                                    <div class="card-body">
+                                        <h3 class="mb-1">${data.recent_activity.sessions_last_7_days}</h3>
+                                        <small>Last 7 Days</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Distribution -->
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">🎨 Content Distribution</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card" style="background: #222; border: 2px solid #8b5cf6;">
+                                    <div class="card-body text-center">
+                                        <div class="mb-2" style="font-size: 2rem;">🖼️</div>
+                                        <h4 style="color: #8b5cf6;">${data.overview.total_images}</h4>
+                                        <small class="text-muted">Images (${data.content_distribution.images_percentage}%)</small>
+                                        <div class="progress mt-2" style="height: 10px;">
+                                            <div class="progress-bar" style="width: ${data.content_distribution.images_percentage}%; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Avg: ${data.overview.avg_images_per_session} per session</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card" style="background: #222; border: 2px solid #ec4899;">
+                                    <div class="card-body text-center">
+                                        <div class="mb-2" style="font-size: 2rem;">🎬</div>
+                                        <h4 style="color: #ec4899;">${data.overview.total_videos}</h4>
+                                        <small class="text-muted">Videos (${data.content_distribution.videos_percentage}%)</small>
+                                        <div class="progress mt-2" style="height: 10px;">
+                                            <div class="progress-bar" style="width: ${data.content_distribution.videos_percentage}%; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Avg: ${data.overview.avg_videos_per_session} per session</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card" style="background: #222; border: 2px solid #10b981;">
+                                    <div class="card-body text-center">
+                                        <div class="mb-2" style="font-size: 2rem;">🎤</div>
+                                        <h4 style="color: #10b981;">${data.overview.total_audio}</h4>
+                                        <small class="text-muted">Audio (${data.content_distribution.audio_percentage}%)</small>
+                                        <div class="progress mt-2" style="height: 10px;">
+                                            <div class="progress-bar" style="width: ${data.content_distribution.audio_percentage}%; background: linear-gradient(135deg, #10b981 0%, #059669 100%);"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Avg: ${data.overview.avg_audio_per_session} per session</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Most Productive Sessions -->
+                    ${data.most_productive_sessions && data.most_productive_sessions.length > 0 ? `
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">🏆 Most Productive Sessions</h5>
+                        <div class="row g-3">
+                            ${data.most_productive_sessions.map((session, index) => `
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05)); border: 2px solid rgba(251, 191, 36, 0.3);">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="badge me-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                                    #${index + 1}
+                                                </span>
+                                                <h6 class="mb-0 small" style="color: #fbbf24;">${session.title}</h6>
+                                            </div>
+                                            <div class="d-flex gap-2 mb-2">
+                                                ${session.images > 0 ? `<span class="badge bg-secondary">🖼️ ${session.images}</span>` : ''}
+                                                ${session.videos > 0 ? `<span class="badge bg-secondary">🎬 ${session.videos}</span>` : ''}
+                                                ${session.audio > 0 ? `<span class="badge bg-secondary">🎤 ${session.audio}</span>` : ''}
+                                            </div>
+                                            <small class="text-muted">${new Date(session.created_at).toLocaleDateString()}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Style Preferences -->
+                    ${data.style_preferences && data.style_preferences.length > 0 ? `
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">🎨 Top Styles</h5>
+                        <div class="row g-2">
+                            ${data.style_preferences.slice(0, 10).map(item => `
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card" style="background: #222; border: 1px solid #444;">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small">${item.style}</span>
+                                                <span class="badge bg-primary">${item.count}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Model Usage -->
+                    ${data.model_usage && data.model_usage.length > 0 ? `
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">🤖 Model Usage</h5>
+                        <div class="row g-2">
+                            ${data.model_usage.map(item => `
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card" style="background: #222; border: 1px solid #667eea;">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small">${item.model.toUpperCase()}</span>
+                                                <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">${item.count}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Activity by Day -->
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">📅 Activity by Day of Week</h5>
+                        <div class="row g-2">
+                            ${Object.entries(data.activity_by_day).map(([day, count]) => {
+                                const maxCount = Math.max(...Object.values(data.activity_by_day));
+                                const percentage = maxCount > 0 ? (count / maxCount * 100) : 0;
+                                return `
+                                    <div class="col">
+                                        <div class="card" style="background: #222; border: 1px solid #444;">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="d-block mb-1">${day.substr(0, 3)}</small>
+                                                <div class="progress mb-1" style="height: 60px;">
+                                                    <div class="progress-bar" style="width: 100%; height: ${percentage}%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); align-self: flex-end;"></div>
+                                                </div>
+                                                <small class="badge bg-secondary">${count}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Top Keywords -->
+                    ${data.top_keywords && data.top_keywords.length > 0 ? `
+                    <div class="mb-5">
+                        <h5 class="mb-4" style="color: #f093fb;">🔤 Most Used Keywords</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            ${data.top_keywords.map((item, index) => {
+                                const sizes = ['1.2rem', '1.1rem', '1rem', '0.95rem', '0.9rem'];
+                                const fontSize = sizes[Math.min(index, sizes.length - 1)];
+                                const colors = ['#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#667eea'];
+                                const color = colors[index % colors.length];
+                                return `
+                                    <span class="badge" style="background: ${color}; font-size: ${fontSize}; padding: 0.5rem 1rem;">
+                                        ${item.keyword} (${item.count})
+                                    </span>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+
+                analyticsLoaded = true;
+                console.log('📊 Session analytics loaded successfully');
+
+            } catch (error) {
+                console.error('Error loading session analytics:', error);
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-danger">Error loading analytics</p>
                     </div>
                 `;
             }
@@ -20200,20 +20618,79 @@
             }
         }
 
-        // Delete a session
+        // Delete a session (Session 97: Delete functionality)
         async function deleteSession(sessionId) {
-            if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
-                return;
+            // Ask user if they want to delete content too
+            const deleteContent = confirm(
+                'Delete this session?\n\n' +
+                'Click OK to delete ONLY the conversation history (content will be preserved)\n' +
+                'Click Cancel to delete BOTH the session AND all its content (images/videos)'
+            );
+
+            // If user clicked Cancel on first prompt, ask if they really want to delete everything
+            let deleteContentParam = false;
+            if (!deleteContent) {
+                const confirmFullDelete = confirm(
+                    '⚠️ WARNING: This will permanently delete the session AND all its content!\n\n' +
+                    'Are you absolutely sure? This cannot be undone!'
+                );
+                if (!confirmFullDelete) {
+                    return; // User cancelled
+                }
+                deleteContentParam = true;
             }
 
-            console.log(`🗑️ Deleting session: ${sessionId}`);
+            console.log(`🗑️ Deleting session: ${sessionId} (delete_content: ${deleteContentParam})`);
 
             try {
-                // TODO: Implement delete session API endpoint
-                alert('Delete session functionality will be implemented in the next iteration.');
-                // After implementation:
-                // const response = await fetch(`/api/v1/sessions/delete/${sessionId}/`, { method: 'DELETE', ... });
-                // if (response.ok) { loadSessions(); }
+                const response = await fetch(`/api/v1/sessions/${sessionId}/delete/?delete_content=${deleteContentParam}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log(`✅ ${data.message}`);
+
+                    // Show success message
+                    const contentMsg = data.content_deleted
+                        ? `Session and ${data.content_counts.images} images, ${data.content_counts.videos} videos deleted`
+                        : `Session deleted, content preserved`;
+
+                    // Create toast notification
+                    const toast = document.createElement('div');
+                    toast.className = 'toast';
+                    toast.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                        color: white;
+                        padding: 16px 24px;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        z-index: 10000;
+                        animation: slideIn 0.3s ease-out;
+                    `;
+                    toast.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 4px;">✅ Session Deleted</div>
+                        <div style="font-size: 13px; opacity: 0.9;">${contentMsg}</div>
+                    `;
+                    document.body.appendChild(toast);
+
+                    setTimeout(() => {
+                        toast.style.animation = 'slideOut 0.3s ease-in';
+                        setTimeout(() => toast.remove(), 300);
+                    }, 3000);
+
+                    // Reload sessions list
+                    loadSessions();
+                } else {
+                    throw new Error(data.error || 'Failed to delete session');
+                }
 
             } catch (error) {
                 console.error('❌ Error deleting session:', error);
