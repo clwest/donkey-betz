@@ -276,7 +276,7 @@ from core.views_davinci import (
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
-    control_sketch, control_structure, execute_workflow_step, unified_gallery, session_gallery, list_sessions, get_project_sessions, get_session_analytics, delete_session, promote_session_to_project, unified_batch_download, unified_toggle_favorite,
+    control_sketch, control_structure, execute_workflow_step, unified_gallery, session_gallery, list_sessions, get_project_sessions, get_session_analytics, get_session_assets, delete_session, promote_session_to_project, unified_batch_download, unified_toggle_favorite,
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
     list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
@@ -988,6 +988,7 @@ urlpatterns = [
     path('api/v1/sessions/analytics/', get_session_analytics, name='get-session-analytics'),  # Session 97: Option 4 - Session analytics dashboard
     path('api/v1/sessions/<uuid:session_id>/delete/', delete_session, name='delete-session'),  # Session 97: Delete session
     path('api/v1/sessions/<uuid:session_id>/promote/', promote_session_to_project, name='promote-session-to-project'),  # Session 98: Promote Quick Starts session to standalone project
+    path('api/v1/sessions/<uuid:session_id>/assets/', get_session_assets, name='get-session-assets'),  # Session 101: Get all images and videos for a session
     path('api/v1/gallery/batch-download/', unified_batch_download, name='unified-batch-download'),
     path('api/v1/gallery/toggle-favorite/', unified_toggle_favorite, name='unified-toggle-favorite'),
     path('api/v1/content/library/', content_library, name='content-library'),

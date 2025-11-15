@@ -3834,6 +3834,119 @@ def get_project_sessions(request, project_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def get_session_assets(request, session_id):
+    """
+    Get all assets (images and videos) for a specific session
+    Session 101: Project Browser - Mobile Flutter App
+
+    GET /api/v1/sessions/<session_id>/assets/
+
+    Returns:
+    {
+        "success": true,
+        "session": {
+            "session_id": "uuid",
+            "title": "...",
+            "created_at": "..."
+        },
+        "images": [
+            {
+                "id": "uuid",
+                "file_path": "...",
+                "prompt": "...",
+                "created_at": "...",
+                "model_used": "...",
+                "style": "..."
+            }
+        ],
+        "videos": [
+            {
+                "id": "uuid",
+                "file_path": "...",
+                "prompt": "...",
+                "created_at": "...",
+                "model_used": "...",
+                "duration": 5
+            }
+        ],
+        "total_images": 10,
+        "total_videos": 3
+    }
+    """
+    try:
+        from content.models import AISession, ImageHistory, VideoHistory
+
+        # Verify session exists and belongs to user
+        try:
+            session = AISession.objects.get(session_id=session_id, user=request.user)
+        except AISession.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Session not found'
+            }, status=404)
+
+        # Get all images for this session
+        images = ImageHistory.objects.filter(
+            session=session,
+            user=request.user
+        ).order_by('-created_at')
+
+        images_data = []
+        for img in images:
+            images_data.append({
+                'id': str(img.id),
+                'file_path': img.file_path,
+                'prompt': img.prompt,
+                'created_at': img.created_at.isoformat(),
+                'model_used': img.model_used,
+                'style': img.style if hasattr(img, 'style') else None,
+                'image_type': img.image_type if hasattr(img, 'image_type') else 'generated',
+            })
+
+        # Get all videos for this session
+        videos = VideoHistory.objects.filter(
+            session=session,
+            user=request.user
+        ).order_by('-created_at')
+
+        videos_data = []
+        for vid in videos:
+            videos_data.append({
+                'id': str(vid.id),
+                'file_path': vid.file_path,
+                'prompt': vid.prompt,
+                'created_at': vid.created_at.isoformat(),
+                'model_used': vid.model_used if hasattr(vid, 'model_used') else 'runway',
+                'duration': vid.duration if hasattr(vid, 'duration') else None,
+                'status': vid.status if hasattr(vid, 'status') else 'completed',
+            })
+
+        return Response({
+            'success': True,
+            'session': {
+                'session_id': str(session.session_id),
+                'title': session.title or 'Untitled Session',
+                'created_at': session.created_at.isoformat(),
+                'session_type': session.session_type if hasattr(session, 'session_type') else 'default',
+            },
+            'images': images_data,
+            'videos': videos_data,
+            'total_images': len(images_data),
+            'total_videos': len(videos_data),
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Get session assets error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_session_analytics(request):
     """
     Get comprehensive analytics about user's AI sessions
