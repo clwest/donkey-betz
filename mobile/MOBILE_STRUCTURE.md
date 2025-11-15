@@ -1,7 +1,7 @@
 # DonkeyOS Flutter Mobile - Project Structure
 
-**Last Updated:** Session 101 - November 15, 2025
-**Status:** Complete ✅
+**Last Updated:** Session 102 - November 15, 2025
+**Status:** Complete ✅ (with Auth & Settings)
 
 ---
 
@@ -21,13 +21,16 @@ mobile/
 │   │   ├── image_asset.dart         # ImageAsset + SessionAssetsResponse (Session 101)
 │   │   ├── video_asset.dart         # VideoAsset model (Session 101)
 │   │   ├── boardroom_meeting.dart   # Boardroom meeting models
-│   │   └── coleadership.dart        # Decision/outcome models
+│   │   ├── coleadership.dart        # Decision/outcome models
+│   │   ├── connection_status.dart   # Connection status enum (Session 102)
+│   │   └── settings_state.dart      # Settings state models (Session 102)
 │   │
 │   ├── providers/                    # Riverpod state providers
-│   │   ├── api_provider.dart        # API client providers
+│   │   ├── api_provider.dart        # API client providers (Session 102: uses settings)
 │   │   ├── projects_provider.dart   # Project/session/assets providers
 │   │   ├── boardroom_provider.dart  # Boardroom state
-│   │   └── coleadership_provider.dart  # Co-leadership state
+│   │   ├── coleadership_provider.dart  # Co-leadership state
+│   │   └── settings_provider.dart   # Settings state + storage (Session 102)
 │   │
 │   ├── services/                     # API service layer
 │   │   └── api/
@@ -37,7 +40,7 @@ mobile/
 │   │
 │   ├── features/                     # UI screens by feature
 │   │   ├── home/
-│   │   │   └── home_screen.dart     # Main dashboard
+│   │   │   └── home_screen.dart     # Main dashboard (Session 102: Settings icon)
 │   │   │
 │   │   ├── projects/                # Session 101: Project Browser
 │   │   │   ├── project_list_screen.dart       # Browse all projects
@@ -46,6 +49,9 @@ mobile/
 │   │   │   └── widgets/
 │   │   │       ├── asset_grid.dart            # Image/video grid
 │   │   │       └── asset_viewer.dart          # Full-screen viewer
+│   │   │
+│   │   ├── settings/                # Session 102: Auth & Connection Settings
+│   │   │   └── settings_screen.dart           # API config + testing
 │   │   │
 │   │   ├── boardroom/
 │   │   │   ├── boardroom_form_screen.dart     # Start meeting
@@ -61,13 +67,17 @@ mobile/
 │   ├── app.dart                      # App configuration
 │   └── main.dart                     # Entry point
 │
-├── test/                             # Tests (Session 101)
+├── test/                             # Tests (Session 101, 102)
 │   ├── models/
-│   │   └── asset_models_test.dart   # Model serialization tests
+│   │   ├── asset_models_test.dart   # Asset model serialization tests (Session 101)
+│   │   └── settings_models_test.dart  # Settings model tests (Session 102)
+│   ├── providers/
+│   │   └── settings_provider_test.dart  # Settings provider tests (Session 102)
 │   ├── services/
 │   │   └── projects_api_test.dart   # API integration tests
 │   └── features/
-│       └── project_list_screen_test.dart  # Widget tests
+│       ├── project_list_screen_test.dart  # Project browser widget tests (Session 101)
+│       └── settings_screen_test.dart      # Settings UI widget tests (Session 102)
 │
 ├── .env                              # Environment configuration (NOT in git)
 ├── .env.example                      # Example environment config
