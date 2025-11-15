@@ -1173,6 +1173,13 @@
                 </button>
             </li>
 
+            <!-- Session 100: Leadership Dashboard -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="leadership-tab" data-bs-toggle="tab" data-bs-target="#leadership" type="button" role="tab" title="Your AI-Human Co-Leadership Dashboard">
+                    🎯 Leadership
+                </button>
+            </li>
+
             <!-- Session 64: REMOVED Workflows tab - functionality consolidated into Projects tab -->
             <!-- Workflows are now accessed via Projects → Add Workflow button -->
             <!-- This eliminates redundancy and creates one clear path for users -->
@@ -4948,6 +4955,134 @@
 
             </div>
             <!-- END PORTFOLIO TAB -->
+
+            <!-- SESSION 100: LEADERSHIP DASHBOARD TAB -->
+            <div class="tab-pane fade" id="leadership" role="tabpanel">
+                <h3 class="mb-4">🎯 Your Leadership Dashboard</h3>
+                <p class="text-muted">AI-Human Co-Leadership Analytics: Track your decision-making, overrides, and collaborative outcomes</p>
+
+                <!-- Loading State -->
+                <div id="leadership-loading" class="text-center py-5">
+                    <div class="spinner-border" style="color: #9333ea;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading your leadership analytics...</p>
+                </div>
+
+                <!-- Stats Container (hidden until loaded) -->
+                <div id="leadership-stats-container" style="display: none;">
+
+                    <!-- Key Metrics Row -->
+                    <div class="row mb-4">
+                        <!-- Total Decisions -->
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="stat-total-decisions">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Decisions</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Overrides -->
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="stat-overrides">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Overrides</small>
+                                    <div class="mt-1">
+                                        <span id="stat-override-rate" style="font-size: 0.9rem; opacity: 0.9;">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Success Rate -->
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="stat-success-rate">0%</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Success Rate</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Confidence -->
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="stat-avg-confidence">0.0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Avg AI Confidence</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attribution Breakdown Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333; color: #fff;">
+                                <div class="card-body">
+                                    <h5 style="color: #9333ea; margin-bottom: 20px;">📊 Decision Attribution</h5>
+                                    <div class="row text-center">
+                                        <div class="col-md-3">
+                                            <div style="padding: 20px; background: rgba(147, 51, 234, 0.1); border-radius: 8px; border: 1px solid rgba(147, 51, 234, 0.3);">
+                                                <h3 style="color: #9333ea; margin-bottom: 5px;" id="stat-ai-correct">0</h3>
+                                                <small style="color: #999;">AI More Correct</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                                <h3 style="color: #10b981; margin-bottom: 5px;" id="stat-human-correct">0</h3>
+                                                <small style="color: #999;">Human More Correct</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="padding: 20px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                                <h3 style="color: #3b82f6; margin-bottom: 5px;" id="stat-both-correct">0</h3>
+                                                <small style="color: #999;">Both Correct</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="padding: 20px; background: rgba(156, 163, 175, 0.1); border-radius: 8px; border: 1px solid rgba(156, 163, 175, 0.3);">
+                                                <h3 style="color: #9ca3af; margin-bottom: 5px;" id="stat-pending">0</h3>
+                                                <small style="color: #999;">Pending Outcome</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Decisions List -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333; color: #fff;">
+                                <div class="card-body">
+                                    <h5 style="color: #9333ea; margin-bottom: 20px;">📋 Recent Decisions</h5>
+                                    <div id="recent-decisions-list">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Empty State -->
+                <div id="leadership-empty" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-graph-up" style="font-size: 4rem; color: #9333ea;"></i>
+                    <h5 class="mt-3" style="color: #9333ea;">No Decisions Yet</h5>
+                    <p class="text-muted">Start making co-leadership decisions to see your analytics here!</p>
+                    <button class="btn" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;" onclick="showHowToStartDecisions()">
+                        🚀 How to Start
+                    </button>
+                </div>
+
+            </div>
+            <!-- END LEADERSHIP TAB -->
 
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
@@ -19953,6 +20088,134 @@
                 loadPortfolio();
             }
         });
+
+        // Session 100: Leadership Dashboard
+        document.getElementById('leadership-tab')?.addEventListener('shown.bs.tab', function() {
+            console.log('🎯 Leadership tab activated - loading stats...');
+            loadLeadershipStats();
+        });
+
+        // Session 100: Load Leadership Stats
+        async function loadLeadershipStats() {
+            const loadingEl = document.getElementById('leadership-loading');
+            const statsContainer = document.getElementById('leadership-stats-container');
+            const emptyEl = document.getElementById('leadership-empty');
+
+            try {
+                loadingEl.style.display = 'block';
+                statsContainer.style.display = 'none';
+                emptyEl.style.display = 'none';
+
+                const response = await fetch('/api/v1/coleadership/stats/', {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load stats');
+
+                const data = await response.json();
+                const stats = data.stats;
+
+                if (stats.total_decisions === 0) {
+                    // Show empty state
+                    loadingEl.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                } else {
+                    // Populate stats
+                    document.getElementById('stat-total-decisions').textContent = stats.total_decisions;
+                    document.getElementById('stat-overrides').textContent = stats.overrides;
+                    document.getElementById('stat-override-rate').textContent = `${stats.override_rate}%`;
+                    document.getElementById('stat-success-rate').textContent = `${stats.success_rate}%`;
+                    document.getElementById('stat-avg-confidence').textContent = stats.avg_ai_confidence.toFixed(2);
+
+                    document.getElementById('stat-ai-correct').textContent = stats.ai_correct;
+                    document.getElementById('stat-human-correct').textContent = stats.human_correct;
+                    document.getElementById('stat-both-correct').textContent = stats.both_correct;
+                    document.getElementById('stat-pending').textContent = stats.pending;
+
+                    // Render recent decisions
+                    renderRecentDecisions(stats.recent_decisions || []);
+
+                    loadingEl.style.display = 'none';
+                    statsContainer.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Error loading leadership stats:', error);
+                loadingEl.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading stats:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Session 100: Render Recent Decisions List
+        function renderRecentDecisions(decisions) {
+            const container = document.getElementById('recent-decisions-list');
+
+            if (!decisions || decisions.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-3">No recent decisions</p>';
+                return;
+            }
+
+            let html = '<div class="table-responsive"><table class="table" style="color: #fff;">';
+            html += '<thead><tr>';
+            html += '<th>Decision</th>';
+            html += '<th>Date</th>';
+            html += '<th>Override</th>';
+            html += '<th>Status</th>';
+            html += '<th>Attribution</th>';
+            html += '</tr></thead><tbody>';
+
+            decisions.forEach(dec => {
+                const overrideBadge = dec.is_override ?
+                    '<span style="background: #ec4899; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">OVERRIDE</span>' :
+                    '<span style="color: #666;">-</span>';
+
+                const statusColors = {
+                    'Success': '#10b981',
+                    'Failure': '#ef4444',
+                    'Mixed': '#f59e0b',
+                    'Pending': '#6b7280',
+                    'No outcome': '#6b7280'
+                };
+                const statusColor = statusColors[dec.status] || '#6b7280';
+
+                const attrColors = {
+                    'AI more correct': '#9333ea',
+                    'Human more correct': '#10b981',
+                    'Both partly correct': '#3b82f6',
+                    'Unknown': '#6b7280'
+                };
+                const attrColor = attrColors[dec.attribution] || '#6b7280';
+
+                html += '<tr>';
+                html += `<td>${dec.title}</td>`;
+                html += `<td style="font-size: 12px; color: #999;">${new Date(dec.created_at).toLocaleDateString()}</td>`;
+                html += `<td>${overrideBadge}</td>`;
+                html += `<td><span style="color: ${statusColor};">●</span> ${dec.status}</td>`;
+                html += `<td><span style="color: ${attrColor};">●</span> ${dec.attribution}</td>`;
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // Session 100: Show how to start decisions helper
+        function showHowToStartDecisions() {
+            alert(`To start making co-leadership decisions:
+
+1. Use the AI Assistant
+2. Say "Start an executive meeting about [topic]"
+3. Get recommendations from CTO, COO, and other executives
+4. Commit your decision
+5. Log the outcome when you see results
+
+Your analytics will appear here automatically!`);
+        }
 
         // Export portfolio as HTML (Session 62: Phase C.2.2)
         function exportPortfolio() {

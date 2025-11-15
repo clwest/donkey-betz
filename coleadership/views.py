@@ -257,3 +257,101 @@ def get_stats(request):
             'error': 'Failed to get statistics',
             'details': str(e)
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_project_decisions(request, project_id):
+    """
+    Get all co-leadership decisions for a specific project.
+
+    Session 100: Part 2 - Decisions timeline for projects.
+
+    Returns list of decisions with their recommendations, human choices, and outcomes.
+    """
+    try:
+        # Get project (verify ownership)
+        from content.models import CreativeProject
+        project = CreativeProject.objects.get(
+            project_id=project_id,
+            user=request.user
+        )
+
+        # Get all decisions for this project
+        decisions = CoLeadershipDecision.objects.filter(
+            project=project
+        ).select_related(
+            'human_decision',
+            'outcome'
+        ).prefetch_related(
+            'recommendations__agent_template'
+        ).order_by('-created_at')
+
+        # Build response
+        decisions_list = []
+        for decision in decisions:
+            decision_data = {
+                'id': str(decision.id),
+                'title': decision.title,
+                'description': decision.description,
+                'created_at': decision.created_at.isoformat(),
+                'frozen_at': decision.frozen_at.isoformat() if decision.frozen_at else None,
+                'is_frozen': decision.is_frozen,
+                'has_outcome': decision.has_outcome,
+                'recommendations': [],
+                'human_decision': None,
+                'outcome': None
+            }
+
+            # Add agent recommendations
+            for rec in decision.recommendations.all():
+                decision_data['recommendations'].append({
+                    'agent': rec.agent_template.display_name,
+                    'stance': rec.get_stance_display(),
+                    'summary': rec.summary,
+                    'confidence': rec.confidence
+                })
+
+            # Add human decision if exists
+            if hasattr(decision, 'human_decision'):
+                hd = decision.human_decision
+                decision_data['human_decision'] = {
+                    'chosen_path': hd.chosen_path_summary,
+                    'justification': hd.justification,
+                    'is_override': hd.is_override,
+                    'overridden_agent': hd.overridden_agent.display_name if hd.overridden_agent else None
+                }
+
+            # Add outcome if exists
+            if hasattr(decision, 'outcome'):
+                outcome = decision.outcome
+                decision_data['outcome'] = {
+                    'status': outcome.get_status_display(),
+                    'attribution': outcome.get_attribution_display(),
+                    'summary': outcome.outcome_summary,
+                    'told_you_so_message': outcome.told_you_so_message if outcome.told_you_so_triggered else None
+                }
+
+            decisions_list.append(decision_data)
+
+        return Response({
+            'success': True,
+            'project': {
+                'id': str(project.project_id),
+                'name': project.name
+            },
+            'decisions': decisions_list,
+            'total': len(decisions_list)
+        })
+
+    except CreativeProject.DoesNotExist:
+        return Response({
+            'error': 'Project not found or access denied'
+        }, status=404)
+
+    except Exception as e:
+        logger.error(f"❌ Error getting project decisions: {str(e)}")
+        return Response({
+            'error': 'Failed to get project decisions',
+            'details': str(e)
+        }, status=500)
