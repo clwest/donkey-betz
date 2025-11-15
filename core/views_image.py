@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # SESSION MANAGEMENT HELPERS (Session 96: Weekend Project)
 # ========================================
 
-def get_or_create_session(user, session_id=None, first_prompt=None):
+def get_or_create_session(user, session_id=None, first_prompt=None, project_id=None):
     """
     Get existing session or create new one for AI Assistant conversations
 
@@ -47,11 +47,12 @@ def get_or_create_session(user, session_id=None, first_prompt=None):
         user: User object
         session_id: UUID of existing session (optional)
         first_prompt: First user message in conversation (for new sessions)
+        project_id: UUID of project to associate with (Session 97)
 
     Returns:
         AISession object
     """
-    from content.models import AISession
+    from content.models import AISession, CreativeProject
     import uuid as uuid_lib
 
     if session_id:
@@ -65,6 +66,23 @@ def get_or_create_session(user, session_id=None, first_prompt=None):
         except AISession.DoesNotExist:
             logger.warning(f"⚠️ Session {session_id} not found, creating new one")
 
+    # Session 97: Get project if provided, or default to Quick Starts
+    project = None
+    if project_id:
+        try:
+            if isinstance(project_id, str):
+                project_id = uuid_lib.UUID(project_id)
+            project = CreativeProject.objects.get(id=project_id, user=user)
+            logger.info(f"📁 Linking new session to project: {project.name}")
+        except CreativeProject.DoesNotExist:
+            logger.warning(f"⚠️ Project {project_id} not found")
+
+    # Fall back to Quick Starts if no project specified
+    if not project:
+        project = CreativeProject.objects.filter(user=user, is_quick_starts=True).first()
+        if project:
+            logger.info(f"⚡ Using Quick Starts project for session")
+
     # Create new session
     # Generate title from first prompt (take first 50 chars or use generic)
     if first_prompt:
@@ -77,6 +95,7 @@ def get_or_create_session(user, session_id=None, first_prompt=None):
         title=title,
         first_prompt=first_prompt or '',
         conversation_transcript=[],
+        project=project,
         is_active=True
     )
 
@@ -5110,6 +5129,7 @@ def assistant_chat(request):
         user_message = request.data.get('message', '').strip()
         conversation_history = request.data.get('history', [])  # Optional for context
         session_id = request.data.get('session_id')  # Session 96 Weekend Project
+        project_id = request.data.get('project_id')  # Session 97: Project tracking
 
         if not user_message:
             return Response({
@@ -5117,10 +5137,12 @@ def assistant_chat(request):
             }, status=400)
 
         # Session 96 Weekend Project: Get or create AI session for tracking
+        # Session 97: Link to active project
         session = get_or_create_session(
             user=request.user,
             session_id=session_id,
-            first_prompt=user_message if not session_id else None
+            first_prompt=user_message if not session_id else None,
+            project_id=project_id
         )
 
         # Store user message in session transcript
