@@ -4946,6 +4946,19 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Session 97: Project Selector -->
+                        <div id="projectSelector" style="margin-top: 8px; padding: 6px 10px; background: rgba(139, 92, 246, 0.15); border-left: 3px solid #8b5cf6; border-radius: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span style="font-size: 11px; color: #c4b5fd; font-weight: 700;">📁 PROJECT:</span>
+                                <select id="activeProjectSelect" class="form-select form-select-sm"
+                                        style="flex: 1; background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #e9d5ff; font-size: 11px; padding: 4px 8px;"
+                                        onchange="window.aiAssistant.switchProject(this.value)">
+                                    <option value="">Loading projects...</option>
+                                </select>
+                            </div>
+                            <small style="font-size: 9px; color: #c4b5fd;">All new sessions will be added to this project</small>
+                        </div>
                     </div>
                     <button id="aiSidebarClose" class="btn btn-sm btn-outline-light" title="Collapse sidebar">←</button>
                 </div>
@@ -13443,6 +13456,10 @@
                 this.sessionId = null;
                 this.sessionTitle = null;
 
+                // Session 97: Project tracking
+                this.activeProjectId = null;
+                this.activeProjectName = null;
+
                 // Session 58: Phase B.3 - Workflow definitions
                 this.workflows = {
                     logo_creator: {
@@ -13813,6 +13830,106 @@
                 }
             }
 
+            // Session 97: Project Management Methods
+            async loadProjects() {
+                console.log('📁 Loading projects...');
+                try {
+                    const response = await authenticatedFetch('/api/v1/projects/');
+                    const data = await response.json();
+
+                    if (data.success && data.projects) {
+                        this.populateProjectDropdown(data.projects);
+                        // Auto-select Quick Starts or last active project
+                        await this.autoSelectProject(data.projects);
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading projects:', error);
+                }
+            }
+
+            populateProjectDropdown(projects) {
+                const select = document.getElementById('activeProjectSelect');
+                if (!select) return;
+
+                // Clear existing options
+                select.innerHTML = '';
+
+                // Sort projects: Quick Starts first, then by last_activity
+                const sortedProjects = projects.sort((a, b) => {
+                    if (a.is_quick_starts) return -1;
+                    if (b.is_quick_starts) return 1;
+                    return new Date(b.last_activity || 0) - new Date(a.last_activity || 0);
+                });
+
+                // Add projects as options
+                sortedProjects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.id;
+                    const prefix = project.is_quick_starts ? '⚡ ' : '📁 ';
+                    option.textContent = `${prefix}${project.name}`;
+                    select.appendChild(option);
+                });
+
+                console.log(`✅ Loaded ${projects.length} projects into dropdown`);
+            }
+
+            async autoSelectProject(projects) {
+                // Try to get last active project from localStorage
+                const lastProjectId = localStorage.getItem('lastActiveProject');
+
+                let selectedProject = null;
+
+                if (lastProjectId) {
+                    // Try to find the last active project
+                    selectedProject = projects.find(p => p.id === lastProjectId);
+                }
+
+                if (!selectedProject) {
+                    // Fall back to Quick Starts
+                    selectedProject = projects.find(p => p.is_quick_starts);
+                }
+
+                if (!selectedProject && projects.length > 0) {
+                    // Last resort: first project
+                    selectedProject = projects[0];
+                }
+
+                if (selectedProject) {
+                    await this.switchProject(selectedProject.id, selectedProject.name, true);
+                }
+            }
+
+            async switchProject(projectId, projectName = null, skipSave = false) {
+                console.log('📁 Switching to project:', projectId);
+
+                // Update active project
+                this.activeProjectId = projectId;
+
+                // Get project name if not provided
+                if (!projectName) {
+                    const select = document.getElementById('activeProjectSelect');
+                    const selectedOption = select.options[select.selectedIndex];
+                    projectName = selectedOption ? selectedOption.textContent.replace(/^[⚡📁]\s/, '') : 'Unknown';
+                }
+
+                this.activeProjectName = projectName;
+
+                // Update dropdown selection
+                const select = document.getElementById('activeProjectSelect');
+                if (select) {
+                    select.value = projectId;
+                }
+
+                // Save to localStorage (unless it's the initial auto-select)
+                if (!skipSave) {
+                    localStorage.setItem('lastActiveProject', projectId);
+                }
+
+                console.log(`✅ Active project: ${projectName} (${projectId})`);
+
+                // Future: Update session creation to use this project
+            }
+
             toggle() {
                 this.isOpen = !this.isOpen;
                 const sidebar = document.getElementById('aiSidebar');
@@ -13820,6 +13937,11 @@
                 const toggleBtn = document.getElementById('aiSidebarToggle');
 
                 if (this.isOpen) {
+                    // Session 97: Load projects when opening sidebar
+                    if (!this.activeProjectId) {
+                        this.loadProjects();
+                    }
+
                     // Open sidebar
                     sidebar.style.width = '450px';
                     sidebar.style.minWidth = '450px';
@@ -14359,6 +14481,10 @@
                 };
                 if (this.sessionId) {
                     requestBody.session_id = this.sessionId;
+                }
+                // Session 97: Include active project
+                if (this.activeProjectId) {
+                    requestBody.project_id = this.activeProjectId;
                 }
 
                 // Call the GPT-5-mini assistant chat endpoint with function calling
