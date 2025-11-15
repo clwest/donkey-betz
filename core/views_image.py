@@ -6221,13 +6221,13 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "start_executive_meeting",
-                    "description": "Start an executive boardroom meeting with CTO and COO agents to discuss a topic collaboratively. Session 98: Returns meeting summary, decisions, and action items from both perspectives.",
+                    "description": "Start an executive boardroom meeting with any combination of 8 executives (CTO, COO, Product Manager, Legal, Marketing, Strategy, HR, CFO) to discuss a topic collaboratively. Session 100: Returns meeting summary with perspectives from all selected executives, decisions, and action items. Natural language examples: 'Include CFO and Marketing' or 'All executives' or 'Technical team (CTO, Product Manager)'",
                     "parameters": {
                         "type": "object",
                         "properties": {
                             "topic": {
                                 "type": "string",
-                                "description": "Meeting topic or agenda (e.g., 'AI feature roadmap for Q1', 'Platform scalability strategy')"
+                                "description": "Meeting topic or agenda (e.g., 'Pricing strategy for Q1', 'AI feature roadmap', 'Platform launch plan')"
                             },
                             "project_id": {
                                 "type": "string",
@@ -6237,9 +6237,9 @@ Keep responses under 200 words. Be conversational and practical."""
                                 "type": "array",
                                 "items": {
                                     "type": "string",
-                                    "enum": ["CTOAgent", "COOAgent"]
+                                    "enum": ["CTOAgent", "COOAgent", "ProductManagerAgent", "LegalAgent", "MarketingAgent", "StrategyAgent", "HRAgent", "CFOAgent"]
                                 },
-                                "description": "List of agent participants (default: both CTO and COO)",
+                                "description": "List of executive participants. Map natural language to agent names: CTO→CTOAgent, COO→COOAgent, Product Manager/PM→ProductManagerAgent, Legal/General Counsel→LegalAgent, Marketing/CMO→MarketingAgent, Strategy/CSO→StrategyAgent, HR/CHRO→HRAgent, CFO/Finance→CFOAgent. Default: CTO + COO",
                                 "default": ["CTOAgent", "COOAgent"]
                             }
                         },
