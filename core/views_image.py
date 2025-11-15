@@ -4046,6 +4046,140 @@ def delete_session(request, session_id):
         }, status=500)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def promote_session_to_project(request, session_id):
+    """
+    Promote a Quick Starts session to its own standalone project
+    Session 98: Quick Starts Promotion Feature
+
+    Request body:
+    {
+        "project_name": "My New Project",
+        "description": "Optional description",
+        "category": "Optional category"
+    }
+
+    Returns:
+    {
+        "success": true,
+        "project": {
+            "id": "uuid",
+            "name": "Project name",
+            ...
+        },
+        "session": {
+            "session_id": "uuid",
+            "new_project_id": "uuid"
+        },
+        "content_moved": {
+            "images": 5,
+            "videos": 2
+        }
+    }
+    """
+    try:
+        from content.models import AISession, ImageHistory, VideoHistory, CreativeProject
+        import json
+
+        # Get the session
+        try:
+            session = AISession.objects.get(session_id=session_id, user=request.user)
+        except AISession.DoesNotExist:
+            return Response({
+                'error': 'Session not found or you do not have permission to access it'
+            }, status=404)
+
+        # Verify this session is in Quick Starts project
+        quick_starts = None
+        if session.project:
+            quick_starts = session.project
+            if not quick_starts.is_quick_starts:
+                return Response({
+                    'error': 'This session is not in Quick Starts. Only Quick Starts sessions can be promoted.'
+                }, status=400)
+        else:
+            # Session has no project - this shouldn't happen, but allow it
+            logger.warning(f"⚠️ Session {session_id} has no project, proceeding with promotion anyway")
+
+        # Get request data
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except:
+            data = {}
+
+        project_name = data.get('project_name', '').strip()
+        if not project_name:
+            # Auto-generate name from session title or first prompt
+            project_name = session.title or session.first_prompt or f"Session {session.session_id[:8]}"
+            # Clean up the name
+            project_name = project_name[:100]  # Limit length
+
+        description = data.get('description', '').strip()
+        category = data.get('category', '').strip()
+
+        # Create new standalone project
+        new_project = CreativeProject.objects.create(
+            user=request.user,
+            name=project_name,
+            description=description or f"Promoted from Quick Starts session: {session.title or 'Untitled'}",
+            category=category or 'general',
+            status='in_progress',
+            is_quick_starts=False  # NOT a Quick Starts project
+        )
+
+        logger.info(f"📁 Created new project: {new_project.name} (ID: {new_project.id})")
+
+        # Move session to new project
+        old_project_id = session.project_id
+        session.project = new_project
+        session.save()
+
+        # Move all content from this session to the new project
+        images_moved = ImageHistory.objects.filter(
+            session=session,
+            user=request.user
+        ).update(project=new_project)
+
+        videos_moved = VideoHistory.objects.filter(
+            session=session,
+            user=request.user
+        ).update(project=new_project)
+
+        logger.info(f"✅ Promoted session {session_id} to project '{new_project.name}'")
+        logger.info(f"   Moved {images_moved} images and {videos_moved} videos")
+
+        return Response({
+            'success': True,
+            'message': f"Session promoted to project '{new_project.name}'",
+            'project': {
+                'id': str(new_project.id),
+                'name': new_project.name,
+                'description': new_project.description,
+                'category': new_project.category,
+                'status': new_project.status
+            },
+            'session': {
+                'session_id': str(session.session_id),
+                'title': session.title,
+                'old_project_id': str(old_project_id) if old_project_id else None,
+                'new_project_id': str(new_project.id)
+            },
+            'content_moved': {
+                'images': images_moved,
+                'videos': videos_moved
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Promote session to project error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_featured_examples(request):
@@ -5938,6 +6072,180 @@ Keep responses under 200 words. Be conversational and practical."""
                         "required": ["image_id", "refinement_request"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "analyze_codebase",
+                    "description": "Ask the CTO Agent to analyze a feature or part of the codebase. Session 98: Read-only analysis. Returns comprehensive analysis with implementation details, dependencies, potential improvements, and risk areas.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "feature_name": {
+                                "type": "string",
+                                "description": "Name of feature to analyze (e.g., 'AI Assistant voice commands', 'Video generation pipeline', 'Agent orchestration')"
+                            },
+                            "scope": {
+                                "type": "string",
+                                "enum": ["feature", "integration", "agent", "full_system"],
+                                "description": "Scope of analysis: 'feature' for specific feature, 'integration' for API integration, 'agent' for agent system, 'full_system' for platform-wide",
+                                "default": "feature"
+                            }
+                        },
+                        "required": ["feature_name"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "plan_implementation",
+                    "description": "Ask the CTO Agent to create a detailed implementation plan. Session 98: PLANNING ONLY - does NOT execute changes. Returns step-by-step plan with code snippets, testing strategy, and documentation updates.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "description": {
+                                "type": "string",
+                                "description": "What to implement (e.g., 'Add rate limiting to all API endpoints', 'Create new agent for X', 'Refactor Y for performance')"
+                            },
+                            "approach": {
+                                "type": "string",
+                                "description": "Implementation approach (e.g., 'decorator_pattern', 'new_agent', 'refactor', 'api_integration')"
+                            },
+                            "files_to_modify": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Optional: Specific files to modify (e.g., ['core/views_image.py', 'agents/new_agent.py'])"
+                            }
+                        },
+                        "required": ["description", "approach"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "analyze_documentation",
+                    "description": "Ask the CTO Agent to analyze documentation coverage and identify gaps. Session 98: Read-only analysis. Returns recommendations for docs to create/update but does NOT modify files.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {
+                                "type": "string",
+                                "enum": ["changed_files", "all_agents", "all_features", "full"],
+                                "description": "Documentation scope: 'changed_files' for recent changes, 'all_agents' for agent docs, 'all_features' for feature docs, 'full' for complete platform",
+                                "default": "all_features"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "analyze_roadmap",
+                    "description": "Ask the COO Agent to analyze the project roadmap and provide strategic recommendations. Session 98: Read-only analysis. Returns summary, priorities, risks, suggested tasks, and timeline.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "project_slug": {
+                                "type": "string",
+                                "description": "Optional project identifier (e.g., 'session-management', 'character-training')"
+                            },
+                            "feature_name": {
+                                "type": "string",
+                                "description": "Optional specific feature to analyze (e.g., 'AI Assistant voice commands', 'Video chaining workflow')"
+                            },
+                            "scope": {
+                                "type": "string",
+                                "enum": ["project", "feature", "platform"],
+                                "description": "Analysis scope: 'project' for specific project, 'feature' for single feature, 'platform' for entire platform",
+                                "default": "project"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "plan_next_sprint",
+                    "description": "Ask the COO Agent to plan the next sprint with concrete tasks. Session 98: Planning only - does NOT execute tasks. Returns sprint goals, tasks, success criteria, and estimated effort.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "project_slug": {
+                                "type": "string",
+                                "description": "Optional project identifier for sprint focus"
+                            },
+                            "feature_name": {
+                                "type": "string",
+                                "description": "Optional specific feature for sprint focus"
+                            },
+                            "sprint_duration": {
+                                "type": "string",
+                                "description": "Sprint length (e.g., '2 weeks', '1 week', '3 days')",
+                                "default": "2 weeks"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "analyze_risks",
+                    "description": "Ask the COO Agent to identify risks, blockers, and mitigation strategies. Session 98: Read-only analysis. Returns critical risks, moderate risks, dependencies, and mitigation strategies.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "project_slug": {
+                                "type": "string",
+                                "description": "Optional project identifier for risk analysis"
+                            },
+                            "feature_name": {
+                                "type": "string",
+                                "description": "Optional specific feature for risk analysis"
+                            },
+                            "scope": {
+                                "type": "string",
+                                "enum": ["project", "feature", "platform"],
+                                "description": "Risk analysis scope",
+                                "default": "project"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "start_executive_meeting",
+                    "description": "Start an executive boardroom meeting with CTO and COO agents to discuss a topic collaboratively. Session 98: Returns meeting summary, decisions, and action items from both perspectives.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {
+                                "type": "string",
+                                "description": "Meeting topic or agenda (e.g., 'AI feature roadmap for Q1', 'Platform scalability strategy')"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID for context"
+                            },
+                            "participants": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["CTOAgent", "COOAgent"]
+                                },
+                                "description": "List of agent participants (default: both CTO and COO)",
+                                "default": ["CTOAgent", "COOAgent"]
+                            }
+                        },
+                        "required": ["topic"]
+                    }
+                }
             }
         ]
 
@@ -6222,6 +6530,101 @@ def execute_tool(request):
                 image_id=parameters.get('image_id'),
                 refinement_request=parameters.get('refinement_request')
             )
+
+        elif tool_name == 'analyze_codebase':
+            # Session 98: Route to CTOAgent - Codebase analysis (read-only)
+            from agents.cto_agent import CTOAgent
+            cto = CTOAgent(user=request.user)
+            result = cto.analyze_feature(
+                feature_name=parameters.get('feature_name'),
+                scope=parameters.get('scope', 'feature')
+            )
+
+        elif tool_name == 'plan_implementation':
+            # Session 98: Route to CTOAgent - Implementation planning (no execution)
+            from agents.cto_agent import CTOAgent
+            cto = CTOAgent(user=request.user)
+            result = cto.implement_feature(
+                description=parameters.get('description'),
+                approach=parameters.get('approach'),
+                files_to_modify=parameters.get('files_to_modify')
+            )
+
+        elif tool_name == 'analyze_documentation':
+            # Session 98: Route to CTOAgent - Documentation analysis (read-only)
+            from agents.cto_agent import CTOAgent
+            cto = CTOAgent(user=request.user)
+            result = cto.sync_documentation(
+                scope=parameters.get('scope', 'all_features')
+            )
+
+        elif tool_name == 'analyze_roadmap':
+            # Session 98: Route to COOAgent - Roadmap analysis (read-only)
+            from agents.coo_agent import COOAgent
+            coo = COOAgent(user=request.user)
+            result = coo.analyze_roadmap(
+                project_slug=parameters.get('project_slug'),
+                feature_name=parameters.get('feature_name'),
+                scope=parameters.get('scope', 'project')
+            )
+
+        elif tool_name == 'plan_next_sprint':
+            # Session 98: Route to COOAgent - Sprint planning (no execution)
+            from agents.coo_agent import COOAgent
+            coo = COOAgent(user=request.user)
+            result = coo.propose_next_sprint(
+                project_slug=parameters.get('project_slug'),
+                feature_name=parameters.get('feature_name'),
+                sprint_duration=parameters.get('sprint_duration', '2 weeks')
+            )
+
+        elif tool_name == 'analyze_risks':
+            # Session 98: Route to COOAgent - Risk analysis (read-only)
+            from agents.coo_agent import COOAgent
+            coo = COOAgent(user=request.user)
+            result = coo.identify_risks(
+                project_slug=parameters.get('project_slug'),
+                feature_name=parameters.get('feature_name'),
+                scope=parameters.get('scope', 'project')
+            )
+
+        elif tool_name == 'start_executive_meeting':
+            # Session 98: Route to MeetingCoordinatorAgent - Executive boardroom meeting
+            from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+            from content.models import AISession
+
+            coordinator = MeetingCoordinatorAgent(user=request.user)
+
+            # Start the meeting
+            meeting_result = coordinator.start_meeting(
+                topic=parameters.get('topic'),
+                project_id=parameters.get('project_id'),
+                participants=parameters.get('participants', ['CTOAgent', 'COOAgent'])
+            )
+
+            # Create a boardroom AISession to store results
+            if meeting_result.get('status') == 'complete':
+                session = AISession.objects.create(
+                    user=request.user,
+                    title=f"Boardroom: {parameters.get('topic')[:100]}",
+                    session_type='boardroom',
+                    meeting_topic=parameters.get('topic'),
+                    participants=meeting_result.get('participants', []),
+                    meeting_summary=meeting_result.get('summary', ''),
+                    decisions=meeting_result.get('decisions', []),
+                    action_items=meeting_result.get('action_items', []),
+                    agent_responses=meeting_result.get('agent_responses', {}),
+                    is_active=False,  # Meetings are one-shot
+                    conversation_transcript=[{
+                        'role': 'system',
+                        'content': f"Executive meeting conducted: {parameters.get('topic')}"
+                    }]
+                )
+
+                logger.info(f"✅ Created boardroom session: {session.session_id}")
+                meeting_result['session_id'] = str(session.session_id)
+
+            result = meeting_result
 
         else:
             return Response({
@@ -8519,6 +8922,8 @@ def list_projects(request):
                 'progress_percentage': project.progress_percentage,
                 'is_overdue': project.is_overdue,
                 'is_shared': project.is_shared,
+                'is_quick_starts': project.is_quick_starts,  # Session 97: Quick Starts flag
+                'last_activity': project.updated_at.isoformat(),  # Session 97: For sorting
                 'created_at': project.created_at.isoformat(),
                 'updated_at': project.updated_at.isoformat()
             })
