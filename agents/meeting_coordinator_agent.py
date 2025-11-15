@@ -123,25 +123,51 @@ class MeetingCoordinatorAgent:
             # Phase 1: Collect perspectives from each participant
             agent_responses = {}
 
-            # Get CTO perspective if participating
-            if 'CTOAgent' in participants:
-                cto = CTOAgent(user=self.user)
-                cto_response = cto.analyze_feature(
-                    feature_name=topic,
-                    scope='feature'
-                )
-                agent_responses['CTOAgent'] = cto_response.get('analysis', 'No response')
-                logger.info("✅ Collected CTO perspective")
+            # Session 100: Dynamic agent perspective collection
+            for participant_name in participants:
+                try:
+                    # Get agent template
+                    agent_template = UnifiedAgentTemplate.objects.get(name=participant_name)
 
-            # Get COO perspective if participating
-            if 'COOAgent' in participants:
-                coo = COOAgent(user=self.user)
-                coo_response = coo.analyze_roadmap(
-                    feature_name=topic,
-                    scope='feature'
-                )
-                agent_responses['COOAgent'] = coo_response.get('summary', 'No response')
-                logger.info("✅ Collected COO perspective")
+                    # Generate perspective using GPT-5-mini with agent's system prompt
+                    perspective_prompt = f"""
+Topic for discussion: {topic}
+
+You are {agent_template.display_name}. Based on your role and expertise:
+{agent_template.system_prompt}
+
+Provide your perspective on this topic in 2-3 sentences. Focus on:
+- Your area of expertise
+- Key considerations from your domain
+- Specific recommendations
+"""
+
+                    response = self.client.chat.completions.create(
+                        model="gpt-5-mini",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": agent_template.system_prompt or "You are an executive advisor."
+                            },
+                            {
+                                "role": "user",
+                                "content": perspective_prompt
+                            }
+                        ],
+                        reasoning_effort="medium",
+                        max_completion_tokens=500
+                    )
+
+                    agent_perspective = response.choices[0].message.content or ""
+                    agent_responses[participant_name] = agent_perspective
+                    logger.info(f"✅ Collected {participant_name} perspective ({len(agent_perspective)} chars)")
+
+                except UnifiedAgentTemplate.DoesNotExist:
+                    logger.warning(f"❌ Agent template not found: {participant_name}")
+                    agent_responses[participant_name] = f"(Agent {participant_name} not available)"
+                except Exception as e:
+                    logger.error(f"❌ Error getting {participant_name} perspective: {str(e)}")
+                    agent_responses[participant_name] = "(Error generating perspective)"
 
             # Phase 2: Synthesize with GPT-5-mini
             synthesis_prompt = f"""
@@ -159,9 +185,10 @@ Synthesize this discussion and extract:
 3. Action items (who does what, with priority)
 
 Focus on:
-- Strategic alignment between technical (CTO) and operational (COO) views
-- Concrete next steps
-- Risk mitigation
+- Strategic alignment between all executive perspectives (technical, operational, legal, marketing, product, finance, HR, strategy)
+- Concrete next steps with clear ownership
+- Risk mitigation across all domains
+- Cross-functional collaboration opportunities
 """
 
             response = self.client.chat.completions.create(
