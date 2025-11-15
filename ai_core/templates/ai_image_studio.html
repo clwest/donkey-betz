@@ -14526,6 +14526,15 @@
                 // Session 64: Save original content for copy button before formatting
                 const originalContent = content;
 
+                // Session 100: Detect decision-related content for beautiful styling
+                const isExecutiveMeeting = originalContent.includes('🏢 **Executive Meeting') ||
+                                          originalContent.includes('**CTO Recommendation:**') ||
+                                          originalContent.includes('**COO Recommendation:**');
+                const isOutcome = originalContent.includes('✅ **Outcome Recorded**') ||
+                                 originalContent.includes('**Decision Outcome:**');
+                const isReflection = originalContent.includes('🧠 **Reflection:**') ||
+                                    originalContent.includes('**Learning Insight:**');
+
                 // Session 64: Format assistant messages for readability
                 if (role === 'assistant' && !isTemporary) {
                     content = this.formatMessage(content);
@@ -14633,10 +14642,34 @@
                     actionButtons = `<div class="mt-2 d-flex gap-1 flex-wrap">${buttons.join('')}</div>`;
                 }
 
+                // Session 100: Apply beautiful styling for decision-related content
+                let messageStyle, messageBorder, messageIcon;
+                if (role === 'assistant' && isExecutiveMeeting) {
+                    // Purple/black gradient for executive meetings
+                    messageStyle = 'background: linear-gradient(135deg, #1a1a1a 0%, #2d1b4e 100%); border: 2px solid #8b5cf6; box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);';
+                    messageBorder = 'border-left: 4px solid #a78bfa;';
+                    messageIcon = '🏢';
+                } else if (role === 'assistant' && isOutcome) {
+                    // Green/black gradient for successful outcomes
+                    messageStyle = 'background: linear-gradient(135deg, #1a1a1a 0%, #064e3b 100%); border: 2px solid #10b981; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);';
+                    messageBorder = 'border-left: 4px solid #34d399;';
+                    messageIcon = '✅';
+                } else if (role === 'assistant' && isReflection) {
+                    // Blue/purple gradient for learning reflections
+                    messageStyle = 'background: linear-gradient(135deg, #1a1a1a 0%, #1e3a8a 100%); border: 2px solid #3b82f6; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);';
+                    messageBorder = 'border-left: 4px solid #60a5fa;';
+                    messageIcon = '🧠';
+                } else {
+                    // Default styling
+                    messageStyle = `background: ${role === 'user' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(100, 116, 139, 0.5)'};`;
+                    messageBorder = '';
+                    messageIcon = role === 'user' ? '👤' : '🤖';
+                }
+
                 const messageHTML = `
                     <div id="${messageId}" class="mb-2 ${role === 'user' ? 'text-end' : ''}" ${isTemporary ? 'data-temporary="true"' : ''}>
-                        <div class="d-inline-block p-2 rounded" style="max-width: 85%; background: ${role === 'user' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(100, 116, 139, 0.5)'}; font-size: 15px; line-height: 1.6; position: relative;">
-                            ${role === 'user' ? '👤' : '🤖'} ${content}
+                        <div class="d-inline-block p-3 rounded" style="max-width: 85%; ${messageStyle} ${messageBorder} font-size: 15px; line-height: 1.6; position: relative;">
+                            ${messageIcon} ${content}
                             ${actionButtons}
                         </div>
                     </div>
@@ -18078,6 +18111,22 @@
                     </div>
                 </div>
 
+                <!-- Session 100: Part 9 - Decision Timeline -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="color: #9333ea;">🎯 Decision Timeline</h5>
+                        <button class="btn btn-sm" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;" onclick="refreshProjectDecisions('${project.id}')" title="Refresh decisions">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div id="project-decisions-${project.id}">
+                        <div class="text-center py-4">
+                            <div class="spinner-border" style="color: #9333ea;" role="status"></div>
+                            <p class="mt-2 text-muted">Loading decision timeline...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Workflows (Session 62: Phase C.4 - Added Create New + Execute All) -->
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -18137,6 +18186,8 @@
             setTimeout(() => refreshProjectAssets(project.id), 500);
             // Session 97: Auto-load project sessions after rendering
             setTimeout(() => refreshProjectSessions(project.id), 600);
+            // Session 100: Auto-load project decisions timeline after rendering
+            setTimeout(() => refreshProjectDecisions(project.id), 700);
         }
 
         /**
@@ -18361,6 +18412,160 @@
                 // Call the existing resumeSession function
                 resumeSession(sessionId, sessionTitle);
             }, 300);
+        }
+
+        /**
+         * Session 100: Part 9 - Fetch and display project decisions timeline
+         */
+        async function refreshProjectDecisions(projectId) {
+            const container = document.getElementById(`project-decisions-${projectId}`);
+            if (!container) return;
+
+            try {
+                // Show loading state
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border" style="color: #9333ea;" role="status"></div>
+                        <p class="mt-2 text-muted">Loading decision timeline...</p>
+                    </div>
+                `;
+
+                // Fetch project decisions
+                const response = await fetch(`/api/v1/coleadership/projects/${projectId}/decisions/`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.decisions && data.decisions.length > 0) {
+                    // Render decision timeline with beautiful purple/black/neon styling
+                    container.innerHTML = data.decisions.map(decision => {
+                        const createdDate = new Date(decision.created_at);
+                        const frozenDate = decision.frozen_at ? new Date(decision.frozen_at) : null;
+
+                        // Status badge colors
+                        const statusColors = {
+                            'Success': { bg: '#10b981', border: '#34d399' },
+                            'Failure': { bg: '#ef4444', border: '#f87171' },
+                            'Mixed': { bg: '#f59e0b', border: '#fbbf24' },
+                            'Pending': { bg: '#6b7280', border: '#9ca3af' }
+                        };
+
+                        const attributionColors = {
+                            'AI more correct': { bg: '#9333ea', border: '#a78bfa' },
+                            'Human more correct': { bg: '#10b981', border: '#34d399' },
+                            'Both partly correct': { bg: '#3b82f6', border: '#60a5fa' },
+                            'Unknown': { bg: '#6b7280', border: '#9ca3af' }
+                        };
+
+                        // Recommendations section
+                        const recommendationsHtml = decision.recommendations && decision.recommendations.length > 0 ? `
+                            <div class="mb-3">
+                                <h6 style="color: #c4b5fd; font-size: 0.9rem; margin-bottom: 0.5rem;">Agent Recommendations:</h6>
+                                ${decision.recommendations.map(rec => `
+                                    <div class="mb-2 p-2 rounded" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6;">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <strong style="color: #a78bfa;">${rec.agent}</strong>
+                                            <span class="badge" style="background: ${rec.stance === 'Support' ? '#10b981' : rec.stance === 'Oppose' ? '#ef4444' : '#f59e0b'};">
+                                                ${rec.stance}
+                                            </span>
+                                        </div>
+                                        <div class="small mt-1">${rec.summary}</div>
+                                        <div class="small text-muted mt-1">Confidence: ${(rec.confidence * 100).toFixed(0)}%</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '';
+
+                        // Human decision section
+                        const humanDecisionHtml = decision.human_decision ? `
+                            <div class="mb-3 p-2 rounded" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981;">
+                                <h6 style="color: #34d399; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    👤 Human Decision
+                                    ${decision.human_decision.is_override ? '<span class="badge" style="background: #ec4899; margin-left: 0.5rem;">OVERRIDE</span>' : ''}
+                                </h6>
+                                <div class="small mb-2">${decision.human_decision.chosen_path}</div>
+                                ${decision.human_decision.justification ? `<div class="small text-muted fst-italic">"${decision.human_decision.justification}"</div>` : ''}
+                                ${decision.human_decision.overridden_agent ? `<div class="small text-warning mt-1">Overrode: ${decision.human_decision.overridden_agent}</div>` : ''}
+                            </div>
+                        ` : `
+                            <div class="small text-muted fst-italic mb-3">⏳ Decision not committed yet</div>
+                        `;
+
+                        // Outcome section
+                        const outcomeHtml = decision.outcome ? `
+                            <div class="p-2 rounded" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 style="color: #60a5fa; font-size: 0.9rem; margin: 0;">📊 Outcome</h6>
+                                    <div class="d-flex gap-2">
+                                        ${decision.outcome.status !== 'Pending' ? `
+                                            <span class="badge" style="background: ${statusColors[decision.outcome.status]?.bg || '#6b7280'}; border: 1px solid ${statusColors[decision.outcome.status]?.border || '#9ca3af'};">
+                                                ${decision.outcome.status}
+                                            </span>
+                                        ` : ''}
+                                        <span class="badge" style="background: ${attributionColors[decision.outcome.attribution]?.bg || '#6b7280'}; border: 1px solid ${attributionColors[decision.outcome.attribution]?.border || '#9ca3af'};">
+                                            ${decision.outcome.attribution}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="small mb-2">${decision.outcome.summary}</div>
+                                ${decision.outcome.told_you_so_message ? `
+                                    <div class="small p-2 mt-2 rounded" style="background: rgba(236, 72, 153, 0.1); border-left: 2px solid #ec4899; color: #f9a8d4;">
+                                        💬 ${decision.outcome.told_you_so_message}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : '';
+
+                        return `
+                            <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d1b4e 100%); border: 2px solid #8b5cf6; box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 style="color: #c4b5fd; margin: 0; flex-grow: 1;">${decision.title}</h6>
+                                    ${decision.is_frozen ? '<span class="badge bg-success">COMMITTED</span>' : '<span class="badge bg-warning">OPEN</span>'}
+                                </div>
+
+                                <div class="small text-muted mb-3">
+                                    📅 Created: ${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString()}
+                                    ${frozenDate ? ` | 🔒 Committed: ${frozenDate.toLocaleDateString()} ${frozenDate.toLocaleTimeString()}` : ''}
+                                </div>
+
+                                ${decision.description ? `<p class="small mb-3" style="color: #d1d5db;">${decision.description}</p>` : ''}
+
+                                ${recommendationsHtml}
+                                ${humanDecisionHtml}
+                                ${outcomeHtml}
+                            </div>
+                        `;
+                    }).join('');
+
+                    console.log(`✅ Loaded ${data.decisions.length} decisions for project ${projectId}`);
+                } else {
+                    // No decisions yet
+                    container.innerHTML = `
+                        <div class="text-center py-4 p-3 rounded" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(147, 51, 234, 0.05)); border: 2px dashed rgba(147, 51, 234, 0.3);">
+                            <p class="mb-2" style="color: #9333ea; font-size: 1.1rem;">🎯 No co-leadership decisions yet</p>
+                            <p class="small text-muted mb-3">Start making strategic decisions with your AI executives!</p>
+                            <p class="small" style="color: #c4b5fd;">
+                                💡 Use AI Assistant and say:<br>
+                                <code style="background: rgba(139, 92, 246, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px; color: #a78bfa;">
+                                    "Start an executive meeting about [topic]"
+                                </code>
+                            </p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error loading project decisions:', error);
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-danger">❌ Error loading decision timeline</p>
+                        <p class="small text-muted">${error.message}</p>
+                    </div>
+                `;
+            }
         }
 
         /**
