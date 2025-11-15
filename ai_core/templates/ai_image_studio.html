@@ -15678,23 +15678,24 @@
                                 message += `🏢 **Executive Meeting Complete!**\n\n`;
                                 message += `📋 **Topic:** ${result.result.topic}\n\n`;
 
-                                // Meeting summary
-                                if (result.result.summary) {
-                                    message += `**Summary:**\n${result.result.summary}\n\n`;
+                                // Agent perspectives (Session 100: Show all executive viewpoints!)
+                                if (result.result.agent_responses && Object.keys(result.result.agent_responses).length > 0) {
+                                    message += `**💼 Executive Perspectives:**\n\n`;
+
+                                    // Display each agent's perspective
+                                    Object.entries(result.result.agent_responses).forEach(([agentName, perspective]) => {
+                                        if (perspective && perspective.trim().length > 0) {
+                                            // Format agent name nicely (remove "Agent" suffix)
+                                            const displayName = agentName.replace('Agent', '');
+                                            message += `**${displayName}:**\n`;
+                                            message += `${perspective}\n\n`;
+                                        }
+                                    });
                                 }
 
-                                // Agent recommendations
-                                if (result.result.recommendations && result.result.recommendations.length > 0) {
-                                    message += `**🎯 Recommendations:**\n\n`;
-                                    result.result.recommendations.forEach((rec, index) => {
-                                        message += `**${rec.agent_name} Recommendation:**\n`;
-                                        message += `- **Stance:** ${rec.stance}\n`;
-                                        message += `- **Summary:** ${rec.summary}\n`;
-                                        if (rec.confidence) {
-                                            message += `- **Confidence:** ${Math.round(rec.confidence * 100)}%\n`;
-                                        }
-                                        message += `\n`;
-                                    });
+                                // Meeting summary
+                                if (result.result.summary) {
+                                    message += `**📝 Meeting Summary:**\n${result.result.summary}\n\n`;
                                 }
 
                                 // Decisions
