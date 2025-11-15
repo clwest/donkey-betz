@@ -1159,6 +1159,13 @@
                 </button>
             </li>
 
+            <!-- Session 97: Session Management -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sessions-tab" data-bs-toggle="tab" data-bs-target="#sessions" type="button" role="tab" title="View and manage all AI sessions">
+                    📝 Sessions
+                </button>
+            </li>
+
             <!-- Portfolio (Session 61: Phase C.2.2) -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="portfolio-tab" data-bs-toggle="tab" data-bs-target="#portfolio" type="button" role="tab" title="View all content from all projects">
@@ -4582,6 +4589,125 @@
                         </div>
                     </div>
                 </div>
+
+            <!-- SESSIONS TAB (Session 97: Session Management UI) -->
+            <div class="tab-pane fade" id="sessions" role="tabpanel">
+                <h3 class="mb-4">📝 AI Sessions</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info mb-4">
+                    <strong>✨ Your AI Conversation History</strong><br>
+                    View all your AI Assistant sessions, track content created, and resume conversations!<br>
+                    <small class="text-muted">Sessions automatically save content and can create projects when you generate 3+ images or 1+ video</small>
+                </div>
+
+                <!-- Filters & Controls -->
+                <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Sort Options -->
+                            <div class="col-md-3">
+                                <label class="form-label">📊 Sort By</label>
+                                <select class="form-select" id="session-sort" onchange="loadSessions()">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="most_content">Most Content</option>
+                                    <option value="alphabetical">Alphabetical</option>
+                                </select>
+                            </div>
+
+                            <!-- Project Filter -->
+                            <div class="col-md-3">
+                                <label class="form-label">📁 Project Status</label>
+                                <select class="form-select" id="session-project-filter" onchange="loadSessions()">
+                                    <option value="all">All Sessions</option>
+                                    <option value="with_project">Has Project</option>
+                                    <option value="no_project">No Project</option>
+                                </select>
+                            </div>
+
+                            <!-- Content Type Filter -->
+                            <div class="col-md-3">
+                                <label class="form-label">🎨 Content Type</label>
+                                <select class="form-select" id="session-content-filter" onchange="loadSessions()">
+                                    <option value="all">All Types</option>
+                                    <option value="images">Has Images</option>
+                                    <option value="videos">Has Videos</option>
+                                    <option value="audio">Has Audio</option>
+                                </select>
+                            </div>
+
+                            <!-- Refresh Button -->
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-light w-100" onclick="loadSessions()">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Stats Summary -->
+                <div class="row mb-4" id="session-stats">
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                            <div class="card-body">
+                                <h4 class="mb-0" id="total-sessions">0</h4>
+                                <small>Total Sessions</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                            <div class="card-body">
+                                <h4 class="mb-0" id="total-session-images">0</h4>
+                                <small>Total Images</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                            <div class="card-body">
+                                <h4 class="mb-0" id="total-session-videos">0</h4>
+                                <small>Total Videos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;">
+                            <div class="card-body">
+                                <h4 class="mb-0" id="sessions-with-projects">0</h4>
+                                <small>With Projects</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sessions Grid -->
+                <div id="sessions-grid" class="row g-4">
+                    <!-- Sessions will be loaded here via JavaScript -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="sessions-empty-state" class="text-center py-5" style="display: none;">
+                    <div class="mb-4">
+                        <i class="bi bi-chat-dots" style="font-size: 4rem; opacity: 0.3;"></i>
+                    </div>
+                    <h4 class="text-muted">No Sessions Yet</h4>
+                    <p class="text-muted">Start a conversation with the AI Assistant to create your first session!</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('ai-assistant-tab').click()">
+                        🤖 Open AI Assistant
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="sessions-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mt-3">Loading sessions...</p>
+                </div>
+            </div>
 
             <!-- PORTFOLIO TAB (Session 61: Phase C.2.2) -->
             <div class="tab-pane fade" id="portfolio" role="tabpanel">
@@ -14192,7 +14318,8 @@
 
                 // Session 92: Strip images from conversation history to prevent context overflow!
                 // Base64 image data causes 4M+ token overflows
-                const sanitizedHistory = this.conversation.slice(-6).map(msg => {
+                // Session 97: Increased from -6 to -20 messages for better context in resumed sessions
+                const sanitizedHistory = this.conversation.slice(-20).map(msg => {
                     if (msg.role === 'assistant' && msg.content) {
                         // Remove all <img> tags with base64 data
                         const cleaned = msg.content.replace(/<img[^>]*src="data:image[^"]*"[^>]*>/gi, '[IMAGE]');
@@ -19790,6 +19917,425 @@
         }
 
         // END CHARACTER TRAINING SYSTEM
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION MANAGEMENT UI (Session 97)
+        // ====================================================================
+
+        // Load and display all sessions with filters
+        async function loadSessions() {
+            console.log('📝 Loading sessions...');
+
+            const grid = document.getElementById('sessions-grid');
+            const emptyState = document.getElementById('sessions-empty-state');
+            const loadingState = document.getElementById('sessions-loading');
+
+            // Show loading state
+            grid.style.display = 'none';
+            emptyState.style.display = 'none';
+            loadingState.style.display = 'block';
+
+            try {
+                // Get filter values
+                const sort = document.getElementById('session-sort').value;
+                const projectFilter = document.getElementById('session-project-filter').value;
+                const contentFilter = document.getElementById('session-content-filter').value;
+
+                // Build query parameters
+                const params = new URLSearchParams({
+                    sort: sort,
+                    project_filter: projectFilter,
+                    content_filter: contentFilter
+                });
+
+                // Fetch sessions from API
+                const response = await fetch(`/api/v1/sessions/list/?${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log(`✅ Loaded ${data.sessions.length} sessions`, data);
+
+                // Update stats
+                document.getElementById('total-sessions').textContent = data.stats.total_sessions;
+                document.getElementById('total-session-images').textContent = data.stats.total_images;
+                document.getElementById('total-session-videos').textContent = data.stats.total_videos;
+                document.getElementById('sessions-with-projects').textContent = data.stats.sessions_with_projects;
+
+                // Display sessions
+                if (data.sessions.length === 0) {
+                    grid.style.display = 'none';
+                    loadingState.style.display = 'none';
+                    emptyState.style.display = 'block';
+                } else {
+                    grid.innerHTML = '';
+                    data.sessions.forEach(session => {
+                        grid.appendChild(createSessionCard(session));
+                    });
+                    grid.style.display = 'flex';
+                    loadingState.style.display = 'none';
+                    emptyState.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('❌ Error loading sessions:', error);
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'block';
+                alert(`Error loading sessions: ${error.message}`);
+            }
+        }
+
+        // Create a session card element
+        function createSessionCard(session) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4';
+
+            // Format date
+            const date = new Date(session.created_at);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Total content count
+            const totalContent = session.total_images + session.total_videos + session.total_audio;
+
+            // Project badge
+            const projectBadge = session.project
+                ? `<div class="badge bg-success mb-2">📁 ${session.project.name}</div>`
+                : `<div class="badge bg-secondary mb-2">📝 No Project</div>`;
+
+            col.innerHTML = `
+                <div class="card h-100" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid rgba(251, 191, 36, 0.2); transition: all 0.3s;">
+                    <div class="card-body">
+                        ${projectBadge}
+                        <h5 class="card-title" style="color: #fbbf24; font-weight: 700; margin-bottom: 12px;">
+                            ${session.title}
+                        </h5>
+                        <p class="card-text" style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">
+                            📅 ${formattedDate}
+                        </p>
+
+                        <!-- Content Stats -->
+                        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                            ${session.total_images > 0 ? `
+                                <div style="display: flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); padding: 6px 12px; border-radius: 8px;">
+                                    <span style="font-size: 18px;">🖼️</span>
+                                    <span style="color: #60a5fa; font-weight: 600;">${session.total_images}</span>
+                                </div>
+                            ` : ''}
+                            ${session.total_videos > 0 ? `
+                                <div style="display: flex; align-items: center; gap: 6px; background: rgba(168, 85, 247, 0.1); padding: 6px 12px; border-radius: 8px;">
+                                    <span style="font-size: 18px;">🎬</span>
+                                    <span style="color: #a78bfa; font-weight: 600;">${session.total_videos}</span>
+                                </div>
+                            ` : ''}
+                            ${session.total_audio > 0 ? `
+                                <div style="display: flex; align-items: center; gap: 6px; background: rgba(236, 72, 153, 0.1); padding: 6px 12px; border-radius: 8px;">
+                                    <span style="font-size: 18px;">🎵</span>
+                                    <span style="color: #ec4899; font-weight: 600;">${session.total_audio}</span>
+                                </div>
+                            ` : ''}
+                            ${totalContent === 0 ? `
+                                <div style="color: #64748b; font-size: 13px; font-style: italic;">
+                                    No content yet
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- First Prompt Preview -->
+                        ${session.first_prompt ? `
+                            <p style="color: #cbd5e1; font-size: 12px; margin-bottom: 16px; font-style: italic; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                "${session.first_prompt}"
+                            </p>
+                        ` : ''}
+
+                        <!-- Actions -->
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button
+                                onclick="resumeSession('${session.session_id}', '${session.title.replace(/'/g, "\\'")}')"
+                                class="btn btn-sm btn-success"
+                                style="flex: 1 1 45%;"
+                                title="Continue this conversation"
+                            >
+                                ▶️ Resume
+                            </button>
+                            <button
+                                onclick="viewSessionContent('${session.session_id}')"
+                                class="btn btn-sm btn-primary"
+                                style="flex: 1 1 45%;"
+                                ${totalContent === 0 ? 'disabled' : ''}
+                                title="View session content"
+                            >
+                                👁️ View (${totalContent})
+                            </button>
+                            <button
+                                onclick="deleteSession('${session.session_id}')"
+                                class="btn btn-sm btn-outline-danger"
+                                style="flex: 0 0 auto;"
+                                title="Delete session"
+                            >
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add hover effect
+            const card = col.querySelector('.card');
+            card.addEventListener('mouseenter', () => {
+                card.style.borderColor = 'rgba(251, 191, 36, 0.6)';
+                card.style.transform = 'translateY(-4px)';
+                card.style.boxShadow = '0 8px 24px rgba(251, 191, 36, 0.2)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.borderColor = 'rgba(251, 191, 36, 0.2)';
+                card.style.transform = 'translateY(0)';
+                card.style.boxShadow = 'none';
+            });
+
+            return col;
+        }
+
+        // View session content (opens session gallery modal)
+        async function viewSessionContent(sessionId) {
+            console.log(`👁️ Opening session gallery for: ${sessionId}`);
+
+            // Use existing session gallery modal from Session 96
+            const modal = document.getElementById('sessionGalleryModal');
+            const titleEl = document.getElementById('sessionGalleryTitle');
+            const subtitleEl = document.getElementById('sessionGallerySubtitle');
+            const imagesGrid = document.getElementById('sessionImagesGrid');
+            const videosGrid = document.getElementById('sessionVideosGrid');
+            const imagesSection = document.getElementById('sessionImagesSection');
+            const videosSection = document.getElementById('sessionVideosSection');
+            const emptyState = document.getElementById('sessionEmptyState');
+            const loadingState = document.getElementById('sessionLoadingState');
+
+            // Show modal and loading state
+            modal.style.display = 'block';
+            loadingState.style.display = 'block';
+            imagesSection.style.display = 'none';
+            videosSection.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/v1/gallery/session/?session_id=${sessionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Session content loaded:', data);
+
+                // Update modal title
+                titleEl.textContent = data.session.title;
+                subtitleEl.textContent = `Created ${new Date(data.session.created_at).toLocaleDateString()}`;
+
+                // Display images
+                if (data.images && data.images.length > 0) {
+                    imagesGrid.innerHTML = data.images.map(img => `
+                        <div class="col-md-4">
+                            <div style="position: relative; border-radius: 8px; overflow: hidden; border: 2px solid rgba(34, 211, 238, 0.3);">
+                                <img src="${img.url}" alt="${img.prompt}" style="width: 100%; height: 200px; object-fit: cover;">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 12px;">
+                                    <div style="color: #22d3ee; font-size: 11px; font-weight: 600;">Image #${img.sequential_number}</div>
+                                    <div style="color: #cbd5e1; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${img.prompt || 'No prompt'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                    imagesSection.style.display = 'block';
+                    document.getElementById('sessionImageCount').textContent = `(${data.images.length})`;
+                }
+
+                // Display videos
+                if (data.videos && data.videos.length > 0) {
+                    videosGrid.innerHTML = data.videos.map(video => `
+                        <div class="col-md-6">
+                            <div style="border-radius: 8px; overflow: hidden; border: 2px solid rgba(167, 139, 250, 0.3);">
+                                <video controls style="width: 100%; height: 200px; background: #000;">
+                                    <source src="${video.url}" type="video/mp4">
+                                </video>
+                                <div style="background: rgba(0,0,0,0.8); padding: 12px;">
+                                    <div style="color: #a78bfa; font-size: 11px; font-weight: 600;">${video.model_name || 'Video'}</div>
+                                    <div style="color: #cbd5e1; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${video.prompt || 'No prompt'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                    videosSection.style.display = 'block';
+                    document.getElementById('sessionVideoCount').textContent = `(${data.videos.length})`;
+                }
+
+                // Show empty state if no content
+                if ((!data.images || data.images.length === 0) && (!data.videos || data.videos.length === 0)) {
+                    emptyState.style.display = 'block';
+                }
+
+                loadingState.style.display = 'none';
+
+            } catch (error) {
+                console.error('❌ Error loading session content:', error);
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'block';
+            }
+        }
+
+        // Delete a session
+        async function deleteSession(sessionId) {
+            if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
+                return;
+            }
+
+            console.log(`🗑️ Deleting session: ${sessionId}`);
+
+            try {
+                // TODO: Implement delete session API endpoint
+                alert('Delete session functionality will be implemented in the next iteration.');
+                // After implementation:
+                // const response = await fetch(`/api/v1/sessions/delete/${sessionId}/`, { method: 'DELETE', ... });
+                // if (response.ok) { loadSessions(); }
+
+            } catch (error) {
+                console.error('❌ Error deleting session:', error);
+                alert(`Error deleting session: ${error.message}`);
+            }
+        }
+
+        // Resume a session (Session 97: Option 2)
+        async function resumeSession(sessionId, sessionTitle) {
+            console.log(`▶️ Resuming session: ${sessionId} - "${sessionTitle}"`);
+
+            try {
+                // Fetch session data including conversation transcript
+                const response = await fetch(`/api/v1/gallery/session/?session_id=${sessionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Session data loaded:', data);
+
+                // Get AI Assistant instance (assumes there's a global instance)
+                if (typeof aiAssistant !== 'undefined') {
+                    // Clear current conversation
+                    aiAssistant.conversation = [];
+
+                    // Clear chat DOM
+                    const chatMessages = document.getElementById('aiChatMessages');
+                    if (chatMessages) {
+                        chatMessages.innerHTML = '';
+                    }
+
+                    // Load conversation transcript if available
+                    if (data.session.conversation_transcript) {
+                        try {
+                            const transcript = JSON.parse(data.session.conversation_transcript);
+                            if (Array.isArray(transcript)) {
+                                aiAssistant.conversation = transcript;
+                                console.log(`📜 Loaded ${transcript.length} messages from transcript`);
+
+                                // Re-render all messages in the chat
+                                transcript.forEach(msg => {
+                                    if (msg.role && msg.content) {
+                                        aiAssistant.addMessage(msg.role, msg.content, false, msg.metadata || {});
+                                    }
+                                });
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ Could not parse transcript:', e);
+                        }
+                    }
+
+                    // Set current session
+                    aiAssistant.sessionId = sessionId;
+                    aiAssistant.sessionTitle = sessionTitle;
+
+                    // Update session indicator
+                    aiAssistant.updateSessionIndicator({
+                        session_id: sessionId,
+                        title: sessionTitle,
+                        total_images: data.session.total_images || 0,
+                        total_videos: data.session.total_videos || 0,
+                        total_audio: data.session.total_audio || 0
+                    });
+
+                    // Switch to AI Assistant tab
+                    const aiAssistantTab = document.getElementById('ai-assistant-tab');
+                    if (aiAssistantTab) {
+                        aiAssistantTab.click();
+                    }
+
+                    // Show success message
+                    console.log(`✅ Session resumed: "${sessionTitle}"`);
+
+                    // Optional: Show toast notification
+                    if (typeof showToast === 'function') {
+                        showToast(`Session resumed: ${sessionTitle}`, 'success');
+                    } else {
+                        // Fallback to simple notification
+                        const notification = document.createElement('div');
+                        notification.style.cssText = 'position: fixed; top: 80px; right: 20px; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; animation: slideIn 0.3s ease-out;';
+                        notification.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="font-size: 24px;">▶️</span>
+                                <div>
+                                    <div style="font-weight: 700;">Session Resumed</div>
+                                    <div style="font-size: 13px; opacity: 0.9;">${sessionTitle}</div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(notification);
+                        setTimeout(() => notification.remove(), 3000);
+                    }
+
+                } else {
+                    throw new Error('AI Assistant not found');
+                }
+
+            } catch (error) {
+                console.error('❌ Error resuming session:', error);
+                alert(`Error resuming session: ${error.message}\n\nPlease try refreshing the page.`);
+            }
+        }
+
+        // Auto-load sessions when Sessions tab is clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            const sessionsTab = document.getElementById('sessions-tab');
+            if (sessionsTab) {
+                sessionsTab.addEventListener('shown.bs.tab', function() {
+                    console.log('📝 Sessions tab activated - loading sessions...');
+                    loadSessions();
+                });
+            }
+        });
+
+        // END SESSION MANAGEMENT UI
         // ====================================================================
     </script>
 
