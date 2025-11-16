@@ -3373,11 +3373,21 @@ def unified_gallery(request):
 
             # Convert to unified format
             for img in image_queryset:
+                # Session 111: Build absolute URLs for mobile app compatibility
+                image_url = img.get_full_url()
+                thumbnail_url = img.get_thumbnail_url()
+
+                # Convert relative URLs to absolute URLs
+                if image_url and not image_url.startswith(('http://', 'https://', 'data:')):
+                    image_url = request.build_absolute_uri(image_url)
+                if thumbnail_url and not thumbnail_url.startswith(('http://', 'https://', 'data:')):
+                    thumbnail_url = request.build_absolute_uri(thumbnail_url)
+
                 all_items.append({
                     'id': str(img.id),
                     'type': 'image',
-                    'url': img.get_full_url(),
-                    'thumbnail_url': img.get_thumbnail_url(),
+                    'url': image_url,
+                    'thumbnail_url': thumbnail_url,
                     'prompt': img.prompt,
                     'created_at': img.created_at,
                     'is_favorite': img.is_favorite,
@@ -3416,11 +3426,21 @@ def unified_gallery(request):
 
             # Convert to unified format
             for video in video_queryset:
+                # Session 111: Build absolute URLs for mobile app compatibility
+                video_url = video.video_url
+                thumbnail_url = video.thumbnail_url or video.video_url
+
+                # Convert relative URLs to absolute URLs (external CDN URLs are already absolute)
+                if video_url and not video_url.startswith(('http://', 'https://', 'data:')):
+                    video_url = request.build_absolute_uri(video_url)
+                if thumbnail_url and not thumbnail_url.startswith(('http://', 'https://', 'data:')):
+                    thumbnail_url = request.build_absolute_uri(thumbnail_url)
+
                 all_items.append({
                     'id': str(video.id),
                     'type': 'video',
-                    'url': video.video_url,
-                    'thumbnail_url': video.thumbnail_url or video.video_url,
+                    'url': video_url,
+                    'thumbnail_url': thumbnail_url,
                     'prompt': video.prompt,
                     'created_at': video.created_at,
                     'is_favorite': video.is_favorite,
@@ -3878,7 +3898,7 @@ def get_session_assets(request, session_id):
 
         # Verify session exists and belongs to user
         try:
-            session = AISession.objects.get(session_id=session_id, user=request.user)
+            session = AISession.objects.get(id=session_id, user=request.user)
         except AISession.DoesNotExist:
             return Response({
                 'success': False,

@@ -1,7 +1,7 @@
 # DonkeyOS Flutter Mobile - Project Structure
 
-**Last Updated:** Session 110 - November 15, 2025
-**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Creative Pipelines)
+**Last Updated:** Session 111 - November 15, 2025
+**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Pipelines + Galleries)
 
 ---
 
@@ -20,6 +20,7 @@ mobile/
 │   │   ├── session.dart             # AISession model
 │   │   ├── image_asset.dart         # ImageAsset + SessionAssetsResponse (Session 101)
 │   │   ├── video_asset.dart         # VideoAsset model (Session 101)
+│   │   ├── gallery.dart             # GalleryAsset + GalleryResponse + GalleryFilters (Session 111)
 │   │   ├── render_job.dart          # RenderJob model with status/progress (Session 105-106)
 │   │   ├── pipeline_template.dart   # Pipeline template model (Session 109)
 │   │   ├── pipeline_run.dart        # Pipeline run with status tracking (Session 109)
@@ -31,6 +32,7 @@ mobile/
 │   ├── providers/                    # Riverpod state providers
 │   │   ├── api_provider.dart        # API client providers (Session 102: uses settings)
 │   │   ├── projects_provider.dart   # Project/session/assets providers
+│   │   ├── gallery_provider.dart    # Gallery assets + filters providers (Session 111)
 │   │   ├── render_providers.dart    # Render job providers (Session 105-106)
 │   │   ├── pipelines_provider.dart  # Pipeline templates + runs providers (Session 109)
 │   │   ├── boardroom_provider.dart  # Boardroom state
@@ -40,14 +42,15 @@ mobile/
 │   ├── services/                     # API service layer
 │   │   └── api/
 │   │       ├── projects_api.dart    # Projects, sessions, assets API
+│   │       ├── gallery_api.dart     # Unified gallery API (images/videos/audio) (Session 111)
 │   │       ├── render_api.dart      # Render job API calls (Session 105-106)
 │   │       ├── pipelines_api.dart   # Pipeline templates + runs API (Session 109)
 │   │       ├── boardroom_api.dart   # Boardroom API calls
 │   │       └── coleadership_api.dart  # Co-leadership API
 │   │
 │   ├── features/                     # UI screens by feature
-│   │   ├── cockpit/                 # Session 107+110: Donkey Cockpit (Unified Home)
-│   │   │   └── donkey_cockpit_screen.dart  # Command center with 5 cards (added Creative Pipelines in S110)
+│   │   ├── cockpit/                 # Session 107+110+111: Donkey Cockpit (Unified Home)
+│   │   │   └── donkey_cockpit_screen.dart  # Command center with 6 cards (added Galleries in S111)
 │   │   │
 │   │   ├── home/
 │   │   │   └── home_screen.dart     # Deprecated: Replaced by Cockpit (Session 107)
@@ -76,6 +79,10 @@ mobile/
 │   │   │   ├── pipelines_screen.dart         # Template list + recent runs (tabbed)
 │   │   │   └── pipeline_run_detail_screen.dart  # Run details with live polling
 │   │   │
+│   │   ├── gallery/                     # Session 111: Galleries & Assets
+│   │   │   ├── galleries_screen.dart         # Unified gallery (images/videos/audio) with filters
+│   │   │   └── asset_detail_screen.dart      # Asset detail with metadata + actions
+│   │   │
 │   │   ├── coleadership/                # Deprecated: Replaced by leadership/ (Session 108)
 │   │   │   ├── decision_commit_screen.dart    # Legacy decision commit
 │   │   │   └── outcome_screen.dart            # Legacy outcome logging
@@ -85,6 +92,9 @@ mobile/
 │   │   │   ├── decision_detail_screen.dart        # Full decision detail + forms
 │   │   │   ├── coleadership_settings_screen.dart  # ITYS preferences
 │   │   │   └── leadership_dashboard.dart          # Leadership stats (future)
+│   │
+│   ├── widgets/                       # Shared reusable widgets
+│   │   └── video_player_widget.dart  # Video player with controls (Session 111)
 │   │
 │   ├── app.dart                      # App configuration
 │   └── main.dart                     # Entry point
@@ -399,6 +409,7 @@ cupertino_icons: ^1.0.6             # iOS-style icons
 intl: ^0.18.1                       # Internationalization and date formatting
 cached_network_image: ^3.3.0        # Efficient image loading (Session 101)
 url_launcher: ^6.2.0                 # Open URLs in browser (Session 106)
+video_player: ^2.8.1                 # Video playback with controls (Session 111)
 ```
 
 ### Development
