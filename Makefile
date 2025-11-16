@@ -1,4 +1,4 @@
-# Makefile - dev convenience helpers (Django + Daphne (ws) + Redis + Channels worker)
+# Makefile - dev convenience helpers (Django + Daphne (ws) + Redis + Channels worker + Flutter)
 SHELL := /bin/bash
 
 # Configurable knobs
@@ -9,13 +9,17 @@ START_TIMEOUT ?= 30
 LOG ?= server.log
 PIDFILE ?= .daphne.pid
 REDIS_PIDFILE ?= .redis.pid
+FLUTTER_PIDFILE ?= .flutter.pid
+FLUTTER_LOG ?= flutter.log
+FLUTTER_DEVICE ?= 5F3829A4-2139-4667-9648-410F6A629AE0
 DJANGO_MANAGE ?= python manage.py
 ASGI_APP ?= core.asgi:application
+MOBILE_DIR ?= mobile
 
 # Export common env for child processes if you want (safe; read-only for checks)
 export HOST PORT
 
-.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose
+.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all
 
 # ---------- Core service lifecycle ----------
 start: ## Start Redis (if needed) and Daphne (background). Wait for health endpoint.
@@ -159,6 +163,75 @@ selfpatch-apply: ## Apply a stored patch file: make selfpatch-apply FILE=patch.j
 selfpatch-propose: ## Propose a patch with the project's LLM helper (provider chosen by env)
 	@if [ -z "$(DESC)" ]; then echo "Usage: make selfpatch-propose DESC=\"description\" PATHS=\"path1 path2\""; exit 1; fi
 	@$(DJANGO_MANAGE) selfpatch propose --desc "$(DESC)" --paths $(PATHS) $(ARGS)
+
+# ---------- Mobile / Flutter helpers ----------
+mobile: ## Start Flutter app (iOS simulator by default) in background
+	@echo "==> Starting Flutter app (device: $(FLUTTER_DEVICE))..."
+	@if [ -f $(FLUTTER_PIDFILE) ]; then \
+		echo "Warning: $(FLUTTER_PIDFILE) exists; Flutter may already be running. Continuing..."; \
+	fi
+	@cd $(MOBILE_DIR) && nohup flutter run -d $(FLUTTER_DEVICE) > ../$(FLUTTER_LOG) 2>&1 & echo $$! > ../$(FLUTTER_PIDFILE)
+	@echo "-> Flutter app starting (see $(FLUTTER_LOG) for output)"
+	@echo "-> PID: $$(cat $(FLUTTER_PIDFILE) 2>/dev/null || echo 'unknown')"
+	@sleep 3
+	@echo "✓ Flutter app launched. Use 'make mobile-status' to check status."
+
+mobile-stop: ## Stop Flutter app
+	@echo "==> Stopping Flutter app..."
+	@if [ -f $(FLUTTER_PIDFILE) ]; then \
+		PID=$$(cat $(FLUTTER_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Flutter (PID $$PID)..."; \
+			kill $$PID || true; \
+			sleep 2; \
+			if ps -p $$PID >/dev/null 2>&1; then kill -9 $$PID || true; fi; \
+		fi; \
+		rm -f $(FLUTTER_PIDFILE); \
+	else \
+		echo "-> No $(FLUTTER_PIDFILE) found; attempting pkill for flutter run..."; \
+		pkill -f "flutter run" 2>/dev/null || true; \
+	fi
+	@echo "✓ Flutter stop sequence finished."
+
+mobile-status: ## Check Flutter app status
+	@echo "==> Flutter app status"
+	@if [ -f $(FLUTTER_PIDFILE) ]; then \
+		PID=$$(cat $(FLUTTER_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "✓ Flutter app running (PID $$PID)"; \
+		else \
+			echo "✗ Flutter app not running (stale PID file)"; \
+		fi; \
+	else \
+		echo "✗ Flutter app not running (no PID file)"; \
+	fi
+	@echo "Flutter processes:"
+	@ps aux | grep -E "flutter run|dart.*macos" | grep -v grep || echo "  No Flutter processes found"
+
+mobile-logs: ## Tail the Flutter log (ctrl-c to exit)
+	@echo "==> Tailing $(FLUTTER_LOG) (ctrl-c to stop)"
+	@touch $(FLUTTER_LOG)
+	@tail -f $(FLUTTER_LOG)
+
+# ---------- Combined lifecycle ----------
+start-all: ## Start Redis + Daphne + Flutter (complete stack)
+	@echo "==> Starting complete stack (Redis + Daphne + Flutter)..."
+	@$(MAKE) start
+	@echo
+	@$(MAKE) mobile
+	@echo
+	@echo "✓ Complete stack started!"
+	@echo "  - Backend: http://$(HOST):$(PORT)"
+	@echo "  - Flutter: Running on iOS Simulator"
+	@echo "  - Logs: $(LOG) and $(FLUTTER_LOG)"
+	@echo "  - Device: $(FLUTTER_DEVICE)"
+
+stop-all: ## Stop all services (Daphne + Flutter + optional Redis)
+	@echo "==> Stopping all services..."
+	@$(MAKE) mobile-stop
+	@echo
+	@$(MAKE) stop
+	@echo "✓ All services stopped."
 
 # ---------- Utility / help ----------
 help:
