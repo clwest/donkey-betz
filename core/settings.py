@@ -140,7 +140,8 @@ MIDDLEWARE = [
     'core.rate_limiter.RateLimitMiddleware',  # Global rate limiting
     'core.auth_middleware.RateLimitingMiddleware',  # Enhanced rate limiting
     'core.auth_middleware.APILoggingMiddleware',  # API request/response logging
-    
+    'core.middleware.RangeRequestMiddleware',  # Session 111: HTTP range requests for video streaming
+
     # Unified platform middleware (will be created)
     # 'gateway.middleware.UnifiedAPIMiddleware',
     # 'monitoring.middleware.PerformanceMiddleware',

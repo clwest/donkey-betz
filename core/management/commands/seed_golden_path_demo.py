@@ -71,10 +71,12 @@ class Command(BaseCommand):
         project_name = "Golden Path Demo"
 
         project, created = CreativeProject.objects.get_or_create(
+            user=user,
             name=project_name,
             defaults={
                 'description': 'Demo project showcasing AI-Human Co-Leadership and Creative Pipelines',
-                'status': 'active',
+                'goal': 'Demonstrate end-to-end AI-Human Co-Leadership workflows and Creative Pipelines',
+                'status': 'in_progress',
             }
         )
 
@@ -93,7 +95,8 @@ class Command(BaseCommand):
         session, _ = AISession.objects.get_or_create(
             title="Q1 2026 AI Feature Roadmap",
             defaults={
-                'purpose': 'boardroom_meeting',
+                'user': user,
+                'session_type': 'boardroom',
                 'project': project,
             }
         )
@@ -283,7 +286,8 @@ This is what good co-leadership looks like: AI provides expert analysis, humans 
         session, _ = AISession.objects.get_or_create(
             title="Demo Creative Assets",
             defaults={
-                'purpose': 'creative_pipeline_demo',
+                'user': user,
+                'session_type': 'content_package',
                 'project': project,
             }
         )
@@ -339,9 +343,6 @@ This is what good co-leadership looks like: AI provides expert analysis, humans 
         )
 
         if created:
-            # Update duration
-            run1.duration = 59.0  # 59 seconds
-            run1.save()
             self.stdout.write('   ✅ Pipeline Run 1: "Idea to Image Set" (completed)')
 
         # Run 2: Idea to Promo Video (if template exists)
@@ -386,8 +387,6 @@ This is what good co-leadership looks like: AI provides expert analysis, humans 
             )
 
             if created:
-                run2.duration = 29.0
-                run2.save()
                 self.stdout.write('   ✅ Pipeline Run 2: "Idea to Promo Video" (completed)')
 
         self.stdout.write(self.style.SUCCESS(f'   🏆 Creative Pipeline runs complete'))
