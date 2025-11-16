@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_video_picker.dart';
+import 'dart:typed_data';
 
 class VoiceEditScreen extends ConsumerStatefulWidget {
   const VoiceEditScreen({super.key});
@@ -17,11 +19,21 @@ class VoiceEditScreen extends ConsumerStatefulWidget {
 class _VoiceEditScreenState extends ConsumerState<VoiceEditScreen> {
   final _videoIdController = TextEditingController();
   final _commandController = TextEditingController();
+  Uint8List? _videoBytes;
+  String? _fileName;
   String? _editedVideoUrl;
   bool _isProcessing = false;
   String? _errorMessage;
   VideoPlayerController? _videoController;
   final List<Map<String, String>> _commandHistory = [];
+
+  void _onVideoSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _videoBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
+  }
 
   final List<String> _exampleCommands = [
     'Add text "Hello World" at 5 seconds for 3 seconds',
@@ -33,8 +45,9 @@ class _VoiceEditScreenState extends ConsumerState<VoiceEditScreen> {
   ];
 
   Future<void> _executeCommand() async {
-    if (_videoIdController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Please enter a video ID');
+    // Check if we have either video bytes or video ID
+    if (_videoBytes == null && _videoIdController.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please select a video or enter a video ID');
       return;
     }
 
@@ -50,14 +63,28 @@ class _VoiceEditScreenState extends ConsumerState<VoiceEditScreen> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
+      Map<String, dynamic> response;
 
-      final response = await apiClient.post(
-        '/api/v1/video/voice-edit/',
-        {
-          'video_id': _videoIdController.text.trim(),
-          'command': _commandController.text.trim(),
-        },
-      );
+      if (_videoBytes != null) {
+        // Upload video file with multipart
+        response = await apiClient.postMultipart(
+          '/api/v1/video/voice-edit/',
+          fileBytes: {'video': _videoBytes!},
+          fileName: _fileName ?? 'video.mp4',
+          fields: {
+            'command': _commandController.text.trim(),
+          },
+        );
+      } else {
+        // Use video ID
+        response = await apiClient.post(
+          '/api/v1/video/voice-edit/',
+          {
+            'video_id': _videoIdController.text.trim(),
+            'command': _commandController.text.trim(),
+          },
+        );
+      }
 
       if (response['success'] == true) {
         setState(() {
@@ -137,12 +164,32 @@ class _VoiceEditScreenState extends ConsumerState<VoiceEditScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Video ID Input
+            // Dual-Source Video Picker
+            DualSourceVideoPicker(
+              currentVideoBytes: _videoBytes,
+              onVideoSelected: _onVideoSelected,
+              placeholderText: 'Select a video to edit',
+              height: 150,
+            ),
+            const SizedBox(height: 16),
+
+            const Center(
+              child: Text(
+                'OR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Video ID Input (Manual)
             TextField(
               controller: _videoIdController,
               decoration: const InputDecoration(
-                labelText: 'Video ID',
-                hintText: 'Enter the video ID to edit',
+                labelText: 'Video ID (Optional)',
+                hintText: 'Or enter a video ID manually',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.videocam),
               ),

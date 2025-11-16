@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_video_picker.dart';
+import 'dart:typed_data';
 
 class VideoExtendScreen extends ConsumerStatefulWidget {
   const VideoExtendScreen({super.key});
@@ -16,15 +18,26 @@ class VideoExtendScreen extends ConsumerStatefulWidget {
 
 class _VideoExtendScreenState extends ConsumerState<VideoExtendScreen> {
   final _videoIdController = TextEditingController();
+  Uint8List? _videoBytes;
+  String? _fileName;
   String? _extendedVideoUrl;
   bool _isExtending = false;
   String? _errorMessage;
   int _extendSeconds = 5;
   VideoPlayerController? _videoController;
 
+  void _onVideoSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _videoBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
+  }
+
   Future<void> _extendVideo() async {
-    if (_videoIdController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Please enter a video ID');
+    // Check if we have either video bytes or video ID
+    if (_videoBytes == null && _videoIdController.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please select a video or enter a video ID');
       return;
     }
 
@@ -35,14 +48,28 @@ class _VideoExtendScreenState extends ConsumerState<VideoExtendScreen> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
+      Map<String, dynamic> response;
 
-      final response = await apiClient.post(
-        '/api/v1/video/extend/',
-        {
-          'video_id': _videoIdController.text.trim(),
-          'extend_seconds': _extendSeconds,
-        },
-      );
+      if (_videoBytes != null) {
+        // Upload video file with multipart
+        response = await apiClient.postMultipart(
+          '/api/v1/video/extend/',
+          fileBytes: {'video': _videoBytes!},
+          fileName: _fileName ?? 'video.mp4',
+          fields: {
+            'extend_seconds': _extendSeconds.toString(),
+          },
+        );
+      } else {
+        // Use video ID
+        response = await apiClient.post(
+          '/api/v1/video/extend/',
+          {
+            'video_id': _videoIdController.text.trim(),
+            'extend_seconds': _extendSeconds,
+          },
+        );
+      }
 
       if (response['success'] == true && response['video_url'] != null) {
         setState(() {
@@ -111,12 +138,32 @@ class _VideoExtendScreenState extends ConsumerState<VideoExtendScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Video ID Input
+            // Dual-Source Video Picker
+            DualSourceVideoPicker(
+              currentVideoBytes: _videoBytes,
+              onVideoSelected: _onVideoSelected,
+              placeholderText: 'Select a video to extend',
+              height: 150,
+            ),
+            const SizedBox(height: 16),
+
+            const Center(
+              child: Text(
+                'OR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Video ID Input (Manual)
             TextField(
               controller: _videoIdController,
               decoration: const InputDecoration(
-                labelText: 'Video ID',
-                hintText: 'Enter the ID from your generated video',
+                labelText: 'Video ID (Optional)',
+                hintText: 'Or enter a video ID manually',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.videocam),
               ),
