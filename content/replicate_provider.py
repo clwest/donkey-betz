@@ -57,6 +57,18 @@ class GenerationResult:
             self.images = []
 
 
+@dataclass
+class ThreeDGenerationResult:
+    """Result from 3D model generation (TRELLIS)"""
+    success: bool
+    prediction_id: str = ""
+    model_file: str = ""  # GLB file URL
+    color_video: str = ""  # Color render video URL
+    gaussian_ply: str = ""  # Point cloud file URL
+    status: str = "starting"
+    error_message: str = ""
+
+
 class ReplicateProvider:
     """
     Replicate API provider for character training & generation
@@ -456,6 +468,192 @@ class ReplicateProvider:
             }
         except Exception as e:
             logger.error(f"Prediction status check error: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+
+
+    def generate_3d_from_images(
+        self,
+        image_urls: List[str],
+        generate_model: bool = True,
+        generate_color: bool = True,
+        save_gaussian_ply: bool = True,
+        **kwargs
+    ) -> ThreeDGenerationResult:
+        """
+        Generate 3D model from images using TRELLIS
+
+        Args:
+            image_urls: List of public image URLs (1-4 images for multi-view)
+            generate_model: Generate GLB 3D model file (default: True)
+            generate_color: Generate color video render (default: True)
+            save_gaussian_ply: Save Gaussian point cloud (default: True)
+            **kwargs: Additional TRELLIS parameters (texture_size, mesh_simplify, etc.)
+
+        Returns:
+            ThreeDGenerationResult with prediction_id and status
+        """
+
+        if not self.available:
+            return ThreeDGenerationResult(
+                success=False,
+                error_message=ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
+            )
+
+        if not image_urls:
+            return ThreeDGenerationResult(
+                success=False,
+                error_message="At least one image URL is required"
+            )
+
+        try:
+            # Process image URLs/paths - Replicate SDK handles file uploads automatically
+            processed_images = []
+            for img_path in image_urls:
+                if isinstance(img_path, str):
+                    if img_path.startswith('http://') or img_path.startswith('https://'):
+                        # Public URL - use as-is
+                        processed_images.append(img_path)
+                    else:
+                        # Local file path - open and pass file handle
+                        # Replicate SDK will automatically upload the file
+                        import pathlib
+                        file_path = pathlib.Path(img_path)
+                        if file_path.exists():
+                            # Use 'file' prefix for Replicate SDK file upload
+                            processed_images.append(open(img_path, 'rb'))
+                        else:
+                            logger.warning(f"File not found: {img_path}")
+                else:
+                    # Already a file handle
+                    processed_images.append(img_path)
+
+            if not processed_images:
+                return ThreeDGenerationResult(
+                    success=False,
+                    error_message="No valid images provided"
+                )
+
+            # Build TRELLIS input parameters
+            input_params = {
+                "images": processed_images,
+                "generate_model": generate_model,
+                "generate_color": generate_color,
+                "save_gaussian_ply": save_gaussian_ply,
+            }
+
+            # Add optional parameters
+            if 'texture_size' in kwargs:
+                input_params['texture_size'] = kwargs['texture_size']
+            if 'mesh_simplify' in kwargs:
+                input_params['mesh_simplify'] = kwargs['mesh_simplify']
+            if 'ss_sampling_steps' in kwargs:
+                input_params['ss_sampling_steps'] = kwargs['ss_sampling_steps']
+            if 'slat_sampling_steps' in kwargs:
+                input_params['slat_sampling_steps'] = kwargs['slat_sampling_steps']
+
+            logger.info(f"🎨 [REPLICATE] Starting 3D generation from {len(image_urls)} image(s)")
+            logger.info(f"   Model: firtoz/trellis (version: e8f6c45...)")
+            logger.info(f"   Generate GLB: {generate_model}, Color Video: {generate_color}, Gaussian: {save_gaussian_ply}")
+
+            # Create prediction using TRELLIS model version
+            # Note: Use version (not model) for pinned production behavior
+            prediction = self.client.predictions.create(
+                version="e8f6c45206993f297372f5436b90350817bd9b4a0d52d2a76df50c1c8afa2b3c",
+                input=input_params
+            )
+
+            logger.info(f"✅ [REPLICATE] 3D generation submitted: {prediction.id}")
+            logger.info(f"   Status: {prediction.status}")
+            logger.info(f"   Estimated time: <1 minute")
+
+            # Close any open file handles
+            for img in processed_images:
+                if hasattr(img, 'close'):
+                    img.close()
+
+            return ThreeDGenerationResult(
+                success=True,
+                prediction_id=prediction.id,
+                status=prediction.status
+            )
+
+        except ReplicateError as e:
+            # Close any open file handles on error
+            for img in processed_images:
+                if hasattr(img, 'close'):
+                    img.close()
+            logger.error(f"Replicate API error: {str(e)}")
+            return ThreeDGenerationResult(
+                success=False,
+                error_message=f"Replicate API error: {str(e)}"
+            )
+        except Exception as e:
+            # Close any open file handles on error
+            try:
+                for img in processed_images:
+                    if hasattr(img, 'close'):
+                        img.close()
+            except:
+                pass
+            logger.error(f"3D generation submission error: {str(e)}")
+            return ThreeDGenerationResult(
+                success=False,
+                error_message=str(e)
+            )
+
+
+    def check_3d_generation_status(self, prediction_id: str) -> Dict[str, Any]:
+        """
+        Check status of a 3D generation prediction
+
+        Args:
+            prediction_id: Prediction ID from generate_3d_from_images()
+
+        Returns:
+            Dict with status, model_file, color_video, gaussian_ply URLs
+        """
+
+        if not self.available:
+            return {
+                "success": False,
+                "error_message": ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
+            }
+
+        try:
+            prediction = self.client.predictions.get(prediction_id)
+
+            result = {
+                "success": True,
+                "prediction_id": prediction.id,
+                "status": prediction.status,  # starting, processing, succeeded, failed, canceled
+            }
+
+            if prediction.status == "succeeded" and prediction.output:
+                output = prediction.output
+                # TRELLIS returns an object with model_file, color_video, gaussian_ply, etc.
+                if isinstance(output, dict):
+                    result["model_file"] = output.get("model_file", "")
+                    result["color_video"] = output.get("color_video", "")
+                    result["gaussian_ply"] = output.get("gaussian_ply", "")
+                    result["normal_video"] = output.get("normal_video", "")
+                else:
+                    result["error"] = "Unexpected output format from TRELLIS"
+            elif prediction.status == "failed":
+                result["error"] = prediction.error if hasattr(prediction, 'error') else "3D generation failed"
+
+            return result
+
+        except ReplicateError as e:
+            logger.error(f"Failed to check 3D generation status: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+        except Exception as e:
+            logger.error(f"3D generation status check error: {str(e)}")
             return {
                 "success": False,
                 "error_message": str(e)
