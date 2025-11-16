@@ -1,7 +1,7 @@
 # DonkeyOS Flutter Mobile - Project Structure
 
-**Last Updated:** Session 111 - November 15, 2025
-**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Pipelines + Galleries)
+**Last Updated:** Session 112 - November 15, 2025
+**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Pipelines + Galleries + Personal Assistant)
 
 ---
 
@@ -21,6 +21,7 @@ mobile/
 │   │   ├── image_asset.dart         # ImageAsset + SessionAssetsResponse (Session 101)
 │   │   ├── video_asset.dart         # VideoAsset model (Session 101)
 │   │   ├── gallery.dart             # GalleryAsset + GalleryResponse + GalleryFilters (Session 111)
+│   │   ├── personal_assistant.dart  # AssistantMessage + Conversation + Context + LearningSummary (Session 112)
 │   │   ├── render_job.dart          # RenderJob model with status/progress (Session 105-106)
 │   │   ├── pipeline_template.dart   # Pipeline template model (Session 109)
 │   │   ├── pipeline_run.dart        # Pipeline run with status tracking (Session 109)
@@ -30,9 +31,10 @@ mobile/
 │   │   └── settings_state.dart      # Settings state models (Session 102)
 │   │
 │   ├── providers/                    # Riverpod state providers
-│   │   ├── api_provider.dart        # API client providers (Session 102: uses settings)
+│   │   ├── api_provider.dart        # API client providers (Session 102: uses settings + Session 112: Personal Assistant)
 │   │   ├── projects_provider.dart   # Project/session/assets providers
 │   │   ├── gallery_provider.dart    # Gallery assets + filters providers (Session 111)
+│   │   ├── personal_assistant_provider.dart  # Chat conversation + context providers (Session 112)
 │   │   ├── render_providers.dart    # Render job providers (Session 105-106)
 │   │   ├── pipelines_provider.dart  # Pipeline templates + runs providers (Session 109)
 │   │   ├── boardroom_provider.dart  # Boardroom state
@@ -43,14 +45,15 @@ mobile/
 │   │   └── api/
 │   │       ├── projects_api.dart    # Projects, sessions, assets API
 │   │       ├── gallery_api.dart     # Unified gallery API (images/videos/audio) (Session 111)
+│   │       ├── personal_assistant_api.dart  # Chat, context, learning summary API (Session 112)
 │   │       ├── render_api.dart      # Render job API calls (Session 105-106)
 │   │       ├── pipelines_api.dart   # Pipeline templates + runs API (Session 109)
 │   │       ├── boardroom_api.dart   # Boardroom API calls
 │   │       └── coleadership_api.dart  # Co-leadership API
 │   │
 │   ├── features/                     # UI screens by feature
-│   │   ├── cockpit/                 # Session 107+110+111: Donkey Cockpit (Unified Home)
-│   │   │   └── donkey_cockpit_screen.dart  # Command center with 6 cards (added Galleries in S111)
+│   │   ├── cockpit/                 # Session 107+110+111+112: Donkey Cockpit (Unified Home)
+│   │   │   └── donkey_cockpit_screen.dart  # Command center with 7 cards (added Personal Assistant in S112)
 │   │   │
 │   │   ├── home/
 │   │   │   └── home_screen.dart     # Deprecated: Replaced by Cockpit (Session 107)
@@ -83,6 +86,9 @@ mobile/
 │   │   │   ├── galleries_screen.dart         # Unified gallery (images/videos/audio) with filters
 │   │   │   └── asset_detail_screen.dart      # Asset detail with metadata + actions
 │   │   │
+│   │   ├── assistant/                   # Session 112: Personal Assistant
+│   │   │   └── personal_assistant_screen.dart  # Chat interface with AI assistant
+│   │   │
 │   │   ├── coleadership/                # Deprecated: Replaced by leadership/ (Session 108)
 │   │   │   ├── decision_commit_screen.dart    # Legacy decision commit
 │   │   │   └── outcome_screen.dart            # Legacy outcome logging
@@ -99,22 +105,25 @@ mobile/
 │   ├── app.dart                      # App configuration
 │   └── main.dart                     # Entry point
 │
-├── test/                             # Tests (Session 101, 102, 106, 109)
+├── test/                             # Tests (Session 101, 102, 106, 109, 112)
 │   ├── models/
 │   │   ├── asset_models_test.dart   # Asset model serialization tests (Session 101)
 │   │   ├── settings_models_test.dart  # Settings model tests (Session 102)
 │   │   ├── render_job_test.dart     # RenderJob model tests (Session 106: 21 tests)
 │   │   └── pipeline_models_test.dart  # Pipeline model tests (Session 109: 20 tests)
 │   ├── providers/
-│   │   └── settings_provider_test.dart  # Settings provider tests (Session 102)
+│   │   ├── settings_provider_test.dart  # Settings provider tests (Session 102)
+│   │   └── personal_assistant_provider_test.dart  # Personal Assistant provider tests (Session 112: 10 tests)
 │   ├── services/
 │   │   ├── projects_api_test.dart   # API integration tests
-│   │   └── render_api_test.dart     # Render API tests (Session 106: 27 tests)
+│   │   ├── render_api_test.dart     # Render API tests (Session 106: 27 tests)
+│   │   └── personal_assistant_api_test.dart  # Personal Assistant API tests (Session 112: 8 tests)
 │   └── features/
 │       ├── donkey_cockpit_screen_test.dart  # Donkey Cockpit UI tests (Session 107: 38 tests)
 │       ├── project_list_screen_test.dart    # Project browser widget tests (Session 101)
 │       ├── settings_screen_test.dart        # Settings UI widget tests (Session 102)
-│       └── video_studio_screen_test.dart    # Video Studio UI tests (Session 106: 25 tests)
+│       ├── video_studio_screen_test.dart    # Video Studio UI tests (Session 106: 25 tests)
+│       └── personal_assistant_screen_test.dart  # Personal Assistant widget tests (Session 112: 8 tests)
 │
 ├── .env                              # Environment configuration (NOT in git)
 ├── .env.example                      # Example environment config
@@ -128,7 +137,63 @@ mobile/
 
 ## 🎯 Feature Organization
 
-### Session 108: Co-Leadership Mobile UI ⭐ NEW!
+### Session 112: Personal Assistant Mobile MVP ⭐ NEW!
+**Directory:** `lib/features/assistant/`
+
+**Screen:**
+- **PersonalAssistantScreen** (~480 lines) - Chat interface with AI assistant
+  - Chat message bubbles (user/assistant)
+  - Empty state with suggestion chips
+  - Text input with send button
+  - Stub microphone button (voice coming soon)
+  - Clear conversation option
+  - Real-time message updates
+  - Error handling with inline messages
+  - Confidence indicators for AI responses
+  - Suggested actions as chips
+  - Timestamp display
+
+**Models:**
+- AssistantMessage - Single chat message
+- AssistantConversation - Client-side conversation history
+- AssistantContext - User preferences and activity context
+- LearningSummary - Skills/preferences learned from user
+
+**Providers:**
+- assistantConversationProvider - StateNotifier for chat state management
+- assistantContextProvider - FutureProvider for user context
+- learningSummaryProvider - FutureProvider for learning stats
+- personalAssistantApiProvider - PersonalAssistantApi service (in api_provider.dart)
+
+**APIs (Django Backend):**
+- `POST /api/assistant/chat/` - Send message, get AI response
+- `GET /api/assistant/context/` - Get user context
+- `GET /api/assistant/learning/` - Get learning summary
+- `POST /api/assistant/feedback/` - Provide feedback on responses
+
+**Integration:**
+- Donkey Cockpit Card 4: Personal Assistant card with stats + "Open Chat" button
+- Stats: Total chats, skills learned (from learningSummary)
+- Navigation from DonkeyCockpitScreen
+
+**Tests:** 26 comprehensive tests (Session 112) - ALL PASSING ✅
+- 8 PersonalAssistantApi tests (sendMessage, getContext, getLearningSummary, provideFeedback)
+- 10 Provider tests (conversation management, state updates, error handling)
+- 8 Widget tests (empty state, message display, input handling, navigation)
+
+**Features:**
+- Client-side message history (backend is stateless)
+- Optimistic UI updates (user message shows immediately)
+- Error messages shown as system messages in chat
+- Suggestion chips for common questions
+- Material Design 3 styling
+- Pull-to-refresh in Cockpit card
+
+**Documentation:** `/docs/SESSION_112_PERSONAL_ASSISTANT_MOBILE.md` (~500 lines)
+
+---
+
+### Session 108: Co-Leadership Mobile UI
 **Directory:** `lib/features/leadership/` (+ `lib/features/boardroom/` integration)
 
 **Screens:**
@@ -927,8 +992,8 @@ flutter test --verbose
 
 ---
 
-**Structure Version:** 3.0
-**Last Updated:** Session 107 - November 15, 2025
+**Structure Version:** 3.1
+**Last Updated:** Session 112 - November 15, 2025
 **Maintained By:** Claude Code + Chris Partnership 🤝
 
-**"Unified command center, unified experience!"** 🏗️✨
+**"Unified command center with your personal AI assistant!"** 🏗️💬✨
