@@ -12,6 +12,7 @@ import '../services/api/projects_api.dart';
 import '../services/api/boardroom_api.dart';
 import '../services/api/coleadership_api.dart';
 import '../services/api/leadership_api.dart';
+import '../services/api/gallery_api.dart';
 import 'settings_provider.dart';
 
 /// API Client provider (uses settings for dynamic config)
@@ -44,4 +45,10 @@ final coleadershipApiProvider = Provider<CoLeadershipApi>((ref) {
 final leadershipApiProvider = Provider<LeadershipApi>((ref) {
   final client = ref.watch(apiClientProvider);
   return LeadershipApi(client);
+});
+
+/// Gallery API provider (Session 111)
+final galleryApiProvider = Provider<GalleryApi>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return GalleryApi(client);
 });
