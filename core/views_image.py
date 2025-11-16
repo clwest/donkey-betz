@@ -3785,7 +3785,7 @@ def get_project_sessions(request, project_id):
         sessions = AISession.objects.filter(
             id__in=session_ids,
             user=request.user
-        ).order_by('-last_activity')
+        ).order_by('-updated_at')
 
         # Format sessions
         sessions_data = []
@@ -3805,7 +3805,7 @@ def get_project_sessions(request, project_id):
                 'session_id': str(session.session_id),
                 'title': session.title or 'Untitled Session',
                 'created_at': session.created_at.isoformat(),
-                'last_activity': session.last_activity.isoformat(),
+                'last_activity': session.updated_at.isoformat(),
                 'total_images': session.total_images,
                 'total_videos': session.total_videos,
                 'total_audio': session.total_audio,
