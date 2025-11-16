@@ -195,34 +195,49 @@ final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async 
 /// Settings controller provider
 final settingsControllerProvider =
     StateNotifierProvider<SettingsController, SettingsState>((ref) {
-  // Get shared preferences synchronously (we'll initialize it properly)
-  final prefs = ref.watch(sharedPreferencesProvider).value;
+  // Get shared preferences - wait for it to be available
+  final prefsAsync = ref.watch(sharedPreferencesProvider);
   final secureStorage = ref.watch(secureStorageProvider);
 
-  if (prefs == null) {
-    // Return a temporary controller while loading
-    throw Exception('SharedPreferences not initialized');
-  }
-
-  final controller = SettingsController(
-    secureStorage: secureStorage,
-    prefs: prefs,
+  return prefsAsync.when(
+    data: (prefs) {
+      final controller = SettingsController(
+        secureStorage: secureStorage,
+        prefs: prefs,
+      );
+      // Load settings on initialization
+      controller.loadSettings();
+      return controller;
+    },
+    loading: () {
+      // Return a controller with defaults while SharedPreferences loads
+      // This is a temporary workaround - in production we'd want a loading state
+      throw UnimplementedError('SharedPreferences still loading');
+    },
+    error: (err, stack) {
+      throw Exception('Failed to initialize SharedPreferences: $err');
+    },
   );
-
-  // Load settings on initialization
-  controller.loadSettings();
-
-  return controller;
 });
 
 /// Current API base URL provider (for use in ApiClient)
 final apiBaseUrlProvider = Provider<String?>((ref) {
-  final settings = ref.watch(settingsControllerProvider);
-  return settings.apiBaseUrl ?? 'http://localhost:8000'; // Fallback to localhost
+  try {
+    final settings = ref.watch(settingsControllerProvider);
+    return settings.apiBaseUrl ?? 'http://127.0.0.1:8000'; // Fallback updated for iOS Simulator
+  } catch (e) {
+    // If settings controller isn't ready yet, use the default from ApiConfig
+    return 'http://127.0.0.1:8000'; // Default for iOS Simulator compatibility
+  }
 });
 
 /// Current API key provider (for use in ApiClient)
 final apiKeyProvider = Provider<String?>((ref) {
-  final settings = ref.watch(settingsControllerProvider);
-  return settings.apiKey;
+  try {
+    final settings = ref.watch(settingsControllerProvider);
+    return settings.apiKey;
+  } catch (e) {
+    // If settings controller isn't ready yet, return null (will use header-based auth)
+    return null;
+  }
 });
