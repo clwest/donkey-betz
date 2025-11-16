@@ -1,7 +1,7 @@
 # DonkeyOS Flutter Mobile - Project Structure
 
-**Last Updated:** Session 102 - November 15, 2025
-**Status:** Complete ✅ (with Auth & Settings)
+**Last Updated:** Session 110 - November 15, 2025
+**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Creative Pipelines)
 
 ---
 
@@ -20,6 +20,9 @@ mobile/
 │   │   ├── session.dart             # AISession model
 │   │   ├── image_asset.dart         # ImageAsset + SessionAssetsResponse (Session 101)
 │   │   ├── video_asset.dart         # VideoAsset model (Session 101)
+│   │   ├── render_job.dart          # RenderJob model with status/progress (Session 105-106)
+│   │   ├── pipeline_template.dart   # Pipeline template model (Session 109)
+│   │   ├── pipeline_run.dart        # Pipeline run with status tracking (Session 109)
 │   │   ├── boardroom_meeting.dart   # Boardroom meeting models
 │   │   ├── coleadership.dart        # Decision/outcome models
 │   │   ├── connection_status.dart   # Connection status enum (Session 102)
@@ -28,6 +31,8 @@ mobile/
 │   ├── providers/                    # Riverpod state providers
 │   │   ├── api_provider.dart        # API client providers (Session 102: uses settings)
 │   │   ├── projects_provider.dart   # Project/session/assets providers
+│   │   ├── render_providers.dart    # Render job providers (Session 105-106)
+│   │   ├── pipelines_provider.dart  # Pipeline templates + runs providers (Session 109)
 │   │   ├── boardroom_provider.dart  # Boardroom state
 │   │   ├── coleadership_provider.dart  # Co-leadership state
 │   │   └── settings_provider.dart   # Settings state + storage (Session 102)
@@ -35,49 +40,71 @@ mobile/
 │   ├── services/                     # API service layer
 │   │   └── api/
 │   │       ├── projects_api.dart    # Projects, sessions, assets API
+│   │       ├── render_api.dart      # Render job API calls (Session 105-106)
+│   │       ├── pipelines_api.dart   # Pipeline templates + runs API (Session 109)
 │   │       ├── boardroom_api.dart   # Boardroom API calls
 │   │       └── coleadership_api.dart  # Co-leadership API
 │   │
 │   ├── features/                     # UI screens by feature
+│   │   ├── cockpit/                 # Session 107+110: Donkey Cockpit (Unified Home)
+│   │   │   └── donkey_cockpit_screen.dart  # Command center with 5 cards (added Creative Pipelines in S110)
+│   │   │
 │   │   ├── home/
-│   │   │   └── home_screen.dart     # Main dashboard (Session 102: Settings icon)
+│   │   │   └── home_screen.dart     # Deprecated: Replaced by Cockpit (Session 107)
 │   │   │
 │   │   ├── projects/                # Session 101: Project Browser
 │   │   │   ├── project_list_screen.dart       # Browse all projects
 │   │   │   ├── project_detail_screen.dart     # Project + sessions
-│   │   │   ├── session_assets_screen.dart     # View session assets
+│   │   │   ├── session_assets_screen.dart     # View session assets (Session 105: +Render FAB)
 │   │   │   └── widgets/
 │   │   │       ├── asset_grid.dart            # Image/video grid
 │   │   │       └── asset_viewer.dart          # Full-screen viewer
+│   │   │
+│   │   ├── render/                  # Session 105-106: Video Render Pipeline
+│   │   │   ├── video_studio_screen.dart       # Main render hub (Session 106)
+│   │   │   ├── render_job_detail_screen.dart  # Live job status with polling
+│   │   │   └── render_jobs_screen.dart        # Render queue list
 │   │   │
 │   │   ├── settings/                # Session 102: Auth & Connection Settings
 │   │   │   └── settings_screen.dart           # API config + testing
 │   │   │
 │   │   ├── boardroom/
 │   │   │   ├── boardroom_form_screen.dart     # Start meeting
-│   │   │   └── boardroom_result_screen.dart   # Meeting results
+│   │   │   └── boardroom_result_screen.dart   # Meeting results (Session 108: +Navigate to detail)
 │   │   │
-│   │   ├── coleadership/
-│   │   │   ├── decision_commit_screen.dart    # Commit decisions
-│   │   │   └── outcome_screen.dart            # Log outcomes
+│   │   ├── pipelines/                   # Session 109: Creative Pipelines
+│   │   │   ├── pipelines_screen.dart         # Template list + recent runs (tabbed)
+│   │   │   └── pipeline_run_detail_screen.dart  # Run details with live polling
 │   │   │
-│   │   └── leadership/
-│   │       └── leadership_dashboard.dart  # Leadership stats (future)
+│   │   ├── coleadership/                # Deprecated: Replaced by leadership/ (Session 108)
+│   │   │   ├── decision_commit_screen.dart    # Legacy decision commit
+│   │   │   └── outcome_screen.dart            # Legacy outcome logging
+│   │   │
+│   │   ├── leadership/                  # Session 108: Co-Leadership Mobile UI
+│   │   │   ├── decisions_list_screen.dart         # List all decisions with filters
+│   │   │   ├── decision_detail_screen.dart        # Full decision detail + forms
+│   │   │   ├── coleadership_settings_screen.dart  # ITYS preferences
+│   │   │   └── leadership_dashboard.dart          # Leadership stats (future)
 │   │
 │   ├── app.dart                      # App configuration
 │   └── main.dart                     # Entry point
 │
-├── test/                             # Tests (Session 101, 102)
+├── test/                             # Tests (Session 101, 102, 106, 109)
 │   ├── models/
 │   │   ├── asset_models_test.dart   # Asset model serialization tests (Session 101)
-│   │   └── settings_models_test.dart  # Settings model tests (Session 102)
+│   │   ├── settings_models_test.dart  # Settings model tests (Session 102)
+│   │   ├── render_job_test.dart     # RenderJob model tests (Session 106: 21 tests)
+│   │   └── pipeline_models_test.dart  # Pipeline model tests (Session 109: 20 tests)
 │   ├── providers/
 │   │   └── settings_provider_test.dart  # Settings provider tests (Session 102)
 │   ├── services/
-│   │   └── projects_api_test.dart   # API integration tests
+│   │   ├── projects_api_test.dart   # API integration tests
+│   │   └── render_api_test.dart     # Render API tests (Session 106: 27 tests)
 │   └── features/
-│       ├── project_list_screen_test.dart  # Project browser widget tests (Session 101)
-│       └── settings_screen_test.dart      # Settings UI widget tests (Session 102)
+│       ├── donkey_cockpit_screen_test.dart  # Donkey Cockpit UI tests (Session 107: 38 tests)
+│       ├── project_list_screen_test.dart    # Project browser widget tests (Session 101)
+│       ├── settings_screen_test.dart        # Settings UI widget tests (Session 102)
+│       └── video_studio_screen_test.dart    # Video Studio UI tests (Session 106: 25 tests)
 │
 ├── .env                              # Environment configuration (NOT in git)
 ├── .env.example                      # Example environment config
@@ -91,25 +118,61 @@ mobile/
 
 ## 🎯 Feature Organization
 
-### Session 100 Part 13: Co-Leadership Features
-**Directory:** `lib/features/boardroom/` and `lib/features/coleadership/`
+### Session 108: Co-Leadership Mobile UI ⭐ NEW!
+**Directory:** `lib/features/leadership/` (+ `lib/features/boardroom/` integration)
 
 **Screens:**
-- BoardroomFormScreen - Start executive meetings
-- BoardroomResultScreen - View meeting perspectives
-- DecisionCommitScreen - Commit human decisions
-- OutcomeScreen - Log decision outcomes
+1. **DecisionsListScreen** (~300 lines)
+   - ListView of all leadership decisions
+   - Status chips (PENDING DECISION, PENDING OUTCOME, COMPLETE)
+   - Attribution chips (AI CORRECT, HUMAN CORRECT, BOTH CORRECT)
+   - Project chips when linked
+   - Empty state, error state, pull-to-refresh
+   - Navigation to detail screen
+
+2. **DecisionDetailScreen** (~1000 lines)
+   - Complete decision lifecycle screen
+   - Decision metadata (title, dates, project)
+   - Agent recommendations with stance/confidence
+   - Human decision form (commit decision, justification, override tracking)
+   - Outcome form (status, attribution, summary)
+   - "I Told You So" reflection card (purple, when triggered)
+   - Full form validation and state management
+
+3. **CoLeadershipSettingsScreen** (~420 lines)
+   - Switch: Allow "I Told You So" reflections
+   - Radio buttons: Communication tone (serious/playful)
+   - Save/reset functionality
+   - Success/error messaging
+
+**Integration:**
+- BoardroomResultScreen: "Open Leadership Decision" button → DecisionDetailScreen
+- SettingsScreen: "Co-Leadership Preferences" link → CoLeadershipSettingsScreen
 
 **Models:**
-- BoardroomMeeting
-- ExecutivePerspective
-- Decision
-- Outcome
+- CoLeadershipDecision (list view - lightweight)
+- CoLeadershipDecisionDetail (full detail)
+- ProjectInfo, AgentRecommendation, HumanDecision, DecisionOutcome
+- CoLeadershipPreferences, ToneChoice
 
-**APIs:**
+**New APIs (Session 108):**
+- `GET /api/v1/coleadership/decisions/` - List decisions (paginated)
+- `GET /api/v1/coleadership/decisions/{id}/` - Get decision detail
+- `GET /api/v1/coleadership/preferences/` - Get preferences
+- `POST /api/v1/coleadership/preferences/` - Update preferences
+
+**Existing APIs (Session 99):**
 - `POST /api/v1/coleadership/boardroom/start/`
 - `POST /api/v1/coleadership/decisions/{id}/human_decision/`
 - `POST /api/v1/coleadership/decisions/{id}/outcome/`
+- `GET /api/v1/coleadership/stats/`
+
+**Decision Flow:**
+1. Run boardroom meeting → Decision created
+2. View decision detail → Review agent recommendations
+3. Commit human decision → Optional override tracking
+4. Log outcome → Attribution (AI/Human/Both)
+5. Receive "I Told You So" reflection (if opted-in and AI was correct)
 
 ---
 
@@ -164,6 +227,150 @@ mobile/
 
 ---
 
+### Session 102: Auth & Connection Settings
+**Directory:** `lib/features/settings/`
+
+**Screen:**
+- **SettingsScreen** - API configuration and connection testing
+  - Dynamic API base URL configuration
+  - Secure API key storage (FlutterSecureStorage)
+  - Real-time connection testing with /health/ping/
+  - Form validation and status indicators
+  - Save/reset functionality
+
+**Models:**
+- ConnectionStatus - Enum (disconnected, connecting, connected, error)
+- SettingsState - Settings state management
+
+**Features:**
+- FlutterSecureStorage for secure credential storage
+- X-API-Key header authentication (replaced Bearer token)
+- Real-time connection health checks
+- Material Design form validation
+
+**Tests:** 6 Django + 27 Flutter tests (Session 102)
+
+---
+
+### Session 107: Donkey Cockpit v1 (Unified Home) ⭐ NEW!
+**Directory:** `lib/features/cockpit/`
+
+**Screen:**
+- **DonkeyCockpitScreen** (640 lines) - Unified command center replacing HomeScreen
+  - Welcome header with "Command Center" branding
+  - 4 main cards: Leadership, Projects, Video Studio, System
+  - Pull-to-refresh for all data sources
+  - 6 navigation buttons to all major features
+  - Material Design 3 with stat chips
+  - Graceful degradation when APIs fail
+
+**Card Structure:**
+1. **Leadership & Decisions**
+   - Stats from `leadershipStatsProvider` (total decisions, override rate, success rate)
+   - Navigate to LeadershipDashboard (Session 104)
+   - Start Boardroom Meeting (Session 100)
+
+2. **Projects & Sessions**
+   - Stats from `projectsProvider` (active projects, recent activity)
+   - Navigate to ProjectListScreen (Session 101)
+
+3. **Video Studio & Renders**
+   - Stats from `renderJobListProvider` (active jobs, recent renders)
+   - Navigate to VideoStudioScreen (Session 106)
+   - Navigate to RenderJobsScreen (Session 105)
+
+4. **System & Agents**
+   - Static stats (v1: "10+" agents, "34" features)
+   - Navigate to SettingsScreen (Session 102)
+
+**Integration:**
+- Replaced HomeScreen as app entry point in `app.dart`
+- Added named route `/cockpit`
+- ConsumerStatefulWidget with initState for data fetching
+- Pull-to-refresh refreshes all 3 providers simultaneously
+
+**Tests:** 38 structural tests (Session 107)
+- Welcome Header (1 test)
+- Leadership & Decisions card (8 tests)
+- Projects & Sessions card (6 tests)
+- Video Studio & Renders card (8 tests)
+- System & Agents card (4 tests)
+- Pull-to-Refresh (2 tests)
+- Data Initialization (2 tests)
+- Navigation Integration (2 tests)
+- UI Styling (4 tests)
+- Error Handling (3 tests)
+
+**Documentation:** `/docs/SESSION_107_DONKEY_COCKPIT_V1.md` (380+ lines)
+
+---
+
+### Session 105-106: Video Render Pipeline
+**Directory:** `lib/features/render/`
+
+#### Backend (Session 105)
+**Django RenderJob API:**
+- `POST /api/v1/render-jobs/create/` - Create render job with Resolve Node dispatch
+- `GET /api/v1/render-jobs/<uuid>/` - Get job status (live polling of Resolve Node)
+- `GET /api/v1/render-jobs/` - List user's render jobs with filtering
+
+**RenderJob Model:**
+- Status flow: `queued` → `dispatching` → `rendering` → `done`/`error`
+- Progress tracking (0.0-1.0)
+- Auto-generated titles (Session 106): "Session render: {title}"
+- Integration with DaVinci Resolve Node (Session 103)
+
+#### Mobile Screens (Session 105-106)
+
+1. **VideoStudioScreen** (Session 106 - 444 lines)
+   - Main hub for video rendering features
+   - **Quick Actions:** View Queue, New Render (info dialog)
+   - **Recent Renders:** Last 5 jobs with status, progress, error states
+   - **Coming Soon:** 5 future features (batch rendering, templates, notifications, analytics, settings)
+   - Pull-to-refresh support
+   - Material Design 3 with status color-coding
+
+2. **RenderJobDetailScreen** (Session 105)
+   - Live job status with 3-second polling
+   - Real-time progress updates
+   - Status cards (queued, dispatching, rendering, done, error)
+   - Download button when complete (url_launcher)
+   - Automatic polling cleanup on dispose
+
+3. **RenderJobsScreen** (Session 105)
+   - List all user's render jobs
+   - Optional project filtering
+   - Pull-to-refresh
+   - Status badges with color-coded icons
+   - Progress bars for active jobs
+   - Error messages for failed jobs
+
+**Integration:**
+- SessionAssetsScreen (Session 105): Added "Render Video" FAB when assets exist
+- Navigates to RenderJobDetailScreen with initialJob (no flicker)
+
+**Models:**
+- RenderJob (Freezed) - Job status, progress, title, timestamps
+- RenderJobStatus enum - 5 states with colors and icons
+
+**Providers:**
+- renderApiProvider - RenderApi service
+- renderJobProvider (family) - Single job tracking with live polling
+- renderJobListProvider - Job list management
+- createRenderJobProvider - Job creation function
+
+**APIs:**
+- POST /api/v1/render-jobs/create/ - Create with sessionId, projectId?, timeline Name?, template?
+- GET /api/v1/render-jobs/<uuid>/ - Get with backend→node polling
+- GET /api/v1/render-jobs/?project_id=<uuid>&limit=20 - List with filters
+
+**Tests:** 73 comprehensive tests (Session 106)
+- 21 RenderJob model tests (serialization, getters, edge cases)
+- 27 RenderApi service tests (create, get, list, poll, errors)
+- 25 VideoStudioScreen widget tests (Quick Actions, Recent Renders, Coming Soon)
+
+---
+
 ## 📦 Dependencies
 
 ### Production
@@ -191,6 +398,7 @@ flutter_dotenv: ^5.1.0              # .env file support
 cupertino_icons: ^1.0.6             # iOS-style icons
 intl: ^0.18.1                       # Internationalization and date formatting
 cached_network_image: ^3.3.0        # Efficient image loading (Session 101)
+url_launcher: ^6.2.0                 # Open URLs in browser (Session 106)
 ```
 
 ### Development
@@ -227,8 +435,14 @@ projectsProvider                                  // FutureProvider<List<Project
       └─> projectSessionsProvider(projectId)     // FutureProvider.family<List<AISession>, String>
           └─> sessionAssetsProvider(sessionId)   // FutureProvider.family<SessionAssetsResponse, String>
 
-// Leadership Data
-leadershipStatsProvider        // FutureProvider<LeadershipStats>
+// Leadership Data (Session 99 + Session 108)
+leadershipStatsProvider                         // FutureProvider<LeadershipStats>
+decisionsListProvider                           // FutureProvider<List<CoLeadershipDecision>>
+decisionDetailProvider(decisionId)              // FutureProvider.family<CoLeadershipDecisionDetail, String>
+coLeadershipPreferencesProvider                 // FutureProvider<CoLeadershipPreferences>
+updatePreferencesProvider                       // Provider<Future<CoLeadershipPreferences> Function()>
+decisionCommitControllerProvider                // StateNotifierProvider<DecisionCommitController, DecisionCommitState>
+outcomeLogControllerProvider                    // StateNotifierProvider<OutcomeLogController, OutcomeLogState>
 ```
 
 ### Provider Pattern
@@ -306,24 +520,114 @@ class ApiConfig {
 
 ---
 
+## 🌟 Golden Paths (Session 110)
+
+**Purpose:** Official demo-ready user flows that showcase the platform's unique value in 5-10 minutes.
+
+### Golden Path #1: Strategic Decision Loop
+**Tagline:** AI-Human Co-Leadership: Collaborative Decision-Making with Outcome Tracking
+
+**Entry Point:** Donkey Cockpit → Strategic Co-Leadership Card → "Start Boardroom Meeting"
+
+**Flow:**
+```
+1. DonkeyCockpitScreen → Tap "Start Boardroom Meeting"
+2. BoardroomFormScreen → Enter topic, submit
+3. DecisionDetailScreen → Review AI agent recommendations (CTO, COO, PM)
+4. DecisionCommitScreen → Commit decision with justification
+5. DecisionDetailScreen → Log outcome when ready
+6. LeadershipDashboard → View stats and reflection
+```
+
+**Demo Duration:** 4-6 minutes
+
+**Value Shown:**
+- AI and human work as equals
+- Full accountability (outcomes tracked and attributed)
+- Learning loop (system gets smarter over time)
+
+### Golden Path #2: Idea to Publish-Ready Assets
+**Tagline:** One-Tap Creative Workflows: From Concept to Professional Content
+
+**Entry Point:** Donkey Cockpit → Creative Pipelines Card → "Idea → Images" or "View All Pipelines"
+
+**Flow:**
+```
+1. DonkeyCockpitScreen → Tap "Idea → Images" shortcut
+2. PipelinesScreen → View "Idea to Image Set" template
+3. LaunchPipelineDialog → Enter idea and parameters, launch
+4. PipelineRunDetailScreen → Watch live progress (3-second polling)
+5. Outputs Card → View generated images and prompts
+6. Recent Runs Tab → See completed run history
+```
+
+**Demo Duration:** 2-4 minutes (including 45-60 seconds of actual execution)
+
+**Value Shown:**
+- One-tap workflows (vs manual multi-step processes)
+- Real AI service orchestration (GPT-4o + Stability AI)
+- 45-second execution (vs 30+ minutes manual)
+
+**Setup:** Run `python manage.py seed_golden_path_demo` to create demo data for both paths.
+
+---
+
 ## 📱 Screen Flow
 
-### Main Navigation Flow
+### Main Navigation Flow (Session 107+110: Updated with Creative Pipelines)
 
 ```
-Home Screen
-  ├─> "Start Executive Meeting"
-  │     └─> BoardroomFormScreen
-  │           └─> BoardroomResultScreen
-  │                 └─> DecisionCommitScreen
-  │                       └─> OutcomeScreen
+DonkeyCockpitScreen (Unified Home - Session 107)
+  ├─> Leadership Card
+  │   ├─> "Open Leadership Cockpit"
+  │   │     └─> LeadershipDashboard (Session 104)
+  │   │           └─> Can navigate to projects/sessions
+  │   │
+  │   └─> "Start Boardroom Meeting"
+  │         └─> BoardroomFormScreen
+  │               └─> BoardroomResultScreen
+  │                     └─> "Open Leadership Decision" (Session 108)
+  │                           └─> DecisionDetailScreen
+  │                                 ├─> Commit decision form
+  │                                 └─> Log outcome form
   │
-  └─> "Browse Projects" (Session 101)
-        └─> ProjectListScreen
-              └─> ProjectDetailScreen
-                    └─> SessionAssetsScreen
-                          └─> AssetGrid
-                                └─> AssetViewer (full-screen)
+  │ (NEW: Session 108)
+  │   └─> DecisionsListScreen (accessible from Leadership Dashboard)
+  │         └─> DecisionDetailScreen
+  │               ├─> View agent recommendations
+  │               ├─> Commit human decision (if not committed)
+  │               ├─> Log outcome (if committed but no outcome)
+  │               └─> See "I Told You So" reflection (if triggered)
+  │
+  ├─> Projects Card
+  │   └─> "Open Project Browser" (Session 101)
+  │         └─> ProjectListScreen
+  │               └─> ProjectDetailScreen
+  │                     └─> SessionAssetsScreen
+  │                           ├─> AssetGrid
+  │                           │     └─> AssetViewer (full-screen)
+  │                           │
+  │                           └─> "Render Video" FAB (Session 105)
+  │                                 └─> RenderJobDetailScreen
+  │
+  ├─> Video Studio Card (Session 106)
+  │   ├─> "Open Video Studio"
+  │   │     └─> VideoStudioScreen
+  │   │           ├─> Recent Renders → RenderJobDetailScreen
+  │   │           └─> "View Queue" → RenderJobsScreen
+  │   │
+  │   └─> "View Render Queue"
+  │         └─> RenderJobsScreen
+  │               └─> Tap job → RenderJobDetailScreen
+  │
+  └─> System Card
+      └─> "Settings" (Session 102 + Session 108)
+            └─> SettingsScreen
+                  ├─> API configuration & connection testing
+                  └─> "Co-Leadership Preferences" (Session 108)
+                        └─> CoLeadershipSettingsScreen
+                              ├─> Allow "I Told You So" reflections
+                              └─> Communication tone (serious/playful)
 ```
 
 ---
@@ -492,7 +796,14 @@ flutter build appbundle --release  # For Google Play
 - **README.md** - Overview and quick start
 - **BUILD_INSTRUCTIONS.md** - Detailed build instructions
 - **MOBILE_STRUCTURE.md** - This file
-- **/docs/SESSION_101_PROJECT_BROWSER.md** - Session 101 documentation
+- **/docs/SESSION_100_UNIFIED_SYSTEM_INTEGRATION.md** - Session 100: Boardroom + Co-Leadership
+- **/docs/SESSION_101_PROJECT_BROWSER.md** - Session 101: Project Browser
+- **/docs/SESSION_102_AUTH_AND_SETTINGS.md** - Session 102: Auth & Settings
+- **/docs/SESSION_104_LEADERSHIP_COCKPIT.md** - Session 104: Leadership Dashboard
+- **/docs/SESSION_105_RENDER_PIPELINE_MVP.md** - Session 105: Render Backend
+- **/docs/SESSION_106_VIDEO_STUDIO_V1.md** - Session 106: Video Studio
+- **/docs/SESSION_107_DONKEY_COCKPIT_V1.md** - Session 107: Donkey Cockpit
+- **/docs/SESSION_108_COLEADERSHIP_MOBILE_UI.md** - Session 108: Co-Leadership Mobile UI ⭐ NEW!
 
 ---
 
@@ -605,8 +916,8 @@ flutter test --verbose
 
 ---
 
-**Structure Version:** 2.0
-**Last Updated:** Session 101 - November 15, 2025
+**Structure Version:** 3.0
+**Last Updated:** Session 107 - November 15, 2025
 **Maintained By:** Claude Code + Chris Partnership 🤝
 
-**"Clean structure, clean code, clean mind!"** 🏗️✨
+**"Unified command center, unified experience!"** 🏗️✨

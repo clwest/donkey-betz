@@ -12,6 +12,7 @@ from .views import (
     ContentGenerationViewSet, ContentWorkflowViewSet, WorkflowExecutionViewSet,
     ContentAnalyticsViewSet, blog_list
 )
+from . import minifig_views
 
 # Create router for ViewSets
 router = DefaultRouter()
@@ -31,6 +32,9 @@ urlpatterns = [
     # Additional endpoints
     path('blog/list/', blog_list, name='blog-list'),
     path('social/list/', blog_list, name='social-list'),  # Using same view for now
+    # MiniFig Assets API (Session 111)
+    path('minifigs/<uuid:minifig_id>/', minifig_views.get_minifig_detail, name='minifig-detail'),
+    path('minifigs/', minifig_views.list_minifigs, name='minifig-list'),
 ]
 
 # WebSocket URL patterns (to be included in core routing)

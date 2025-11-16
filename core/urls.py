@@ -1056,6 +1056,8 @@ urlpatterns = [
     path('api/v1/style-memory/', include('style_memory.urls')),  # Style Memory module
     path('api/v1/agents/', include('agents.urls')),  # Agent Orchestra module
     path('api/v1/coleadership/', include('coleadership.urls')),  # AI-Human Co-Leadership (Session 99)
+    path('api/v1/render-jobs/', include('rendering.urls')),  # Render Jobs & DaVinci Integration (Session 105)
+    path('api/v1/pipelines/', include('pipelines.urls')),  # Creative Pipelines v1 - Template-Based Orchestration (Session 109)
     path('api/v1/sports/', include('sports.urls')),  # Sports/Betting module
     path('api/v1/content/', include('content.urls')),  # Content Generation module
     path('api/v1/self-awareness/', include('self_awareness.urls')),  # Self-Awareness module

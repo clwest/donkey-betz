@@ -97,6 +97,8 @@ INSTALLED_APPS = [
     # 'memory',                  # Unified Memory System
     'agents',                  # Agent Registry & Orchestration
     'coleadership',            # AI-Human Co-Leadership System (Session 99)
+    'rendering',               # Render Jobs & DaVinci Integration (Session 105)
+    'pipelines',               # Creative Pipelines v1 - Template-Based Orchestration (Session 109)
     # 'ai_services',            # Multi-Provider AI Interface
     'ai_core.spiders',         # Spider Army System
     'ai_core',                 # AI Core app for agents, spiders, intelligence

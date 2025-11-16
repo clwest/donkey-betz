@@ -1,0 +1,11 @@
+# Code generation configuration for json_serializable
+#
+# Session 104 - Enable snake_case field renaming for backend compatibility
+
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          field_rename: snake
+          explicit_to_json: true
