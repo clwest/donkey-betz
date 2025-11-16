@@ -1,12 +1,12 @@
 /// Sketch-to-Image Screen - Convert sketches to detailed images
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class SketchToImageScreen extends ConsumerStatefulWidget {
   const SketchToImageScreen({super.key});
@@ -17,23 +17,23 @@ class SketchToImageScreen extends ConsumerStatefulWidget {
 
 class _SketchToImageScreenState extends ConsumerState<SketchToImageScreen> {
   final _promptController = TextEditingController();
-  File? _sketchImage;
+  Uint8List? _imageBytes;
+  String? _fileName;
   String? _resultImageUrl;
   bool _isProcessing = false;
   String? _errorMessage;
   double _controlStrength = 0.7;
 
-  Future<void> _pickSketch() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() => _sketchImage = File(pickedFile.path));
-    }
+  void _onImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _generateFromSketch() async {
-    if (_sketchImage == null) {
+    if (_imageBytes == null) {
       setState(() => _errorMessage = 'Please select a sketch');
       return;
     }
@@ -51,12 +51,13 @@ class _SketchToImageScreenState extends ConsumerState<SketchToImageScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/sketch-to-image/',
-        {
+        fileBytes: {'image': _imageBytes!},
+        fileName: _fileName ?? 'sketch.jpg',
+        fields: {
           'prompt': _promptController.text.trim(),
-          'sketch_url': 'temp', // TODO: File upload
-          'control_strength': _controlStrength,
+          'control_strength': _controlStrength.toString(),
         },
       );
 
@@ -86,32 +87,12 @@ class _SketchToImageScreenState extends ConsumerState<SketchToImageScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Sketch Upload
-            GestureDetector(
-              onTap: _pickSketch,
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.purple, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _sketchImage != null
-                    ? Image.file(_sketchImage!, fit: BoxFit.contain)
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.draw, size: 64, color: Colors.purple),
-                            SizedBox(height: 8),
-                            Text('Tap to upload sketch',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            Text('Line drawing, wireframe, or rough sketch',
-                                style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-              ),
+            // Dual-Source Image Picker
+            DualSourceImagePicker(
+              currentImageBytes: _imageBytes,
+              onImageSelected: _onImageSelected,
+              placeholderText: 'Upload sketch (line drawing or wireframe)',
+              height: 200,
             ),
             const SizedBox(height: 16),
 

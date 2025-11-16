@@ -1,12 +1,12 @@
 /// Inpaint Screen - Mask-based editing
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class InpaintScreen extends ConsumerStatefulWidget {
   const InpaintScreen({super.key});
@@ -17,29 +17,32 @@ class InpaintScreen extends ConsumerStatefulWidget {
 
 class _InpaintScreenState extends ConsumerState<InpaintScreen> {
   final _promptController = TextEditingController();
-  File? _sourceImage;
-  File? _maskImage;
+  Uint8List? _sourceImageBytes;
+  String? _sourceFileName;
+  Uint8List? _maskImageBytes;
+  String? _maskFileName;
   String? _resultImageUrl;
   bool _isProcessing = false;
   String? _errorMessage;
 
-  Future<void> _pickImage(bool isMask) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  void _onSourceImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _sourceImageBytes = bytes;
+      _sourceFileName = fileName;
+      _errorMessage = null;
+    });
+  }
 
-    if (pickedFile != null) {
-      setState(() {
-        if (isMask) {
-          _maskImage = File(pickedFile.path);
-        } else {
-          _sourceImage = File(pickedFile.path);
-        }
-      });
-    }
+  void _onMaskImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _maskImageBytes = bytes;
+      _maskFileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _inpaint() async {
-    if (_sourceImage == null || _maskImage == null) {
+    if (_sourceImageBytes == null || _maskImageBytes == null) {
       setState(() => _errorMessage = 'Please select both source and mask images');
       return;
     }
@@ -52,12 +55,15 @@ class _InpaintScreenState extends ConsumerState<InpaintScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/inpaint/',
-        {
+        fileBytes: {
+          'image': _sourceImageBytes!,
+          'mask': _maskImageBytes!,
+        },
+        fileName: _sourceFileName ?? 'image.jpg',
+        fields: {
           'prompt': _promptController.text.trim(),
-          'image_url': 'temp', // TODO: File upload
-          'mask_url': 'temp',
         },
       );
 
@@ -89,35 +95,21 @@ class _InpaintScreenState extends ConsumerState<InpaintScreen> {
           children: [
             const Text('1. Source Image:', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () => _pickImage(false),
-              child: Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.indigo),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _sourceImage != null
-                    ? Image.file(_sourceImage!, fit: BoxFit.cover)
-                    : const Center(child: Icon(Icons.add_photo_alternate, size: 48)),
-              ),
+            DualSourceImagePicker(
+              currentImageBytes: _sourceImageBytes,
+              onImageSelected: _onSourceImageSelected,
+              placeholderText: 'Select source image',
+              height: 150,
             ),
             const SizedBox(height: 16),
 
             const Text('2. Mask Image (area to change):', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () => _pickImage(true),
-              child: Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.indigo),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _maskImage != null
-                    ? Image.file(_maskImage!, fit: BoxFit.cover)
-                    : const Center(child: Icon(Icons.brush, size: 48)),
-              ),
+            DualSourceImagePicker(
+              currentImageBytes: _maskImageBytes,
+              onImageSelected: _onMaskImageSelected,
+              placeholderText: 'Select mask image',
+              height: 150,
             ),
             const SizedBox(height: 16),
 
