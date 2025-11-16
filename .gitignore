@@ -161,6 +161,9 @@ backup_*/
 *.backup
 *.bak
 
+# Archived Code (Session 115 Part 3 - Mobile archived for future)
+_archived/
+
 # Testing
 .coverage
 htmlcov/
