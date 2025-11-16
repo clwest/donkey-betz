@@ -23169,7 +23169,8 @@ Your analytics will appear here automatically!`);
             try {
                 // Fetch image gallery
                 const response = await authenticatedFetch('/api/v1/gallery/all/?type=images&limit=100');
-                const images = response.results.filter(item => item.type === 'image');
+                const data = await response.json();
+                const images = (data.results || []).filter(item => item.type === 'image');
 
                 if (images.length === 0) {
                     alert('❌ No images in gallery!\n\nGenerate some images first.');
@@ -23311,17 +23312,35 @@ Your analytics will appear here automatically!`);
                     })
                 });
 
-                if (response.status === 'processing' || response.id) {
-                    minifigState.currentMiniFigId = response.id;
-                    pollMiniFigStatus(response.id);
+                // Check if response is OK before parsing JSON
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('❌ Server error response:', text.substring(0, 500));
+                    throw new Error(`Server error (${response.status}): ${response.statusText}`);
+                }
+
+                // Check content type before parsing JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('❌ Non-JSON response:', text.substring(0, 500));
+                    throw new Error(`Expected JSON but got ${contentType || 'unknown content type'}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.minifig_id) {
+                    minifigState.currentMiniFigId = data.minifig_id;
+                    pollMiniFigStatus(data.minifig_id);
                 } else {
-                    throw new Error(response.error || 'Failed to start pipeline');
+                    throw new Error(data.error || 'Failed to start pipeline');
                 }
 
             } catch (error) {
                 console.error('❌ MiniFig creation error:', error);
                 document.getElementById('minifigStatusText').textContent = `Error: ${error.message}`;
-                document.getElementById('minifigStatus').querySelector('.card').classList.add('border-danger');
+                const statusCard = document.getElementById('minifigStatus');
+                if (statusCard) statusCard.style.borderColor = '#dc3545';
                 document.getElementById('launchMiniFigBtn').disabled = false;
             }
         }
@@ -23335,13 +23354,20 @@ Your analytics will appear here automatically!`);
                 try {
                     attempts++;
                     const response = await authenticatedFetch(`/api/v1/content/minifigs/${minifigId}/`);
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to fetch status');
+                    }
+
+                    const minifig = data.minifig;
 
                     // Update progress
                     const progress = Math.min(95, Math.floor((attempts / maxAttempts) * 100));
                     document.getElementById('minifigProgress').style.width = `${progress}%`;
-                    document.getElementById('minifigStatusText').textContent = response.status || 'Processing...';
+                    document.getElementById('minifigStatusText').textContent = minifig.status || 'Processing...';
 
-                    if (response.status === 'completed') {
+                    if (minifig.status === 'completed') {
                         clearInterval(interval);
                         document.getElementById('minifigProgress').style.width = '100%';
 
@@ -23352,9 +23378,9 @@ Your analytics will appear here automatically!`);
                             document.getElementById('launchMiniFigBtn').disabled = false;
                         }, 500);
 
-                    } else if (response.status === 'failed' || attempts >= maxAttempts) {
+                    } else if (minifig.status === 'failed' || attempts >= maxAttempts) {
                         clearInterval(interval);
-                        throw new Error(response.error || 'Pipeline timed out');
+                        throw new Error(minifig.error_message || 'Pipeline timed out');
                     }
 
                 } catch (error) {
@@ -23375,11 +23401,17 @@ Your analytics will appear here automatically!`);
 
             try {
                 const response = await authenticatedFetch(`/api/v1/content/minifigs/${minifigState.currentMiniFigId}/`);
+                const data = await response.json();
 
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to fetch MiniFig details');
+                }
+
+                const minifig = data.minifig;
                 let fileUrl;
-                if (format === 'obj') fileUrl = response.obj_file;
-                else if (format === 'stl') fileUrl = response.stl_file;
-                else if (format === 'glb') fileUrl = response.glb_file;
+                if (format === 'obj') fileUrl = minifig.three_d_file;  // Backend stores in three_d_file
+                else if (format === 'stl') fileUrl = minifig.three_d_file;
+                else if (format === 'glb') fileUrl = minifig.three_d_file;
 
                 if (!fileUrl) {
                     alert(`❌ .${format.toUpperCase()} file not available yet. Please wait a moment and try again.`);
@@ -23414,7 +23446,13 @@ Your analytics will appear here automatically!`);
                 if (filter) url += `&style=${filter}`;
 
                 const response = await authenticatedFetch(url);
-                const minifigs = response.results || [];
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load MiniFigs');
+                }
+
+                const minifigs = data.minifigs || [];
 
                 loading.style.display = 'none';
 
@@ -23423,23 +23461,27 @@ Your analytics will appear here automatically!`);
                     return;
                 }
 
-                grid.innerHTML = minifigs.map(mf => `
+                grid.innerHTML = minifigs.map(mf => {
+                    // Extract style and scale from metadata
+                    const style = mf.metadata?.style || 'Unknown';
+                    const scale = mf.metadata?.scale || 'N/A';
+
+                    return `
                     <div class="col-md-4">
                         <div class="card bg-dark border-cyan h-100">
                             <div class="card-body">
-                                <h6 class="text-cyan mb-2">🤖 ${mf.style || 'Unknown'} Style</h6>
-                                <p class="small text-muted mb-2">Scale: ${mf.scale || 'N/A'}</p>
+                                <h6 class="text-cyan mb-2">🤖 ${style} Style</h6>
+                                <p class="small text-muted mb-2">Scale: ${scale}</p>
                                 <p class="small text-muted mb-2">Status: ${mf.status || 'Unknown'}</p>
                                 <p class="small text-muted mb-3">Created: ${new Date(mf.created_at).toLocaleDateString()}</p>
                                 <div class="d-grid gap-2">
-                                    ${mf.obj_file ? `<a href="${mf.obj_file}" class="btn btn-sm btn-outline-success" download>📥 .OBJ</a>` : ''}
-                                    ${mf.stl_file ? `<a href="${mf.stl_file}" class="btn btn-sm btn-outline-success" download>📥 .STL</a>` : ''}
-                                    ${mf.glb_file ? `<a href="${mf.glb_file}" class="btn btn-sm btn-outline-success" download>📥 .GLB</a>` : ''}
+                                    ${mf.three_d_file ? `<a href="${mf.three_d_file}" class="btn btn-sm btn-outline-success" download>📥 Download 3D File</a>` : '<p class="small text-warning">File not available</p>'}
                                 </div>
                             </div>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
 
             } catch (error) {
                 console.error('❌ Failed to load gallery:', error);

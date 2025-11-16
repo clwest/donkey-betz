@@ -406,6 +406,43 @@ Response: { count: N, results: [...] }
 
 ---
 
+---
+
+## 🐛 Session 115 Part 2: MiniFig Backend Integration & Bug Fixes
+
+**What Happened:** After building the UI, discovered the backend pipeline endpoint was missing, causing 404 errors.
+
+### Backend Endpoint Created:
+**File:** `pipelines/views.py`
+- Added `launch_minifig_pipeline()` view function (~90 lines)
+- Validates image_ids (1-4), style (cartoon/realistic), scale (28mm-75mm)
+- Calls `create_minifig_asset_from_images()` from Session 111
+- Returns `{success: true, minifig_id: "uuid", status: "completed"}`
+
+**File:** `pipelines/urls.py`
+- Added URL pattern: `path('images_to_minifigs/launch/', views.launch_minifig_pipeline)`
+
+### Frontend JSON Parsing Fixes:
+All 5 MiniFig JavaScript functions were missing `await response.json()`:
+1. ✅ `selectMiniFigImagesFromGallery()` - Added JSON parsing
+2. ✅ `launchMiniFigPipeline()` - Added JSON parsing + response validation
+3. ✅ `pollMiniFigStatus()` - Added JSON parsing + data.minifig access
+4. ✅ `downloadMiniFigAsset()` - Added JSON parsing + data.minifig.three_d_file
+5. ✅ `loadMiniFigGallery()` - Added JSON parsing + data.minifigs access
+
+### Critical Debugging Discovery:
+**Problem:** Browser kept getting 404 even though curl showed endpoint working.
+**Root Cause:** TWO stale Django servers were running on port 8000 from earlier in the day!
+**Solution:** Killed both processes, started fresh with `make start`
+
+### Total Code Added (Session 115 Parts 1 & 2):
+- **Backend:** ~90 lines (pipelines/views.py + urls.py)
+- **Frontend:** ~1,180 lines (HTML + JavaScript)
+- **Documentation:** 415 lines (this file)
+- **Total:** ~1,685 lines production code
+
+---
+
 **Session 115 Complete!** ✅
 
 Next session can focus on:

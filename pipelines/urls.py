@@ -16,4 +16,7 @@ urlpatterns = [
     # Runs - Combined GET (list) and POST (create) endpoint
     path('runs/<uuid:run_id>/', views.get_run_detail, name='get-run-detail'),
     path('runs/', views.runs_endpoint, name='runs'),
+
+    # MiniFig Pipeline (Session 115)
+    path('images_to_minifigs/launch/', views.launch_minifig_pipeline, name='launch-minifig-pipeline'),
 ]
