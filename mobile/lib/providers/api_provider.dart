@@ -2,9 +2,11 @@
 ///
 /// Session 100 Part 13 - Flutter Cockpit
 /// Session 102 - Mobile Auth & Connection Settings (Dynamic config integration)
+/// Session 110 - Auth token fix for 401 errors
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../core/api_client.dart';
 import '../services/api/projects_api.dart';
 import '../services/api/boardroom_api.dart';
@@ -16,7 +18,8 @@ import 'settings_provider.dart';
 final apiClientProvider = Provider<ApiClient>((ref) {
   final baseUrl = ref.watch(apiBaseUrlProvider);
   final apiKey = ref.watch(apiKeyProvider);
-  return ApiClient(baseUrl: baseUrl, apiKey: apiKey);
+  final authToken = dotenv.env['AUTH_TOKEN']; // Read from .env
+  return ApiClient(baseUrl: baseUrl, apiKey: apiKey, authToken: authToken);
 });
 
 /// Projects API provider

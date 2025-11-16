@@ -52,20 +52,25 @@ class ApiException implements Exception {
 class ApiClient {
   final String _baseUrl;
   final String? _apiKey;
+  final String? _authToken;
   final http.Client _httpClient;
 
   ApiClient({
     String? baseUrl,
     String? apiKey,
+    String? authToken,
     http.Client? httpClient,
   })  : _baseUrl = baseUrl ?? ApiConfig.defaultBaseUrl,
         _apiKey = apiKey,
+        _authToken = authToken,
         _httpClient = httpClient ?? http.Client();
 
-  /// Request headers with API key authentication
+  /// Request headers with authentication
+  /// Supports both API key (X-API-Key) and token auth (Authorization: Token <token>)
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        if (_authToken != null) 'Authorization': 'Token $_authToken',
         if (_apiKey != null) 'X-API-Key': _apiKey!,
       };
 
