@@ -31,6 +31,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# BUT: Allow Flutter mobile lib directory
+!mobile/lib/
+!mobile/lib/**
+
 # Virtual Environments
 .venv/
 venv/
@@ -107,7 +111,16 @@ expo-env.d.ts
 *.orig.*
 web-build/
 android/
-ios/
+# iOS - ignore except Runner configuration
+mobile/ios/Flutter/
+mobile/ios/.symlinks/
+mobile/ios/Pods/
+mobile/ios/*.xcworkspace/
+mobile/ios/Runner.xcodeproj/project.pbxproj
+mobile/ios/Runner.xcodeproj/xcuserdata/
+# Allow Runner config (Info.plist, etc)
+!mobile/ios/Runner/
+!mobile/ios/Runner/**
 
 # React Native Bundle
 *.bundle
@@ -186,6 +199,12 @@ monitoring_logs/
 *.pkl
 *.joblib
 models/
+
+# BUT: Allow Flutter mobile test models
+!mobile/test/models/
+!mobile/test/models/**
+!mobile/lib/models/
+!mobile/lib/models/**
 
 # Large Files
 *.zip

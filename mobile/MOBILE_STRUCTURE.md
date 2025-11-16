@@ -1,7 +1,7 @@
 # DonkeyOS Flutter Mobile - Project Structure
 
-**Last Updated:** Session 112 - November 15, 2025
-**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Pipelines + Galleries + Personal Assistant)
+**Last Updated:** Session 113 - November 15, 2025
+**Status:** Demo-Ready! ✅ (Golden Paths + Donkey Cockpit + Co-Leadership + Pipelines + Galleries + Personal Assistant + Voice Input)
 
 ---
 
@@ -22,6 +22,7 @@ mobile/
 │   │   ├── video_asset.dart         # VideoAsset model (Session 101)
 │   │   ├── gallery.dart             # GalleryAsset + GalleryResponse + GalleryFilters (Session 111)
 │   │   ├── personal_assistant.dart  # AssistantMessage + Conversation + Context + LearningSummary (Session 112)
+│   │   ├── assistant_voice.dart     # VoiceResult + MessageData models (Session 113: Voice Input MVP)
 │   │   ├── render_job.dart          # RenderJob model with status/progress (Session 105-106)
 │   │   ├── pipeline_template.dart   # Pipeline template model (Session 109)
 │   │   ├── pipeline_run.dart        # Pipeline run with status tracking (Session 109)
@@ -35,6 +36,7 @@ mobile/
 │   │   ├── projects_provider.dart   # Project/session/assets providers
 │   │   ├── gallery_provider.dart    # Gallery assets + filters providers (Session 111)
 │   │   ├── personal_assistant_provider.dart  # Chat conversation + context providers (Session 112)
+│   │   ├── assistant_voice_provider.dart  # Voice recording state provider (Session 113)
 │   │   ├── render_providers.dart    # Render job providers (Session 105-106)
 │   │   ├── pipelines_provider.dart  # Pipeline templates + runs providers (Session 109)
 │   │   ├── boardroom_provider.dart  # Boardroom state
@@ -46,6 +48,7 @@ mobile/
 │   │       ├── projects_api.dart    # Projects, sessions, assets API
 │   │       ├── gallery_api.dart     # Unified gallery API (images/videos/audio) (Session 111)
 │   │       ├── personal_assistant_api.dart  # Chat, context, learning summary API (Session 112)
+│   │       ├── assistant_voice_api.dart  # Voice recording upload API (Session 113)
 │   │       ├── render_api.dart      # Render job API calls (Session 105-106)
 │   │       ├── pipelines_api.dart   # Pipeline templates + runs API (Session 109)
 │   │       ├── boardroom_api.dart   # Boardroom API calls
