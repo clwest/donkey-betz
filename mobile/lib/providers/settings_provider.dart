@@ -1,6 +1,7 @@
 /// Settings State Provider
 ///
 /// Session 102 - Mobile Auth & Connection Settings
+/// Session 115 - Platform-aware defaults (web vs mobile)
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/settings_state.dart';
 import '../models/connection_status.dart';
+import '../core/api_config.dart';
 
 /// Storage keys
 class SettingsKeys {
@@ -221,23 +223,25 @@ final settingsControllerProvider =
 });
 
 /// Current API base URL provider (for use in ApiClient)
+/// Session 115: Uses platform-aware defaults (localhost for web, 127.0.0.1 for mobile)
 final apiBaseUrlProvider = Provider<String?>((ref) {
   try {
     final settings = ref.watch(settingsControllerProvider);
-    return settings.apiBaseUrl ?? 'http://127.0.0.1:8000'; // Fallback updated for iOS Simulator
+    return settings.apiBaseUrl ?? ApiConfig.defaultBaseUrl; // Platform-aware fallback
   } catch (e) {
-    // If settings controller isn't ready yet, use the default from ApiConfig
-    return 'http://127.0.0.1:8000'; // Default for iOS Simulator compatibility
+    // If settings controller isn't ready yet, use the platform-aware default from ApiConfig
+    return ApiConfig.defaultBaseUrl;
   }
 });
 
 /// Current API key provider (for use in ApiClient)
+/// Session 115: Uses default auth token if no saved key
 final apiKeyProvider = Provider<String?>((ref) {
   try {
     final settings = ref.watch(settingsControllerProvider);
-    return settings.apiKey;
+    return settings.apiKey ?? ApiConfig.defaultApiKey; // Use default token as fallback
   } catch (e) {
-    // If settings controller isn't ready yet, return null (will use header-based auth)
-    return null;
+    // If settings controller isn't ready yet, use the default API key
+    return ApiConfig.defaultApiKey;
   }
 });

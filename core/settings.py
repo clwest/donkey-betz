@@ -372,10 +372,13 @@ CONTENT_GENERATION = {
 }
 
 # REST Framework Configuration
+# Session 115: Production-ready mobile authentication
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # Mobile apps: Token auth without CSRF (X-API-Key header)
+        'core.mobile_authentication.MobileTokenAuthentication',
+        # Web browsers: Session auth that skips CSRF when token is present
+        'core.mobile_authentication.CsrfExemptSessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Temporarily allow all requests
@@ -396,7 +399,7 @@ REST_FRAMEWORK = {
 # SECURITY: Never use CORS_ALLOW_ALL_ORIGINS in production!
 if DEBUG:
     # Development - allow specific origins only
-    default_dev_origins = 'http://localhost:3000,http://localhost:8080,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:5174'
+    default_dev_origins = 'http://localhost:3000,http://localhost:8080,http://localhost:8888,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:8888,http://127.0.0.1:5173,http://127.0.0.1:5174'
     CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', default_dev_origins).split(',')
     # SECURITY WARNING: Set to False for better security even in development
     CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'false').lower() == 'true'

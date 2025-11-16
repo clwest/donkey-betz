@@ -6,6 +6,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'api_config.dart';
 
@@ -66,12 +67,13 @@ class ApiClient {
         _httpClient = httpClient ?? http.Client();
 
   /// Request headers with authentication
-  /// Supports both API key (X-API-Key) and token auth (Authorization: Token <token>)
+  /// Session 115: Use Authorization header for DRF compatibility
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        // Always use Authorization header (DRF standard)
         if (_authToken != null) 'Authorization': 'Token $_authToken',
-        if (_apiKey != null) 'X-API-Key': _apiKey!,
+        if (_apiKey != null) 'Authorization': 'Token $_apiKey',
       };
 
   /// GET request
@@ -149,6 +151,70 @@ class ApiClient {
       final response = await _httpClient
           .delete(url, headers: _headers)
           .timeout(ApiConfig.receiveTimeout);
+
+      return _handleResponse(response);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        message: 'Network error: ${e.toString()}',
+        details: e,
+      );
+    }
+  }
+
+  /// POST request with multipart file upload
+  /// Session 115: For image/video file uploads to Stability AI endpoints
+  /// Supports both file paths (mobile) and bytes (web)
+  Future<Map<String, dynamic>> postMultipart(
+    String endpoint, {
+    Map<String, String>? fields,
+    Map<String, String>? files, // file field name -> file path (mobile)
+    Map<String, Uint8List>? fileBytes, // file field name -> bytes (web)
+    String? fileName, // filename for bytes upload
+  }) async {
+    try {
+      final url = Uri.parse('$_baseUrl$endpoint');
+      final request = http.MultipartRequest('POST', url);
+
+      // Add authentication headers
+      if (_authToken != null) {
+        request.headers['Authorization'] = 'Token $_authToken';
+      } else if (_apiKey != null) {
+        request.headers['Authorization'] = 'Token $_apiKey';
+      }
+
+      // Add form fields
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      // Add files from path (mobile)
+      if (files != null) {
+        for (final entry in files.entries) {
+          final file = await http.MultipartFile.fromPath(
+            entry.key,
+            entry.value,
+          );
+          request.files.add(file);
+        }
+      }
+
+      // Add files from bytes (web)
+      if (fileBytes != null) {
+        for (final entry in fileBytes.entries) {
+          final file = http.MultipartFile.fromBytes(
+            entry.key,
+            entry.value,
+            filename: fileName ?? 'upload.jpg',
+          );
+          request.files.add(file);
+        }
+      }
+
+      // Send request
+      final streamedResponse =
+          await request.send().timeout(ApiConfig.receiveTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
 
       return _handleResponse(response);
     } catch (e) {

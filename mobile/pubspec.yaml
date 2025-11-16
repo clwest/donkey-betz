@@ -28,7 +28,12 @@ dependencies:
   path_provider: ^2.1.1
 
   # Audio Recording (Session 113)
-  record: ^5.1.0
+  record: ^6.0.0  # Updated to v6 for compatible record_linux
+
+  # Media (Session 115)
+  image_picker: ^1.0.5
+  file_picker: ^6.1.1  # Better web support for file selection
+  audioplayers: ^5.2.1
 
   # Environment Configuration
   flutter_dotenv: ^5.1.0
@@ -39,6 +44,7 @@ dependencies:
   cached_network_image: ^3.3.0
   url_launcher: ^6.2.0
   video_player: ^2.8.1
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
