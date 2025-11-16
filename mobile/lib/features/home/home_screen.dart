@@ -7,8 +7,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
-import '../../providers/coleadership_provider.dart';
+import '../../providers/leadership_providers.dart';
 import '../projects/project_list_screen.dart';
+import '../leadership/leadership_dashboard.dart';
 import '../settings/settings_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -153,6 +154,25 @@ class HomeScreen extends ConsumerWidget {
                 },
                 icon: const Icon(Icons.folder_open),
                 label: const Text('Browse Projects'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LeadershipDashboard(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.insights),
+                label: const Text('Leadership Dashboard'),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                 ),

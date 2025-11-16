@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/settings_provider.dart';
 import '../../models/connection_status.dart';
 import '../../core/app_theme.dart';
+import '../leadership/coleadership_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -338,6 +339,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Other Settings Section
+              Text(
+                'Other Settings',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 12),
+
+              // Co-Leadership Preferences Link
+              Card(
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.psychology,
+                    color: AppTheme.primaryColor,
+                  ),
+                  title: const Text('Co-Leadership Preferences'),
+                  subtitle: const Text('Customize AI partnership settings'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CoLeadershipSettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

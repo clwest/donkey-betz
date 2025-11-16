@@ -9,11 +9,12 @@ Mobile cockpit for the DonkeyOS AI Platform - Human-AI Co-Leadership on the go!
 
 ## Features
 
-- **Executive Boardroom Meetings** - Start meetings with your AI executive team
-- **Co-Leadership Dashboard** - Track decisions, overrides, and outcomes
-- **Project Browser** - Browse projects, sessions, and view all images/videos (Session 101) ⭐ NEW!
-- **Asset Viewer** - Full-screen image/video viewing with swipe navigation
-- **Leadership Stats** - See AI vs Human performance metrics
+- **📊 Donkey Cockpit** - Unified command center home screen surfacing leadership decisions, projects/sessions, and video renders in one place (Session 107) ⭐ NEW!
+- **🎬 Video Studio** - Create and monitor DaVinci Resolve render jobs with real-time status updates (Session 105-106)
+- **🏢 Project Browser** - Browse projects, sessions, and view all images/videos with full-screen asset viewer (Session 101)
+- **👔 Executive Boardroom** - Start meetings with your AI executive team (Session 100)
+- **📈 Leadership Dashboard** - Track AI vs Human decisions, overrides, and performance (Session 104)
+- **⚙️ Settings & Auth** - Configure API connections with secure credential storage (Session 102)
 
 ## Getting Started
 
@@ -65,11 +66,13 @@ lib/
 ├── providers/      # Riverpod providers
 ├── services/       # API services
 ├── features/       # UI screens
-│   ├── home/
-│   ├── projects/
-│   ├── boardroom/
-│   ├── coleadership/
-│   └── leadership/
+│   ├── cockpit/    # Unified home screen (Session 107)
+│   ├── render/     # Video Studio (Sessions 105-106)
+│   ├── projects/   # Project Browser (Session 101)
+│   ├── settings/   # Settings (Session 102)
+│   ├── leadership/ # Leadership Dashboard (Session 104)
+│   ├── boardroom/  # Boardroom (Session 100)
+│   └── coleadership/
 ├── app.dart        # App configuration
 └── main.dart       # Entry point
 ```
@@ -92,10 +95,15 @@ flutter test
 ## Backend Integration
 
 Integrates with DonkeyOS Django backend:
-- Session 99: Co-Leadership System
-- Session 100 Part 11: Leadership Dashboard
-- Session 100 Part 13: Flutter-Ready APIs
-- Session 101: Project Browser with Asset Viewing ⭐ NEW!
+- Session 99: Co-Leadership System (AI-Human decision tracking)
+- Session 100: Executive Boardroom + Flutter-Ready APIs
+- Session 101: Project Browser with Asset Viewing
+- Session 102: Auth & Connection Settings with X-API-Key
+- Session 103: DaVinci Resolve Render Node Service
+- Session 104: Leadership Dashboard (stats and recent decisions)
+- Session 105: Render Pipeline Backend (create/poll/list jobs)
+- Session 106: Video Studio Frontend (render management)
+- Session 107: Donkey Cockpit (unified home screen) ⭐ NEW!
 
 ## License
 
@@ -104,4 +112,4 @@ Private - Chris's AI Platform
 ## Created By
 
 Claude Code + Chris Partnership 🤝
-Session 100 Part 13 - November 15, 2025
+**Latest:** Session 107 - Donkey Cockpit v1 (November 15, 2025)

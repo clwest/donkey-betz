@@ -17,6 +17,18 @@ urlpatterns = [
         name='start-boardroom-meeting'
     ),
 
+    # Decision list and detail (Session 108)
+    path(
+        'decisions/',
+        views.list_decisions,
+        name='list-decisions'
+    ),
+    path(
+        'decisions/<uuid:decision_id>/',
+        views.get_decision_detail,
+        name='get-decision-detail'
+    ),
+
     # Human decision commit
     path(
         'decisions/<uuid:decision_id>/human_decision/',
@@ -36,6 +48,13 @@ urlpatterns = [
         'stats/',
         views.get_stats,
         name='get-stats'
+    ),
+
+    # User preferences (Session 108)
+    path(
+        'preferences/',
+        views.manage_preferences,
+        name='manage-preferences'
     ),
 
     # Project decisions (Session 100: Part 2)

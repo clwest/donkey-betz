@@ -2059,6 +2059,144 @@ class VideoHistory(UnifiedBaseModel):
         self.save(update_fields=['download_count'])
 
 
+class MiniFigAsset(UnifiedBaseModel):
+    """
+    Track 3D Mini-Fig assets created from AI-generated images
+    Session 111 - MiniFig Pipeline v1
+    """
+
+    # User identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='minifig_assets',
+        help_text="User who created this mini-fig"
+    )
+
+    # Source tracking
+    source_pipeline_run = models.ForeignKey(
+        'pipelines.CreativePipelineRun',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_minifigs',
+        help_text="Pipeline run that created this mini-fig"
+    )
+
+    source_image_asset = models.ForeignKey(
+        ImageHistory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_minifigs',
+        help_text="Source image used for mini-fig generation"
+    )
+
+    # MiniFig identification
+    title = models.CharField(
+        max_length=200,
+        help_text="User-friendly title for this mini-fig"
+    )
+
+    provider = models.CharField(
+        max_length=100,
+        default='placeholder',
+        choices=[
+            ('placeholder', 'Placeholder (v1)'),
+            ('external_service', 'External 3D Service (v2+)'),
+        ],
+        help_text="Provider used for 3D generation"
+    )
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='pending',
+        help_text="Generation status"
+    )
+
+    # 3D File output
+    three_d_file = models.URLField(
+        max_length=1000,
+        help_text="URL to 3D file (STL, OBJ, etc.) - v1: placeholder URL"
+    )
+
+    preview_image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        help_text="URL to preview/thumbnail image"
+    )
+
+    # Generation parameters and metadata
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional metadata (style, scale, generation params, etc.)"
+    )
+
+    # Error tracking
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if generation failed"
+    )
+
+    # Usage tracking
+    download_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times downloaded"
+    )
+
+    view_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times viewed"
+    )
+
+    is_favorite = models.BooleanField(
+        default=False,
+        help_text="User marked as favorite"
+    )
+
+    # User notes
+    user_notes = models.TextField(
+        blank=True,
+        help_text="User's personal notes about this mini-fig"
+    )
+
+    tags = models.JSONField(
+        default=list,
+        help_text="User-defined tags for organization"
+    )
+
+    class Meta:
+        verbose_name = "MiniFig Asset"
+        verbose_name_plural = "MiniFig Assets"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['status']),
+            models.Index(fields=['provider']),
+            models.Index(fields=['is_favorite']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+
+    def increment_view_count(self):
+        """Increment view counter"""
+        self.view_count += 1
+        self.save(update_fields=['view_count'])
+
+    def increment_download_count(self):
+        """Increment download counter"""
+        self.download_count += 1
+        self.save(update_fields=['download_count'])
+
+
 class WorkflowHistory(UnifiedBaseModel):
     """
     Track all AI workflow executions for user history and analysis

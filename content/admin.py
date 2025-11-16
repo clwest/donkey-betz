@@ -12,7 +12,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
     ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
-    ImageHistory, VideoHistory, CreativeProject, ProjectWorkflow
+    ImageHistory, VideoHistory, MiniFigAsset, CreativeProject, ProjectWorkflow
 )
 
 
@@ -476,6 +476,73 @@ class VideoHistoryAdmin(admin.ModelAdmin):
             )
         return "No video"
     video_player.short_description = 'Video Player'
+
+
+@admin.register(MiniFigAsset)
+class MiniFigAssetAdmin(admin.ModelAdmin):
+    """Admin interface for MiniFig assets (Session 111: MiniFig Pipeline v1)"""
+
+    list_display = [
+        'preview_thumbnail', 'title', 'provider', 'status',
+        'user_name', 'is_favorite', 'view_count', 'download_count', 'created_at'
+    ]
+    list_filter = [
+        'provider', 'status', 'is_favorite', 'created_at'
+    ]
+    search_fields = ['title', 'user_notes', 'tags']
+    readonly_fields = [
+        'preview_display', 'id', 'three_d_file', 'preview_image_url',
+        'view_count', 'download_count', 'created_at', 'updated_at'
+    ]
+
+    fieldsets = (
+        ('MiniFig Information', {
+            'fields': ('preview_display', 'title', 'provider', 'status', 'three_d_file', 'preview_image_url')
+        }),
+        ('Source', {
+            'fields': ('source_pipeline_run', 'source_image_asset'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('metadata', 'error_message'),
+            'classes': ('collapse',)
+        }),
+        ('User Organization', {
+            'fields': ('user', 'is_favorite', 'user_notes', 'tags')
+        }),
+        ('Usage Statistics', {
+            'fields': ('view_count', 'download_count'),
+            'classes': ('collapse',)
+        }),
+        ('System', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def user_name(self, obj):
+        return obj.user.username
+    user_name.short_description = 'User'
+
+    def preview_thumbnail(self, obj):
+        """Small preview for list view"""
+        if obj.preview_image_url and not obj.preview_image_url.startswith('data:'):
+            return format_html(
+                '<img src="{}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />',
+                obj.preview_image_url
+            )
+        return "No preview"
+    preview_thumbnail.short_description = 'Preview'
+
+    def preview_display(self, obj):
+        """Larger preview for detail view"""
+        if obj.preview_image_url and not obj.preview_image_url.startswith('data:'):
+            return format_html(
+                '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px;" />',
+                obj.preview_image_url
+            )
+        return "No preview available"
+    preview_display.short_description = 'Preview Image'
 
 
 # =============================================================================

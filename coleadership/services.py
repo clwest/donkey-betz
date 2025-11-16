@@ -453,7 +453,11 @@ def get_user_decision_stats(user) -> Dict[str, Any]:
                 'has_outcome': dec.has_outcome,
                 'is_override': hasattr(dec, 'human_decision') and dec.human_decision.is_override,
                 'status': dec.outcome.get_status_display() if dec.has_outcome else 'No outcome',
-                'attribution': dec.outcome.get_attribution_display() if dec.has_outcome else 'Unknown'
+                'attribution': dec.outcome.get_attribution_display() if dec.has_outcome else 'Unknown',
+                # Session 104: Add IDs for mobile navigation
+                'project_id': str(dec.project.project_id) if dec.project else None,
+                'project_name': dec.project.name if dec.project else None,
+                'session_id': str(dec.session.session_id) if dec.session else None
             })
 
         return {

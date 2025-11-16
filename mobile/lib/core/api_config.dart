@@ -21,6 +21,8 @@ class ApiConfig {
   static const String boardroomEndpoint = '/api/v1/coleadership/boardroom/';
   static const String coleadershipEndpoint = '/api/v1/coleadership/';
   static const String leadershipEndpoint = '/api/leadership/';
+  static const String renderJobsEndpoint = '/api/v1/render-jobs/'; // Session 105
+  static const String pipelinesEndpoint = '/api/v1/pipelines/'; // Session 109
 
   /// Timeout durations
   static const Duration connectTimeout = Duration(seconds: 30);
