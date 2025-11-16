@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .models import MiniFigAsset
-from .minifig_services import get_user_minifigs
+from .minifig_services import get_user_minifigs, check_and_update_3d_generation
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,15 @@ def get_minifig_detail(request, minifig_id):
                 'success': False,
                 'error': 'MiniFig asset not found'
             }, status=status.HTTP_404_NOT_FOUND)
+
+        # For Replicate generations, check status and update if still in progress
+        if minifig.provider == 'replicate' and minifig.status in ['pending', 'processing']:
+            try:
+                logger.info(f"Checking Replicate status for MiniFigAsset {minifig_id}")
+                minifig = check_and_update_3d_generation(str(minifig.id))
+            except Exception as e:
+                logger.warning(f"Failed to check 3D generation status: {e}")
+                # Continue anyway and return current status
 
         # Build response
         minifig_data = {

@@ -12,7 +12,7 @@ from rest_framework import status
 
 from .models import CreativePipelineTemplate, CreativePipelineRun
 from .services import get_available_templates, start_pipeline_run
-from content.minifig_services import create_minifig_asset_from_images
+from content.minifig_services import create_minifig_asset_from_images, check_and_update_3d_generation
 
 logger = logging.getLogger(__name__)
 
@@ -360,24 +360,29 @@ def launch_minifig_pipeline(request):
                 'error': f'Invalid scale. Must be one of: {valid_scales}'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create MiniFig assets
+        # Create MiniFig assets using real Replicate 3D generation
         minifig_assets = create_minifig_asset_from_images(
             user=request.user,
             image_asset_ids=image_ids,
             pipeline_run=None,  # Not tied to a CreativePipelineRun for now
-            provider='placeholder',  # v1 uses placeholder
+            provider='replicate',  # v2: Real 3D generation with TRELLIS
             style=style,
             scale=scale
         )
 
-        # Return first minifig (v1 creates one per image, but we'll return the first)
+        # Return minifig info (v2 creates one multi-view asset from all images)
         if minifig_assets:
             first_minifig = minifig_assets[0]
+
+            # Get prediction_id from metadata for frontend polling
+            prediction_id = first_minifig.metadata.get('prediction_id', '')
+
             return Response({
                 'success': True,
                 'minifig_id': str(first_minifig.id),
-                'status': first_minifig.status,
-                'message': f'Created {len(minifig_assets)} MiniFig asset(s)'
+                'status': first_minifig.status,  # Will be 'pending' for Replicate
+                'prediction_id': prediction_id,
+                'message': f'Started 3D generation from {len(image_ids)} image(s). Check status with GET /api/v1/content/minifigs/{first_minifig.id}/'
             }, status=status.HTTP_201_CREATED)
         else:
             return Response({
