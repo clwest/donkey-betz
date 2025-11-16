@@ -1,12 +1,12 @@
 /// Search & Replace Screen - Object replacement with prompts
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class SearchReplaceScreen extends ConsumerStatefulWidget {
   const SearchReplaceScreen({super.key});
@@ -18,22 +18,22 @@ class SearchReplaceScreen extends ConsumerStatefulWidget {
 class _SearchReplaceScreenState extends ConsumerState<SearchReplaceScreen> {
   final _searchController = TextEditingController();
   final _replaceController = TextEditingController();
-  File? _sourceImage;
+  Uint8List? _imageBytes;
+  String? _fileName;
   String? _resultImageUrl;
   bool _isProcessing = false;
   String? _errorMessage;
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() => _sourceImage = File(pickedFile.path));
-    }
+  void _onImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _searchAndReplace() async {
-    if (_sourceImage == null) {
+    if (_imageBytes == null) {
       setState(() => _errorMessage = 'Please select an image');
       return;
     }
@@ -51,10 +51,11 @@ class _SearchReplaceScreenState extends ConsumerState<SearchReplaceScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/search-replace/',
-        {
-          'image_url': 'temp', // TODO: File upload
+        fileBytes: {'image': _imageBytes!},
+        fileName: _fileName ?? 'image.jpg',
+        fields: {
           'search': _searchController.text.trim(),
           'replace': _replaceController.text.trim(),
         },
@@ -86,27 +87,12 @@ class _SearchReplaceScreenState extends ConsumerState<SearchReplaceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.cyan),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _sourceImage != null
-                    ? Image.file(_sourceImage!, fit: BoxFit.cover)
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.search, size: 48, color: Colors.cyan),
-                            SizedBox(height: 8),
-                            Text('Tap to select image'),
-                          ],
-                        ),
-                      ),
-              ),
+            // Dual-Source Image Picker
+            DualSourceImagePicker(
+              currentImageBytes: _imageBytes,
+              onImageSelected: _onImageSelected,
+              placeholderText: 'Select image for search & replace',
+              height: 200,
             ),
             const SizedBox(height: 16),
 

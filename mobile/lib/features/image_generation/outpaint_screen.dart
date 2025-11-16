@@ -1,12 +1,12 @@
 /// Outpaint Screen - Extend images beyond their borders
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class OutpaintScreen extends ConsumerStatefulWidget {
   const OutpaintScreen({super.key});
@@ -17,24 +17,24 @@ class OutpaintScreen extends ConsumerStatefulWidget {
 
 class _OutpaintScreenState extends ConsumerState<OutpaintScreen> {
   final _promptController = TextEditingController();
-  File? _sourceImage;
+  Uint8List? _imageBytes;
+  String? _fileName;
   String? _resultImageUrl;
   bool _isProcessing = false;
   String? _errorMessage;
   String _direction = 'all';
   double _creativity = 0.7;
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() => _sourceImage = File(pickedFile.path));
-    }
+  void _onImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _outpaint() async {
-    if (_sourceImage == null) {
+    if (_imageBytes == null) {
       setState(() => _errorMessage = 'Please select an image');
       return;
     }
@@ -47,13 +47,14 @@ class _OutpaintScreenState extends ConsumerState<OutpaintScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/outpaint/',
-        {
-          'image_url': 'temp', // TODO: File upload
+        fileBytes: {'image': _imageBytes!},
+        fileName: _fileName ?? 'image.jpg',
+        fields: {
           'prompt': _promptController.text.trim(),
           'direction': _direction,
-          'creativity': _creativity,
+          'creativity': _creativity.toString(),
         },
       );
 
@@ -83,32 +84,12 @@ class _OutpaintScreenState extends ConsumerState<OutpaintScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image Upload
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.lime, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _sourceImage != null
-                    ? Image.file(_sourceImage!, fit: BoxFit.contain)
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.expand, size: 64, color: Colors.lime),
-                            SizedBox(height: 8),
-                            Text('Tap to select image',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            Text('Extend beyond borders with AI',
-                                style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-              ),
+            // Dual-Source Image Picker
+            DualSourceImagePicker(
+              currentImageBytes: _imageBytes,
+              onImageSelected: _onImageSelected,
+              placeholderText: 'Select image to expand beyond borders',
+              height: 200,
             ),
             const SizedBox(height: 16),
 

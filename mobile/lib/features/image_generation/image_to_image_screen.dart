@@ -1,12 +1,12 @@
 /// Image-to-Image Generation (Style Transfer)
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class ImageToImageScreen extends ConsumerStatefulWidget {
   const ImageToImageScreen({super.key});
@@ -17,25 +17,23 @@ class ImageToImageScreen extends ConsumerStatefulWidget {
 
 class _ImageToImageScreenState extends ConsumerState<ImageToImageScreen> {
   final _promptController = TextEditingController();
-  File? _sourceImage;
+  Uint8List? _imageBytes;
+  String? _fileName;
   String? _generatedImageUrl;
   bool _isGenerating = false;
   String? _errorMessage;
   double _strength = 0.75;
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _sourceImage = File(pickedFile.path);
-      });
-    }
+  void _onImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _generateImage() async {
-    if (_sourceImage == null) {
+    if (_imageBytes == null) {
       setState(() => _errorMessage = 'Please select a source image');
       return;
     }
@@ -48,14 +46,14 @@ class _ImageToImageScreenState extends ConsumerState<ImageToImageScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      // TODO: Upload image and get URL, then call API
-      // For now, showing structure
-      final response = await apiClient.post(
+      // Upload image with multipart and call API
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/image-to-image/',
-        {
+        fileBytes: {'image': _imageBytes!},
+        fileName: _fileName ?? 'image.jpg',
+        fields: {
           'prompt': _promptController.text.trim(),
-          'image_url': 'temp', // Will implement file upload
-          'strength': _strength,
+          'strength': _strength.toString(),
         },
       );
 
@@ -85,28 +83,12 @@ class _ImageToImageScreenState extends ConsumerState<ImageToImageScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Source Image Picker
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.purple),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _sourceImage != null
-                    ? Image.file(_sourceImage!, fit: BoxFit.cover)
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate, size: 48),
-                            SizedBox(height: 8),
-                            Text('Tap to select source image'),
-                          ],
-                        ),
-                      ),
-              ),
+            // Dual-Source Image Picker
+            DualSourceImagePicker(
+              currentImageBytes: _imageBytes,
+              onImageSelected: _onImageSelected,
+              placeholderText: 'Select source image for style transfer',
+              height: 200,
             ),
             const SizedBox(height: 16),
 

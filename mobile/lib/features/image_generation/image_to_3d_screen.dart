@@ -1,12 +1,12 @@
 /// Image-to-3D Screen - Generate 3D models from images
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class ImageTo3DScreen extends ConsumerStatefulWidget {
   const ImageTo3DScreen({super.key});
@@ -16,24 +16,24 @@ class ImageTo3DScreen extends ConsumerStatefulWidget {
 }
 
 class _ImageTo3DScreenState extends ConsumerState<ImageTo3DScreen> {
-  File? _sourceImage;
+  Uint8List? _imageBytes;
+  String? _fileName;
   String? _model3DUrl;
   String? _previewImageUrl;
   bool _isProcessing = false;
   String? _errorMessage;
   String _textureQuality = 'standard';
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() => _sourceImage = File(pickedFile.path));
-    }
+  void _onImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _generate3D() async {
-    if (_sourceImage == null) {
+    if (_imageBytes == null) {
       setState(() => _errorMessage = 'Please select an image');
       return;
     }
@@ -46,10 +46,11 @@ class _ImageTo3DScreenState extends ConsumerState<ImageTo3DScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/image-to-3d/',
-        {
-          'image_url': 'temp', // TODO: File upload
+        fileBytes: {'image': _imageBytes!},
+        fileName: _fileName ?? 'image.jpg',
+        fields: {
           'texture_quality': _textureQuality,
         },
       );
@@ -81,32 +82,12 @@ class _ImageTo3DScreenState extends ConsumerState<ImageTo3DScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image Upload
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 250,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.deepPurple, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _sourceImage != null
-                    ? Image.file(_sourceImage!, fit: BoxFit.contain)
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.view_in_ar, size: 64, color: Colors.deepPurple),
-                            SizedBox(height: 8),
-                            Text('Tap to upload image',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            Text('Convert 2D image to 3D model',
-                                style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-              ),
+            // Dual-Source Image Picker
+            DualSourceImagePicker(
+              currentImageBytes: _imageBytes,
+              onImageSelected: _onImageSelected,
+              placeholderText: 'Upload image to convert to 3D model',
+              height: 250,
             ),
             const SizedBox(height: 24),
 

@@ -1,12 +1,12 @@
 /// Control Screen - Generate images with structural control (Canny, depth, pose)
-/// Session 115 Part 4 - Full Feature Parity
+/// Session 115 Part 5 - Dual-Source Image Picker Integration
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_image_picker.dart';
 
 class ControlScreen extends ConsumerStatefulWidget {
   const ControlScreen({super.key});
@@ -17,7 +17,8 @@ class ControlScreen extends ConsumerStatefulWidget {
 
 class _ControlScreenState extends ConsumerState<ControlScreen> {
   final _promptController = TextEditingController();
-  File? _controlImage;
+  Uint8List? _imageBytes;
+  String? _fileName;
   String? _resultImageUrl;
   bool _isProcessing = false;
   String? _errorMessage;
@@ -51,17 +52,16 @@ class _ControlScreenState extends ConsumerState<ControlScreen> {
     },
   ];
 
-  Future<void> _pickControlImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() => _controlImage = File(pickedFile.path));
-    }
+  void _onImageSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _generateWithControl() async {
-    if (_controlImage == null) {
+    if (_imageBytes == null) {
       setState(() => _errorMessage = 'Please select a control image');
       return;
     }
@@ -79,13 +79,14 @@ class _ControlScreenState extends ConsumerState<ControlScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.postMultipart(
         '/api/v1/gallery/control/',
-        {
+        fileBytes: {'image': _imageBytes!},
+        fileName: _fileName ?? 'control.jpg',
+        fields: {
           'prompt': _promptController.text.trim(),
-          'control_image': 'temp', // TODO: File upload
           'control_mode': _controlMode,
-          'control_strength': _controlStrength,
+          'control_strength': _controlStrength.toString(),
         },
       );
 
@@ -115,32 +116,12 @@ class _ControlScreenState extends ConsumerState<ControlScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Control Image Upload
-            GestureDetector(
-              onTap: _pickControlImage,
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.teal, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _controlImage != null
-                    ? Image.file(_controlImage!, fit: BoxFit.contain)
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.control_camera, size: 64, color: Colors.teal),
-                            SizedBox(height: 8),
-                            Text('Tap to upload control image',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            Text('Reference image for structural guidance',
-                                style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-              ),
+            // Dual-Source Image Picker
+            DualSourceImagePicker(
+              currentImageBytes: _imageBytes,
+              onImageSelected: _onImageSelected,
+              placeholderText: 'Upload control image for structural guidance',
+              height: 200,
             ),
             const SizedBox(height: 16),
 
