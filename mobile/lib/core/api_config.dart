@@ -8,7 +8,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConfig {
   /// Default base URL for development (used as fallback)
-  static const String defaultBaseUrl = 'http://localhost:8000';
+  /// Updated for iOS Simulator compatibility (127.0.0.1 works better than localhost)
+  static const String defaultBaseUrl = 'http://127.0.0.1:8000';
 
   /// Base URL from environment (deprecated - use settings provider instead)
   @Deprecated('Use settings provider for dynamic configuration')
