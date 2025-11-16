@@ -91,18 +91,51 @@ void main() {
         expect(message.confidence, 0.95);
       });
 
-      test('includes suggested actions when present', () async {
+      test('combines suggestions and actions when present', () async {
         mockClient.nextResponse = {
           'success': true,
           'data': {
             'response': 'I can help with that',
-            'suggested_actions': ['Action 1', 'Action 2'],
+            'suggestions': ['Suggestion 1', 'Suggestion 2'],
+            'actions': ['Action 1'],
           }
         };
 
         final message = await api.sendMessage('Help me');
 
-        expect(message.suggestedActions, ['Action 1', 'Action 2']);
+        expect(message.suggestedActions, [
+          'Suggestion 1',
+          'Suggestion 2',
+          'Action 1',
+        ]);
+      });
+
+      test('handles only suggestions when actions are null', () async {
+        mockClient.nextResponse = {
+          'success': true,
+          'data': {
+            'response': 'Here are some ideas',
+            'suggestions': ['Idea 1', 'Idea 2'],
+          }
+        };
+
+        final message = await api.sendMessage('Give me ideas');
+
+        expect(message.suggestedActions, ['Idea 1', 'Idea 2']);
+      });
+
+      test('handles only actions when suggestions are null', () async {
+        mockClient.nextResponse = {
+          'success': true,
+          'data': {
+            'response': 'You can do this',
+            'actions': ['Do this', 'Do that'],
+          }
+        };
+
+        final message = await api.sendMessage('What can I do');
+
+        expect(message.suggestedActions, ['Do this', 'Do that']);
       });
 
       test('throws ApiException on failure', () async {

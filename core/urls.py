@@ -176,7 +176,7 @@ from core.views_profile import (
 # Import Personal Assistant views
 from core.views_personal_assistant import (
     chat_with_assistant, get_assistant_context, get_learning_summary,
-    provide_feedback, reset_assistant
+    provide_feedback, reset_assistant, voice_to_assistant
 )
 from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
 from core.views_assistant_bypass import assistant_chat_bypass
@@ -664,6 +664,7 @@ urlpatterns = [
     # Personal AI Assistant endpoints (Session 58: Phase B.3 - Using GPT-5)
     path('api/assistant/chat/', assistant_chat, name='personal-assistant-chat'),
     path('api/assistant/transcribe/', transcribe_audio, name='assistant-transcribe'),  # Session 64: Voice input
+    path('api/assistant/voice/', voice_to_assistant, name='personal-assistant-voice'),  # Session 113: Voice Input MVP
     path('api/executor/run-tool/', execute_tool, name='executor-run-tool'),  # Session 65: SUPER AI EXECUTOR
     path('api/assistant/preferences/', get_user_preferences_api, name='user-preferences'),  # Session 59: Phase B.4
     path('api/assistant/context/', get_assistant_context, name='personal-assistant-context'),

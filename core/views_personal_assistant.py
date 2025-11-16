@@ -221,3 +221,119 @@ def reset_assistant(request):
             'error': 'Failed to reset assistant',
             'detail': str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def voice_to_assistant(request):
+    """
+    Voice input for Personal Assistant.
+    Session 113: Voice Input MVP
+
+    Combines audio transcription + assistant chat in one endpoint.
+
+    Request:
+    - multipart/form-data with 'audio' file (webm/m4a/wav)
+    - Optional 'session_id' for conversation threading
+
+    Response:
+    {
+        "success": true,
+        "user_text": "transcribed text...",
+        "assistant_message": {
+            "response": "...",
+            "suggestions": [...],
+            "actions": [...],
+            "confidence": 0.95
+        }
+    }
+    """
+    try:
+        # Step 1: Get and validate audio file
+        audio_file = request.FILES.get('audio')
+
+        if not audio_file:
+            return Response({
+                'error': 'No audio file provided'
+            }, status=400)
+
+        logger.info(f"🎤 Voice input from {request.user.username} ({audio_file.size} bytes)")
+
+        # Step 2: Transcribe audio using OpenAI Whisper
+        # (Reusing logic from views_image.py:6466)
+        try:
+            import os
+            from openai import OpenAI
+            from io import BytesIO
+
+            client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+            # Convert Django InMemoryUploadedFile to BytesIO for OpenAI SDK
+            audio_file.seek(0)
+            audio_bytes = audio_file.read()
+            audio_file_like = BytesIO(audio_bytes)
+
+            # Always use .webm extension (frontend sends audio/webm format)
+            audio_file_like.name = "recording.webm"
+
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file_like,
+                language="en"  # Can be removed to auto-detect
+            )
+
+            user_text = transcript.text.strip()
+            logger.info(f"✅ Transcribed: '{user_text[:100]}...'")
+
+        except Exception as e:
+            logger.error(f"❌ Transcription failed: {str(e)}")
+            return Response({
+                'error': 'Failed to transcribe audio',
+                'details': str(e)
+            }, status=500)
+
+        # Step 3: Send transcribed text to Personal Assistant
+        # (Reusing logic from chat_with_assistant)
+        try:
+            # Get or create assistant for user
+            cache_key = f'assistant_{request.user.id}'
+            assistant = cache.get(cache_key)
+
+            if not assistant:
+                assistant = PersonalAIAssistant(request.user)
+                # Cache assistant for 30 minutes
+                cache.set(cache_key, assistant, 1800)
+
+            # Process message with optional context
+            context = request.data.get('context', {})
+            context['input_method'] = 'voice'  # Mark as voice input
+
+            response_data = assistant.process_message(user_text, context)
+
+            logger.info(f"✅ Assistant responded to voice input")
+
+            # Step 4: Return combined result
+            return Response({
+                'success': True,
+                'user_text': user_text,
+                'assistant_message': response_data
+            })
+
+        except Exception as e:
+            logger.error(f"❌ Assistant processing failed: {str(e)}")
+            # Return partial success - transcription worked
+            return Response({
+                'success': False,
+                'user_text': user_text,
+                'error': 'Transcription succeeded but assistant failed to respond',
+                'details': str(e)
+            }, status=500)
+
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Voice input failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return Response({
+            'error': 'Failed to process voice input',
+            'details': str(e)
+        }, status=500)
