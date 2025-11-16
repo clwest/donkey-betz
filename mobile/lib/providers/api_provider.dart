@@ -13,6 +13,7 @@ import '../services/api/boardroom_api.dart';
 import '../services/api/coleadership_api.dart';
 import '../services/api/leadership_api.dart';
 import '../services/api/gallery_api.dart';
+import '../services/api/personal_assistant_api.dart';
 import 'settings_provider.dart';
 
 /// API Client provider (uses settings for dynamic config)
@@ -51,4 +52,10 @@ final leadershipApiProvider = Provider<LeadershipApi>((ref) {
 final galleryApiProvider = Provider<GalleryApi>((ref) {
   final client = ref.watch(apiClientProvider);
   return GalleryApi(client);
+});
+
+/// Personal Assistant API provider (Session 112)
+final personalAssistantApiProvider = Provider<PersonalAssistantApi>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return PersonalAssistantApi(client);
 });
