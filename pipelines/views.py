@@ -12,6 +12,7 @@ from rest_framework import status
 
 from .models import CreativePipelineTemplate, CreativePipelineRun
 from .services import get_available_templates, start_pipeline_run
+from content.minifig_services import create_minifig_asset_from_images
 
 logger = logging.getLogger(__name__)
 
@@ -301,6 +302,98 @@ def get_run_detail(request, run_id):
 
     except Exception as e:
         logger.error(f"Error getting run detail: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def launch_minifig_pipeline(request):
+    """
+    POST /api/v1/pipelines/images_to_minifigs/launch/
+
+    Launch the Image-to-MiniFig 3D character creation pipeline.
+
+    Request body:
+        image_ids: list of str - UUIDs of ImageHistory objects (1-4 images)
+        style: str - "cartoon" or "realistic"
+        scale: str - "28mm", "32mm", "54mm", or "75mm"
+
+    Returns:
+        success: bool
+        minifig_id: str - UUID of created MiniFigAsset
+        status: str - "completed" (v1 completes immediately)
+    """
+    try:
+        # Validate request data
+        image_ids = request.data.get('image_ids', [])
+        style = request.data.get('style', 'cartoon')
+        scale = request.data.get('scale', '32mm')
+
+        if not image_ids:
+            return Response({
+                'success': False,
+                'error': 'image_ids is required (1-4 image UUIDs)'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(image_ids) > 4:
+            return Response({
+                'success': False,
+                'error': 'Maximum 4 images allowed'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate style
+        valid_styles = ['cartoon', 'realistic']
+        if style not in valid_styles:
+            return Response({
+                'success': False,
+                'error': f'Invalid style. Must be one of: {valid_styles}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate scale
+        valid_scales = ['28mm', '32mm', '54mm', '75mm']
+        if scale not in valid_scales:
+            return Response({
+                'success': False,
+                'error': f'Invalid scale. Must be one of: {valid_scales}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create MiniFig assets
+        minifig_assets = create_minifig_asset_from_images(
+            user=request.user,
+            image_asset_ids=image_ids,
+            pipeline_run=None,  # Not tied to a CreativePipelineRun for now
+            provider='placeholder',  # v1 uses placeholder
+            style=style,
+            scale=scale
+        )
+
+        # Return first minifig (v1 creates one per image, but we'll return the first)
+        if minifig_assets:
+            first_minifig = minifig_assets[0]
+            return Response({
+                'success': True,
+                'minifig_id': str(first_minifig.id),
+                'status': first_minifig.status,
+                'message': f'Created {len(minifig_assets)} MiniFig asset(s)'
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'success': False,
+                'error': 'No MiniFig assets were created'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    except ValueError as e:
+        # Validation errors from service layer
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.error(f"Error launching MiniFig pipeline: {e}", exc_info=True)
         return Response({
             'success': False,
             'error': str(e)
