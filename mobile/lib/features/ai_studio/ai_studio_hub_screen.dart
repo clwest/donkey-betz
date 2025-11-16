@@ -231,9 +231,9 @@ class AIStudioHubScreen extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 0.85,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.3, // Wider cards (was 0.85)
       children: tiles.map((tile) => _EnhancedFeatureCard(tile: tile)).toList(),
     );
   }
@@ -307,27 +307,27 @@ class _EnhancedFeatureCardState extends State<_EnhancedFeatureCard> {
               onTap: widget.tile.onTap,
               borderRadius: BorderRadius.circular(16),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: widget.tile.color.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         widget.tile.icon,
-                        size: 36,
+                        size: 24,
                         color: widget.tile.color,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     Text(
                       widget.tile.label,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade900,
                       ),
@@ -335,16 +335,16 @@ class _EnhancedFeatureCardState extends State<_EnhancedFeatureCard> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
                       widget.tile.description,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 10,
                         color: Colors.grey.shade600,
-                        height: 1.3,
+                        height: 1.2,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 3,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

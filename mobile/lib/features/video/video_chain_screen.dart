@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../providers/api_provider.dart';
+import '../../widgets/dual_source_video_picker.dart';
+import 'dart:typed_data';
 
 class VideoChainScreen extends ConsumerStatefulWidget {
   const VideoChainScreen({super.key});
@@ -17,11 +19,21 @@ class VideoChainScreen extends ConsumerStatefulWidget {
 class _VideoChainScreenState extends ConsumerState<VideoChainScreen> {
   final List<String> _videoIds = [];
   final _videoIdController = TextEditingController();
+  Uint8List? _videoBytes;
+  String? _fileName;
   String? _chainedVideoUrl;
   bool _isChaining = false;
   String? _errorMessage;
   VideoPlayerController? _videoController;
   String _transitionType = 'cut';
+
+  void _onVideoSelected(Uint8List bytes, String fileName) {
+    setState(() {
+      _videoBytes = bytes;
+      _fileName = fileName;
+      _errorMessage = null;
+    });
+  }
 
   void _addVideoId() {
     if (_videoIdController.text.trim().isNotEmpty) {
@@ -125,15 +137,35 @@ class _VideoChainScreenState extends ConsumerState<VideoChainScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Video ID Input
+            // Dual-Source Video Picker
+            DualSourceVideoPicker(
+              currentVideoBytes: _videoBytes,
+              onVideoSelected: _onVideoSelected,
+              placeholderText: 'Select videos to chain together',
+              height: 150,
+            ),
+            const SizedBox(height: 16),
+
+            const Center(
+              child: Text(
+                'OR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Video ID Input (Manual)
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _videoIdController,
                     decoration: const InputDecoration(
-                      labelText: 'Video ID',
-                      hintText: 'Enter video ID',
+                      labelText: 'Video ID (Optional)',
+                      hintText: 'Or enter video IDs manually',
                       border: OutlineInputBorder(),
                     ),
                   ),
