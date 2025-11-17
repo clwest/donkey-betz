@@ -2511,6 +2511,30 @@
             </div>
             <!-- END MINIFIG 3D CHARACTERS PANE -->
 
+            <!-- MINIFIG DETAIL MODAL -->
+            <div id="minifigDetailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
+                <div style="max-width: 1200px; margin: 0 auto; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-radius: 16px; padding: 40px; border: 2px solid var(--cyan-bright); box-shadow: 0 0 40px rgba(0, 217, 255, 0.3);">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--cyan-bright); padding-bottom: 20px;">
+                        <h3 style="color: var(--cyan-bright); margin: 0; font-size: 28px; font-weight: bold;">
+                            🎨 3D Character Details
+                        </h3>
+                        <button onclick="document.getElementById('minifigDetailModal').style.display='none'"
+                                style="background: transparent; border: 2px solid var(--cyan); color: var(--cyan); padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s;"
+                                onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';"
+                                onmouseout="this.style.background='transparent'; this.style.color='var(--cyan)';">
+                            ✕ Close
+                        </button>
+                    </div>
+
+                    <!-- Content -->
+                    <div id="minifigDetailContent" style="color: #fff;">
+                        <!-- Content will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            <!-- END MINIFIG DETAIL MODAL -->
+
             <!-- CUSTOM WORKFLOW GALLERY MODAL (Simple, non-Bootstrap) -->
             <!-- CUSTOM EDIT GALLERY MODAL -->
             <div id="editGalleryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
@@ -5767,8 +5791,33 @@
                                     <option value="">Loading projects...</option>
                                 </select>
                             </div>
-                            <small style="font-size: 9px; color: #c4b5fd;">All new sessions will be added to this project</small>
+                            <small style="font-size: 9px; color: #c4b5fd;">Reference only - new sessions create their own projects automatically</small>
                         </div>
+
+                        <!-- Session 117: New Session Button -->
+                        <button
+                            id="newSessionBtn"
+                            onclick="window.aiAssistant.startNewSession()"
+                            style="
+                                width: 100%;
+                                margin-top: 8px;
+                                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                                border: 2px solid #fbbf24;
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 8px;
+                                font-size: 12px;
+                                font-weight: 700;
+                                cursor: pointer;
+                                transition: all 0.2s;
+                                box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+                            "
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(251, 191, 36, 0.5)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(251, 191, 36, 0.3)'"
+                            title="Start a fresh conversation with no project"
+                        >
+                            ✨ New Session (Fresh Start)
+                        </button>
                     </div>
                     <button id="aiSidebarClose" class="btn btn-sm btn-outline-light" title="Collapse sidebar">←</button>
                 </div>
@@ -5838,6 +5887,10 @@
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Google Model Viewer for 3D Models -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
     <script>
         // Reset form on page load to prevent browser autocomplete caching
         window.addEventListener('load', function() {
@@ -14376,6 +14429,8 @@
                 // Session 96: Session tracking for auto-project creation
                 this.sessionId = null;
                 this.sessionTitle = null;
+                this.isNewSession = true;  // Track if this is a fresh session (don't inherit project)
+                this.sessionStartedWithProject = false;  // Track if session was resumed with a project
 
                 // Session 97: Project tracking
                 this.activeProjectId = null;
@@ -14503,8 +14558,17 @@
             updateSessionIndicator(sessionData) {
                 if (!sessionData || !sessionData.session_id) return;
 
+                // Session 117: First time getting session_id back means session is no longer "new"
+                const wasNewSession = this.isNewSession && !this.sessionId;
+
                 this.sessionId = sessionData.session_id;
                 this.sessionTitle = sessionData.title || 'New Session';
+
+                // Mark session as no longer new (has been created in backend)
+                if (wasNewSession) {
+                    this.isNewSession = false;
+                    console.log('✨ Session created - no longer new');
+                }
 
                 const indicator = document.getElementById('sessionIndicator');
                 const titleEl = document.getElementById('sessionTitle');
@@ -14531,6 +14595,49 @@
                 }
 
                 console.log('📝 Session indicator updated:', this.sessionId, this.sessionTitle);
+            }
+
+            // Session 117: Start a completely new session (fresh start)
+            startNewSession() {
+                console.log('✨ Starting new session...');
+
+                // Clear all session state
+                this.sessionId = null;
+                this.sessionTitle = null;
+                this.isNewSession = true;
+                this.sessionStartedWithProject = false;
+                this.conversation = [];
+
+                // Hide session indicator
+                const indicator = document.getElementById('sessionIndicator');
+                indicator.style.display = 'none';
+
+                // Clear chat messages (keep welcome message)
+                const messagesDiv = document.getElementById('aiChatMessages');
+                messagesDiv.innerHTML = `
+                    <div class="alert alert-info mb-3" style="font-size: 13px;">
+                        <strong>👋 Welcome to AI Studio!</strong>
+                        <p class="mb-2 mt-2">I can help you:</p>
+                        <ul class="mb-0" style="font-size: 12px;">
+                            <li>Create logos, images, and videos</li>
+                            <li>Enhance and transform photos</li>
+                            <li>Generate complete creative campaigns</li>
+                            <li>Execute any creative workflow you need</li>
+                        </ul>
+                        <div class="mt-3" style="font-size: 11px; padding: 8px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px;">
+                            <strong style="color: #fbbf24;">✨ Fresh Start!</strong>
+                            <div style="margin-top: 4px; color: #cbd5e1;">This session will auto-create its own project when you generate 3+ images or 1+ video.</div>
+                        </div>
+                    </div>
+                `;
+
+                // Don't clear activeProjectId - keep it for reference, but don't send it for new sessions
+                // This way the dropdown still shows the last project, but new session won't be forced into it
+
+                console.log('✅ New session ready - project will be auto-created when you create content');
+
+                // Scroll to top of chat
+                messagesDiv.scrollTop = 0;
             }
 
             // Session 96: Show toast notification when project is auto-created
@@ -15447,9 +15554,15 @@
                 if (this.sessionId) {
                     requestBody.session_id = this.sessionId;
                 }
-                // Session 97: Include active project
-                if (this.activeProjectId) {
+                // Session 117: FIXED - Only send project_id if:
+                // 1. Session was resumed WITH a project (sessionStartedWithProject = true), OR
+                // 2. User explicitly selected a project after session started
+                // DO NOT send project_id for NEW sessions - let backend auto-create!
+                if (this.activeProjectId && (this.sessionStartedWithProject || !this.isNewSession)) {
                     requestBody.project_id = this.activeProjectId;
+                    console.log('📁 Including project in request:', this.activeProjectName);
+                } else if (this.isNewSession) {
+                    console.log('✨ New session - letting backend handle project creation');
                 }
 
                 // Call the GPT-5-mini assistant chat endpoint with function calling
@@ -18932,8 +19045,12 @@
                                     </div>
                                 `}
                                 <div class="card-body p-2">
-                                    <p class="small mb-1 text-truncate" title="${asset.prompt || 'No prompt'}">
-                                        ${asset.prompt || 'No prompt'}
+                                    <!-- Session 117: Use consistent labeling with Sessions view -->
+                                    <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">
+                                        🆔 ${asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : 'Audio'} #${asset.sequential_number || asset.id}
+                                    </p>
+                                    <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">
+                                        ${asset.prompt && asset.prompt.length > 60 ? asset.prompt.substring(0, 60) + '...' : asset.prompt || 'No prompt'}
                                     </p>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">${asset.type}</small>
@@ -22590,6 +22707,22 @@ Your analytics will appear here automatically!`);
                     aiAssistant.sessionId = sessionId;
                     aiAssistant.sessionTitle = sessionTitle;
 
+                    // Session 117: CRITICAL - Mark as resumed session with project
+                    aiAssistant.isNewSession = false;
+                    if (data.session.project) {
+                        aiAssistant.sessionStartedWithProject = true;
+                        aiAssistant.activeProjectId = data.session.project.id;
+                        aiAssistant.activeProjectName = data.session.project.name;
+
+                        // Update project dropdown to match
+                        const projectSelect = document.getElementById('activeProjectSelect');
+                        if (projectSelect) {
+                            projectSelect.value = data.session.project.id;
+                        }
+
+                        console.log(`📁 Session has project: ${data.session.project.name}`);
+                    }
+
                     // Update session indicator
                     aiAssistant.updateSessionIndicator({
                         session_id: sessionId,
@@ -23430,7 +23563,7 @@ Your analytics will appear here automatically!`);
             }
         }
 
-        // Load MiniFig Gallery
+        // Load MiniFig Gallery (Enhanced with 3D Viewer)
         async function loadMiniFigGallery() {
             const grid = document.getElementById('minifigGalleryGrid');
             const loading = document.getElementById('minifigGalleryLoading');
@@ -23462,20 +23595,169 @@ Your analytics will appear here automatically!`);
                 }
 
                 grid.innerHTML = minifigs.map(mf => {
-                    // Extract style and scale from metadata
+                    // Extract metadata
                     const style = mf.metadata?.style || 'Unknown';
-                    const scale = mf.metadata?.scale || 'N/A';
+                    const scale = mf.metadata?.scale || 'medium';
+                    const imageCount = mf.metadata?.image_count || 'N/A';
+                    const generationMethod = mf.metadata?.generation_method || 'AI';
+                    const colorVideo = mf.metadata?.color_video;
+
+                    // Generate title
+                    const title = mf.title || `${style} Character (${scale})`;
+
+                    // Status badge styling
+                    const statusColors = {
+                        'completed': 'success',
+                        'processing': 'warning',
+                        'pending': 'info',
+                        'failed': 'danger'
+                    };
+                    const statusColor = statusColors[mf.status] || 'secondary';
+
+                    // Format date
+                    const createdDate = new Date(mf.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    // Download filename
+                    const downloadFilename = `character_${style.toLowerCase()}_${scale}.glb`;
 
                     return `
-                    <div class="col-md-4">
-                        <div class="card bg-dark border-cyan h-100">
-                            <div class="card-body">
-                                <h6 class="text-cyan mb-2">🤖 ${style} Style</h6>
-                                <p class="small text-muted mb-2">Scale: ${scale}</p>
-                                <p class="small text-muted mb-2">Status: ${mf.status || 'Unknown'}</p>
-                                <p class="small text-muted mb-3">Created: ${new Date(mf.created_at).toLocaleDateString()}</p>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%); border: 2px solid var(--cyan); border-radius: 12px; overflow: hidden; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 217, 255, 0.2);"
+                             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(0, 217, 255, 0.4)'; this.style.borderColor='var(--cyan-bright)';"
+                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 217, 255, 0.2)'; this.style.borderColor='var(--cyan)';">
+
+                            <!-- 3D Model Viewer -->
+                            ${mf.three_d_file ? `
+                            <div style="background: #000; border-bottom: 2px solid var(--cyan); position: relative;">
+                                <model-viewer
+                                    src="${mf.three_d_file}"
+                                    alt="${title}"
+                                    auto-rotate
+                                    camera-controls
+                                    style="width: 100%; height: 300px;"
+                                    loading="eager"
+                                    reveal="auto">
+                                </model-viewer>
+                                <div style="position: absolute; top: 10px; right: 10px;">
+                                    <span class="badge bg-${statusColor}" style="font-size: 11px; padding: 5px 10px;">
+                                        ${mf.status.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+                            ` : `
+                            <div style="background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); height: 300px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid var(--cyan);">
+                                <div class="text-center">
+                                    <div class="spinner-border text-cyan mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                        <span class="visually-hidden">Processing...</span>
+                                    </div>
+                                    <p class="text-muted">Generating 3D model...</p>
+                                    <span class="badge bg-${statusColor}">${mf.status.toUpperCase()}</span>
+                                </div>
+                            </div>
+                            `}
+
+                            <!-- Card Body -->
+                            <div class="card-body" style="padding: 20px;">
+                                <!-- Title -->
+                                <h5 class="card-title mb-3" style="color: var(--cyan-bright); font-weight: bold; font-size: 18px;">
+                                    🎨 ${title}
+                                </h5>
+
+                                <!-- Source Image Preview -->
+                                ${mf.preview_image_url ? `
+                                <div class="mb-3" style="border-radius: 8px; overflow: hidden; border: 1px solid var(--cyan); cursor: pointer;">
+                                    <img src="${mf.preview_image_url}"
+                                         alt="Source Image"
+                                         style="width: 100%; height: 120px; object-fit: cover;"
+                                         onclick="showMiniFigDetails('${mf.id}')">
+                                    <div style="background: rgba(0, 217, 255, 0.1); padding: 5px 10px; text-align: center;">
+                                        <small style="color: var(--cyan); font-weight: 600;">Source Image</small>
+                                    </div>
+                                </div>
+                                ` : ''}
+
+                                <!-- Color Video Preview -->
+                                ${colorVideo ? `
+                                <div class="mb-3" style="border-radius: 8px; overflow: hidden; border: 1px solid var(--cyan); cursor: pointer;">
+                                    <video src="${colorVideo}"
+                                           style="width: 100%; height: 120px; object-fit: cover;"
+                                           autoplay loop muted playsinline
+                                           onclick="showMiniFigDetails('${mf.id}')">
+                                    </video>
+                                    <div style="background: rgba(0, 217, 255, 0.1); padding: 5px 10px; text-align: center;">
+                                        <small style="color: var(--cyan); font-weight: 600;">🎬 Turntable Animation</small>
+                                    </div>
+                                </div>
+                                ` : ''}
+
+                                <!-- Metadata Cards -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(0, 217, 255, 0.1); border-radius: 6px; border: 1px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 10px;">STYLE</small>
+                                            <strong style="color: var(--cyan); font-size: 13px;">${style}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(0, 217, 255, 0.1); border-radius: 6px; border: 1px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 10px;">SCALE</small>
+                                            <strong style="color: var(--cyan); font-size: 13px; text-transform: uppercase;">${scale}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(0, 217, 255, 0.1); border-radius: 6px; border: 1px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 10px;">METHOD</small>
+                                            <strong style="color: var(--cyan); font-size: 13px;">${generationMethod}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(0, 217, 255, 0.1); border-radius: 6px; border: 1px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 10px;">IMAGES</small>
+                                            <strong style="color: var(--cyan); font-size: 13px;">${imageCount}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Cost Display -->
+                                <div class="mb-3 p-2 text-center" style="background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(0, 150, 200, 0.15) 100%); border-radius: 8px; border: 1px solid var(--cyan);">
+                                    <small style="color: #888; display: block; font-size: 11px;">GENERATION COST</small>
+                                    <strong style="color: #4ade80; font-size: 18px; font-weight: bold;">$0.038</strong>
+                                </div>
+
+                                <!-- Timestamp -->
+                                <p class="text-muted mb-3" style="font-size: 12px; text-align: center;">
+                                    📅 ${createdDate}
+                                </p>
+
+                                <!-- Action Buttons -->
                                 <div class="d-grid gap-2">
-                                    ${mf.three_d_file ? `<a href="${mf.three_d_file}" class="btn btn-sm btn-outline-success" download>📥 Download 3D File</a>` : '<p class="small text-warning">File not available</p>'}
+                                    ${mf.three_d_file ? `
+                                    <a href="${mf.three_d_file}"
+                                       class="btn btn-outline-success btn-sm"
+                                       download="${downloadFilename}"
+                                       style="border-width: 2px; font-weight: 600; transition: all 0.3s;"
+                                       onmouseover="this.style.transform='scale(1.02)'"
+                                       onmouseout="this.style.transform='scale(1)'">
+                                        📥 Download GLB File
+                                    </a>
+                                    ` : `
+                                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                                        ⏳ Model Not Ready
+                                    </button>
+                                    `}
+                                    <button onclick="showMiniFigDetails('${mf.id}')"
+                                            class="btn btn-outline-info btn-sm"
+                                            style="border-width: 2px; border-color: var(--cyan); color: var(--cyan); font-weight: 600; transition: all 0.3s;"
+                                            onmouseover="this.style.background='var(--cyan)'; this.style.color='#000'; this.style.transform='scale(1.02)'"
+                                            onmouseout="this.style.background='transparent'; this.style.color='var(--cyan)'; this.style.transform='scale(1)'">
+                                        🔍 View Details
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -23494,6 +23776,250 @@ Your analytics will appear here automatically!`);
         document.getElementById('minifig-gallery-pill').addEventListener('shown.bs.tab', () => {
             loadMiniFigGallery();
         });
+
+        // Show MiniFig Details Modal
+        async function showMiniFigDetails(minifigId) {
+            const modal = document.getElementById('minifigDetailModal');
+            const content = document.getElementById('minifigDetailContent');
+
+            // Show modal with loading state
+            modal.style.display = 'block';
+            content.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-cyan mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted">Loading character details...</p>
+                </div>
+            `;
+
+            try {
+                // Fetch minifig details
+                const response = await authenticatedFetch(`/api/v1/content/minifigs/${minifigId}/`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load MiniFig details');
+                }
+
+                const mf = data.minifig;
+
+                // Extract metadata
+                const style = mf.metadata?.style || 'Unknown';
+                const scale = mf.metadata?.scale || 'medium';
+                const imageCount = mf.metadata?.image_count || 'N/A';
+                const generationMethod = mf.metadata?.generation_method || 'AI';
+                const colorVideo = mf.metadata?.color_video;
+                const depthVideo = mf.metadata?.depth_video;
+                const normalVideo = mf.metadata?.normal_video;
+
+                // Generate title
+                const title = mf.title || `${style} Character (${scale})`;
+
+                // Status badge styling
+                const statusColors = {
+                    'completed': 'success',
+                    'processing': 'warning',
+                    'pending': 'info',
+                    'failed': 'danger'
+                };
+                const statusColor = statusColors[mf.status] || 'secondary';
+
+                // Format date
+                const createdDate = new Date(mf.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                // Download filename
+                const downloadFilename = `character_${style.toLowerCase()}_${scale}.glb`;
+
+                // Render detailed content
+                content.innerHTML = `
+                    <div class="row g-4">
+                        <!-- Left Column: 3D Viewer -->
+                        <div class="col-lg-6">
+                            ${mf.three_d_file ? `
+                            <div style="background: #000; border-radius: 12px; overflow: hidden; border: 2px solid var(--cyan); box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);">
+                                <model-viewer
+                                    src="${mf.three_d_file}"
+                                    alt="${title}"
+                                    auto-rotate
+                                    camera-controls
+                                    style="width: 100%; height: 500px;"
+                                    loading="eager"
+                                    reveal="auto"
+                                    shadow-intensity="1">
+                                </model-viewer>
+                            </div>
+                            ` : `
+                            <div style="background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); height: 500px; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 2px solid var(--cyan);">
+                                <div class="text-center">
+                                    <div class="spinner-border text-cyan mb-3" role="status" style="width: 4rem; height: 4rem;">
+                                        <span class="visually-hidden">Processing...</span>
+                                    </div>
+                                    <h4 class="text-muted">Generating 3D model...</h4>
+                                    <span class="badge bg-${statusColor} mt-2" style="font-size: 14px; padding: 8px 16px;">
+                                        ${mf.status.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+                            `}
+
+                            <!-- Download Button -->
+                            ${mf.three_d_file ? `
+                            <div class="mt-3">
+                                <a href="${mf.three_d_file}"
+                                   class="btn btn-success btn-lg w-100"
+                                   download="${downloadFilename}"
+                                   style="border-width: 2px; font-weight: 700; font-size: 18px; padding: 12px;">
+                                    📥 Download GLB File (${downloadFilename})
+                                </a>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- Right Column: Details -->
+                        <div class="col-lg-6">
+                            <!-- Title & Status -->
+                            <div class="mb-4">
+                                <h3 style="color: var(--cyan-bright); font-size: 28px; font-weight: bold; margin-bottom: 10px;">
+                                    ${title}
+                                </h3>
+                                <span class="badge bg-${statusColor}" style="font-size: 14px; padding: 8px 16px;">
+                                    ${mf.status.toUpperCase()}
+                                </span>
+                            </div>
+
+                            <!-- Source Image Preview -->
+                            ${mf.preview_image_url ? `
+                            <div class="mb-4">
+                                <h5 style="color: var(--cyan); margin-bottom: 10px;">📸 Source Image</h5>
+                                <div style="border-radius: 12px; overflow: hidden; border: 2px solid var(--cyan); box-shadow: 0 0 15px rgba(0, 217, 255, 0.2);">
+                                    <img src="${mf.preview_image_url}"
+                                         alt="Source Image"
+                                         style="width: 100%; height: auto; object-fit: cover;">
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <!-- Metadata Grid -->
+                            <div class="mb-4">
+                                <h5 style="color: var(--cyan); margin-bottom: 15px;">📊 Generation Details</h5>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="p-3" style="background: rgba(0, 217, 255, 0.1); border-radius: 8px; border: 2px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 11px; margin-bottom: 5px;">STYLE</small>
+                                            <strong style="color: var(--cyan); font-size: 16px;">${style}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3" style="background: rgba(0, 217, 255, 0.1); border-radius: 8px; border: 2px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 11px; margin-bottom: 5px;">SCALE</small>
+                                            <strong style="color: var(--cyan); font-size: 16px; text-transform: uppercase;">${scale}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3" style="background: rgba(0, 217, 255, 0.1); border-radius: 8px; border: 2px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 11px; margin-bottom: 5px;">METHOD</small>
+                                            <strong style="color: var(--cyan); font-size: 16px;">${generationMethod}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3" style="background: rgba(0, 217, 255, 0.1); border-radius: 8px; border: 2px solid rgba(0, 217, 255, 0.3);">
+                                            <small style="color: #888; display: block; font-size: 11px; margin-bottom: 5px;">IMAGES</small>
+                                            <strong style="color: var(--cyan); font-size: 16px;">${imageCount}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cost Display -->
+                            <div class="mb-4 p-3 text-center" style="background: linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(0, 150, 200, 0.2) 100%); border-radius: 12px; border: 2px solid var(--cyan); box-shadow: 0 0 15px rgba(0, 217, 255, 0.2);">
+                                <small style="color: #888; display: block; font-size: 12px; margin-bottom: 5px;">GENERATION COST</small>
+                                <strong style="color: #4ade80; font-size: 32px; font-weight: bold;">$0.038</strong>
+                                <p class="text-muted mt-2 mb-0" style="font-size: 13px;">Per character generation</p>
+                            </div>
+
+                            <!-- Timestamp -->
+                            <div class="mb-4 p-3" style="background: rgba(0, 217, 255, 0.05); border-radius: 8px; border: 1px solid rgba(0, 217, 255, 0.2);">
+                                <small style="color: #888; display: block; font-size: 11px; margin-bottom: 5px;">CREATED</small>
+                                <strong style="color: #fff; font-size: 14px;">📅 ${createdDate}</strong>
+                            </div>
+
+                            <!-- Videos Section -->
+                            ${colorVideo || depthVideo || normalVideo ? `
+                            <div class="mb-4">
+                                <h5 style="color: var(--cyan); margin-bottom: 15px;">🎬 Preview Videos</h5>
+                                <div class="row g-3">
+                                    ${colorVideo ? `
+                                    <div class="col-12">
+                                        <div style="border-radius: 8px; overflow: hidden; border: 2px solid var(--cyan);">
+                                            <video src="${colorVideo}"
+                                                   controls
+                                                   loop
+                                                   style="width: 100%; height: auto; background: #000;">
+                                            </video>
+                                            <div style="background: rgba(0, 217, 255, 0.1); padding: 8px; text-align: center;">
+                                                <small style="color: var(--cyan); font-weight: 600;">Color Turntable</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    ${depthVideo ? `
+                                    <div class="col-6">
+                                        <div style="border-radius: 8px; overflow: hidden; border: 1px solid rgba(0, 217, 255, 0.5);">
+                                            <video src="${depthVideo}"
+                                                   controls
+                                                   loop
+                                                   style="width: 100%; height: auto; background: #000;">
+                                            </video>
+                                            <div style="background: rgba(0, 217, 255, 0.05); padding: 5px; text-align: center;">
+                                                <small style="color: var(--cyan); font-size: 11px;">Depth Map</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    ${normalVideo ? `
+                                    <div class="col-6">
+                                        <div style="border-radius: 8px; overflow: hidden; border: 1px solid rgba(0, 217, 255, 0.5);">
+                                            <video src="${normalVideo}"
+                                                   controls
+                                                   loop
+                                                   style="width: 100%; height: auto; background: #000;">
+                                            </video>
+                                            <div style="background: rgba(0, 217, 255, 0.05); padding: 5px; text-align: center;">
+                                                <small style="color: var(--cyan); font-size: 11px;">Normal Map</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('❌ Failed to load MiniFig details:', error);
+                content.innerHTML = `
+                    <div class="text-center py-5">
+                        <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                        <h4 class="text-danger mb-3">Failed to Load Details</h4>
+                        <p class="text-muted">${error.message}</p>
+                        <button onclick="document.getElementById('minifigDetailModal').style.display='none'"
+                                class="btn btn-outline-cyan mt-3">
+                            Close
+                        </button>
+                    </div>
+                `;
+            }
+        }
 
         // END SESSION 115: MINIFIG 3D CHARACTERS
         // ====================================================================

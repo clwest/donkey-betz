@@ -192,7 +192,11 @@ def increment_session_counter(session, content_type):
         session.total_audio >= 2
     )
 
-    if should_create_project and not session.project and not session.auto_created_project:
+    # Session 117: FIXED - Also auto-create if session is using Quick Starts placeholder
+    # Quick Starts is just a fallback, not a real user project
+    has_real_project = session.project and not session.project.is_quick_starts
+
+    if should_create_project and not has_real_project and not session.auto_created_project:
         logger.info(f"🎯 Auto-creating project for session {session.session_id}")
         project = auto_create_project_from_session(session)
         if project:
@@ -220,8 +224,10 @@ def auto_create_project_from_session(session):
     if not session:
         return None
 
-    # Skip if already has project or already auto-created one
-    if session.project or session.auto_created_project:
+    # Session 117: FIXED - Skip only if has a REAL project (not Quick Starts placeholder)
+    # Quick Starts is okay to replace with auto-created project
+    has_real_project = session.project and not session.project.is_quick_starts
+    if has_real_project or session.auto_created_project:
         return None
 
     # Determine project name from session title
@@ -3614,7 +3620,15 @@ def session_gallery(request):
                 'created_at': session.created_at.isoformat(),
                 'total_images': session.total_images,
                 'total_videos': session.total_videos,
-                'total_audio': session.total_audio
+                'total_audio': session.total_audio,
+                # Session 117: Include project info for proper resume
+                'project': {
+                    'id': str(session.project.id),
+                    'name': session.project.name,
+                    'is_quick_starts': session.project.is_quick_starts
+                } if session.project else None,
+                # Session 117: Include conversation for AI context (frontend expects 'transcript')
+                'transcript': session.conversation_transcript or []
             },
             'images': images,
             'videos': videos,
@@ -6496,9 +6510,10 @@ def transcribe_audio(request):
         audio_bytes = audio_file.read()
         audio_file_like = BytesIO(audio_bytes)
 
-        # Session 83: Always use .webm extension (frontend sends audio/webm format)
-        # This ensures OpenAI Whisper recognizes the format correctly
-        audio_file_like.name = "recording.webm"
+        # Session 117: Try MP4 extension first (more compatible with macOS WebM)
+        # If that fails, OpenAI will give us a more specific error
+        # WebM on macOS can have codec issues - MP4 container is more universal
+        audio_file_like.name = "recording.mp4"
 
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
