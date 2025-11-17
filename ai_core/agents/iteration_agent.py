@@ -165,32 +165,39 @@ class IterationAgent:
                 'parameters': {}
             })
 
-        if 'color' in request_lower or 'recolor' in request_lower:
-            # Extract color if mentioned
-            color_prompt = request  # In production, extract the actual color
+        # Session 123: Support brightness/darkness adjustments
+        if 'darker' in request_lower or 'dark' in request_lower or 'brightness' in request_lower or 'lighter' in request_lower or 'brighter' in request_lower:
+            # Use image_to_image for brightness adjustments
             operations.append({
-                'operation': 'recolor',
-                'parameters': {'prompt': color_prompt}
+                'operation': 'image_to_image',
+                'parameters': {'prompt': request, 'strength': 0.65}
             })
 
-        if 'background' in request_lower and 'remove' in request_lower:
+        elif 'color' in request_lower or 'recolor' in request_lower:
+            # Extract color if mentioned - use image_to_image
+            operations.append({
+                'operation': 'image_to_image',
+                'parameters': {'prompt': request, 'strength': 0.7}
+            })
+
+        elif 'background' in request_lower and 'remove' in request_lower:
             operations.append({
                 'operation': 'remove_bg',
                 'parameters': {}
             })
 
-        if 'style' in request_lower or 'look like' in request_lower:
+        elif 'style' in request_lower or 'look like' in request_lower:
             # Style transfer operation
             operations.append({
                 'operation': 'image_to_image',
                 'parameters': {'prompt': request, 'strength': 0.7}
             })
 
-        # If no specific keywords matched, default to inpaint with prompt
+        # If no specific keywords matched, use image_to_image as default
         if not operations:
             operations.append({
-                'operation': 'inpaint',
-                'parameters': {'prompt': request}
+                'operation': 'image_to_image',
+                'parameters': {'prompt': request, 'strength': 0.65}
             })
 
         return operations

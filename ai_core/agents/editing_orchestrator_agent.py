@@ -200,10 +200,33 @@ class EditingOrchestratorAgent:
                         'error': f'Image with ID {image_id} not found.'
                     }
 
+            # Check if it's a placeholder/data URI - can't edit those
+            if source_image.file_path.startswith('data:'):
+                return {
+                    'success': False,
+                    'error': f'Cannot edit placeholder image #{image_id}. Please generate a real image first using AI Studio.'
+                }
+
+            # Convert relative path to absolute if needed
+            import os
+            from django.conf import settings
+
+            image_path = source_image.file_path
+            if not image_path.startswith(('http://', 'https://', 'data:')):
+                # It's a relative path - make it absolute
+                image_path = os.path.join(settings.BASE_DIR, image_path)
+
+                # Check if file exists
+                if not os.path.exists(image_path):
+                    return {
+                        'success': False,
+                        'error': f'Image file not found at: {image_path}. The file may have been moved or deleted.'
+                    }
+
             # Execute operation based on type
             if operation == 'inpaint':
                 result = self.stability.inpaint(
-                    image_url=source_image.image_url,
+                    image_url=image_path,
                     prompt=parameters.get('prompt'),
                     mask=parameters.get('mask'),
                     **{k: v for k, v in parameters.items() if k not in ['prompt', 'mask']}
@@ -211,20 +234,20 @@ class EditingOrchestratorAgent:
 
             elif operation == 'outpaint':
                 result = self.stability.outpaint(
-                    image_url=source_image.image_url,
+                    image_url=image_path,
                     **parameters
                 )
 
             elif operation == 'recolor':
                 result = self.stability.recolor(
-                    image_url=source_image.image_url,
+                    image_url=image_path,
                     prompt=parameters.get('prompt'),
                     **{k: v for k, v in parameters.items() if k != 'prompt'}
                 )
 
             elif operation == 'image_to_image':
                 result = self.stability.image_to_image(
-                    image_url=source_image.image_url,
+                    base_image=image_path,
                     prompt=parameters.get('prompt'),
                     strength=parameters.get('strength', 0.65),
                     **{k: v for k, v in parameters.items() if k not in ['prompt', 'strength']}
@@ -232,12 +255,12 @@ class EditingOrchestratorAgent:
 
             elif operation == 'remove_bg':
                 result = self.stability.remove_background(
-                    image_url=source_image.image_url
+                    image_url=image_path
                 )
 
             elif operation == 'upscale':
                 result = self.stability.upscale(
-                    image_url=source_image.image_url,
+                    image_url=image_path,
                     **parameters
                 )
 
@@ -247,16 +270,27 @@ class EditingOrchestratorAgent:
                     'error': f'Unknown operation: {operation}'
                 }
 
-            if result.get('success'):
+            if result.success:
                 # Create ImageHistory record for result
+                # ImageGenerationResult.images is a list, get the first one
+                result_image_url = result.images[0] if result.images else None
+
+                if not result_image_url:
+                    return {
+                        'success': False,
+                        'error': 'No image returned from operation'
+                    }
+
                 result_image = ImageHistory.objects.create(
                     user=self.user,
                     prompt=f"{operation}: {parameters.get('prompt', 'N/A')}",
-                    image_url=result['image_url'],
-                    model=source_image.model,
+                    filename=f'{operation}_{image_id}.png',
+                    file_path=result_image_url,
+                    image_type=operation,
+                    model_used=result.model_used or source_image.model_used,
                     style=source_image.style,
-                    width=source_image.width,
-                    height=source_image.height
+                    image_width=source_image.image_width,
+                    image_height=source_image.image_height
                 )
 
                 self.memory.log_agent_action(
@@ -271,12 +305,15 @@ class EditingOrchestratorAgent:
                 return {
                     'success': True,
                     'operation': operation,
-                    'result_image_id': result_image.id,
-                    'result_image_url': result['image_url'],
+                    'result_image_id': str(result_image.id),
+                    'result_image_url': result_image_url,
                     'message': f'✅ {operation} completed successfully'
                 }
             else:
-                return result
+                return {
+                    'success': False,
+                    'error': result.error_message or 'Operation failed'
+                }
 
         except ImageHistory.DoesNotExist:
             return {'success': False, 'error': 'Source image not found'}

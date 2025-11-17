@@ -47,7 +47,19 @@ def assistant_chat_intelligent(request):
         use_rag = request.data.get('use_rag', True)
         use_intelligent_routing = request.data.get('use_intelligent_routing', True)
         force_direct = request.data.get('force_direct', False)  # Bypass intelligent routing for testing
-        
+
+        # Session 124: Extract session_id and project_id for project-scoped generation
+        session_id = request.data.get('session_id')
+        project_id = request.data.get('project_id')
+
+        if project_id:
+            logger.info(f"Intelligent Assistant - Project context: {project_id}")
+            # Store project_id in Redis for this conversation so image generation can access it
+            import redis
+            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            r.setex(f"user:{user.id}:current_project", 300, project_id)  # 5 min expiry
+            logger.info(f"Stored project context in Redis: user:{user.id}:current_project = {project_id}")
+
         logger.info(f"Intelligent Assistant - Message: {message[:50]}... RAG: {use_rag}, Routing: {use_intelligent_routing}")
         
         if not message:
@@ -108,7 +120,9 @@ def assistant_chat_intelligent(request):
             'total_embeddings_available': _get_total_embeddings(),
             'routing_used': False,
             'agent_used': None,
-            'prompt_optimized': False
+            'prompt_optimized': False,
+            'session_id': session_id,  # Session 124: Pass session context
+            'project_id': project_id   # Session 124: Pass project context
         }
 
         # Add system awareness to metadata if available
@@ -132,8 +146,10 @@ def assistant_chat_intelligent(request):
             try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+                # Session 124: Pass project context to agent execution
                 result = loop.run_until_complete(_process_with_agent_execution(
-                    user, message, context, response_metadata, system_awareness_context
+                    user, message, context, response_metadata, system_awareness_context,
+                    session_id=session_id, project_id=project_id
                 ))
             finally:
                 loop.close()
@@ -220,17 +236,24 @@ def assistant_chat_intelligent(request):
 
 async def _process_with_agent_execution(user, message: str, context: str,
                                       response_metadata: Dict[str, Any],
-                                      system_awareness_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                      system_awareness_context: Optional[Dict[str, Any]] = None,
+                                      session_id: Optional[str] = None,
+                                      project_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Process message through the 149-agent system for task execution
     """
     try:
         logger.info("Processing through 149-agent system")
 
+        # Session 124: Add project context to agent execution
+        if project_id:
+            logger.info(f"Agent execution in project context: {project_id}")
+
         # Check if user wants to select specific agents
         selected_agents = None  # Could be extracted from message or context
 
         # Execute through agents
+        # TODO: Pass project_id to execute_through_agents when implementing project-scoped generation
         execution_result = await personal_assistant_agent_integration.execute_through_agents(
             message, selected_agents
         )
