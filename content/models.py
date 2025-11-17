@@ -2058,6 +2058,23 @@ class VideoHistory(UnifiedBaseModel):
         self.download_count += 1
         self.save(update_fields=['download_count'])
 
+    def get_sequential_number(self):
+        """
+        Get sequential number for this video (per user, chronological)
+
+        Session 119: Add sequential numbering to videos (like images and projects)
+        Returns 1-based sequential number for easy voice commands
+        Example: "Use video 12" instead of "Use video d4f7b3c2-8a9e-4d1f..."
+        """
+        # Count how many videos this user has created BEFORE this one
+        earlier_videos = VideoHistory.objects.filter(
+            user=self.user,
+            created_at__lt=self.created_at
+        ).count()
+
+        # Sequential number is count + 1 (1-based indexing)
+        return earlier_videos + 1
+
 
 class MiniFigAsset(UnifiedBaseModel):
     """
@@ -2600,6 +2617,23 @@ class CreativeProject(UnifiedBaseModel):
         self.total_workflows = counts['total'] or 0
         self.completed_workflows = counts['completed'] or 0
         self.save(update_fields=['total_workflows', 'completed_workflows'])
+
+    def get_sequential_number(self):
+        """
+        Get sequential number for this project (per user, chronological)
+
+        Session 117: Hybrid Project ID system
+        Returns 1-based sequential number for easy referencing
+        Example: "Project #5" instead of "Project d4f7b3c2-8a9e-4d1f..."
+        """
+        # Count how many projects this user has created BEFORE this one
+        earlier_projects = CreativeProject.objects.filter(
+            user=self.user,
+            created_at__lt=self.created_at
+        ).count()
+
+        # Sequential number is count + 1 (1-based indexing)
+        return earlier_projects + 1
 
 
 class ProjectWorkflow(models.Model):

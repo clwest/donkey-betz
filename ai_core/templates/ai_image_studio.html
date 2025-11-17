@@ -1160,11 +1160,14 @@
             </li>
 
             <!-- Session 97: Session Management -->
+            <!-- Session 119: Sessions tab removed from navigation - now integrated into Projects view -->
+            <!--
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sessions-tab" data-bs-toggle="tab" data-bs-target="#sessions" type="button" role="tab" title="View and manage all AI sessions">
                     📝 Sessions
                 </button>
             </li>
+            -->
 
             <!-- Portfolio (Session 61: Phase C.2.2) -->
             <li class="nav-item" role="presentation">
@@ -4705,6 +4708,30 @@
                     <strong>✨ Organize Your Creative Work</strong><br>
                     Group workflows into projects, track progress, and manage deadlines!<br>
                     <small class="text-muted">Perfect for client work, campaigns, and creative collections</small>
+                </div>
+
+                <!-- Session 119: Analytics Dashboard (moved from Sessions tab) -->
+                <div class="mb-4">
+                    <button class="btn btn-lg w-100"
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#analytics-panel"
+                            onclick="loadSessionAnalytics()">
+                        📊 View Analytics Dashboard
+                    </button>
+
+                    <div class="collapse mt-3" id="analytics-panel">
+                        <div class="card" style="background: #1a1a1a; border: 2px solid #f093fb;">
+                            <div class="card-body" id="analytics-content">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border" style="color: #f093fb;" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Loading analytics...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Create New Project Buttons (Session 62: Phase C.3) -->
@@ -14904,8 +14931,12 @@
                 sortedProjects.forEach(project => {
                     const option = document.createElement('option');
                     option.value = project.id;
-                    const prefix = project.is_quick_starts ? '⚡ ' : '📁 ';
-                    option.textContent = `${prefix}${project.name}`;
+                    // Session 117: Show sequential number for easy reference
+                    if (project.is_quick_starts) {
+                        option.textContent = `⚡ ${project.name}`;
+                    } else {
+                        option.textContent = `📁 Project #${project.sequential_number} - ${project.name}`;
+                    }
                     select.appendChild(option);
                 });
 
@@ -19019,7 +19050,7 @@
                                         onmouseout="this.style.background='rgba(239, 68, 68, 0.9)'"
                                         title="Delete this image"
                                     >🗑️ Delete</button>
-                                    <img src="${asset.thumbnail_url || asset.url}"
+                                    <img src="${asset.thumbnail_url || asset.content_url}"
                                          class="card-img-top"
                                          style="height: 200px; object-fit: cover; cursor: pointer;"
                                          onclick="viewAsset('${asset.id}', '${asset.type}')"
@@ -19032,7 +19063,8 @@
                                         onmouseout="this.style.background='rgba(239, 68, 68, 0.9)'"
                                         title="Delete this video"
                                     >🗑️ Delete</button>
-                                    <video src="${asset.url}"
+                                    <video src="${asset.content_url}"
+                                           poster="${asset.thumbnail_url || ''}"
                                            class="card-img-top"
                                            style="height: 200px; object-fit: cover; cursor: pointer;"
                                            onclick="viewAsset('${asset.id}', '${asset.type}')"

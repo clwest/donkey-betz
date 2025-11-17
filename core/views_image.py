@@ -336,6 +336,13 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             logger.warning(f"Could not read file size: {e}")
             file_size = None
 
+        # Session 119: BUGFIX - Assign project if session already has one
+        # When resuming a session with existing project, images need to be linked immediately
+        image_project = None
+        if session and session.project:
+            image_project = session.project
+            logger.info(f"📁 Assigning image to project: {session.project.name}")
+
         # Create history record
         history = ImageHistory.objects.create(
             user=user,
@@ -351,7 +358,8 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             file_size_bytes=file_size,
             parent_image=parent_image,
             seed=seed,  # Session 95: Save seed for reproducibility
-            session=session  # Session 96 Weekend Project: Link to AI conversation
+            session=session,  # Session 96 Weekend Project: Link to AI conversation
+            project=image_project  # Session 119: BUGFIX - Assign project if session has one
         )
 
         logger.info(f"✅ Saved to history: {image_type} - {history.filename} (ID: {history.id})")
@@ -3391,6 +3399,7 @@ def unified_gallery(request):
 
                 all_items.append({
                     'id': str(img.id),
+                    'sequential_number': img.get_sequential_number(),  # Session 117: Sequential ID
                     'type': 'image',
                     'url': image_url,
                     'thumbnail_url': thumbnail_url,
@@ -5626,6 +5635,7 @@ Keep responses under 200 words. Be conversational and practical."""
             ASSISTANT_INSTRUCTIONS += personalization
 
         # Session 62: Phase C.3.2 - Add project context for strategic planning
+        # Session 119: ENHANCED - Use project context for content generation!
         if user_projects.exists():
             project_context = "\n\n**ACTIVE PROJECTS:**\n"
             for project in user_projects:
@@ -5634,8 +5644,30 @@ Keep responses under 200 words. Be conversational and practical."""
                 if project.deadline:
                     project_context += f"  Deadline: {project.deadline.strftime('%Y-%m-%d')}\n"
 
-            project_context += "\nProvide strategic advice based on their active projects. Suggest workflows, timelines, and organization strategies!"
+            # Session 119: Add explicit instructions for using project context in content generation
+            project_context += "\n**CRITICAL - USE PROJECT CONTEXT FOR CONTENT GENERATION:**\n"
+            project_context += "- When user asks to create content (images/videos/audio) during an active project session, EXTRACT the project theme and style!\n"
+            project_context += "- Example: Project is 'Three cartoon style logos for a mechanic shop'\n"
+            project_context += "  → Video prompt should be: 'Cartoon-style promo video for a mechanic shop with animated tools and vehicles'\n"
+            project_context += "  → NOT just: 'Generic promo video for your brand'\n"
+            project_context += "- ALWAYS incorporate the project's goal, category, and any style keywords (cartoon, modern, vintage, etc.) into your prompts!\n"
+            project_context += "- If the project name mentions a specific style (cartoon, realistic, vintage), USE that style in all content!\n"
+            project_context += "\nAlso provide strategic advice based on their active projects. Suggest workflows, timelines, and organization strategies!"
             ASSISTANT_INSTRUCTIONS += project_context
+
+        # Session 119: Add CURRENT session project context if available
+        if session and session.project and not session.project.is_quick_starts:
+            current_project_context = f"\n\n**🎯 CURRENT ACTIVE SESSION PROJECT:**\n"
+            current_project_context += f"**{session.project.name}**\n"
+            current_project_context += f"Goal: {session.project.goal}\n"
+            current_project_context += f"Category: {session.project.category}\n"
+            current_project_context += f"Status: {session.project.status}\n"
+            current_project_context += f"\n⚠️ CRITICAL: The user is CURRENTLY working on this project!\n"
+            current_project_context += f"- When they ask to create content, it's FOR THIS PROJECT!\n"
+            current_project_context += f"- Extract the theme, style, and subject from the project name and goal!\n"
+            current_project_context += f"- Use those details in your content generation prompts!\n"
+            current_project_context += f"- Example: If project is '{session.project.name}', make content that matches that theme!\n"
+            ASSISTANT_INSTRUCTIONS += current_project_context
 
         # Session 65: SUPER AI EXECUTOR - Function calling support
         # Build messages array for Chat Completions API
@@ -7221,6 +7253,52 @@ def _execute_generate_image(user, parameters, session=None):
         raise
 
 
+def _extract_image_reference(text, user):
+    """
+    Extract and resolve image references from text.
+
+    Session 119: BUGFIX - Enable "create video from image 199" functionality
+
+    Looks for patterns like:
+    - "image 199"
+    - "image #199"
+    - "Image 199"
+    - UUID strings
+
+    Returns ImageHistory object if found, None otherwise.
+    """
+    import re
+    from content.models import ImageHistory
+
+    # Pattern 1: "image 199" or "image #199" (sequential number)
+    pattern1 = r'image\s*#?(\d+)'
+    matches = re.findall(pattern1, text, re.IGNORECASE)
+
+    if matches:
+        sequential_num = int(matches[0])
+        # Sequential number is just the database ID
+        try:
+            image = ImageHistory.objects.get(id=sequential_num, user=user)
+            logger.info(f"📸 Resolved 'image {sequential_num}' to: {image.filename} (ID: {image.id})")
+            return image
+        except ImageHistory.DoesNotExist:
+            logger.warning(f"⚠️ Image #{sequential_num} not found for user {user.username}")
+
+    # Pattern 2: UUID pattern (8-4-4-4-12 format)
+    uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    uuid_matches = re.findall(uuid_pattern, text, re.IGNORECASE)
+
+    if uuid_matches:
+        try:
+            image = ImageHistory.objects.get(id=uuid_matches[0], user=user)
+            logger.info(f"📸 Resolved UUID to: {image.filename}")
+            return image
+        except ImageHistory.DoesNotExist:
+            logger.warning(f"⚠️ Image UUID {uuid_matches[0]} not found")
+
+    return None
+
+
 def _execute_generate_video(user, parameters, session=None):
     """
     Execute video generation tool
@@ -7263,20 +7341,40 @@ def _execute_generate_video(user, parameters, session=None):
             prompt = prompt[:950] + "..."
             logger.info(f"🎬 Truncated prompt: {prompt[:100]}...")
 
+        # Session 119: BUGFIX - Check if prompt references an existing image
+        # If found, use image-to-video instead of text-to-video
+        source_image = _extract_image_reference(prompt, user)
+        video_type = 'text_to_video'
+
         logger.info(f"🎬 Executor generating video: {prompt[:50]}... (duration: {duration}s)")
 
         # Use Runway ML provider directly (same as text_to_video view)
         from content.video_provider import runway_provider
 
-        result = runway_provider.text_to_video(
-            prompt=prompt,
-            duration=duration,
-            quality='veo3.1_fast',  # Use fast model for executor
-            style='realistic',
-            enhance_prompt=True,
-            enhancement_level='advanced',
-            ratio='1920:1080'
-        )
+        if source_image:
+            # Image reference found - use image-to-video!
+            logger.info(f"🖼️ Image reference detected! Using image-to-video with: {source_image.filename}")
+            video_type = 'image_to_video'
+
+            result = runway_provider.image_to_video(
+                image_url=source_image.file_path,
+                motion_prompt=prompt,
+                duration=duration,
+                quality='gen4_turbo',  # Use gen4_turbo for image-to-video
+                enhance_prompt=True,
+                ratio='1280:720'
+            )
+        else:
+            # No image reference - use regular text-to-video
+            result = runway_provider.text_to_video(
+                prompt=prompt,
+                duration=duration,
+                quality='veo3.1_fast',  # Use fast model for executor
+                style='realistic',
+                enhance_prompt=True,
+                enhancement_level='advanced',
+                ratio='1920:1080'
+            )
 
         if not result.success:
             raise Exception(f"Video generation failed: {result.error_message or 'Unknown error'}")
@@ -7285,25 +7383,36 @@ def _execute_generate_video(user, parameters, session=None):
         # This makes AI Assistant videos appear in Video Gallery
         # Session 96 Weekend Project: Link to AI conversation session
         from content.models import VideoHistory
+
+        # Session 119: BUGFIX - Assign project if session already has one
+        # When resuming a session with existing project, videos need to be linked immediately
+        video_project = None
+        if session and session.project:
+            video_project = session.project
+            logger.info(f"📁 Assigning video to project: {session.project.name}")
+
         video = VideoHistory.objects.create(
             user=user,
             video_id=result.task_id,
             video_url='',  # Will be populated when video completes
-            video_type='text_to_video',
+            video_type=video_type,  # Session 119: BUGFIX - Dynamic type based on image reference
             prompt=prompt,
             parameters={
                 'duration': duration,
-                'quality': 'veo3.1_fast',
+                'quality': 'gen4_turbo' if source_image else 'veo3.1_fast',
                 'style': 'realistic',
-                'ratio': '1920:1080',
+                'ratio': '1280:720' if source_image else '1920:1080',
                 'enhance_prompt': True,
-                'enhancement_level': 'advanced'
+                'enhancement_level': 'advanced',
+                'source_image_id': str(source_image.id) if source_image else None  # Session 119: Track source
             },
-            model_used='veo3.1_fast',
+            model_used='gen4_turbo' if source_image else 'veo3.1_fast',
             duration=duration,
-            ratio='1920:1080',
+            ratio='1280:720' if source_image else '1920:1080',
             status='processing',
-            session=session  # Session 96: Link to AI conversation
+            session=session,  # Session 96: Link to AI conversation
+            project=video_project,  # Session 119: BUGFIX - Assign project if session has one
+            source_image=source_image  # Session 119: BUGFIX - Link to source image if image-to-video
         )
 
         logger.info(f"✅ Executor started video generation: {result.task_id}")
@@ -9128,6 +9237,7 @@ def list_projects(request):
             project_data.append({
                 'id': str(project.id),
                 'name': project.name,
+                'sequential_number': project.get_sequential_number(),  # Session 117: Sequential ID
                 'description': project.description,
                 'goal': project.goal,
                 'status': project.status,
@@ -9732,6 +9842,7 @@ def get_portfolio(request):
 
                 portfolio_items.append({
                     'id': str(img.id),
+                    'sequential_number': img.get_sequential_number(),  # Session 117: Sequential ID
                     'type': 'image',
                     'content_url': img.get_full_url(),
                     'thumbnail_url': img.get_thumbnail_url(),
@@ -9755,11 +9866,10 @@ def get_portfolio(request):
         # Query videos
         if not content_type or content_type == 'video':
             # Session 96: Exclude videos with expired external CDN URLs
-            videos_query = VideoHistory.objects.filter(**video_filter).exclude(
-                Q(video_url__icontains='cloudfront.net') |
-                Q(video_url__icontains='storage.googleapis.com') |
-                Q(video_url__icontains='_jwt=')
-            ).select_related('user')
+            # Session 119: Filter disabled - videos are now downloaded to local storage automatically
+            videos_query = VideoHistory.objects.filter(**video_filter).select_related('user')
+            # CDN filter no longer needed - all new videos download automatically (Session 119)
+            # Existing videos rescued via rescue_cdn_videos.py script
 
             # Session 62: Phase C.2.1 - Apply search filter
             if search_query:
@@ -9799,6 +9909,7 @@ def get_portfolio(request):
 
                 portfolio_items.append({
                     'id': str(vid.id),
+                    'sequential_number': vid.get_sequential_number(),  # Session 119: Sequential ID for videos
                     'type': 'video',
                     'content_url': vid.video_url,
                     'thumbnail_url': vid.thumbnail_url or vid.video_url,

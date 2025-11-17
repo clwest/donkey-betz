@@ -559,7 +559,38 @@ def check_video_status(request, task_id):
 
                 # Update VideoHistory status directly
                 if result.status == 'completed':
-                    video_history.video_url = result.video_url
+                    # Session 119: Download video to local storage (prevent expired CDN URLs)
+                    local_video_url = result.video_url
+                    try:
+                        import requests
+                        from django.core.files.base import ContentFile
+                        from django.core.files.storage import default_storage
+
+                        # Download video from CDN
+                        logger.info(f"📥 Downloading AI Assistant video from CDN: {result.video_url[:80]}...")
+                        response = requests.get(result.video_url, timeout=120, stream=True)
+                        response.raise_for_status()
+
+                        # Read video content
+                        video_content = b''
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                video_content += chunk
+
+                        # Generate filename using video_history ID
+                        filename = f"videos/{request.user.id}/assistant_{video_history.id}.mp4"
+
+                        # Save to local storage
+                        file_path = default_storage.save(filename, ContentFile(video_content))
+                        local_video_url = default_storage.url(file_path)
+
+                        logger.info(f"✅ AI Assistant video saved to local storage: {file_path}")
+                    except Exception as download_error:
+                        logger.warning(f"⚠️ Failed to download AI Assistant video, using CDN URL: {str(download_error)}")
+                        # Fall back to CDN URL if download fails
+                        local_video_url = result.video_url
+
+                    video_history.video_url = local_video_url  # Session 119: Use local URL
                     video_history.thumbnail_url = result.thumbnail_url or ''
                     video_history.status = 'completed'
                     video_history.generation_completed = timezone.now()
@@ -790,6 +821,7 @@ def get_video_history(request):
 
             video_list.append({
                 'id': video.id,
+                'sequential_number': video.get_sequential_number(),  # Session 119: Sequential ID for videos
                 'video_id': video.video_id,
                 'video_url': video.video_url,
                 'thumbnail_url': video.thumbnail_url,
@@ -1280,10 +1312,22 @@ def extend_video_endpoint(request):
         - prompt: Optional guidance for extension (default: continue motion)
     """
     try:
+        # Handle JSON request body (Flutter sends JSON, not form data)
+        import json
+        try:
+            data = json.loads(request.body)
+        except:
+            data = request.POST.dict()
+
         # Get video URL (must be from gallery)
-        video_url = request.POST.get('video_url', '').strip()
-        extension_seconds = int(request.POST.get('extension_seconds', 10))
-        prompt = request.POST.get('prompt', '').strip()
+        video_url = data.get('video_url', '').strip()
+        extension_seconds = int(data.get('extension_seconds', 10))
+        prompt = data.get('prompt', '').strip()
+
+        # DEBUG: Print what we received
+        print(f"🔍 DEBUG - Received data: {data}")
+        print(f"🔍 DEBUG - video_url: '{video_url}'")
+        print(f"🔍 DEBUG - extension_seconds: {extension_seconds}")
 
         # Validate video URL provided
         if not video_url:
