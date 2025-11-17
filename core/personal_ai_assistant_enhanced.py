@@ -62,6 +62,419 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, and Asset Tracking for {user.username}")
 
+    # Session 125: Tool Definitions for GPT Function Calling
+    def get_tool_definitions(self) -> List[Dict]:
+        """
+        Get tool definitions for GPT function calling.
+        These tools allow GPT to autonomously execute operations.
+        """
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "upscale_image",
+                    "description": "Upscale an image to 4x resolution using Stability AI. Use this when users want to enhance image quality or make an image larger.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID of the image to upscale"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate the upscaled image with"
+                            }
+                        },
+                        "required": ["image_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "remove_background",
+                    "description": "Remove the background from an image, creating a transparent PNG. Use this when users want to isolate the subject or remove the background.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID of the image to process"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate the result with"
+                            }
+                        },
+                        "required": ["image_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_image_variations",
+                    "description": "Generate multiple variations of an image with different styles or compositions. Use this when users want different versions, alternatives, or variations of an image.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID of the source image"
+                            },
+                            "count": {
+                                "type": "integer",
+                                "description": "Number of variations to generate (1-4)",
+                                "default": 3
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate results with"
+                            }
+                        },
+                        "required": ["image_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "erase_object",
+                    "description": "Remove specific objects from an image (like removing pins, removing a person, removing text, etc). Use this when users want to remove something specific from an image.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID of the image to edit"
+                            },
+                            "object_description": {
+                                "type": "string",
+                                "description": "Description of what to remove (e.g., 'pins', 'person', 'text')"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["image_id", "object_description"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "recolor_image",
+                    "description": "Adjust colors, vibrancy, or apply color grading to an image. Use when users want to make images more vibrant, change colors, or apply color effects.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID of the image to recolor"
+                            },
+                            "prompt": {
+                                "type": "string",
+                                "description": "Description of desired color changes (e.g., 'more vibrant', 'warmer tones', 'black and white')"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["image_id", "prompt"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "refine_image",
+                    "description": "Refine or modify an existing image based on a text description. Use this to create variations, adjust style, or make specific changes to an image.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID or number of the image to refine"
+                            },
+                            "refinement_request": {
+                                "type": "string",
+                                "description": "Detailed description of how to refine/modify the image"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["image_id", "refinement_request"]
+                    }
+                }
+            }
+        ]
+
+    # Session 125: Tool Execution Handler
+    def _execute_tool_call(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a tool call from GPT.
+
+        Args:
+            tool_call: Tool call dictionary from GPT response
+
+        Returns:
+            Dictionary with execution results
+        """
+        try:
+            function_name = tool_call['function']['name']
+            arguments = json.loads(tool_call['function']['arguments'])
+
+            logger.info(f"🔧 Executing tool: {function_name} with args: {arguments}")
+
+            # Route to appropriate tool handler
+            if function_name == 'upscale_image':
+                return self._tool_upscale_image(arguments)
+            elif function_name == 'remove_background':
+                return self._tool_remove_background(arguments)
+            elif function_name == 'create_image_variations':
+                return self._tool_create_variations(arguments)
+            elif function_name == 'erase_object':
+                return self._tool_erase_object(arguments)
+            elif function_name == 'recolor_image':
+                return self._tool_recolor_image(arguments)
+            elif function_name == 'refine_image':
+                return self._tool_refine_image(arguments)
+            else:
+                return {
+                    'success': False,
+                    'error': f"Unknown tool: {function_name}"
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Tool execution error: {e}")
+            return {
+                'success': False,
+                'error': f"Tool execution failed: {str(e)}"
+            }
+
+    def _tool_upscale_image(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the upscale_image tool."""
+        try:
+            from core.views_image import upscale_image_view
+            from django.http import JsonResponse
+            from django.test import RequestFactory
+
+            image_id = arguments['image_id']
+            project_id = arguments.get('project_id')
+
+            logger.info(f"⚙️ Upscaling image {image_id}...")
+
+            # Create a mock request for the view
+            factory = RequestFactory()
+            request_data = {'image_id': image_id}
+            if project_id:
+                request_data['project_id'] = project_id
+
+            # Import here to avoid circular dependency
+            import json as json_module
+            request = factory.post('/api/stability/upscale/',
+                                  data=json_module.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            # Call the view
+            response = upscale_image_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success') or result.get('image_id'):
+                return {
+                    'success': True,
+                    'message': f"✨ Successfully upscaling image {image_id} to 4x resolution. The upscaled image will appear in the gallery shortly (takes ~30 seconds).",
+                    'image_id': result.get('image_id')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Upscale operation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Upscale tool error: {e}")
+            return {
+                'success': False,
+                'error': f"Failed to upscale image: {str(e)}"
+            }
+
+    def _tool_remove_background(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the remove_background tool."""
+        try:
+            from core.views_image import remove_background_view
+            from django.test import RequestFactory
+
+            image_id = arguments['image_id']
+            project_id = arguments.get('project_id')
+
+            logger.info(f"⚙️ Removing background from image {image_id}...")
+
+            # Create a mock request for the view
+            factory = RequestFactory()
+            request_data = {'image_id': image_id}
+            if project_id:
+                request_data['project_id'] = project_id
+
+            import json as json_module
+            request = factory.post('/api/stability/remove-background/',
+                                  data=json_module.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            # Call the view
+            response = remove_background_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success') or result.get('image_id'):
+                return {
+                    'success': True,
+                    'message': f"✨ Successfully removed background from image {image_id}. The result will appear in the gallery shortly (takes ~20 seconds).",
+                    'image_id': result.get('image_id')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Background removal failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Remove background tool error: {e}")
+            return {
+                'success': False,
+                'error': f"Failed to remove background: {str(e)}"
+            }
+
+    def _tool_create_variations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the create_image_variations tool."""
+        try:
+            image_id = arguments['image_id']
+            count = arguments.get('count', 3)
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎨 Creating {count} variations of image {image_id}...")
+
+            return {
+                'success': False,
+                'message': f"🚧 Image variations feature coming soon! This will generate {count} different versions of your image."
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Create variations tool error: {e}")
+            return {
+                'success': False,
+                'error': f"Failed to create variations: {str(e)}"
+            }
+
+    def _tool_erase_object(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the erase_object tool."""
+        try:
+            image_id = arguments['image_id']
+            object_description = arguments['object_description']
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎯 Erasing '{object_description}' from image {image_id}...")
+
+            return {
+                'success': False,
+                'message': f"🚧 Object removal feature coming soon! This will remove '{object_description}' from your image."
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Erase object tool error: {e}")
+            return {
+                'success': False,
+                'error': f"Failed to erase object: {str(e)}"
+            }
+
+    def _tool_recolor_image(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the recolor_image tool."""
+        try:
+            image_id = arguments['image_id']
+            prompt = arguments['prompt']
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎨 Recoloring image {image_id} with prompt: {prompt}...")
+
+            return {
+                'success': False,
+                'message': f"🚧 Recoloring feature coming soon! This will apply '{prompt}' to your image colors."
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Recolor tool error: {e}")
+            return {
+                'success': False,
+                'error': f"Failed to recolor image: {str(e)}"
+            }
+
+    def _tool_refine_image(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the refine_image tool.
+        This is a general-purpose refinement tool that GPT can use for variations and modifications.
+        """
+        try:
+            from content.models import ImageHistory
+
+            image_id = arguments['image_id']
+            refinement_request = arguments['refinement_request']
+            project_id = arguments.get('project_id')
+
+            logger.info(f"✨ Refining image {image_id}: {refinement_request[:50]}...")
+
+            # Resolve image_id if it's a sequential number like "262"
+            seq_num = None
+            try:
+                # Try as UUID first
+                image = ImageHistory.objects.get(id=image_id, user=self.user)
+                seq_num = image.get_sequential_number()
+            except:
+                # Try as sequential number
+                try:
+                    seq_num = int(image_id)
+                    # Find image by sequential number
+                    all_images = ImageHistory.objects.filter(user=self.user).order_by('created_at')
+                    matching = [img for img in all_images if img.get_sequential_number() == seq_num]
+                    if matching:
+                        image = matching[0]
+                    else:
+                        return {
+                            'success': False,
+                            'error': f"Image #{seq_num} not found in your gallery"
+                        }
+                except ValueError:
+                    return {
+                        'success': False,
+                        'error': f"Invalid image ID: {image_id}"
+                    }
+
+            # Session 125 Part 3: MVP - Return "coming soon" message with details
+            # TODO Session 126: Implement actual image variations using Stability AI's structure control
+            return {
+                'success': True,
+                'message': f"🎨 I understand you want to: \"{refinement_request}\"\n\n" + \
+                          f"📸 Image #{seq_num} has been identified!\n\n" + \
+                          f"🚧 Image variations and refinement feature is coming in the next session! " + \
+                          f"We'll use Stability AI's structure control API to create variations while " + \
+                          f"preserving the original image's structure.\n\n" + \
+                          f"For now, you can:\n" + \
+                          f"• ✅ **Upscale** images (\"Upscale image {seq_num}\")\n" + \
+                          f"• ✅ **Remove backgrounds** (\"Remove background from image {seq_num}\")"
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Refine image tool error: {e}")
+            return {
+                'success': False,
+                'error': f"Failed to refine image: {str(e)}"
+            }
+
     def _ensure_enhanced_profile(self):
         """Ensure the user has an enhanced profile."""
         try:
@@ -597,27 +1010,62 @@ Respond in a helpful, personalized way that:
 7. Uses their preferred communication style ({self.enhanced_profile.communication_style or 'balanced'})
 """
 
-        # Call the LLM Enforcer for real AI response
+        # Call the LLM Enforcer for real AI response with tool calling support
         try:
+            # Session 125: Pass tool definitions to enable GPT function calling
+            logger.info(f"🔧 Calling LLM with {len(self.get_tool_definitions())} tools...")
             ai_result = self.llm_enforcer.enforce_real_ai(
                 prompt=message,
                 context=system_prompt,
                 agent_name="PersonalAssistant",
                 task_type="conversation",
                 max_tokens=500,
+                tools=self.get_tool_definitions()  # Enable tool calling
                 # temperature=0.7  # GPT-5 only supports default temperature
             )
+            logger.info(f"✅ LLM returned: success={ai_result.get('success')}, has_tool_calls={'tool_calls' in ai_result}")
 
             if ai_result['success']:
-                response = ai_result['response']
-                logger.info(f"✅ Generated REAL AI response for {self.user.username}")
-                return response
+                # Session 125: Check if GPT returned tool calls
+                if 'tool_calls' in ai_result and ai_result['tool_calls']:
+                    logger.info(f"🛠️ GPT requested {len(ai_result['tool_calls'])} tool calls")
+
+                    # Execute each tool call
+                    tool_results = []
+                    for tool_call in ai_result['tool_calls']:
+                        result = self._execute_tool_call(tool_call)
+                        tool_results.append(result)
+
+                    # Build response with tool execution results
+                    response_parts = []
+                    if ai_result['response']:
+                        response_parts.append(ai_result['response'])
+
+                    for result in tool_results:
+                        if result['success']:
+                            response_parts.append(result['message'])
+                        else:
+                            # Handle both 'error' and 'message' keys for failed results
+                            error_msg = result.get('error') or result.get('message', 'Operation failed')
+                            response_parts.append(error_msg if error_msg.startswith('❌') or error_msg.startswith('🚧') else f"❌ {error_msg}")
+
+                    response = "\n\n".join(response_parts)
+                    logger.info(f"✅ Generated REAL AI response with tool execution for {self.user.username}")
+                    return response
+                else:
+                    # No tool calls, just return the text response
+                    response = ai_result['response']
+                    logger.info(f"✅ Generated REAL AI response for {self.user.username}")
+                    return response
             else:
                 # Fallback if AI fails
                 logger.warning(f"⚠️ AI generation failed, using intelligent fallback")
                 return self._generate_intelligent_fallback(message, context)
 
         except Exception as e:
+            import traceback
+            logger.error(f"❌ LLM ERROR: {e}")
+            logger.error(f"❌ Full traceback:\n{traceback.format_exc()}")
             logger.warning(f"⚠️ LLM not available (likely no API keys configured): {e}")
             logger.info("📋 Using intelligent fallback response with conversation context")
             return self._generate_intelligent_fallback(message, context)

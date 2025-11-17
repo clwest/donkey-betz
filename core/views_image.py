@@ -10861,3 +10861,189 @@ def get_meeting_details(request, meeting_key):
             'error': 'Failed to retrieve meeting details',
             'details': str(e)
         }, status=500)
+
+
+# ========================================
+# SESSION 125: Image Editing Wrappers (Accept image_id)
+# ========================================
+
+@login_required
+def upscale_image_view(request):
+    """
+    Upscale an existing image from history using its ID.
+    Accepts JSON: {image_id: uuid, project_id: uuid (optional)}
+    """
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        project_id = data.get('project_id')
+
+        if not image_id:
+            return JsonResponse({'success': False, 'error': 'image_id required'}, status=400)
+
+        # Get the image from history
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=request.user)
+        except ImageHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"📈 Upscaling image {image_id} (sequential #{seq_num})")
+
+        # Get image data (handle both data URIs and file paths)
+        if image.file_path.startswith('data:'):
+            # Data URI - extract base64 data
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            # File path - read from storage
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI upscale API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return JsonResponse({'success': False, 'error': 'Stability AI API key not configured'}, status=500)
+
+        url = "https://api.stability.ai/v2beta/stable-image/upscale/conservative"
+        files = {"image": image_data}
+        data_params = {"output_format": "png"}
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI upscale failed: {api_response.text}")
+            return JsonResponse({'success': False, 'error': f'Upscale failed: {api_response.text}'}, status=500)
+
+        # Save the upscaled image
+        upscaled_image_data = api_response.content
+        image_base64 = base64.b64encode(upscaled_image_data).decode('utf-8')
+
+        # Create new image history entry
+        from content.models import CreativeProject
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        new_image = ImageHistory.objects.create(
+            user=request.user,
+            prompt=f"Upscaled from image #{seq_num}",
+            file_path=f"data:image/png;base64,{image_base64}",
+            model_used="stability-upscale-4x",
+            project=project
+        )
+
+        logger.info(f"✅ Image upscaled successfully: {new_image.id}")
+
+        return JsonResponse({
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': new_image.file_path,
+            'sequential_number': new_image.get_sequential_number()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Upscale error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def remove_background_view(request):
+    """
+    Remove background from an existing image from history using its ID.
+    Accepts JSON: {image_id: uuid, project_id: uuid (optional)}
+    """
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        project_id = data.get('project_id')
+
+        if not image_id:
+            return JsonResponse({'success': False, 'error': 'image_id required'}, status=400)
+
+        # Get the image from history
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=request.user)
+        except ImageHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎭 Removing background from image {image_id} (sequential #{seq_num})")
+
+        # Get image data (handle both data URIs and file paths)
+        if image.file_path.startswith('data:'):
+            # Data URI - extract base64 data
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            # File path - read from storage
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI remove-background API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return JsonResponse({'success': False, 'error': 'Stability AI API key not configured'}, status=500)
+
+        url = "https://api.stability.ai/v2beta/stable-image/edit/remove-background"
+        files = {"image": image_data}
+        data_params = {"output_format": "png"}
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI remove-background failed: {api_response.text}")
+            return JsonResponse({'success': False, 'error': f'Remove background failed: {api_response.text}'}, status=500)
+
+        # Save the result image
+        result_image_data = api_response.content
+        image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+        # Create new image history entry
+        from content.models import CreativeProject
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        new_image = ImageHistory.objects.create(
+            user=request.user,
+            prompt=f"Background removed from image #{seq_num}",
+            file_path=f"data:image/png;base64,{image_base64}",
+            model_used="stability-remove-bg",
+            project=project
+        )
+
+        logger.info(f"✅ Background removed successfully: {new_image.id}")
+
+        return JsonResponse({
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': new_image.file_path,
+            'sequential_number': new_image.get_sequential_number()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Remove background error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

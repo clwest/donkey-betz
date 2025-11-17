@@ -676,7 +676,8 @@ urlpatterns = [
     path('api/v1/assistant/chat/', assistant_chat, name='assistant-chat'),
 
     # Personal AI Assistant endpoints (Session 58: Phase B.3 - Using GPT-5)
-    path('api/assistant/chat/', assistant_chat, name='personal-assistant-chat'),
+    # Session 125: Use bypass endpoint with EnhancedPersonalAIAssistant (backend tool execution)
+    path('api/assistant/chat/', assistant_chat_bypass, name='personal-assistant-chat'),
     path('api/assistant/transcribe/', transcribe_audio, name='assistant-transcribe'),  # Session 64: Voice input
     path('api/assistant/voice/', voice_to_assistant, name='personal-assistant-voice'),  # Session 113: Voice Input MVP
     path('api/executor/run-tool/', execute_tool, name='executor-run-tool'),  # Session 65: SUPER AI EXECUTOR
@@ -884,9 +885,10 @@ urlpatterns = [
     path('api/v1/gallery/test/', test_image_generation, name='test-image-generation'),
 
     # Image Editing endpoints (Session 35: Image Editing UI)
-    path('api/stability/remove-background/', lambda r: __import__('core.views_image', fromlist=['remove_background']).remove_background(r), name='stability-remove-background'),
+    # Session 125: Updated to use image_id wrappers
+    path('api/stability/remove-background/', lambda r: __import__('core.views_image', fromlist=['remove_background_view']).remove_background_view(r), name='stability-remove-background'),
     path('api/stability/recolor/', lambda r: __import__('core.views_image', fromlist=['recolor_image']).recolor_image(r), name='stability-recolor'),
-    path('api/stability/upscale/', lambda r: __import__('core.views_image', fromlist=['upscale_image']).upscale_image(r), name='stability-upscale'),
+    path('api/stability/upscale/', lambda r: __import__('core.views_image', fromlist=['upscale_image_view']).upscale_image_view(r), name='stability-upscale'),
     path('api/stability/erase/', lambda r: __import__('core.views_image', fromlist=['erase_object']).erase_object(r), name='stability-erase'),
     path('api/stability/inpaint/', lambda r: __import__('core.views_image', fromlist=['inpaint_image']).inpaint_image(r), name='stability-inpaint'),
     path('api/stability/outpaint/', lambda r: __import__('core.views_image', fromlist=['outpaint_image']).outpaint_image(r), name='stability-outpaint'),

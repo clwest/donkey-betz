@@ -18890,14 +18890,18 @@
             const deadline = project.deadline ? new Date(project.deadline).toLocaleString() : 'No deadline';
 
             detailContent.innerHTML = `
-                <!-- Project Info -->
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 style="color: #f59e0b;">Project Information</h5>
-                        <button class="btn btn-sm btn-info" onclick="saveProjectInfo('${project.id}')" id="save-project-btn">
-                            💾 Save Changes
-                        </button>
-                    </div>
+                <!-- Session 125: Split View Layout - Project & Assistant Side by Side -->
+                <div class="row">
+                    <!-- LEFT: Project Content (60%) -->
+                    <div class="col-lg-7">
+                        <!-- Project Info -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 style="color: #f59e0b;">Project Information</h5>
+                                <button class="btn btn-sm btn-info" onclick="saveProjectInfo('${project.id}')" id="save-project-btn">
+                                    💾 Save Changes
+                                </button>
+                            </div>
                     <table class="table table-dark">
                         <tr>
                             <td style="width: 150px;"><strong>Status:</strong></td>
@@ -18957,31 +18961,6 @@
                     </table>
                 </div>
 
-                <!-- Session 124: Use Main AI Assistant (it works!) -->
-                <div class="mb-4">
-                    <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); border: none;">
-                        <div class="card-body text-center py-5">
-                            <h4 style="color: white; margin-bottom: 20px;">
-                                🤖 Generate Content with AI Assistant
-                            </h4>
-                            <p style="color: rgba(255,255,255,0.9); margin-bottom: 25px; font-size: 16px;">
-                                Use the powerful AI Assistant to create content for this project.<br>
-                                All generated images, videos, and audio will automatically appear here!
-                            </p>
-                            <button class="btn btn-light btn-lg"
-                                    onclick="openAssistantForProject('${project.id}', '${project.name}')"
-                                    style="padding: 15px 40px; font-size: 18px; font-weight: 600;">
-                                💬 Open AI Assistant
-                            </button>
-                            <div class="mt-4" style="color: rgba(255,255,255,0.8); font-size: 14px;">
-                                <p class="mb-2"><strong>Try saying:</strong></p>
-                                <p class="mb-1">• "Create 3 modern logo variations"</p>
-                                <p class="mb-1">• "Make a promo video for my tech startup"</p>
-                                <p class="mb-0">• "Generate a social media banner"</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Session 123: Phase 3 - NLP Asset Editing -->
                 <div class="mb-4">
@@ -19344,6 +19323,84 @@
                         </div>
                     `}
                 </div>
+                    </div>
+                    <!-- End LEFT column -->
+
+                    <!-- RIGHT: AI Assistant (40%) -->
+                    <div class="col-lg-5">
+                        <div class="sticky-top" style="top: 20px;">
+                            <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); border: none; height: calc(100vh - 200px);">
+                                <!-- Header -->
+                                <div class="card-header" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <h5 style="color: white; margin: 0;">
+                                        🤖 AI Assistant
+                                    </h5>
+                                    <div class="small mt-1" style="color: rgba(255,255,255,0.8);">
+                                        Project: ${project.name}
+                                    </div>
+                                </div>
+
+                                <!-- Chat Messages Area -->
+                                <div class="card-body" style="padding: 0; display: flex; flex-direction: column; height: calc(100% - 80px);">
+                                    <div id="project-chat-messages-${project.id}"
+                                         style="flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.1);">
+                                        <div class="text-center" style="color: rgba(255,255,255,0.7); padding: 60px 20px;">
+                                            <h4 style="color: white; margin-bottom: 15px;">Ready to create! 🎨</h4>
+                                            <p style="font-size: 14px;">
+                                                <strong>Try saying:</strong><br>
+                                                • "Create 3 logo variations"<br>
+                                                • "Make a promo video"<br>
+                                                • "Generate a banner"<br>
+                                                • "Upscale image 1"<br>
+                                                • "Remove background from image 2"
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Input Area -->
+                                    <div style="padding: 15px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.1);">
+                                        <div class="d-flex gap-2 mb-2">
+                                            <!-- Voice Input Button -->
+                                            <button class="btn btn-light"
+                                                    id="project-voice-btn-${project.id}"
+                                                    onmousedown="startProjectVoiceInput('${project.id}')"
+                                                    onmouseup="stopProjectVoiceInput('${project.id}')"
+                                                    ontouchstart="startProjectVoiceInput('${project.id}')"
+                                                    ontouchend="stopProjectVoiceInput('${project.id}')"
+                                                    title="Hold to speak"
+                                                    style="width: 50px; height: 50px; border-radius: 25px; font-size: 20px;">
+                                                🎤
+                                            </button>
+
+                                            <!-- Text Input -->
+                                            <input type="text"
+                                                   id="project-chat-input-${project.id}"
+                                                   class="form-control"
+                                                   placeholder="Type or use voice..."
+                                                   style="flex: 1; background: white; border: none; height: 50px; font-size: 16px;"
+                                                   onkeypress="if(event.key==='Enter') sendProjectMessage('${project.id}')">
+
+                                            <!-- Send Button -->
+                                            <button class="btn btn-light"
+                                                    onclick="sendProjectMessage('${project.id}')"
+                                                    style="width: 50px; height: 50px; border-radius: 25px; font-size: 20px; font-weight: 700;">
+                                                ➤
+                                            </button>
+                                        </div>
+
+                                        <!-- Status Message -->
+                                        <div id="project-chat-status-${project.id}"
+                                             class="text-center small mt-2"
+                                             style="color: rgba(255,255,255,0.8);">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End RIGHT column -->
+                </div>
+                <!-- End row -->
             `;
 
             // Session 63: Auto-load project assets after rendering
@@ -19354,6 +19411,14 @@
             setTimeout(() => refreshProjectDecisions(project.id), 700);
             // Session 125: Auto-load agent contributions after rendering
             setTimeout(() => loadAgentContributions(project.id), 800);
+
+            // Session 125: Set project context for embedded AI Assistant
+            if (window.aiAssistant) {
+                console.log(`📁 Setting embedded assistant project context: ${project.name} (${project.id})`);
+                window.aiAssistant.activeProjectId = project.id;
+                window.aiAssistant.activeProjectName = project.name;
+                window.aiAssistant.sessionStartedWithProject = true;
+            }
         }
 
         // Session 123: Phase 2 - Project Editing Functions
@@ -20465,6 +20530,110 @@
             }
         }
 
+        // Session 125 Part C: Quick Editing Operations (Direct API Shortcuts)
+        async function tryQuickEditingOperation(projectId, message, statusDiv) {
+            const msgLower = message.toLowerCase();
+
+            // Parse image number from message (e.g., "image 262", "image number 262", "#262")
+            const imageMatch = msgLower.match(/(?:image|#)\s*(?:number\s*)?(\d+)/);
+            if (!imageMatch) {
+                return { handled: false };
+            }
+
+            const imageNumber = parseInt(imageMatch[1]);
+            console.log(`🎯 Detected operation on image #${imageNumber}`);
+
+            // Detect operation type
+            let operation = null;
+            let endpoint = null;
+            let successMessage = '';
+
+            if (msgLower.includes('upscale')) {
+                operation = 'upscale';
+                endpoint = '/api/stability/upscale/';
+                successMessage = `✨ Upscaling image #${imageNumber} (4x resolution)... This takes ~30 seconds.`;
+            } else if (msgLower.match(/remove\s+(the\s+)?(background|bg)/)) {
+                // Matches: "remove background", "remove the background", "remove bg", "remove the bg"
+                operation = 'remove_background';
+                endpoint = '/api/stability/remove-background/';
+                successMessage = `✨ Removing background from image #${imageNumber}... This takes ~20 seconds.`;
+            } else {
+                return { handled: false }; // Not a quick operation
+            }
+
+            // Fetch project assets to find the image by sequential number
+            try {
+                statusDiv.innerHTML = `🔍 Finding image #${imageNumber}...`;
+
+                const portfolioResponse = await fetch(`/api/portfolio/?project_id=${projectId}`, {
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const portfolioData = await portfolioResponse.json();
+
+                if (!portfolioData.success || !portfolioData.portfolio) {
+                    throw new Error('Failed to load project assets');
+                }
+
+                // Find image by sequential number
+                const targetImage = portfolioData.portfolio.find(a =>
+                    a.type === 'image' && a.sequential_number === imageNumber
+                );
+
+                if (!targetImage) {
+                    return {
+                        handled: true,
+                        message: `❌ Could not find image #${imageNumber} in this project. Try refreshing the page.`
+                    };
+                }
+
+                console.log(`✅ Found image #${imageNumber}:`, targetImage.id);
+                statusDiv.innerHTML = `⚙️ Executing ${operation}...`;
+
+                // Execute the operation
+                const opResponse = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        image_id: targetImage.id,
+                        project_id: projectId
+                    })
+                });
+
+                const result = await opResponse.json();
+
+                if (result.success || result.image_id) {
+                    // Poll for new assets
+                    setTimeout(() => {
+                        for (let i = 0; i < 6; i++) {
+                            setTimeout(() => {
+                                console.log(`🔄 Polling for new asset (${i+1}/6)...`);
+                                refreshProjectAssets(projectId);
+                            }, i * 5000);
+                        }
+                    }, 5000);
+
+                    statusDiv.innerHTML = '⏳ Processing... New image will appear shortly.';
+                    return {
+                        handled: true,
+                        message: successMessage + ' Check above for the result!'
+                    };
+                } else {
+                    throw new Error(result.error || 'Operation failed');
+                }
+
+            } catch (error) {
+                console.error(`❌ Quick operation error:`, error);
+                statusDiv.innerHTML = '';
+                return {
+                    handled: true,
+                    message: `❌ Failed to ${operation}: ${error.message}`
+                };
+            }
+        }
+
         // Session 124: Project-scoped Assistant chat
         async function sendProjectMessage(projectId) {
             const inputField = document.getElementById(`project-chat-input-${projectId}`);
@@ -20481,9 +20650,20 @@
             addProjectChatMessage(projectId, 'user', message);
 
             // Show status
-            statusDiv.innerHTML = '🤖 AI Assistant is thinking...';
+            statusDiv.innerHTML = '🤖 AI Assistant is working on it...';
 
+            // Session 125 Part C: Check for direct editing operations first (quick shortcuts!)
+            const quickResult = await tryQuickEditingOperation(projectId, message, statusDiv);
+            if (quickResult.handled) {
+                addProjectChatMessage(projectId, 'assistant', quickResult.message);
+                return; // Operation handled directly
+            }
+
+            // Session 125 Part 2: Call Enhanced Assistant API directly with project context
             try {
+                console.log(`🤖 Calling Enhanced Assistant API with project context: ${projectId}`);
+                statusDiv.innerHTML = '🤖 AI is thinking...';
+
                 const response = await fetch('/api/assistant/chat/', {
                     method: 'POST',
                     headers: {
@@ -20492,79 +20672,37 @@
                     },
                     body: JSON.stringify({
                         message: message,
-                        project_id: projectId,  // KEY: Project context!
-                        use_agent_execution: true
+                        project_id: projectId
                     })
                 });
 
                 const result = await response.json();
-                console.log('🤖 Assistant response:', result);
+                console.log('🔍 Full API response:', result);
 
-                // Handle different response types
-                let displayMessage = '';
+                // Session 125: Handle wrapped response structure
+                const assistantResponse = result.data?.response || result.response;
+                console.log('🔍 Extracted assistant response:', assistantResponse);
 
-                if (result.response || result.message) {
-                    // Regular text response
-                    displayMessage = result.response || result.message;
-                } else if (result.tool_calls && result.tool_calls.length > 0) {
-                    // Tool calling response - execute the tools ourselves!
-                    displayMessage = "I'm working on that for you! Generating your content now...";
+                if (assistantResponse) {
+                    addProjectChatMessage(projectId, 'assistant', assistantResponse);
+                    statusDiv.innerHTML = '';
 
-                    // Show tool execution details
-                    const toolNames = result.tool_calls.map(tc => tc.name || tc.function?.name || 'task').join(', ');
-                    console.log('🛠️ Assistant wants to execute tools:', toolNames);
-                    console.log('🛠️ Tool calls:', result.tool_calls);
-
-                    // Execute each tool call
-                    for (const toolCall of result.tool_calls) {
-                        const toolName = toolCall.name || toolCall.function?.name;
-                        const args = toolCall.arguments || (typeof toolCall.function?.arguments === 'string' ? JSON.parse(toolCall.function.arguments) : toolCall.function?.arguments);
-
-                        console.log(`🛠️ Executing tool: ${toolName}`, args);
-
-                        if (toolName === 'generate_with_options' || toolName === 'generate_image') {
-                            // Execute image generation with project context
-                            await executeImageGeneration(projectId, args);
-                        }
-                    }
-                } else if (result.user_message) {
-                    // Fallback - at least acknowledge the request
-                    displayMessage = "I received your request and I'm processing it now...";
-                } else {
-                    throw new Error('No response from assistant');
-                }
-
-                // Add assistant response to chat
-                addProjectChatMessage(projectId, 'assistant', displayMessage);
-                statusDiv.innerHTML = '';
-
-                // If tool calls are being executed, wait longer and check multiple times
-                if (result.tool_calls && result.tool_calls.length > 0) {
-                    statusDiv.innerHTML = '⏳ Generating content (this may take 10-30 seconds)...';
-
-                    // Check for new assets multiple times
-                    let checkCount = 0;
-                    const checkInterval = setInterval(() => {
-                        checkCount++;
-                        console.log(`🔄 Checking for new assets (attempt ${checkCount}/6)...`);
-                        refreshProjectAssets(projectId);
-
-                        if (checkCount >= 6) {
-                            clearInterval(checkInterval);
-                            statusDiv.innerHTML = '';
-                            addProjectChatMessage(projectId, 'assistant', 'Generation complete! If you don\'t see new assets, they may still be processing. Try refreshing the page.');
-                        }
-                    }, 5000);  // Check every 5 seconds, 6 times = 30 seconds total
-                } else {
-                    // Regular text response, single refresh
+                    // Poll for new assets (in case AI generated images/videos)
                     setTimeout(() => {
-                        refreshProjectAssets(projectId);
+                        for (let i = 0; i < 6; i++) {
+                            setTimeout(() => {
+                                console.log(`🔄 Polling for new assets (${i+1}/6)...`);
+                                refreshProjectAssets(projectId);
+                            }, i * 5000);
+                        }
                     }, 2000);
+                } else {
+                    addProjectChatMessage(projectId, 'error', '❌ No response from assistant');
+                    statusDiv.innerHTML = '';
                 }
-
             } catch (error) {
-                console.error('❌ Chat error:', error);
-                addProjectChatMessage(projectId, 'error', `Error: ${error.message}`);
+                console.error('❌ Enhanced Assistant API error:', error);
+                addProjectChatMessage(projectId, 'error', `❌ Error: ${error.message}`);
                 statusDiv.innerHTML = '';
             }
         }

@@ -45,21 +45,31 @@ def assistant_chat_bypass(request):
                 status=400
             )
 
-        # Get default user without any session handling
-        user, created = User.objects.get_or_create(
-            username='assistant_user',
-            defaults={
-                'email': 'assistant@example.com',
-                'first_name': 'Assistant',
-                'last_name': 'User'
-            }
-        )
+        # Session 125: Get authenticated user (not default user!)
+        if not request.user.is_authenticated:
+            return HttpResponse(
+                json.dumps({'error': 'Authentication required'}),
+                content_type='application/json',
+                status=401
+            )
+
+        user = request.user
+        project_id = data.get('project_id')  # Session 125: Get project context
 
         logger.info(f"Processing message for {user.username}: {message[:50]}...")
+        if project_id:
+            logger.info(f"  With project context: {project_id}")
 
-        # Create assistant and process message
-        assistant = PersonalAIAssistant(user)
-        response_data = assistant.process_message(message, {})
+        # Session 125: Use EnhancedPersonalAIAssistant (has tool definitions!)
+        from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+        assistant = EnhancedPersonalAIAssistant(user)
+
+        # Build context with project_id if provided
+        context = {}
+        if project_id:
+            context['project_id'] = project_id
+
+        response_data = assistant.process_message(message, context)
 
         # Ensure all data is JSON serializable
         clean_response = {}
