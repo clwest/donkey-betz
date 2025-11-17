@@ -1,0 +1,30 @@
+{
+  "test_session": {
+    "name": "Blender Auto-Rigging POC - Weekend Validation",
+    "date": "2025-11-16",
+    "total_characters": 10,
+    "selection_criteria": "Diverse body types, poses, complexity levels"
+  },
+
+  "test_characters": [
+    {
+      "id": 1,
+      "name": "character_name_here",
+      "source_file": "models/character_01.glb",
+      "description": "Description of character (e.g., standard humanoid, simple pose)",
+      "complexity": "simple|medium|complex",
+      "notes": "Any special considerations"
+    }
+  ],
+
+  "instructions": [
+    "1. Browse MiniFig gallery at http://localhost:8000/ai-studio/",
+    "2. Select 10 diverse characters:",
+    "   - 3 simple (basic humanoid, T-pose or simple pose)",
+    "   - 4 medium (varied poses, standard proportions)",
+    "   - 3 complex (unusual proportions, complex poses)",
+    "3. Download .glb files to blender_tests/models/",
+    "4. Update this file with actual character details",
+    "5. Run auto_rig_test.py to validate auto-rigging"
+  ]
+}

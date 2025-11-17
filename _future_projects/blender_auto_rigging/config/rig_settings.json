@@ -1,0 +1,46 @@
+{
+  "test_name": "Blender Auto-Rigging POC",
+  "test_date": "2025-11-16",
+  "blender_version": "4.5.3",
+  "rigify_enabled": true,
+
+  "rig_configuration": {
+    "rig_type": "basic.human",
+    "metarig": "basic.human",
+    "generate_deform": true,
+    "generate_control": true,
+    "auto_bone_assignment": true
+  },
+
+  "import_settings": {
+    "format": "glb",
+    "axis_forward": "-Z",
+    "axis_up": "Y",
+    "scale": 1.0
+  },
+
+  "export_settings": {
+    "format": "fbx",
+    "axis_forward": "-Z",
+    "axis_up": "Y",
+    "scale": 1.0,
+    "apply_scale": true,
+    "bake_animation": false,
+    "embed_textures": false,
+    "path_mode": "COPY"
+  },
+
+  "success_criteria": {
+    "min_success_rate": 0.70,
+    "max_time_per_character": 60,
+    "require_fbx_import": true,
+    "require_production_quality": true
+  },
+
+  "timeout_settings": {
+    "import_timeout": 30,
+    "rig_timeout": 90,
+    "export_timeout": 30,
+    "total_timeout": 180
+  }
+}

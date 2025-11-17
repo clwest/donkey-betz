@@ -49,6 +49,7 @@ def list_minifigs(request):
                 'status': mf.status,
                 'three_d_file': mf.three_d_file,
                 'preview_image_url': mf.preview_image_url,
+                'metadata': mf.metadata,
                 'is_favorite': mf.is_favorite,
                 'view_count': mf.view_count,
                 'download_count': mf.download_count,

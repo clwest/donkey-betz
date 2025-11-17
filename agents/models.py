@@ -24,6 +24,7 @@ from django.contrib.auth import get_user_model
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from core.models import UnifiedBaseModel
 
@@ -720,6 +721,163 @@ class AgentExecution(UnifiedBaseModel):
                 })
         
         self.save()
+
+
+class AgentContribution(UnifiedBaseModel):
+    """
+    Session 120: Track which agents contributed to which content/project.
+
+    Supports both simple single-agent tracking and complex multi-agent
+    collaboration workflows.
+    """
+
+    # Agent reference
+    agent = models.ForeignKey(
+        UnifiedAgentTemplate,
+        on_delete=models.CASCADE,
+        related_name='contributions',
+        help_text="Agent that made this contribution"
+    )
+
+    # Project reference (always required)
+    project = models.ForeignKey(
+        'content.CreativeProject',
+        on_delete=models.CASCADE,
+        related_name='agent_contributions',
+        help_text="Project this contribution belongs to"
+    )
+
+    # Optional: Link to specific content (one of these)
+    image = models.ForeignKey(
+        'content.ImageHistory',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='agent_contributions',
+        help_text="Image created/edited by agent"
+    )
+
+    video = models.ForeignKey(
+        'content.VideoHistory',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='agent_contributions',
+        help_text="Video created/edited by agent"
+    )
+
+    # NOTE: AudioHistory model doesn't exist yet (TODO in content app)
+    # audio = models.ForeignKey(
+    #     'content.AudioHistory',
+    #     null=True,
+    #     blank=True,
+    #     on_delete=models.CASCADE,
+    #     related_name='agent_contributions',
+    #     help_text="Audio created/edited by agent"
+    # )
+
+    # Contribution details
+    CONTRIBUTION_TYPES = [
+        ('generation', 'Content Generation'),
+        ('editing', 'Editing/Enhancement'),
+        ('orchestration', 'Workflow Orchestration'),
+        ('analysis', 'Analysis/Planning'),
+        ('recommendation', 'Recommendation'),
+        ('iteration', 'Iterative Improvement'),
+    ]
+
+    contribution_type = models.CharField(
+        max_length=50,
+        choices=CONTRIBUTION_TYPES,
+        default='generation',
+        help_text="Type of contribution"
+    )
+
+    contribution_role = models.CharField(
+        max_length=100,
+        default="Primary Creator",
+        help_text="Role in creation process"
+    )
+
+    contribution_percentage = models.IntegerField(
+        default=100,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Contribution percentage (0-100)"
+    )
+
+    # Execution tracking
+    execution = models.ForeignKey(
+        AgentExecution,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='content_contributions',
+        help_text="Link to agent execution record"
+    )
+
+    task_description = models.TextField(
+        blank=True,
+        help_text="Description of what agent did"
+    )
+
+    # Performance metrics
+    execution_time_seconds = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Execution time in seconds"
+    )
+
+    tokens_used = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="AI tokens consumed"
+    )
+
+    # User feedback (optional)
+    user_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="User rating (1-5 stars)"
+    )
+
+    user_selected = models.BooleanField(
+        default=False,
+        help_text="True if user selected this agent's output as favorite"
+    )
+
+    class Meta:
+        db_table = 'agent_contributions'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', '-created_at']),
+            models.Index(fields=['agent', '-created_at']),
+            models.Index(fields=['contribution_type']),
+        ]
+        verbose_name = "Agent Contribution"
+        verbose_name_plural = "Agent Contributions"
+
+    def __str__(self):
+        content_type = "project"
+        if self.image:
+            content_type = f"image #{self.image.get_sequential_number()}"
+        elif self.video:
+            content_type = f"video #{self.video.get_sequential_number()}"
+        # elif self.audio:  # TODO: Uncomment when AudioHistory exists
+        #     content_type = f"audio #{self.audio.id}"
+
+        return f"{self.agent.display_name} → {content_type} ({self.contribution_type})"
+
+    @property
+    def content_reference(self):
+        """Get reference to the content item"""
+        if self.image:
+            return {'type': 'image', 'id': str(self.image.id), 'number': self.image.get_sequential_number()}
+        elif self.video:
+            return {'type': 'video', 'id': str(self.video.id), 'number': self.video.get_sequential_number()}
+        # elif self.audio:  # TODO: Uncomment when AudioHistory exists
+        #     return {'type': 'audio', 'id': str(self.audio.id)}
+        return {'type': 'project', 'id': str(self.project.id)}
 
 
 class AgentOrchestration(UnifiedBaseModel):

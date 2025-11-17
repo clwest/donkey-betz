@@ -50,6 +50,14 @@ from core.views_projects_api import (
     projects_list, project_detail, project_agents, assign_agent_to_project
 )
 
+# Import agent tracking API views (Session 120)
+from core.views_agent_tracking import (
+    project_agents as project_contributing_agents,
+    agent_timeline,
+    rate_contribution,
+    mark_contribution_selected
+)
+
 # Import deployment views
 from core.views_deploy import (
     view_generated_files, download_project, deploy_project,
@@ -447,6 +455,12 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/', project_detail, name='project-detail'),
     path('api/projects/<uuid:project_id>/agents/', project_agents, name='project-agents'),
     path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
+
+    # Agent Tracking APIs (Session 120)
+    path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),
+    path('api/projects/<uuid:project_id>/contributions/timeline/', agent_timeline, name='agent-timeline'),
+    path('api/agent-contributions/<uuid:contribution_id>/rate/', rate_contribution, name='rate-contribution'),
+    path('api/agent-contributions/<uuid:contribution_id>/select/', mark_contribution_selected, name='select-contribution'),
 
     # Project Builder endpoints for dynamic code generation
     path('api/projects/switch/', switch_project, name='switch-project'),

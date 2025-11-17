@@ -210,6 +210,80 @@ def increment_session_counter(session, content_type):
     return None
 
 
+def _generate_smart_project_name(title):
+    """
+    Generate a clean, professional project name from a verbose AI prompt.
+
+    Transforms:
+    - "Create three cartoon style logos for a mechanic shop" → "Mechanic Shop Logos"
+    - "Generate social media posts for coffee brand" → "Coffee Brand Social Media"
+    - "Make a modern website design" → "Modern Website Design"
+
+    Algorithm:
+    1. Remove common AI prompt prefixes
+    2. Extract key subject nouns (last 3-5 important words)
+    3. Remove filler words
+    4. Title-case result
+    5. Limit to 50 characters max
+    """
+    if not title:
+        return "Untitled Project"
+
+    # Step 1: Remove common AI prompt prefixes
+    prefixes_to_remove = [
+        'create a ', 'create three ', 'create ',
+        'make a ', 'make three ', 'make ',
+        'generate a ', 'generate three ', 'generate ',
+        'design a ', 'design three ', 'design ',
+        'build a ', 'build three ', 'build ',
+        'draw a ', 'draw ', 'write a ', 'write '
+    ]
+
+    title_lower = title.lower()
+    for prefix in prefixes_to_remove:
+        if title_lower.startswith(prefix):
+            title = title[len(prefix):]
+            title_lower = title.lower()
+            break
+
+    # Step 2: Remove filler words and focus on meaningful content
+    filler_words = {
+        'a', 'an', 'the', 'some', 'for', 'with', 'about', 'using',
+        'in', 'on', 'at', 'by', 'from', 'of', 'to', 'and', 'or', 'but',
+        'style', 'styled', 'themed',  # Often redundant in project names
+        'called', 'named'  # Session 122: Remove "called/named" from project names (e.g., "tech startup called Cloud" → "Tech Startup Cloud")
+    }
+
+    words = title.split()
+    meaningful_words = []
+    for word in words:
+        # Keep words that are:
+        # - Not filler words
+        # - OR are important content words (capitalized, numbers, etc.)
+        clean_word = word.strip('.,!?;:').lower()
+        if clean_word not in filler_words or word[0].isupper() or clean_word.isdigit():
+            meaningful_words.append(word.strip('.,!?;:'))
+
+    # Step 3: Smart truncation - keep last 3-5 meaningful words (usually the core subject)
+    # Example: "cartoon style logos for a mechanic shop" → "logos mechanic shop"
+    if len(meaningful_words) > 5:
+        # For longer prompts, take last 4-5 words (usually contains the subject)
+        meaningful_words = meaningful_words[-5:]
+    elif len(meaningful_words) > 3:
+        # For medium prompts, keep last 3-4 words
+        meaningful_words = meaningful_words[-4:]
+
+    # Step 4: Join and title-case
+    project_name = ' '.join(meaningful_words)
+    project_name = project_name.title()
+
+    # Step 5: Limit length
+    if len(project_name) > 50:
+        project_name = project_name[:47] + '...'
+
+    return project_name if project_name else "Untitled Project"
+
+
 def auto_create_project_from_session(session):
     """
     Automatically create a CreativeProject from an AI session
@@ -230,22 +304,8 @@ def auto_create_project_from_session(session):
     if has_real_project or session.auto_created_project:
         return None
 
-    # Determine project name from session title
-    # Remove common AI prompt prefixes for cleaner project names
-    project_name = session.title
-    prefixes_to_remove = [
-        'create a ', 'create ', 'make a ', 'make ',
-        'generate a ', 'generate ', 'design a ', 'design ',
-        'build a ', 'build '
-    ]
-    project_name_lower = project_name.lower()
-    for prefix in prefixes_to_remove:
-        if project_name_lower.startswith(prefix):
-            project_name = project_name[len(prefix):]
-            break
-
-    # Capitalize first letter
-    project_name = project_name[0].upper() + project_name[1:] if project_name else session.title
+    # Determine project name from session title with smart extraction
+    project_name = _generate_smart_project_name(session.title)
 
     # Determine project category based on session type and content
     category = 'branding'  # Default
@@ -541,7 +601,7 @@ def gallery_generate(request):
                     image_seed = seeds[img_index] if img_index < len(seeds) else None
 
                     # Save to history (Session 36: Feature 9)
-                    save_to_history(
+                    history = save_to_history(
                         user=user,
                         file_path=file_path,
                         image_type='generated',
@@ -558,6 +618,31 @@ def gallery_generate(request):
                         style=style,
                         seed=image_seed  # Session 95: Add seed for reproducibility
                     )
+
+                    # Session 122: Track generated image in AI Assistant for intelligent chaining
+                    try:
+                        from django.core.cache import cache
+                        cache_key = f'assistant_{user.id}'
+                        assistant = cache.get(cache_key)
+                        if assistant and history:
+                            # Determine asset type based on context
+                            asset_type = 'image'
+                            if 'logo' in prompt.lower():
+                                asset_type = 'logo'
+                            elif any(word in prompt.lower() for word in ['character', 'mascot', 'avatar']):
+                                asset_type = 'character'
+                            elif any(word in prompt.lower() for word in ['product', 'merchandise']):
+                                asset_type = 'product'
+
+                            assistant.track_generated_image(
+                                image_id=str(history.id),
+                                image_url=url,
+                                prompt=prompt,
+                                asset_type=asset_type
+                            )
+                            logger.info(f"📸 Tracked image {history.id} as {asset_type} in AI Assistant")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to track image in AI Assistant: {e}")
 
                     # Save image record (works for both base64 and HTTP URLs)
                     saved_images.append({
@@ -7341,9 +7426,26 @@ def _execute_generate_video(user, parameters, session=None):
             prompt = prompt[:950] + "..."
             logger.info(f"🎬 Truncated prompt: {prompt[:100]}...")
 
+        # Session 122: Check for explicit source_image_id parameter FIRST (intelligent chaining!)
         # Session 119: BUGFIX - Check if prompt references an existing image
         # If found, use image-to-video instead of text-to-video
-        source_image = _extract_image_reference(prompt, user)
+        source_image = None
+        source_image_id = parameters.get('source_image_id')
+
+        if source_image_id:
+            # Session 122: AI explicitly passed an image ID - use it!
+            try:
+                from content.models import ImageHistory
+                source_image = ImageHistory.objects.get(id=source_image_id, user=user)
+                logger.info(f"📸 Session 122: AI passed explicit source_image_id: {source_image_id}")
+            except ImageHistory.DoesNotExist:
+                logger.warning(f"⚠️ Source image {source_image_id} not found, falling back to text-to-video")
+                source_image = None
+
+        if not source_image:
+            # Fallback to Session 119 text-based extraction
+            source_image = _extract_image_reference(prompt, user)
+
         video_type = 'text_to_video'
 
         logger.info(f"🎬 Executor generating video: {prompt[:50]}... (duration: {duration}s)")

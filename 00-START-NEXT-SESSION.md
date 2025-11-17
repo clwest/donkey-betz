@@ -1,8 +1,8 @@
-# 🚀 Start Next Session - Session 120
+# 🚀 Start Next Session - Session 122
 
 **Last Updated:** November 17, 2025
-**Current Status:** 100% Reality Score! All bugs fixed, architecture improved!
-**Previous Session:** Session 119 - Sessions Tab Removal + 7 Bug Fixes (COMPLETE!)
+**Current Status:** 100% Reality Score! Domain Specialist Agents Deployed!
+**Previous Session:** Session 121 - Domain Specialist Agents (LogoAgent + SocialMediaAgent) COMPLETE!
 
 ---
 
@@ -16,92 +16,111 @@ make start
 open http://localhost:8000/ai-studio/
 ```
 
-**Platform Status:** All systems operational! Navigation streamlined! ✅
+**Platform Status:** All systems operational! 21 agents active! ✅
 
 ---
 
-## 🎉 Session 119 Victory - Architecture + Bug Fixes!
+## 🎉 Session 121 Victory - Domain Specialist Agents!
 
 ### Major Achievements:
 
-**ARCHITECTURAL IMPROVEMENT:**
-✅ **Sessions Tab Removed** - Merged into Projects for cleaner navigation
-✅ **Analytics Dashboard Moved** - Now in Projects tab where it belongs
-✅ **Navigation Streamlined** - Chat → Image → Video → Projects → Portfolio → Leadership
-✅ **Sessions via Projects** - Access sessions by viewing project details
+**STRATEGIC DECISION:**
+✅ **Domain Specialists > Style-Specific Agents** - Focus on purpose, not aesthetics
+✅ **2 New Agents Deployed** - LogoAgent + SocialMediaAgent (fastest market entry)
+✅ **Session 120 Integration** - Auto-tracking works perfectly via signal handlers
+✅ **Stability AI Integration** - Both agents generate real content via API
+✅ **Data-Driven Approach** - Will decide on Agent #3 based on actual usage
 
-**7 CRITICAL BUGS FIXED:**
-1. ✅ Videos now correctly assigned to projects during session resume
-2. ✅ Image references resolved ("create video from image 199" works!)
-3. ✅ AI uses current project context (theme/style) for content generation
-4. ✅ CDN URL filter managed appropriately (disabled after auto-download)
-5. ✅ Django ORM field name error fixed (`project_id` → `id`)
-6. ✅ Videos have sequential numbers matching images/projects
-7. ✅ Frontend field names corrected (`url` → `content_url`)
+**2 DOMAIN SPECIALIST AGENTS IMPLEMENTED:**
 
-**CRITICAL FIX - CDN Expiration:**
-✅ **Automatic Video Downloading** - All videos now saved to local storage
-✅ **No More Expired URLs** - Videos permanently accessible
-✅ **Rescued 7 Videos** - Including all 4 mechanic shop project videos
-- Modified `check_video_status()` in `core/views_video.py`
-- Created `rescue_cdn_videos.py` script for existing videos
+1. **LogoAgent** - Professional Logo & Brand Identity Specialist
+   - ✅ Professional typography and design expertise
+   - ✅ Industry-specific prompting (tech, coffee, gaming, etc.)
+   - ✅ Accepts ANY style parameter (minimalist, modern, vintage, cyberpunk, etc.)
+   - ✅ Scalability awareness (SVG-ready designs)
+   - ✅ Auto-tracked via Session 120 signals
+   - ✅ Location: `ai_core/agents/logo_agent.py` (~350 lines)
 
-### Files Modified (Session 119):
-- `ai_core/templates/ai_image_studio.html` (~40 lines)
-  - Removed Sessions tab navigation (lines 1163-1170)
-  - Added Analytics Dashboard to Projects (lines 4713-4735)
-- `content/models.py` (~16 lines)
-  - Added `VideoHistory.get_sequential_number()` method
-- `core/views_image.py` (~100 lines)
-  - Video project assignment fix
-  - Image reference parsing with `_extract_image_reference()`
-  - AI context enhancement
-  - API endpoint updates
-- `core/views_video.py` (~37 lines)
-  - Automatic video downloading
-  - API endpoint updates
-- `coleadership/views.py` (~2 lines)
-  - Field name corrections
+2. **SocialMediaAgent** - Platform-Optimized Social Content Specialist
+   - ✅ Platform-specific sizes (Instagram, Facebook, Twitter, LinkedIn)
+   - ✅ 9 platform presets (1080x1080, 1200x675, 1500x500, etc.)
+   - ✅ Engagement psychology and trending patterns
+   - ✅ Accepts ANY style parameter (modern, professional, bold, etc.)
+   - ✅ Auto-tracked via Session 120 signals
+   - ✅ Location: `ai_core/agents/social_media_agent.py` (~380 lines)
+
+**SESSION 120 AUTO-TRACKING VERIFIED:**
+- ✅ LogoAgent: Contribution tracked automatically
+- ✅ SocialMediaAgent: Contribution tracked automatically
+- ✅ Signal handlers firing correctly
+- ✅ Agent contributions visible in Project Details modal
+
+### Files Created/Modified (Session 121):
+
+**New Files:**
+- `docs/SESSION_121_DOMAIN_SPECIALIST_AGENTS.md` (330 lines) - Complete documentation
+- `ai_core/agents/logo_agent.py` (350 lines) - Logo specialist implementation
+- `ai_core/agents/social_media_agent.py` (380 lines) - Social media specialist implementation
+
+**Database Changes:**
+- ✅ LogoAgent registered in UnifiedAgentTemplate (ID: 0287c290...)
+- ✅ SocialMediaAgent registered in UnifiedAgentTemplate (ID: 078a39e3...)
+- ✅ Total agents in system: 19 → 21
+
+**Bug Fixes:**
+- ✅ Fixed field name error: `agent_name` → `name` in UnifiedAgentTemplate.objects.get()
 
 ### Testing Results:
-- ✅ Sessions tab removed from navigation
-- ✅ Analytics Dashboard in Projects tab
-- ✅ All 7 bugs verified as fixed
-- ✅ Videos display correctly in projects
-- ✅ CDN URLs no longer expire
-- ✅ Project → Sessions → Resume workflow working
+- ✅ LogoAgent generated test logo successfully (CloudFlow tech startup)
+- ✅ SocialMediaAgent generated test Instagram post successfully
+- ✅ Session 120 auto-tracking working perfectly for both agents
+- ✅ Contributions visible in Project Details UI
+- ✅ Agent state summaries working correctly
 
-**Reality Score:** 98% → 100%!
+**Reality Score:** 100% (maintained)!
 
 ---
 
-## 🎯 What's Next for Session 120?
+## 🎯 What's Next for Session 122?
 
-Based on user's priorities, we have 2 remaining tasks from the architectural improvement plan:
+### Strategic Options Based on Session 121 Discussion:
 
-### Priority 2: Verify Decision Timeline Works
-- **Current State:** Already implemented in project details (lines 18909-18923)
-- **Need to Test:** Executive members integration with decisions
-- **User Request:** "Make sure Decision Timeline works with executive members"
+**Option A: Market Validation Plan (RECOMMENDED)**
+Based on user's explicit request for strategic leadership, recommended approach:
 
-### Priority 3: Verify Workflows Section
-- **Current State:** Already implemented in project details (lines 18925-18977)
-- **Need to Test:** Workflows display and functionality
-- **User Request:** "Make sure workflows section works correctly"
+**Week 1: Internal Testing**
+- Test LogoAgent with 10+ real use cases
+- Test SocialMediaAgent with 10+ real use cases
+- Verify quality, consistency, value proposition
+- Identify any bugs or edge cases
 
-### Priority 4: Add Agents Tracking to Projects (NEW FEATURE)
-- **Current State:** No implementation yet
-- **User Request:** "We don't have any way of tracking Agents with Projects"
-- **Possible Implementation:**
-  - Add agents section to project detail view
-  - Track which agents contributed to project content
-  - Show agent activity timeline per project
-  - Link agents to specific images/videos/audio
+**Week 2: Beta Users (if available)**
+- Share with trusted users
+- Gather feedback on usefulness
+- Track which agent gets more usage
+- Collect feature requests
+
+**Week 3: Data-Driven Decision on Agent #3**
+Based on actual usage data:
+- **High Logo Usage → ProductAgent** (e-commerce product shots)
+- **High Social Usage → IllustrationAgent** (editorial, storytelling)
+- **Both Equal → IllustrationAgent** (broader appeal)
+
+**Option B: Immediate Agent #3 Implementation**
+- Implement IllustrationAgent or ProductAgent now
+- Skip market validation
+- Add third domain specialist immediately
+
+**Option C: Integration & Polish**
+- Create API endpoints for LogoAgent and SocialMediaAgent
+- Add UI controls in AI Image Studio
+- Create quick-access buttons for logo and social media generation
+- Polish existing agents
 
 ### User's Explicit Direction:
-> "I think we address this in order one step at a time starting with 1."
+> "I honestly believe that this is something I would screw up so I want to lean heavily on you going forward until we hit the market and get some income flowing in"
 
-We completed Priority 1 (Sessions tab removal). Next up: Priority 2 (Decision Timeline verification).
+**Recommended:** Option A - Market validation with internal testing first, then decide on Agent #3 based on data.
 
 ---
 
@@ -109,93 +128,148 @@ We completed Priority 1 (Sessions tab removal). Next up: Priority 2 (Decision Ti
 
 **Features Working:** 34/34 (100%)
 **Reality Score:** 100%
-**Navigation:** 6 tabs (streamlined from 7)
-**Project Management:** Fully integrated with sessions, analytics, decisions, workflows
+**Active Agents:** 21 (up from 19)
+**Domain Specialist Agents:** 2 (LogoAgent, SocialMediaAgent)
+**Navigation:** 6 tabs (Chat → Image → Video → Projects → Portfolio → Leadership)
 
-**Recent Improvements:**
-- Sequential IDs across all content (Projects, Images, Videos)
-- Sessions integrated into Projects
-- Analytics Dashboard in Projects
-- Automatic video downloading (no more CDN expiration)
-- All known bugs fixed
+**New Agent Capabilities:**
+- Professional logo generation for any industry + any style
+- Platform-optimized social media content (9 platforms)
+- Auto-tracked contributions via Session 120 signals
+- Domain expertise + style flexibility
 
 ---
 
-## 🔍 Session 119 Technical Details
+## 🔍 Session 121 Technical Details
 
-### Bug Fixes Implemented:
+### LogoAgent Implementation:
 
-**Bug 1 - Video Project Assignment:**
+**Key Features:**
 ```python
-# Session 119: BUGFIX - Assign project if session already has one
-video_project = None
-if session and session.project:
-    video_project = session.project
-    logger.info(f"📁 Assigning video to project: {session.project.name}")
-```
-
-**Bug 2 - Image Reference Resolution:**
-```python
-def _extract_image_reference(text, user):
-    """Extract and resolve image references from text.
-
-    Supports: "image 199", "image #199", UUID patterns
+class LogoAgent:
     """
-    pattern1 = r'image\s*#?(\d+)'
-    matches = re.findall(pattern1, text, re.IGNORECASE)
-    # ... resolution logic
+    Domain specialist for professional logo generation.
+
+    Use cases:
+    - "Create a logo for my tech startup" (any style)
+    - "Generate a coffee shop logo" (any style)
+    - "Design a gaming company logo" (any style)
+    """
+
+    def generate_logo(
+        self,
+        brand_name: str,
+        industry: str,
+        style: Optional[str] = None,  # minimalist, modern, vintage, etc.
+        count: int = 3,
+        color_scheme: Optional[str] = None,
+        include_text: bool = True
+    ) -> Dict:
+        # Adds professional logo expertise to any style
+        # Returns dict with logos, batch_id, message
 ```
 
-**Bug 6 - Sequential Video Numbers:**
+**Domain-Specific Prompting:**
+- Professional typography best practices
+- Brand identity principles
+- Negative space usage
+- Color psychology for branding
+- Scalability considerations
+
+### SocialMediaAgent Implementation:
+
+**Key Features:**
 ```python
-def get_sequential_number(self):
-    """Get sequential number for this video (per user, chronological)"""
-    earlier_videos = VideoHistory.objects.filter(
-        user=self.user,
-        created_at__lt=self.created_at
-    ).count()
-    return earlier_videos + 1
+class SocialMediaAgent:
+    """
+    Domain specialist for platform-optimized social media content.
+
+    Platform sizes:
+    - Instagram: 1080x1080 (square), 1080x1350 (portrait), 1080x1920 (story)
+    - Facebook: 1200x1200 (post), 1200x630 (link preview)
+    - Twitter: 1200x675 (post), 1500x500 (header)
+    - LinkedIn: 1200x627 (post), 1584x396 (banner)
+    """
+
+    def generate_social_content(
+        self,
+        message: str,
+        platform: str = 'instagram_square',  # 9 platform presets
+        style: Optional[str] = None,  # modern, professional, bold, etc.
+        count: int = 3,
+        include_text: bool = True,
+        cta: Optional[str] = None
+    ) -> Dict:
+        # Adds social media expertise to any style
+        # Returns dict with posts, platform, size, batch_id
 ```
 
-**CDN Expiration Fix:**
+**Platform-Specific Optimization:**
+- Engagement psychology (attention, emotion, action)
+- Trending visual patterns
+- Platform best practices
+- Call-to-action integration
+
+### Session 120 Auto-Tracking:
+
+Both agents leverage Session 120 signal handlers for automatic contribution tracking:
+
 ```python
-# Download video from CDN to local storage
-response = requests.get(result.video_url, timeout=120, stream=True)
-filename = f"videos/{request.user.id}/assistant_{video_history.id}.mp4"
-file_path = default_storage.save(filename, ContentFile(video_content))
-local_video_url = default_storage.url(file_path)
+# In both agents:
+image_history = ImageHistory.objects.create(
+    user=self.user,
+    # ... other fields ...
+    agent=agent_template,  # Session 120: Auto-track contribution!
+    project=self.project
+)
+
+# Signal handler (agents/signals.py) fires automatically:
+@receiver(post_save, sender=ImageHistory)
+def track_image_contribution(sender, instance, created, **kwargs):
+    if created and instance.agent and instance.project:
+        service.track_image_contribution(
+            agent=instance.agent,
+            project=instance.project,
+            image=instance,
+            contribution_type='generation',
+            contribution_role='Primary Creator',
+            contribution_percentage=100
+        )
 ```
 
 ---
 
-## 💡 Key Insights from Session 119
+## 💡 Key Insights from Session 121
 
-1. **Architectural Consolidation Works** - Fewer tabs = clearer navigation
-2. **CDN URLs Are Temporary** - Always download critical assets to local storage
-3. **Context Matters for AI** - Explicit prompts about using project context improved output quality
-4. **Sequential IDs Everywhere** - Consistency across Projects, Images, Videos improves UX
-5. **Test End-to-End** - User testing discovered bugs that automated tests missed
+1. **Domain Specialists > Style-Specific** - Users think "I need a logo" not "I need cyberpunk"
+2. **Purpose + Style = Power** - Agents provide domain expertise, users choose aesthetic
+3. **Faster to Market** - 2 domain agents vs 69 style-specific agents
+4. **Data-Driven Decisions** - Let actual usage determine future agents
+5. **Session 120 Integration** - Auto-tracking makes contribution management effortless
+6. **Field Name Matters** - `name` vs `agent_name` bug caught in testing
 
 ---
 
-## 🎯 Recommended Next Steps (Session 120)
+## 🎯 Recommended Next Steps (Session 122)
 
-**Option 1: Continue Architectural Improvements (User's Plan)**
-1. Test Decision Timeline with executive members (Priority 2)
-2. Test Workflows section (Priority 3)
-3. Design and implement Agents tracking for projects (Priority 4)
+**Option 1: Market Validation (RECOMMENDED)**
+1. Internal testing (Week 1): Test both agents with 10+ real use cases
+2. Beta users (Week 2): Share with trusted users if available
+3. Data-driven decision (Week 3): Choose Agent #3 based on actual usage
 
-**Option 2: Polish & Testing**
-1. Comprehensive end-to-end testing of all 34 features
-2. Performance optimization
-3. Error handling improvements
+**Option 2: Agent #3 Implementation**
+1. Choose based on strategic reasoning (not data)
+2. Implement IllustrationAgent or ProductAgent
+3. Register and test new agent
 
-**Option 3: New Features**
-1. Batch operations (generate multiple variations)
-2. Advanced workflow automation
-3. Template system for common project types
+**Option 3: Integration & Polish**
+1. Create API endpoints for easy access
+2. Add UI controls in AI Image Studio
+3. Create quick-access buttons for logo/social generation
 
-**User's Stated Priority:** "Address this in order one step at a time" - so Option 1 is recommended.
+**User's Stated Priority:** "Lean heavily on you going forward until we hit the market and get some income flowing in"
+
+**Recommended:** Option 1 - Market validation path for fastest, safest market entry.
 
 ---
 
@@ -206,25 +280,42 @@ local_video_url = default_storage.url(file_path)
 make start
 ```
 
-**Check Server Status:**
-```bash
-lsof -i :8000  # Check Daphne
-lsof -i :6379  # Check Redis
+**Test New Agents:**
+```python
+# LogoAgent
+from ai_core.agents.logo_agent import LogoAgent
+logo_agent = LogoAgent(user=user, project=project)
+result = logo_agent.generate_logo(
+    brand_name="CloudFlow",
+    industry="cloud computing",
+    style="minimalist",
+    count=3
+)
+
+# SocialMediaAgent
+from ai_core.agents.social_media_agent import SocialMediaAgent
+social_agent = SocialMediaAgent(user=user, project=project)
+result = social_agent.generate_social_content(
+    message="New AI-powered productivity app launch",
+    platform="instagram_square",
+    style="modern",
+    count=3
+)
+```
+
+**Check Agent Registry:**
+```python
+from agents.models import UnifiedAgentTemplate
+total = UnifiedAgentTemplate.objects.count()  # Should be 21
+active = UnifiedAgentTemplate.objects.filter(is_active=True).count()
 ```
 
 **Access Platform:**
 - AI Studio: http://localhost:8000/ai-studio/
 - Admin: http://localhost:8000/admin/
 
-**Recent Git Commit:**
-```
-feat: Session 119 - Remove Sessions Tab & Fix 7 Critical Bugs
-Branch: feature/session-52-ai-assistant
-Commit: 389998e
-```
-
 ---
 
-**Ready for Session 120!** 🚀
+**Ready for Session 122!** 🚀
 
-Let's verify Decision Timeline and Workflows, then implement Agents tracking for Projects!
+Let's validate our domain specialist agents with real use cases and decide on Agent #3 based on actual data!

@@ -1610,6 +1610,16 @@ class ImageHistory(UnifiedBaseModel):
         help_text="AI session that created this image"
     )
 
+    # Session 120: Track which agent created this image
+    agent = models.ForeignKey(
+        'agents.UnifiedAgentTemplate',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generated_images',
+        help_text="Agent that generated this image (if created by agent)"
+    )
+
     # Image identification
     filename = models.CharField(
         max_length=255,
@@ -1867,6 +1877,16 @@ class VideoHistory(UnifiedBaseModel):
         blank=True,
         related_name='session_videos',
         help_text="AI session that created this video"
+    )
+
+    # Session 120: Track which agent created this video
+    agent = models.ForeignKey(
+        'agents.UnifiedAgentTemplate',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generated_videos',
+        help_text="Agent that generated this video (if created by agent)"
     )
 
     # Video identification

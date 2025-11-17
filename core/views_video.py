@@ -507,6 +507,13 @@ def check_video_status(request, task_id):
                     local_video_url = result.video_url
 
                 # Check if VideoHistory already exists for this task
+                # Session 122: If it exists, preserve its session/project (set by _execute_generate_video)
+                existing_video = None
+                try:
+                    existing_video = VideoHistory.objects.get(user=request.user, video_id=task_id)
+                except VideoHistory.DoesNotExist:
+                    pass
+
                 video_history, created = VideoHistory.objects.get_or_create(
                     user=request.user,
                     video_id=task_id,
@@ -521,6 +528,9 @@ def check_video_status(request, task_id):
                         'ratio': metadata.get('ratio', ''),
                         'status': 'completed',
                         'source_image': source_image,
+                        # Session 122: Inherit session/project from source image (for image-to-video) or existing_video
+                        'session': existing_video.session if existing_video else (source_image.session if source_image else None),
+                        'project': existing_video.project if existing_video else (source_image.project if source_image else None),
                         'generation_completed': timezone.now()
                     }
                 )
@@ -535,6 +545,27 @@ def check_video_status(request, task_id):
                     video_history.save()
 
                 logger.info(f"✅ Video saved to gallery: {video_history.id}")
+
+                # Session 122: Track generated video in AI Assistant for intelligent chaining
+                try:
+                    from django.core.cache import cache
+                    cache_key = f'assistant_{request.user.id}'
+                    assistant = cache.get(cache_key)
+                    if assistant and video_history:
+                        # Determine source image ID if this was image-to-video
+                        source_image_id = None
+                        if source_image:
+                            source_image_id = str(source_image.id)
+
+                        assistant.track_generated_video(
+                            video_id=str(video_history.id),
+                            video_url=local_video_url,
+                            prompt=content.prompt,
+                            source_image_id=source_image_id
+                        )
+                        logger.info(f"🎬 Tracked video {video_history.id} in AI Assistant (source_image: {source_image_id})")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to track video in AI Assistant: {e}")
             elif result.status == 'failed':
                 content.status = 'failed'
                 metadata = content.metadata or {}
@@ -596,6 +627,27 @@ def check_video_status(request, task_id):
                     video_history.generation_completed = timezone.now()
                     video_history.save()
                     logger.info(f"✅ AI Assistant video completed: {video_history.id} (task: {task_id})")
+
+                    # Session 122: Track generated video in AI Assistant for intelligent chaining
+                    try:
+                        from django.core.cache import cache
+                        cache_key = f'assistant_{request.user.id}'
+                        assistant = cache.get(cache_key)
+                        if assistant and video_history:
+                            # Determine source image ID if this was image-to-video
+                            source_image_id = None
+                            if video_history.source_image:
+                                source_image_id = str(video_history.source_image.id)
+
+                            assistant.track_generated_video(
+                                video_id=str(video_history.id),
+                                video_url=local_video_url,
+                                prompt=video_history.prompt,
+                                source_image_id=source_image_id
+                            )
+                            logger.info(f"🎬 Tracked AI Assistant video {video_history.id} (source_image: {source_image_id})")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to track AI Assistant video: {e}")
 
                 elif result.status == 'failed':
                     video_history.status = 'failed'

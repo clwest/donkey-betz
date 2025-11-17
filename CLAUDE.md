@@ -1,11 +1,11 @@
 # 🤖 CLAUDE - START HERE
 **Unified Donkey Betz Platform - AI Session Entry Point**
 
-**Last Updated:** November 16, 2025 - Session 115 Part 3 (COMPLETE!)
+**Last Updated:** November 17, 2025 - Session 122 (COMPLETE!)
 **Current Status:** 100% Reality Score ✅ | DJANGO WEB APP ONLY! 🌐🎨🤖✨
 **Platform:** Django Web Application (Mobile archived - deploy web first, prove revenue!)
-**Ready For:** Session 116 - Production Deployment Path! 🎯
-**Breakthrough:** 🎉 IMAGE-TO-3D PIPELINE COMPLETE + STRATEGIC FOCUS! (Real 3D generation working, mobile archived, 100% focus on Django web app!) 🎨→🤖→🖨️→🌐✨
+**Ready For:** Session 123 - Comprehensive Testing & Validation! 🎯
+**Breakthrough:** 🐛 CRITICAL BUG FIXES COMPLETE! (Credit drain fixed, video-project association fixed, project naming fixed, hybrid ID support added!) 🔧✨
 
 ---
 
@@ -121,6 +121,23 @@ open http://localhost:8000/ai-studio/
 ---
 
 ## 📚 Recent Session History
+
+**Session 122:** CRITICAL BUG FIXES - COMPLETE! 🐛🔧✨
+- Fixed 4 critical bugs discovered during user testing
+- Bug #1: Credit drain (6 videos instead of 2) - AI multiplying by image count
+  - Added explicit count control to system prompt (Instructions #9 & #10)
+  - Prevents expensive video generation mishaps (~$2.20 saved per occurrence)
+- Bug #2: Videos not appearing in project with logos
+  - Fixed `check_video_status` to preserve session/project associations
+  - Created migration script to fix 4 orphaned videos
+- Bug #3: "Called" appearing in project names ("Tech Startup Called Cloud")
+  - Added "called" and "named" to filler_words in `_generate_smart_project_name`
+- Bug #4: Hybrid ID support for image refinement
+  - Added numeric ID resolution ("image 213") to EditingOrchestratorAgent
+  - Users can now use simple numbers instead of full UUIDs
+- Files modified: `personal_ai_assistant_enhanced.py`, `views_video.py`, `views_image.py`, `editing_orchestrator_agent.py`
+- Runway ML Credits: 2,903 remaining (71%) - Crisis averted! 🎉
+- Docs: SESSION_122_BUG_HUNT_COMPLETE.md
 
 **Session 115:** IMAGE-TO-3D PIPELINE - COMPLETE! 🎨🤖🖨️✨
 - Part 1 & 2: MiniFig 3D Characters UI + DaVinci Resolve Video Editing UI (1,180 lines frontend)

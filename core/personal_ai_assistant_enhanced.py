@@ -53,7 +53,14 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         self.agent_registry = get_agent_registry()
         self.advisor_registry = get_advisor_registry()
 
-        logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, and Agent/Advisor Communication for {user.username}")
+        # Session 122: Asset tracking for intelligent chaining (logos → videos)
+        self.recently_generated_assets = {
+            'images': [],  # [{id, url, prompt, timestamp, type}]
+            'videos': [],  # [{id, url, prompt, timestamp, source_image_id}]
+            'last_updated': None
+        }
+
+        logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, and Asset Tracking for {user.username}")
 
     def _ensure_enhanced_profile(self):
         """Ensure the user has an enhanced profile."""
@@ -62,6 +69,179 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except EnhancedUserProfile.DoesNotExist:
             self.enhanced_profile = EnhancedUserProfile.objects.create(user=self.user)
             logger.info(f"Created enhanced profile for {self.user.username}")
+
+    # Session 122: Asset Tracking Methods for Intelligent Chaining
+    def track_generated_image(self, image_id: str, image_url: str, prompt: str, asset_type: str = 'logo'):
+        """
+        Track a newly generated image for intelligent chaining.
+
+        Args:
+            image_id: Database ID of the image
+            image_url: URL to the generated image
+            prompt: The prompt used to generate the image
+            asset_type: Type of image (logo, social_media, general, etc.)
+        """
+        from django.utils import timezone
+
+        asset_data = {
+            'id': image_id,
+            'url': image_url,
+            'prompt': prompt,
+            'type': asset_type,
+            'timestamp': timezone.now().isoformat()
+        }
+
+        self.recently_generated_assets['images'].append(asset_data)
+        self.recently_generated_assets['last_updated'] = timezone.now().isoformat()
+
+        # Keep only last 10 images (prevent memory bloat)
+        if len(self.recently_generated_assets['images']) > 10:
+            self.recently_generated_assets['images'] = self.recently_generated_assets['images'][-10:]
+
+        logger.info(f"📸 Tracked new image: {asset_type} (ID: {image_id})")
+
+    def track_generated_video(self, video_id: str, video_url: str, prompt: str, source_image_id: Optional[str] = None):
+        """
+        Track a newly generated video for context awareness.
+
+        Args:
+            video_id: Database ID of the video
+            video_url: URL to the generated video
+            prompt: The prompt used to generate the video
+            source_image_id: ID of source image if this was image-to-video
+        """
+        from django.utils import timezone
+
+        asset_data = {
+            'id': video_id,
+            'url': video_url,
+            'prompt': prompt,
+            'source_image_id': source_image_id,
+            'timestamp': timezone.now().isoformat()
+        }
+
+        self.recently_generated_assets['videos'].append(asset_data)
+        self.recently_generated_assets['last_updated'] = timezone.now().isoformat()
+
+        # Keep only last 10 videos
+        if len(self.recently_generated_assets['videos']) > 10:
+            self.recently_generated_assets['videos'] = self.recently_generated_assets['videos'][-10:]
+
+        logger.info(f"🎬 Tracked new video (ID: {video_id}, source_image: {source_image_id})")
+
+    def get_recent_assets_context(self) -> str:
+        """
+        Get formatted context of recently generated assets for AI prompt.
+
+        Returns:
+            Formatted string describing recent assets
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        images = self.recently_generated_assets.get('images', [])
+        videos = self.recently_generated_assets.get('videos', [])
+
+        if not images and not videos:
+            return "No recently generated assets in this session."
+
+        # Filter to assets from last 10 minutes (keep context fresh)
+        cutoff_time = timezone.now() - timedelta(minutes=10)
+
+        recent_images = [
+            img for img in images
+            if timezone.datetime.fromisoformat(img['timestamp']) > cutoff_time
+        ]
+
+        recent_videos = [
+            vid for vid in videos
+            if timezone.datetime.fromisoformat(vid['timestamp']) > cutoff_time
+        ]
+
+        context_parts = []
+
+        if recent_images:
+            context_parts.append(f"📸 {len(recent_images)} images generated in last 10 minutes:")
+            for img in recent_images[-5:]:  # Show last 5
+                context_parts.append(f"  - {img['type'].title()} (ID: {img['id']}): \"{img['prompt'][:50]}...\"")
+
+        if recent_videos:
+            context_parts.append(f"🎬 {len(recent_videos)} videos generated in last 10 minutes:")
+            for vid in recent_videos[-5:]:
+                source_info = f", from image {vid['source_image_id']}" if vid['source_image_id'] else ""
+                context_parts.append(f"  - Video (ID: {vid['id']}{source_info}): \"{vid['prompt'][:50]}...\"")
+
+        return "\n".join(context_parts)
+
+    def get_latest_generated_images(self, limit: int = 5) -> List[Dict]:
+        """
+        Get the most recently generated images for use in image-to-video.
+
+        Args:
+            limit: Maximum number of images to return
+
+        Returns:
+            List of recent image data dictionaries
+        """
+        images = self.recently_generated_assets.get('images', [])
+        return images[-limit:] if images else []
+
+    def get_project_assets_context(self, project) -> str:
+        """
+        Get ALL assets from a specific project for long-term work.
+
+        Session 122: Smart Hybrid - Use this when working in a project context
+        for customer work that spans hours/days, not just 10-minute sessions.
+
+        Args:
+            project: CreativeProject instance
+
+        Returns:
+            Formatted string describing all project assets
+        """
+        from content.models import ImageHistory, VideoHistory
+
+        try:
+            # Get recent images from project (last 10)
+            recent_images = ImageHistory.objects.filter(
+                project=project
+            ).order_by('-created_at')[:10]
+
+            # Get recent videos from project (last 5)
+            recent_videos = VideoHistory.objects.filter(
+                project=project
+            ).order_by('-created_at')[:5]
+
+            context_parts = [f"📁 **Project: {project.name}** (All assets available)"]
+
+            if recent_images.exists():
+                context_parts.append(f"\n📸 {recent_images.count()} recent images in project:")
+                for img in recent_images:
+                    # Determine type from prompt or image_type
+                    img_type = 'image'
+                    if 'logo' in img.prompt.lower():
+                        img_type = 'logo'
+                    elif any(word in img.prompt.lower() for word in ['character', 'mascot']):
+                        img_type = 'character'
+                    elif any(word in img.prompt.lower() for word in ['product', 'merchandise']):
+                        img_type = 'product'
+
+                    context_parts.append(f"  - {img_type.title()} (ID: {img.id}): \"{img.prompt[:50]}...\"")
+
+            if recent_videos.exists():
+                context_parts.append(f"\n🎬 {recent_videos.count()} recent videos in project:")
+                for vid in recent_videos:
+                    source_info = f", from image {vid.source_image.id}" if vid.source_image else ""
+                    context_parts.append(f"  - Video (ID: {vid.id}{source_info}): \"{vid.prompt[:50]}...\"")
+
+            if not recent_images.exists() and not recent_videos.exists():
+                context_parts.append("\n⚠️ No assets in project yet")
+
+            return "\n".join(context_parts)
+
+        except Exception as e:
+            logger.error(f"Error getting project assets context: {e}")
+            return f"📁 Project: {project.name} (Unable to load assets)"
 
     def execute_database_query(self, query: str, params: List = None) -> Dict[str, Any]:
         """
@@ -341,6 +521,14 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         # Get cross-agent insights
         insights = self.memory_manager.get_cross_agent_insights(self.user)
 
+        # Session 122: Smart Hybrid - Use project context if available, otherwise 10-min window
+        if hasattr(self, 'project') and self.project:
+            # Customer work: Full project access (spans hours/days)
+            assets_context = self.get_project_assets_context(self.project)
+        else:
+            # Quick experiments: 10-minute window for rapid iteration
+            assets_context = self.get_recent_assets_context()
+
         # Extract conversation history from context and load from database
         conversation_context = context.get('conversation_context', '')
         conversation_history = context.get('conversation_history', [])
@@ -378,6 +566,9 @@ Recent Memories:
 Recent Agent Activities:
 {agent_context}
 
+Recently Generated Assets (Last 10 minutes):
+{assets_context}
+
 System Capabilities:
 - You can check system status and database queries
 - You can execute agents on behalf of the user
@@ -391,6 +582,10 @@ CRITICAL INSTRUCTIONS:
 4. Pay attention to nuanced language - distinguish between "exploring/looking at" vs "updating/changing"
 5. If they're exploring profile options, help them understand what's available
 6. If they're actually making changes, help them complete the process
+7. **INTELLIGENT ASSET CHAINING:** If the user requests video generation AND there are recently generated images (especially logos, characters, or products), STRONGLY suggest using image-to-video mode with those image IDs. Format your response to include: "VIDEO: image_to_video [image_id] [prompt]"
+8. **AVOID TEXT-TO-VIDEO WHEN IMAGES EXIST:** Do NOT use text-to-video mode if relevant images were just generated. Use image-to-video instead for better consistency and quality
+9. **CRITICAL - RESPECT EXACT COUNTS:** When the user specifies a number (e.g., "create 2 videos", "make 5 images"), create EXACTLY that many assets. Do NOT multiply by the number of available images. Example: "Create 3 logos and 2 videos using those logos" = create exactly 3 logos + exactly 2 videos (NOT 2 videos per logo!). Pick the BEST logo(s) to use for the specified number of videos.
+10. **CREDIT CONSERVATION:** Video generation is expensive (~22% of monthly credits per video). ALWAYS confirm the exact count before generating videos. If unclear, ask the user to clarify the exact number they want.
 
 Respond in a helpful, personalized way that:
 1. Starts by addressing {user_first_name} by name
