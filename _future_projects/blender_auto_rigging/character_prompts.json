@@ -1,0 +1,83 @@
+{
+  "test_characters": [
+    {
+      "id": 1,
+      "complexity": "simple",
+      "name": "Basic T-Pose Humanoid",
+      "prompt": "3D character model, human figure in T-pose, arms extended horizontally, neutral expression, clear anatomy, simple proportions, full body view, white background, professional reference sheet style, anatomically correct, clean design",
+      "expected_rig_success": "high"
+    },
+    {
+      "id": 2,
+      "complexity": "simple",
+      "name": "Standing Neutral",
+      "prompt": "3D character model, human standing in neutral pose, arms at sides, forward facing, balanced proportions, full body visible, clean silhouette, white background, reference character design, simple and clear",
+      "expected_rig_success": "high"
+    },
+    {
+      "id": 3,
+      "complexity": "simple",
+      "name": "Basic Forward Facing",
+      "prompt": "3D character reference, simple human figure, standing upright, facing camera, symmetrical pose, standard proportions, full body shot, white background, clean design, character turnaround style",
+      "expected_rig_success": "high"
+    },
+    {
+      "id": 4,
+      "complexity": "medium",
+      "name": "Athletic Walking",
+      "prompt": "3D character model, athletic human figure mid-walk, one foot forward, arms swinging naturally, fit body type, confident stride, full body visible, white background, dynamic but clear pose, well-defined limbs",
+      "expected_rig_success": "medium"
+    },
+    {
+      "id": 5,
+      "complexity": "medium",
+      "name": "Stocky Character",
+      "prompt": "3D character model, stocky muscular human, standing confidently, broader shoulders, strong build, hands on hips, full body view, white background, clear joint definition, solid proportions",
+      "expected_rig_success": "medium"
+    },
+    {
+      "id": 6,
+      "complexity": "medium",
+      "name": "Slender Casual",
+      "prompt": "3D character model, slender human figure, casual relaxed stance, one hand in pocket, slight hip tilt, lean proportions, full body visible, white background, natural pose, clear anatomy",
+      "expected_rig_success": "medium"
+    },
+    {
+      "id": 7,
+      "complexity": "medium",
+      "name": "Action Arms Extended",
+      "prompt": "3D character model, human in action pose, both arms extended outward, dynamic stance, athletic build, one leg slightly bent, full body view, white background, clear limb positioning, energetic pose",
+      "expected_rig_success": "medium"
+    },
+    {
+      "id": 8,
+      "complexity": "complex",
+      "name": "Tall Stylized Dynamic",
+      "prompt": "3D character model, tall stylized human, exaggerated height proportions, dynamic hero pose, one arm raised high, elongated limbs, full body visible, white background, unique silhouette, clear joint structure",
+      "expected_rig_success": "low"
+    },
+    {
+      "id": 9,
+      "complexity": "complex",
+      "name": "Short Exaggerated",
+      "prompt": "3D character model, short character with exaggerated proportions, chibi style, large head, small body, standing pose, cute expression, full body view, white background, stylized anatomy, clear limb separation",
+      "expected_rig_success": "low"
+    },
+    {
+      "id": 10,
+      "complexity": "complex",
+      "name": "Twisted Action Complex",
+      "prompt": "3D character model, human in complex twisted pose, torso rotated, one arm reaching back, dynamic martial arts stance, athletic build, full body visible, white background, challenging anatomy, clear muscle definition",
+      "expected_rig_success": "low"
+    }
+  ],
+  "generation_settings": {
+    "model": "sd3-large-turbo",
+    "width": 1024,
+    "height": 1024,
+    "style_preset": "3d-model",
+    "cfg_scale": 7,
+    "steps": 40
+  },
+  "notes": "Prompts optimized for Blender auto-rigging validation. Simple characters should rig easily, complex characters test system limits."
+}

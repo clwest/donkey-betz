@@ -1,0 +1,20 @@
+# Ignore large model files (but track structure)
+models/*.glb
+models/*.obj
+models/*.fbx
+models/*.blend
+
+# Ignore test results
+results/*.fbx
+results/*.blend
+results/*.glb
+
+# Ignore logs
+logs/*.log
+
+# Keep directory structure
+!models/.gitkeep
+!results/.gitkeep
+!logs/.gitkeep
+!config/.gitkeep
+!scripts/.gitkeep

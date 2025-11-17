@@ -11836,6 +11836,35 @@
                         console.log('🔄 Video completed - refreshing Video Gallery...');
                         loadVideoGallery();
 
+                        // Session 122: Add completed video to chat conversation (like audio does!)
+                        if (window.aiAssistant && mode === 'assistant') {
+                            const videoUrl = data.video_url;
+
+                            // Create completion message with embedded video
+                            const completionMessage = `✅ **Your Video is Ready!**\n\n` +
+                                `🎬 Video generation complete!\n\n` +
+                                `**VIDEO_URL:** ${videoUrl}\n\n` +
+                                `<video controls style="max-width: 100%; border-radius: 8px; margin: 10px 0;">\n` +
+                                `  <source src="${videoUrl}" type="video/mp4">\n` +
+                                `  Your browser does not support the video tag.\n` +
+                                `</video>\n\n` +
+                                `📥 [Download Video](${videoUrl})\n\n` +
+                                `💡 You can now chain this video or add voice editing!`;
+
+                            // Add to UI
+                            window.aiAssistant.addMessage('assistant', completionMessage);
+
+                            // Add to conversation history so OpenAI can see it
+                            window.aiAssistant.conversation.push({
+                                role: 'assistant',
+                                content: completionMessage
+                            });
+
+                            // Store video URL globally for easy backend access
+                            window.mostRecentVideoUrl = videoUrl;
+                            console.log('📌 Stored most recent video URL:', videoUrl);
+                        }
+
                         // Session 68: Multi-notification system for video completion
                         notifyVideoComplete(mode);
 
@@ -18949,6 +18978,22 @@
                     </div>
                 </div>
 
+                <!-- Session 120: Agent Contributions -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="color: #10b981;">🤖 Agent Contributions</h5>
+                        <button class="btn btn-sm btn-success" onclick="refreshProjectAgents('${project.id}')" title="Refresh agent contributions">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div id="project-agents-${project.id}">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-success" role="status"></div>
+                            <p class="mt-2 text-muted">Loading agent contributions...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Workflows (Session 62: Phase C.4 - Added Create New + Execute All) -->
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -19010,6 +19055,8 @@
             setTimeout(() => refreshProjectSessions(project.id), 600);
             // Session 100: Auto-load project decisions timeline after rendering
             setTimeout(() => refreshProjectDecisions(project.id), 700);
+            // Session 120: Auto-load agent contributions after rendering
+            setTimeout(() => refreshProjectAgents(project.id), 800);
         }
 
         /**
@@ -19053,26 +19100,40 @@
                                     <img src="${asset.thumbnail_url || asset.content_url}"
                                          class="card-img-top"
                                          style="height: 200px; object-fit: cover; cursor: pointer;"
-                                         onclick="viewAsset('${asset.id}', '${asset.type}')"
+                                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')"
                                          alt="${asset.prompt || 'Generated image'}">
                                 ` : asset.type === 'video' ? `
-                                    <button
-                                        onclick="event.stopPropagation(); deleteVideoFromProject('${asset.id}', '${projectId}')"
-                                        style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
-                                        onmouseover="this.style.background='rgba(220, 38, 38, 1)'"
-                                        onmouseout="this.style.background='rgba(239, 68, 68, 0.9)'"
-                                        title="Delete this video"
-                                    >🗑️ Delete</button>
-                                    <video src="${asset.content_url}"
-                                           poster="${asset.thumbnail_url || ''}"
-                                           class="card-img-top"
-                                           style="height: 200px; object-fit: cover; cursor: pointer;"
-                                           onclick="viewAsset('${asset.id}', '${asset.type}')"
-                                           muted></video>
+                                    <div class="card-img-top"
+                                         style="height: 200px; position: relative; cursor: pointer; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;"
+                                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')"
+                                         data-video-url="${asset.content_url}">
+                                        <!-- Session 122: Clean video placeholder design -->
+                                        <button
+                                            onclick="event.stopPropagation(); deleteVideoFromProject('${asset.id}', '${projectId}')"
+                                            style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                                            onmouseover="this.style.background='rgba(220, 38, 38, 1)'"
+                                            onmouseout="this.style.background='rgba(239, 68, 68, 0.9)'"
+                                            title="Delete this video"
+                                        >🗑️ Delete</button>
+
+                                        <!-- Film strip pattern background -->
+                                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1;">
+                                            <div style="position: absolute; top: 20px; left: 0; right: 0; height: 8px; background: repeating-linear-gradient(90deg, #22d3ee 0px, #22d3ee 20px, transparent 20px, transparent 30px);"></div>
+                                            <div style="position: absolute; bottom: 20px; left: 0; right: 0; height: 8px; background: repeating-linear-gradient(90deg, #22d3ee 0px, #22d3ee 20px, transparent 20px, transparent 30px);"></div>
+                                        </div>
+
+                                        <!-- Video icon -->
+                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                            <div style="font-size: 48px; margin-bottom: 8px; opacity: 0.6;">🎬</div>
+                                            <div style="background: rgba(34, 211, 238, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                                                ▶️ Click to Play
+                                            </div>
+                                        </div>
+                                    </div>
                                 ` : `
                                     <div class="card-img-top d-flex align-items-center justify-content-center"
                                          style="height: 200px; background: #333; cursor: pointer;"
-                                         onclick="viewAsset('${asset.id}', '${asset.type}')">
+                                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')">
                                         <span style="font-size: 48px;">🎵</span>
                                     </div>
                                 `}
@@ -19396,6 +19457,195 @@
         }
 
         /**
+         * Session 120: Fetch and display agent contributions to a project
+         */
+        async function refreshProjectAgents(projectId) {
+            const container = document.getElementById(`project-agents-${projectId}`);
+            if (!container) return;
+
+            try {
+                // Show loading state
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-success" role="status"></div>
+                        <p class="mt-2 text-muted">Loading agent contributions...</p>
+                    </div>
+                `;
+
+                // Fetch agent contributions
+                // Uses session authentication (no token needed - user already logged in)
+                const response = await fetch(`/api/projects/${projectId}/contributions/agents/`, {
+                    credentials: 'same-origin',  // Include session cookie
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data.agents && data.data.agents.length > 0) {
+                    const agents = data.data.agents;
+                    const stats = data.data.stats;
+
+                    // Render agent cards + stats summary
+                    container.innerHTML = `
+                        <!-- Stats Summary -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981;">
+                                    <div class="card-body py-2">
+                                        <div class="h4 mb-0" style="color: #10b981;">${stats.unique_agents}</div>
+                                        <div class="small text-muted">Agents</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6;">
+                                    <div class="card-body py-2">
+                                        <div class="h4 mb-0" style="color: #3b82f6;">${stats.total_contributions}</div>
+                                        <div class="small text-muted">Contributions</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: rgba(251, 191, 36, 0.1); border: 1px solid #fbbf24;">
+                                    <div class="card-body py-2">
+                                        <div class="h4 mb-0" style="color: #fbbf24;">${(stats.total_tokens_used / 1000).toFixed(1)}K</div>
+                                        <div class="small text-muted">Tokens</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6;">
+                                    <div class="card-body py-2">
+                                        <div class="h4 mb-0" style="color: #8b5cf6;">${stats.average_rating ? stats.average_rating.toFixed(1) : 'N/A'}</div>
+                                        <div class="small text-muted">Avg Rating</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Agent List -->
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-success" onclick="showAgentTimeline('${projectId}')" style="float: right;">
+                                📅 View Timeline
+                            </button>
+                            <h6 style="color: #34d399;">Contributing Agents:</h6>
+                        </div>
+                        <div class="list-group">
+                            ${agents.map(agent => `
+                                <div class="list-group-item list-group-item-dark mb-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1" style="color: #10b981;">🤖 ${agent.agent_name}</h6>
+                                            <p class="mb-1 small text-muted">${agent.agent_description}</p>
+                                            <div class="small">
+                                                <span class="badge bg-primary me-1">${agent.contribution_count} contributions</span>
+                                                ${agent.avg_execution_time ? `<span class="badge bg-info me-1">${agent.avg_execution_time.toFixed(1)}s avg</span>` : ''}
+                                                ${agent.total_tokens > 0 ? `<span class="badge bg-warning me-1">${agent.total_tokens} tokens</span>` : ''}
+                                                ${agent.avg_rating ? `<span class="badge bg-success me-1">⭐ ${agent.avg_rating.toFixed(1)}</span>` : ''}
+                                            </div>
+                                        </div>
+                                        <div class="text-end ms-3">
+                                            ${Object.entries(agent.type_breakdown).map(([type, count]) => `
+                                                <div class="small text-muted">${type}: ${count}</div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-muted">No agent contributions yet for this project.</p>
+                            <p class="small">Agents will be tracked automatically when they create images or videos.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading agent contributions:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading agent contributions</strong>
+                        <p class="small text-muted">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Session 120: Show detailed agent contribution timeline
+         */
+        async function showAgentTimeline(projectId) {
+            try {
+                const response = await fetch(`/api/projects/${projectId}/contributions/timeline/`, {
+                    headers: {
+                        'Authorization': 'Token ' + getCookie('auth_token'),
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data.timeline) {
+                    const timeline = data.data.timeline;
+
+                    // Show in a modal or expand timeline in place
+                    const container = document.getElementById(`project-agents-${projectId}`);
+                    const existingTimeline = document.getElementById(`agent-timeline-${projectId}`);
+
+                    if (existingTimeline) {
+                        // Collapse timeline
+                        existingTimeline.remove();
+                    } else {
+                        // Show timeline
+                        const timelineHtml = `
+                            <div id="agent-timeline-${projectId}" class="mt-4 pt-4" style="border-top: 2px solid #10b981;">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 style="color: #34d399;">📅 Agent Contribution Timeline</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="showAgentTimeline('${projectId}')">
+                                        ✖️ Hide
+                                    </button>
+                                </div>
+                                <div style="max-height: 400px; overflow-y: auto;">
+                                    ${timeline.length > 0 ? timeline.map(contrib => `
+                                        <div class="card mb-2" style="background: #1a1a1a; border: 1px solid #333;">
+                                            <div class="card-body py-2">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <strong style="color: #10b981;">${contrib.agent_name}</strong>
+                                                        <span class="badge bg-secondary ms-2">${contrib.contribution_type}</span>
+                                                    </div>
+                                                    <small class="text-muted">${new Date(contrib.timestamp).toLocaleString()}</small>
+                                                </div>
+                                                <div class="small mt-1">
+                                                    ${contrib.contribution_role} - ${contrib.content_reference.type} #${contrib.content_reference.number || 'N/A'}
+                                                </div>
+                                                ${contrib.task_description ? `<div class="small text-muted mt-1">${contrib.task_description}</div>` : ''}
+                                                <div class="small mt-1">
+                                                    ${contrib.execution_time_seconds ? `⏱️ ${contrib.execution_time_seconds.toFixed(1)}s` : ''}
+                                                    ${contrib.tokens_used ? ` | 🎫 ${contrib.tokens_used} tokens` : ''}
+                                                    ${contrib.user_rating ? ` | ⭐ ${contrib.user_rating}/5` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('') : '<p class="text-center text-muted">No contributions in timeline yet.</p>'}
+                                </div>
+                            </div>
+                        `;
+
+                        container.insertAdjacentHTML('beforeend', timelineHtml);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agent timeline:', error);
+                showToast('Error loading agent timeline', 'error');
+            }
+        }
+
+        /**
          * Session 97: Option 4 - Load session analytics
          */
         let analyticsLoaded = false;
@@ -19651,22 +19901,75 @@
 
         /**
          * View asset in fullscreen (reuse existing gallery viewer)
+         * Session 122: Pass element directly for reliable access
          */
-        function viewAsset(assetId, assetType) {
-            // Use existing gallery modal functionality
+        function viewAsset(element, assetId, assetType) {
             if (assetType === 'image') {
-                // Trigger image gallery viewer
-                const img = document.querySelector(`[onclick*="viewAsset('${assetId}']`)?.querySelector('img');
-                if (img) {
-                    showImageModal(img.src, img.alt);
+                // Element is the IMG tag itself
+                if (element && element.src) {
+                    showImageModal(element.src, element.alt || 'Generated image');
                 }
             } else if (assetType === 'video') {
-                // Open video in new tab for now (could enhance later)
-                const video = document.querySelector(`[onclick*="viewAsset('${assetId}']`)?.querySelector('video');
-                if (video) {
-                    window.open(video.src, '_blank');
+                // Session 122: Element is now a DIV with data-video-url attribute
+                const videoUrl = element.dataset?.videoUrl || element.getAttribute('data-video-url');
+                if (videoUrl) {
+                    showVideoModal(videoUrl, assetId);
+                } else {
+                    console.error('Video URL not found on element:', element);
                 }
             }
+        }
+
+        /**
+         * Session 122: Show video in fullscreen modal
+         */
+        function showVideoModal(videoUrl, assetId) {
+            // Create modal HTML if it doesn't exist
+            let modal = document.getElementById('video-viewer-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'video-viewer-modal';
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content" style="background: #111; border: 1px solid #22d3ee;">
+                            <div class="modal-header" style="border-bottom: 1px solid #22d3ee;">
+                                <h5 class="modal-title" style="color: #22d3ee;">🎬 Video Viewer</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-0">
+                                <video id="modal-video-player" controls autoplay style="width: 100%; max-height: 80vh; background: #000;">
+                                    <source id="modal-video-source" type="video/mp4">
+                                </video>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #22d3ee;">
+                                <a id="modal-video-download" class="btn btn-outline-cyan" download>📥 Download</a>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            // Update video source
+            const videoSource = document.getElementById('modal-video-source');
+            const videoPlayer = document.getElementById('modal-video-player');
+            const downloadBtn = document.getElementById('modal-video-download');
+
+            videoSource.src = videoUrl;
+            videoPlayer.load();
+            downloadBtn.href = videoUrl;
+
+            // Show modal
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            // Clean up when modal closes
+            modal.addEventListener('hidden.bs.modal', function() {
+                videoPlayer.pause();
+                videoPlayer.currentTime = 0;
+            });
         }
 
         // Delete project

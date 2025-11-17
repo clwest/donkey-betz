@@ -11,11 +11,32 @@ from django.core.files.storage import default_storage
 
 class DisableCSRFForAuthEndpoints(MiddlewareMixin):
     """
-    Disable CSRF protection for authentication endpoints to allow API access.
+    Disable CSRF protection for API endpoints.
+
+    Session 115: Enhanced to skip CSRF for:
+    1. Any request with X-API-Key header (mobile apps)
+    2. Any request with Authorization token header
+    3. Specific auth endpoints
     """
-    
+
     def process_view(self, request, view_func, view_args, view_kwargs):
-        # List of paths that should be exempt from CSRF
+        # Session 115: Exempt ALL /api/ paths from CSRF (mobile apps use token auth)
+        if request.path.startswith('/api/'):
+            setattr(request, '_dont_enforce_csrf_checks', True)
+            return None
+
+        # Check if request has API key authentication (mobile apps)
+        if request.META.get('HTTP_X_API_KEY'):
+            setattr(request, '_dont_enforce_csrf_checks', True)
+            return None
+
+        # Check if request has token authentication
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token ') or auth_header.startswith('Bearer '):
+            setattr(request, '_dont_enforce_csrf_checks', True)
+            return None
+
+        # List of paths that should be exempt from CSRF (backwards compatibility)
         csrf_exempt_paths = [
             '/api/v1/auth/login/',
             '/api/auth/login/',
@@ -25,7 +46,7 @@ class DisableCSRFForAuthEndpoints(MiddlewareMixin):
             '/api/freelance/analyze/',
             '/api/freelance/',
         ]
-        
+
         # Check if the current path should be exempt
         path_to_check = request.path
         if (path_to_check in csrf_exempt_paths or

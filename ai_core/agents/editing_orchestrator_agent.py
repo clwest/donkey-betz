@@ -170,7 +170,7 @@ class EditingOrchestratorAgent:
         Execute a single editing operation.
 
         Args:
-            image_id: Source image ID
+            image_id: Source image ID (UUID or numeric index like "213")
             operation: Operation type
             parameters: Operation-specific parameters
 
@@ -178,8 +178,27 @@ class EditingOrchestratorAgent:
             Dict with result
         """
         try:
-            # Get source image
-            source_image = ImageHistory.objects.get(id=image_id, user=self.user)
+            # Session 122: Support hybrid IDs - numeric IDs like "213" or full UUIDs
+            # Resolve numeric ID to UUID if needed
+            if isinstance(image_id, str) and image_id.isdigit():
+                # User asked for "image 213" - get the 213th image chronologically
+                numeric_index = int(image_id)
+                try:
+                    source_image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[numeric_index - 1]  # 1-indexed
+                except (IndexError, ImageHistory.DoesNotExist):
+                    return {
+                        'success': False,
+                        'error': f'Image {numeric_index} not found. You have {ImageHistory.objects.filter(user=self.user).count()} images.'
+                    }
+            else:
+                # Full UUID provided
+                try:
+                    source_image = ImageHistory.objects.get(id=image_id, user=self.user)
+                except ImageHistory.DoesNotExist:
+                    return {
+                        'success': False,
+                        'error': f'Image with ID {image_id} not found.'
+                    }
 
             # Execute operation based on type
             if operation == 'inpaint':
