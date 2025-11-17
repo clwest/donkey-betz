@@ -708,7 +708,7 @@ def get_project_decisions(request, project_id):
         # Get project (verify ownership)
         from content.models import CreativeProject
         project = CreativeProject.objects.get(
-            project_id=project_id,
+            id=project_id,  # Session 119: Fixed - use 'id' not 'project_id'
             user=request.user
         )
 
@@ -772,7 +772,7 @@ def get_project_decisions(request, project_id):
         return Response({
             'success': True,
             'project': {
-                'id': str(project.project_id),
+                'id': str(project.id),  # Session 119: Fixed - use 'id' not 'project_id'
                 'name': project.name
             },
             'decisions': decisions_list,
