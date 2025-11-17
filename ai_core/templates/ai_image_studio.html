@@ -19014,6 +19014,219 @@
                     </div>
                 </div>
 
+                <!-- Session 125: Phase 5 - Agent Contributions -->
+                <div class="mb-4">
+                    <div class="card" style="background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); border: none;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 style="color: white; margin: 0;">
+                                    🤖 Agent Contributions
+                                </h5>
+                                <button class="btn btn-sm btn-light" onclick="loadAgentContributions('${project.id}')" title="Refresh agent data">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                            <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
+                                See which AI agents helped create this project and what they contributed.
+                            </p>
+
+                            <!-- Stats Summary -->
+                            <div id="agent-stats-${project.id}" class="mb-3">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+                                    <p class="small mt-2 mb-0" style="color: rgba(255,255,255,0.8);">Loading agent data...</p>
+                                </div>
+                            </div>
+
+                            <!-- Agent List -->
+                            <div id="agent-list-${project.id}" class="mb-3"></div>
+
+                            <!-- Timeline Toggle -->
+                            <div class="text-center">
+                                <button class="btn btn-sm btn-light" onclick="toggleAgentTimeline('${project.id}')" id="timeline-toggle-${project.id}">
+                                    📅 Show Timeline
+                                </button>
+                            </div>
+
+                            <!-- Timeline (initially hidden) -->
+                            <div id="agent-timeline-${project.id}" style="display: none;" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 125: Phase 6 - Workflow Templates -->
+                <div class="mb-4">
+                    <div class="card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 style="color: white; margin: 0;">
+                                    ⚡ Quick Workflows
+                                </h5>
+                            </div>
+                            <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
+                                Execute multi-step workflows with one click! Perfect for common tasks.
+                            </p>
+
+                            <!-- Workflow Templates Grid -->
+                            <div class="row g-2">
+                                <!-- Template 1: Logo Package -->
+                                <div class="col-md-6">
+                                    <div class="p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                                         onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                                         onmouseout="this.style.background='rgba(255,255,255,0.1)'"
+                                         onclick="executeWorkflow('${project.id}', 'logo_package')">
+                                        <div style="color: white; font-weight: 600; margin-bottom: 8px;">
+                                            🎨 Logo Package
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Generate 3 logo variations + 2 promo videos
+                                        </div>
+                                        <div class="small mt-2" style="color: #fcd34d;">
+                                            ⚡ ~2 min • 5 assets
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Template 2: Social Media Kit -->
+                                <div class="col-md-6">
+                                    <div class="p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                                         onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                                         onmouseout="this.style.background='rgba(255,255,255,0.1)'"
+                                         onclick="executeWorkflow('${project.id}', 'social_media_kit')">
+                                        <div style="color: white; font-weight: 600; margin-bottom: 8px;">
+                                            📱 Social Media Kit
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Create banners, posts, and profile images
+                                        </div>
+                                        <div class="small mt-2" style="color: #fcd34d;">
+                                            ⚡ ~3 min • 6 assets
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Template 3: Video Marketing -->
+                                <div class="col-md-6">
+                                    <div class="p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                                         onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                                         onmouseout="this.style.background='rgba(255,255,255,0.1)'"
+                                         onclick="executeWorkflow('${project.id}', 'video_marketing')">
+                                        <div style="color: white; font-weight: 600; margin-bottom: 8px;">
+                                            🎬 Video Marketing
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Generate hero images → Create promo videos
+                                        </div>
+                                        <div class="small mt-2" style="color: #fcd34d;">
+                                            ⚡ ~4 min • 5 assets
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Template 4: Brand Refresh -->
+                                <div class="col-md-6">
+                                    <div class="p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                                         onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                                         onmouseout="this.style.background='rgba(255,255,255,0.1)'"
+                                         onclick="executeWorkflow('${project.id}', 'brand_refresh')">
+                                        <div style="color: white; font-weight: 600; margin-bottom: 8px;">
+                                            ✨ Brand Refresh
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Refine existing assets with modern style
+                                        </div>
+                                        <div class="small mt-2" style="color: #fcd34d;">
+                                            ⚡ ~2 min • Refines all
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Workflow Progress (initially hidden) -->
+                            <div id="workflow-progress-${project.id}" style="display: none;" class="mt-3 p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div style="color: white; font-weight: 600;">⚡ Workflow Running...</div>
+                                    <div id="workflow-step-${project.id}" class="small" style="color: rgba(255,255,255,0.7);">Step 1/3</div>
+                                </div>
+                                <div class="progress" style="height: 6px; background: rgba(255,255,255,0.2);">
+                                    <div id="workflow-progress-bar-${project.id}" class="progress-bar" style="background: #fbbf24; width: 33%;"></div>
+                                </div>
+                                <div id="workflow-status-${project.id}" class="small mt-2" style="color: rgba(255,255,255,0.7);">
+                                    Generating logos...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 125: Phase 7 - Export & Share -->
+                <div class="mb-4">
+                    <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 style="color: white; margin: 0;">
+                                    📦 Export & Share
+                                </h5>
+                            </div>
+                            <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
+                                Download your project assets or share them with others.
+                            </p>
+
+                            <!-- Export Options Grid -->
+                            <div class="row g-2">
+                                <!-- Download All -->
+                                <div class="col-md-4">
+                                    <button class="btn w-100 p-3" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; text-align: left;"
+                                            onclick="downloadProjectAssets('${project.id}', '${project.name}')">
+                                        <div style="font-weight: 600; margin-bottom: 4px;">
+                                            💾 Download All
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Get .zip with all assets
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <!-- Copy Link -->
+                                <div class="col-md-4">
+                                    <button class="btn w-100 p-3" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; text-align: left;"
+                                            onclick="copyProjectLink('${project.id}')">
+                                        <div style="font-weight: 600; margin-bottom: 4px;">
+                                            🔗 Copy Link
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Share project URL
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <!-- Export Metadata -->
+                                <div class="col-md-4">
+                                    <button class="btn w-100 p-3" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; text-align: left;"
+                                            onclick="exportProjectMetadata('${project.id}', '${project.name}')">
+                                        <div style="font-weight: 600; margin-bottom: 4px;">
+                                            📄 Export JSON
+                                        </div>
+                                        <div class="small" style="color: rgba(255,255,255,0.7);">
+                                            Get project metadata
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Download Status -->
+                            <div id="download-status-${project.id}" class="mt-3" style="display: none;">
+                                <div class="alert mb-0" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                        <span id="download-message-${project.id}">Preparing download...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Session 63: Project Asset Gallery -->
                 <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -19139,8 +19352,8 @@
             setTimeout(() => refreshProjectSessions(project.id), 600);
             // Session 100: Auto-load project decisions timeline after rendering
             setTimeout(() => refreshProjectDecisions(project.id), 700);
-            // Session 120: Auto-load agent contributions after rendering
-            setTimeout(() => refreshProjectAgents(project.id), 800);
+            // Session 125: Auto-load agent contributions after rendering
+            setTimeout(() => loadAgentContributions(project.id), 800);
         }
 
         // Session 123: Phase 2 - Project Editing Functions
@@ -19582,6 +19795,613 @@
             // Reload the assets grid
             loadPortfolioForProject(projectId);
             showNotification('✓ Project refreshed!', 'info');
+        }
+
+        /**
+         * Session 125: Phase 5 - Load Agent Contributions
+         */
+        async function loadAgentContributions(projectId) {
+            console.log(`🤖 Loading agent contributions for project: ${projectId}`);
+
+            const statsDiv = document.getElementById(`agent-stats-${projectId}`);
+            const listDiv = document.getElementById(`agent-list-${projectId}`);
+
+            try {
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+                // Fetch agent data from API
+                const response = await fetch(`/api/projects/${projectId}/contributions/agents/`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('✅ Agent data loaded:', result.data);
+                    renderAgentStats(projectId, result.data.stats);
+                    renderAgentList(projectId, result.data.agents);
+                } else {
+                    throw new Error(result.error || 'Failed to load agent data');
+                }
+
+            } catch (error) {
+                console.error('❌ Error loading agent contributions:', error);
+
+                // Always hide spinner and show friendly message
+                if (statsDiv) {
+                    statsDiv.innerHTML = `
+                        <div class="alert alert-info mb-0" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); color: rgba(255,255,255,0.9);">
+                            <strong>Agent tracking coming soon!</strong><br>
+                            <small>Agents will appear here once they start contributing to this project.</small>
+                        </div>
+                    `;
+                }
+                if (listDiv) {
+                    listDiv.innerHTML = '';
+                }
+            }
+        }
+
+        /**
+         * Session 125: Render agent stats summary
+         */
+        function renderAgentStats(projectId, stats) {
+            const statsHtml = `
+                <div class="row g-2 text-center">
+                    <div class="col-3">
+                        <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: white;">${stats.total_contributions || 0}</div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">Contributions</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: white;">${stats.unique_agents || 0}</div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">Agents</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: white;">${(stats.total_execution_time || 0).toFixed(1)}s</div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">Time</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: white;">${stats.average_rating ? '⭐'.repeat(Math.round(stats.average_rating)) : 'N/A'}</div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">Rating</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById(`agent-stats-${projectId}`).innerHTML = statsHtml;
+        }
+
+        /**
+         * Session 125: Render list of agents
+         */
+        function renderAgentList(projectId, agents) {
+            if (!agents || agents.length === 0) {
+                document.getElementById(`agent-list-${projectId}`).innerHTML = `
+                    <div class="text-center py-3" style="color: rgba(255,255,255,0.7);">
+                        <p class="mb-0">No agents have contributed to this project yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const agentsHtml = agents.map(agent => `
+                <div class="mb-2 p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 3px solid #ec4899;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <div style="color: white; font-weight: 600; margin-bottom: 4px;">
+                                🤖 ${agent.agent_name || 'Unknown Agent'}
+                            </div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">
+                                ${agent.contribution_count} contribution${agent.contribution_count !== 1 ? 's' : ''} •
+                                ${(agent.avg_execution_time || 0).toFixed(1)}s avg time
+                                ${agent.avg_rating ? ` • ⭐ ${agent.avg_rating.toFixed(1)}` : ''}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="small" style="color: #fcd34d; font-weight: 600;">${agent.total_percentage || 0}%</div>
+                            <div class="small" style="color: rgba(255,255,255,0.6);">contribution</div>
+                        </div>
+                    </div>
+                    ${agent.agent_description ? `<div class="small mt-2" style="color: rgba(255,255,255,0.6);">${agent.agent_description}</div>` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById(`agent-list-${projectId}`).innerHTML = agentsHtml;
+        }
+
+        /**
+         * Session 125: Toggle agent timeline visibility
+         */
+        async function toggleAgentTimeline(projectId) {
+            const timelineDiv = document.getElementById(`agent-timeline-${projectId}`);
+            const toggleBtn = document.getElementById(`timeline-toggle-${projectId}`);
+
+            if (timelineDiv.style.display === 'none') {
+                // Show and load timeline
+                toggleBtn.innerHTML = '📅 Hide Timeline';
+                toggleBtn.disabled = true;
+                timelineDiv.style.display = 'block';
+                timelineDiv.innerHTML = `
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+                        <p class="small mt-2 mb-0" style="color: rgba(255,255,255,0.8);">Loading timeline...</p>
+                    </div>
+                `;
+
+                try {
+                    const response = await fetch(`/api/projects/${projectId}/contributions/timeline/`, {
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        renderAgentTimeline(projectId, result.data.timeline);
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading timeline:', error);
+                    timelineDiv.innerHTML = `
+                        <div class="alert alert-warning mb-0">
+                            <small>Failed to load timeline. ${error.message}</small>
+                        </div>
+                    `;
+                } finally {
+                    toggleBtn.disabled = false;
+                }
+            } else {
+                // Hide timeline
+                toggleBtn.innerHTML = '📅 Show Timeline';
+                timelineDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * Session 125: Render agent timeline
+         */
+        function renderAgentTimeline(projectId, timeline) {
+            if (!timeline || timeline.length === 0) {
+                document.getElementById(`agent-timeline-${projectId}`).innerHTML = `
+                    <div class="text-center py-3" style="color: rgba(255,255,255,0.7);">
+                        <p class="mb-0">No timeline events yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const timelineHtml = timeline.map((event, index) => {
+                const timestamp = new Date(event.timestamp).toLocaleString();
+                return `
+                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 2px solid #ec4899;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div class="small" style="color: white; font-weight: 500;">
+                                    ${event.agent_name}
+                                </div>
+                                <div class="small" style="color: rgba(255,255,255,0.6);">
+                                    ${event.task_description || event.contribution_type}
+                                    ${event.content_reference ? ` • ${event.content_reference.type} #${event.content_reference.number}` : ''}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="small" style="color: rgba(255,255,255,0.5);">${timestamp}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById(`agent-timeline-${projectId}`).innerHTML = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    ${timelineHtml}
+                </div>
+            `;
+        }
+
+        /**
+         * Session 125: Phase 6 - Execute Workflow Template
+         * Fixed: Resume project session for full AI context!
+         */
+        async function executeWorkflow(projectId, workflowType) {
+            console.log(`⚡ Executing workflow: ${workflowType} for project: ${projectId}`);
+
+            // Show progress UI early
+            const progressDiv = document.getElementById(`workflow-progress-${projectId}`);
+            progressDiv.style.display = 'block';
+            document.getElementById(`workflow-status-${projectId}`).textContent = 'Loading project session...';
+
+            try {
+                // Step 1: Fetch project sessions to resume conversation history
+                const sessionsResponse = await fetch(`/api/v1/sessions/project/${projectId}/`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                let sessionToResume = null;
+                if (sessionsResponse.ok) {
+                    const sessionsData = await sessionsResponse.json();
+                    if (sessionsData.success && sessionsData.sessions && sessionsData.sessions.length > 0) {
+                        // Get the most recent session for this project
+                        sessionToResume = sessionsData.sessions[0];
+                        console.log(`📝 Found project session: ${sessionToResume.title} (${sessionToResume.session_id})`);
+                        console.log(`📜 Session has ${sessionToResume.total_images || 0} images, ${sessionToResume.total_videos || 0} videos`);
+
+                        // Resume the session to load conversation history!
+                        document.getElementById(`workflow-status-${projectId}`).textContent = 'Resuming conversation...';
+                        await resumeSession(sessionToResume.session_id, sessionToResume.title);
+                        console.log(`✅ Session resumed! AI now has full context about the project.`);
+
+                        // Wait a moment for session to fully load
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    } else {
+                        console.log(`📝 No existing session for project - AI will start fresh`);
+                    }
+                } else {
+                    console.warn(`⚠️ Could not fetch project sessions: HTTP ${sessionsResponse.status}`);
+                }
+
+                // Step 2: Fetch project data to get name and existing assets
+                document.getElementById(`workflow-status-${projectId}`).textContent = 'Analyzing project style...';
+
+                const projectResponse = await fetch(`/api/portfolio/?project=${projectId}`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!projectResponse.ok) {
+                    throw new Error(`Failed to fetch project data: HTTP ${projectResponse.status}`);
+                }
+
+                const projectResult = await projectResponse.json();
+                const projectAssets = projectResult.data || [];
+
+                // Get project name from the modal title or use a default
+                const projectName = document.querySelector(`#projectModal-${projectId} .modal-title`)?.textContent || 'Project';
+
+                console.log(`📁 Project: ${projectName} with ${projectAssets.length} existing assets`);
+
+                // Step 2: Analyze project style from existing assets
+                let styleContext = '';
+                if (projectAssets.length > 0) {
+                    // Look at the first few assets to understand the style
+                    const sampleAsset = projectAssets[0];
+
+                    // Try to detect style keywords from prompt if available
+                    if (sampleAsset.prompt) {
+                        const styleKeywords = ['pixar', 'robot', 'cartoon', 'realistic', 'anime', 'watercolor', 'sketch', 'minimalist', 'cyberpunk', 'fantasy', 'sci-fi', '3d', 'vector', 'vintage', 'modern', 'abstract'];
+                        const detectedStyles = styleKeywords.filter(keyword =>
+                            sampleAsset.prompt.toLowerCase().includes(keyword)
+                        );
+
+                        if (detectedStyles.length > 0) {
+                            styleContext = ` in ${detectedStyles.join(' ')} style`;
+                            console.log(`🎨 Detected project style: ${detectedStyles.join(' ')}`);
+                        }
+                    }
+
+                    // If no style detected, ask AI to maintain consistency
+                    if (!styleContext) {
+                        styleContext = ' matching the style of existing project assets';
+                        console.log(`🎨 Using consistency instruction: ${styleContext}`);
+                    }
+                } else {
+                    console.log(`🎨 No existing assets - using default style`);
+                }
+
+                // Step 3: Define workflow templates
+                // If we resumed a session, AI has full context and will maintain style automatically
+                // If new session, we add style context as a hint
+                const workflows = {
+                    logo_package: {
+                        name: 'Logo Package',
+                        steps: [
+                            {
+                                message: sessionToResume
+                                    ? `Create 3 more logo variations matching our project style`
+                                    : `Create 3 logo variations${styleContext}`,
+                                status: 'Generating 3 logo variations...'
+                            },
+                            {
+                                message: sessionToResume
+                                    ? `Create 2 promo videos using the logos we created`
+                                    : `Create 2 promo videos using the logos${styleContext}`,
+                                status: 'Creating promo videos...'
+                            }
+                        ]
+                    },
+                    social_media_kit: {
+                        name: 'Social Media Kit',
+                        steps: [
+                            {
+                                message: sessionToResume
+                                    ? `Create a social media banner (1200x628) matching our project style`
+                                    : `Create a social media banner (1200x628)${styleContext}`,
+                                status: 'Creating banner...'
+                            },
+                            {
+                                message: sessionToResume
+                                    ? `Create 3 social media post images (1080x1080) matching our project style`
+                                    : `Create 3 social media post images (1080x1080)${styleContext}`,
+                                status: 'Creating post images...'
+                            },
+                            {
+                                message: sessionToResume
+                                    ? `Create a profile/avatar image (400x400) matching our project style`
+                                    : `Create a profile/avatar image (400x400)${styleContext}`,
+                                status: 'Creating profile image...'
+                            }
+                        ]
+                    },
+                    video_marketing: {
+                        name: 'Video Marketing',
+                        steps: [
+                            {
+                                message: sessionToResume
+                                    ? `Create 2 hero images for the brand matching our project style`
+                                    : `Create 2 hero images for the brand${styleContext}`,
+                                status: 'Generating hero images...'
+                            },
+                            {
+                                message: `Create 2 marketing videos using the hero images`,
+                                status: 'Creating marketing videos...'
+                            }
+                        ]
+                    },
+                    brand_refresh: {
+                        name: 'Brand Refresh',
+                        steps: [
+                            {
+                                message: `Refine all existing assets with modern, professional style improvements`,
+                                status: 'Refining assets...'
+                            }
+                        ]
+                    }
+                };
+
+                const workflow = workflows[workflowType];
+                if (!workflow) {
+                    showNotification('Workflow not found', 'danger');
+                    progressDiv.style.display = 'none';
+                    return;
+                }
+
+                console.log(`⚡ Starting workflow: ${workflow.name} (${workflow.steps.length} steps)`);
+
+                // Step 4: Execute workflow steps with proper project context
+                const totalSteps = workflow.steps.length;
+
+                // Open AI Assistant with project context ONCE before starting
+                if (!window.aiAssistant.isOpen) {
+                    console.log('📂 Opening AI Assistant...');
+                    window.aiAssistant.toggle();
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for sidebar to open
+                }
+
+                // CRITICAL: Ensure project context is set for ALL workflow messages
+                console.log(`📁 Setting project context: ${projectName} (${projectId})`);
+                window.aiAssistant.activeProjectId = projectId;
+                window.aiAssistant.activeProjectName = projectName;
+                window.aiAssistant.sessionStartedWithProject = true;  // FORCE project association
+                window.aiAssistant.isNewSession = false;  // Not a new session
+
+                // Update dropdown to match
+                const projectSelect = document.getElementById('activeProjectSelect');
+                if (projectSelect) {
+                    projectSelect.value = projectId;
+                }
+
+                // Verify flags are set correctly
+                console.log('✅ Project context verified:');
+                console.log('   - activeProjectId:', window.aiAssistant.activeProjectId);
+                console.log('   - sessionStartedWithProject:', window.aiAssistant.sessionStartedWithProject);
+                console.log('   - isNewSession:', window.aiAssistant.isNewSession);
+
+                await new Promise(resolve => setTimeout(resolve, 300)); // Wait for context to settle
+
+                for (let i = 0; i < workflow.steps.length; i++) {
+                    const step = workflow.steps[i];
+                    const stepNum = i + 1;
+                    const progressPercent = (stepNum / totalSteps) * 100;
+
+                    // Update progress UI
+                    document.getElementById(`workflow-step-${projectId}`).textContent = `Step ${stepNum}/${totalSteps}`;
+                    document.getElementById(`workflow-progress-bar-${projectId}`).style.width = `${progressPercent}%`;
+                    document.getElementById(`workflow-status-${projectId}`).textContent = step.status;
+
+                    console.log(`⚡ Workflow step ${stepNum}/${totalSteps}: ${step.message}`);
+
+                    // Send the message to AI Assistant
+                    const messageInput = document.getElementById('aiAssistantInput');
+                    messageInput.value = step.message;
+
+                    // Trigger the send action
+                    await window.aiAssistant.sendMessage();
+
+                    // Wait longer for step to complete (increased from 3s to 5s)
+                    // This gives AI time to process and generate content
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+
+                // Workflow complete!
+                showNotification(`✅ ${workflow.name} complete! Refreshing project assets...`, 'success');
+
+                // Wait a bit longer before refreshing to ensure all assets are saved
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                    console.log('🔄 Refreshing project assets...');
+                    refreshProjectAssets(projectId);
+                }, 3000); // Increased from 2s to 3s
+
+            } catch (error) {
+                console.error('❌ Workflow error:', error);
+                showNotification(`Workflow failed: ${error.message}`, 'danger');
+                progressDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * Session 125: Phase 7 - Download Project Assets
+         */
+        async function downloadProjectAssets(projectId, projectName) {
+            console.log(`💾 Downloading assets for project: ${projectName}`);
+
+            const statusDiv = document.getElementById(`download-status-${projectId}`);
+            const messageSpan = document.getElementById(`download-message-${projectId}`);
+
+            statusDiv.style.display = 'block';
+            messageSpan.textContent = 'Fetching project assets...';
+
+            try {
+                // Get all project assets
+                const response = await fetch(`/api/portfolio/?project=${projectId}`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                const assets = result.data || [];
+
+                if (assets.length === 0) {
+                    showNotification('No assets to download in this project', 'info');
+                    statusDiv.style.display = 'none';
+                    return;
+                }
+
+                messageSpan.textContent = `Downloading ${assets.length} assets...`;
+
+                // Create download for each asset
+                for (let i = 0; i < assets.length; i++) {
+                    const asset = assets[i];
+                    const url = asset.url || asset.file_path;
+
+                    if (url && !url.startsWith('data:')) {
+                        // Create download link
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${projectName.replace(/[^a-z0-9]/gi, '_')}_${asset.sequential_number || i}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+
+                        // Small delay between downloads
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                }
+
+                showNotification(`✅ Downloaded ${assets.length} assets!`, 'success');
+                statusDiv.style.display = 'none';
+
+            } catch (error) {
+                console.error('❌ Download error:', error);
+                showNotification(`Download failed: ${error.message}`, 'danger');
+                statusDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * Session 125: Phase 7 - Copy Project Link
+         */
+        function copyProjectLink(projectId) {
+            const url = `${window.location.origin}/ai-studio/#project-${projectId}`;
+
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('✅ Project link copied to clipboard!', 'success');
+                console.log(`📋 Copied link: ${url}`);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy link', 'danger');
+            });
+        }
+
+        /**
+         * Session 125: Phase 7 - Export Project Metadata
+         */
+        async function exportProjectMetadata(projectId, projectName) {
+            console.log(`📄 Exporting metadata for project: ${projectName}`);
+
+            try {
+                // Fetch project data
+                const response = await fetch(`/api/portfolio/?project=${projectId}`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                // Create metadata object
+                const metadata = {
+                    project_id: projectId,
+                    project_name: projectName,
+                    exported_at: new Date().toISOString(),
+                    total_assets: result.data.length,
+                    assets: result.data.map(asset => ({
+                        id: asset.id,
+                        sequential_number: asset.sequential_number,
+                        type: asset.type,
+                        prompt: asset.prompt,
+                        model: asset.model || asset.model_used,
+                        style: asset.style,
+                        dimensions: asset.image_width && asset.image_height ?
+                            `${asset.image_width}x${asset.image_height}` : null,
+                        created_at: asset.created_at,
+                        url: asset.url || asset.file_path
+                    }))
+                };
+
+                // Create and download JSON file
+                const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${projectName.replace(/[^a-z0-9]/gi, '_')}_metadata.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showNotification('✅ Metadata exported!', 'success');
+
+            } catch (error) {
+                console.error('❌ Export error:', error);
+                showNotification(`Export failed: ${error.message}`, 'danger');
+            }
         }
 
         /**
