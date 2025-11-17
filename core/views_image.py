@@ -362,7 +362,7 @@ def auto_create_project_from_session(session):
 # ========================================
 
 def save_to_history(user, file_path, image_type, prompt='', parameters=None,
-                    model_used='', style='', parent_image=None, seed=None, session=None):
+                    model_used='', style='', parent_image=None, seed=None, session=None, project=None):
     """
     Helper function to save image to ImageHistory database.
 
@@ -377,6 +377,7 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
         parent_image: Parent ImageHistory object if this is an edit
         seed: Random seed used for generation (for reproducibility) - Session 95
         session: AISession object linking to conversation (Session 96 Weekend Project)
+        project: CreativeProject object to associate with (Session 124)
     """
     try:
         from content.models import ImageHistory
@@ -398,10 +399,16 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
 
         # Session 119: BUGFIX - Assign project if session already has one
         # When resuming a session with existing project, images need to be linked immediately
+        # Session 124: Also support direct project parameter
         image_project = None
-        if session and session.project:
+        if project:
+            # Direct project parameter takes precedence (Session 124)
+            image_project = project
+            logger.info(f"📁 Assigning image to project (direct): {project.name}")
+        elif session and session.project:
+            # Fall back to session's project (Session 119)
             image_project = session.project
-            logger.info(f"📁 Assigning image to project: {session.project.name}")
+            logger.info(f"📁 Assigning image to project (from session): {session.project.name}")
 
         # Create history record
         history = ImageHistory.objects.create(
@@ -483,6 +490,32 @@ def gallery_generate(request):
         num_images = int(data.get('num_images', 1))
         style = data.get('style', 'photorealistic')
         quality = data.get('quality', 'balanced')  # NEW: Support for quality selector
+
+        # Session 124: Extract project_id for project-scoped generation
+        project_id = data.get('project_id')
+        project = None
+
+        # Check direct parameter first
+        if project_id:
+            try:
+                from content.models import CreativeProject
+                project = CreativeProject.objects.get(id=project_id, user=user)
+                logger.info(f"🎨 Image generation for project (direct): {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ Project {project_id} not found, generating without project")
+
+        # Session 124: Check Redis for project context set by Assistant
+        if not project:
+            try:
+                import redis
+                r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                stored_project_id = r.get(f"user:{user.id}:current_project")
+                if stored_project_id:
+                    from content.models import CreativeProject
+                    project = CreativeProject.objects.get(id=stored_project_id, user=user)
+                    logger.info(f"🎨 Image generation for project (from Redis): {project.name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not retrieve project from Redis: {e}")
 
         logger.info(f"🎨 Image generation request from {user.username}: {prompt[:50]}... (quality: {quality}, style: {style})")
 
@@ -616,7 +649,8 @@ def gallery_generate(request):
                         },
                         model_used=model_used,
                         style=style,
-                        seed=image_seed  # Session 95: Add seed for reproducibility
+                        seed=image_seed,  # Session 95: Add seed for reproducibility
+                        project=project  # Session 124: Associate with project
                     )
 
                     # Session 122: Track generated image in AI Assistant for intelligent chaining
@@ -6627,10 +6661,10 @@ def transcribe_audio(request):
         audio_bytes = audio_file.read()
         audio_file_like = BytesIO(audio_bytes)
 
-        # Session 117: Try MP4 extension first (more compatible with macOS WebM)
-        # If that fails, OpenAI will give us a more specific error
-        # WebM on macOS can have codec issues - MP4 container is more universal
-        audio_file_like.name = "recording.mp4"
+        # Session 124: Use the actual file extension from the uploaded file
+        # This ensures OpenAI Whisper gets the correct format hint
+        audio_file_like.name = audio_file.name or "recording.webm"
+        logger.info(f"🎤 Audio file: {audio_file_like.name} ({len(audio_bytes)} bytes)")
 
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
