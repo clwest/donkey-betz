@@ -166,7 +166,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 "type": "function",
                 "function": {
                     "name": "recolor_image",
-                    "description": "Adjust colors, vibrancy, or apply color grading to an image. Use when users want to make images more vibrant, change colors, or apply color effects.",
+                    "description": "Change colors of specific objects or the entire image. Use when users want to: make something a different color (e.g., 'make robot black', 'change sky to blue'), make images more vibrant, or apply color effects.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -176,7 +176,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             },
                             "prompt": {
                                 "type": "string",
-                                "description": "Description of desired color changes (e.g., 'more vibrant', 'warmer tones', 'black and white')"
+                                "description": "Description of desired color changes (e.g., 'make robot black', 'change blue to red', 'more vibrant', 'warmer tones')"
                             },
                             "project_id": {
                                 "type": "string",
@@ -228,6 +228,12 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         try:
             function_name = tool_call['function']['name']
             arguments = json.loads(tool_call['function']['arguments'])
+
+            # Session 126: Auto-inject project_id from context if available and not already in arguments
+            if hasattr(self, '_current_context') and self._current_context:
+                if 'project_id' in self._current_context and 'project_id' not in arguments:
+                    arguments['project_id'] = self._current_context['project_id']
+                    logger.info(f"💡 Auto-injected project_id: {arguments['project_id']}")
 
             logger.info(f"🔧 Executing tool: {function_name} with args: {arguments}")
 
@@ -354,16 +360,66 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
     def _tool_create_variations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the create_image_variations tool."""
         try:
+            from core.views_image import create_variations_view
+            from django.test import RequestFactory
+            from content.models import ImageHistory
+
             image_id = arguments['image_id']
             count = arguments.get('count', 3)
+            prompt = arguments.get('prompt', 'creative variation')
             project_id = arguments.get('project_id')
 
-            logger.info(f"🎨 Creating {count} variations of image {image_id}...")
+            # Resolve image_id if it's a sequential number
+            try:
+                image = ImageHistory.objects.get(id=image_id, user=self.user)
+            except:
+                try:
+                    seq_num = int(image_id)
+                    image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[seq_num - 1]
+                    image_id = str(image.id)
+                except:
+                    return {
+                        'success': False,
+                        'error': f"Could not find image {image_id}"
+                    }
 
-            return {
-                'success': False,
-                'message': f"🚧 Image variations feature coming soon! This will generate {count} different versions of your image."
+            seq_num = image.get_sequential_number()
+            logger.info(f"🎨 Creating {count} variations of image #{seq_num}...")
+
+            # Create a mock request for the view
+            factory = RequestFactory()
+            request_data = {
+                'image_id': image_id,
+                'count': count,
+                'prompt': prompt
             }
+            if project_id:
+                request_data['project_id'] = project_id
+
+            import json as json_module
+            request = factory.post('/api/stability/create-variations/',
+                                  data=json_module.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            # Call the view
+            response = create_variations_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                created_count = result.get('count', 0)
+                images = result.get('images', [])
+                image_ids = [img['image_id'] for img in images]
+                return {
+                    'success': True,
+                    'message': f"✅ Created {created_count} variations of image #{seq_num}! New image IDs: {', '.join(image_ids[:3])}{'...' if len(image_ids) > 3 else ''}",
+                    'images': images
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Create variations failed')
+                }
 
         except Exception as e:
             logger.error(f"❌ Create variations tool error: {e}")
@@ -375,16 +431,65 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
     def _tool_erase_object(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the erase_object tool."""
         try:
+            from core.views_image import search_and_replace_view
+            from django.test import RequestFactory
+            from content.models import ImageHistory
+
             image_id = arguments['image_id']
             object_description = arguments['object_description']
             project_id = arguments.get('project_id')
 
-            logger.info(f"🎯 Erasing '{object_description}' from image {image_id}...")
+            # Resolve image_id if it's a sequential number
+            try:
+                image = ImageHistory.objects.get(id=image_id, user=self.user)
+            except:
+                try:
+                    seq_num = int(image_id)
+                    image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[seq_num - 1]
+                    image_id = str(image.id)
+                except:
+                    return {
+                        'success': False,
+                        'error': f"Could not find image {image_id}"
+                    }
 
-            return {
-                'success': False,
-                'message': f"🚧 Object removal feature coming soon! This will remove '{object_description}' from your image."
+            seq_num = image.get_sequential_number()
+            logger.info(f"🎯 Erasing '{object_description}' from image #{seq_num}...")
+
+            # Create a mock request for the view
+            factory = RequestFactory()
+            request_data = {
+                'image_id': image_id,
+                'search_prompt': object_description,
+                'replace_prompt': ''  # Empty means erase
             }
+            if project_id:
+                request_data['project_id'] = project_id
+
+            import json as json_module
+            request = factory.post('/api/stability/search-and-replace/',
+                                  data=json_module.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            # Call the view
+            response = search_and_replace_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                new_image_id = result.get('image_id')
+                new_seq_num = result.get('sequential_number')
+                return {
+                    'success': True,
+                    'message': f"✅ Removed '{object_description}' from image #{seq_num}! New image: #{new_seq_num} (ID: {new_image_id})",
+                    'image_id': new_image_id,
+                    'image_url': result.get('image_url')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Erase object failed')
+                }
 
         except Exception as e:
             logger.error(f"❌ Erase object tool error: {e}")
@@ -396,16 +501,80 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
     def _tool_recolor_image(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the recolor_image tool."""
         try:
+            from core.views_image import recolor_image_view
+            from django.test import RequestFactory
+            from content.models import ImageHistory
+
             image_id = arguments['image_id']
             prompt = arguments['prompt']
             project_id = arguments.get('project_id')
 
-            logger.info(f"🎨 Recoloring image {image_id} with prompt: {prompt}...")
+            # Resolve image_id if it's a sequential number
+            try:
+                image = ImageHistory.objects.get(id=image_id, user=self.user)
+            except:
+                try:
+                    seq_num = int(image_id)
+                    image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[seq_num - 1]
+                    image_id = str(image.id)
+                except:
+                    return {
+                        'success': False,
+                        'error': f"Could not find image {image_id}"
+                    }
 
-            return {
-                'success': False,
-                'message': f"🚧 Recoloring feature coming soon! This will apply '{prompt}' to your image colors."
+            seq_num = image.get_sequential_number()
+            logger.info(f"🎨 Recoloring image #{seq_num} with prompt: {prompt}...")
+
+            # Parse the prompt to extract select_prompt and color
+            # Examples: "make it more vibrant", "change blue to red", "make the sky purple"
+            select_prompt = "entire image"
+            color = prompt
+
+            # Simple parsing for common patterns
+            if "make" in prompt.lower() and ("vibrant" in prompt.lower() or "saturated" in prompt.lower()):
+                select_prompt = "entire image"
+                color = "vibrant colors"
+            elif "change" in prompt.lower() and " to " in prompt.lower():
+                parts = prompt.lower().split(" to ")
+                if len(parts) == 2:
+                    select_prompt = parts[0].replace("change", "").strip()
+                    color = parts[1].strip()
+
+            # Create a mock request for the view
+            factory = RequestFactory()
+            request_data = {
+                'image_id': image_id,
+                'select_prompt': select_prompt,
+                'color': color
             }
+            if project_id:
+                request_data['project_id'] = project_id
+
+            import json as json_module
+            request = factory.post('/api/stability/recolor/',
+                                  data=json_module.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            # Call the view
+            response = recolor_image_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                new_image_id = result.get('image_id')
+                new_seq_num = result.get('sequential_number')
+                return {
+                    'success': True,
+                    'message': f"✅ Recolored image #{seq_num}! Applied '{prompt}'. New image: #{new_seq_num} (ID: {new_image_id})",
+                    'image_id': new_image_id,
+                    'image_url': result.get('image_url')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Recolor failed')
+                }
 
         except Exception as e:
             logger.error(f"❌ Recolor tool error: {e}")
@@ -1300,6 +1469,9 @@ Respond in a helpful, personalized way that:
 
         if context:
             full_context.update(context)
+
+        # Session 126: Store context for tool execution (so tools can access project_id)
+        self._current_context = full_context
 
         # Check for agent execution requests
         agent_execution_phrases = [

@@ -886,9 +886,12 @@ urlpatterns = [
 
     # Image Editing endpoints (Session 35: Image Editing UI)
     # Session 125: Updated to use image_id wrappers
+    # Session 126: Added create_variations, search_and_replace, recolor wrappers
     path('api/stability/remove-background/', lambda r: __import__('core.views_image', fromlist=['remove_background_view']).remove_background_view(r), name='stability-remove-background'),
-    path('api/stability/recolor/', lambda r: __import__('core.views_image', fromlist=['recolor_image']).recolor_image(r), name='stability-recolor'),
+    path('api/stability/recolor/', lambda r: __import__('core.views_image', fromlist=['recolor_image_view']).recolor_image_view(r), name='stability-recolor'),
     path('api/stability/upscale/', lambda r: __import__('core.views_image', fromlist=['upscale_image_view']).upscale_image_view(r), name='stability-upscale'),
+    path('api/stability/create-variations/', lambda r: __import__('core.views_image', fromlist=['create_variations_view']).create_variations_view(r), name='stability-create-variations'),
+    path('api/stability/search-and-replace/', lambda r: __import__('core.views_image', fromlist=['search_and_replace_view']).search_and_replace_view(r), name='stability-search-replace'),
     path('api/stability/erase/', lambda r: __import__('core.views_image', fromlist=['erase_object']).erase_object(r), name='stability-erase'),
     path('api/stability/inpaint/', lambda r: __import__('core.views_image', fromlist=['inpaint_image']).inpaint_image(r), name='stability-inpaint'),
     path('api/stability/outpaint/', lambda r: __import__('core.views_image', fromlist=['outpaint_image']).outpaint_image(r), name='stability-outpaint'),
