@@ -85,7 +85,8 @@ class LLMEnforcer:
                        task_type: str = "general",
                        max_tokens: int = 2000,  # Increased for GPT-5-mini reasoning models
                        temperature: float = 0.7,
-                       use_claude: bool = False) -> Dict[str, Any]:
+                       use_claude: bool = False,
+                       tools: Optional[List[Dict]] = None) -> Dict[str, Any]:
         """
         ENFORCE real AI usage - this is the ONLY way to get AI responses
 
@@ -126,7 +127,7 @@ class LLMEnforcer:
                 model = "claude-3-haiku"  # Keep Claude as alternative
             elif self.openai_client:
                 # Use OpenAI
-                response = self._call_openai(full_prompt, max_tokens, temperature, task_type)
+                response = self._call_openai(full_prompt, max_tokens, temperature, task_type, tools)
                 provider = "openai"
                 model = "gpt-4o-mini"  # Fast and reliable standard model
             else:
@@ -152,7 +153,7 @@ class LLMEnforcer:
 
             logger.info(f"✅ REAL AI RESPONSE generated - {provider}/{model} - {response.get('tokens', 0)} tokens")
 
-            return {
+            result = {
                 'success': True,
                 'response': response['content'],
                 'provider': provider,
@@ -162,6 +163,13 @@ class LLMEnforcer:
                 'call_id': call_id,
                 'agent': agent_name
             }
+
+            # Session 125: Include tool calls if present
+            if 'tool_calls' in response:
+                result['tool_calls'] = response['tool_calls']
+                logger.info(f"🛠️ Returning {len(response['tool_calls'])} tool calls to caller")
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ LLM call failed: {e}")
@@ -186,8 +194,8 @@ class LLMEnforcer:
                 'agent': agent_name
             }
 
-    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, task_type: str) -> Dict[str, Any]:
-        """Make actual OpenAI API call"""
+    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, task_type: str, tools: Optional[List[Dict]] = None) -> Dict[str, Any]:
+        """Make actual OpenAI API call with optional tool calling support"""
         if not self.openai_client:
             raise Exception("OpenAI client not initialized")
 
@@ -246,9 +254,35 @@ RESPONSE:"""
             'temperature': temperature
         }
 
+        # Session 125: Add tool calling support
+        if tools:
+            params['tools'] = tools
+            params['tool_choice'] = "auto"  # Let GPT decide when to use tools
+            logger.info(f"🔧 Tool calling enabled with {len(tools)} tools")
+
         response = self.openai_client.chat.completions.create(**params)
 
-        content = response.choices[0].message.content
+        # Session 125: Check for tool calls in response
+        message = response.choices[0].message
+        if hasattr(message, 'tool_calls') and message.tool_calls:
+            logger.info(f"🛠️ GPT returned {len(message.tool_calls)} tool calls")
+            return {
+                'content': message.content or '',
+                'tool_calls': [
+                    {
+                        'id': tc.id,
+                        'type': tc.type,
+                        'function': {
+                            'name': tc.function.name,
+                            'arguments': tc.function.arguments
+                        }
+                    } for tc in message.tool_calls
+                ],
+                'tokens': response.usage.total_tokens if response.usage else 0,
+                'cost': self._calculate_cost(response.usage) if response.usage else 0
+            }
+
+        content = message.content
 
         # For reasoning models like GPT-5-mini, check if reasoning output is available
         if not content and hasattr(response.choices[0], 'reasoning_content'):
@@ -277,6 +311,27 @@ RESPONSE:"""
             'tokens': tokens,
             'cost': cost
         }
+
+    def _calculate_cost(self, usage) -> float:
+        """
+        Calculate cost based on token usage for GPT-4o-mini.
+
+        Args:
+            usage: OpenAI usage object
+
+        Returns:
+            Estimated cost in USD
+        """
+        if not usage:
+            return 0.0
+
+        # GPT-4o-mini pricing (as of Jan 2025)
+        # Input: $0.15 per 1M tokens = $0.00015 per 1K tokens
+        # Output: $0.60 per 1M tokens = $0.0006 per 1K tokens
+        input_cost = (usage.prompt_tokens / 1000) * 0.00015
+        output_cost = (usage.completion_tokens / 1000) * 0.0006
+
+        return input_cost + output_cost
 
     def _call_claude(self, prompt: str, max_tokens: int, temperature: float) -> Dict[str, Any]:
         """Make actual Claude API call"""
