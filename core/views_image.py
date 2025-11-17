@@ -11047,3 +11047,303 @@ def remove_background_view(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def create_variations_view(request):
+    """
+    Create variations of an existing image using structure control.
+    Accepts JSON: {image_id: uuid, count: int (default 3), prompt: str (optional), project_id: uuid (optional)}
+    """
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        count = data.get('count', 3)
+        variation_prompt = data.get('prompt', 'creative variation')
+        project_id = data.get('project_id')
+
+        if not image_id:
+            return JsonResponse({'success': False, 'error': 'image_id required'}, status=400)
+
+        # Get the image from history
+        from content.models import ImageHistory, CreativeProject
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=request.user)
+        except ImageHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎨 Creating {count} variations of image {image_id} (sequential #{seq_num})")
+
+        # Get image data (handle both data URIs and file paths)
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Get API key
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return JsonResponse({'success': False, 'error': 'Stability AI API key not configured'}, status=500)
+
+        # Get project if provided
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        # Create variations using structure control
+        url = "https://api.stability.ai/v2beta/stable-image/control/structure"
+        created_images = []
+
+        for i in range(count):
+            # Vary the control strength slightly for each variation
+            control_strength = 0.6 + (i * 0.05)  # 0.6, 0.65, 0.7, etc.
+
+            files = {'image': image_data}
+            data_params = {
+                'prompt': variation_prompt,
+                'control_strength': min(control_strength, 0.9),
+                'output_format': 'png'
+            }
+
+            headers = {
+                "Authorization": f"Bearer {stability_key}",
+                "Accept": "image/*"
+            }
+
+            api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+            if api_response.status_code == 200:
+                # Save the variation
+                result_image_data = api_response.content
+                image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+                new_image = ImageHistory.objects.create(
+                    user=request.user,
+                    prompt=f"Variation {i+1} of image #{seq_num}",
+                    file_path=f"data:image/png;base64,{image_base64}",
+                    model_used="stability-structure-control",
+                    project=project
+                )
+                created_images.append({
+                    'image_id': str(new_image.id),
+                    'image_url': new_image.file_path,
+                    'sequential_number': new_image.get_sequential_number()
+                })
+                logger.info(f"✅ Created variation {i+1}/{count}: {new_image.id}")
+            else:
+                logger.error(f"❌ Variation {i+1} failed: {api_response.text}")
+
+        if not created_images:
+            return JsonResponse({'success': False, 'error': 'Failed to create any variations'}, status=500)
+
+        return JsonResponse({
+            'success': True,
+            'count': len(created_images),
+            'images': created_images
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Create variations error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def search_and_replace_view(request):
+    """
+    Search and replace objects in an image (erase functionality).
+    Accepts JSON: {image_id: uuid, search_prompt: str, replace_prompt: str (optional), project_id: uuid (optional)}
+    """
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        search_prompt = data.get('search_prompt')
+        replace_prompt = data.get('replace_prompt', '')  # Empty means remove/erase
+        project_id = data.get('project_id')
+
+        if not image_id or not search_prompt:
+            return JsonResponse({'success': False, 'error': 'image_id and search_prompt required'}, status=400)
+
+        # Get the image from history
+        from content.models import ImageHistory, CreativeProject
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=request.user)
+        except ImageHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
+
+        seq_num = image.get_sequential_number()
+        action = "Erasing" if not replace_prompt else "Replacing"
+        logger.info(f"🎯 {action} '{search_prompt}' in image {image_id} (sequential #{seq_num})")
+
+        # Get image data (handle both data URIs and file paths)
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Get API key
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return JsonResponse({'success': False, 'error': 'Stability AI API key not configured'}, status=500)
+
+        # Call Stability AI search-and-replace API
+        url = "https://api.stability.ai/v2beta/stable-image/edit/search-and-replace"
+
+        files = {'image': image_data}
+        data_params = {
+            'search_prompt': search_prompt,
+            'prompt': replace_prompt if replace_prompt else 'plain background',  # Always required by API
+            'output_format': 'png'
+        }
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI search-and-replace failed: {api_response.text}")
+            return JsonResponse({'success': False, 'error': f'Search and replace failed: {api_response.text}'}, status=500)
+
+        # Save the result image
+        result_image_data = api_response.content
+        image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+        # Create new image history entry
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        prompt_desc = f"Removed '{search_prompt}'" if not replace_prompt else f"Replaced '{search_prompt}' with '{replace_prompt}'"
+        new_image = ImageHistory.objects.create(
+            user=request.user,
+            prompt=f"{prompt_desc} from image #{seq_num}",
+            file_path=f"data:image/png;base64,{image_base64}",
+            model_used="stability-search-replace",
+            project=project
+        )
+
+        logger.info(f"✅ Search and replace successful: {new_image.id}")
+
+        return JsonResponse({
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': new_image.file_path,
+            'sequential_number': new_image.get_sequential_number()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Search and replace error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def recolor_image_view(request):
+    """
+    Recolor specific objects/areas in an image.
+    Accepts JSON: {image_id: uuid, select_prompt: str, color: str (optional), project_id: uuid (optional)}
+    """
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        select_prompt = data.get('select_prompt', 'entire image')
+        color = data.get('color', 'vibrant colors')
+        project_id = data.get('project_id')
+
+        if not image_id:
+            return JsonResponse({'success': False, 'error': 'image_id required'}, status=400)
+
+        # Get the image from history
+        from content.models import ImageHistory, CreativeProject
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=request.user)
+        except ImageHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎨 Recoloring '{select_prompt}' to '{color}' in image {image_id} (sequential #{seq_num})")
+
+        # Get image data (handle both data URIs and file paths)
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Get API key
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return JsonResponse({'success': False, 'error': 'Stability AI API key not configured'}, status=500)
+
+        # Call Stability AI search-and-recolor API
+        url = "https://api.stability.ai/v2beta/stable-image/edit/search-and-recolor"
+
+        files = {'image': image_data}
+        data_params = {
+            'prompt': f'{select_prompt}, {color}',
+            'select_prompt': select_prompt,
+            'output_format': 'png'
+        }
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI search-and-recolor failed: {api_response.text}")
+            return JsonResponse({'success': False, 'error': f'Recolor failed: {api_response.text}'}, status=500)
+
+        # Save the result image
+        result_image_data = api_response.content
+        image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+        # Create new image history entry
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        new_image = ImageHistory.objects.create(
+            user=request.user,
+            prompt=f"Recolored '{select_prompt}' to '{color}' from image #{seq_num}",
+            file_path=f"data:image/png;base64,{image_base64}",
+            model_used="stability-search-recolor",
+            project=project
+        )
+
+        logger.info(f"✅ Recolor successful: {new_image.id}")
+
+        return JsonResponse({
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': new_image.file_path,
+            'sequential_number': new_image.get_sequential_number()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Recolor error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
