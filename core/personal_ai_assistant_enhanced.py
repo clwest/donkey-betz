@@ -382,6 +382,78 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         "required": ["image_id"]
                     }
                 }
+            },
+            # Session 128: DaVinci Resolve Video Editing Tools
+            {
+                "type": "function",
+                "function": {
+                    "name": "add_text_overlay",
+                    "description": "Add text overlay to a video with precise timing control using ffmpeg. Use this when users want to add captions, titles, labels, or any text to a video. Supports positioning and duration control.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_id": {
+                                "type": "string",
+                                "description": "The UUID or number of the video to add text to"
+                            },
+                            "text": {
+                                "type": "string",
+                                "description": "The text to display on the video"
+                            },
+                            "position": {
+                                "type": "string",
+                                "description": "Text position: 'center', 'lower_third', or 'upper_third'",
+                                "default": "center"
+                            },
+                            "start_second": {
+                                "type": "number",
+                                "description": "When to show the text (in seconds from start)",
+                                "default": 0
+                            },
+                            "duration": {
+                                "type": "number",
+                                "description": "How long to show the text (in seconds)",
+                                "default": 3
+                            },
+                            "font_size": {
+                                "type": "integer",
+                                "description": "Text size (36-144)",
+                                "default": 72
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["video_id", "text"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "apply_color_grading",
+                    "description": "Apply professional color grading to a video using ffmpeg filters. Use this when users want to change the look/feel of a video, apply cinematic effects, or adjust colors. Available styles: cinematic_warm, cinematic_cool, vintage, modern, high_contrast, soft, vibrant.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_id": {
+                                "type": "string",
+                                "description": "The UUID or number of the video to color grade"
+                            },
+                            "style": {
+                                "type": "string",
+                                "description": "Color grading style: 'cinematic_warm' (orange tones), 'cinematic_cool' (blue tones), 'vintage' (film look), 'modern' (clean/crisp), 'high_contrast' (dramatic), 'soft' (muted/gentle), 'vibrant' (saturated)",
+                                "default": "cinematic_warm"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["video_id"]
+                    }
+                }
             }
         ]
 
@@ -436,6 +508,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 return self._tool_add_voiceover(arguments)
             elif function_name == 'animate_image':
                 return self._tool_animate_image(arguments)
+            elif function_name == 'add_text_overlay':
+                return self._tool_add_text_overlay(arguments)
+            elif function_name == 'apply_color_grading':
+                return self._tool_apply_color_grading(arguments)
             else:
                 return {
                     'success': False,
@@ -1118,6 +1194,123 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         except Exception as e:
             logger.error(f"❌ Animate image tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_add_text_overlay(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the add_text_overlay tool - Session 128."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments['video_id']
+            text = arguments['text']
+            position = arguments.get('position', 'center')
+            start_second = arguments.get('start_second', 0)
+            duration = arguments.get('duration', 3)
+            font_size = arguments.get('font_size', 72)
+            project_id = arguments.get('project_id')
+
+            logger.info(f"📝 ADD_TEXT_OVERLAY TOOL: '{text}' to video {video_id} at {start_second}s for {duration}s")
+
+            # Call the DaVinci endpoint directly
+            factory = RequestFactory()
+            from django.http import QueryDict
+
+            post_data = QueryDict('', mutable=True)
+            post_data['video_id'] = str(video_id)
+            post_data['text'] = text
+            post_data['position'] = position
+            post_data['start_second'] = str(start_second)
+            post_data['duration'] = str(duration)
+            post_data['font_size'] = str(font_size)
+
+            from core.views_davinci import add_text_overlay_endpoint
+            view_request = factory.post('/api/v1/davinci/add-text-overlay/', post_data)
+            view_request.user = self.user
+            view_request.POST = post_data
+
+            response = add_text_overlay_endpoint(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'video_url': result.get('video_url'),
+                    'video_id': result.get('video_id'),
+                    'message': f"✅ Text overlay added successfully!\n\n" + \
+                              f"Text: '{text}'\n" + \
+                              f"Position: {position}\n" + \
+                              f"Timing: {start_second}s for {duration}s\n" + \
+                              f"Font size: {font_size}\n\n" + \
+                              f"The video with text overlay is ready in the gallery!"
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Text overlay failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Add text overlay tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_apply_color_grading(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the apply_color_grading tool - Session 128."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments['video_id']
+            style = arguments.get('style', 'cinematic_warm')
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎨 APPLY_COLOR_GRADING TOOL: {style} style to video {video_id}")
+
+            # Call the DaVinci endpoint directly
+            factory = RequestFactory()
+            from django.http import QueryDict
+
+            post_data = QueryDict('', mutable=True)
+            post_data['video_id'] = str(video_id)
+            post_data['style'] = style
+
+            from core.views_davinci import apply_color_grading_endpoint
+            view_request = factory.post('/api/v1/davinci/apply-color-grading/', post_data)
+            view_request.user = self.user
+            view_request.POST = post_data
+
+            response = apply_color_grading_endpoint(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                style_descriptions = {
+                    'cinematic_warm': 'warm orange tones - film-like',
+                    'cinematic_cool': 'cool blue tones - professional',
+                    'vintage': 'retro film look with grain',
+                    'modern': 'clean and crisp',
+                    'high_contrast': 'bold dramatic look',
+                    'soft': 'muted gentle tones',
+                    'vibrant': 'saturated vivid colors'
+                }
+                style_desc = style_descriptions.get(style, style)
+
+                return {
+                    'success': True,
+                    'video_url': result.get('video_url'),
+                    'video_id': result.get('video_id'),
+                    'message': f"✅ Color grading applied successfully!\n\n" + \
+                              f"Style: {style}\n" + \
+                              f"Look: {style_desc}\n\n" + \
+                              f"The color-graded video is ready in the gallery!"
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Color grading failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Apply color grading tool error: {e}")
             return {'success': False, 'error': str(e)}
 
     def _ensure_enhanced_profile(self):

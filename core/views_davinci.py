@@ -566,14 +566,7 @@ def add_text_overlay_endpoint(request):
         }
     """
     try:
-        davinci = get_davinci_provider()
-
-        if not davinci.studio_available:
-            return JsonResponse({
-                'success': False,
-                'error_message': 'DaVinci Resolve Studio required. Free version does not support API.'
-            }, status=503)
-
+        # Session 128: Removed DaVinci Studio check - this endpoint uses ffmpeg (Session 73)
         # Parse parameters
         video_id = request.POST.get('video_id', '').strip()
         text = request.POST.get('text', '').strip()
@@ -591,8 +584,20 @@ def add_text_overlay_endpoint(request):
 
         logger.info(f"📝 Adding text overlay '{text}' to video {video_id}")
 
-        # Get source video
-        video = VideoHistory.objects.get(id=video_id, user=request.user)
+        # Session 128: Hybrid ID resolution (numeric or UUID)
+        try:
+            if video_id.isdigit():
+                # Sequential number - resolve to UUID
+                seq_num = int(video_id)
+                video = VideoHistory.objects.filter(user=request.user).order_by('created_at')[seq_num - 1]
+            else:
+                # UUID
+                video = VideoHistory.objects.get(id=video_id, user=request.user)
+        except (VideoHistory.DoesNotExist, IndexError):
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Video {video_id} not found'
+            }, status=404)
 
         # Create temporary directory
         temp_dir = Path('/tmp/davinci_text')
@@ -727,14 +732,7 @@ def apply_color_grading_endpoint(request):
         }
     """
     try:
-        davinci = get_davinci_provider()
-
-        if not davinci.studio_available:
-            return JsonResponse({
-                'success': False,
-                'error_message': 'DaVinci Resolve Studio required.'
-            }, status=503)
-
+        # Session 128: Removed DaVinci Studio check - this endpoint uses ffmpeg (Session 73)
         # Parse parameters
         video_id = request.POST.get('video_id', '').strip()
         style = request.POST.get('style', 'cinematic_warm')
@@ -748,8 +746,20 @@ def apply_color_grading_endpoint(request):
 
         logger.info(f"🎨 Applying {style} color grading to video {video_id}")
 
-        # Get source video
-        video = VideoHistory.objects.get(id=video_id, user=request.user)
+        # Session 128: Hybrid ID resolution (numeric or UUID)
+        try:
+            if video_id.isdigit():
+                # Sequential number - resolve to UUID
+                seq_num = int(video_id)
+                video = VideoHistory.objects.filter(user=request.user).order_by('created_at')[seq_num - 1]
+            else:
+                # UUID
+                video = VideoHistory.objects.get(id=video_id, user=request.user)
+        except (VideoHistory.DoesNotExist, IndexError):
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Video {video_id} not found'
+            }, status=404)
 
         # Create temporary directory
         temp_dir = Path('/tmp/davinci_color')
