@@ -86,9 +86,13 @@ class LLMEnforcer:
                        max_tokens: int = 2000,  # Increased for GPT-5-mini reasoning models
                        temperature: float = 0.7,
                        use_claude: bool = False,
-                       tools: Optional[List[Dict]] = None) -> Dict[str, Any]:
+                       tools: Optional[List[Dict]] = None,
+                       previous_response_id: Optional[str] = None,
+                       tool_choice: Optional[Dict] = None) -> Dict[str, Any]:
         """
         ENFORCE real AI usage - this is the ONLY way to get AI responses
+
+        Session 129: Added previous_response_id parameter for GPT-5.1 chain of thought
 
         Args:
             prompt: The actual prompt to send
@@ -126,10 +130,12 @@ class LLMEnforcer:
                 provider = "anthropic"
                 model = "claude-3-haiku"  # Keep Claude as alternative
             elif self.openai_client:
-                # Use OpenAI
-                response = self._call_openai(full_prompt, max_tokens, temperature, task_type, tools)
+                # Session 129: Pass context separately so GPT can see project assets
+                # Session 129: Pass previous_response_id for chain of thought
+                # Session 129: Pass tool_choice to force tool execution
+                response = self._call_openai(prompt, max_tokens, temperature, task_type, tools, context, previous_response_id, tool_choice)
                 provider = "openai"
-                model = "gpt-4o-mini"  # Fast and reliable standard model
+                model = "gpt-5.1"  # Session 129: Upgraded to GPT-5.1 flagship model with Responses API
             else:
                 raise Exception("No LLM client available")
 
@@ -194,20 +200,31 @@ class LLMEnforcer:
                 'agent': agent_name
             }
 
-    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, task_type: str, tools: Optional[List[Dict]] = None) -> Dict[str, Any]:
-        """Make actual OpenAI API call with optional tool calling support"""
+    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, task_type: str, tools: Optional[List[Dict]] = None, context: str = "", previous_response_id: Optional[str] = None, tool_choice: Optional[Dict] = None) -> Dict[str, Any]:
+        """Make actual OpenAI API call using GPT-5.1 with Responses API
+
+        Session 129: Migrated to GPT-5.1 with Responses API
+        - Uses gpt-5.1 flagship model
+        - Responses API for chain of thought passing
+        - Proper reasoning.effort and text.verbosity configuration
+        - Tool calling support via Responses API
+        - Tool forcing via tool_choice with allowed_tools (mode: required)
+        """
         if not self.openai_client:
             raise Exception("OpenAI client not initialized")
 
-        # Customize system message based on task type
-        # IMPORTANT: GPT-5-mini is a reasoning model - it needs explicit output instructions
-        system_messages = {
-            'cover_letter': """You are an expert cover letter writer creating personalized, compelling applications.
+        # Build system context
+        if context:
+            system_msg = context
+        else:
+            # Fallback to task-specific system messages
+            system_messages = {
+                'cover_letter': """You are an expert cover letter writer creating personalized, compelling applications.
 
 After analyzing the job and candidate information, write your cover letter below:
 
 COVER LETTER:""",
-            'content': """You are a professional content creator producing high-quality, engaging content.
+                'content': """You are a professional content creator producing high-quality, engaging content.
 
 After considering all requirements and context, write your content below:
 
@@ -227,94 +244,123 @@ CODE:""",
 After thinking through the request, provide your response below:
 
 RESPONSE:"""
-        }
-
-        system_msg = system_messages.get(task_type, system_messages['general'])
-
-        # For GPT-5-mini reasoning model: add explicit output instruction to user message
-        # The model thinks internally unless told to provide visible output
-        output_instructions = {
-            'cover_letter': "\n\nProvide your complete cover letter below:",
-            'content': "\n\nProvide your complete content below:",
-            'analysis': "\n\nProvide your complete analysis below:",
-            'code': "\n\nProvide your complete code below:",
-            'general': "\n\nProvide your complete response below:"
-        }
-        output_instruction = output_instructions.get(task_type, output_instructions['general'])
-        user_message = f"{prompt}{output_instruction}"
-
-        # Build parameters for GPT-4o-mini
-        params = {
-            'model': "gpt-4o-mini",
-            'messages': [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": user_message}
-            ],
-            'max_tokens': max_tokens,
-            'temperature': temperature
-        }
-
-        # Session 125: Add tool calling support
-        if tools:
-            params['tools'] = tools
-            params['tool_choice'] = "auto"  # Let GPT decide when to use tools
-            logger.info(f"🔧 Tool calling enabled with {len(tools)} tools")
-
-        response = self.openai_client.chat.completions.create(**params)
-
-        # Session 125: Check for tool calls in response
-        message = response.choices[0].message
-        if hasattr(message, 'tool_calls') and message.tool_calls:
-            logger.info(f"🛠️ GPT returned {len(message.tool_calls)} tool calls")
-            return {
-                'content': message.content or '',
-                'tool_calls': [
-                    {
-                        'id': tc.id,
-                        'type': tc.type,
-                        'function': {
-                            'name': tc.function.name,
-                            'arguments': tc.function.arguments
-                        }
-                    } for tc in message.tool_calls
-                ],
-                'tokens': response.usage.total_tokens if response.usage else 0,
-                'cost': self._calculate_cost(response.usage) if response.usage else 0
             }
 
-        content = message.content
+            system_msg = system_messages.get(task_type, system_messages['general'])
 
-        # For reasoning models like GPT-5-mini, check if reasoning output is available
-        if not content and hasattr(response.choices[0], 'reasoning_content'):
-            content = response.choices[0].reasoning_content
-            logger.info(f"📊 Using reasoning content from GPT-5-mini")
+        # Combine system message and user prompt for Responses API input
+        full_input = f"{system_msg}\n\nUser request: {prompt}"
 
-        # Debug: check if content is still empty
-        if not content:
-            logger.warning(f"⚠️ OpenAI returned empty content for prompt: {prompt[:100]}...")
-            logger.warning(f"⚠️ Response object: {response}")
+        # Session 129: GPT-5.1 with Responses API
+        # Configure reasoning effort based on task type
+        reasoning_effort_map = {
+            'conversation': 'low',     # Session 129: Changed from 'none' to 'low' for better agentic tool execution
+            'cover_letter': 'low',     # Quick content generation
+            'content': 'low',          # Quick content generation
+            'analysis': 'medium',      # Balanced analysis
+            'code': 'high',            # Complex coding tasks
+            'general': 'none'          # Default fast mode
+        }
+        reasoning_effort = reasoning_effort_map.get(task_type, 'none')
 
-            # For reasoning models, provide helpful fallback
-            usage = response.usage
-            if hasattr(usage, 'completion_tokens_details') and usage.completion_tokens_details.reasoning_tokens > 0:
-                content = f"[GPT-5-mini used {usage.completion_tokens_details.reasoning_tokens} reasoning tokens but produced no visible output. The model may need explicit instruction to provide a final answer.]"
-            else:
-                content = "[AI Response Error: Empty content returned from OpenAI]"
+        # Build Responses API parameters
+        params = {
+            'model': "gpt-5.1",                          # Session 129: Upgraded to GPT-5.1
+            'input': full_input,                         # Combined system + user input
+            'reasoning': {"effort": reasoning_effort},   # Configurable reasoning
+            'text': {"verbosity": "medium"},             # Balanced output length
+            'max_output_tokens': max_tokens,             # Correct parameter for Responses API
+        }
 
-        tokens = response.usage.total_tokens
+        # Add chain of thought if available (improves intelligence + reduces cost)
+        if previous_response_id:
+            params['previous_response_id'] = previous_response_id
+            logger.info(f"🔗 Passing chain of thought from previous response")
 
-        # Estimate cost (GPT-5-nano pricing)
-        cost = (response.usage.prompt_tokens * 0.0005 + response.usage.completion_tokens * 0.0015) / 1000
+        # Add tool calling support
+        if tools:
+            params['tools'] = tools
+            logger.info(f"🔧 Tool calling enabled with {len(tools)} tools")
 
-        return {
+            # Session 129: Add tool_choice to force tool execution (Responses API format)
+            # Docs: https://platform.openai.com/docs/guides/function-calling
+            if tool_choice:
+                params['tool_choice'] = tool_choice
+                logger.info(f"🎯 Tool forcing enabled: {tool_choice.get('mode', 'auto')}")
+
+        # Call Responses API
+        try:
+            response = self.openai_client.responses.create(**params)
+        except Exception as e:
+            logger.error(f"❌ Responses API error: {e}")
+            raise
+
+        # Parse Responses API response (different structure than Chat Completions)
+        # Response has: output (list of items), id, usage, etc.
+        content = response.output_text if hasattr(response, 'output_text') else ''
+
+        # Session 129: Parse tool calls from Responses API output list
+        # The Responses API returns tool calls in response.output[], not response.tool_calls!
+        tool_calls = None
+        if hasattr(response, 'output') and response.output:
+            # Filter for ResponseFunctionToolCall items in the output list
+            function_calls = [item for item in response.output if hasattr(item, 'type') and item.type == 'function_call']
+
+            if function_calls:
+                logger.info(f"🛠️ GPT-5.1 returned {len(function_calls)} tool calls in output list!")
+                tool_calls = [
+                    {
+                        'id': tc.call_id if hasattr(tc, 'call_id') else (tc.id if hasattr(tc, 'id') else str(i)),
+                        'type': 'function',
+                        'function': {
+                            'name': tc.name,
+                            'arguments': tc.arguments
+                        }
+                    } for i, tc in enumerate(function_calls)
+                ]
+                logger.info(f"🎯 Parsed tool calls: {[tc['function']['name'] for tc in tool_calls]}")
+
+        # Calculate usage and cost for GPT-5.1
+        usage = response.usage if hasattr(response, 'usage') else None
+        if usage:
+            # GPT-5.1 pricing: $1.25/1M input + $10.00/1M output
+            # Reasoning tokens are separate but counted in cost
+            input_tokens = usage.input_tokens if hasattr(usage, 'input_tokens') else 0
+            output_tokens = usage.output_tokens if hasattr(usage, 'output_tokens') else 0
+            reasoning_tokens = usage.reasoning_tokens if hasattr(usage, 'reasoning_tokens') else 0
+
+            # Calculate cost (reasoning tokens count toward input cost)
+            total_input = input_tokens + reasoning_tokens
+            cost = (total_input * 1.25 / 1_000_000) + (output_tokens * 10.00 / 1_000_000)
+            total_tokens = input_tokens + output_tokens + reasoning_tokens
+
+            logger.info(f"💰 GPT-5.1 usage: {input_tokens} input + {reasoning_tokens} reasoning + {output_tokens} output = {total_tokens} total tokens (${cost:.6f})")
+        else:
+            total_tokens = 0
+            cost = 0.0
+
+        # Build response dict
+        result = {
             'content': content,
-            'tokens': tokens,
+            'tokens': total_tokens,
             'cost': cost
         }
 
+        # Add response_id for chain of thought passing
+        if hasattr(response, 'id'):
+            result['response_id'] = response.id
+
+        # Add tool calls if present
+        if tool_calls:
+            result['tool_calls'] = tool_calls
+
+        return result
+
     def _calculate_cost(self, usage) -> float:
         """
-        Calculate cost based on token usage for GPT-4o-mini.
+        Calculate cost based on token usage for GPT-5-mini.
+
+        Session 127: Updated for GPT-5-mini pricing
 
         Args:
             usage: OpenAI usage object
@@ -325,11 +371,11 @@ RESPONSE:"""
         if not usage:
             return 0.0
 
-        # GPT-4o-mini pricing (as of Jan 2025)
-        # Input: $0.15 per 1M tokens = $0.00015 per 1K tokens
-        # Output: $0.60 per 1M tokens = $0.0006 per 1K tokens
-        input_cost = (usage.prompt_tokens / 1000) * 0.00015
-        output_cost = (usage.completion_tokens / 1000) * 0.0006
+        # GPT-5-mini pricing (Session 127)
+        # Input: $0.50 per 1M tokens = $0.0005 per 1K tokens
+        # Output: $1.50 per 1M tokens = $0.0015 per 1K tokens
+        input_cost = (usage.prompt_tokens / 1000) * 0.0005
+        output_cost = (usage.completion_tokens / 1000) * 0.0015
 
         return input_cost + output_cost
 
