@@ -1138,6 +1138,172 @@ class VideoAgent:
                 'error': str(e)
             }
 
+    # ===== SESSION 127: IMAGE-TO-VIDEO ANIMATION =====
+
+    def animate_image(
+        self,
+        image_id: str,
+        motion_prompt: Optional[str] = None,
+        duration: int = 5,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Convert a static image into an animated video using Runway ML.
+        Session 127: Agent-based image-to-video animation!
+
+        Args:
+            image_id: Image ID from database (UUID or sequential number)
+            motion_prompt: Optional description of desired motion (e.g., 'zoom in slowly', 'pan left')
+            duration: Video duration in seconds (5 or 10)
+            **kwargs: Additional parameters
+
+        Returns:
+            Result dictionary with video info
+        """
+        try:
+            from content.models import ImageHistory, VideoHistory
+            from content.video_provider import runway_provider
+            from django.core.exceptions import ValidationError
+
+            logger.info(f"🎬 VideoAgent.animate_image CALLED with image_id: '{image_id}' (type: {type(image_id).__name__})")
+
+            # Session 127: Hybrid ID support - EXACT pattern from Session 122 Bug #4 fix
+            # Use .isdigit() to check BEFORE touching Django's UUID field!
+            image = None
+
+            if isinstance(image_id, str) and image_id.isdigit():
+                # User asked for "image 271" - get the 271st image chronologically
+                numeric_index = int(image_id)
+                logger.info(f"🔍 Numeric ID detected: {numeric_index}")
+
+                try:
+                    image = ImageHistory.objects.filter(
+                        user=self.user
+                    ).order_by('created_at')[numeric_index - 1]  # 1-indexed
+                    logger.info(f"✅ Resolved image #{numeric_index} to UUID: {image.id}")
+
+                except (IndexError, ImageHistory.DoesNotExist):
+                    total_images = ImageHistory.objects.filter(user=self.user).count()
+                    logger.error(f"❌ Image #{numeric_index} not found. User has {total_images} images.")
+                    return {
+                        'success': False,
+                        'error': f'Image #{numeric_index} not found. You have {total_images} images.'
+                    }
+            else:
+                # Full UUID provided
+                logger.info(f"🔍 UUID detected: {image_id}")
+                try:
+                    image = ImageHistory.objects.get(id=image_id, user=self.user)
+                    logger.info(f"✅ Resolved UUID {image_id} to image")
+                except ImageHistory.DoesNotExist:
+                    logger.error(f"❌ Image not found for UUID: {image_id}")
+                    return {
+                        'success': False,
+                        'error': f'Image with ID {image_id} not found.'
+                    }
+                except Exception as e:
+                    logger.error(f"❌ Unexpected error on UUID lookup: {e}", exc_info=True)
+                    return {
+                        'success': False,
+                        'error': f'Error finding image: {str(e)}'
+                    }
+
+            # Get image display info
+            try:
+                seq_num = image.get_sequential_number() if hasattr(image, 'get_sequential_number') else image_id
+                image_prompt = image.prompt if hasattr(image, 'prompt') and image.prompt else f"Image #{seq_num}"
+            except Exception as e:
+                logger.warning(f"⚠️ Error getting image details: {e}")
+                seq_num = image_id
+                image_prompt = "Your image"
+
+            # Default motion prompt if not provided
+            if not motion_prompt:
+                motion_prompt = 'natural motion'
+
+            # Get image URL using the proper method
+            logger.info(f"🔍 DEBUG: About to call image.get_full_url()")
+            logger.info(f"🔍 DEBUG: image object type: {type(image)}")
+            logger.info(f"🔍 DEBUG: image dir: {[attr for attr in dir(image) if 'url' in attr.lower()]}")
+
+            image_url = image.get_full_url()
+
+            logger.info(f"🎬 Calling Runway ML image-to-video: {image_url[:100]}...")
+            logger.info(f"   Motion: {motion_prompt}, Duration: {duration}s")
+
+            # Call Runway ML image-to-video API
+            result = runway_provider.image_to_video(
+                image_url=image_url,
+                motion_prompt=motion_prompt,
+                duration=duration,
+                quality="veo3.1_fast"
+            )
+
+            if not result.success:
+                return {
+                    'success': False,
+                    'error': result.error_message or 'Image-to-video generation failed',
+                    'image_id': str(image.id),
+                    'image_prompt': image_prompt
+                }
+
+            # Create VideoHistory record with pending status
+            video_record = VideoHistory.objects.create(
+                video_id=result.task_id,
+                user=self.user,
+                video_type='image_to_video',
+                prompt=f"Animated from image #{seq_num}: {motion_prompt}",
+                duration=duration,
+                model_used='veo3.1_fast',
+                status='pending',
+                source_image_url=image_url,
+                metadata={
+                    'source_image_id': str(image.id),
+                    'source_image_prompt': image_prompt,
+                    'motion_prompt': motion_prompt,
+                    'method': 'runway_ml_image_to_video',
+                    'agent': 'VideoAgent'
+                }
+            )
+
+            # Store in memory
+            video_data = {
+                'video_id': str(video_record.id),
+                'task_id': result.task_id,
+                'source_image_id': str(image.id),
+                'motion_prompt': motion_prompt,
+                'type': 'image_to_video_animation',
+                'user_id': self.user.id if self.user else None,
+                'created_at': timezone.now().isoformat()
+            }
+
+            self.memory.remember('most_recent_video', video_data)
+
+            logger.info(f"✅ VideoAgent started image animation! Task ID: {result.task_id}")
+
+            return {
+                'success': True,
+                'task_id': result.task_id,
+                'video_id': str(video_record.id),
+                'status': 'pending',
+                'image_id': str(image.id),
+                'image_prompt': image_prompt,
+                'motion_prompt': motion_prompt,
+                'duration': duration,
+                'message': f'✅ Image animation started!\n\n'
+                          f'Motion: {motion_prompt}\n'
+                          f'Duration: {duration}s\n'
+                          f'Task ID: {result.task_id}\n\n'
+                          f'The animated video will appear in the gallery in ~60 seconds.'
+            }
+
+        except Exception as e:
+            logger.error(f"❌ VideoAgent.animate_image failed: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     # ===== QUERY HANDLERS =====
 
     def get_most_recent_video(self) -> Optional[Dict]:

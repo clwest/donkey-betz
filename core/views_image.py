@@ -10921,9 +10921,18 @@ def upscale_image_view(request):
             logger.error(f"❌ Stability AI upscale failed: {api_response.text}")
             return JsonResponse({'success': False, 'error': f'Upscale failed: {api_response.text}'}, status=500)
 
-        # Save the upscaled image
+        # Save the upscaled image to file (NOT as data URI!)
         upscaled_image_data = api_response.content
-        image_base64 = base64.b64encode(upscaled_image_data).decode('utf-8')
+
+        # Generate unique filename and save to disk
+        filename = f'upscaled_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', request.user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(upscaled_image_data))
+        image_url = default_storage.url(saved_path)
+
+        logger.info(f"✅ Saved upscaled image: {saved_path}")
 
         # Create new image history entry
         from content.models import CreativeProject
@@ -10937,7 +10946,8 @@ def upscale_image_view(request):
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Upscaled from image #{seq_num}",
-            file_path=f"data:image/png;base64,{image_base64}",
+            file_path=saved_path,  # Save FILE PATH, not data URI!
+            filename=filename,
             model_used="stability-upscale-4x",
             project=project
         )
@@ -11012,9 +11022,18 @@ def remove_background_view(request):
             logger.error(f"❌ Stability AI remove-background failed: {api_response.text}")
             return JsonResponse({'success': False, 'error': f'Remove background failed: {api_response.text}'}, status=500)
 
-        # Save the result image
+        # Save the result image to file (NOT as data URI!)
         result_image_data = api_response.content
-        image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+        # Generate unique filename and save to disk
+        filename = f'no_bg_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', request.user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(result_image_data))
+        image_url = default_storage.url(saved_path)
+
+        logger.info(f"✅ Saved background-removed image: {saved_path}")
 
         # Create new image history entry
         from content.models import CreativeProject
@@ -11028,7 +11047,8 @@ def remove_background_view(request):
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"Background removed from image #{seq_num}",
-            file_path=f"data:image/png;base64,{image_base64}",
+            file_path=saved_path,  # Save FILE PATH, not data URI!
+            filename=filename,
             model_used="stability-remove-bg",
             project=project
         )
@@ -11119,23 +11139,29 @@ def create_variations_view(request):
             api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
 
             if api_response.status_code == 200:
-                # Save the variation
+                # Save the variation to disk (not as data URI!)
                 result_image_data = api_response.content
-                image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+                # Create unique filename and save to disk
+                filename = f'variation_{i+1}_{uuid.uuid4().hex[:8]}.png'
+                filepath = os.path.join('generated_images', request.user.username, filename)
+                saved_path = default_storage.save(filepath, ContentFile(result_image_data))
+                image_url = default_storage.url(saved_path)
 
                 new_image = ImageHistory.objects.create(
                     user=request.user,
                     prompt=f"Variation {i+1} of image #{seq_num}",
-                    file_path=f"data:image/png;base64,{image_base64}",
+                    file_path=saved_path,  # Save FILE PATH, not data URI!
+                    filename=filename,
                     model_used="stability-structure-control",
                     project=project
                 )
                 created_images.append({
                     'image_id': str(new_image.id),
-                    'image_url': new_image.file_path,
+                    'image_url': image_url,  # Return actual URL, not data URI
                     'sequential_number': new_image.get_sequential_number()
                 })
-                logger.info(f"✅ Created variation {i+1}/{count}: {new_image.id}")
+                logger.info(f"✅ Created variation {i+1}/{count}: {new_image.id} → {saved_path}")
             else:
                 logger.error(f"❌ Variation {i+1} failed: {api_response.text}")
 
@@ -11216,9 +11242,18 @@ def search_and_replace_view(request):
             logger.error(f"❌ Stability AI search-and-replace failed: {api_response.text}")
             return JsonResponse({'success': False, 'error': f'Search and replace failed: {api_response.text}'}, status=500)
 
-        # Save the result image
+        # Save the result image to file (NOT as data URI!)
         result_image_data = api_response.content
-        image_base64 = base64.b64encode(result_image_data).decode('utf-8')
+
+        # Generate unique filename and save to disk
+        filename = f'search_replace_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', request.user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(result_image_data))
+        image_url = default_storage.url(saved_path)
+
+        logger.info(f"✅ Saved search-and-replace result: {saved_path}")
 
         # Create new image history entry
         project = None
@@ -11232,7 +11267,8 @@ def search_and_replace_view(request):
         new_image = ImageHistory.objects.create(
             user=request.user,
             prompt=f"{prompt_desc} from image #{seq_num}",
-            file_path=f"data:image/png;base64,{image_base64}",
+            file_path=saved_path,  # Save FILE PATH, not data URI!
+            filename=filename,
             model_used="stability-search-replace",
             project=project
         )
