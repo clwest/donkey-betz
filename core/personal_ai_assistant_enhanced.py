@@ -115,7 +115,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 "type": "function",
                 "function": {
                     "name": "create_image_variations",
-                    "description": "Generate multiple variations of an image with different styles or compositions. Use this when users want different versions, alternatives, or variations of an image.",
+                    "description": "Create multiple STATIC image alternatives with different styles or compositions. These are STILL images, NOT videos or animations. Only use when user wants multiple static image options. NEVER use for animation, motion, or video requests.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -191,7 +191,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 "type": "function",
                 "function": {
                     "name": "refine_image",
-                    "description": "Refine or modify an existing image based on a text description. Use this to create variations, adjust style, or make specific changes to an image.",
+                    "description": "Modify or enhance a STATIC image (adjust style, quality, composition). Creates a single refined STILL image, NOT a video. Do NOT use for animation or motion requests.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -209,6 +209,177 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             }
                         },
                         "required": ["image_id", "refinement_request"]
+                    }
+                }
+            },
+            # Session 127: Video & Audio Tools
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_video",
+                    "description": "Generate a new video from a text description using Runway ML. Use this when users want to create a video from scratch using text prompts.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "prompt": {
+                                "type": "string",
+                                "description": "Detailed description of the video to generate"
+                            },
+                            "duration": {
+                                "type": "integer",
+                                "description": "Video duration in seconds (4-10)",
+                                "default": 5
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["prompt"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "extend_video",
+                    "description": "Extend an existing video's duration by generating a continuation. Use this when users want to make a video longer (e.g., '5 seconds to 10 seconds').",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_id": {
+                                "type": "string",
+                                "description": "The UUID or number of the video to extend"
+                            },
+                            "extension_seconds": {
+                                "type": "integer",
+                                "description": "Seconds to add (4, 6, 8, or 10)",
+                                "default": 10
+                            },
+                            "prompt": {
+                                "type": "string",
+                                "description": "Optional guidance for the extension (default: continue current motion)"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["video_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "chain_videos",
+                    "description": "Combine multiple videos into a single video. Use this when users want to merge, join, or combine several video clips together.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Array of video UUIDs or numbers to chain together (in order)"
+                            },
+                            "add_transitions": {
+                                "type": "boolean",
+                                "description": "Whether to add smooth transitions between clips",
+                                "default": True
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["video_ids"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_voice",
+                    "description": "Generate speech audio from text using ElevenLabs professional voices. Use this when users want text-to-speech, narration, or voiceovers.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "Text to convert to speech"
+                            },
+                            "voice": {
+                                "type": "string",
+                                "description": "Voice name (Rachel, Drew, Clyde, Paul, Aria, Domi, Dave, Antoni, Sarah, Josh, Bella, Charlotte)",
+                                "default": "Rachel"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["text"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "add_voiceover",
+                    "description": "Add audio narration to an existing video. Use this when users want to add voice narration, commentary, or audio to a video.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_id": {
+                                "type": "string",
+                                "description": "The UUID or number of the video to add audio to"
+                            },
+                            "text": {
+                                "type": "string",
+                                "description": "Text to convert to speech and add as voiceover"
+                            },
+                            "voice": {
+                                "type": "string",
+                                "description": "Voice name (Rachel, Drew, Clyde, etc.)",
+                                "default": "Rachel"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["video_id", "text"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "animate_image",
+                    "description": "Transform a STATIC IMAGE into a MOVING VIDEO with animation/motion. Use this tool IMMEDIATELY when user says: 'animate image', 'animate', 'make it move', 'turn into video', 'bring to life', or any request for motion/animation. This creates VIDEO files (mp4), NOT static images. This is the ONLY tool that creates videos from images.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {
+                                "type": "string",
+                                "description": "The UUID or number of the image to animate"
+                            },
+                            "motion_prompt": {
+                                "type": "string",
+                                "description": "Optional description of desired motion (e.g., 'zoom in slowly', 'pan left', 'gentle sway')",
+                                "default": "natural motion"
+                            },
+                            "duration": {
+                                "type": "integer",
+                                "description": "Video duration in seconds (5 or 10)",
+                                "default": 5
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Optional project ID to associate result with"
+                            }
+                        },
+                        "required": ["image_id"]
                     }
                 }
             }
@@ -236,8 +407,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     logger.info(f"💡 Auto-injected project_id: {arguments['project_id']}")
 
             logger.info(f"🔧 Executing tool: {function_name} with args: {arguments}")
+            print(f"🔧🔧🔧 GPT CALLED TOOL: {function_name}")  # Console output for debugging
 
             # Route to appropriate tool handler
+            # Session 125/126: Image Tools
             if function_name == 'upscale_image':
                 return self._tool_upscale_image(arguments)
             elif function_name == 'remove_background':
@@ -250,6 +423,19 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 return self._tool_recolor_image(arguments)
             elif function_name == 'refine_image':
                 return self._tool_refine_image(arguments)
+            # Session 127: Video & Audio Tools
+            elif function_name == 'generate_video':
+                return self._tool_generate_video(arguments)
+            elif function_name == 'extend_video':
+                return self._tool_extend_video(arguments)
+            elif function_name == 'chain_videos':
+                return self._tool_chain_videos(arguments)
+            elif function_name == 'generate_voice':
+                return self._tool_generate_voice(arguments)
+            elif function_name == 'add_voiceover':
+                return self._tool_add_voiceover(arguments)
+            elif function_name == 'animate_image':
+                return self._tool_animate_image(arguments)
             else:
                 return {
                     'success': False,
@@ -643,6 +829,296 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'success': False,
                 'error': f"Failed to refine image: {str(e)}"
             }
+
+    # Session 127: Video & Audio Tool Handlers
+    def _tool_generate_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the generate_video tool."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            prompt = arguments['prompt']
+            duration = arguments.get('duration', 5)
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎬 Generating video: {prompt[:50]}...")
+
+            # Create request and call wrapper view
+            factory = RequestFactory()
+            data = {'prompt': prompt, 'duration': duration}
+            if project_id:
+                data['project_id'] = project_id
+
+            from core.views_video import generate_video_view
+            view_request = factory.post('/api/tool/generate-video/',
+                                       json.dumps(data),
+                                       content_type='application/json')
+            view_request.user = self.user
+
+            response = generate_video_view(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'task_id': result.get('task_id'),
+                    'message': f"✅ Video generation started! Task ID: {result.get('task_id')}\n\n" + \
+                              f"The video will be ready in approximately 30-60 seconds. It will automatically appear in the gallery."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Video generation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Generate video tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_extend_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the extend_video tool."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments['video_id']
+            extension_seconds = arguments.get('extension_seconds', 10)
+            prompt = arguments.get('prompt', '')
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎬 Extending video {video_id} by {extension_seconds}s...")
+
+            factory = RequestFactory()
+            data = {
+                'video_id': video_id,
+                'extension_seconds': extension_seconds,
+                'prompt': prompt
+            }
+            if project_id:
+                data['project_id'] = project_id
+
+            from core.views_video import extend_video_view
+            view_request = factory.post('/api/tool/extend-video/',
+                                       json.dumps(data),
+                                       content_type='application/json')
+            view_request.user = self.user
+
+            response = extend_video_view(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'task_id': result.get('task_id'),
+                    'message': f"✅ Video extension started! Adding {extension_seconds} seconds.\n\n" + \
+                              f"Task ID: {result.get('task_id')}\n" + \
+                              f"The extended video will appear in the gallery in ~60 seconds."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Video extension failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Extend video tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_chain_videos(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the chain_videos tool."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_ids = arguments['video_ids']
+            add_transitions = arguments.get('add_transitions', True)
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎬 Chaining {len(video_ids)} videos...")
+
+            factory = RequestFactory()
+            data = {
+                'video_ids': video_ids,
+                'add_transitions': add_transitions
+            }
+            if project_id:
+                data['project_id'] = project_id
+
+            from core.views_video import chain_videos_view
+            view_request = factory.post('/api/tool/chain-videos/',
+                                       json.dumps(data),
+                                       content_type='application/json')
+            view_request.user = self.user
+
+            response = chain_videos_view(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'video_url': result.get('video_path'),
+                    'message': f"✅ Successfully combined {len(video_ids)} videos!\n\n" + \
+                              f"Duration: {result.get('duration', 0):.1f}s\n" + \
+                              f"The combined video is now available in your gallery."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Video chaining failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Chain videos tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_generate_voice(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the generate_voice tool."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            text = arguments['text']
+            voice = arguments.get('voice', 'Rachel')
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎤 Generating voice: {voice} saying '{text[:50]}...'")
+
+            factory = RequestFactory()
+            data = {
+                'text': text,
+                'voice': voice
+            }
+            if project_id:
+                data['project_id'] = project_id
+
+            from core.views_video import generate_voice_view
+            view_request = factory.post('/api/tool/generate-voice/',
+                                       json.dumps(data),
+                                       content_type='application/json')
+            view_request.user = self.user
+
+            response = generate_voice_view(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'audio_url': result.get('audio_url'),
+                    'message': f"✅ Voice generated successfully using {voice} voice!\n\n" + \
+                              f"The audio is ready to play or download."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Voice generation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Generate voice tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_add_voiceover(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the add_voiceover tool."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments['video_id']
+            text = arguments['text']
+            voice = arguments.get('voice', 'Rachel')
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎤 Adding voiceover to video {video_id}...")
+
+            factory = RequestFactory()
+            data = {
+                'video_id': video_id,
+                'text': text,
+                'voice': voice
+            }
+            if project_id:
+                data['project_id'] = project_id
+
+            from core.views_video import add_voiceover_view
+            view_request = factory.post('/api/tool/add-voiceover/',
+                                       json.dumps(data),
+                                       content_type='application/json')
+            view_request.user = self.user
+
+            response = add_voiceover_view(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'video_url': result.get('video_url'),
+                    'video_id': result.get('video_id'),
+                    'message': f"✅ Voiceover added successfully!\n\n" + \
+                              f"Narration: \"{text[:100]}...\"\n" + \
+                              f"Voice: {voice}\n" + \
+                              f"The video with voiceover is now in your gallery."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Voiceover addition failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Add voiceover tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _tool_animate_image(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the animate_image tool."""
+        try:
+            from django.test import RequestFactory
+            import json
+
+            image_id = arguments['image_id']
+            motion_prompt = arguments.get('motion_prompt', 'natural motion')
+            duration = arguments.get('duration', 5)
+            project_id = arguments.get('project_id')
+
+            logger.info(f"🎬🎬🎬 ANIMATE_IMAGE TOOL CALLED! Image: {image_id}, Motion: {motion_prompt}")
+            print(f"🎬🎬🎬 ANIMATE_IMAGE TOOL CALLED! Image: {image_id}, Motion: {motion_prompt}")  # Console output
+
+            factory = RequestFactory()
+            data = {
+                'image_id': image_id,
+                'motion_prompt': motion_prompt,
+                'duration': duration
+            }
+            if project_id:
+                data['project_id'] = project_id
+
+            from core.views_video import animate_image_view
+            view_request = factory.post('/api/tool/animate-image/',
+                                       json.dumps(data),
+                                       content_type='application/json')
+            view_request.user = self.user
+
+            response = animate_image_view(view_request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'task_id': result.get('task_id'),
+                    'message': f"✅ Image animation started!\n\n" + \
+                              f"Motion: {motion_prompt}\n" + \
+                              f"Duration: {duration}s\n" + \
+                              f"Task ID: {result.get('task_id')}\n\n" + \
+                              f"The animated video will appear in the gallery in ~60 seconds."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Image animation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Animate image tool error: {e}")
+            return {'success': False, 'error': str(e)}
 
     def _ensure_enhanced_profile(self):
         """Ensure the user has an enhanced profile."""
@@ -1472,6 +1948,65 @@ Respond in a helpful, personalized way that:
 
         # Session 126: Store context for tool execution (so tools can access project_id)
         self._current_context = full_context
+
+        # Session 127: Check for animation requests and route to VideoAgent
+        animation_phrases = ['animate image', 'animate', 'make it move', 'turn into video', 'bring to life']
+        is_animation_request = any(phrase in message.lower() for phrase in animation_phrases)
+
+        if is_animation_request:
+            logger.info(f"🎬 ANIMATION REQUEST DETECTED in message: '{message}'")
+
+            # Extract image ID from message (e.g., "animate image 271" -> "271")
+            import re
+            image_id_match = re.search(r'image\s+(\d+|[0-9a-f-]{36})', message.lower())
+
+            if image_id_match:
+                image_id = image_id_match.group(1)
+                logger.info(f"🎬 Extracted image_id: '{image_id}' (type: {type(image_id).__name__})")
+                logger.info(f"🎬 Routing to VideoAgent.animate_image()...")
+
+                # Initialize VideoAgent and call animate_image
+                from agents.video_agent import get_video_agent
+                video_agent = get_video_agent(user=self.user)
+                logger.info(f"✅ VideoAgent initialized for user: {self.user}")
+
+                # Call agent method
+                logger.info(f"🔧 Calling video_agent.animate_image(image_id='{image_id}', motion_prompt='natural motion', duration=5)")
+                agent_result = video_agent.animate_image(
+                    image_id=image_id,
+                    motion_prompt='natural motion',  # Default motion
+                    duration=5
+                )
+                logger.info(f"🔙 VideoAgent.animate_image() returned: {agent_result}")
+
+                # Format response
+                if agent_result.get('success'):
+                    logger.info(f"✅ Animation SUCCESS! Task ID: {agent_result.get('task_id')}")
+                    response = {
+                        'response': agent_result.get('message', '✅ Image animation started!'),
+                        'success': True,
+                        'agent_used': 'VideoAgent',
+                        'method': 'animate_image',
+                        'task_id': agent_result.get('task_id'),
+                        'video_id': agent_result.get('video_id'),
+                        'confidence': 0.95
+                    }
+                else:
+                    logger.error(f"❌ Animation FAILED! Error: {agent_result.get('error')}")
+                    response = {
+                        'response': f"❌ Animation failed: {agent_result.get('error', 'Unknown error')}",
+                        'success': False,
+                        'agent_used': 'VideoAgent',
+                        'method': 'animate_image',
+                        'error': agent_result.get('error'),
+                        'confidence': 0.9
+                    }
+
+                logger.info(f"🔙 Returning response to frontend: {response}")
+                return response
+            else:
+                # No image ID found, let GPT handle it
+                logger.info("🎬 Animation request detected but no image ID found, continuing with GPT...")
 
         # Check for agent execution requests
         agent_execution_phrases = [
