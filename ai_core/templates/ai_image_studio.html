@@ -9,7 +9,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>✅ VIDEO GALLERY FIXED v3.0 ✅ AI Image Studio</title>
-    <!-- Cache Buster: 2025-11-03-17:10:00 - Fixed duplicate ID issue -->
+    <!-- Cache Buster: 2025-11-17-FULLSCREEN-FIX - Project modals now truly fullscreen -->
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -630,6 +630,24 @@
         .nav, .nav-tabs, .nav-pills, .navbar,
         .nav-link, .nav-item, button, a {
             pointer-events: auto !important;
+        }
+
+        /* Force project modals to be truly fullscreen */
+        #project-modal .modal-dialog,
+        #project-detail-modal .modal-dialog {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        #project-modal .modal-content,
+        #project-detail-modal .modal-content {
+            width: 100% !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
         }
 
         /* ===== RESPONSIVE FULL-WIDTH LAYOUT (Session 51) ===== */
@@ -4757,7 +4775,7 @@
 
                 <!-- Create/Edit Project Modal -->
                 <div class="modal fade" id="project-modal" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
+                    <div class="modal-dialog modal-fullscreen">
                         <div class="modal-content" style="background: #1a1a1a; border: 2px solid #f59e0b;">
                             <div class="modal-header" style="border-bottom: 1px solid #333;">
                                 <h5 class="modal-title" id="project-modal-title">Create New Project</h5>
@@ -4837,7 +4855,7 @@
 
                 <!-- Project Detail Modal -->
                 <div class="modal fade" id="project-detail-modal" tabindex="-1">
-                    <div class="modal-dialog modal-xl">
+                    <div class="modal-dialog modal-fullscreen">
                         <div class="modal-content" style="background: #1a1a1a; border: 2px solid #f59e0b;">
                             <div class="modal-header" style="border-bottom: 1px solid #333;">
                                 <h5 class="modal-title" id="project-detail-title">Project Details</h5>
@@ -7363,6 +7381,59 @@
             }
         }
 
+        // Session 129: Download image for laser printing!
+        async function downloadImageFromProject(imageId, imageUrl, sequentialNumber) {
+            try {
+                console.log('📥 Downloading image:', {imageId, imageUrl, sequentialNumber});
+
+                // Fetch the image
+                const response = await fetch(imageUrl);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch image');
+                }
+
+                const blob = await response.blob();
+
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+
+                // Generate filename: robot_image_272.png or image_{id}.png
+                const filename = sequentialNumber
+                    ? `robot_image_${sequentialNumber}.png`
+                    : `image_${imageId.substring(0, 8)}.png`;
+
+                link.download = filename;
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+
+                // Cleanup
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                console.log('✅ Image downloaded successfully:', filename);
+
+                // Show success message
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: rgba(34, 197, 94, 0.95); color: white; padding: 16px 24px; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 700;';
+                toast.innerHTML = `📥 Downloaded: ${filename}<br><small style="opacity: 0.9;">Ready for laser printing!</small>`;
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.transition = 'opacity 0.3s';
+                    toast.style.opacity = '0';
+                    setTimeout(() => document.body.removeChild(toast), 300);
+                }, 3000);
+
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Error downloading image. Please try again or check the console for details.');
+            }
+        }
+
         // Session 97: Delete image from project assets
         async function deleteImageFromProject(imageId, projectId) {
             if (!confirm('Are you sure you want to delete this image? This cannot be undone.')) {
@@ -7401,12 +7472,15 @@
 
         // Session 97: Delete video from project assets
         async function deleteVideoFromProject(videoId, projectId) {
+            console.log('🔥🔥🔥 DELETE VIDEO FUNCTION - VERSION 2025-11-17-23:52 🔥🔥🔥');
+            console.log('🔥 Using endpoint: /api/v1/video/history/' + videoId + '/');
+
             if (!confirm('Are you sure you want to delete this video? This cannot be undone.')) {
                 return;
             }
 
             try {
-                const response = await fetch(`/api/videos/${videoId}/delete/`, {
+                const response = await fetch(`/api/v1/video/history/${videoId}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': getCsrfToken()
@@ -15092,8 +15166,8 @@
                 // Add user message to chat
                 this.addMessage('user', message);
 
-                // Show typing indicator
-                const typingId = this.addMessage('assistant', '💭 Thinking...', true);
+                // Session 129: Enhanced thinking indicator with AI Assistant branding
+                const typingId = this.addMessage('assistant', '🤖 **AI Assistant:** Analyzing your request...', true);
 
                 try {
                     // Call AI backend
@@ -15969,31 +16043,48 @@
             }
 
             getProgressMessage(toolName, params) {
-                // Session 65: Safe parameter access with defaults
+                // Session 129: Enhanced with Agent status indicators to show which Agent is working
                 try {
+                    // Map tools to their respective Agents for transparency
                     if (toolName === 'generate_image' && params.prompt) {
-                        return `🎨 Generating image: "${params.prompt.substring(0, 50)}..."`;
+                        return `🎨 **Image Generation Agent:** Generating image: "${params.prompt.substring(0, 50)}..."`;
                     } else if (toolName === 'generate_video' && params.prompt) {
-                        return `🎬 Generating video: "${params.prompt.substring(0, 50)}..."`;
+                        return `🎬 **Video Agent:** Generating video: "${params.prompt.substring(0, 50)}..."`;
+                    } else if (toolName === 'animate_image') {
+                        return `🎬 **Video Agent:** Converting image to video...`;
+                    } else if (toolName === 'convert_to_3d') {
+                        return `🤖 **3D Generation Agent:** Converting 2D image to 3D model with Replicate TRELLIS...`;
                     } else if (toolName === 'web_search' && params.query) {
-                        return `🔍 Searching web for: "${params.query}"...`;
+                        return `🔍 **Search Agent:** Searching web for: "${params.query}"...`;
                     } else if (toolName === 'scrape_website' && params.url) {
-                        return `🕷️ Scraping website: ${params.url}...`;
+                        return `🕷️ **Web Scraper Agent:** Scraping website: ${params.url}...`;
                     } else if (toolName === 'send_email' && params.to_email) {
-                        return `📧 Sending email to: ${params.to_email}...`;
+                        return `📧 **Email Agent:** Sending email to: ${params.to_email}...`;
                     } else if (toolName === 'chain_videos') {
-                        return `🎬 Setting up video chaining...`;
+                        return `🎬 **DaVinci Agent:** Setting up video chaining with FFmpeg...`;
                     } else if (toolName === 'add_text_to_video' && params.text) {
-                        return `📝 Preparing text overlay: "${params.text}"...`;
+                        return `📝 **DaVinci Agent:** Preparing text overlay: "${params.text}"...`;
                     } else if (toolName === 'add_music_to_video') {
-                        return `🎵 Preparing audio mixing...`;
+                        return `🎵 **DaVinci Agent:** Preparing audio mixing...`;
                     } else if (toolName === 'apply_color_grade') {
-                        return `🎨 Preparing color grading...`;
+                        return `🎨 **DaVinci Agent:** Preparing color grading...`;
+                    } else if (toolName === 'upscale_image') {
+                        return `🔍 **Image Editing Agent:** Upscaling image to higher resolution...`;
+                    } else if (toolName === 'remove_background') {
+                        return `✂️ **Image Editing Agent:** Removing background from image...`;
+                    } else if (toolName === 'refine_image') {
+                        return `✨ **Editing Orchestrator Agent:** Refining image with AI-powered editing...`;
+                    } else if (toolName === 'create_image_variations') {
+                        return `🎨 **Image Editing Agent:** Creating image variations...`;
+                    } else if (toolName === 'erase_object') {
+                        return `🧹 **Image Editing Agent:** Erasing object from image...`;
+                    } else if (toolName === 'recolor_image') {
+                        return `🎨 **Image Editing Agent:** Recoloring image...`;
                     }
                 } catch (e) {
                     console.error('Error in getProgressMessage:', e);
                 }
-                return `🔧 Executing ${toolName}...`;
+                return `🔧 **AI Assistant:** Executing ${toolName}...`;
             }
 
             formatToolResults(results) {
@@ -16049,6 +16140,18 @@
                                 setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
                             } else if (result.result.task_id) {
                                 console.error('❌ pollVideoStatus function not found - videos won\'t auto-update!');
+                            }
+                        } else if (result.tool === 'animate_image') {
+                            // Session 129: Handle image animation (image-to-video)
+                            message += `🎬 **Image Animation Started!**\n\n`;
+                            message += `${result.result.message}\n\n`;
+
+                            // Start status polling so video auto-updates when complete
+                            if (result.result.task_id && typeof window.pollVideoStatus === 'function') {
+                                console.log('🎬 Starting video status polling for animated image:', result.result.task_id);
+                                setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
+                            } else if (result.result.task_id) {
+                                console.error('❌ pollVideoStatus function not found - animated video won\'t auto-update!');
                             }
                         } else if (result.tool === 'web_search') {
                             message += `✅ **Search Results for "${result.result.query}":**\n\n`;
@@ -21017,11 +21120,33 @@
                 const data = await response.json();
 
                 if (data.success && data.portfolio && data.portfolio.length > 0) {
-                    // Render asset gallery
-                    container.innerHTML = data.portfolio.map(asset => `
+                    // Session 127 Part 2 (continued): Group assets by type
+                    const images = data.portfolio.filter(a => a.type === 'image');
+                    const videos = data.portfolio.filter(a => a.type === 'video');
+                    const models3d = data.portfolio.filter(a => a.type === '3d_model');
+
+                    // Helper function to render an asset card
+                    const renderAssetCard = (asset) => `
                         <div class="col-md-4 col-lg-3">
                             <div class="card h-100" style="background: #222; border: 1px solid #444; position: relative;">
                                 ${asset.type === 'image' ? `
+                                    <!-- Download Button -->
+                                    <button
+                                        onclick="event.stopPropagation(); downloadImageFromProject('${asset.id}', '${asset.content_url}', ${asset.sequential_number || 'null'})"
+                                        style="position: absolute; top: 8px; right: 182px; background: rgba(34, 197, 94, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                                        onmouseover="this.style.background='rgba(22, 163, 74, 1)'"
+                                        onmouseout="this.style.background='rgba(34, 197, 94, 0.9)'"
+                                        title="Download this image for laser printing!"
+                                    >📥 Download</button>
+                                    <!-- Favorite Button -->
+                                    <button
+                                        onclick="event.stopPropagation(); toggleFavorite('${asset.id}', this)"
+                                        style="position: absolute; top: 8px; right: 95px; background: rgba(251, 191, 36, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                                        onmouseover="this.style.background='rgba(245, 158, 11, 1)'"
+                                        onmouseout="this.style.background='rgba(251, 191, 36, 0.9)'"
+                                        title="${asset.is_favorite ? 'Remove from favorites' : 'Add to favorites'}"
+                                    ><span class="favorite-icon">${asset.is_favorite ? '⭐' : '☆'}</span> Favorite</button>
+                                    <!-- Delete Button -->
                                     <button
                                         onclick="event.stopPropagation(); deleteImageFromProject('${asset.id}', '${projectId}')"
                                         style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
@@ -21040,6 +21165,14 @@
                                          onclick="viewAsset(this, '${asset.id}', '${asset.type}')"
                                          data-video-url="${asset.content_url}">
                                         <!-- Session 122: Clean video placeholder design -->
+                                        <!-- Favorite Button -->
+                                        <button
+                                            onclick="event.stopPropagation(); toggleVideoFavorite('${asset.id}', this)"
+                                            style="position: absolute; top: 8px; right: 95px; background: rgba(251, 191, 36, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                                            onmouseover="this.style.background='rgba(245, 158, 11, 1)'"
+                                            onmouseout="this.style.background='rgba(251, 191, 36, 0.9)'"
+                                            title="${asset.is_favorite ? 'Remove from favorites' : 'Add to favorites'}"
+                                        ><span class="favorite-icon">${asset.is_favorite ? '⭐' : '☆'}</span> Favorite</button>
                                         <button
                                             onclick="event.stopPropagation(); deleteVideoFromProject('${asset.id}', '${projectId}')"
                                             style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
@@ -21062,6 +21195,37 @@
                                             </div>
                                         </div>
                                     </div>
+                                ` : asset.type === '3d_model' ? `
+                                    <!-- Session 127 Part 2: 3D Model Card -->
+                                    <div class="card-img-top d-flex align-items-center justify-content-center"
+                                         style="height: 200px; background: linear-gradient(135deg, #1a103e 0%, #2d1b69 100%); cursor: pointer; position: relative;"
+                                         data-model-url="${asset.content_url}"
+                                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')">
+                                        <!-- Favorite Button -->
+                                        <button
+                                            onclick="event.stopPropagation(); toggleFavorite('${asset.id}', this)"
+                                            style="position: absolute; top: 8px; right: 95px; background: rgba(251, 191, 36, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                                            onmouseover="this.style.background='rgba(245, 158, 11, 1)'"
+                                            onmouseout="this.style.background='rgba(251, 191, 36, 0.9)'"
+                                            title="${asset.is_favorite ? 'Remove from favorites' : 'Add to favorites'}"
+                                        ><span class="favorite-icon">${asset.is_favorite ? '⭐' : '☆'}</span> Favorite</button>
+                                        <!-- Delete Button -->
+                                        <button
+                                            onclick="event.stopPropagation(); deleteVideoFromProject('${asset.id}', '${projectId}')"
+                                            style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
+                                            onmouseover="this.style.background='rgba(220, 38, 38, 1)'"
+                                            onmouseout="this.style.background='rgba(239, 68, 68, 0.9)'"
+                                            title="Delete this 3D model"
+                                        >🗑️ Delete</button>
+
+                                        <!-- 3D icon -->
+                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                            <div style="font-size: 48px; margin-bottom: 8px; opacity: 0.8;">🎨</div>
+                                            <div style="background: rgba(147, 51, 234, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                                                🖼️ View 3D Model
+                                            </div>
+                                        </div>
+                                    </div>
                                 ` : `
                                     <div class="card-img-top d-flex align-items-center justify-content-center"
                                          style="height: 200px; background: #333; cursor: pointer;"
@@ -21072,13 +21236,13 @@
                                 <div class="card-body p-2">
                                     <!-- Session 117: Use consistent labeling with Sessions view -->
                                     <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">
-                                        🆔 ${asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : 'Audio'} #${asset.sequential_number || asset.id}
+                                        🆔 ${asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : asset.type === '3d_model' ? '3D Model' : 'Audio'} #${asset.sequential_number || asset.id}
                                     </p>
                                     <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">
                                         ${asset.prompt && asset.prompt.length > 60 ? asset.prompt.substring(0, 60) + '...' : asset.prompt || 'No prompt'}
                                     </p>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">${asset.type}</small>
+                                        <small class="text-muted">${asset.type === '3d_model' ? '3D' : asset.type}</small>
                                         <div>
                                             ${asset.is_favorite ? '<span title="Favorite">⭐</span>' : ''}
                                             <small class="text-muted">
@@ -21089,9 +21253,49 @@
                                 </div>
                             </div>
                         </div>
-                    `).join('');
+                    `;
 
-                    console.log(`✅ Loaded ${data.portfolio.length} assets for project ${projectId}`);
+                    // Session 127 Part 2 (continued): Render three separate sections
+                    let sectionsHtml = '';
+
+                    // Images Section
+                    if (images.length > 0) {
+                        sectionsHtml += `
+                            <div class="col-12 mt-4">
+                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">
+                                    📸 Images (${images.length})
+                                </h5>
+                            </div>
+                            ${images.map(renderAssetCard).join('')}
+                        `;
+                    }
+
+                    // Videos Section
+                    if (videos.length > 0) {
+                        sectionsHtml += `
+                            <div class="col-12 mt-4">
+                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">
+                                    🎬 Videos (${videos.length})
+                                </h5>
+                            </div>
+                            ${videos.map(renderAssetCard).join('')}
+                        `;
+                    }
+
+                    // 3D Models Section
+                    if (models3d.length > 0) {
+                        sectionsHtml += `
+                            <div class="col-12 mt-4">
+                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">
+                                    🎨 3D Models (${models3d.length})
+                                </h5>
+                            </div>
+                            ${models3d.map(renderAssetCard).join('')}
+                        `;
+                    }
+
+                    container.innerHTML = sectionsHtml;
+                    console.log(`✅ Loaded ${data.portfolio.length} assets for project ${projectId} (📸 ${images.length} images, 🎬 ${videos.length} videos, 🎨 ${models3d.length} 3D models)`);
                 } else {
                     // No assets yet
                     container.innerHTML = `
@@ -21879,6 +22083,17 @@
                     showVideoModal(videoUrl, assetId);
                 } else {
                     console.error('Video URL not found on element:', element);
+                }
+            } else if (assetType === '3d_model') {
+                // Session 127 Part 2: Handle 3D model viewing
+                // Session 128: Better error handling for missing URLs
+                const modelUrl = element.dataset?.modelUrl || element.closest('.card').querySelector('[data-model-url]')?.dataset.modelUrl;
+                if (modelUrl && modelUrl !== '') {
+                    window.open(modelUrl, '_blank');
+                    console.log('✅ Opening 3D model in new window:', modelUrl);
+                } else {
+                    console.error('❌ 3D model URL not found for asset:', assetId);
+                    showToast('This 3D model is still generating or failed. Please try again later.', 'warning');
                 }
             }
         }

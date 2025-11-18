@@ -1145,6 +1145,8 @@ class VideoAgent:
         image_id: str,
         motion_prompt: Optional[str] = None,
         duration: int = 5,
+        project=None,  # Session 127 Part 2: Accept project context
+        session=None,  # Session 127 Part 2: Accept session context
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -1236,7 +1238,7 @@ class VideoAgent:
                 image_url=image_url,
                 motion_prompt=motion_prompt,
                 duration=duration,
-                quality="veo3.1_fast"
+                quality=kwargs.get('quality', 'gen4_turbo')  # Use gen4_turbo by default for image-to-video
             )
 
             if not result.success:
@@ -1248,18 +1250,21 @@ class VideoAgent:
                 }
 
             # Create VideoHistory record with pending status
+            # Session 127 Part 2: Include project and session context!
             video_record = VideoHistory.objects.create(
                 video_id=result.task_id,
                 user=self.user,
+                project=project,  # Associate with project!
+                session=session,  # Associate with session!
                 video_type='image_to_video',
                 prompt=f"Animated from image #{seq_num}: {motion_prompt}",
                 duration=duration,
-                model_used='veo3.1_fast',
+                model_used=kwargs.get('quality', 'gen4_turbo'),  # Use correct model name
                 status='pending',
-                source_image_url=image_url,
                 metadata={
                     'source_image_id': str(image.id),
                     'source_image_prompt': image_prompt,
+                    'source_image_url': image_url,  # Store in metadata instead
                     'motion_prompt': motion_prompt,
                     'method': 'runway_ml_image_to_video',
                     'agent': 'VideoAgent'
