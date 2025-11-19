@@ -20363,35 +20363,13 @@
                 console.log(`⚡ Starting workflow: ${workflow.name} (${workflow.steps.length} steps)`);
 
                 // Step 4: Execute workflow steps with proper project context
+                // Session 131: Proper flow - Assistant → Agent → Session
+                // Each workflow step routes through GPT-5.1 → Agent Orchestrators → Database
                 const totalSteps = workflow.steps.length;
 
-                // Open AI Assistant with project context ONCE before starting
-                if (!window.aiAssistant.isOpen) {
-                    console.log('📂 Opening AI Assistant...');
-                    window.aiAssistant.toggle();
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for sidebar to open
-                }
-
-                // CRITICAL: Ensure project context is set for ALL workflow messages
-                console.log(`📁 Setting project context: ${projectName} (${projectId})`);
-                window.aiAssistant.activeProjectId = projectId;
-                window.aiAssistant.activeProjectName = projectName;
-                window.aiAssistant.sessionStartedWithProject = true;  // FORCE project association
-                window.aiAssistant.isNewSession = false;  // Not a new session
-
-                // Update dropdown to match
-                const projectSelect = document.getElementById('activeProjectSelect');
-                if (projectSelect) {
-                    projectSelect.value = projectId;
-                }
-
-                // Verify flags are set correctly
-                console.log('✅ Project context verified:');
-                console.log('   - activeProjectId:', window.aiAssistant.activeProjectId);
-                console.log('   - sessionStartedWithProject:', window.aiAssistant.sessionStartedWithProject);
-                console.log('   - isNewSession:', window.aiAssistant.isNewSession);
-
-                await new Promise(resolve => setTimeout(resolve, 300)); // Wait for context to settle
+                // Session 131: Use project-embedded assistant (maintains project context)
+                console.log(`📁 Using project-embedded assistant for: ${projectName} (${projectId})`);
+                console.log(`🎯 Flow: Workflow → Assistant (GPT-5.1) → Agent Orchestrator → Session`);
 
                 for (let i = 0; i < workflow.steps.length; i++) {
                     const step = workflow.steps[i];
@@ -20405,14 +20383,10 @@
 
                     console.log(`⚡ Workflow step ${stepNum}/${totalSteps}: ${step.message}`);
 
-                    // Send the message to AI Assistant
-                    const messageInput = document.getElementById('aiAssistantInput');
-                    messageInput.value = step.message;
+                    // Session 131: Send message via project-embedded chat
+                    await sendProjectMessageFromWorkflow(projectId, step.message);
 
-                    // Trigger the send action
-                    await window.aiAssistant.sendMessage();
-
-                    // Wait longer for step to complete (increased from 3s to 5s)
+                    // Wait for step to complete
                     // This gives AI time to process and generate content
                     await new Promise(resolve => setTimeout(resolve, 5000));
                 }
@@ -20734,6 +20708,67 @@
                     handled: true,
                     message: `❌ Failed to ${operation}: ${error.message}`
                 };
+            }
+        }
+
+        // Session 131: Helper function for workflows to use project-embedded assistant
+        // Ensures proper Assistant → Agent → Session flow
+        async function sendProjectMessageFromWorkflow(projectId, message) {
+            const messagesDiv = document.getElementById(`project-chat-messages-${projectId}`);
+            const statusDiv = document.getElementById(`project-chat-status-${projectId}`);
+
+            // Add user message to chat (so user sees what workflow is doing)
+            addProjectChatMessage(projectId, 'user', message);
+
+            // Show status
+            statusDiv.innerHTML = '🤖 Routing to specialized agent...';
+
+            try {
+                console.log(`🤖 Workflow calling Enhanced Assistant API (Assistant → Agent flow)`);
+                console.log(`   Project ID: ${projectId}`);
+                console.log(`   Message: ${message}`);
+
+                // Call Enhanced Assistant API with project context
+                // This ensures proper routing through agent orchestrators
+                const response = await fetch('/api/assistant/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        project_id: projectId  // KEY: Project context for session tracking
+                    })
+                });
+
+                const result = await response.json();
+                console.log('🔍 Workflow API response:', result);
+
+                // Extract response (handle both wrapped and direct response structures)
+                const assistantResponse = result.data?.response || result.response || result.message;
+                console.log('🔍 Assistant response:', assistantResponse);
+
+                if (assistantResponse) {
+                    addProjectChatMessage(projectId, 'assistant', assistantResponse);
+                    statusDiv.innerHTML = '✅ Agent completed task';
+
+                    // Brief status clear
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '';
+                    }, 2000);
+
+                    return true; // Success
+                } else {
+                    addProjectChatMessage(projectId, 'error', '❌ No response from agent');
+                    statusDiv.innerHTML = '';
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Workflow agent routing error:', error);
+                addProjectChatMessage(projectId, 'error', `❌ Error: ${error.message}`);
+                statusDiv.innerHTML = '';
+                return false;
             }
         }
 
