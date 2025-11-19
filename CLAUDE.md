@@ -1,11 +1,11 @@
 # 🤖 CLAUDE - START HERE
 **Unified Donkey Betz Platform - AI Session Entry Point**
 
-**Last Updated:** November 19, 2025 - Session 131 (COMPLETE!)
-**Current Status:** 99.7% Reality Score ✅ | DJANGO WEB APP ONLY! 🌐🎨🤖✨
+**Last Updated:** November 19, 2025 - Session 135 (COMPLETE!)
+**Current Status:** 99.8% Reality Score ✅ | DJANGO WEB APP ONLY! 🌐🎨🤖✨
 **Platform:** Django Web Application (Mobile archived - deploy web first, prove revenue!)
-**Ready For:** Session 132 - Agent Optimization & Performance Tuning! 🎯
-**Breakthrough:** ✨ UI DISPLAY ISSUES RESOLVED! (All content visible, video errors fixed, clean UI!) 🎉
+**Ready For:** Session 136 - Continue Platform Development! 🎯
+**Breakthrough:** 🔧 PROJECT ASSOCIATION FIX COMPLETE! (Videos now properly associated with projects!) 🎉
 
 ---
 
@@ -122,6 +122,19 @@ open http://localhost:8000/ai-studio/
 ---
 
 ## 📚 Recent Session History
+
+**Session 135:** PROJECT ASSOCIATION FIX - COMPLETE! 🔧✨🎉
+- **Critical Bug Fix:** Videos now properly associated with projects (no more orphaned content!)
+- **Root Cause:** `self.project` was never set as instance attribute in GPT function calling flow
+- **Solution:** Set `self.project` early in `process_message()` for ALL code paths (lines 2311-2324)
+- **Data Repair:** Fixed 6 orphaned videos (4 pending + 2 completed) using `fix_orphaned_videos.py`
+- **Before:** Project showed 4 videos, gallery showed 6 (60% orphan rate)
+- **After:** Project shows 10 videos, gallery shows 10 (0% orphan rate)
+- **Technical Details:** Used `getattr(self, 'project', None)` pattern - requires instance attribute, not dict key
+- **Files Modified:** `core/personal_ai_assistant_enhanced.py` (14 lines added), `fix_orphaned_videos.py` (90 lines)
+- **Verification:** Ran `verify_project_videos.py` confirming all 10 videos properly associated
+- Reality Score: 99.7% → 99.8% (+0.1%)
+- Docs: SESSION_135_PROJECT_ASSOCIATION_FIX.md (520 lines)
 
 **Session 131:** UI DISPLAY ISSUES RESOLVED! - COMPLETE! 🎨✨🎉
 - **Critical Bug Fixes:** Fixed all UI display issues preventing content visibility

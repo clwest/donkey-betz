@@ -62,391 +62,238 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, and Asset Tracking for {user.username}")
 
-    # Session 125: Tool Definitions for GPT Function Calling
+    # Session 131: Agent-Based Tool Definitions
     def get_tool_definitions(self) -> List[Dict]:
         """
-        Get tool definitions for GPT-5.1 Responses API function calling.
+        Get agent-based tool definitions for GPT-5.1 Responses API function calling.
 
-        Session 129: Updated to use flat format (not nested 'function' key) required by Responses API.
-        These tools allow GPT to autonomously execute operations.
+        Session 131: Refactored from 14+ individual tools to 5 agent orchestrators.
+        This provides clearer intent, less confusion, and better alignment with multi-agent architecture.
+
+        Architecture: GPT-5.1 → Agent → Specific Operation
         """
         return [
-            # Session 125-126: Image Editing Tools
+            # Session 132: Image Generation Agent - NEW!
             {
                 "type": "function",
-                "name": "upscale_image",
-                "description": "Upscale an image to 4x resolution using Stability AI. Use this when users want to enhance image quality or make an image larger.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID. When user says 'image 2', 'image number two', or '#2', use '2' as the image_id."
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate the upscaled image with"
-                        }
-                    },
-                    "required": ["image_id"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "remove_background",
-                "description": "Remove the background from an image, creating a transparent PNG. Use this when users want to isolate the subject or remove the background.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID. When user says 'image 2', 'image number two', or '#2', use '2' as the image_id."
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate the result with"
-                        }
-                    },
-                    "required": ["image_id"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "create_image_variations",
-                "description": "Create multiple STATIC image alternatives with different styles or compositions. These are STILL images, NOT videos or animations. Only use when user wants multiple static image options. NEVER use for animation, motion, or video requests.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID. When user says 'image 2', 'image number two', or '#2', use '2' as the image_id."
-                        },
-                        "count": {
-                            "type": "integer",
-                            "description": "Number of variations to generate (1-4)",
-                            "default": 3
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate results with"
-                        }
-                    },
-                    "required": ["image_id"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "erase_object",
-                "description": "Remove specific objects from an image (like removing pins, removing a person, removing text, etc). Use this when users want to remove something specific from an image.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID. When user says 'image 2', 'image number two', or '#2', use '2' as the image_id."
-                        },
-                        "object_description": {
-                            "type": "string",
-                            "description": "Description of what to remove (e.g., 'pins', 'person', 'text')"
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["image_id", "object_description"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "recolor_image",
-                "description": "Change colors of specific objects or the entire image. Use when users want to: make something a different color (e.g., 'make robot black', 'change sky to blue'), make images more vibrant, or apply color effects.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID. When user says 'image 2', 'image number two', or '#2', use '2' as the image_id."
-                        },
-                        "prompt": {
-                            "type": "string",
-                            "description": "Description of desired color changes (e.g., 'make robot black', 'change blue to red', 'more vibrant', 'warmer tones')"
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["image_id", "prompt"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "refine_image",
-                "description": "Modify or enhance a STATIC image (adjust style, quality, composition). Creates a single refined STILL image, NOT a video. Do NOT use for animation or motion requests.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID. When user says 'image 2', 'image number two', or '#2', use '2' as the image_id."
-                        },
-                        "refinement_request": {
-                            "type": "string",
-                            "description": "Detailed description of how to refine/modify the image"
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["image_id", "refinement_request"]
-                }
-            },
-            # Session 127: Video & Audio Tools
-            {
-                "type": "function",
-                "name": "generate_video",
-                "description": "Generate a new video from a text description using Runway ML. Use this when users want to create a video from scratch using text prompts.",
+                "name": "image_generation_agent",
+                "description": "Generate BRAND NEW images from scratch using text prompts. CRITICAL: Use this agent whenever user wants to CREATE/GENERATE/MAKE images that don't exist yet: 'create banner', 'generate logo', 'make social media post', 'design avatar', 'create profile picture', 'create images matching style', etc. This generates NEW images, not modifications of existing ones. Supports custom dimensions (width/height), quality levels, style preferences, and multiple images. Use this for ALL new image creation requests, even if they mention matching a style.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "prompt": {
                             "type": "string",
-                            "description": "Detailed description of the video to generate"
+                            "description": "Text description of the image to generate (e.g., 'modern tech company logo', 'social media banner with vibrant colors', 'professional profile picture')"
                         },
-                        "duration": {
-                            "type": "integer",
-                            "description": "Video duration in seconds (4-10)",
-                            "default": 5
+                        "params": {
+                            "type": "object",
+                            "description": "Optional generation parameters",
+                            "properties": {
+                                "width": {"type": "integer", "default": 1024, "description": "Image width (512-2048)"},
+                                "height": {"type": "integer", "default": 1024, "description": "Image height (512-2048)"},
+                                "count": {"type": "integer", "default": 1, "description": "Number of images to generate (1-4)"},
+                                "quality": {"type": "string", "enum": ["fast", "balanced", "high", "premium"], "default": "balanced", "description": "Quality level: fast (core), balanced (sdxl), high (sd3), premium (ultra)"},
+                                "style": {"type": "string", "default": "photorealistic", "description": "Style preset or custom style description"}
+                            }
                         },
                         "project_id": {
                             "type": "string",
-                            "description": "Optional project ID to associate result with"
+                            "description": "Optional project ID to associate images with"
+                        },
+                        "character_model_name": {
+                            "type": "string",
+                            "description": "Optional trained character/style model to use for generation. CRITICAL: Extract ANY mention of a specific style, brand identity, character model, or trained aesthetic from the user's request. Examples: 'AI content generation company style', 'company style', 'our brand style', 'the trained model', etc. The backend will automatically match variations and trigger words (case-insensitive, handles spaces/dashes). When user mentions a trained style/model, extract it AS SPOKEN/WRITTEN - don't worry about exact formatting. When specified, uses FLUX + custom LoRA training. Omit for standard Stability AI generation. Session 134: Now supports trigger word matching!"
                         }
                     },
                     "required": ["prompt"]
                 }
             },
+
+            # Session 131: Image Editing Agent (replaces 6 individual tools)
             {
                 "type": "function",
-                "name": "extend_video",
-                "description": "Extend an existing video's duration by generating a continuation. Use this when users want to make a video longer (e.g., '5 seconds to 10 seconds').",
+                "name": "image_editing_agent",
+                "description": "MODIFY EXISTING images only. Requires an existing image_id. Operations: upscale (4x resolution), remove_background (transparent PNG), create_variations (multiple styles of EXISTING image), erase_object (remove specific items), recolor (change colors), refine (enhance/modify EXISTING image). IMPORTANT: This agent modifies images that already exist. For creating NEW images from scratch, use image_generation_agent instead.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "video_id": {
+                        "operation": {
                             "type": "string",
-                            "description": "The UUID or number of the video to extend"
+                            "description": "Operation to perform: 'upscale' | 'remove_background' | 'create_variations' | 'erase_object' | 'recolor' | 'refine'",
+                            "enum": ["upscale", "remove_background", "create_variations", "erase_object", "recolor", "refine"]
                         },
-                        "extension_seconds": {
-                            "type": "integer",
-                            "description": "Seconds to add (4, 6, 8, or 10)",
-                            "default": 10
-                        },
-                        "prompt": {
+                        "image_id": {
                             "type": "string",
-                            "description": "Optional guidance for the extension (default: continue current motion)"
+                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID"
+                        },
+                        "params": {
+                            "type": "object",
+                            "description": "Operation-specific parameters: For erase_object: {object_description: 'text'}. For recolor: {prompt: 'make robot black'}. For refine: {refinement_request: 'enhance quality'}. For create_variations: {count: 3}.",
+                            "properties": {
+                                "object_description": {"type": "string"},
+                                "prompt": {"type": "string"},
+                                "refinement_request": {"type": "string"},
+                                "count": {"type": "integer", "default": 3}
+                            }
                         },
                         "project_id": {
                             "type": "string",
                             "description": "Optional project ID to associate result with"
                         }
                     },
-                    "required": ["video_id"]
+                    "required": ["operation", "image_id"]
                 }
             },
+
+            # Session 131: Video Generation Agent (replaces 4 tools)
             {
                 "type": "function",
-                "name": "chain_videos",
-                "description": "Combine multiple videos into a single video. Use this when users want to merge, join, or combine several video clips together.",
+                "name": "video_generation_agent",
+                "description": "Handle all video generation operations: generate (create video from text), animate (transform image to moving video), extend (make video longer), chain (combine multiple videos). Use this agent for ANY video generation request.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "video_ids": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Operation: 'generate' | 'animate' | 'extend' | 'chain'",
+                            "enum": ["generate", "animate", "extend", "chain"]
+                        },
+                        "params": {
+                            "type": "object",
+                            "description": "Operation-specific parameters. For generate: {prompt, duration}. For animate: {image_id, motion_prompt, duration}. For extend: {video_id, extension_seconds, prompt}. For chain: {video_ids, add_transitions}.",
+                            "properties": {
+                                "prompt": {"type": "string"},
+                                "duration": {"type": "integer", "default": 5},
+                                "image_id": {"type": "string"},
+                                "motion_prompt": {"type": "string", "default": "natural motion"},
+                                "video_id": {"type": "string"},
+                                "extension_seconds": {"type": "integer", "default": 10},
+                                "video_ids": {"type": "array", "items": {"type": "string"}},
+                                "add_transitions": {"type": "boolean", "default": True}
+                            }
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Optional project ID"
+                        }
+                    },
+                    "required": ["operation", "params"]
+                }
+            },
+
+            # Session 131: Audio Generation Agent (replaces 2 tools)
+            {
+                "type": "function",
+                "name": "audio_generation_agent",
+                "description": "Handle all audio generation: generate_voice (text-to-speech), add_voiceover (add narration to video). Use this agent for ANY audio generation request.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Operation: 'generate_voice' | 'add_voiceover'",
+                            "enum": ["generate_voice", "add_voiceover"]
+                        },
+                        "params": {
+                            "type": "object",
+                            "description": "For generate_voice: {text, voice}. For add_voiceover: {video_id, text, voice}.",
+                            "properties": {
+                                "text": {"type": "string"},
+                                "voice": {"type": "string", "default": "Rachel"},
+                                "video_id": {"type": "string"}
+                            }
+                        },
+                        "project_id": {"type": "string"}
+                    },
+                    "required": ["operation", "params"]
+                }
+            },
+
+            # Session 131: 3D Generation Agent (replaces 1 tool)
+            {
+                "type": "function",
+                "name": "three_d_generation_agent",
+                "description": "Convert images to 3D models using Replicate TRELLIS. Creates downloadable GLB files for 3D printing. Use when users want: 'convert to 3D', 'make 3D model', '3D print', 'create 3D object'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Operation (currently only 'convert')",
+                            "enum": ["convert"]
+                        },
+                        "image_id": {
+                            "type": "string",
+                            "description": "Image identifier: sequential number OR full UUID"
+                        },
+                        "project_id": {"type": "string"}
+                    },
+                    "required": ["operation", "image_id"]
+                }
+            },
+
+            # Session 131: Video Editing Agent (replaces 2 tools)
+            {
+                "type": "function",
+                "name": "video_editing_agent",
+                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (cinematic color effects). Use this agent for ANY video editing request.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading'",
+                            "enum": ["add_text_overlay", "apply_color_grading"]
+                        },
+                        "video_id": {
+                            "type": "string",
+                            "description": "Video identifier: sequential number OR full UUID"
+                        },
+                        "params": {
+                            "type": "object",
+                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style}.",
+                            "properties": {
+                                "text": {"type": "string"},
+                                "position": {"type": "string", "default": "center"},
+                                "start_second": {"type": "number", "default": 0},
+                                "duration": {"type": "number", "default": 3},
+                                "font_size": {"type": "integer", "default": 72},
+                                "style": {"type": "string", "default": "cinematic_warm"}
+                            }
+                        },
+                        "project_id": {"type": "string"}
+                    },
+                    "required": ["operation", "video_id"]
+                }
+            },
+
+            # Session 133: Character Training Agent (FLUX LoRA for style consistency)
+            {
+                "type": "function",
+                "name": "character_training_agent",
+                "description": "Train a FLUX LoRA model to learn a consistent visual style from 4-10 example images. Creates reusable style model that can be applied to all future generations. Use when user wants to 'train project style', 'create custom style', 'learn my visual aesthetic', or 'make consistent style'. Perfect for brand consistency across all content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_ids": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Array of video UUIDs or numbers to chain together (in order)"
+                            "description": "List of 4-10 image IDs to train on. Can use sequential numbers (e.g., '1', '2') or full UUIDs. These images should have similar style/aesthetic for best results."
                         },
-                        "add_transitions": {
-                            "type": "boolean",
-                            "description": "Whether to add smooth transitions between clips",
-                            "default": True
+                        "style_name": {
+                            "type": "string",
+                            "description": "Name for this trained style model (e.g., 'pixar-robot-style', 'minimalist-logo-style', 'ai-content-generation-company-style'). Use lowercase with hyphens."
                         },
-                        "project_id": {
+                        "trigger_word": {
                             "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["video_ids"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "generate_voice",
-                "description": "Generate speech audio from text using ElevenLabs professional voices. Use this when users want text-to-speech, narration, or voiceovers.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "text": {
-                            "type": "string",
-                            "description": "Text to convert to speech"
-                        },
-                        "voice": {
-                            "type": "string",
-                            "description": "Voice name (Rachel, Drew, Clyde, Paul, Aria, Domi, Dave, Antoni, Sarah, Josh, Bella, Charlotte)",
-                            "default": "Rachel"
+                            "description": "Optional trigger word to activate this style in prompts (e.g., 'PIXBOT', 'MINILOGO'). If not provided, uses uppercase version of style_name."
                         },
                         "project_id": {
                             "type": "string",
-                            "description": "Optional project ID to associate result with"
+                            "description": "Optional project ID to associate trained model with. Model can then be used automatically in project workflows."
                         }
                     },
-                    "required": ["text"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "add_voiceover",
-                "description": "Add audio narration to an existing video. Use this when users want to add voice narration, commentary, or audio to a video.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "video_id": {
-                            "type": "string",
-                            "description": "The UUID or number of the video to add audio to"
-                        },
-                        "text": {
-                            "type": "string",
-                            "description": "Text to convert to speech and add as voiceover"
-                        },
-                        "voice": {
-                            "type": "string",
-                            "description": "Voice name (Rachel, Drew, Clyde, etc.)",
-                            "default": "Rachel"
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["video_id", "text"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "animate_image",
-                "description": "Transform a STATIC IMAGE into a MOVING VIDEO with animation/motion. Use this tool IMMEDIATELY when user says: 'animate image', 'animate', 'make it move', 'turn into video', 'bring to life', or any request for motion/animation. This creates VIDEO files (mp4), NOT static images. This is the ONLY tool that creates videos from images.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "The UUID or number of the image to animate"
-                        },
-                        "motion_prompt": {
-                            "type": "string",
-                            "description": "Optional description of desired motion (e.g., 'zoom in slowly', 'pan left', 'gentle sway')",
-                            "default": "natural motion"
-                        },
-                        "duration": {
-                            "type": "integer",
-                            "description": "Video duration in seconds (5 or 10)",
-                            "default": 5
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["image_id"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "convert_to_3d",
-                "description": "Convert an image to a 3D model using Replicate TRELLIS. Creates a downloadable GLB 3D model file perfect for 3D printing. Use this when users want to: 'convert to 3D', 'make 3D model', '3D print', 'create 3D object', or turn an image into a 3D asset.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "image_id": {
-                            "type": "string",
-                            "description": "The UUID or number of the image to convert to 3D"
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["image_id"]
-                }
-            },
-            # Session 128: DaVinci Resolve Video Editing Tools
-            {
-                "type": "function",
-                "name": "add_text_overlay",
-                "description": "Add text overlay to a video with precise timing control using ffmpeg. Use this when users want to add captions, titles, labels, or any text to a video. Supports positioning and duration control.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "video_id": {
-                            "type": "string",
-                            "description": "The UUID or number of the video to add text to"
-                        },
-                        "text": {
-                            "type": "string",
-                            "description": "The text to display on the video"
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Text position: 'center', 'lower_third', or 'upper_third'",
-                            "default": "center"
-                        },
-                        "start_second": {
-                            "type": "number",
-                            "description": "When to show the text (in seconds from start)",
-                            "default": 0
-                        },
-                        "duration": {
-                            "type": "number",
-                            "description": "How long to show the text (in seconds)",
-                            "default": 3
-                        },
-                        "font_size": {
-                            "type": "integer",
-                            "description": "Text size (36-144)",
-                            "default": 72
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["video_id", "text"]
-                }
-            },
-            {
-                "type": "function",
-                "name": "apply_color_grading",
-                "description": "Apply professional color grading to a video using ffmpeg filters. Use this when users want to change the look/feel of a video, apply cinematic effects, or adjust colors. Available styles: cinematic_warm, cinematic_cool, vintage, modern, high_contrast, soft, vibrant.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "video_id": {
-                            "type": "string",
-                            "description": "The UUID or number of the video to color grade"
-                        },
-                        "style": {
-                            "type": "string",
-                            "description": "Color grading style: 'cinematic_warm' (orange tones), 'cinematic_cool' (blue tones), 'vintage' (film look), 'modern' (clean/crisp), 'high_contrast' (dramatic), 'soft' (muted/gentle), 'vibrant' (saturated)",
-                            "default": "cinematic_warm"
-                        },
-                        "project_id": {
-                            "type": "string",
-                            "description": "Optional project ID to associate result with"
-                        }
-                    },
-                    "required": ["video_id"]
+                    "required": ["image_ids", "style_name"]
                 }
             }
         ]
@@ -475,50 +322,427 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.info(f"🔧 Executing tool: {function_name} with args: {arguments}")
             print(f"🔧🔧🔧 GPT CALLED TOOL: {function_name}")  # Console output for debugging
 
-            # Route to appropriate tool handler
-            # Session 125/126: Image Tools
-            if function_name == 'upscale_image':
-                return self._tool_upscale_image(arguments)
-            elif function_name == 'remove_background':
-                return self._tool_remove_background(arguments)
-            elif function_name == 'create_image_variations':
-                return self._tool_create_variations(arguments)
-            elif function_name == 'erase_object':
-                return self._tool_erase_object(arguments)
-            elif function_name == 'recolor_image':
-                return self._tool_recolor_image(arguments)
-            elif function_name == 'refine_image':
-                return self._tool_refine_image(arguments)
-            # Session 127: Video & Audio Tools
-            elif function_name == 'generate_video':
-                return self._tool_generate_video(arguments)
-            elif function_name == 'extend_video':
-                return self._tool_extend_video(arguments)
-            elif function_name == 'chain_videos':
-                return self._tool_chain_videos(arguments)
-            elif function_name == 'generate_voice':
-                return self._tool_generate_voice(arguments)
-            elif function_name == 'add_voiceover':
-                return self._tool_add_voiceover(arguments)
-            elif function_name == 'animate_image':
-                return self._tool_animate_image(arguments)
-            elif function_name == 'convert_to_3d':
-                return self._tool_convert_to_3d(arguments)
-            elif function_name == 'add_text_overlay':
-                return self._tool_add_text_overlay(arguments)
-            elif function_name == 'apply_color_grading':
-                return self._tool_apply_color_grading(arguments)
+            # Session 132: Route to agent orchestrators
+            if function_name == 'image_generation_agent':
+                result = self._handle_image_generation_agent(arguments)
+            elif function_name == 'image_editing_agent':
+                result = self._handle_image_editing_agent(arguments)
+            elif function_name == 'video_generation_agent':
+                result = self._handle_video_generation_agent(arguments)
+            elif function_name == 'audio_generation_agent':
+                result = self._handle_audio_generation_agent(arguments)
+            elif function_name == 'three_d_generation_agent':
+                result = self._handle_three_d_generation_agent(arguments)
+            elif function_name == 'video_editing_agent':
+                result = self._handle_video_editing_agent(arguments)
+            elif function_name == 'character_training_agent':
+                result = self._handle_character_training_agent(arguments)
             else:
-                return {
+                result = {
                     'success': False,
-                    'error': f"Unknown tool: {function_name}"
+                    'error': f"Unknown agent: {function_name}"
                 }
+
+            # Session 135: Store tool result to preserve task_id for video polling
+            self._last_tool_result = result
+            logger.info(f"📦 Stored tool result: {result}")
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ Tool execution error: {e}")
             return {
                 'success': False,
                 'error': f"Tool execution failed: {str(e)}"
+            }
+
+    # Session 131: Agent Handler Methods
+    def _resolve_hybrid_image_id(self, image_id: str) -> str:
+        """Convert sequential image numbers to UUIDs (Session 131)."""
+        if image_id.isdigit():
+            from content.models import ImageHistory
+            try:
+                seq_num = int(image_id)
+                image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[seq_num - 1]
+                resolved_id = str(image.id)
+                logger.info(f"✅ Converted image #{seq_num} → UUID {resolved_id[:8]}...")
+                return resolved_id
+            except (IndexError, ImageHistory.DoesNotExist):
+                raise ValueError(f'Image #{image_id} not found')
+        return image_id
+
+    def _handle_image_generation_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle image_generation_agent calls - routes to appropriate Creation Agent (Session 134)."""
+        prompt = arguments.get('prompt')
+        params = arguments.get('params', {})
+        project_id = arguments.get('project_id')
+        character_model_name = arguments.get('character_model_name')  # Session 134: LoRA model name
+
+        # Session 134: Route to appropriate agent based on whether trained model is requested
+        if character_model_name:
+            logger.info(f"🎨 Routing to Trained Creation Agent: '{character_model_name}'")
+            logger.info(f"   User: {self.user.username} (ID: {self.user.id})")
+            return self._handle_trained_creation_agent(prompt, character_model_name, params, project_id)
+        else:
+            logger.info(f"🖼️ Routing to Creation Agent (standard Stability AI)")
+            logger.info(f"   User: {self.user.username} (ID: {self.user.id})")
+            return self._handle_creation_agent(prompt, params, project_id)
+
+    def _handle_creation_agent(self, prompt: str, params: Dict[str, Any], project_id: str) -> Dict[str, Any]:
+        """Handle standard image generation via CreationAgent (Session 134)."""
+        logger.info(f"🖼️ Creation Agent: prompt='{prompt[:50]}...'")
+
+        # Extract parameters with defaults
+        width = params.get('width', 1024)
+        height = params.get('height', 1024)
+        count = params.get('count', 1)
+        quality = params.get('quality', 'balanced')
+        style = params.get('style', 'photorealistic')
+
+        try:
+            from agents.creation_agent import CreationAgent
+
+            # Initialize agent
+            agent = CreationAgent(user=self.user, project_id=project_id)
+
+            # Execute generation
+            result = agent.execute(
+                prompt=prompt,
+                size=f"{width}x{height}",
+                num_images=count,
+                quality=quality,
+                style=style
+            )
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'message': result.get('message'),
+                    'image_ids': result.get('image_ids', [])
+                }
+            else:
+                error_msg = result.get('error', 'Image generation failed')
+                logger.error(f"❌ Creation Agent failed: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Creation Agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to generate image: {str(e)}"
+            }
+
+    def _handle_trained_creation_agent(
+        self,
+        prompt: str,
+        character_model_name: str,
+        params: Dict[str, Any],
+        project_id: str
+    ) -> Dict[str, Any]:
+        """Handle LoRA-based image generation via TrainedCreationAgent (Session 134)."""
+        logger.info(f"🎨 Trained Creation Agent: model='{character_model_name}'")
+        logger.info(f"   Prompt: '{prompt[:50]}...'")
+
+        # Extract parameters with defaults
+        width = params.get('width', 1024)
+        height = params.get('height', 1024)
+        count = params.get('count', 1)
+        lora_scale = params.get('lora_scale', 0.8)
+
+        try:
+            from agents.trained_creation_agent import TrainedCreationAgent
+
+            # Initialize agent
+            agent = TrainedCreationAgent(user=self.user, project_id=project_id)
+
+            # Execute generation with LoRA
+            result = agent.execute(
+                prompt=prompt,
+                character_model_name=character_model_name,
+                width=width,
+                height=height,
+                num_outputs=count,
+                lora_scale=lora_scale
+            )
+
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'message': result.get('message'),
+                    'image_ids': result.get('image_ids', [])
+                }
+            else:
+                error_msg = result.get('error', 'Trained image generation failed')
+                logger.error(f"❌ Trained Creation Agent failed: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Trained Creation Agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to generate image with trained model: {str(e)}"
+            }
+
+    def _handle_image_editing_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle image_editing_agent calls - routes to specific operation."""
+        operation = arguments.get('operation')
+        image_id = arguments.get('image_id')
+        params = arguments.get('params', {})
+        project_id = arguments.get('project_id')
+
+        logger.info(f"🎨 Image Editing Agent: operation={operation}, image_id={image_id}")
+
+        # Session 131: Convert sequential numbers to UUIDs
+        try:
+            image_id = self._resolve_hybrid_image_id(image_id)
+        except ValueError as e:
+            return {'success': False, 'error': str(e)}
+
+        # Build arguments for the specific tool handler
+        tool_args = {'image_id': image_id, 'project_id': project_id}
+        tool_args.update(params)  # Merge operation-specific params
+
+        # Route to appropriate existing tool handler
+        if operation == 'upscale':
+            return self._tool_upscale_image(tool_args)
+        elif operation == 'remove_background':
+            return self._tool_remove_background(tool_args)
+        elif operation == 'create_variations':
+            return self._tool_create_variations(tool_args)
+        elif operation == 'erase_object':
+            return self._tool_erase_object(tool_args)
+        elif operation == 'recolor':
+            return self._tool_recolor_image(tool_args)
+        elif operation == 'refine':
+            return self._tool_refine_image(tool_args)
+        else:
+            return {'success': False, 'error': f"Unknown image operation: {operation}"}
+
+    def _handle_video_generation_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle video_generation_agent calls - routes to specific operation."""
+        operation = arguments.get('operation')
+        params = arguments.get('params', {})
+        project_id = arguments.get('project_id')
+
+        logger.info(f"🎬 Video Generation Agent: operation={operation}")
+
+        # Build arguments for the specific tool handler
+        tool_args = {'project_id': project_id}
+        tool_args.update(params)  # Merge operation-specific params
+
+        # Route to appropriate existing tool handler
+        if operation == 'generate':
+            return self._tool_generate_video(tool_args)
+        elif operation == 'animate':
+            return self._tool_animate_image(tool_args)
+        elif operation == 'extend':
+            return self._tool_extend_video(tool_args)
+        elif operation == 'chain':
+            return self._tool_chain_videos(tool_args)
+        else:
+            return {'success': False, 'error': f"Unknown video operation: {operation}"}
+
+    def _handle_audio_generation_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle audio_generation_agent calls - routes to specific operation."""
+        operation = arguments.get('operation')
+        params = arguments.get('params', {})
+        project_id = arguments.get('project_id')
+
+        logger.info(f"🎤 Audio Generation Agent: operation={operation}")
+
+        # Build arguments for the specific tool handler
+        tool_args = {'project_id': project_id}
+        tool_args.update(params)  # Merge operation-specific params
+
+        # Route to appropriate existing tool handler
+        if operation == 'generate_voice':
+            return self._tool_generate_voice(tool_args)
+        elif operation == 'add_voiceover':
+            return self._tool_add_voiceover(tool_args)
+        else:
+            return {'success': False, 'error': f"Unknown audio operation: {operation}"}
+
+    def _handle_three_d_generation_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle three_d_generation_agent calls - routes to convert operation."""
+        operation = arguments.get('operation')
+        image_id = arguments.get('image_id')
+        project_id = arguments.get('project_id')
+
+        logger.info(f"🤖 3D Generation Agent: operation={operation}, image_id={image_id}")
+
+        # Route to convert_to_3d handler
+        if operation == 'convert':
+            return self._tool_convert_to_3d({'image_id': image_id, 'project_id': project_id})
+        else:
+            return {'success': False, 'error': f"Unknown 3D operation: {operation}"}
+
+    def _handle_video_editing_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle video_editing_agent calls - routes to specific operation."""
+        operation = arguments.get('operation')
+        video_id = arguments.get('video_id')
+        params = arguments.get('params', {})
+        project_id = arguments.get('project_id')
+
+        logger.info(f"✂️ Video Editing Agent: operation={operation}, video_id={video_id}")
+
+        # Build arguments for the specific tool handler
+        tool_args = {'video_id': video_id, 'project_id': project_id}
+        tool_args.update(params)  # Merge operation-specific params
+
+        # Route to appropriate existing tool handler
+        if operation == 'add_text_overlay':
+            return self._tool_add_text_overlay(tool_args)
+        elif operation == 'apply_color_grading':
+            return self._tool_apply_color_grading(tool_args)
+        else:
+            return {'success': False, 'error': f"Unknown video editing operation: {operation}"}
+
+    def _handle_character_training_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle character_training_agent calls - trains FLUX LoRA models (Session 133)."""
+        image_ids = arguments.get('image_ids', [])
+        style_name = arguments.get('style_name')
+        trigger_word = arguments.get('trigger_word', style_name.upper().replace('-', ''))
+        project_id = arguments.get('project_id')
+
+        logger.info(f"🎨 Character Training Agent: {len(image_ids)} images → '{style_name}'")
+        logger.info(f"   Trigger word: {trigger_word}")
+        logger.info(f"   User: {self.user.username} (ID: {self.user.id})")
+
+        try:
+            # Convert hybrid IDs (numbers or UUIDs) to UUIDs
+            from content.models import ImageHistory, CharacterModel
+            import uuid as uuid_module
+
+            resolved_images = []
+            for img_id in image_ids:
+                try:
+                    # Try UUID first
+                    uuid_obj = uuid_module.UUID(img_id)
+                    # Get image if it exists and belongs to user
+                    img = ImageHistory.objects.filter(id=uuid_obj, user=self.user).first()
+                    if img:
+                        resolved_images.append(img)
+                    else:
+                        logger.warning(f"⚠️ Image {img_id} not found or doesn't belong to user")
+                except (ValueError, AttributeError):
+                    # Try sequential number
+                    try:
+                        seq_num = int(img_id)
+                        images = ImageHistory.objects.filter(user=self.user).order_by('created_at')
+                        if seq_num > 0 and seq_num <= images.count():
+                            resolved_images.append(images[seq_num - 1])
+                        else:
+                            logger.warning(f"⚠️ Sequential number {seq_num} out of range")
+                    except (ValueError, IndexError):
+                        logger.warning(f"⚠️ Could not resolve image ID: {img_id}")
+
+            logger.info(f"✅ Resolved {len(resolved_images)} images")
+
+            if len(resolved_images) < 4:
+                return {
+                    'success': False,
+                    'error': f"Need at least 4 images for training, got {len(resolved_images)}. Please provide more images."
+                }
+
+            # Create CharacterModel with these images
+            from content.models import CharacterTrainingImage
+            from PIL import Image as PILImage
+            from django.core.files.base import ContentFile
+            import io
+
+            character = CharacterModel.objects.create(
+                user=self.user,
+                name=style_name,
+                trigger_word=trigger_word,
+                training_status='preparing'
+            )
+            logger.info(f"✅ Created CharacterModel: {character.id}")
+
+            # Create CharacterTrainingImage objects from ImageHistory images
+            import requests
+            from django.core.files.storage import default_storage
+
+            for idx, img_hist in enumerate(resolved_images):
+                # Get image data from file_path
+                if img_hist.file_path.startswith('data:'):
+                    # Data URI - extract base64 data
+                    import base64
+                    import re
+                    match = re.match(r'data:image/\w+;base64,(.+)', img_hist.file_path)
+                    if match:
+                        img_data = base64.b64decode(match.group(1))
+                    else:
+                        logger.warning(f"⚠️ Could not parse data URI for image {img_hist.id}")
+                        continue
+                elif img_hist.file_path.startswith('http'):
+                    # URL - fetch the image
+                    response = requests.get(img_hist.file_path)
+                    img_data = response.content
+                else:
+                    # Local file path
+                    with default_storage.open(img_hist.file_path, 'rb') as f:
+                        img_data = f.read()
+
+                # Get image dimensions
+                pil_img = PILImage.open(io.BytesIO(img_data))
+                width, height = pil_img.size
+
+                # Create CharacterTrainingImage
+                training_img = CharacterTrainingImage(
+                    character_model=character,
+                    original_filename=img_hist.filename,
+                    file_size=len(img_data),
+                    width=width,
+                    height=height,
+                    order=idx,
+                    is_valid=True
+                )
+
+                # Save the image file
+                training_img.image.save(
+                    img_hist.filename,
+                    ContentFile(img_data),
+                    save=False
+                )
+                training_img.save()
+
+            character.training_images_count = len(resolved_images)
+            character.save()
+            logger.info(f"✅ Created {len(resolved_images)} CharacterTrainingImage objects")
+
+            # Create training ZIP file
+            from content.character_training import create_training_zip
+            zip_path = create_training_zip(character)
+            logger.info(f"✅ Created training ZIP: {zip_path}")
+
+            # Submit training job using existing infrastructure
+            from content.character_training import submit_training_job
+            result = submit_training_job(character)
+
+            logger.info(f"✅ Training submitted! ID: {result['training_id']}")
+
+            return {
+                'success': True,
+                'message': f"🎨 Training '{style_name}' started! Training ID: {result['training_id']}. This will take approximately 15-30 minutes. The model will be ready to use in all workflows once complete.",
+                'training_id': result['training_id'],
+                'character_id': str(character.id),
+                'trigger_word': trigger_word,
+                'style_name': style_name,
+                'status': result.get('status', 'pending'),
+                'estimated_time_minutes': result.get('estimated_time_minutes', 20)
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Character training error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to start training: {str(e)}"
             }
 
     # Session 128: Updated to use Image Editing Agent
@@ -531,7 +755,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             image_id = arguments['image_id']
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -563,10 +787,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         logger.info(f"🤖 Delegating to Image Editing Agent...")
 
         try:
-            image_id = arguments['image_id']
+            image_id = arguments['image_id']  # Already converted by handler
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -603,7 +827,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             prompt = arguments.get('prompt', 'creative variation')
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -641,7 +865,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             object_description = arguments['object_description']
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -679,7 +903,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             select_prompt = arguments.get('select_prompt')
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -720,7 +944,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             refinement_request = arguments['refinement_request']
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -761,7 +985,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             ratio = arguments.get('ratio', '1280:720')
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Video Generation Agent
             from agents.video_generation_agent import VideoGenerationAgent
@@ -912,7 +1136,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             voice = arguments.get('voice', 'Rachel')
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Audio Generation Agent
             from agents.audio_generation_agent import AudioGenerationAgent
@@ -947,7 +1171,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             voice = arguments.get('voice', 'Rachel')
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128: Delegate to specialized Audio Generation Agent
             from agents.audio_generation_agent import AudioGenerationAgent
@@ -1091,7 +1315,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             font_size = arguments.get('font_size', 72)
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128 Part 2: Delegate to specialized Video Editing Agent
             from agents.video_editing_agent import VideoEditingAgent
@@ -1129,7 +1353,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             style = arguments.get('style', 'cinematic_warm')
 
             # Get current project if in session
-            current_project = self.session.project if hasattr(self.session, 'project') and self.session.project else None
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
 
             # Session 128 Part 2: Delegate to specialized Video Editing Agent
             from agents.video_editing_agent import VideoEditingAgent
@@ -1662,6 +1886,12 @@ Recent Agent Activities:
 Available Assets in Current Context:
 {assets_context}
 
+CRITICAL - Project Context (Session 132):
+{f"- Active Project ID: {self._current_context.get('project_id')}" if hasattr(self, '_current_context') and self._current_context and 'project_id' in self._current_context else "- No active project"}
+- When using image_generation_agent, video_generation_agent, audio_generation_agent, three_d_generation_agent, or video_editing_agent, you MUST include the project_id parameter with the EXACT UUID shown above
+- DO NOT make up project IDs like "admin-project-assets" or "user-project" - use the actual UUID from "Active Project ID" above
+- If no Active Project ID is shown above, omit the project_id parameter (let the system handle it)
+
 IMPORTANT - Image & Video References:
 - When user says "image 2", "image number two", or "image #2", they mean Image #2 from the list above
 - When user says "video 1", they mean Video #1 from the list above
@@ -1685,19 +1915,32 @@ CRITICAL INSTRUCTIONS:
 8. **AVOID TEXT-TO-VIDEO WHEN IMAGES EXIST:** Do NOT use text-to-video mode if relevant images were just generated. Use image-to-video instead for better consistency and quality
 9. **CRITICAL - RESPECT EXACT COUNTS:** When the user specifies a number (e.g., "create 2 videos", "make 5 images"), create EXACTLY that many assets. Do NOT multiply by the number of available images. Example: "Create 3 logos and 2 videos using those logos" = create exactly 3 logos + exactly 2 videos (NOT 2 videos per logo!). Pick the BEST logo(s) to use for the specified number of videos.
 10. **CREDIT CONSERVATION:** Video generation is expensive (~22% of monthly credits per video). ALWAYS confirm the exact count before generating videos. If unclear, ask the user to clarify the exact number they want.
-11. **TOOL CALLING PREAMBLE (SESSION 129 - GPT-5.1 REQUIREMENT):** When you have access to a tool that can fulfill the user's request, you MUST call that tool. Before calling the tool, briefly explain what you are about to do and why. Then IMMEDIATELY execute the tool call. Do NOT just say you will do something without actually calling the tool function.
+11. **AGENT ORCHESTRATION (SESSION 134 - DUAL-AGENT ARCHITECTURE):** You have access to specialized agent orchestrators. ALWAYS explicitly announce which agent you're routing the request to:
+   - NEW image creation (standard) → "🎨 Routing to Creation Agent..." (Stability AI)
+   - NEW image creation (trained style) → "🎨 Routing to Trained Creation Agent..." (FLUX + LoRA when character_model_name is specified)
+   - EXISTING image editing → "✏️ Routing to Image Editing Agent..." (upscale, remove_background, etc.)
+   - Video operations → "🎬 Routing to Video Generation Agent..."
+   - Audio operations → "🎤 Routing to Audio Generation Agent..."
+   - 3D conversion → "🎨 Routing to 3D Generation Agent..."
+   - Video editing → "✂️ Routing to Video Editing Agent..."
+12. **TOOL CALLING PREAMBLE (SESSION 129 - GPT-5.1 REQUIREMENT):** When you have access to a tool that can fulfill the user's request, you MUST call that tool. State which agent is handling it, then IMMEDIATELY execute the tool call. Do NOT just say you will do something without actually calling the tool function.
 
-**Example - CORRECT:**
-User: "Convert image 25 to 3D"
-Your response: "I'll use the convert_to_3d tool to transform image 25 into a 3D model suitable for 3D printing."
-[Then you MUST call: convert_to_3d(image_id="25")]
+**Example - CORRECT (Session 131 - Agent Orchestration):**
+User: "Remove background from image 3"
+Your response: "🎨 Routing to Image Editing Agent for background removal on image #3..."
+[Then you MUST call: image_editing_agent(operation="remove_background", image_id="3")]
+
+**Example - CORRECT (Session 131 - Agent Orchestration):**
+User: "Animate image 16"
+Your response: "🎬 Routing to Video Generation Agent to animate image #16..."
+[Then you MUST call: video_generation_agent(operation="animate", params={{"image_id": "16"}})]
 
 **Example - WRONG:**
 User: "Convert image 25 to 3D"
 Your response: "✅ Conversion to 3D model is starting! This will take about 45-60 seconds."
-[NO tool call made - THIS IS WRONG! You must actually call the tool!]
+[NO tool call made - THIS IS WRONG! You must announce the agent AND call the tool!]
 
-**Remember:** If a tool exists for the task, explain briefly + execute the tool. Never say you'll do something without executing it.
+**Remember:** Always announce which agent is handling the request, then execute the agent orchestrator tool. Never say you'll do something without executing it.
 
 <persistence>
 - You are an autonomous agent - please keep going until the user's query is COMPLETELY resolved, before ending your turn and yielding back to the user.
@@ -1728,15 +1971,45 @@ Respond in a helpful, personalized way that:
                     logger.info(f"🔗 Using chain of thought from previous response: {previous_response_id[:20]}...")
 
             # Session 125: Pass tool definitions to enable GPT function calling
-            # Session 129: Use tool_choice to strongly encourage tool usage
+            # Session 131: FORCE tool usage with "required" mode for operations
             tools = self.get_tool_definitions()
-            tool_choice = {
-                "type": "allowed_tools",
-                "mode": "auto",  # GPT can choose which tool (if any) based on user request
-                "tools": [{"type": "function", "name": t["name"]} for t in tools]  # All 15 tools allowed
-            }
 
-            logger.info(f"🔧 Calling LLM with {len(tools)} tools (mode: auto)...")
+            # Session 131: Detect if this is an operation request (stronger tool forcing)
+            operation_keywords = [
+                # Image operations (broad keywords for workflow support)
+                'generate image', 'create image', 'draw', 'make image', 'picture of',
+                'create banner', 'create post', 'create avatar', 'create profile',  # Session 131: Workflow keywords
+                'social media banner', 'social media post', 'profile image', 'avatar image',  # Session 131: Workflow phrases
+                'upscale', 'remove background', 'create variation', 'erase', 'recolor', 'refine',
+                # Video operations
+                'animate', 'generate video', 'extend video', 'chain video', 'make video',
+                'create video', 'promo video', 'marketing video',  # Session 131: Workflow keywords
+                # Audio operations
+                'generate voice', 'voiceover', 'text to speech',
+                # 3D & editing
+                'convert to 3d', 'text overlay', 'color grading',
+                # Character training (Session 133)
+                'train style', 'train model', 'train lora', 'learn style', 'character training',
+                'create style model', 'learn visual style', 'train project style'
+            ]
+            is_operation = any(keyword in message.lower() for keyword in operation_keywords)
+
+            if is_operation:
+                # FORCE tool execution for operations
+                tool_choice = {
+                    "type": "allowed_tools",
+                    "mode": "required",  # Session 131: MUST use a tool, cannot just respond with text
+                    "tools": [{"type": "function", "name": t["name"]} for t in tools]
+                }
+                logger.info(f"🎯 FORCING tool execution (mode: required) - {len(tools)} tools available")
+            else:
+                # Auto mode for general conversation
+                tool_choice = {
+                    "type": "allowed_tools",
+                    "mode": "auto",
+                    "tools": [{"type": "function", "name": t["name"]} for t in tools]
+                }
+                logger.info(f"🔧 Calling LLM with {len(tools)} tools (mode: auto)...")
             ai_result = self.llm_enforcer.enforce_real_ai(
                 prompt=message,
                 context=system_prompt,
@@ -2035,6 +2308,21 @@ Respond in a helpful, personalized way that:
         # Session 126: Store context for tool execution (so tools can access project_id)
         self._current_context = full_context
 
+        # Session 135: Set project and session as instance attributes for all code paths
+        # This ensures GPT function calling can access project context via getattr(self, 'project', None)
+        self.project = None
+        self.session = None
+
+        if full_context.get('project_id'):
+            try:
+                from content.models import CreativeProject
+                self.project = CreativeProject.objects.get(id=full_context['project_id'], user=self.user)
+                logger.info(f"✅ Set self.project for all code paths: {self.project.name} (ID: {full_context['project_id']})")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ Project {full_context['project_id']} not found for user {self.user}")
+            except Exception as e:
+                logger.error(f"❌ Error resolving project for instance attribute: {e}")
+
         # Session 127: Check for animation requests and route to VideoAgent
         animation_phrases = ['animate image', 'animate', 'make it move', 'turn into video', 'bring to life']
         is_animation_request = any(phrase in message.lower() for phrase in animation_phrases)
@@ -2057,9 +2345,23 @@ Respond in a helpful, personalized way that:
                 logger.info(f"✅ VideoAgent initialized for user: {self.user}")
 
                 # Call agent method
-                # Session 127 Part 2: Pass project and session context!
-                current_project = getattr(self, 'project', None)
-                current_session = getattr(self, 'session', None)
+                # Session 135: Convert project_id from context to CreativeProject object
+                current_project = None
+                current_session = None
+
+                # Get project from context if available
+                if hasattr(self, '_current_context') and self._current_context:
+                    project_id = self._current_context.get('project_id')
+                    if project_id:
+                        try:
+                            from content.models import CreativeProject
+                            current_project = CreativeProject.objects.get(id=project_id, user=self.user)
+                            logger.info(f"✅ Resolved project_id '{project_id}' to CreativeProject: {current_project.name}")
+                        except CreativeProject.DoesNotExist:
+                            logger.warning(f"⚠️ Project {project_id} not found for user {self.user}")
+                        except Exception as e:
+                            logger.error(f"❌ Error resolving project: {e}")
+
                 logger.info(f"🔧 Calling video_agent.animate_image(image_id='{image_id}', project={current_project}, session={current_session})")
                 agent_result = video_agent.animate_image(
                     image_id=image_id,
@@ -2279,6 +2581,15 @@ Respond in a helpful, personalized way that:
 
         # Regular message processing with AI instead of templates
         response_data = self._generate_response(message, full_context)
+
+        # Session 135: Inject task_id from tool execution (enables video polling notifications)
+        if hasattr(self, '_last_tool_result') and self._last_tool_result:
+            if 'task_id' in self._last_tool_result and self._last_tool_result['task_id']:
+                response_data['task_id'] = self._last_tool_result['task_id']
+                response_data['agent_used'] = 'VideoAgent'  # Mark as video operation for frontend polling
+                logger.info(f"✅ Injected task_id into response: {self._last_tool_result['task_id']}")
+            # Clear the stored result after use
+            self._last_tool_result = None
 
         # Personalize response based on communication style
         if self.enhanced_profile.communication_style == 'detailed':
