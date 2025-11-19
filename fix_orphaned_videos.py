@@ -1,54 +1,90 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Session 122: Fix orphaned videos that have a session but no project
+Session 135: Fix orphaned videos - associate with "AI Content Generation Company" project
 
-This script links videos to their session's project if they're missing the association.
+This script finds videos without project association and links them to the user's primary project.
 Run with: python fix_orphaned_videos.py
 """
 
 import os
+import sys
 import django
 
 # Setup Django
+sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from content.models import VideoHistory
+from content.models import VideoHistory, CreativeProject
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 def fix_orphaned_videos():
-    """Find and fix videos that have a session but no project"""
+    """Find and fix videos that have no project association"""
+    print("=" * 80)
+    print("🔧 Fixing Orphaned Videos - Session 135")
+    print("=" * 80)
+    print()
 
-    # Find videos with session but no project
-    orphaned = VideoHistory.objects.filter(
-        session__isnull=False,  # Has a session
-        project__isnull=True,    # But no project
-        session__project__isnull=False  # And the session HAS a project
-    )
+    # Get user
+    user = User.objects.get(username='admin')
 
-    count = orphaned.count()
-    print(f"\n🔍 Found {count} orphaned videos with sessions that have projects")
+    # Find "AI Content Generation Company" project
+    project = CreativeProject.objects.filter(
+        user=user,
+        name__icontains='AI Content'
+    ).first()
 
-    if count == 0:
-        print("✅ No orphaned videos found! All videos are properly linked.")
+    if not project:
+        print("❌ Project not found!")
         return
 
-    # Show details
-    print("\n📹 Orphaned videos:")
-    for video in orphaned:
-        print(f"  - Video {str(video.id)[:8]}...: '{video.prompt[:50]}...' → Session: {str(video.session.session_id)[:8]} → Project: {video.session.project.name}")
+    print(f"📁 Target Project: {project.name}")
+    print(f"   ID: {project.id}")
+    print()
 
-    # Fix them
-    print(f"\n🔧 Fixing {count} orphaned videos...")
-    fixed_count = 0
+    # Find orphaned videos (videos without project)
+    orphaned_videos = VideoHistory.objects.filter(
+        user=user,
+        project__isnull=True
+    ).order_by('created_at')
 
-    for video in orphaned:
-        video.project = video.session.project
-        video.save(update_fields=['project'])
-        fixed_count += 1
-        print(f"  ✅ Linked video {str(video.id)[:8]}... to project: {video.session.project.name}")
+    print(f"📊 Found {orphaned_videos.count()} orphaned video(s)")
+    print()
 
-    print(f"\n🎉 Fixed {fixed_count} videos!")
-    print(f"   All videos are now properly linked to their projects.")
+    if orphaned_videos.count() == 0:
+        print("✅ No orphaned videos found!")
+        print()
+        print("=" * 80)
+        return
 
-if __name__ == '__main__':
+    # Fix each orphaned video
+    for video in orphaned_videos:
+        print(f"🔧 Fixing Video #{video.get_sequential_number()}")
+        print(f"   ID: {video.id}")
+        print(f"   Status: {video.status}")
+        print(f"   Created: {video.created_at}")
+        print(f"   Current project: {video.project}")
+        print()
+
+        # Associate with project
+        video.project = project
+        video.save()
+
+        print(f"   ✅ Now associated with: {project.name}")
+        print()
+
+    # Verify fix
+    project_videos = VideoHistory.objects.filter(
+        user=user,
+        project=project
+    ).count()
+
+    print("=" * 80)
+    print(f"✅ FIX COMPLETE!")
+    print(f"   Project '{project.name}' now has {project_videos} video(s)")
+    print("=" * 80)
+
+if __name__ == "__main__":
     fix_orphaned_videos()
