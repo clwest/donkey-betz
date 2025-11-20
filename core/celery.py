@@ -141,6 +141,14 @@ app.conf.beat_schedule = {
             'expires': 300,  # Expire after 5 minutes if not executed
         }
     },
+    # Session 139: Background 3D Model Status Polling
+    'poll-pending-3d-models': {
+        'task': 'core.tasks.poll_pending_3d_models',
+        'schedule': 30.0,  # Every 30 seconds
+        'options': {
+            'expires': 25,  # Expire after 25 seconds if not executed (just before next run)
+        }
+    },
 }
 
 # Spider-specific task routing configuration

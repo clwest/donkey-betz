@@ -214,7 +214,9 @@ if 'postgresql' in os.environ.get('DATABASE_URL', ''):
         'connect_timeout': 10,
         'options': '-c search_path=studio,public,dbao,shared'  # Include all schemas
     }
-    DATABASES['default']['CONN_MAX_AGE'] = 600
+    # Session 141: Set to 0 to fix Celery Beat database connection issues
+    # Closes connections immediately instead of pooling them
+    DATABASES['default']['CONN_MAX_AGE'] = 0
 else:
     # SQLite configuration
     DATABASES['default']['OPTIONS'] = {}

@@ -80,7 +80,8 @@ class ThreeDGenerationAgent:
                 image_asset_ids=[str(image.id)],
                 provider='replicate',
                 style=style,
-                scale=scale
+                scale=scale,
+                project_id=self.project_id  # Session 137: Pass project_id
             )
 
             if not minifig_assets:

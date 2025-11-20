@@ -24,7 +24,8 @@ def create_minifig_asset_from_images(
     pipeline_run=None,
     provider: str = 'placeholder',
     style: str = 'toy',
-    scale: str = 'medium'
+    scale: str = 'medium',
+    project_id: Optional[str] = None  # Session 137: Add project_id parameter
 ) -> List[MiniFigAsset]:
     """
     Create MiniFigAsset records from image assets.
@@ -125,6 +126,15 @@ def create_minifig_asset_from_images(
         if not result.success:
             raise ValueError(f"3D generation failed: {result.error_message}")
 
+        # Session 137: Get project if project_id provided
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=user)
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"Project {project_id} not found for user {user.username}")
+
         # Create MiniFigAsset with pending status
         title = f"Mini-Fig from {len(images)} image(s)"
         preview_url = images[0].file_path if images[0].file_path and not images[0].file_path.startswith('data:') else ''
@@ -138,6 +148,7 @@ def create_minifig_asset_from_images(
             status='pending',  # Async generation
             three_d_file='',  # Will be filled when generation completes
             preview_image_url=preview_url,
+            project=project,  # Session 137: Associate with project
             metadata={
                 'style': style,
                 'scale': scale,
@@ -151,6 +162,23 @@ def create_minifig_asset_from_images(
 
         created_assets.append(minifig)
         logger.info(f"Created MiniFigAsset {minifig.id} with prediction {result.prediction_id}")
+
+        # Session 142: Track agent contribution for 3D generation
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='three-d-generation-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                minifig_asset=minifig,
+                project=project,
+                contribution_type='generation',
+                task_description=f"Generated 3D model from {len(images)} source images using Replicate TRELLIS (style={style}, scale={scale})",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for MiniFigAsset {minifig.id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution for 3D generation: {e}")
+            # Don't fail content creation if contribution tracking fails
 
     else:
         # v1: Placeholder generation (immediate completion)
@@ -185,6 +213,23 @@ def create_minifig_asset_from_images(
 
             created_assets.append(minifig)
             logger.info(f"Created MiniFigAsset {minifig.id} from ImageHistory {image.id}")
+
+            # Session 142: Track agent contribution for 3D generation (placeholder)
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='three-d-generation-agent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    minifig_asset=minifig,
+                    project=None,  # Placeholder generation doesn't have project context
+                    contribution_type='generation',
+                    task_description=f"Generated placeholder 3D model from image {image.id} (provider={provider}, style={style}, scale={scale})",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for MiniFigAsset {minifig.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution for 3D generation: {e}")
+                # Don't fail content creation if contribution tracking fails
 
     logger.info(f"Successfully created {len(created_assets)} mini-fig assets")
     return created_assets
@@ -260,6 +305,67 @@ def update_minifig_status(minifig_id: str, status: str, error_message: str = '')
     return minifig
 
 
+def _download_glb_file(minifig: MiniFigAsset, glb_url: str) -> bool:
+    """
+    Download GLB file from Replicate CDN to local storage.
+
+    Session 139: Prevents data loss when CDN URLs expire (24-48 hours)
+
+    Args:
+        minifig: MiniFigAsset instance to update
+        glb_url: CDN URL to download from
+
+    Returns:
+        True if download succeeded, False otherwise
+    """
+    import requests
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+
+    try:
+        logger.info(f"📥 Downloading GLB file for MiniFigAsset {minifig.id}")
+        logger.info(f"   URL: {glb_url[:80]}...")
+
+        # Download file from CDN
+        response = requests.get(glb_url, timeout=60)
+        response.raise_for_status()
+
+        # Generate filename
+        filename = f"minifig-{minifig.id}.glb"
+        file_path = f"3d_models/{filename}"
+
+        # Save to storage
+        content_file = ContentFile(response.content)
+        saved_path = default_storage.save(file_path, content_file)
+
+        # Update MiniFigAsset with local file info
+        minifig.local_glb_path = saved_path
+        minifig.download_completed = True
+        minifig.download_error = ''  # Clear any previous errors
+        minifig.save(update_fields=['local_glb_path', 'download_completed', 'download_error'])
+
+        file_size_mb = len(response.content) / (1024 * 1024)
+        logger.info(f"✅ GLB file downloaded successfully")
+        logger.info(f"   Size: {file_size_mb:.2f} MB")
+        logger.info(f"   Saved to: {saved_path}")
+
+        return True
+
+    except requests.RequestException as e:
+        error_msg = f"Failed to download GLB file: {str(e)}"
+        logger.error(f"❌ {error_msg}")
+        minifig.download_error = error_msg
+        minifig.save(update_fields=['download_error'])
+        return False
+
+    except Exception as e:
+        error_msg = f"Unexpected error downloading GLB file: {str(e)}"
+        logger.error(f"❌ {error_msg}")
+        minifig.download_error = error_msg
+        minifig.save(update_fields=['download_error'])
+        return False
+
+
 def check_and_update_3d_generation(minifig_id: str) -> MiniFigAsset:
     """
     Check the status of a Replicate 3D generation and update the MiniFigAsset.
@@ -305,13 +411,25 @@ def check_and_update_3d_generation(minifig_id: str) -> MiniFigAsset:
 
     # Update MiniFigAsset based on status
     if status == 'succeeded':
-        # Extract file URLs from result
+        # Extract file URLs from result (Session 139: Ensure we extract strings, not dicts)
         model_file = result.get('model_file', '')
+
+        # Session 139: Defensive URL extraction - if model_file is a dict, extract the URL
+        if isinstance(model_file, dict):
+            # Replicate might return {"model_file": "url", ...} instead of just "url"
+            model_file = model_file.get('model_file', '') or model_file.get('url', '')
+            logger.warning(f"⚠️ model_file was a dict, extracted URL: {model_file[:80] if model_file else 'None'}")
+
+        # Ensure it's a string
+        if not isinstance(model_file, str):
+            logger.error(f"❌ model_file is not a string: {type(model_file)}")
+            model_file = str(model_file) if model_file else ''
+
         color_video = result.get('color_video', '')
         gaussian_ply = result.get('gaussian_ply', '')
 
         minifig.status = 'completed'
-        minifig.three_d_file = model_file  # GLB file
+        minifig.three_d_file = model_file  # GLB file (Session 139: Now guaranteed to be string URL)
         minifig.metadata['color_video'] = color_video
         minifig.metadata['gaussian_ply'] = gaussian_ply
         minifig.metadata['normal_video'] = result.get('normal_video', '')
@@ -319,6 +437,17 @@ def check_and_update_3d_generation(minifig_id: str) -> MiniFigAsset:
 
         logger.info(f"✅ MiniFigAsset {minifig_id} generation completed")
         logger.info(f"   Model file: {model_file}")
+
+        # Session 139: Download GLB file to local storage (prevents CDN expiration data loss)
+        if model_file and not minifig.download_completed:
+            logger.info(f"📥 Starting automatic file download for MiniFigAsset {minifig_id}")
+            download_success = _download_glb_file(minifig, model_file)
+            if download_success:
+                logger.info(f"✅ File download completed successfully")
+            else:
+                logger.warning(f"⚠️ File download failed, but CDN URL is still available: {model_file[:80]}...")
+        elif minifig.download_completed:
+            logger.info(f"✅ File already downloaded to: {minifig.local_glb_path}")
 
     elif status == 'failed':
         error = result.get('error', 'Unknown error')

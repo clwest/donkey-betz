@@ -429,3 +429,80 @@ def process_spider_data_automatic():
     logger.info(f"   Agents matched: {results['agents_matched']}, Errors: {results['errors']}")
 
     return results
+
+
+@shared_task
+def poll_pending_3d_models():
+    """
+    Background task to poll Replicate for pending 3D model status updates.
+
+    Runs every 30 seconds to check all MiniFigAssets with status='pending' and update them
+    if they're completed on Replicate. This prevents models from getting stuck
+    when frontend polling stops.
+
+    Session 139: Fix for 3D models stuck in 'pending' status
+    """
+    from content.models import MiniFigAsset
+    from content.minifig_services import check_and_update_3d_generation
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info("🎨 [3D MODEL POLLER] Starting background 3D model status polling...")
+
+    # Get all pending models (created in last 24 hours to avoid polling ancient models)
+    yesterday = timezone.now() - timedelta(hours=24)
+
+    pending_models = MiniFigAsset.objects.filter(
+        status='pending',
+        created_at__gte=yesterday
+    ).order_by('created_at')
+
+    if not pending_models.exists():
+        logger.info("🎨 [3D MODEL POLLER] No pending 3D models to check")
+        return {'status': 'idle', 'checked': 0, 'completed': 0, 'failed': 0, 'still_pending': 0}
+
+    logger.info(f"🎨 [3D MODEL POLLER] Found {pending_models.count()} pending 3D models to check")
+
+    stats = {
+        'checked': 0,
+        'completed': 0,
+        'failed': 0,
+        'still_pending': 0,
+        'errors': 0
+    }
+
+    for minifig in pending_models:
+        try:
+            logger.info(f"🎨 [3D MODEL POLLER] Checking 3D model {minifig.id} ({minifig.title[:40]}...)")
+
+            # Check status with Replicate (this function also downloads files automatically)
+            updated_minifig = check_and_update_3d_generation(str(minifig.id))
+
+            stats['checked'] += 1
+
+            if updated_minifig.status == 'completed':
+                logger.info(f"✅ [3D MODEL POLLER] 3D model {minifig.id} completed!")
+                stats['completed'] += 1
+
+            elif updated_minifig.status == 'failed':
+                logger.warning(f"❌ [3D MODEL POLLER] 3D model {minifig.id} failed on Replicate")
+                stats['failed'] += 1
+
+            elif updated_minifig.status in ['pending', 'processing']:
+                logger.info(f"⏳ [3D MODEL POLLER] 3D model {minifig.id} still {updated_minifig.status}")
+                stats['still_pending'] += 1
+
+            else:
+                logger.warning(f"❓ [3D MODEL POLLER] Unknown status for 3D model {minifig.id}: {updated_minifig.status}")
+                stats['still_pending'] += 1
+
+        except Exception as e:
+            logger.error(f"❌ [3D MODEL POLLER] Error checking 3D model {minifig.id}: {e}")
+            stats['errors'] += 1
+
+    logger.info(f"🎨 [3D MODEL POLLER] Poll complete: {stats['checked']} checked, {stats['completed']} completed, {stats['failed']} failed, {stats['still_pending']} still pending")
+
+    return {
+        'status': 'completed',
+        **stats
+    }
