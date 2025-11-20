@@ -313,6 +313,22 @@ class VideoAgent:
 
                     logger.info(f"✅ Created VideoHistory record: {video_record.id}")
 
+                    # Session 144: Track agent contribution for audio mixing
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            video=video_record,
+                            project=getattr(video, 'project', None),
+                            contribution_type='editing',
+                            task_description=f"Mixed audio to video using ffmpeg (volume={audio_volume})",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for video {video_record.id}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+
                     # Update result with proper URL
                     result['video_url'] = f"/{dest_path}"
                     result['video_id'] = video_record.id
@@ -752,6 +768,22 @@ class VideoAgent:
 
             logger.info(f"✅ Multi-operation edit complete! Video ID: {video_record.id}")
 
+            # Session 144: Track agent contribution for multi-edit
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_record,
+                    project=getattr(videos[0], 'project', None) if videos else None,
+                    contribution_type='editing',
+                    task_description=f"Multi-edit with DaVinci Resolve ({len(operations)} operations on {len(videos)} videos)",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {video_record.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+
             return {
                 'success': True,
                 'video_id': str(video_record.id),
@@ -881,6 +913,22 @@ class VideoAgent:
 
             logger.info(f"✅ Text overlay added! Video ID: {video_record.id}")
 
+            # Session 144: Track agent contribution for text overlay
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_record,
+                    project=getattr(video, 'project', None),
+                    contribution_type='editing',
+                    task_description=f"Added text overlay using DaVinci Resolve (text='{text}', position={position})",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {video_record.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+
             return {
                 'success': True,
                 'video_id': str(video_record.id),
@@ -997,6 +1045,22 @@ class VideoAgent:
             davinci.close_project()
 
             logger.info(f"✅ Color grade applied! Video ID: {video_record.id}")
+
+            # Session 144: Track agent contribution for color grading
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_record,
+                    project=getattr(video, 'project', None),
+                    contribution_type='editing',
+                    task_description=f"Applied color grading using DaVinci Resolve (style={style}, intensity={intensity})",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {video_record.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
 
             return {
                 'success': True,
@@ -1119,6 +1183,22 @@ class VideoAgent:
             # Session 84: No project cleanup needed (using ffmpeg, not DaVinci API)
 
             logger.info(f"✅ Videos chained with ffmpeg! Video ID: {video_record.id}")
+
+            # Session 144: Track agent contribution for video chaining
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_record,
+                    project=getattr(videos[0], 'project', None) if videos else None,
+                    contribution_type='editing',
+                    task_description=f"Chained {len(videos)} videos using ffmpeg (transition={transition_type})",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {video_record.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
 
             return {
                 'success': True,
@@ -1285,6 +1365,22 @@ class VideoAgent:
             self.memory.remember('most_recent_video', video_data)
 
             logger.info(f"✅ VideoAgent started image animation! Task ID: {result.task_id}")
+
+            # Session 144: Track agent contribution for image-to-video
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_record,
+                    project=project,
+                    contribution_type='generation',
+                    task_description=f"Generated image-to-video using Runway ML (image #{seq_num}, motion='{motion_prompt}')",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {video_record.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
 
             return {
                 'success': True,

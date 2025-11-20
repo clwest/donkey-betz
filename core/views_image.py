@@ -7790,6 +7790,23 @@ def _execute_generate_video(user, parameters, session=None):
         logger.info(f"✅ Executor started video generation: {result.task_id}")
         logger.info(f"📹 Created VideoHistory record: {video.id}")
 
+        # Session 144: Track agent contribution for video generation
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=video,
+                project=video_project,
+                contribution_type='generation',
+                task_description=f"Generated video via gallery_generate_video (type={video_type}, duration={duration}s)",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for video {video.id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            # Don't fail video creation if contribution tracking fails
+
         # Session 96 Weekend Project: Update session counter and check for auto-project creation
         project_info = increment_session_counter(session, 'video')
 
