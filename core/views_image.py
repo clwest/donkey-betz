@@ -671,6 +671,23 @@ def gallery_generate(request):
                         project=project  # Session 124: Associate with project
                     )
 
+                    # Session 143: Track agent contribution for gallery generation
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=history,
+                            project=project,
+                            contribution_type='generation',
+                            task_description=f"Generated image via gallery_generate (provider={provider}, quality={quality}, style={style}, resolution={width}x{height})",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {history.id}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        # Don't fail image creation if contribution tracking fails
+
                     # Session 122: Track generated image in AI Assistant for intelligent chaining
                     try:
                         from django.core.cache import cache

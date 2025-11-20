@@ -135,6 +135,7 @@ class VideoGenerationAgent:
             )
 
             # Associate with project if provided
+            project = None
             if self.project_id:
                 from content.models import Project
                 try:
@@ -144,6 +145,23 @@ class VideoGenerationAgent:
                     logger.info(f"✅ Video associated with project: {project.name}")
                 except Project.DoesNotExist:
                     logger.warning(f"⚠️  Project {self.project_id} not found for user")
+
+            # Session 143: Track agent contribution for video generation
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=project,
+                    contribution_type='generation',
+                    task_description=f"Generated video via VideoGenerationAgent (type={video_type}, duration={duration}s, quality={quality})",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {video_history.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail video creation if contribution tracking fails
 
             logger.info(f"⏳ Video generation submitted to RunwayML")
             logger.info(f"   Video ID: {video_history.id}")
@@ -325,6 +343,23 @@ class VideoGenerationAgent:
 
             logger.info(f"✅ Extension video record created")
             logger.info(f"   New Video ID: {extended_video.id}")
+
+            # Session 143: Track agent contribution for video extension
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=extended_video,
+                    project=original_video.project,
+                    contribution_type='editing',
+                    task_description=f"Extended video {video_id} by {extension_seconds}s using VideoGenerationAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video extension {extended_video.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail video creation if contribution tracking fails
 
             return {
                 'success': True,
