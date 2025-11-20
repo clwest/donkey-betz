@@ -504,6 +504,23 @@ def chain_videos_simple(request):
                     video_url=f"/media/generated_videos/{filename}"  # Local media URL
                 )
 
+                # Session 142: Track agent contribution
+                try:
+                    from agents.models import UnifiedAgentTemplate, AgentContribution
+                    agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                    AgentContribution.objects.create(
+                        agent=agent,
+                        video=video_history,
+                        project=None,
+                        contribution_type='generation',
+                        task_description="Generated video using VideoAgent",
+                        execution_time_seconds=0.0
+                    )
+                    logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to create agent contribution: {e}")
+                    # Don't fail content creation if contribution tracking fails
+
                 # Get the full URL for the video
                 video_url = request.build_absolute_uri(video_history.video_url)
 
@@ -688,6 +705,23 @@ def add_text_overlay_endpoint(request):
                 video_url=f"/media/generated_videos/{filename}"
             )
 
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='generation',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
+
             video_url = request.build_absolute_uri(video_history.video_url)
 
             return JsonResponse({
@@ -852,6 +886,23 @@ def apply_color_grading_endpoint(request):
                 video_url=f"/media/generated_videos/{filename}"
             )
 
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='generation',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
+
             video_url = request.build_absolute_uri(video_history.video_url)
 
             return JsonResponse({
@@ -1007,6 +1058,23 @@ def add_audio_to_video_endpoint(request):
                 status='completed',
                 video_url=f"/media/generated_videos/{filename}"
             )
+
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='generation',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
 
             video_url = request.build_absolute_uri(video_history.video_url)
 

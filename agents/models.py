@@ -766,6 +766,15 @@ class AgentContribution(UnifiedBaseModel):
         help_text="Video created/edited by agent"
     )
 
+    minifig_asset = models.ForeignKey(
+        'content.MiniFigAsset',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='agent_contributions',
+        help_text="3D model created by agent"
+    )
+
     # NOTE: AudioHistory model doesn't exist yet (TODO in content app)
     # audio = models.ForeignKey(
     #     'content.AudioHistory',
@@ -863,6 +872,8 @@ class AgentContribution(UnifiedBaseModel):
             content_type = f"image #{self.image.get_sequential_number()}"
         elif self.video:
             content_type = f"video #{self.video.get_sequential_number()}"
+        elif self.minifig_asset:
+            content_type = f"3D model #{self.minifig_asset.id}"
         # elif self.audio:  # TODO: Uncomment when AudioHistory exists
         #     content_type = f"audio #{self.audio.id}"
 
@@ -875,6 +886,8 @@ class AgentContribution(UnifiedBaseModel):
             return {'type': 'image', 'id': str(self.image.id), 'number': self.image.get_sequential_number()}
         elif self.video:
             return {'type': 'video', 'id': str(self.video.id), 'number': self.video.get_sequential_number()}
+        elif self.minifig_asset:
+            return {'type': '3d_model', 'id': str(self.minifig_asset.id)}
         # elif self.audio:  # TODO: Uncomment when AudioHistory exists
         #     return {'type': 'audio', 'id': str(self.audio.id)}
         return {'type': 'project', 'id': str(self.project.id)}

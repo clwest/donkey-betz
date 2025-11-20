@@ -429,6 +429,24 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             project=image_project  # Session 119: BUGFIX - Assign project if session has one
         )
 
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=history,
+                project=image_project,
+                contribution_type='generation',
+                task_description="Generated image using image-generation-agent",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {{ history.id }}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            # Don't fail image creation if contribution tracking fails
+
         logger.info(f"✅ Saved to history: {image_type} - {history.filename} (ID: {history.id})")
         return history
 
@@ -2515,13 +2533,31 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='upscaled_fast',
                         prompt='Fast Upscale (4x)'
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='generation',
+                            task_description="Generated image using image-generation-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        # Don't fail content creation if contribution tracking fails
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -2567,13 +2603,30 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='upscaled_conservative',
                         prompt='Conservative Upscale (4K)'
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='editing',
+                            task_description="Edited image using image-generation-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution for image upscaling: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -2631,13 +2684,30 @@ def execute_workflow_step(request):
 
                             # Save to history
                             from content.models import ImageHistory
-                            ImageHistory.objects.create(
+                            image_history = ImageHistory.objects.create(
                                 user=request.user,
                                 filename=filename,
                                 file_path=saved_path,
                                 image_type='upscaled_creative',
                                 prompt=config.get('prompt', 'enhance quality')
                             )
+
+                            # Session 142: Track agent contribution
+                            try:
+                                from agents.models import UnifiedAgentTemplate, AgentContribution
+                                agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+                                AgentContribution.objects.create(
+                                    agent=agent,
+                                    image=image_history,
+                                    project=None,
+                                    contribution_type='editing',
+                                    task_description="Edited image using image-generation-agent",
+                                    execution_time_seconds=0.0
+                                )
+                                logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                            except Exception as e:
+                                logger.error(f"❌ Failed to create agent contribution: {e}")
+                                logger.error(f"❌ Failed to create agent contribution: {e}")
 
                             return JsonResponse({'success': True, 'image_url': image_url})
 
@@ -2676,13 +2746,30 @@ def execute_workflow_step(request):
                     image_url = default_storage.url(saved_path)
 
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='background_removed',
                         prompt='Remove Background'
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='editing',
+                            task_description="Edited image using image-editing-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -2739,13 +2826,30 @@ def execute_workflow_step(request):
                     image_url = default_storage.url(saved_path)
 
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='recolored',
                         prompt=f"Recolor {config.get('search_prompt', 'object')} to {config.get('prompt', 'red')}"
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='editing',
+                            task_description="Edited image using image-editing-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -2820,13 +2924,30 @@ def execute_workflow_step(request):
                     image_url = default_storage.url(saved_path)
 
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='outpainted',
                         prompt=config.get('prompt', 'Extend image')
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='editing',
+                            task_description="Edited image using image-editing-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -2892,13 +3013,30 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='erased',
                         prompt='Erase Object'
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='editing',
+                            task_description="Edited image using image-editing-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -2975,13 +3113,30 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='inpainted',
                         prompt=prompt
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='editing',
+                            task_description="Edited image using image-editing-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -3054,13 +3209,30 @@ def execute_workflow_step(request):
 
                     # Save to history
                     from content.models import ImageHistory
-                    ImageHistory.objects.create(
+                    image_history = ImageHistory.objects.create(
                         user=request.user,
                         filename=filename,
                         file_path=saved_path,
                         image_type='generated',
                         prompt=prompt
                     )
+
+                    # Session 142: Track agent contribution
+                    try:
+                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+                        AgentContribution.objects.create(
+                            agent=agent,
+                            image=image_history,
+                            project=None,
+                            contribution_type='generation',
+                            task_description="Generated image using image-generation-agent",
+                            execution_time_seconds=0.0
+                        )
+                        logger.info(f"✅ Agent contribution tracked for image {{ image_history.id }}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
+                        logger.error(f"❌ Failed to create agent contribution: {e}")
 
                     return JsonResponse({'success': True, 'image_url': image_url})
                 else:
@@ -3589,6 +3761,53 @@ def unified_gallery(request):
                     'video_id': video.video_id,
                     'user_notes': video.user_notes,
                     'tags': video.tags,
+                })
+
+        # Fetch 3D models if requested (Session 137)
+        if media_type in ['all', '3d_models', 'models']:
+            from content.models import MiniFigAsset
+
+            # Only show completed 3D models
+            model_queryset = MiniFigAsset.objects.filter(user=user, status='completed')
+
+            # Apply filters
+            if is_favorite is not None:
+                model_queryset = model_queryset.filter(is_favorite=is_favorite.lower() == 'true')
+
+            if search_term:
+                model_queryset = model_queryset.filter(
+                    Q(title__icontains=search_term)
+                )
+
+            # Convert to unified format
+            for model in model_queryset:
+                # Build absolute URL for 3D file
+                model_url = model.three_d_file
+                preview_url = model.preview_image_url or ''
+
+                if model_url and not model_url.startswith(('http://', 'https://')):
+                    model_url = request.build_absolute_uri(model_url)
+                if preview_url and not preview_url.startswith(('http://', 'https://', 'data:')):
+                    preview_url = request.build_absolute_uri(preview_url)
+
+                all_items.append({
+                    'id': str(model.id),
+                    'type': '3d_model',
+                    'url': model_url,
+                    'thumbnail_url': preview_url,
+                    'prompt': model.title,  # Use title as prompt
+                    'created_at': model.created_at,
+                    'is_favorite': getattr(model, 'is_favorite', False),
+                    'view_count': getattr(model, 'view_count', 0),
+                    'download_count': getattr(model, 'download_count', 0),
+                    'model_used': 'replicate-trellis',
+                    'parameters': model.metadata,
+                    # 3D model-specific fields
+                    '3d_model_type': 'minifig',
+                    'provider': model.provider,
+                    'status': model.status,
+                    'style': model.metadata.get('style', 'toy'),
+                    'scale': model.metadata.get('scale', 'medium'),
                 })
 
         # TODO: Add audio when AudioHistory model is created
@@ -8986,6 +9205,23 @@ def _execute_inpaint(user, parameters):
             image_height=1024
         )
 
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=history_record,
+                project=None,
+                contribution_type='editing',
+                task_description="Edited image using image-editing-agent",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {{ history_record.id }}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+
         logger.info(f"✅ Executor inpaint complete: {saved_url}")
 
         return {
@@ -10066,6 +10302,71 @@ def get_portfolio(request):
                     }
                 })
 
+        # Query 3D models (Session 137: Add MiniFigAsset support)
+        if not content_type or content_type == '3d_model' or content_type == 'model':
+            from content.models import MiniFigAsset
+
+            # Only show completed 3D models
+            models_query = MiniFigAsset.objects.filter(
+                user=request.user,
+                status='completed'
+            ).select_related('user')
+
+            # Session 137: Apply search filter
+            if search_query:
+                models_query = models_query.filter(
+                    Q(title__icontains=search_query) |
+                    Q(provider__icontains=search_query)
+                )
+
+            models = models_query
+            for model_obj in models:
+                # Session 137: Find associated projects - check direct project field
+                projects = []
+
+                if hasattr(model_obj, 'project') and model_obj.project:
+                    if not project_id or str(model_obj.project.id) == project_id:
+                        projects.append({
+                            'id': str(model_obj.project.id),
+                            'name': model_obj.project.name,
+                            'status': model_obj.project.status
+                        })
+
+                # Skip if project filter doesn't match
+                if project_id and not projects:
+                    continue
+
+                # Build absolute URL for 3D file
+                model_url = model_obj.three_d_file or ''
+                preview_url = model_obj.preview_image_url or ''
+
+                if model_url and not model_url.startswith(('http://', 'https://')):
+                    model_url = request.build_absolute_uri(model_url)
+                if preview_url and not preview_url.startswith(('http://', 'https://', 'data:')):
+                    preview_url = request.build_absolute_uri(preview_url)
+
+                portfolio_items.append({
+                    'id': str(model_obj.id),
+                    'sequential_number': model_obj.get_sequential_number() if hasattr(model_obj, 'get_sequential_number') else 0,
+                    'type': '3d_model',
+                    'content_url': model_url,
+                    'thumbnail_url': preview_url,
+                    'prompt': model_obj.title,
+                    'operation_type': 'image-to-3d',
+                    'created_at': model_obj.created_at.isoformat(),
+                    'view_count': model_obj.view_count if hasattr(model_obj, 'view_count') else 0,
+                    'download_count': model_obj.download_count if hasattr(model_obj, 'download_count') else 0,
+                    'is_favorite': model_obj.is_favorite if hasattr(model_obj, 'is_favorite') else False,
+                    'projects': projects,
+                    'metadata': {
+                        'provider': model_obj.provider,
+                        'status': model_obj.status,
+                        'style': model_obj.metadata.get('style', 'toy') if model_obj.metadata else 'toy',
+                        'scale': model_obj.metadata.get('scale', 'medium') if model_obj.metadata else 'medium',
+                        'model_type': 'minifig'
+                    }
+                })
+
         # Query audio
         # TODO: Implement AudioHistory model first (currently using Runway ML but no model tracking)
         # if not content_type or content_type == 'audio':
@@ -10117,18 +10418,19 @@ def get_portfolio(request):
             # Sort by first project name if exists
             portfolio_items.sort(key=lambda x: x['projects'][0]['name'] if x['projects'] else 'zzzz')
 
-        # Get summary stats
+        # Get summary stats (Session 137: Add 3D models count)
         stats = {
             'total_items': len(portfolio_items),
             'images': sum(1 for item in portfolio_items if item['type'] == 'image'),
             'videos': sum(1 for item in portfolio_items if item['type'] == 'video'),
             'audio': sum(1 for item in portfolio_items if item['type'] == 'audio'),
+            'models': sum(1 for item in portfolio_items if item['type'] == '3d_model'),
             'favorites': sum(1 for item in portfolio_items if item['is_favorite']),
             'total_views': sum(item['view_count'] for item in portfolio_items),
             'total_downloads': sum(item['download_count'] for item in portfolio_items)
         }
 
-        logger.info(f"✅ Portfolio loaded: {stats['total_items']} items ({stats['images']} images, {stats['videos']} videos, {stats['audio']} audio)")
+        logger.info(f"✅ Portfolio loaded: {stats['total_items']} items ({stats['images']} images, {stats['videos']} videos, {stats['audio']} audio, {stats['models']} 3D models)")
 
         # Session 96: Add no-cache headers to prevent browser caching of expired video URLs
         response = Response({
@@ -10952,6 +11254,23 @@ def upscale_image_view(request):
             project=project
         )
 
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=new_image,
+                project=project,
+                contribution_type='editing',
+                task_description="Edited image using image-generation-agent",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {{ new_image.id }}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+
         logger.info(f"✅ Image upscaled successfully: {new_image.id}")
 
         return JsonResponse({
@@ -11052,6 +11371,23 @@ def remove_background_view(request):
             model_used="stability-remove-bg",
             project=project
         )
+
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=new_image,
+                project=project,
+                contribution_type='editing',
+                task_description="Edited image using image-editing-agent",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {{ new_image.id }}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            logger.error(f"❌ Failed to create agent contribution: {e}")
 
         logger.info(f"✅ Background removed successfully: {new_image.id}")
 
@@ -11156,6 +11492,24 @@ def create_variations_view(request):
                     model_used="stability-structure-control",
                     project=project
                 )
+
+                # Session 142: Track agent contribution
+                try:
+                    from agents.models import UnifiedAgentTemplate, AgentContribution
+                    agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+                    AgentContribution.objects.create(
+                        agent=agent,
+                        image=new_image,
+                        project=project,
+                        contribution_type='generation',
+                        task_description="Generated image using image-generation-agent",
+                        execution_time_seconds=0.0
+                    )
+                    logger.info(f"✅ Agent contribution tracked for image {{ new_image.id }}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to create agent contribution: {e}")
+                    logger.error(f"❌ Failed to create agent contribution: {e}")
+
                 created_images.append({
                     'image_id': str(new_image.id),
                     'image_url': image_url,  # Return actual URL, not data URI
@@ -11273,6 +11627,23 @@ def search_and_replace_view(request):
             project=project
         )
 
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=new_image,
+                project=project,
+                contribution_type='editing',
+                task_description="Edited image using image-editing-agent",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {{ new_image.id }}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+
         logger.info(f"✅ Search and replace successful: {new_image.id}")
 
         return JsonResponse({
@@ -11368,6 +11739,23 @@ def recolor_image_view(request):
             model_used="stability-search-recolor",
             project=project
         )
+
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=new_image,
+                project=project,
+                contribution_type='editing',
+                task_description="Edited image using image-editing-agent",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {{ new_image.id }}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+            logger.error(f"❌ Failed to create agent contribution: {e}")
 
         logger.info(f"✅ Recolor successful: {new_image.id}")
 

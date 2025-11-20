@@ -1236,7 +1236,7 @@ def video_to_video_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
-            VideoHistory.objects.create(
+            video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
                 user=request.user if request.user.is_authenticated else None,
                 video_type='video_to_video',
@@ -1246,6 +1246,23 @@ def video_to_video_endpoint(request):
                 ratio="1280:720",
                 status='pending'
             )
+
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='generation',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
 
         return JsonResponse({
             'success': result.success,
@@ -1322,7 +1339,7 @@ def video_upscale_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
-            VideoHistory.objects.create(
+            video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
                 user=request.user if request.user.is_authenticated else None,
                 video_type='upscale_video',
@@ -1331,6 +1348,23 @@ def video_upscale_endpoint(request):
                 ratio="3840:2160",  # 4K
                 status='pending'
             )
+
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='editing',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
 
         return JsonResponse({
             'success': result.success,
@@ -1408,7 +1442,7 @@ def extend_video_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
-            VideoHistory.objects.create(
+            video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
                 user=request.user if request.user.is_authenticated else None,
                 video_type='extend_video',
@@ -1419,6 +1453,23 @@ def extend_video_endpoint(request):
                 status='pending',
                 parent_video_url=video_url  # Track which video was extended
             )
+
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='generation',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
 
         return JsonResponse({
             'success': result.success,
@@ -1543,7 +1594,7 @@ def character_performance_endpoint(request):
 
         # Save to history if successful
         if result.success and result.task_id:
-            VideoHistory.objects.create(
+            video_history = VideoHistory.objects.create(
                 video_id=result.task_id,
                 user=request.user if request.user.is_authenticated else None,
                 video_type='character_performance',
@@ -1553,6 +1604,23 @@ def character_performance_endpoint(request):
                 ratio="1280:720",
                 status='pending'
             )
+
+            # Session 142: Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=video_history,
+                    project=None,
+                    contribution_type='generation',
+                    task_description="Generated video using VideoAgent",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for video {{ video_history.id }}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+                # Don't fail content creation if contribution tracking fails
 
         return JsonResponse({
             'success': result.success,

@@ -214,11 +214,15 @@ class ImageEditingAgent:
             response = create_variations_view(request)
             result = json.loads(response.content)
 
-            if result.get('success') or result.get('image_ids'):
+            if result.get('success'):
+                # Extract image IDs from the images array
+                images = result.get('images', [])
+                image_ids = [img['image_id'] for img in images]
+
                 return {
                     'success': True,
-                    'message': f"✨ Creating {count} variations. Results will appear in gallery shortly (~40 seconds).",
-                    'image_ids': result.get('image_ids', [])
+                    'message': f"✨ Created {len(image_ids)} variations successfully! Check your gallery.",
+                    'image_ids': image_ids
                 }
             else:
                 return {
@@ -387,7 +391,7 @@ class ImageEditingAgent:
         try:
             # Try UUID first
             return ImageHistory.objects.get(id=image_id, user=self.user)
-        except (ValueError, ImageHistory.DoesNotExist):
+        except (ValueError, ImageHistory.DoesNotExist, Exception):  # Session 137: Catch all exceptions including ValidationError
             # Try sequential number
             try:
                 seq_num = int(image_id)

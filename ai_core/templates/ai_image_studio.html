@@ -5486,6 +5486,14 @@
                         </div>
                     </div>
                     <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-models">0</h5>
+                                <small>3D Models</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="card text-center" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;">
                             <div class="card-body">
                                 <h5 class="mb-0" id="total-favorites">0</h5>
@@ -20221,9 +20229,16 @@
                             styleContext = `. Use this exact style: "${extractedStyle}"`;
                             console.log(`🎨 Extracted style from first asset: "${extractedStyle}"`);
                         } else {
-                            // Use the FULL prompt as the style reference
-                            styleContext = `. Match this exact style and aesthetic: "${sampleAsset.prompt}"`;
-                            console.log(`🎨 Using full prompt as style reference: "${sampleAsset.prompt.substring(0, 100)}..."`);
+                            // Clean the prompt before using as style reference
+                            // Remove "Animated from image #X:" prefix that confuses GPT
+                            let cleanPrompt = sampleAsset.prompt
+                                .replace(/^Animated from image #\d+:\s*/i, '')
+                                .replace(/^Variation \d+ of image #\d+:\s*/i, '')
+                                .trim();
+
+                            // Use the cleaned prompt as the style reference
+                            styleContext = `. Match this exact style and aesthetic: "${cleanPrompt}"`;
+                            console.log(`🎨 Using cleaned prompt as style reference: "${cleanPrompt.substring(0, 100)}..."`);
                         }
                     } else {
                         styleContext = ' matching the visual style of existing project assets';
@@ -20855,7 +20870,7 @@
                         setTimeout(() => {
                             for (let i = 0; i < 6; i++) {
                                 setTimeout(() => {
-                                    console.log(`🔄 Polling for new assets (${i+1}/6)...`);
+                                    // console.log(`🔄 Polling for new assets (${i+1}/6)...`);
                                     refreshProjectAssets(projectId);
                                 }, i * 5000);
                             }
@@ -23440,12 +23455,13 @@
             }
         }
 
-        // Update stats display
+        // Update stats display (Session 137: Add 3D models)
         function updatePortfolioStats() {
             document.getElementById('total-items').textContent = portfolioSystem.stats.total_items || 0;
             document.getElementById('total-images').textContent = portfolioSystem.stats.images || 0;
             document.getElementById('total-videos').textContent = portfolioSystem.stats.videos || 0;
             document.getElementById('total-audio').textContent = portfolioSystem.stats.audio || 0;
+            document.getElementById('total-models').textContent = portfolioSystem.stats.models || 0;
             document.getElementById('total-favorites').textContent = portfolioSystem.stats.favorites || 0;
             document.getElementById('total-views').textContent = portfolioSystem.stats.total_views || 0;
         }
@@ -23466,7 +23482,8 @@
             emptyState.style.display = 'none';
             let html = '';
             portfolioSystem.items.forEach(item => {
-                const typeIcon = item.type === 'image' ? '🖼️' : item.type === 'video' ? '🎬' : '🎵';
+                // Session 137: Add 3D model support
+                const typeIcon = item.type === 'image' ? '🖼️' : item.type === 'video' ? '🎬' : item.type === '3d_model' ? '🎨' : '🎵';
                 const favoriteIcon = item.is_favorite ? '⭐' : '☆';
 
                 // Project tags
@@ -23477,13 +23494,20 @@
                     `).join(' ');
                 }
 
-                // Thumbnail or placeholder
+                // Thumbnail or placeholder (Session 137: Add 3D model rendering)
                 let thumbnail = '';
                 if (item.type === 'image') {
                     thumbnail = `<img src="${item.content_url}" alt="Image" style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;">`;
                 } else if (item.type === 'video') {
                     // Session 96: Show actual video with controls (consistent with Video Gallery)
                     thumbnail = `<video src="${item.content_url}" controls style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;"></video>`;
+                } else if (item.type === '3d_model') {
+                    // Session 137: Show 3D model preview or icon
+                    if (item.thumbnail_url) {
+                        thumbnail = `<img src="${item.thumbnail_url}" alt="3D Model" style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;">`;
+                    } else {
+                        thumbnail = `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎨</span></div>`;
+                    }
                 } else {
                     thumbnail = `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎵</span></div>`;
                 }

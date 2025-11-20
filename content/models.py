@@ -2129,6 +2129,16 @@ class MiniFigAsset(UnifiedBaseModel):
         help_text="Source image used for mini-fig generation"
     )
 
+    # Session 137: Add project field
+    project = models.ForeignKey(
+        'CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='three_d_models',
+        help_text="Creative project this 3D model belongs to"
+    )
+
     # MiniFig identification
     title = models.CharField(
         max_length=200,
@@ -2161,7 +2171,32 @@ class MiniFigAsset(UnifiedBaseModel):
     # 3D File output
     three_d_file = models.URLField(
         max_length=1000,
-        help_text="URL to 3D file (STL, OBJ, etc.) - v1: placeholder URL"
+        help_text="URL to 3D file (STL, OBJ, etc.) - CDN URL from Replicate (expires in 24-48hrs)"
+    )
+
+    # Session 139: Local file persistence (prevents data loss after CDN expiration)
+    glb_file = models.FileField(
+        upload_to='3d_models/',
+        null=True,
+        blank=True,
+        help_text="Local GLB file (permanent storage)"
+    )
+
+    local_glb_path = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Path to local GLB file relative to MEDIA_ROOT"
+    )
+
+    download_completed = models.BooleanField(
+        default=False,
+        help_text="Whether the CDN file has been downloaded to local storage"
+    )
+
+    download_error = models.TextField(
+        blank=True,
+        help_text="Error message if file download failed"
     )
 
     preview_image_url = models.URLField(
