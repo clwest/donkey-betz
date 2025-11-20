@@ -19013,6 +19013,69 @@
             const deadline = project.deadline ? new Date(project.deadline).toLocaleString() : 'No deadline';
 
             detailContent.innerHTML = `
+                <!-- Session 146: Project Stats Header -->
+                <div class="mb-4 p-4 rounded" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: 2px solid #a78bfa;">
+                    <h5 class="text-white mb-3">
+                        <i class="fas fa-chart-bar"></i> Project Stats
+                    </h5>
+
+                    <!-- Content Stats -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div style="font-size: 28px;">📸</div>
+                                <div class="h4 text-white mb-0" id="stats-images-${project.id}">0</div>
+                                <div class="small text-light">Images</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div style="font-size: 28px;">🎬</div>
+                                <div class="h4 text-white mb-0" id="stats-videos-${project.id}">0</div>
+                                <div class="small text-light">Videos</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div style="font-size: 28px;">🎨</div>
+                                <div class="h4 text-white mb-0" id="stats-models-${project.id}">0</div>
+                                <div class="small text-light">3D Models</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collaboration Stats -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div style="font-size: 28px;">🤖</div>
+                                <div class="h4 text-white mb-0" id="stats-agents-${project.id}">0</div>
+                                <div class="small text-light">Agents</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div style="font-size: 28px;">🎯</div>
+                                <div class="h4 text-white mb-0" id="stats-decisions-${project.id}">0</div>
+                                <div class="small text-light">Decisions</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <div style="font-size: 28px;">⏱️</div>
+                                <div class="h4 text-white mb-0" id="stats-time-${project.id}">0s</div>
+                                <div class="small text-light">Total Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="text-center text-light small">
+                        📅 Created <span id="stats-created-${project.id}">...</span> •
+                        Last active <span id="stats-active-${project.id}">...</span>
+                    </div>
+                </div>
+
                 <!-- Session 125: Split View Layout - Project & Assistant Side by Side -->
                 <div class="row">
                     <!-- LEFT: Project Content (60%) -->
@@ -19337,6 +19400,66 @@
                             🔄 Refresh
                         </button>
                     </div>
+
+                    <!-- Session 147: Search/Filter Controls -->
+                    <div class="mb-3 p-3 rounded" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                        <div class="row g-2">
+                            <!-- Search Box -->
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-dark border-secondary">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text"
+                                           id="asset-search-${project.id}"
+                                           class="form-control bg-dark text-light border-secondary"
+                                           placeholder="Search content by prompt or description..."
+                                           onkeyup="debounceAssetSearch('${project.id}')">
+                                </div>
+                            </div>
+
+                            <!-- Type Filter -->
+                            <div class="col-md-2">
+                                <select id="type-filter-${project.id}"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary"
+                                        onchange="filterProjectAssets('${project.id}')">
+                                    <option value="all">All Types</option>
+                                    <option value="image">📸 Images</option>
+                                    <option value="video">🎬 Videos</option>
+                                    <option value="3d_model">🎨 3D Models</option>
+                                </select>
+                            </div>
+
+                            <!-- Agent Filter -->
+                            <div class="col-md-2">
+                                <select id="agent-filter-${project.id}"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary"
+                                        onchange="filterProjectAssets('${project.id}')">
+                                    <option value="all">All Agents</option>
+                                    <!-- Dynamically populated -->
+                                </select>
+                            </div>
+
+                            <!-- Sort By -->
+                            <div class="col-md-2">
+                                <select id="sort-filter-${project.id}"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary"
+                                        onchange="filterProjectAssets('${project.id}')">
+                                    <option value="-created_at">Newest First</option>
+                                    <option value="created_at">Oldest First</option>
+                                    <option value="-rating">Highest Rated</option>
+                                    <option value="rating">Lowest Rated</option>
+                                    <option value="type">By Type</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Results Count -->
+                        <div class="mt-2 small text-light">
+                            <span id="results-count-${project.id}">Loading...</span>
+                        </div>
+                    </div>
+
                     <div id="project-assets-${project.id}" class="row g-3">
                         <div class="col-12 text-center py-4">
                             <div class="spinner-border text-warning" role="status"></div>
@@ -19425,13 +19548,55 @@
             `;
 
             // Session 63: Auto-load project assets after rendering
-            setTimeout(() => refreshProjectAssets(project.id), 500);
+            // Session 147: Load assets and agent filters
+            setTimeout(() => {
+                refreshProjectAssets(project.id);
+                loadAgentFiltersForProject(project.id);
+            }, 500);
             // Session 97: Auto-load project sessions after rendering
             setTimeout(() => refreshProjectSessions(project.id), 600);
             // Session 100: Auto-load project decisions timeline after rendering
             setTimeout(() => refreshProjectDecisions(project.id), 700);
             // Session 125: Auto-load agent contributions after rendering
             setTimeout(() => loadAgentContributions(project.id), 800);
+
+            // Session 146: Populate Project Stats
+            if (project.stats) {
+                // Content stats
+                document.getElementById(`stats-images-${project.id}`).textContent = project.stats.content.images;
+                document.getElementById(`stats-videos-${project.id}`).textContent = project.stats.content.videos;
+                document.getElementById(`stats-models-${project.id}`).textContent = project.stats.content.models;
+
+                // Collaboration stats
+                document.getElementById(`stats-agents-${project.id}`).textContent = project.stats.collaboration.unique_agents_count || project.stats.collaboration.unique_agents?.length || 0;
+                document.getElementById(`stats-decisions-${project.id}`).textContent = project.stats.collaboration.decisions_count;
+
+                // Format execution time (seconds to readable format)
+                const totalSeconds = project.stats.collaboration.execution_time_seconds;
+                let timeText;
+                if (totalSeconds < 60) {
+                    timeText = `${totalSeconds}s`;
+                } else if (totalSeconds < 3600) {
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    timeText = seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+                } else {
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    timeText = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+                }
+                document.getElementById(`stats-time-${project.id}`).textContent = timeText;
+
+                // Timeline (relative time)
+                if (project.stats.timeline.created_at) {
+                    const createdDate = new Date(project.stats.timeline.created_at);
+                    document.getElementById(`stats-created-${project.id}`).textContent = getTimeAgo(createdDate);
+                }
+                if (project.stats.timeline.last_active) {
+                    const lastActiveDate = new Date(project.stats.timeline.last_active);
+                    document.getElementById(`stats-active-${project.id}`).textContent = getTimeAgo(lastActiveDate);
+                }
+            }
 
             // Session 125: Set project context for embedded AI Assistant
             if (window.aiAssistant) {
@@ -21172,11 +21337,209 @@
         }
 
         /**
+         * Session 147: Asset Search/Filter Functions
+         */
+        let assetSearchTimeout;
+        let assetLoadingFlags = {}; // Prevent multiple simultaneous loads
+
+        function debounceAssetSearch(projectId) {
+            clearTimeout(assetSearchTimeout);
+            assetSearchTimeout = setTimeout(() => filterProjectAssets(projectId), 300);
+        }
+
+        async function filterProjectAssets(projectId) {
+            // Prevent multiple simultaneous loads
+            if (assetLoadingFlags[projectId]) {
+                console.log('⏸️ Already loading assets for this project, skipping...');
+                return;
+            }
+            assetLoadingFlags[projectId] = true;
+            const search = document.getElementById(`asset-search-${projectId}`)?.value || '';
+            const type = document.getElementById(`type-filter-${projectId}`)?.value || 'all';
+            const agent = document.getElementById(`agent-filter-${projectId}`)?.value || 'all';
+            const sort = document.getElementById(`sort-filter-${projectId}`)?.value || '-created_at';
+
+            // Build query parameters
+            const params = new URLSearchParams({
+                project_id: projectId
+            });
+
+            if (search) params.append('search', search);
+            if (type && type !== 'all') params.append('content_type', type);
+            if (agent && agent !== 'all') params.append('agent', agent);
+            if (sort) params.append('sort_by', sort);
+
+            console.log(`🔍 Filtering assets: search="${search}", type="${type}", agent="${agent}", sort="${sort}"`);
+
+            // Fetch filtered assets
+            try {
+                const container = document.getElementById(`project-assets-${projectId}`);
+                if (!container) return;
+
+                // Show loading state
+                container.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <div class="spinner-border text-warning" role="status"></div>
+                        <p class="mt-2 text-muted">Filtering assets...</p>
+                    </div>
+                `;
+
+                const response = await fetch(`/api/portfolio/?${params}`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log(`✅ Filtered results:`, data);
+
+                // Update results count
+                const resultsCount = document.getElementById(`results-count-${projectId}`);
+                if (resultsCount && data.stats) {
+                    resultsCount.textContent = `Showing ${data.stats.total_items} items (${data.stats.images} images, ${data.stats.videos} videos, ${data.stats.models} 3D models)`;
+                }
+
+                // Render filtered assets using existing logic
+                if (data.success && data.portfolio && data.portfolio.length > 0) {
+                    renderFilteredAssets(projectId, data.portfolio, container);
+                } else {
+                    container.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <div style="font-size: 48px; opacity: 0.3;">🔍</div>
+                            <p class="text-muted mt-3">No assets match your filters</p>
+                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="clearAssetFilters('${projectId}')">
+                                Clear Filters
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Filter error:', error);
+                showNotification('Failed to filter assets', 'danger');
+            } finally {
+                // Release loading flag
+                assetLoadingFlags[projectId] = false;
+            }
+        }
+
+        function renderFilteredAssets(projectId, assets, container) {
+            // Group assets by type
+            const images = assets.filter(a => a.type === 'image');
+            const videos = assets.filter(a => a.type === 'video');
+            const models3d = assets.filter(a => a.type === '3d_model');
+
+            // Use the existing renderAssetCard logic (extracted from refreshProjectAssets)
+            const renderAssetCard = (asset) => `
+                <div class="col-md-4 col-lg-3">
+                    <div class="card h-100" style="background: #222; border: 1px solid #444; position: relative;">
+                        ${asset.type === 'image' ? `
+                            <button onclick="event.stopPropagation(); downloadImageFromProject('${asset.id}', '${asset.content_url}', ${asset.sequential_number || 'null'})" style="position: absolute; top: 8px; right: 182px; background: rgba(34, 197, 94, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" onmouseover="this.style.background='rgba(22, 163, 74, 1)'" onmouseout="this.style.background='rgba(34, 197, 94, 0.9)'" title="Download this image">📥 Download</button>
+                            <button onclick="event.stopPropagation(); toggleFavorite('${asset.id}', this)" style="position: absolute; top: 8px; right: 95px; background: rgba(251, 191, 36, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" onmouseover="this.style.background='rgba(245, 158, 11, 1)'" onmouseout="this.style.background='rgba(251, 191, 36, 0.9)'" title="${asset.is_favorite ? 'Remove from favorites' : 'Add to favorites'}"><span class="favorite-icon">${asset.is_favorite ? '⭐' : '☆'}</span> Favorite</button>
+                            <button onclick="event.stopPropagation(); deleteImageFromProject('${asset.id}', '${projectId}')" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" onmouseover="this.style.background='rgba(220, 38, 38, 1)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.9)'" title="Delete this image">🗑️ Delete</button>
+                            <img src="${asset.thumbnail_url || asset.content_url}" class="card-img-top" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewAsset(this, '${asset.id}', '${asset.type}')" alt="${asset.prompt || 'Generated image'}">
+                        ` : asset.type === 'video' ? `
+                            <div class="card-img-top" style="height: 200px; position: relative; cursor: pointer; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); display: flex; align-items: center; justify-content: center;" onclick="viewAsset(this, '${asset.id}', '${asset.type}')" data-video-url="${asset.content_url}">
+                                <button onclick="event.stopPropagation(); toggleVideoFavorite('${asset.id}', this)" style="position: absolute; top: 8px; right: 95px; background: rgba(251, 191, 36, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10;"><span class="favorite-icon">${asset.is_favorite ? '⭐' : '☆'}</span> Favorite</button>
+                                <button onclick="event.stopPropagation(); deleteVideoFromProject('${asset.id}', '${projectId}')" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10;">🗑️ Delete</button>
+                                <div style="font-size: 48px; opacity: 0.6;">🎬</div>
+                                <div style="background: rgba(34, 211, 238, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; position: absolute;">▶️ Click to Play</div>
+                            </div>
+                        ` : asset.type === '3d_model' ? `
+                            <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 200px; background: linear-gradient(135deg, #1a103e 0%, #2d1b69 100%); cursor: pointer; position: relative;" data-model-url="${asset.content_url}" onclick="viewAsset(this, '${asset.id}', '${asset.type}')">
+                                <button onclick="event.stopPropagation(); toggleFavorite('${asset.id}', this)" style="position: absolute; top: 8px; right: 95px; background: rgba(251, 191, 36, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10;"><span class="favorite-icon">${asset.is_favorite ? '⭐' : '☆'}</span> Favorite</button>
+                                <button onclick="event.stopPropagation(); deleteVideoFromProject('${asset.id}', '${projectId}')" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; z-index: 10;">🗑️ Delete</button>
+                                <div style="font-size: 48px; opacity: 0.8;">🎨</div>
+                                <div style="background: rgba(147, 51, 234, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; position: absolute;">🖼️ View 3D Model</div>
+                            </div>
+                        ` : ''}
+                        <div class="card-body p-2">
+                            <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">🆔 ${asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : '3D Model'} #${asset.sequential_number || asset.id}</p>
+                            <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">${asset.prompt && asset.prompt.length > 60 ? asset.prompt.substring(0, 60) + '...' : asset.prompt || 'No prompt'}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">${asset.type === '3d_model' ? '3D' : asset.type}</small>
+                                <div>${asset.is_favorite ? '<span title="Favorite">⭐</span>' : ''} <small class="text-muted">${asset.view_count} 👁️ | ${asset.download_count} 📥</small></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let sectionsHtml = '';
+            if (images.length > 0) {
+                sectionsHtml += `<div class="col-12 mt-4"><h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">📸 Images (${images.length})</h5></div>${images.map(renderAssetCard).join('')}`;
+            }
+            if (videos.length > 0) {
+                sectionsHtml += `<div class="col-12 mt-4"><h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">🎬 Videos (${videos.length})</h5></div>${videos.map(renderAssetCard).join('')}`;
+            }
+            if (models3d.length > 0) {
+                sectionsHtml += `<div class="col-12 mt-4"><h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">🎨 3D Models (${models3d.length})</h5></div>${models3d.map(renderAssetCard).join('')}`;
+            }
+            container.innerHTML = sectionsHtml;
+        }
+
+        function clearAssetFilters(projectId) {
+            document.getElementById(`asset-search-${projectId}`).value = '';
+            document.getElementById(`type-filter-${projectId}`).value = 'all';
+            document.getElementById(`agent-filter-${projectId}`).value = 'all';
+            document.getElementById(`sort-filter-${projectId}`).value = '-created_at';
+            filterProjectAssets(projectId);
+        }
+
+        async function loadAgentFiltersForProject(projectId) {
+            try {
+                // Get project stats to find unique agents
+                const response = await fetch(`/api/creative-projects/${projectId}/`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const agents = data.project?.stats?.unique_agents || [];
+
+                const dropdown = document.getElementById(`agent-filter-${projectId}`);
+                if (!dropdown) return;
+
+                // Clear existing options except "All Agents"
+                dropdown.innerHTML = '<option value="all">All Agents</option>';
+
+                // Add agent options
+                agents.forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent;
+                    option.textContent = `🤖 ${agent}`;
+                    dropdown.appendChild(option);
+                });
+
+                console.log(`✅ Loaded ${agents.length} agent filters for project ${projectId}`);
+            } catch (error) {
+                console.error('❌ Failed to load agent filters:', error);
+            }
+        }
+
+        /**
          * Session 63: Fetch and display project assets
          */
         async function refreshProjectAssets(projectId) {
+            // Session 147: Prevent multiple simultaneous loads
+            if (assetLoadingFlags[projectId]) {
+                console.log('⏸️ Already loading assets, skipping refresh...');
+                return;
+            }
+            assetLoadingFlags[projectId] = true;
+
             const container = document.getElementById(`project-assets-${projectId}`);
-            if (!container) return;
+            if (!container) {
+                assetLoadingFlags[projectId] = false;
+                return;
+            }
 
             try {
                 // Show loading state
@@ -21390,6 +21753,9 @@
                         <p class="text-danger">Error loading assets</p>
                     </div>
                 `;
+            } finally {
+                // Session 147: Release loading flag
+                assetLoadingFlags[projectId] = false;
             }
         }
 

@@ -9766,12 +9766,101 @@ def create_project(request):
         }, status=500)
 
 
+def calculate_project_stats(project_id, user):
+    """
+    Calculate comprehensive project statistics
+    Session 146: Project Stats Header
+
+    Args:
+        project_id: UUID of the project
+        user: User object for filtering
+
+    Returns:
+        Dict containing content counts, collaboration metrics, and timeline
+    """
+    from content.models import ImageHistory, VideoHistory, MiniFigAsset
+    from agents.models import AgentContribution
+    from coleadership.models import CoLeadershipDecision
+    from django.db.models import Sum, Max
+
+    # Content counts
+    images_count = ImageHistory.objects.filter(project_id=project_id, user=user).count()
+    videos_count = VideoHistory.objects.filter(project_id=project_id, user=user).count()
+    models_count = MiniFigAsset.objects.filter(project_id=project_id, user=user).count()
+
+    # Agent stats (Session 147: Return list of agent names for dropdown)
+    agent_contributions = AgentContribution.objects.filter(
+        project_id=project_id
+    ).values('agent').distinct()
+
+    unique_agents_list = [a['agent'] for a in agent_contributions]
+    unique_agents_count = len(unique_agents_list)
+
+    total_execution_time = AgentContribution.objects.filter(
+        project_id=project_id
+    ).aggregate(total=Sum('execution_time_seconds'))['total'] or 0
+
+    # Decision count (from Decision Timeline / Co-Leadership)
+    decisions_count = CoLeadershipDecision.objects.filter(project_id=project_id).count()
+
+    # Get project created_at
+    from content.models import CreativeProject
+    try:
+        project = CreativeProject.objects.get(id=project_id, user=user)
+        created_at = project.created_at
+    except CreativeProject.DoesNotExist:
+        created_at = None
+
+    # Last active (most recent content creation)
+    last_active_candidates = []
+
+    image_latest = ImageHistory.objects.filter(
+        project_id=project_id, user=user
+    ).aggregate(latest=Max('created_at'))['latest']
+    if image_latest:
+        last_active_candidates.append(image_latest)
+
+    video_latest = VideoHistory.objects.filter(
+        project_id=project_id, user=user
+    ).aggregate(latest=Max('created_at'))['latest']
+    if video_latest:
+        last_active_candidates.append(video_latest)
+
+    model_latest = MiniFigAsset.objects.filter(
+        project_id=project_id, user=user
+    ).aggregate(latest=Max('created_at'))['latest']
+    if model_latest:
+        last_active_candidates.append(model_latest)
+
+    last_active = max(last_active_candidates) if last_active_candidates else created_at
+
+    return {
+        'content': {
+            'images': images_count,
+            'videos': videos_count,
+            'models': models_count,
+            'total': images_count + videos_count + models_count
+        },
+        'collaboration': {
+            'unique_agents': unique_agents_list,  # Session 147: List of agent names
+            'unique_agents_count': unique_agents_count,  # Session 147: Count for stats display
+            'decisions_count': decisions_count,
+            'execution_time_seconds': int(total_execution_time)
+        },
+        'timeline': {
+            'created_at': created_at.isoformat() if created_at else None,
+            'last_active': last_active.isoformat() if last_active else None
+        }
+    }
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_project(request, project_id):
     """
     Get detailed information about a specific project
     Session 60: Phase C.1.2 - Project Management API
+    Session 146: Added stats field with comprehensive project metrics
 
     GET /api/projects/<uuid:project_id>/
 
@@ -9779,6 +9868,11 @@ def get_project(request, project_id):
         {
             "project": {
                 ... project data ...,
+                "stats": {
+                    "content": {"images": 42, "videos": 15, "models": 3},
+                    "collaboration": {"unique_agents": 3, "decisions_count": 5, "execution_time_seconds": 9000},
+                    "timeline": {"created_at": "...", "last_active": "..."}
+                },
                 "workflows": [
                     {
                         "id": "uuid",
@@ -9816,6 +9910,9 @@ def get_project(request, project_id):
                 'execution_time': pw.workflow_history.execution_time
             })
 
+        # Session 146: Calculate comprehensive project stats
+        stats = calculate_project_stats(project_id, request.user)
+
         project_data = {
             'id': str(project.id),
             'name': project.name,
@@ -9833,6 +9930,7 @@ def get_project(request, project_id):
             'is_shared': project.is_shared,
             'created_at': project.created_at.isoformat(),
             'updated_at': project.updated_at.isoformat(),
+            'stats': stats,  # Session 146: Project Stats Header
             'workflows': workflows_data
         }
 
@@ -10156,8 +10254,9 @@ def get_portfolio(request):
     - content_type: Filter by type (image/video/audio)
     - date_from: Start date (ISO format)
     - date_to: End date (ISO format)
-    - sort_by: Sort field (created_at/project_name/type) default: -created_at
+    - sort_by: Sort field (created_at/project_name/type/rating) default: -created_at
     - search: Search across prompts, models, styles (Session 62: Phase C.2.1)
+    - agent: Filter by agent name (Session 147: Agent filtering)
     """
     try:
         # Import models locally
@@ -10174,6 +10273,7 @@ def get_portfolio(request):
         date_to = request.GET.get('date_to')
         sort_by = request.GET.get('sort_by', '-created_at')
         search_query = request.GET.get('search', '').strip()  # Session 62: Phase C.2.1
+        agent_filter = request.GET.get('agent', '').strip()  # Session 147: Agent filtering
 
         # Base filters
         image_filter = {'user': request.user}
@@ -10201,6 +10301,42 @@ def get_portfolio(request):
             except Exception as e:
                 logger.warning(f"⚠️ Invalid date_to: {date_to}")
 
+        # Session 147: Agent filtering - Get content IDs created by specific agent
+        agent_image_ids = None
+        agent_video_ids = None
+        agent_model_ids = None
+        if agent_filter:
+            from agents.models import AgentContribution
+
+            logger.info(f"🤖 Filtering by agent: {agent_filter}")
+
+            # Get all contributions by this agent for this user's content
+            if project_id:
+                # Filter by project if specified
+                contributions = AgentContribution.objects.filter(
+                    project_id=project_id,
+                    agent=agent_filter
+                )
+            else:
+                # All contributions by this agent (would need user filter if available)
+                # AgentContribution doesn't have user field, so we filter by project ownership later
+                contributions = AgentContribution.objects.filter(agent=agent_filter)
+
+            # Extract content IDs
+            agent_image_ids = set(contributions.filter(
+                image_id__isnull=False
+            ).values_list('image_id', flat=True))
+
+            agent_video_ids = set(contributions.filter(
+                video_id__isnull=False
+            ).values_list('video_id', flat=True))
+
+            agent_model_ids = set(contributions.filter(
+                minifig_asset_id__isnull=False
+            ).values_list('minifig_asset_id', flat=True))
+
+            logger.info(f"🎯 Agent {agent_filter}: {len(agent_image_ids)} images, {len(agent_video_ids)} videos, {len(agent_model_ids)} models")
+
         # Collect content items
         portfolio_items = []
 
@@ -10216,6 +10352,10 @@ def get_portfolio(request):
                     Q(style__icontains=search_query) |
                     Q(image_type__icontains=search_query)
                 )
+
+            # Session 147: Apply agent filter
+            if agent_image_ids is not None:
+                images_query = images_query.filter(id__in=agent_image_ids)
 
             images = images_query
             for img in images:
@@ -10260,6 +10400,7 @@ def get_portfolio(request):
                     'view_count': img.view_count,
                     'download_count': img.download_count,
                     'is_favorite': img.is_favorite,
+                    'user_rating': getattr(img, 'user_rating', None),  # Session 147: For sorting by rating
                     'projects': projects,
                     'metadata': {
                         'width': img.image_width,
@@ -10284,6 +10425,10 @@ def get_portfolio(request):
                     Q(model_used__icontains=search_query) |
                     Q(video_type__icontains=search_query)
                 )
+
+            # Session 147: Apply agent filter
+            if agent_video_ids is not None:
+                videos_query = videos_query.filter(id__in=agent_video_ids)
 
             videos = videos_query
             for vid in videos:
@@ -10325,6 +10470,7 @@ def get_portfolio(request):
                     'view_count': vid.view_count,
                     'download_count': vid.download_count,
                     'is_favorite': vid.is_favorite,
+                    'user_rating': getattr(vid, 'user_rating', None),  # Session 147: For sorting by rating
                     'projects': projects,
                     'metadata': {
                         'duration': vid.duration,
@@ -10352,6 +10498,10 @@ def get_portfolio(request):
                     Q(title__icontains=search_query) |
                     Q(provider__icontains=search_query)
                 )
+
+            # Session 147: Apply agent filter
+            if agent_model_ids is not None:
+                models_query = models_query.filter(id__in=agent_model_ids)
 
             models = models_query
             for model_obj in models:
@@ -10391,6 +10541,7 @@ def get_portfolio(request):
                     'view_count': model_obj.view_count if hasattr(model_obj, 'view_count') else 0,
                     'download_count': model_obj.download_count if hasattr(model_obj, 'download_count') else 0,
                     'is_favorite': model_obj.is_favorite if hasattr(model_obj, 'is_favorite') else False,
+                    'user_rating': getattr(model_obj, 'user_rating', None),  # Session 147: For sorting by rating
                     'projects': projects,
                     'metadata': {
                         'provider': model_obj.provider,
@@ -10451,6 +10602,14 @@ def get_portfolio(request):
         elif sort_by == 'project_name':
             # Sort by first project name if exists
             portfolio_items.sort(key=lambda x: x['projects'][0]['name'] if x['projects'] else 'zzzz')
+        elif sort_by == 'rating':
+            # Session 147: Sort by user rating (lowest to highest, null last)
+            # Handle None values: convert to -1 for sorting (Python 3 can't compare None with int)
+            portfolio_items.sort(key=lambda x: x.get('user_rating') if x.get('user_rating') is not None else -1)
+        elif sort_by == '-rating':
+            # Session 147: Sort by user rating (highest to lowest, null last)
+            # Handle None values: convert to -1 for sorting (Python 3 can't compare None with int)
+            portfolio_items.sort(key=lambda x: x.get('user_rating') if x.get('user_rating') is not None else -1, reverse=True)
 
         # Get summary stats (Session 137: Add 3D models count)
         stats = {
@@ -10476,7 +10635,8 @@ def get_portfolio(request):
                 'content_type': content_type,
                 'date_from': date_from,
                 'date_to': date_to,
-                'sort_by': sort_by
+                'sort_by': sort_by,
+                'agent': agent_filter  # Session 147: Include agent filter in response
             }
         })
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
