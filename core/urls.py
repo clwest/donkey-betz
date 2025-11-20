@@ -176,7 +176,16 @@ from core.views_real_income_builder import (
     real_income_opportunities, analyze_real_opportunities
 )
 from core.views_income_builder import income_builder_view
-from core.views_neural_orchestra import neural_orchestra_view
+from core.views_neural_orchestra import (
+    neural_orchestra_view,
+    ecosystem_live_feed as neural_ecosystem_feed,
+    agents_stats as neural_agents_stats,
+    learning_status as neural_learning_status,
+    learning_feed as neural_learning_feed,
+    neural_orchestra_health,
+    neural_orchestra_websocket_bridge,
+    neural_orchestra_debug_info
+)
 from core import views_portfolio
 from core.views_profile import (
     ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
@@ -419,6 +428,15 @@ urlpatterns = [
     path('diagnostics/', login_required(lambda request: render(request, 'diagnostic_dashboard.html')), name='diagnostics'),
     path('income-builder/', income_builder_view, name='income-builder'),
     path('neural-orchestra/', neural_orchestra_view, name='neural-orchestra'),
+
+    # Session 145: Neural Orchestra API endpoints - REAL DATA!
+    path('api/neural-orchestra/ecosystem/live-feed/', neural_ecosystem_feed, name='neural-ecosystem-feed'),
+    path('api/neural-orchestra/agents/stats/', neural_agents_stats, name='neural-agents-stats'),
+    path('api/neural-orchestra/learning/status/', neural_learning_status, name='neural-learning-status'),
+    path('api/neural-orchestra/learning/feed/', neural_learning_feed, name='neural-learning-feed'),
+    path('api/neural-orchestra/health/', neural_orchestra_health, name='neural-orchestra-health'),
+    path('api/neural-orchestra/websocket-config/', neural_orchestra_websocket_bridge, name='neural-websocket-config'),
+    path('api/neural-orchestra/debug/', neural_orchestra_debug_info, name='neural-orchestra-debug'),
 
     # Authentication URLs
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

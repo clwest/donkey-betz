@@ -330,9 +330,166 @@
         }
     }
 
+    // Session 145: Fetch REAL agent data from API endpoints!
+    async function loadRealAgentData() {
+        try {
+            // Fetch real agent stats
+            const statsResponse = await fetch('/api/neural-orchestra/agents/stats/');
+            const stats = await statsResponse.json();
+
+            console.log('📊 Loaded REAL agent stats:', stats);
+
+            // Update header counts with REAL data
+            document.getElementById('agentCount').textContent = stats.total_agents || 0;
+            document.getElementById('orchestrationCount').textContent = stats.orchestrations_active || 0;
+
+            // Update performance metrics with REAL data
+            const orchestrationsPerHour = Math.round(stats.contributions_24h / 24) || 0;
+            const successRate = ((stats.performance?.tracking_rate || 0) * 100).toFixed(1);
+            const contributionsPerAgent = (stats.performance?.contributions_per_agent || 0).toFixed(1);
+
+            document.getElementById('orchestrationRate').textContent = orchestrationsPerHour;
+            document.getElementById('successRate').textContent = successRate + '%';
+            document.getElementById('responseTime').textContent = contributionsPerAgent + ' avg';
+
+            // Update agent categories with REAL contribution breakdown
+            updateAgentCategories(stats.contribution_breakdown || []);
+
+            // Update top performers
+            updateTopPerformers(stats.top_performers || []);
+
+        } catch (error) {
+            console.error('❌ Failed to load real agent data:', error);
+        }
+
+        try {
+            // Fetch and display real activity feed
+            const feedResponse = await fetch('/api/neural-orchestra/ecosystem/live-feed/');
+            const feedData = await feedResponse.json();
+
+            console.log('📡 Loaded REAL activity feed:', feedData);
+
+            updateActivityFeed(feedData.feed || []);
+
+        } catch (error) {
+            console.error('❌ Failed to load activity feed:', error);
+        }
+    }
+
+    function updateAgentCategories(breakdown) {
+        const categoryContainer = document.querySelector('.card-body');
+        if (!categoryContainer || breakdown.length === 0) return;
+
+        // Create category display HTML
+        let html = '';
+        breakdown.forEach(item => {
+            const label = item.contribution_type.charAt(0).toUpperCase() + item.contribution_type.slice(1);
+            const color = getCategoryColor(item.contribution_type);
+            html += `
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>${label}</span>
+                        <span class="badge ${color}">${item.count}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        // Find and update the agent categories card
+        const cards = document.querySelectorAll('.card-header');
+        for (let card of cards) {
+            if (card.textContent.includes('Agent Categories')) {
+                card.nextElementSibling.innerHTML = html;
+                break;
+            }
+        }
+    }
+
+    function getCategoryColor(type) {
+        const colors = {
+            'generation': 'bg-success',
+            'editing': 'bg-info',
+            'orchestration': 'bg-warning',
+            'analysis': 'bg-danger',
+            'recommendation': 'bg-secondary',
+            'iteration': 'bg-dark'
+        };
+        return colors[type] || 'bg-primary';
+    }
+
+    function updateTopPerformers(performers) {
+        if (performers.length === 0) return;
+
+        let html = '<div class="mb-3"><strong>Top Performing Agents:</strong></div>';
+        performers.forEach((agent, idx) => {
+            const efficiency = ((agent.efficiency || 0) * 100).toFixed(0);
+            const status = efficiency > 80 ? 'Active' : efficiency > 60 ? 'Consulting' : 'Analyzing';
+            const statusColor = efficiency > 80 ? 'text-success' : efficiency > 60 ? 'text-warning' : 'text-info';
+            html += `
+                <div class="mb-2">
+                    ${agent.name} (${agent.contributions} contributions)
+                    <span class="float-end ${statusColor}">${status}</span>
+                </div>
+            `;
+        });
+
+        // Find and update the advisors card
+        const cards = document.querySelectorAll('.card-header');
+        for (let card of cards) {
+            if (card.textContent.includes('Top Advisors')) {
+                card.querySelector('h5').innerHTML = '<i class="fas fa-trophy"></i> Top Performing Agents';
+                card.nextElementSibling.innerHTML = html;
+                break;
+            }
+        }
+    }
+
+    function updateActivityFeed(feed) {
+        if (feed.length === 0) return;
+
+        const insightsPanel = document.getElementById('insights-list');
+        if (!insightsPanel) return;
+
+        let html = '<div class="list-group">';
+        feed.slice(0, 10).forEach(item => {
+            const timeAgo = getTimeAgo(new Date(item.timestamp));
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${item.type}</h6>
+                        <small class="text-muted">${timeAgo}</small>
+                    </div>
+                    <p class="mb-1">${item.content}</p>
+                    <small class="text-muted">
+                        Agent: ${item.agent} | Project: ${item.project}
+                        <span class="badge bg-primary ms-2">${Math.round(item.confidence * 100)}% confidence</span>
+                    </small>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        insightsPanel.innerHTML = html;
+    }
+
+    function getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         initWebSocket();
         initCanvas();
+        loadRealAgentData();  // Session 145: Load REAL data!
+
+        // Refresh data every 30 seconds
+        setInterval(loadRealAgentData, 30000);
     });
 
     // Agent execution from UI
