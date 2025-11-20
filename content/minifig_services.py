@@ -149,6 +149,7 @@ def create_minifig_asset_from_images(
             three_d_file='',  # Will be filled when generation completes
             preview_image_url=preview_url,
             project=project,  # Session 137: Associate with project
+            download_completed=False,  # Session 143: Explicit default for NOT NULL constraint
             metadata={
                 'style': style,
                 'scale': scale,
@@ -202,6 +203,7 @@ def create_minifig_asset_from_images(
                 status='completed',  # v1: Immediate completion
                 three_d_file=three_d_file_url,
                 preview_image_url=preview_url,
+                download_completed=False,  # Session 143: Explicit default for NOT NULL constraint
                 metadata={
                     'style': style,
                     'scale': scale,
