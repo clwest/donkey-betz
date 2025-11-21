@@ -12,6 +12,7 @@ from io import BytesIO
 from PIL import Image
 import tempfile
 import os
+import subprocess
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -2080,3 +2081,1281 @@ def _build_effect_filter(effect: str, intensity: float) -> str:
     }
 
     return filters.get(effect, filters['cinematic'])
+
+
+def extract_video_frame(request):
+    """
+    Extract a single frame from a video at a specific timestamp.
+
+    Session 159: Frame Extraction Feature
+    Creates a thumbnail/still image from any point in a video.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/extract-frame/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "timestamp": 5.0,  # seconds into video
+        "format": "jpg" or "png" (optional, default jpg)
+    }
+
+    Natural language examples:
+    - "Extract frame at 5 seconds from video 1"
+    - "Get thumbnail from video 3 at 10s"
+    - "Pull a still from video 2 at the 3 second mark"
+    """
+    # Manual authentication check for web requests
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        timestamp = data.get('timestamp', 0.0)  # Default to start
+        output_format = data.get('format', 'jpg').lower()
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Clean video_id if double-encoded
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+            logger.info(f"🔍 [Session 159] Cleaned video_id: {video_id}")
+
+        # Validate format
+        if output_format not in ['jpg', 'jpeg', 'png']:
+            output_format = 'jpg'
+
+        # Validate timestamp
+        try:
+            timestamp = float(timestamp)
+            if timestamp < 0:
+                timestamp = 0.0
+        except (ValueError, TypeError):
+            timestamp = 0.0
+
+        # Resolve hybrid ID (support both UUID and numeric IDs like "1", "2", "3")
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+            logger.info(f"✅ [Session 159] Parsed as UUID: {video_uuid}")
+        except (ValueError, AttributeError):
+            # Numeric ID - resolve to UUID
+            try:
+                numeric_id = int(video_id)
+                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"✅ [Session 159] Resolved numeric ID {numeric_id} → UUID {video_uuid}")
+            except (ValueError, IndexError) as e:
+                logger.error(f"❌ [Session 159] Invalid video_id '{video_id}': {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid video_id: {video_id}'
+                }, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': f'Video is {video.status}, must be completed to extract frame'
+            }, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        # Validate timestamp against video duration
+        if video.duration and timestamp > video.duration:
+            logger.warning(f"⚠️ [Session 159] Timestamp {timestamp}s exceeds video duration {video.duration}s, clamping")
+            timestamp = max(0, video.duration - 0.1)  # Clamp to near end
+
+        logger.info(f"🎬 [Session 159] Extracting frame from video {video.id} at {timestamp}s")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            # Local file
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video file not found: {full_path}'
+                }, status=404)
+        else:
+            # Remote URL - download first
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+
+                # Save to temp file
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                logger.info(f"📥 Downloaded video from CDN to {input_path}")
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to download video: {str(e)}'
+                }, status=500)
+
+        # Generate output filename
+        from django.utils import timezone as tz
+        time_str = tz.now().strftime('%Y%m%d_%H%M%S')
+        extension = 'jpg' if output_format in ['jpg', 'jpeg'] else 'png'
+        output_filename = f"images/{request.user.id}/frame_{time_str}_{timestamp}s.{extension}"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Extract frame using ffmpeg
+        # -ss BEFORE -i for fast seeking, -frames:v 1 for single frame
+        cmd = [
+            'ffmpeg',
+            '-ss', str(timestamp),
+            '-i', input_path,
+            '-frames:v', '1',
+            '-q:v', '2',  # High quality JPEG (1-31, lower is better)
+            '-y',  # Overwrite output file
+            output_path
+        ]
+
+        logger.info(f"🚀 Running ffmpeg frame extraction: {' '.join(cmd)}")
+
+        import subprocess
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg frame extraction failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg frame extraction failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Clean up temp file if used
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        # Verify output file exists
+        if not os.path.exists(output_path):
+            return JsonResponse({
+                'success': False,
+                'error': 'Frame extraction produced no output'
+            }, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Frame extracted: {output_path} ({file_size / 1024:.1f} KB)")
+
+        # Get project if project_id provided
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 [Session 159] Linking extracted frame to project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ [Session 159] Project {project_id} not found")
+
+        # Create ImageHistory record for the extracted frame
+        # Use the correct field names for ImageHistory model
+        extracted_image = ImageHistory.objects.create(
+            user=request.user,
+            prompt=f"Frame extracted at {timestamp}s from video {video.id}",
+            image_type='generated',  # Use existing type; 'extracted_frame' isn't in choices
+            filename=os.path.basename(output_filename),
+            file_path=f'/media/{output_filename}',
+            parameters={'source_video_id': str(video.id), 'timestamp': timestamp, 'operation': 'frame_extraction'},
+            project=project
+        )
+
+        logger.info(f"✅ [Session 159] Frame extracted: video {video.id} @ {timestamp}s → image {extracted_image.id}")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=extracted_image,
+                project=project,
+                contribution_type='extraction',
+                task_description=f"Extracted frame at {timestamp}s from video using ffmpeg",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 159] Agent contribution tracked for image {extracted_image.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 159] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'image_id': str(extracted_image.id),
+            'image_url': extracted_image.file_path,  # file_path contains the URL
+            'timestamp': timestamp,
+            'format': extension,
+            'message': f'Frame extracted at {timestamp}s successfully',
+            'agent': 'VideoEditingAgent',
+            'operation': 'extract_frame',
+            'operation_display': f'Extracting frame at {timestamp}s'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 159] Frame extraction error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def reverse_video(request):
+    """
+    Reverse a video (play backwards) using ffmpeg.
+
+    Session 159: Video Reverse Feature
+    Creates a reversed version of a video with optional audio reversal.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/reverse/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "reverse_audio": true (default) or false
+    }
+
+    Natural language examples:
+    - "Reverse video 1"
+    - "Play video 3 backwards"
+    - "Reverse video 2 without audio"
+    """
+    # Manual authentication check for web requests
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        reverse_audio = data.get('reverse_audio', True)
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Clean video_id if double-encoded
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+            logger.info(f"🔍 [Session 159] Cleaned video_id: {video_id}")
+
+        # Resolve hybrid ID (support both UUID and numeric IDs like "1", "2", "3")
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+            logger.info(f"✅ [Session 159] Parsed as UUID: {video_uuid}")
+        except (ValueError, AttributeError):
+            # Numeric ID - resolve to UUID
+            try:
+                numeric_id = int(video_id)
+                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"✅ [Session 159] Resolved numeric ID {numeric_id} → UUID {video_uuid}")
+            except (ValueError, IndexError) as e:
+                logger.error(f"❌ [Session 159] Invalid video_id '{video_id}': {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid video_id: {video_id}'
+                }, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': f'Video is {video.status}, must be completed to reverse'
+            }, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"🎬 [Session 159] Reversing video {video.id} (audio: {reverse_audio})")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            # Local file
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video file not found: {full_path}'
+                }, status=404)
+        else:
+            # Remote URL - download first
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+
+                # Save to temp file
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                logger.info(f"📥 Downloaded video from CDN to {input_path}")
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to download video: {str(e)}'
+                }, status=500)
+
+        # Generate output filename
+        from django.utils import timezone as tz
+        time_str = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/{request.user.id}/reversed_{time_str}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Reverse video using ffmpeg
+        # -vf reverse: reverse video frames
+        # -af areverse: reverse audio (optional)
+        import subprocess
+
+        if reverse_audio:
+            cmd = [
+                'ffmpeg',
+                '-i', input_path,
+                '-vf', 'reverse',
+                '-af', 'areverse',
+                '-y',  # Overwrite output file
+                output_path
+            ]
+        else:
+            cmd = [
+                'ffmpeg',
+                '-i', input_path,
+                '-vf', 'reverse',
+                '-an',  # Remove audio
+                '-y',  # Overwrite output file
+                output_path
+            ]
+
+        logger.info(f"🚀 Running ffmpeg reverse: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg reverse failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg reverse failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Clean up temp file if used
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        # Verify output file exists
+        if not os.path.exists(output_path):
+            return JsonResponse({
+                'success': False,
+                'error': 'Video reverse produced no output'
+            }, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Reversed video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Get project if project_id provided
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 [Session 159] Linking reversed video to project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ [Session 159] Project {project_id} not found")
+
+        # Create VideoHistory record for the reversed video
+        reversed_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='reversed',
+            prompt=f"Reversed version of video {video.id}" + (" (with audio)" if reverse_audio else " (silent)"),
+            duration=video.duration,
+            model_used='ffmpeg_reverse',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 159] Video reversed: {video.id} → {reversed_video.id}")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=reversed_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Reversed video using ffmpeg" + (" with audio" if reverse_audio else " (silent)"),
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 159] Agent contribution tracked for video {reversed_video.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 159] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(reversed_video.id),
+            'video_url': reversed_video.video_url,
+            'reverse_audio': reverse_audio,
+            'message': f'Video reversed successfully' + (' (with audio)' if reverse_audio else ' (silent)'),
+            'agent': 'VideoEditingAgent',
+            'operation': 'reverse',
+            'operation_display': f'Reversing video' + (' with audio' if reverse_audio else ' (silent)')
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 159] Video reverse error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def trim_video(request):
+    """
+    Trim a video to a specific time range using ffmpeg.
+
+    Session 159: Video Trimming Feature
+    Cuts a video to keep only the specified segment.
+    Uses ffmpeg with -c copy for fast, lossless trimming!
+
+    POST /api/video/trim/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "start_time": 10.0,  # seconds or "00:00:10"
+        "end_time": 20.0,    # seconds or "00:00:20"
+        "keep_audio": true (default)
+    }
+
+    Natural language examples:
+    - "Trim video 1 from 10 to 20 seconds"
+    - "Keep only the first 15 seconds of video 2"
+    - "Cut video 3 from 0:30 to 1:45"
+    """
+    # Manual authentication check for web requests
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        start_time = data.get('start_time', 0)
+        end_time = data.get('end_time')
+        keep_audio = data.get('keep_audio', True)
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        if end_time is None:
+            return JsonResponse({'success': False, 'error': 'end_time required'}, status=400)
+
+        # Clean video_id if double-encoded
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+            logger.info(f"🔍 [Session 159] Cleaned video_id: {video_id}")
+
+        # Parse time values (support both seconds and HH:MM:SS format)
+        def parse_time(t):
+            if isinstance(t, (int, float)):
+                return float(t)
+            if isinstance(t, str):
+                t = t.strip()
+                if ':' in t:
+                    # Parse HH:MM:SS or MM:SS
+                    parts = t.split(':')
+                    if len(parts) == 3:
+                        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+                    elif len(parts) == 2:
+                        return int(parts[0]) * 60 + float(parts[1])
+                return float(t)
+            return 0.0
+
+        start_seconds = parse_time(start_time)
+        end_seconds = parse_time(end_time)
+
+        if start_seconds < 0:
+            start_seconds = 0
+        if end_seconds <= start_seconds:
+            return JsonResponse({
+                'success': False,
+                'error': f'end_time ({end_seconds}s) must be greater than start_time ({start_seconds}s)'
+            }, status=400)
+
+        # Resolve hybrid ID
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+            logger.info(f"✅ [Session 159] Parsed as UUID: {video_uuid}")
+        except (ValueError, AttributeError):
+            try:
+                numeric_id = int(video_id)
+                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"✅ [Session 159] Resolved numeric ID {numeric_id} → UUID {video_uuid}")
+            except (ValueError, IndexError) as e:
+                logger.error(f"❌ [Session 159] Invalid video_id '{video_id}': {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid video_id: {video_id}'
+                }, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': f'Video is {video.status}, must be completed to trim'
+            }, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        # Validate against video duration
+        if video.duration and end_seconds > video.duration:
+            logger.warning(f"⚠️ [Session 159] end_time {end_seconds}s exceeds duration {video.duration}s, clamping")
+            end_seconds = video.duration
+
+        duration_trimmed = end_seconds - start_seconds
+        logger.info(f"✂️ [Session 159] Trimming video {video.id}: {start_seconds}s → {end_seconds}s ({duration_trimmed}s)")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video file not found: {full_path}'
+                }, status=404)
+        else:
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                logger.info(f"📥 Downloaded video from CDN to {input_path}")
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to download video: {str(e)}'
+                }, status=500)
+
+        # Generate output filename
+        from django.utils import timezone as tz
+        time_str = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/{request.user.id}/trimmed_{start_seconds}-{end_seconds}s_{time_str}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Trim video using ffmpeg
+        # -ss before -i for fast seeking, -to for end time, -c copy for lossless
+        import subprocess
+
+        cmd = [
+            'ffmpeg',
+            '-ss', str(start_seconds),
+            '-i', input_path,
+            '-to', str(duration_trimmed),  # Duration from seek point
+            '-c', 'copy',  # Fast, lossless copy
+        ]
+
+        if not keep_audio:
+            cmd.extend(['-an'])  # Remove audio
+
+        cmd.extend(['-y', output_path])
+
+        logger.info(f"🚀 Running ffmpeg trim: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg trim failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg trim failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Clean up temp file if used
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        # Verify output file exists
+        if not os.path.exists(output_path):
+            return JsonResponse({
+                'success': False,
+                'error': 'Video trim produced no output'
+            }, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Trimmed video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Get project if project_id provided
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 [Session 159] Linking trimmed video to project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ [Session 159] Project {project_id} not found")
+
+        # Create VideoHistory record
+        trimmed_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='trimmed',
+            prompt=f"Trimmed {start_seconds}s-{end_seconds}s from video {video.id}",
+            duration=duration_trimmed,
+            model_used='ffmpeg_trim',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 159] Video trimmed: {video.id} → {trimmed_video.id} ({duration_trimmed}s)")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=trimmed_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Trimmed video from {start_seconds}s to {end_seconds}s using ffmpeg",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 159] Agent contribution tracked for video {trimmed_video.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 159] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(trimmed_video.id),
+            'video_url': trimmed_video.video_url,
+            'start_time': start_seconds,
+            'end_time': end_seconds,
+            'duration': duration_trimmed,
+            'message': f'Video trimmed to {start_seconds}s-{end_seconds}s ({duration_trimmed}s)',
+            'agent': 'VideoEditingAgent',
+            'operation': 'trim',
+            'operation_display': f'Trimming video to {start_seconds}s-{end_seconds}s'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 159] Video trim error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# SESSION 160: Speed Control (DaVinci Expansion Phase 1)
+# =============================================================================
+# Speed up or slow down video playback using ffmpeg setpts/atempo filters
+# Commands: "Make video 1 slow motion (0.5x)", "Speed up video 2 to 2x"
+# Cost: FREE! Uses ffmpeg locally
+# =============================================================================
+
+def change_video_speed(request):
+    """
+    Session 160: Change video playback speed using ffmpeg.
+
+    Supports:
+    - Slow motion: 0.25x, 0.5x (2x slower, 4x slower)
+    - Normal: 1.0x (no change)
+    - Fast: 1.5x, 2x, 4x (faster playback)
+
+    Uses ffmpeg setpts filter for video, atempo for audio.
+    Note: atempo only supports 0.5-2.0 range, so we chain for extreme speeds.
+
+    Cost: FREE! Uses ffmpeg locally.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    # Manual auth check (for internal agent calls)
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        speed = data.get('speed', 1.0)  # Speed multiplier (0.25-4.0)
+        preserve_audio = data.get('preserve_audio', True)
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'video_id is required'
+            }, status=400)
+
+        # Validate speed range
+        try:
+            speed = float(speed)
+        except (TypeError, ValueError):
+            return JsonResponse({
+                'success': False,
+                'error': 'speed must be a number'
+            }, status=400)
+
+        if speed <= 0 or speed > 4.0:
+            return JsonResponse({
+                'success': False,
+                'error': 'speed must be between 0.1 and 4.0'
+            }, status=400)
+
+        # Get video - support both UUID and hybrid numeric ID
+        from content.models import VideoHistory
+        video = None
+
+        # First try as UUID
+        try:
+            import uuid
+            uuid.UUID(str(video_id))
+            video = VideoHistory.objects.get(id=video_id, user=request.user)
+        except (ValueError, VideoHistory.DoesNotExist):
+            # Try as numeric ID (hybrid support)
+            try:
+                numeric_id = int(video_id)
+                user_videos = VideoHistory.objects.filter(user=request.user).order_by('created_at')
+                if 1 <= numeric_id <= user_videos.count():
+                    video = user_videos[numeric_id - 1]
+            except (ValueError, TypeError):
+                pass
+
+        if not video:
+            return JsonResponse({
+                'success': False,
+                'error': f'Video {video_id} not found'
+            }, status=404)
+
+        # Get source video path
+        source_path = None
+        if video.video_url:
+            if video.video_url.startswith('/media/'):
+                source_path = os.path.join(settings.MEDIA_ROOT, video.video_url.replace('/media/', ''))
+            elif video.video_url.startswith('http'):
+                # Download from URL
+                import tempfile
+                import requests
+                temp_dir = tempfile.mkdtemp()
+                temp_path = os.path.join(temp_dir, 'source.mp4')
+                response = requests.get(video.video_url)
+                with open(temp_path, 'wb') as f:
+                    f.write(response.content)
+                source_path = temp_path
+
+        if not source_path or not os.path.exists(source_path):
+            return JsonResponse({
+                'success': False,
+                'error': 'Source video file not found'
+            }, status=404)
+
+        # Create output path
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+        speed_label = f"{speed}x".replace('.', '_')
+        output_filename = f"videos/{video.id}/speed_{speed_label}_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        logger.info(f"🎬 [Session 160] Changing video speed: {video.id} to {speed}x")
+
+        # Check if video has audio stream using ffprobe
+        has_audio = False
+        try:
+            probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source_path]
+            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+            has_audio = 'audio' in probe_result.stdout
+            logger.info(f"🔊 [Session 160] Video has audio: {has_audio}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 160] Could not probe audio: {e}")
+
+        # Build ffmpeg command
+        # Video: setpts=PTS/speed (e.g., PTS/2 for 2x speed, PTS*2 for 0.5x)
+        # Audio: atempo filter (only supports 0.5-2.0, chain for extreme values)
+
+        video_filter = f"setpts=PTS/{speed}"
+
+        if preserve_audio and has_audio and speed >= 0.5 and speed <= 2.0:
+            # Normal atempo range
+            audio_filter = f"atempo={speed}"
+            cmd = [
+                'ffmpeg', '-i', source_path,
+                '-filter_complex', f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+                '-map', '[v]', '-map', '[a]',
+                '-y', output_path
+            ]
+        elif preserve_audio and has_audio and speed < 0.5:
+            # Chain atempo for very slow speeds (e.g., 0.25 = atempo=0.5,atempo=0.5)
+            atempo_chain = []
+            remaining = speed
+            while remaining < 0.5:
+                atempo_chain.append("atempo=0.5")
+                remaining *= 2
+            if remaining != 1.0:
+                atempo_chain.append(f"atempo={remaining}")
+            audio_filter = ','.join(atempo_chain) if atempo_chain else f"atempo={speed}"
+            cmd = [
+                'ffmpeg', '-i', source_path,
+                '-filter_complex', f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+                '-map', '[v]', '-map', '[a]',
+                '-y', output_path
+            ]
+        elif preserve_audio and has_audio and speed > 2.0:
+            # Chain atempo for very fast speeds (e.g., 4.0 = atempo=2.0,atempo=2.0)
+            atempo_chain = []
+            remaining = speed
+            while remaining > 2.0:
+                atempo_chain.append("atempo=2.0")
+                remaining /= 2
+            if remaining != 1.0:
+                atempo_chain.append(f"atempo={remaining}")
+            audio_filter = ','.join(atempo_chain) if atempo_chain else f"atempo={speed}"
+            cmd = [
+                'ffmpeg', '-i', source_path,
+                '-filter_complex', f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+                '-map', '[v]', '-map', '[a]',
+                '-y', output_path
+            ]
+        else:
+            # No audio preservation
+            cmd = [
+                'ffmpeg', '-i', source_path,
+                '-vf', video_filter,
+                '-an',  # Remove audio
+                '-y', output_path
+            ]
+
+        logger.info(f"🔧 [Session 160] Running: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ [Session 160] ffmpeg speed change failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg speed change failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Verify output file exists
+        if not os.path.exists(output_path):
+            return JsonResponse({
+                'success': False,
+                'error': 'Video speed change produced no output'
+            }, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Speed-changed video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Calculate new duration
+        original_duration = video.duration or 5  # Default to 5 if unknown
+        new_duration = original_duration / speed
+
+        # Get project if project_id provided
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 [Session 160] Linking speed video to project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ [Session 160] Project {project_id} not found")
+
+        # Create VideoHistory record
+        speed_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='speed_change',
+            prompt=f"Speed {speed}x of video {video.id}",
+            duration=new_duration,
+            model_used='ffmpeg_speed',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        speed_description = "slow motion" if speed < 1.0 else "sped up" if speed > 1.0 else "normal speed"
+        logger.info(f"✅ [Session 160] Video speed changed: {video.id} → {speed_video.id} ({speed}x {speed_description})")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=speed_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Changed video speed to {speed}x using ffmpeg",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 160] Agent contribution tracked for video {speed_video.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 160] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(speed_video.id),
+            'video_url': speed_video.video_url,
+            'speed': speed,
+            'original_duration': original_duration,
+            'new_duration': new_duration,
+            'preserve_audio': preserve_audio,
+            'message': f'Video speed changed to {speed}x ({speed_description})',
+            'agent': 'VideoEditingAgent',
+            'operation': 'speed_change',
+            'operation_display': f'Changing video speed to {speed}x'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 160] Video speed change error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# SESSION 160: Video Concatenation (DaVinci Expansion Phase 1)
+# =============================================================================
+# Combine multiple videos into a single video using ffmpeg concat demuxer
+# Commands: "Combine videos 1, 2, 3", "Merge videos 5-8 together"
+# Cost: FREE! Uses ffmpeg locally
+# =============================================================================
+
+def concatenate_videos(request):
+    """
+    Session 160: Concatenate multiple videos into one using ffmpeg.
+
+    Uses the concat demuxer for lossless concatenation when codecs match,
+    or re-encodes when necessary.
+
+    Cost: FREE! Uses ffmpeg locally.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    # Manual auth check (for internal agent calls)
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        video_ids = data.get('video_ids', [])  # List of video IDs
+        project_id = data.get('project_id')
+        transition = data.get('transition', 'none')  # Future: fade, dissolve, etc.
+
+        if not video_ids or len(video_ids) < 2:
+            return JsonResponse({
+                'success': False,
+                'error': 'At least 2 video_ids are required'
+            }, status=400)
+
+        # Get all videos
+        from content.models import VideoHistory
+        videos = []
+        source_paths = []
+
+        for vid in video_ids:
+            video = None
+
+            # First try as UUID
+            try:
+                import uuid
+                uuid.UUID(str(vid))
+                video = VideoHistory.objects.get(id=vid, user=request.user)
+            except (ValueError, VideoHistory.DoesNotExist):
+                # Try as numeric ID (hybrid support)
+                try:
+                    numeric_id = int(vid)
+                    user_videos = VideoHistory.objects.filter(user=request.user).order_by('created_at')
+                    if 1 <= numeric_id <= user_videos.count():
+                        video = user_videos[numeric_id - 1]
+                except (ValueError, TypeError):
+                    pass
+
+            if not video:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video {vid} not found'
+                }, status=404)
+
+            videos.append(video)
+
+            # Get source path
+            source_path = None
+            if video.video_url:
+                if video.video_url.startswith('/media/'):
+                    source_path = os.path.join(settings.MEDIA_ROOT, video.video_url.replace('/media/', ''))
+                elif video.video_url.startswith('http'):
+                    # Download from URL
+                    temp_dir = tempfile.mkdtemp()
+                    temp_path = os.path.join(temp_dir, f'source_{vid}.mp4')
+                    response = requests.get(video.video_url)
+                    with open(temp_path, 'wb') as f:
+                        f.write(response.content)
+                    source_path = temp_path
+
+            if not source_path or not os.path.exists(source_path):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Source file not found for video {vid}'
+                }, status=404)
+
+            source_paths.append(source_path)
+
+        logger.info(f"🎬 [Session 160] Concatenating {len(videos)} videos")
+
+        # Create output path
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/concatenated/combined_{len(videos)}_videos_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Create concat file list for ffmpeg
+        concat_list_path = os.path.join(settings.MEDIA_ROOT, f"videos/concatenated/concat_list_{timestamp}.txt")
+        os.makedirs(os.path.dirname(concat_list_path), exist_ok=True)
+
+        with open(concat_list_path, 'w') as f:
+            for path in source_paths:
+                f.write(f"file '{path}'\n")
+
+        logger.info(f"📝 [Session 160] Created concat list: {concat_list_path}")
+
+        # Run ffmpeg concat
+        # Using concat demuxer which is fast for same-codec videos
+        cmd = [
+            'ffmpeg', '-f', 'concat', '-safe', '0', '-i', concat_list_path,
+            '-c', 'copy',  # Copy streams without re-encoding (fast!)
+            '-y', output_path
+        ]
+
+        logger.info(f"🔧 [Session 160] Running: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # If concat demuxer failed (different codecs), try re-encoding
+        if result.returncode != 0:
+            logger.warning(f"⚠️ [Session 160] Concat demuxer failed, trying re-encode")
+            # Re-encode using filter_complex concat
+            input_args = []
+            filter_parts = []
+            for i, path in enumerate(source_paths):
+                input_args.extend(['-i', path])
+                filter_parts.append(f'[{i}:v:0][{i}:a:0]')
+
+            filter_complex = f"{''.join(filter_parts)}concat=n={len(source_paths)}:v=1:a=1[v][a]"
+
+            cmd = ['ffmpeg'] + input_args + [
+                '-filter_complex', filter_complex,
+                '-map', '[v]', '-map', '[a]',
+                '-y', output_path
+            ]
+
+            logger.info(f"🔧 [Session 160] Re-encode: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            # If still failing (maybe no audio), try video-only
+            if result.returncode != 0:
+                logger.warning(f"⚠️ [Session 160] Audio concat failed, trying video-only")
+                filter_parts = []
+                for i in range(len(source_paths)):
+                    filter_parts.append(f'[{i}:v:0]')
+
+                filter_complex = f"{''.join(filter_parts)}concat=n={len(source_paths)}:v=1:a=0[v]"
+
+                cmd = ['ffmpeg'] + input_args + [
+                    '-filter_complex', filter_complex,
+                    '-map', '[v]',
+                    '-y', output_path
+                ]
+
+                logger.info(f"🔧 [Session 160] Video-only: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Clean up concat list
+        try:
+            os.remove(concat_list_path)
+        except:
+            pass
+
+        if result.returncode != 0:
+            logger.error(f"❌ [Session 160] ffmpeg concatenation failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg concatenation failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Verify output file exists
+        if not os.path.exists(output_path):
+            return JsonResponse({
+                'success': False,
+                'error': 'Video concatenation produced no output'
+            }, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Concatenated video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Calculate total duration
+        total_duration = sum(v.duration or 0 for v in videos)
+
+        # Get project if project_id provided, or use first video's project
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 [Session 160] Linking concatenated video to project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ [Session 160] Project {project_id} not found")
+        elif videos[0].project:
+            project = videos[0].project
+            logger.info(f"🔗 [Session 160] Using first video's project: {project.name}")
+
+        # Create VideoHistory record
+        concat_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='concatenated',
+            prompt=f"Concatenated {len(videos)} videos: {', '.join(str(v.id) for v in videos)}",
+            duration=total_duration,
+            model_used='ffmpeg_concat',
+            ratio=videos[0].ratio,  # Use first video's ratio
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 160] Videos concatenated: {[str(v.id) for v in videos]} → {concat_video.id}")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=concat_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Concatenated {len(videos)} videos using ffmpeg",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 160] Agent contribution tracked for video {concat_video.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 160] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(concat_video.id),
+            'video_url': concat_video.video_url,
+            'video_count': len(videos),
+            'source_videos': [str(v.id) for v in videos],
+            'total_duration': total_duration,
+            'message': f'Combined {len(videos)} videos into one ({total_duration}s total)',
+            'agent': 'VideoEditingAgent',
+            'operation': 'concatenate',
+            'operation_display': f'Combining {len(videos)} videos'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 160] Video concatenation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

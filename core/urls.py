@@ -286,7 +286,11 @@ from core.views_video import (
     increment_video_download, video_to_video_endpoint, video_upscale_endpoint,
     character_performance_endpoint,
     # Session 154: Video Enhancement
-    upscale_video, apply_video_effect
+    upscale_video, apply_video_effect,
+    # Session 159: Frame Extraction, Video Reverse, Video Trim
+    extract_video_frame, reverse_video, trim_video,
+    # Session 160: Speed Control, Video Concatenation
+    change_video_speed, concatenate_videos
 )
 # Session 66 Part 2: DaVinci Resolve video editing
 # Session 72: Added text overlay and color grading endpoints
@@ -873,6 +877,16 @@ urlpatterns = [
     # Session 154: Video Enhancement with ffmpeg (free!)
     path('api/video/upscale/', upscale_video, name='video-upscale-ffmpeg'),
     path('api/video/effects/', apply_video_effect, name='video-effects'),
+    # Session 159: Frame Extraction (free!)
+    path('api/video/extract-frame/', extract_video_frame, name='video-extract-frame'),
+    # Session 159: Video Reverse (free!)
+    path('api/video/reverse/', reverse_video, name='video-reverse'),
+    # Session 159: Video Trim (free!)
+    path('api/video/trim/', trim_video, name='video-trim'),
+    # Session 160: Speed Control (free!)
+    path('api/video/speed/', change_video_speed, name='video-speed'),
+    # Session 160: Video Concatenation (free!)
+    path('api/video/concatenate/', concatenate_videos, name='video-concatenate'),
     # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
     path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),

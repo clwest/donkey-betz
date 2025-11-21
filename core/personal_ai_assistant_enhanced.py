@@ -238,14 +238,14 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "video_editing_agent",
-                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!). Session 154: Now supports upscale and apply_effect operations using ffmpeg (no API costs!). Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
+                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!), extract_frame (pull a still image from any timestamp - FREE!), reverse (play video backwards - FREE!), trim (cut video to specific time range - FREE!), speed_change (slow motion 0.5x or speed up 2x - FREE!), concatenate (combine multiple videos into one - FREE!). Session 160: Added speed_change, concatenate. Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading)",
-                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect"]
+                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading) | 'extract_frame' (Session 159 - pull still image at timestamp) | 'reverse' (Session 159 - play video backwards) | 'trim' (Session 159 - cut video to time range) | 'speed_change' (Session 160 - slow motion or speed up) | 'concatenate' (Session 160 - combine multiple videos)",
+                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect", "extract_frame", "reverse", "trim", "speed_change", "concatenate"]
                         },
                         "video_id": {
                             "type": "string",
@@ -253,7 +253,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         },
                         "params": {
                             "type": "object",
-                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}.",
+                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}. For extract_frame: {timestamp: seconds, format: 'jpg'|'png'}. For reverse: {reverse_audio: true|false}. For trim: {start_time: seconds, end_time: seconds, keep_audio: true|false}. For speed_change: {speed: 0.5 for slow-mo, 2.0 for 2x speed, preserve_audio: true|false}. For concatenate: {video_ids: ['1', '2', '3'] - list of video IDs to combine}.",
                             "properties": {
                                 "text": {"type": "string"},
                                 "position": {"type": "string", "default": "center"},
@@ -264,7 +264,16 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                                 "scale_factor": {"type": "integer", "enum": [2, 4], "default": 2, "description": "Session 154: Upscale factor (2x or 4x)"},
                                 "quality": {"type": "string", "default": "high", "description": "Session 154: Upscale quality (high or medium)"},
                                 "effect": {"type": "string", "enum": ["cinematic", "vibrant", "vintage", "noir", "warm", "cool"], "default": "cinematic", "description": "Session 154: Color grading effect"},
-                                "intensity": {"type": "number", "default": 0.7, "description": "Session 154: Effect intensity (0.0-1.0)"}
+                                "intensity": {"type": "number", "default": 0.7, "description": "Session 154: Effect intensity (0.0-1.0)"},
+                                "timestamp": {"type": "number", "default": 0, "description": "Session 159: Time in seconds to extract frame from (e.g., 5.0 for 5 seconds)"},
+                                "format": {"type": "string", "enum": ["jpg", "png"], "default": "jpg", "description": "Session 159: Output format for extracted frame"},
+                                "reverse_audio": {"type": "boolean", "default": true, "description": "Session 159: Whether to also reverse the audio (true) or make silent (false)"},
+                                "start_time": {"type": "number", "default": 0, "description": "Session 159: Start time in seconds for trim operation"},
+                                "end_time": {"type": "number", "description": "Session 159: End time in seconds for trim operation"},
+                                "keep_audio": {"type": "boolean", "default": true, "description": "Session 159: Whether to keep audio in trimmed video"},
+                                "speed": {"type": "number", "default": 1.0, "description": "Session 160: Speed multiplier (0.25-4.0). 0.5 = slow motion, 2.0 = 2x speed"},
+                                "preserve_audio": {"type": "boolean", "default": true, "description": "Session 160: Whether to preserve audio (pitch-corrected) when changing speed"},
+                                "video_ids": {"type": "array", "items": {"type": "string"}, "description": "Session 160: List of video IDs to concatenate (for 'concatenate' operation)"}
                             }
                         },
                         "project_id": {"type": "string"}
@@ -825,6 +834,21 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         elif operation == 'apply_effect':
             # Session 154: ffmpeg color grading effects
             return self._execute_single_video_enhancement(operation, video_id, params, project_id)
+        elif operation == 'extract_frame':
+            # Session 159: Frame extraction
+            return self._tool_extract_video_frame(tool_args)
+        elif operation == 'reverse':
+            # Session 159: Video reverse
+            return self._tool_reverse_video(tool_args)
+        elif operation == 'trim':
+            # Session 159: Video trim
+            return self._tool_trim_video(tool_args)
+        elif operation == 'speed_change':
+            # Session 160: Speed control
+            return self._tool_change_video_speed(tool_args)
+        elif operation == 'concatenate':
+            # Session 160: Video concatenation
+            return self._tool_concatenate_videos(tool_args)
         else:
             return {'success': False, 'error': f"Unknown video editing operation: {operation}"}
 
@@ -1789,6 +1813,345 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"❌ Apply color grading tool error: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
+
+    def _tool_extract_video_frame(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the extract_video_frame tool - Session 159.
+        Extracts a single frame from a video at a specified timestamp.
+        Creates an image that can be used as a thumbnail or still.
+        """
+        logger.info(f"📸 EXTRACT_VIDEO_FRAME TOOL CALLED!")
+        logger.info(f"📸 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            timestamp = arguments.get('timestamp', 0.0)
+            output_format = arguments.get('format', 'jpg')
+            project_id = arguments.get('project_id')
+
+            if not video_id:
+                return {'success': False, 'error': 'video_id is required'}
+
+            # Create request using RequestFactory
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'timestamp': timestamp,
+                'format': output_format,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/extract-frame/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            # Call the backend view function
+            from core.views_video import extract_video_frame
+            response = extract_video_frame(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Frame extracted: image {result.get('image_id')} at {timestamp}s")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'Frame extracted at {timestamp}s successfully'),
+                    'image_id': result.get('image_id'),
+                    'image_url': result.get('image_url'),
+                    'timestamp': timestamp,
+                    'format': output_format,
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'extract_frame',
+                    'operation_display': f'Extracting frame at {timestamp}s'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Frame extraction failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Extract video frame tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_reverse_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the reverse_video tool - Session 159.
+        Reverses a video (plays backwards) with optional audio reversal.
+        """
+        logger.info(f"⏪ REVERSE_VIDEO TOOL CALLED!")
+        logger.info(f"⏪ Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            reverse_audio = arguments.get('reverse_audio', True)
+            project_id = arguments.get('project_id')
+
+            if not video_id:
+                return {'success': False, 'error': 'video_id is required'}
+
+            # Create request using RequestFactory
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'reverse_audio': reverse_audio,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/reverse/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            # Call the backend view function
+            from core.views_video import reverse_video
+            response = reverse_video(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Video reversed: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Video reversed successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'reverse_audio': reverse_audio,
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'reverse',
+                    'operation_display': f'Reversing video' + (' with audio' if reverse_audio else ' (silent)')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Video reverse failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Reverse video tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_trim_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the trim_video tool - Session 159.
+        Trims a video to a specific time range.
+        """
+        logger.info(f"✂️ TRIM_VIDEO TOOL CALLED!")
+        logger.info(f"✂️ Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            start_time = arguments.get('start_time', 0)
+            end_time = arguments.get('end_time')
+            keep_audio = arguments.get('keep_audio', True)
+            project_id = arguments.get('project_id')
+
+            if not video_id:
+                return {'success': False, 'error': 'video_id is required'}
+            if end_time is None:
+                return {'success': False, 'error': 'end_time is required'}
+
+            # Create request using RequestFactory
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'start_time': start_time,
+                'end_time': end_time,
+                'keep_audio': keep_audio,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/trim/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            # Call the backend view function
+            from core.views_video import trim_video
+            response = trim_video(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Video trimmed: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Video trimmed successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'duration': result.get('duration'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'trim',
+                    'operation_display': f'Trimming video to {start_time}s-{end_time}s'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Video trim failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Trim video tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_change_video_speed(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the change_video_speed tool - Session 160.
+        Changes video playback speed (slow motion or speed up).
+        """
+        logger.info(f"⏩ CHANGE_VIDEO_SPEED TOOL CALLED!")
+        logger.info(f"⏩ Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            params = arguments.get('params', {})
+            speed = params.get('speed', arguments.get('speed', 1.0))
+            preserve_audio = params.get('preserve_audio', arguments.get('preserve_audio', True))
+            project_id = arguments.get('project_id')
+
+            if not video_id:
+                return {'success': False, 'error': 'video_id is required'}
+
+            # Create request using RequestFactory
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'speed': speed,
+                'preserve_audio': preserve_audio,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/speed/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            # Call the backend view function
+            from core.views_video import change_video_speed
+            response = change_video_speed(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                speed_desc = "slow motion" if speed < 1.0 else "sped up" if speed > 1.0 else "normal"
+                logger.info(f"✅ Video speed changed: {result.get('video_id')} ({speed}x {speed_desc})")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'Video speed changed to {speed}x'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'speed': speed,
+                    'original_duration': result.get('original_duration'),
+                    'new_duration': result.get('new_duration'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'speed_change',
+                    'operation_display': f'Changing video speed to {speed}x ({speed_desc})'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Video speed change failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Change video speed tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_concatenate_videos(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the concatenate_videos tool - Session 160.
+        Combines multiple videos into one.
+        """
+        logger.info(f"🔗 CONCATENATE_VIDEOS TOOL CALLED!")
+        logger.info(f"🔗 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            params = arguments.get('params', {})
+            video_ids = params.get('video_ids', arguments.get('video_ids', []))
+            project_id = arguments.get('project_id')
+
+            # Also try to parse video_id if video_ids not provided
+            if not video_ids and arguments.get('video_id'):
+                # Parse comma-separated or range format
+                video_id_str = arguments.get('video_id', '')
+                if ',' in video_id_str or '-' in video_id_str:
+                    # Parse the batch format
+                    video_ids = self._parse_video_id_range(video_id_str)
+                else:
+                    video_ids = [video_id_str]
+
+            if not video_ids or len(video_ids) < 2:
+                return {'success': False, 'error': 'At least 2 video_ids are required for concatenation'}
+
+            # Create request using RequestFactory
+            factory = RequestFactory()
+            request_data = {
+                'video_ids': video_ids,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/concatenate/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            # Call the backend view function
+            from core.views_video import concatenate_videos
+            response = concatenate_videos(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Videos concatenated: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Videos concatenated successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'video_count': result.get('video_count'),
+                    'total_duration': result.get('total_duration'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'concatenate',
+                    'operation_display': f'Combining {result.get("video_count")} videos'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Video concatenation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Concatenate videos tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _parse_video_id_range(self, video_id_str: str) -> list:
+        """Parse video ID string into list of IDs. Supports '1-3' and '1, 2, 3' formats."""
+        video_ids = []
+        parts = video_id_str.replace(' ', '').split(',')
+        for part in parts:
+            if '-' in part:
+                try:
+                    start, end = part.split('-')
+                    for i in range(int(start), int(end) + 1):
+                        video_ids.append(str(i))
+                except ValueError:
+                    video_ids.append(part)
+            else:
+                video_ids.append(part)
+        return video_ids
 
     def _ensure_enhanced_profile(self):
         """Ensure the user has an enhanced profile."""
