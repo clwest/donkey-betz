@@ -7260,6 +7260,15 @@ def execute_tool(request):
                 parameters['project_id'] = str(project.id)
             result = assistant._handle_video_editing_agent(parameters)
 
+        elif tool_name == 'video_generation_agent':
+            # Session 157: Route to enhanced personal assistant's video generation handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Session 156: Inject project_id into parameters for content linking
+            if project:
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_video_generation_agent(parameters)
+
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
