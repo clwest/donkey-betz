@@ -16119,6 +16119,19 @@
                             return `🎨 **Video Editing Agent:** Applying color grading...`;
                         }
                         return `✂️ **Video Editing Agent:** Processing video...`;
+                    } else if (toolName === 'video_generation_agent') {
+                        // Session 157: Video Generation Agent status indicators
+                        const operation = params.operation;
+                        if (operation === 'animate') {
+                            return `🎬 **Video Generation Agent:** Converting image to video...`;
+                        } else if (operation === 'generate') {
+                            return `🎬 **Video Generation Agent:** Generating video from prompt...`;
+                        } else if (operation === 'extend') {
+                            return `🎬 **Video Generation Agent:** Extending video duration...`;
+                        } else if (operation === 'chain') {
+                            return `🎬 **Video Generation Agent:** Chaining videos together...`;
+                        }
+                        return `🎬 **Video Generation Agent:** Processing video...`;
                     }
                 } catch (e) {
                     console.error('Error in getProgressMessage:', e);
@@ -16191,6 +16204,43 @@
                                 setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
                             } else if (result.result.task_id) {
                                 console.error('❌ pollVideoStatus function not found - animated video won\'t auto-update!');
+                            }
+                        } else if (result.tool === 'video_generation_agent') {
+                            // Session 157: Handle video_generation_agent routing operations
+                            const operation = result.params?.operation || 'unknown';
+
+                            if (operation === 'animate') {
+                                message += `🎬 **Image Animation Started!**\n\n`;
+                                message += `${result.result.message || 'Animation in progress...'}\n\n`;
+
+                                // Start status polling for animated videos
+                                if (result.result.task_id && typeof window.pollVideoStatus === 'function') {
+                                    console.log('🎬 Starting video status polling for video_generation_agent:', result.result.task_id);
+                                    setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
+                                }
+                            } else if (operation === 'generate') {
+                                const minutes = Math.ceil((result.result.estimated_time || 60) / 60);
+                                message += `✅ **Video Generation Started!**\n\n`;
+                                message += `${result.result.message || 'Video generation in progress...'}\n\n`;
+                                message += `⏱️ Estimated time: ~${minutes} minutes\n\n`;
+
+                                if (result.result.task_id && typeof window.pollVideoStatus === 'function') {
+                                    setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
+                                }
+                            } else if (operation === 'extend') {
+                                message += `✅ **Video Extension Started!**\n\n`;
+                                message += `${result.result.message || 'Video extension in progress...'}\n\n`;
+
+                                if (result.result.task_id && typeof window.pollVideoStatus === 'function') {
+                                    setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
+                                }
+                            } else if (operation === 'chain') {
+                                message += `✅ **Video Chaining Complete!**\n\n`;
+                                message += `${result.result.message || 'Videos chained successfully.'}\n\n`;
+                            } else {
+                                // Generic message for unknown operations
+                                message += `✅ **Video Operation Complete!**\n\n`;
+                                message += `${result.result.message || 'Operation completed successfully.'}\n\n`;
                             }
                         } else if (result.tool === 'web_search') {
                             message += `✅ **Search Results for "${result.result.query}":**\n\n`;

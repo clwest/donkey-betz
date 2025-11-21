@@ -55,7 +55,7 @@ class ImageEditingAgent:
 
         Args:
             operation: Type of operation ('upscale', 'remove_background', 'variations',
-                      'erase_object', 'recolor', 'refine')
+                      'recolor', 'search_and_replace', 'creative_upscale')
             image_id: UUID or sequential number of the image to edit
             **kwargs: Operation-specific parameters
 
@@ -85,9 +85,11 @@ class ImageEditingAgent:
                 'upscale': self._upscale,
                 'remove_background': self._remove_background,
                 'variations': self._create_variations,
-                'erase_object': self._erase_object,
+                # 'erase_object': self._erase_object,  # Deprecated: use search_and_replace with empty replace_prompt
                 'recolor': self._recolor,
-                'refine': self._refine
+                # 'refine': self._refine,  # TODO: No backend implementation
+                'search_and_replace': self._search_and_replace,  # Session 151 - also handles erasure
+                'creative_upscale': self._creative_upscale  # Session 151
             }
 
             if operation not in operation_map:
@@ -225,9 +227,11 @@ class ImageEditingAgent:
                     'image_ids': image_ids
                 }
             else:
+                error_msg = result.get('error', 'Variation creation failed')
+                logger.error(f"❌ Create variations backend error: {error_msg}")
                 return {
                     'success': False,
-                    'error': result.get('error', 'Variation creation failed')
+                    'error': error_msg
                 }
 
         except Exception as e:
@@ -240,7 +244,7 @@ class ImageEditingAgent:
     def _erase_object(self, image_id: str, **kwargs) -> Dict[str, Any]:
         """Erase specific objects from an image."""
         try:
-            from core.views_image import erase_object_view
+            from core.views_image import erase_object
 
             search_prompt = kwargs.get('search_prompt')
             if not search_prompt:
@@ -257,12 +261,12 @@ class ImageEditingAgent:
             if self.project_id:
                 request_data['project_id'] = self.project_id
 
-            request = factory.post('/api/stability/erase-object/',
+            request = factory.post('/api/stability/erase/',
                                   data=json.dumps(request_data),
                                   content_type='application/json')
             request.user = self.user
 
-            response = erase_object_view(request)
+            response = erase_object(request)
             result = json.loads(response.content)
 
             if result.get('success') or result.get('image_id'):
@@ -376,6 +380,109 @@ class ImageEditingAgent:
             return {
                 'success': False,
                 'error': f"Failed to refine image: {str(e)}"
+            }
+
+    def _search_and_replace(self, image_id: str, **kwargs) -> Dict[str, Any]:
+        """Search and replace objects in image with AI precision."""
+        try:
+            from core.views_image import search_and_replace_view
+
+            search_prompt = kwargs.get('search_prompt')
+            replace_prompt = kwargs.get('replace_prompt', '')
+
+            if not search_prompt:
+                return {
+                    'success': False,
+                    'error': 'search_prompt is required for search_and_replace operation'
+                }
+
+            factory = RequestFactory()
+            request_data = {
+                'image_id': image_id,
+                'search_prompt': search_prompt,
+                'replace_prompt': replace_prompt
+            }
+            if self.project_id:
+                request_data['project_id'] = self.project_id
+
+            request = factory.post('/api/stability/search-and-replace/',
+                                  data=json.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            response = search_and_replace_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success') or result.get('image_id'):
+                action = "removed" if not replace_prompt else "replaced"
+                target = search_prompt
+                replacement = f" with '{replace_prompt}'" if replace_prompt else ""
+                return {
+                    'success': True,
+                    'message': f"✨ Successfully {action} '{target}'{replacement}. Result will appear in gallery shortly (~30 seconds).",
+                    'image_id': result.get('image_id')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Search and replace operation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Search and replace operation error: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to search and replace: {str(e)}"
+            }
+
+    def _creative_upscale(self, image_id: str, **kwargs) -> Dict[str, Any]:
+        """Creative upscale with prompt - adds AI-generated details while upscaling."""
+        try:
+            from core.views_image import creative_upscale_view
+
+            prompt = kwargs.get('prompt')
+            creativity = kwargs.get('creativity', 0.3)
+
+            if not prompt:
+                return {
+                    'success': False,
+                    'error': 'prompt is required for creative_upscale operation'
+                }
+
+            factory = RequestFactory()
+            request_data = {
+                'image_id': image_id,
+                'prompt': prompt,
+                'creativity': creativity
+            }
+            if self.project_id:
+                request_data['project_id'] = self.project_id
+
+            request = factory.post('/api/stability/creative-upscale/',
+                                  data=json.dumps(request_data),
+                                  content_type='application/json')
+            request.user = self.user
+
+            response = creative_upscale_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success') or result.get('image_id'):
+                return {
+                    'success': True,
+                    'message': f"✨ Creative upscale complete! Enhanced image with: '{prompt}'. Result will appear in gallery shortly (~40 seconds).",
+                    'image_id': result.get('image_id')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Creative upscale operation failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Creative upscale operation error: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to creative upscale image: {str(e)}"
             }
 
     def _resolve_image_id(self, image_id: str) -> Optional[ImageHistory]:

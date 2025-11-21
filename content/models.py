@@ -3356,3 +3356,128 @@ class AISession(UnifiedBaseModel):
             'project_id': self.project_id if self.project else None,
             'project_name': self.project.name if self.project else None,
         }
+
+
+# ============================================================================
+# SESSION 149: PROJECT SHARE LINKS
+# ============================================================================
+
+class ProjectShare(models.Model):
+    """
+    Public share link for a project
+    Session 149: Public Share Links
+
+    Enables users to share projects publicly with optional password protection
+    and expiration dates. Tracks view analytics for shared projects.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        CreativeProject,
+        on_delete=models.CASCADE,
+        related_name='shares',
+        help_text="Project being shared"
+    )
+
+    share_token = models.CharField(
+        max_length=64,
+        unique=True,
+        editable=False,
+        help_text="Unique token for share URL (auto-generated)"
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether the share link is active"
+    )
+
+    password_hash = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text="Hashed password for protected shares"
+    )
+
+    expires_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When the share link expires (null = never)"
+    )
+
+    view_count = models.IntegerField(
+        default=0,
+        help_text="Number of times the shared project has been viewed"
+    )
+
+    last_viewed = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When the share link was last viewed"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'project_shares'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['share_token']),
+            models.Index(fields=['project', 'is_active']),
+            models.Index(fields=['expires_at']),
+        ]
+        verbose_name = "Project Share"
+        verbose_name_plural = "Project Shares"
+
+    def __str__(self):
+        status = "Active" if self.is_accessible() else "Inactive"
+        return f"{self.project.name} - {status} ({self.view_count} views)"
+
+    def save(self, *args, **kwargs):
+        """Generate share token on first save"""
+        if not self.share_token:
+            import secrets
+            self.share_token = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
+    def set_password(self, raw_password):
+        """Hash and set password"""
+        from django.contrib.auth.hashers import make_password
+        if raw_password:
+            self.password_hash = make_password(raw_password)
+        else:
+            self.password_hash = None
+
+    def check_password(self, raw_password):
+        """Check if password matches"""
+        from django.contrib.auth.hashers import check_password
+        if not self.password_hash:
+            return True  # No password set
+        return check_password(raw_password, self.password_hash)
+
+    def is_expired(self):
+        """Check if share link has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+
+    def is_accessible(self):
+        """Check if share link is accessible"""
+        return self.is_active and not self.is_expired()
+
+    def increment_view_count(self):
+        """Increment view count and update last_viewed"""
+        self.view_count += 1
+        self.last_viewed = timezone.now()
+        self.save(update_fields=['view_count', 'last_viewed'])
+
+    def get_share_url(self, request=None):
+        """Get full share URL"""
+        if request:
+            return request.build_absolute_uri(f'/share/{self.share_token}/')
+        return f'/share/{self.share_token}/'
+
+    def revoke(self):
+        """Revoke the share link"""
+        self.is_active = False
+        self.save(update_fields=['is_active'])

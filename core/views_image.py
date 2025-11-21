@@ -7264,8 +7264,9 @@ def execute_tool(request):
             # Session 157: Route to enhanced personal assistant's video generation handler
             from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
             assistant = EnhancedPersonalAIAssistant(user=request.user)
-            # Session 156: Inject project_id into parameters for content linking
+            # Session 157: Set project as instance attribute for VideoAgent
             if project:
+                assistant.project = project
                 parameters['project_id'] = str(project.id)
             result = assistant._handle_video_generation_agent(parameters)
 
