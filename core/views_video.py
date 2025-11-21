@@ -3359,3 +3359,1280 @@ def concatenate_videos(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# SESSION 161: DAVINCI EXPANSION PHASE 2 - 5 NEW VIDEO EDITING FEATURES
+# =============================================================================
+
+def rotate_flip_video(request):
+    """
+    Rotate or flip a video using ffmpeg.
+
+    Session 161: Rotate/Flip Feature
+    Rotate by 90/180/270 degrees or flip horizontally/vertically.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/rotate/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "rotation": 90 | 180 | 270 | "horizontal" | "vertical" | "both"
+    }
+
+    Natural language examples:
+    - "Rotate video 1 by 90 degrees"
+    - "Flip video 3 horizontally"
+    - "Turn video 2 upside down"
+    - "Mirror video 5"
+    """
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        rotation = data.get('rotation', 90)  # 90, 180, 270, "horizontal", "vertical", "both"
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Clean video_id
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+
+        # Resolve hybrid ID - Session 162: Use project scope and created_at ordering for accurate ID resolution
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+        except (ValueError, AttributeError):
+            try:
+                numeric_id = int(video_id)
+                # Session 162: Filter by project if provided, order by created_at to match frontend gallery
+                if project_id:
+                    videos = VideoHistory.objects.filter(user=request.user, project_id=project_id).order_by('created_at')
+                    scope = f'project'
+                else:
+                    videos = VideoHistory.objects.filter(user=request.user).order_by('created_at')
+                    scope = 'all videos'
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found in {scope} (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"🔄 [Session 162] Resolved hybrid ID {numeric_id} → {video_uuid} (scope: {scope})")
+            except (ValueError, IndexError) as e:
+                return JsonResponse({'success': False, 'error': f'Invalid video_id: {video_id}'}, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({'success': False, 'error': f'Video is {video.status}, must be completed'}, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"🔄 [Session 161] Rotating/flipping video {video.id} with rotation={rotation}")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({'success': False, 'error': f'Video file not found: {full_path}'}, status=404)
+        else:
+            # Download remote video
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Failed to download video: {str(e)}'}, status=500)
+
+        # Build ffmpeg filter based on rotation type
+        if rotation in [90, '90', 'cw', 'clockwise']:
+            vf_filter = 'transpose=1'  # 90 degrees clockwise
+            rotation_desc = '90° clockwise'
+        elif rotation in [180, '180', 'upside_down', 'upside-down']:
+            vf_filter = 'transpose=1,transpose=1'  # 180 degrees
+            rotation_desc = '180°'
+        elif rotation in [270, '270', 'ccw', 'counterclockwise', -90, '-90']:
+            vf_filter = 'transpose=2'  # 90 degrees counter-clockwise
+            rotation_desc = '90° counter-clockwise'
+        elif rotation in ['horizontal', 'hflip', 'mirror']:
+            vf_filter = 'hflip'
+            rotation_desc = 'horizontal flip'
+        elif rotation in ['vertical', 'vflip']:
+            vf_filter = 'vflip'
+            rotation_desc = 'vertical flip'
+        elif rotation in ['both', 'hvflip']:
+            vf_filter = 'hflip,vflip'
+            rotation_desc = 'horizontal and vertical flip'
+        else:
+            return JsonResponse({'success': False, 'error': f'Invalid rotation: {rotation}. Use 90, 180, 270, horizontal, vertical, or both'}, status=400)
+
+        # Generate output path
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/rotated/rotated_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Run ffmpeg
+        cmd = [
+            'ffmpeg', '-i', input_path,
+            '-vf', vf_filter,
+            '-c:a', 'copy',  # Copy audio without re-encoding
+            '-y', output_path
+        ]
+
+        logger.info(f"🚀 Running ffmpeg rotate: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Clean up temp file
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg rotation failed: {result.stderr}")
+            return JsonResponse({'success': False, 'error': f'ffmpeg rotation failed: {result.stderr[:200]}'}, status=500)
+
+        if not os.path.exists(output_path):
+            return JsonResponse({'success': False, 'error': 'Rotation produced no output'}, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Video rotated: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Get project
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+        elif video.project:
+            project = video.project
+
+        # Create VideoHistory record
+        rotated_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='edited',
+            prompt=f"Rotated video {video.id} ({rotation_desc})",
+            duration=video.duration,
+            model_used='ffmpeg_rotate',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 161] Video rotated: {video.id} → {rotated_video.id} ({rotation_desc})")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=rotated_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Rotated video {rotation_desc} using ffmpeg",
+                execution_time_seconds=0.0
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(rotated_video.id),
+            'video_url': rotated_video.video_url,
+            'rotation': rotation_desc,
+            'message': f'Video rotated ({rotation_desc}) successfully',
+            'agent': 'VideoEditingAgent',
+            'operation': 'rotate_flip',
+            'operation_display': f'Rotating video {rotation_desc}'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 161] Video rotation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def fade_video(request):
+    """
+    Add fade in/out effects to a video using ffmpeg.
+
+    Session 161: Fade In/Out Feature
+    Add smooth fade transitions at the beginning and/or end of videos.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/fade/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "fade_in": 1.0,  # seconds for fade in (0 to disable)
+        "fade_out": 1.0,  # seconds for fade out (0 to disable)
+        "fade_color": "black"  # black or white
+    }
+
+    Natural language examples:
+    - "Add fade in to video 1"
+    - "Fade out video 3 over 2 seconds"
+    - "Add 1 second fade in and fade out to video 2"
+    """
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        fade_in = float(data.get('fade_in', 1.0))
+        fade_out = float(data.get('fade_out', 1.0))
+        fade_color = data.get('fade_color', 'black')
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        if fade_in <= 0 and fade_out <= 0:
+            return JsonResponse({'success': False, 'error': 'At least one of fade_in or fade_out must be > 0'}, status=400)
+
+        # Clean video_id
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+
+        # Resolve hybrid ID - Session 162: Use project scope and created_at ordering
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+        except (ValueError, AttributeError):
+            try:
+                numeric_id = int(video_id)
+                # Session 162: Filter by project if provided, order by created_at to match frontend gallery
+                if project_id:
+                    videos = VideoHistory.objects.filter(user=request.user, project_id=project_id).order_by('created_at')
+                    scope = 'project'
+                else:
+                    videos = VideoHistory.objects.filter(user=request.user).order_by('created_at')
+                    scope = 'all videos'
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found in {scope} (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"🔄 [Session 162] Fade: Resolved hybrid ID {numeric_id} → {video_uuid} (scope: {scope})")
+            except (ValueError, IndexError) as e:
+                return JsonResponse({'success': False, 'error': f'Invalid video_id: {video_id}'}, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({'success': False, 'error': f'Video is {video.status}, must be completed'}, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"🎬 [Session 161] Adding fade to video {video.id}: in={fade_in}s, out={fade_out}s")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({'success': False, 'error': f'Video file not found: {full_path}'}, status=404)
+        else:
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Failed to download video: {str(e)}'}, status=500)
+
+        # Get video duration for fade out calculation
+        duration = video.duration
+        if not duration:
+            # Get duration from ffprobe
+            probe_cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', input_path]
+            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+            try:
+                duration = float(probe_result.stdout.strip())
+            except:
+                duration = 10.0  # Default fallback
+
+        # Build video filter
+        vf_filters = []
+        af_filters = []
+
+        if fade_in > 0:
+            vf_filters.append(f"fade=t=in:st=0:d={fade_in}:color={fade_color}")
+            af_filters.append(f"afade=t=in:st=0:d={fade_in}")
+
+        if fade_out > 0:
+            fade_out_start = max(0, duration - fade_out)
+            vf_filters.append(f"fade=t=out:st={fade_out_start}:d={fade_out}:color={fade_color}")
+            af_filters.append(f"afade=t=out:st={fade_out_start}:d={fade_out}")
+
+        # Generate output path
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/faded/faded_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Check if video has audio
+        has_audio = _video_has_audio(input_path)
+
+        # Run ffmpeg
+        if has_audio and af_filters:
+            cmd = [
+                'ffmpeg', '-i', input_path,
+                '-vf', ','.join(vf_filters),
+                '-af', ','.join(af_filters),
+                '-y', output_path
+            ]
+        else:
+            cmd = [
+                'ffmpeg', '-i', input_path,
+                '-vf', ','.join(vf_filters),
+                '-c:a', 'copy',
+                '-y', output_path
+            ]
+
+        logger.info(f"🚀 Running ffmpeg fade: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Clean up temp file
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg fade failed: {result.stderr}")
+            return JsonResponse({'success': False, 'error': f'ffmpeg fade failed: {result.stderr[:200]}'}, status=500)
+
+        if not os.path.exists(output_path):
+            return JsonResponse({'success': False, 'error': 'Fade produced no output'}, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Video faded: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Build description
+        fade_desc = []
+        if fade_in > 0:
+            fade_desc.append(f"fade in {fade_in}s")
+        if fade_out > 0:
+            fade_desc.append(f"fade out {fade_out}s")
+        fade_description = ' + '.join(fade_desc)
+
+        # Get project
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+        elif video.project:
+            project = video.project
+
+        # Create VideoHistory record
+        faded_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='edited',
+            prompt=f"Added {fade_description} to video {video.id}",
+            duration=duration,
+            model_used='ffmpeg_fade',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 161] Video faded: {video.id} → {faded_video.id} ({fade_description})")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=faded_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Added {fade_description} using ffmpeg",
+                execution_time_seconds=0.0
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(faded_video.id),
+            'video_url': faded_video.video_url,
+            'fade_in': fade_in,
+            'fade_out': fade_out,
+            'message': f'Added {fade_description} successfully',
+            'agent': 'VideoEditingAgent',
+            'operation': 'fade',
+            'operation_display': f'Adding {fade_description}'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 161] Video fade error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def crop_resize_video(request):
+    """
+    Crop or resize a video using ffmpeg.
+
+    Session 161: Crop/Resize Feature
+    Crop to specific region or resize to new dimensions/aspect ratio.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/crop/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "mode": "crop" | "resize" | "aspect",
+        "width": 1920,  # target width (for resize)
+        "height": 1080,  # target height (for resize)
+        "crop_x": 0,  # crop start X (for crop)
+        "crop_y": 0,  # crop start Y (for crop)
+        "crop_width": 640,  # crop width (for crop)
+        "crop_height": 480,  # crop height (for crop)
+        "aspect": "16:9" | "9:16" | "1:1" | "4:3"  # for aspect mode
+    }
+
+    Natural language examples:
+    - "Crop video 1 to square"
+    - "Resize video 3 to 1920x1080"
+    - "Make video 2 portrait (9:16)"
+    - "Convert video 5 to 4:3 aspect ratio"
+    """
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        mode = data.get('mode', 'resize')  # crop, resize, aspect
+        width = data.get('width')
+        height = data.get('height')
+        crop_x = data.get('crop_x', 0)
+        crop_y = data.get('crop_y', 0)
+        crop_width = data.get('crop_width')
+        crop_height = data.get('crop_height')
+        aspect = data.get('aspect', '16:9')
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Clean video_id
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+
+        # Resolve hybrid ID - Session 162: Use project scope and created_at ordering
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+        except (ValueError, AttributeError):
+            try:
+                numeric_id = int(video_id)
+                # Session 162: Filter by project if provided, order by created_at to match frontend gallery
+                if project_id:
+                    videos = VideoHistory.objects.filter(user=request.user, project_id=project_id).order_by('created_at')
+                    scope = 'project'
+                else:
+                    videos = VideoHistory.objects.filter(user=request.user).order_by('created_at')
+                    scope = 'all videos'
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found in {scope} (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"🔄 [Session 162] Crop/Resize: Resolved hybrid ID {numeric_id} → {video_uuid} (scope: {scope})")
+            except (ValueError, IndexError) as e:
+                return JsonResponse({'success': False, 'error': f'Invalid video_id: {video_id}'}, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({'success': False, 'error': f'Video is {video.status}, must be completed'}, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"✂️ [Session 161] Crop/resize video {video.id}: mode={mode}")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({'success': False, 'error': f'Video file not found: {full_path}'}, status=404)
+        else:
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Failed to download video: {str(e)}'}, status=500)
+
+        # Get current video dimensions
+        probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', input_path]
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        try:
+            current_dims = probe_result.stdout.strip().split('x')
+            current_width = int(current_dims[0])
+            current_height = int(current_dims[1])
+        except:
+            current_width, current_height = 1280, 720  # Default fallback
+
+        # Build filter based on mode
+        if mode == 'crop':
+            if not crop_width or not crop_height:
+                return JsonResponse({'success': False, 'error': 'crop_width and crop_height required for crop mode'}, status=400)
+            vf_filter = f"crop={crop_width}:{crop_height}:{crop_x}:{crop_y}"
+            operation_desc = f"cropped to {crop_width}x{crop_height}"
+            new_ratio = f"{crop_width}:{crop_height}"
+
+        elif mode == 'resize':
+            if not width and not height:
+                return JsonResponse({'success': False, 'error': 'width and/or height required for resize mode'}, status=400)
+            if width and height:
+                vf_filter = f"scale={width}:{height}"
+                operation_desc = f"resized to {width}x{height}"
+                new_ratio = f"{width}:{height}"
+            elif width:
+                vf_filter = f"scale={width}:-2"  # -2 maintains aspect ratio, ensures even number
+                operation_desc = f"resized to width {width}"
+                new_ratio = video.ratio
+            else:
+                vf_filter = f"scale=-2:{height}"
+                operation_desc = f"resized to height {height}"
+                new_ratio = video.ratio
+
+        elif mode == 'aspect':
+            # Aspect ratio presets
+            aspect_ratios = {
+                '16:9': (16, 9),
+                '9:16': (9, 16),
+                '1:1': (1, 1),
+                '4:3': (4, 3),
+                '3:4': (3, 4),
+                '21:9': (21, 9),
+                'square': (1, 1),
+                'portrait': (9, 16),
+                'landscape': (16, 9),
+                'cinematic': (21, 9),
+            }
+
+            if aspect not in aspect_ratios:
+                return JsonResponse({'success': False, 'error': f'Invalid aspect ratio: {aspect}. Use: {", ".join(aspect_ratios.keys())}'}, status=400)
+
+            target_w, target_h = aspect_ratios[aspect]
+
+            # Calculate crop dimensions to achieve target aspect ratio
+            target_aspect = target_w / target_h
+            current_aspect = current_width / current_height
+
+            if current_aspect > target_aspect:
+                # Video is wider than target - crop width
+                new_width = int(current_height * target_aspect)
+                new_height = current_height
+                crop_x_offset = (current_width - new_width) // 2
+                crop_y_offset = 0
+            else:
+                # Video is taller than target - crop height
+                new_width = current_width
+                new_height = int(current_width / target_aspect)
+                crop_x_offset = 0
+                crop_y_offset = (current_height - new_height) // 2
+
+            vf_filter = f"crop={new_width}:{new_height}:{crop_x_offset}:{crop_y_offset}"
+            operation_desc = f"converted to {aspect} aspect ratio"
+            new_ratio = aspect
+        else:
+            return JsonResponse({'success': False, 'error': f'Invalid mode: {mode}. Use: crop, resize, or aspect'}, status=400)
+
+        # Generate output path
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/cropped/cropped_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Run ffmpeg
+        cmd = [
+            'ffmpeg', '-i', input_path,
+            '-vf', vf_filter,
+            '-c:a', 'copy',
+            '-y', output_path
+        ]
+
+        logger.info(f"🚀 Running ffmpeg crop/resize: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Clean up temp file
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg crop/resize failed: {result.stderr}")
+            return JsonResponse({'success': False, 'error': f'ffmpeg crop/resize failed: {result.stderr[:200]}'}, status=500)
+
+        if not os.path.exists(output_path):
+            return JsonResponse({'success': False, 'error': 'Crop/resize produced no output'}, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Video cropped/resized: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Get project
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+        elif video.project:
+            project = video.project
+
+        # Create VideoHistory record
+        edited_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='edited',
+            prompt=f"Video {video.id} {operation_desc}",
+            duration=video.duration,
+            model_used='ffmpeg_crop',
+            ratio=new_ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 161] Video edited: {video.id} → {edited_video.id} ({operation_desc})")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=edited_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Video {operation_desc} using ffmpeg",
+                execution_time_seconds=0.0
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(edited_video.id),
+            'video_url': edited_video.video_url,
+            'mode': mode,
+            'new_ratio': new_ratio,
+            'message': f'Video {operation_desc} successfully',
+            'agent': 'VideoEditingAgent',
+            'operation': 'crop_resize',
+            'operation_display': f'Video {operation_desc}'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 161] Video crop/resize error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def audio_controls(request):
+    """
+    Control audio in a video using ffmpeg.
+
+    Session 161: Audio Controls Feature
+    Adjust volume, mute, or extract audio from videos.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/audio/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "operation": "volume" | "mute" | "extract",
+        "volume": 1.5,  # for volume operation (0.5 = 50%, 2.0 = 200%)
+        "output_format": "mp3" | "wav" | "aac"  # for extract operation
+    }
+
+    Natural language examples:
+    - "Increase volume of video 1 to 150%"
+    - "Mute video 3"
+    - "Extract audio from video 2"
+    - "Make video 5 quieter (50% volume)"
+    """
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        operation = data.get('operation', 'volume')  # volume, mute, extract
+        volume = float(data.get('volume', 1.0))
+        output_format = data.get('output_format', 'mp3')
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Clean video_id
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+
+        # Resolve hybrid ID - Session 162: Use project scope and created_at ordering
+        try:
+            import uuid as uuid_module
+            video_uuid = uuid_module.UUID(video_id)
+        except (ValueError, AttributeError):
+            try:
+                numeric_id = int(video_id)
+                # Session 162: Filter by project if provided, order by created_at to match frontend gallery
+                if project_id:
+                    videos = VideoHistory.objects.filter(user=request.user, project_id=project_id).order_by('created_at')
+                    scope = 'project'
+                else:
+                    videos = VideoHistory.objects.filter(user=request.user).order_by('created_at')
+                    scope = 'all videos'
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found in {scope} (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"🔄 [Session 162] Audio: Resolved hybrid ID {numeric_id} → {video_uuid} (scope: {scope})")
+            except (ValueError, IndexError) as e:
+                return JsonResponse({'success': False, 'error': f'Invalid video_id: {video_id}'}, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({'success': False, 'error': f'Video is {video.status}, must be completed'}, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"🔊 [Session 161] Audio control on video {video.id}: operation={operation}")
+
+        # Get input video path
+        input_path = None
+        temp_dir = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({'success': False, 'error': f'Video file not found: {full_path}'}, status=404)
+        else:
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': f'Failed to download video: {str(e)}'}, status=500)
+
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+
+        # Get project
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+        elif video.project:
+            project = video.project
+
+        if operation == 'volume':
+            # Adjust volume
+            if volume < 0:
+                return JsonResponse({'success': False, 'error': 'Volume must be >= 0'}, status=400)
+
+            output_filename = f"videos/audio/volume_{timestamp}.mp4"
+            output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            cmd = [
+                'ffmpeg', '-i', input_path,
+                '-af', f'volume={volume}',
+                '-c:v', 'copy',
+                '-y', output_path
+            ]
+
+            operation_desc = f"volume adjusted to {int(volume * 100)}%"
+
+        elif operation == 'mute':
+            # Remove audio completely
+            output_filename = f"videos/audio/muted_{timestamp}.mp4"
+            output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            cmd = [
+                'ffmpeg', '-i', input_path,
+                '-an',  # Remove audio
+                '-c:v', 'copy',
+                '-y', output_path
+            ]
+
+            operation_desc = "audio removed (muted)"
+
+        elif operation == 'extract':
+            # Extract audio to separate file
+            if output_format not in ['mp3', 'wav', 'aac', 'm4a', 'flac']:
+                output_format = 'mp3'
+
+            output_filename = f"audio/extracted/audio_{timestamp}.{output_format}"
+            output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            if output_format == 'mp3':
+                cmd = ['ffmpeg', '-i', input_path, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', '-y', output_path]
+            elif output_format == 'wav':
+                cmd = ['ffmpeg', '-i', input_path, '-vn', '-acodec', 'pcm_s16le', '-y', output_path]
+            elif output_format == 'aac':
+                cmd = ['ffmpeg', '-i', input_path, '-vn', '-acodec', 'aac', '-b:a', '192k', '-y', output_path]
+            elif output_format == 'm4a':
+                cmd = ['ffmpeg', '-i', input_path, '-vn', '-acodec', 'aac', '-b:a', '192k', '-y', output_path]
+            else:
+                cmd = ['ffmpeg', '-i', input_path, '-vn', '-y', output_path]
+
+            operation_desc = f"audio extracted as {output_format.upper()}"
+
+        else:
+            return JsonResponse({'success': False, 'error': f'Invalid operation: {operation}. Use: volume, mute, or extract'}, status=400)
+
+        logger.info(f"🚀 Running ffmpeg audio: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Clean up temp file
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg audio operation failed: {result.stderr}")
+            return JsonResponse({'success': False, 'error': f'ffmpeg audio operation failed: {result.stderr[:200]}'}, status=500)
+
+        if not os.path.exists(output_path):
+            return JsonResponse({'success': False, 'error': 'Audio operation produced no output'}, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Audio operation complete: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        if operation == 'extract':
+            # For extract, we create an audio file, not a video
+            # Return the audio URL directly
+            return JsonResponse({
+                'success': True,
+                'audio_url': f'/media/{output_filename}',
+                'format': output_format,
+                'source_video_id': str(video.id),
+                'message': f'Audio extracted from video as {output_format.upper()}',
+                'agent': 'VideoEditingAgent',
+                'operation': 'audio_extract',
+                'operation_display': f'Extracting audio as {output_format.upper()}'
+            })
+
+        # For volume/mute, create VideoHistory record
+        edited_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='edited',
+            prompt=f"Video {video.id} {operation_desc}",
+            duration=video.duration,
+            model_used='ffmpeg_audio',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 161] Video audio edited: {video.id} → {edited_video.id} ({operation_desc})")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=edited_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Audio {operation_desc} using ffmpeg",
+                execution_time_seconds=0.0
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(edited_video.id),
+            'video_url': edited_video.video_url,
+            'operation': operation,
+            'volume': volume if operation == 'volume' else None,
+            'message': f'Video {operation_desc} successfully',
+            'agent': 'VideoEditingAgent',
+            'operation': f'audio_{operation}',
+            'operation_display': f'Video {operation_desc}'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 161] Audio control error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def picture_in_picture(request):
+    """
+    Create picture-in-picture effect by overlaying one video on another.
+
+    Session 161: Picture-in-Picture Feature
+    Overlay a smaller video on top of a larger background video.
+    Uses ffmpeg - completely FREE operation!
+
+    POST /api/video/pip/
+    {
+        "background_video_id": "uuid or hybrid ID",
+        "overlay_video_id": "uuid or hybrid ID",
+        "position": "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center",
+        "scale": 0.25,  # scale of overlay (0.1-0.5, default 0.25 = 25%)
+        "margin": 10,  # pixels from edge
+        "opacity": 1.0  # overlay opacity (0.0-1.0)
+    }
+
+    Natural language examples:
+    - "Put video 2 in the corner of video 1"
+    - "Add video 3 as picture-in-picture on video 5"
+    - "Overlay video 1 on video 4 in top right corner"
+    """
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        bg_video_id = data.get('background_video_id')
+        overlay_video_id = data.get('overlay_video_id')
+        position = data.get('position', 'bottom-right')
+        scale = float(data.get('scale', 0.25))
+        margin = int(data.get('margin', 10))
+        opacity = float(data.get('opacity', 1.0))
+        project_id = data.get('project_id')
+
+        if not bg_video_id or not overlay_video_id:
+            return JsonResponse({'success': False, 'error': 'background_video_id and overlay_video_id required'}, status=400)
+
+        if scale < 0.1 or scale > 0.8:
+            return JsonResponse({'success': False, 'error': 'scale must be between 0.1 and 0.8'}, status=400)
+
+        # Helper to resolve video ID - Session 162: Use project scope and created_at ordering
+        def resolve_video_id(vid, user, proj_id=None):
+            if isinstance(vid, str):
+                vid = vid.strip().strip('"').strip("'")
+            try:
+                import uuid as uuid_module
+                return uuid_module.UUID(vid)
+            except (ValueError, AttributeError):
+                try:
+                    numeric_id = int(vid)
+                    # Session 162: Filter by project if provided, order by created_at to match frontend gallery
+                    if proj_id:
+                        videos = VideoHistory.objects.filter(user=user, project_id=proj_id).order_by('created_at')
+                        scope = 'project'
+                    else:
+                        videos = VideoHistory.objects.filter(user=user).order_by('created_at')
+                        scope = 'all videos'
+                    if numeric_id < 1 or numeric_id > videos.count():
+                        return None
+                    resolved_uuid = videos[numeric_id - 1].id
+                    logger.info(f"🔄 [Session 162] PiP: Resolved hybrid ID {numeric_id} → {resolved_uuid} (scope: {scope})")
+                    return resolved_uuid
+                except:
+                    return None
+
+        bg_uuid = resolve_video_id(bg_video_id, request.user, project_id)
+        overlay_uuid = resolve_video_id(overlay_video_id, request.user, project_id)
+
+        if not bg_uuid:
+            return JsonResponse({'success': False, 'error': f'Background video {bg_video_id} not found'}, status=404)
+        if not overlay_uuid:
+            return JsonResponse({'success': False, 'error': f'Overlay video {overlay_video_id} not found'}, status=404)
+
+        # Get videos from database
+        try:
+            bg_video = VideoHistory.objects.get(id=bg_uuid, user=request.user)
+            overlay_video = VideoHistory.objects.get(id=overlay_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'One or both videos not found'}, status=404)
+
+        if bg_video.status != 'completed' or overlay_video.status != 'completed':
+            return JsonResponse({'success': False, 'error': 'Both videos must be completed'}, status=400)
+
+        if not bg_video.video_url or not overlay_video.video_url:
+            return JsonResponse({'success': False, 'error': 'Both videos must have video URLs'}, status=400)
+
+        logger.info(f"🖼️ [Session 161] PiP: bg={bg_video.id}, overlay={overlay_video.id}, pos={position}")
+
+        # Get input video paths
+        temp_dir = tempfile.mkdtemp()
+
+        def get_video_path(video, temp_dir, suffix):
+            if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+                file_path = video.video_url.lstrip('/')
+                if file_path.startswith('media/'):
+                    file_path = file_path[6:]
+                full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+                if os.path.exists(full_path):
+                    return full_path
+            # Download
+            response = requests.get(video.video_url, timeout=60, stream=True)
+            response.raise_for_status()
+            temp_path = os.path.join(temp_dir, f'{suffix}.mp4')
+            with open(temp_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            return temp_path
+
+        try:
+            bg_path = get_video_path(bg_video, temp_dir, 'bg')
+            overlay_path = get_video_path(overlay_video, temp_dir, 'overlay')
+        except Exception as e:
+            import shutil
+            shutil.rmtree(temp_dir)
+            return JsonResponse({'success': False, 'error': f'Failed to get video files: {str(e)}'}, status=500)
+
+        # Get background video dimensions
+        probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', bg_path]
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        try:
+            bg_dims = probe_result.stdout.strip().split('x')
+            bg_width = int(bg_dims[0])
+            bg_height = int(bg_dims[1])
+        except:
+            bg_width, bg_height = 1280, 720
+
+        # Calculate overlay size
+        overlay_width = int(bg_width * scale)
+        overlay_height = int(bg_height * scale)
+
+        # Calculate position
+        position_map = {
+            'top-left': (margin, margin),
+            'top-right': (bg_width - overlay_width - margin, margin),
+            'bottom-left': (margin, bg_height - overlay_height - margin),
+            'bottom-right': (bg_width - overlay_width - margin, bg_height - overlay_height - margin),
+            'center': ((bg_width - overlay_width) // 2, (bg_height - overlay_height) // 2),
+        }
+
+        if position not in position_map:
+            position = 'bottom-right'
+
+        x_pos, y_pos = position_map[position]
+
+        # Generate output path
+        from django.utils import timezone as tz
+        timestamp = tz.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/pip/pip_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Build ffmpeg filter for PiP
+        # Scale overlay and position it
+        if opacity < 1.0:
+            filter_complex = f"[1:v]scale={overlay_width}:{overlay_height},format=rgba,colorchannelmixer=aa={opacity}[pip];[0:v][pip]overlay={x_pos}:{y_pos}:shortest=1"
+        else:
+            filter_complex = f"[1:v]scale={overlay_width}:{overlay_height}[pip];[0:v][pip]overlay={x_pos}:{y_pos}:shortest=1"
+
+        cmd = [
+            'ffmpeg',
+            '-i', bg_path,
+            '-i', overlay_path,
+            '-filter_complex', filter_complex,
+            '-c:a', 'copy',
+            '-y', output_path
+        ]
+
+        logger.info(f"🚀 Running ffmpeg PiP: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Clean up temp dir
+        import shutil
+        shutil.rmtree(temp_dir)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg PiP failed: {result.stderr}")
+            return JsonResponse({'success': False, 'error': f'ffmpeg PiP failed: {result.stderr[:200]}'}, status=500)
+
+        if not os.path.exists(output_path):
+            return JsonResponse({'success': False, 'error': 'PiP produced no output'}, status=500)
+
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ PiP video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Get project
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+        elif bg_video.project:
+            project = bg_video.project
+
+        # Create VideoHistory record
+        pip_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='edited',
+            prompt=f"Picture-in-Picture: {bg_video.id} + {overlay_video.id} ({position})",
+            duration=min(bg_video.duration or 10, overlay_video.duration or 10),
+            model_used='ffmpeg_pip',
+            ratio=bg_video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=tz.now(),
+            project=project
+        )
+
+        logger.info(f"✅ [Session 161] PiP video created: {pip_video.id}")
+
+        # Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=pip_video,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Created PiP with overlay at {position} using ffmpeg",
+                execution_time_seconds=0.0
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(pip_video.id),
+            'video_url': pip_video.video_url,
+            'background_video': str(bg_video.id),
+            'overlay_video': str(overlay_video.id),
+            'position': position,
+            'scale': scale,
+            'message': f'Picture-in-Picture created with overlay in {position}',
+            'agent': 'VideoEditingAgent',
+            'operation': 'picture_in_picture',
+            'operation_display': f'Creating PiP with overlay in {position}'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 161] PiP error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def _video_has_audio(video_path):
+    """Helper to check if video has an audio stream."""
+    try:
+        cmd = ['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', video_path]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        return 'audio' in result.stdout
+    except:
+        return True  # Assume it has audio if we can't check

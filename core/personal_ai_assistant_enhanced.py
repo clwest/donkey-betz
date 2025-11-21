@@ -238,22 +238,22 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "video_editing_agent",
-                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!), extract_frame (pull a still image from any timestamp - FREE!), reverse (play video backwards - FREE!), trim (cut video to specific time range - FREE!), speed_change (slow motion 0.5x or speed up 2x - FREE!), concatenate (combine multiple videos into one - FREE!). Session 160: Added speed_change, concatenate. Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
+                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!), extract_frame (pull a still image from any timestamp - FREE!), reverse (play video backwards - FREE!), trim (cut video to specific time range - FREE!), speed_change (slow motion 0.5x or speed up 2x - FREE!), concatenate (combine multiple videos into one - FREE!), rotate_flip (rotate 90/180/270 degrees or flip horizontal/vertical - FREE!), fade (add fade in/out effects - FREE!), crop_resize (crop to region, resize dimensions, or change aspect ratio - FREE!), audio_control (adjust volume, mute, or extract audio - FREE!), picture_in_picture (overlay one video on another - FREE!). Session 161: Added rotate_flip, fade, crop_resize, audio_control, picture_in_picture. Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading) | 'extract_frame' (Session 159 - pull still image at timestamp) | 'reverse' (Session 159 - play video backwards) | 'trim' (Session 159 - cut video to time range) | 'speed_change' (Session 160 - slow motion or speed up) | 'concatenate' (Session 160 - combine multiple videos)",
-                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect", "extract_frame", "reverse", "trim", "speed_change", "concatenate"]
+                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading) | 'extract_frame' (Session 159 - pull still image at timestamp) | 'reverse' (Session 159 - play video backwards) | 'trim' (Session 159 - cut video to time range) | 'speed_change' (Session 160 - slow motion or speed up) | 'concatenate' (Session 160 - combine multiple videos) | 'rotate_flip' (Session 161 - rotate 90/180/270 or flip) | 'fade' (Session 161 - fade in/out effects) | 'crop_resize' (Session 161 - crop/resize/aspect ratio) | 'audio_control' (Session 161 - volume/mute/extract) | 'picture_in_picture' (Session 161 - overlay video)",
+                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect", "extract_frame", "reverse", "trim", "speed_change", "concatenate", "rotate_flip", "fade", "crop_resize", "audio_control", "picture_in_picture"]
                         },
                         "video_id": {
                             "type": "string",
-                            "description": "Video identifier(s) - supports SINGLE or BATCH: Single: '2' or UUID. BATCH (Session 154): Range '1-3', List '1, 2, 5', Combined '1-3, 5'. Examples: 'upscale videos 1-3', 'apply cinematic effect to videos 1, 2'. The agent will process each video sequentially."
+                            "description": "Video identifier(s) - supports SINGLE or BATCH: Single: '2' or UUID. BATCH (Session 154): Range '1-3', List '1, 2, 5', Combined '1-3, 5'. Examples: 'upscale videos 1-3', 'apply cinematic effect to videos 1, 2'. The agent will process each video sequentially. For picture_in_picture: this is the BACKGROUND video."
                         },
                         "params": {
                             "type": "object",
-                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}. For extract_frame: {timestamp: seconds, format: 'jpg'|'png'}. For reverse: {reverse_audio: true|false}. For trim: {start_time: seconds, end_time: seconds, keep_audio: true|false}. For speed_change: {speed: 0.5 for slow-mo, 2.0 for 2x speed, preserve_audio: true|false}. For concatenate: {video_ids: ['1', '2', '3'] - list of video IDs to combine}.",
+                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}. For extract_frame: {timestamp: seconds, format: 'jpg'|'png'}. For reverse: {reverse_audio: true|false}. For trim: {start_time: seconds, end_time: seconds, keep_audio: true|false}. For speed_change: {speed: 0.5 for slow-mo, 2.0 for 2x speed, preserve_audio: true|false}. For concatenate: {video_ids: ['1', '2', '3'] - list of video IDs to combine}. For rotate_flip: {rotation: 90|180|270|'horizontal'|'vertical'|'both'}. For fade: {fade_in: seconds, fade_out: seconds, fade_color: 'black'|'white'}. For crop_resize: {mode: 'crop'|'resize'|'aspect', width, height, crop_x, crop_y, crop_width, crop_height, aspect: '16:9'|'9:16'|'1:1'|'4:3'}. For audio_control: {audio_operation: 'volume'|'mute'|'extract', volume: 1.5 for 150%, output_format: 'mp3'|'wav'|'aac'}. For picture_in_picture: {overlay_video_id: '2', position: 'top-left'|'top-right'|'bottom-left'|'bottom-right'|'center', scale: 0.25, margin: 10, opacity: 1.0}.",
                             "properties": {
                                 "text": {"type": "string"},
                                 "position": {"type": "string", "default": "center"},
@@ -267,13 +267,32 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                                 "intensity": {"type": "number", "default": 0.7, "description": "Session 154: Effect intensity (0.0-1.0)"},
                                 "timestamp": {"type": "number", "default": 0, "description": "Session 159: Time in seconds to extract frame from (e.g., 5.0 for 5 seconds)"},
                                 "format": {"type": "string", "enum": ["jpg", "png"], "default": "jpg", "description": "Session 159: Output format for extracted frame"},
-                                "reverse_audio": {"type": "boolean", "default": true, "description": "Session 159: Whether to also reverse the audio (true) or make silent (false)"},
+                                "reverse_audio": {"type": "boolean", "default": True, "description": "Session 159: Whether to also reverse the audio (true) or make silent (false)"},
                                 "start_time": {"type": "number", "default": 0, "description": "Session 159: Start time in seconds for trim operation"},
                                 "end_time": {"type": "number", "description": "Session 159: End time in seconds for trim operation"},
-                                "keep_audio": {"type": "boolean", "default": true, "description": "Session 159: Whether to keep audio in trimmed video"},
+                                "keep_audio": {"type": "boolean", "default": True, "description": "Session 159: Whether to keep audio in trimmed video"},
                                 "speed": {"type": "number", "default": 1.0, "description": "Session 160: Speed multiplier (0.25-4.0). 0.5 = slow motion, 2.0 = 2x speed"},
-                                "preserve_audio": {"type": "boolean", "default": true, "description": "Session 160: Whether to preserve audio (pitch-corrected) when changing speed"},
-                                "video_ids": {"type": "array", "items": {"type": "string"}, "description": "Session 160: List of video IDs to concatenate (for 'concatenate' operation)"}
+                                "preserve_audio": {"type": "boolean", "default": True, "description": "Session 160: Whether to preserve audio (pitch-corrected) when changing speed"},
+                                "video_ids": {"type": "array", "items": {"type": "string"}, "description": "Session 160: List of video IDs to concatenate (for 'concatenate' operation)"},
+                                "rotation": {"type": "string", "description": "Session 161: Rotation type - 90, 180, 270 (degrees), or 'horizontal', 'vertical', 'both' for flipping"},
+                                "fade_in": {"type": "number", "default": 1.0, "description": "Session 161: Fade in duration in seconds (0 to disable)"},
+                                "fade_out": {"type": "number", "default": 1.0, "description": "Session 161: Fade out duration in seconds (0 to disable)"},
+                                "fade_color": {"type": "string", "enum": ["black", "white"], "default": "black", "description": "Session 161: Fade color"},
+                                "mode": {"type": "string", "enum": ["crop", "resize", "aspect"], "default": "resize", "description": "Session 161: Crop/resize mode"},
+                                "width": {"type": "integer", "description": "Session 161: Target width for resize"},
+                                "height": {"type": "integer", "description": "Session 161: Target height for resize"},
+                                "crop_x": {"type": "integer", "default": 0, "description": "Session 161: Crop start X position"},
+                                "crop_y": {"type": "integer", "default": 0, "description": "Session 161: Crop start Y position"},
+                                "crop_width": {"type": "integer", "description": "Session 161: Crop width"},
+                                "crop_height": {"type": "integer", "description": "Session 161: Crop height"},
+                                "aspect": {"type": "string", "enum": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "square", "portrait", "landscape", "cinematic"], "default": "16:9", "description": "Session 161: Target aspect ratio"},
+                                "audio_operation": {"type": "string", "enum": ["volume", "mute", "extract"], "default": "volume", "description": "Session 161: Audio control operation"},
+                                "volume": {"type": "number", "default": 1.0, "description": "Session 161: Volume multiplier (0.5 = 50%, 1.5 = 150%, 2.0 = 200%)"},
+                                "output_format": {"type": "string", "enum": ["mp3", "wav", "aac", "m4a", "flac"], "default": "mp3", "description": "Session 161: Audio extraction output format"},
+                                "overlay_video_id": {"type": "string", "description": "Session 161: Video ID for PiP overlay (smaller video)"},
+                                "scale": {"type": "number", "default": 0.25, "description": "Session 161: PiP overlay scale (0.1-0.8, 0.25 = 25% of background size)"},
+                                "margin": {"type": "integer", "default": 10, "description": "Session 161: PiP margin from edge in pixels"},
+                                "opacity": {"type": "number", "default": 1.0, "description": "Session 161: PiP overlay opacity (0.0-1.0)"}
                             }
                         },
                         "project_id": {"type": "string"}
@@ -849,6 +868,21 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         elif operation == 'concatenate':
             # Session 160: Video concatenation
             return self._tool_concatenate_videos(tool_args)
+        elif operation == 'rotate_flip':
+            # Session 161: Video rotation/flip
+            return self._tool_rotate_flip_video(tool_args)
+        elif operation == 'fade':
+            # Session 161: Video fade in/out
+            return self._tool_fade_video(tool_args)
+        elif operation == 'crop_resize':
+            # Session 161: Video crop/resize/aspect
+            return self._tool_crop_resize_video(tool_args)
+        elif operation == 'audio_control':
+            # Session 161: Audio controls (volume/mute/extract)
+            return self._tool_audio_controls(tool_args)
+        elif operation == 'picture_in_picture':
+            # Session 161: Picture-in-picture overlay
+            return self._tool_picture_in_picture(tool_args)
         else:
             return {'success': False, 'error': f"Unknown video editing operation: {operation}"}
 
@@ -2137,6 +2171,314 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.error(f"❌ Concatenate videos tool error: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
 
+    # ==========================================================================
+    # SESSION 161: Phase 2 Tool Handlers (5 new video editing features)
+    # ==========================================================================
+
+    def _tool_rotate_flip_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the rotate_flip_video tool - Session 161.
+        Rotates or flips a video.
+        """
+        logger.info(f"🔄 ROTATE_FLIP_VIDEO TOOL CALLED!")
+        logger.info(f"🔄 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            rotation = arguments.get('rotation', 90)
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'rotation': rotation,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/rotate/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import rotate_flip_video
+            response = rotate_flip_video(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Video rotated: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Video rotated successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'rotation': result.get('rotation'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'rotate_flip',
+                    'operation_display': f'Rotating video {result.get("rotation")}'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Video rotation failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Rotate/flip video tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_fade_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the fade_video tool - Session 161.
+        Adds fade in/out effects to a video.
+        """
+        logger.info(f"🎬 FADE_VIDEO TOOL CALLED!")
+        logger.info(f"🎬 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            fade_in = arguments.get('fade_in', 1.0)
+            fade_out = arguments.get('fade_out', 1.0)
+            fade_color = arguments.get('fade_color', 'black')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'fade_in': fade_in,
+                'fade_out': fade_out,
+                'fade_color': fade_color,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/fade/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import fade_video
+            response = fade_video(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Video faded: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Fade effects added successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'fade_in': result.get('fade_in'),
+                    'fade_out': result.get('fade_out'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'fade',
+                    'operation_display': f'Adding fade effects'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Fade effect failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Fade video tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_crop_resize_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the crop_resize_video tool - Session 161.
+        Crops, resizes, or changes aspect ratio of a video.
+        """
+        logger.info(f"✂️ CROP_RESIZE_VIDEO TOOL CALLED!")
+        logger.info(f"✂️ Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            mode = arguments.get('mode', 'aspect')  # crop, resize, aspect
+            width = arguments.get('width')
+            height = arguments.get('height')
+            crop_x = arguments.get('crop_x', 0)
+            crop_y = arguments.get('crop_y', 0)
+            crop_width = arguments.get('crop_width')
+            crop_height = arguments.get('crop_height')
+            aspect = arguments.get('aspect', '16:9')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'mode': mode,
+                'width': width,
+                'height': height,
+                'crop_x': crop_x,
+                'crop_y': crop_y,
+                'crop_width': crop_width,
+                'crop_height': crop_height,
+                'aspect': aspect,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/crop/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import crop_resize_video
+            response = crop_resize_video(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Video cropped/resized: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Video cropped/resized successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'mode': result.get('mode'),
+                    'new_ratio': result.get('new_ratio'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'crop_resize',
+                    'operation_display': result.get('operation_display', 'Cropping/resizing video')
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Crop/resize failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Crop/resize video tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_audio_controls(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the audio_controls tool - Session 161.
+        Adjusts volume, mutes, or extracts audio from a video.
+        """
+        logger.info(f"🔊 AUDIO_CONTROLS TOOL CALLED!")
+        logger.info(f"🔊 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            operation = arguments.get('audio_operation', 'volume')
+            volume = arguments.get('volume', 1.0)
+            output_format = arguments.get('output_format', 'mp3')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'operation': operation,
+                'volume': volume,
+                'output_format': output_format,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/audio/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import audio_controls
+            response = audio_controls(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Audio operation complete: {operation}")
+                if operation == 'extract':
+                    return {
+                        'success': True,
+                        'message': result.get('message', 'Audio extracted successfully'),
+                        'audio_url': result.get('audio_url'),
+                        'format': result.get('format'),
+                        'source_video_id': result.get('source_video_id'),
+                        'agent': 'VideoEditingAgent',
+                        'operation': 'audio_extract',
+                        'operation_display': f'Extracting audio as {result.get("format", "MP3").upper()}'
+                    }
+                else:
+                    return {
+                        'success': True,
+                        'message': result.get('message', 'Audio operation completed'),
+                        'video_id': result.get('video_id'),
+                        'video_url': result.get('video_url'),
+                        'agent': 'VideoEditingAgent',
+                        'operation': f'audio_{operation}',
+                        'operation_display': result.get('operation_display', f'Audio {operation}')
+                    }
+            else:
+                return {'success': False, 'error': result.get('error', 'Audio operation failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Audio controls tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_picture_in_picture(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the picture_in_picture tool - Session 161.
+        Overlays one video on another.
+        """
+        logger.info(f"🖼️ PICTURE_IN_PICTURE TOOL CALLED!")
+        logger.info(f"🖼️ Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            bg_video_id = arguments.get('video_id')  # Main video is the background
+            overlay_video_id = arguments.get('overlay_video_id')
+            position = arguments.get('position', 'bottom-right')
+            scale = arguments.get('scale', 0.25)
+            margin = arguments.get('margin', 10)
+            opacity = arguments.get('opacity', 1.0)
+            project_id = arguments.get('project_id')
+
+            if not overlay_video_id:
+                return {'success': False, 'error': 'overlay_video_id is required for picture-in-picture'}
+
+            factory = RequestFactory()
+            request_data = {
+                'background_video_id': bg_video_id,
+                'overlay_video_id': overlay_video_id,
+                'position': position,
+                'scale': scale,
+                'margin': margin,
+                'opacity': opacity,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/pip/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import picture_in_picture
+            response = picture_in_picture(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ PiP video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Picture-in-picture created successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'background_video': result.get('background_video'),
+                    'overlay_video': result.get('overlay_video'),
+                    'position': result.get('position'),
+                    'scale': result.get('scale'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'picture_in_picture',
+                    'operation_display': f'Creating PiP with overlay in {position}'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Picture-in-picture failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Picture-in-picture tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
     def _parse_video_id_range(self, video_id_str: str) -> list:
         """Parse video ID string into list of IDs. Supports '1-3' and '1, 2, 3' formats."""
         video_ids = []
@@ -2758,9 +3100,18 @@ Respond in a helpful, personalized way that:
                 'create banner', 'create post', 'create avatar', 'create profile',  # Session 131: Workflow keywords
                 'social media banner', 'social media post', 'profile image', 'avatar image',  # Session 131: Workflow phrases
                 'upscale', 'remove background', 'create variation', 'erase', 'recolor', 'refine',
-                # Video operations
+                # Video operations - Generation
                 'animate', 'generate video', 'extend video', 'chain video', 'make video',
                 'create video', 'promo video', 'marketing video',  # Session 131: Workflow keywords
+                # Video operations - Phase 1 (Session 159-160)
+                'extract frame', 'reverse video', 'trim video', 'speed', 'slow motion', 'speed up',
+                'concatenate', 'combine videos', 'merge videos',
+                # Video operations - Phase 2 (Session 161) 🆕
+                'rotate', 'flip', 'turn upside', '90 degrees', '180 degrees', '270 degrees',  # Rotate/Flip
+                'fade in', 'fade out', 'add fade',  # Fade
+                'crop', 'resize', 'aspect ratio', 'make square', 'make portrait', 'make landscape', '16:9', '9:16', '1:1',  # Crop/Resize
+                'mute', 'volume', 'extract audio', 'audio control',  # Audio Controls
+                'picture in picture', 'pip', 'overlay video', 'put video in corner',  # Picture-in-Picture
                 # Audio operations
                 'generate voice', 'voiceover', 'text to speech',
                 # 3D & editing

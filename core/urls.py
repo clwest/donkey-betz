@@ -290,7 +290,9 @@ from core.views_video import (
     # Session 159: Frame Extraction, Video Reverse, Video Trim
     extract_video_frame, reverse_video, trim_video,
     # Session 160: Speed Control, Video Concatenation
-    change_video_speed, concatenate_videos
+    change_video_speed, concatenate_videos,
+    # Session 161: DaVinci Expansion Phase 2 (5 new video editing features)
+    rotate_flip_video, fade_video, crop_resize_video, audio_controls, picture_in_picture
 )
 # Session 66 Part 2: DaVinci Resolve video editing
 # Session 72: Added text overlay and color grading endpoints
@@ -887,6 +889,12 @@ urlpatterns = [
     path('api/video/speed/', change_video_speed, name='video-speed'),
     # Session 160: Video Concatenation (free!)
     path('api/video/concatenate/', concatenate_videos, name='video-concatenate'),
+    # Session 161: DaVinci Expansion Phase 2 (5 new video editing features - all FREE!)
+    path('api/video/rotate/', rotate_flip_video, name='video-rotate'),
+    path('api/video/fade/', fade_video, name='video-fade'),
+    path('api/video/crop/', crop_resize_video, name='video-crop'),
+    path('api/video/audio/', audio_controls, name='video-audio'),
+    path('api/video/pip/', picture_in_picture, name='video-pip'),
     # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
     path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
