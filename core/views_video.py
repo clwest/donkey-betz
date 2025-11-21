@@ -1636,3 +1636,447 @@ def character_performance_endpoint(request):
             'success': False,
             'error_message': str(e)
         }, status=500)
+
+
+# ============================================================================
+# Session 154: Video Enhancement Operations
+# ============================================================================
+
+
+def upscale_video(request):
+    """
+    Upscale a video using ffmpeg lanczos scaling
+
+    Session 154: Video Enhancement
+    Note: @login_required removed to support internal RequestFactory calls from agents
+
+    POST /api/video/upscale/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "scale_factor": 2 or 4,  # 2x or 4x upscaling
+        "quality": "high" (optional)
+    }
+    """
+    # Manual authentication check for web requests
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        scale_factor = data.get('scale_factor', 2)  # Default 2x
+        quality = data.get('quality', 'high')
+        project_id = data.get('project_id')  # Session 156: Accept project_id for linking
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Session 154 Bug Fix: Strip quotes if video_id is double-encoded (e.g., '"12"' instead of '12')
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+            logger.info(f"🔍 [Session 154] Cleaned video_id: {video_id}")
+
+        if scale_factor not in [2, 4]:
+            return JsonResponse({'success': False, 'error': 'scale_factor must be 2 or 4'}, status=400)
+
+        # Resolve hybrid ID (support both UUID and numeric IDs like "1", "2", "3")
+        try:
+            import uuid
+            video_uuid = uuid.UUID(video_id)
+            logger.info(f"✅ [Session 154] Parsed as UUID: {video_uuid}")
+        except (ValueError, AttributeError):
+            # Numeric ID - resolve to UUID
+            try:
+                numeric_id = int(video_id)
+                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"✅ [Session 154] Resolved numeric ID {numeric_id} → UUID {video_uuid}")
+            except (ValueError, IndexError) as e:
+                logger.error(f"❌ [Session 154] Invalid video_id '{video_id}': {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid video_id: {video_id}'
+                }, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': f'Video is {video.status}, must be completed to upscale'
+            }, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"🎬 [Session 154] Upscaling video {video.id} by {scale_factor}x")
+
+        # Get input video path
+        input_path = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            # Local file
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video file not found: {full_path}'
+                }, status=404)
+        else:
+            # Remote URL - download first
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+
+                # Save to temp file
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                logger.info(f"📥 Downloaded video from CDN to {input_path}")
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to download video: {str(e)}'
+                }, status=500)
+
+        # Generate output filename
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/{request.user.id}/upscaled_{scale_factor}x_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Upscale using ffmpeg with lanczos algorithm (high quality)
+        # -vf scale=iw*2:ih*2:flags=lanczos (2x) or scale=iw*4:ih*4:flags=lanczos (4x)
+        cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-vf', f'scale=iw*{scale_factor}:ih*{scale_factor}:flags=lanczos',
+            '-c:v', 'libx264',
+            '-preset', 'slow' if quality == 'high' else 'medium',
+            '-crf', '18' if quality == 'high' else '23',
+            '-c:a', 'copy',  # Copy audio without re-encoding
+            '-y',  # Overwrite output file
+            output_path
+        ]
+
+        logger.info(f"🚀 Running ffmpeg upscale: {' '.join(cmd)}")
+
+        import subprocess
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg upscale failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg upscale failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Get file size and duration
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Upscaled video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Session 156: Get project if project_id provided
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 [Session 156] Linking upscaled video to project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ [Session 156] Project {project_id} not found")
+
+        # Create new VideoHistory record for upscaled video
+        upscaled_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='upscaled',
+            prompt=f"Upscaled {scale_factor}x from video {video.id}",
+            duration=video.duration,
+            model_used=f'ffmpeg_lanczos_{scale_factor}x',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=timezone.now(),
+            project=project  # Session 156: Associate with project
+        )
+
+        logger.info(f"✅ [Session 154] Video upscaled: {video.id} → {upscaled_video.id} ({scale_factor}x)")
+
+        # Session 155: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=upscaled_video,
+                project=video.project if hasattr(video, 'project') and video.project else None,
+                contribution_type='editing',
+                task_description=f"Upscaled video {scale_factor}x using ffmpeg lanczos scaling",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 155] Agent contribution tracked for video {upscaled_video.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 155] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(upscaled_video.id),
+            'video_url': upscaled_video.video_url,
+            'scale_factor': scale_factor,
+            'message': f'Video upscaled {scale_factor}x successfully'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 154] Upscale error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def apply_video_effect(request):
+    """
+    Apply color grading/effects to a video using ffmpeg
+
+    Session 154: Video Enhancement
+    Note: @login_required removed to support internal RequestFactory calls from agents
+
+    POST /api/video/effects/
+    {
+        "video_id": "uuid or hybrid ID (1, 2, 3)",
+        "effect": "cinematic|vibrant|vintage|noir|warm|cool",
+        "intensity": 0.5-1.0 (optional)
+    }
+    """
+    # Manual authentication check for web requests
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        video_id = data.get('video_id')
+        effect = data.get('effect', 'cinematic')
+        intensity = float(data.get('intensity', 0.7))
+
+        if not video_id:
+            return JsonResponse({'success': False, 'error': 'video_id required'}, status=400)
+
+        # Session 154 Bug Fix: Strip quotes if video_id is double-encoded (e.g., '"12"' instead of '12')
+        if isinstance(video_id, str):
+            video_id = video_id.strip().strip('"').strip("'")
+            logger.info(f"🔍 [Session 154] Cleaned video_id: {video_id}")
+
+        # Validate effect
+        valid_effects = ['cinematic', 'vibrant', 'vintage', 'noir', 'warm', 'cool']
+        if effect not in valid_effects:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid effect. Choose from: {", ".join(valid_effects)}'
+            }, status=400)
+
+        # Validate intensity
+        if intensity < 0.0 or intensity > 1.0:
+            return JsonResponse({'success': False, 'error': 'intensity must be 0.0-1.0'}, status=400)
+
+        # Resolve hybrid ID (support both UUID and numeric IDs like "1", "2", "3")
+        try:
+            import uuid
+            video_uuid = uuid.UUID(video_id)
+            logger.info(f"✅ [Session 154] Parsed as UUID: {video_uuid}")
+        except (ValueError, AttributeError):
+            # Numeric ID - resolve to UUID
+            try:
+                numeric_id = int(video_id)
+                videos = VideoHistory.objects.filter(user=request.user).order_by('id')
+                if numeric_id < 1 or numeric_id > videos.count():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Video {numeric_id} not found (valid range: 1-{videos.count()})'
+                    }, status=404)
+                video_uuid = videos[numeric_id - 1].id
+                logger.info(f"✅ [Session 154] Resolved numeric ID {numeric_id} → UUID {video_uuid}")
+            except (ValueError, IndexError) as e:
+                logger.error(f"❌ [Session 154] Invalid video_id '{video_id}': {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid video_id: {video_id}'
+                }, status=400)
+
+        # Get video from database
+        try:
+            video = VideoHistory.objects.get(id=video_uuid, user=request.user)
+        except VideoHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Video not found'}, status=404)
+
+        if video.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': f'Video is {video.status}, must be completed to apply effects'
+            }, status=400)
+
+        if not video.video_url:
+            return JsonResponse({'success': False, 'error': 'Video has no video_url'}, status=400)
+
+        logger.info(f"🎨 [Session 154] Applying {effect} effect to video {video.id} (intensity: {intensity})")
+
+        # Get input video path (same logic as upscale_video)
+        input_path = None
+        if video.video_url.startswith('/media/') or video.video_url.startswith('media/'):
+            file_path = video.video_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            if os.path.exists(full_path):
+                input_path = full_path
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video file not found: {full_path}'
+                }, status=404)
+        else:
+            # Remote URL - download first
+            try:
+                response = requests.get(video.video_url, timeout=60, stream=True)
+                response.raise_for_status()
+
+                temp_dir = tempfile.mkdtemp()
+                input_path = os.path.join(temp_dir, 'input.mp4')
+                with open(input_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                logger.info(f"📥 Downloaded video from CDN to {input_path}")
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to download video: {str(e)}'
+                }, status=500)
+
+        # Generate output filename
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"videos/{request.user.id}/{effect}_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # Build ffmpeg filter chain based on effect
+        # Each effect uses different combinations of eq, curves, and colorlevels filters
+        filter_chain = _build_effect_filter(effect, intensity)
+
+        cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-vf', filter_chain,
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-c:a', 'copy',
+            '-y',
+            output_path
+        ]
+
+        logger.info(f"🚀 Running ffmpeg effect: {effect}")
+
+        import subprocess
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg effect failed: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ffmpeg effect failed: {result.stderr[:200]}'
+            }, status=500)
+
+        # Get file size
+        file_size = os.path.getsize(output_path)
+        logger.info(f"✅ Effect applied: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+        # Create new VideoHistory record
+        effect_video = VideoHistory.objects.create(
+            user=request.user,
+            video_type='enhanced',
+            prompt=f"{effect.capitalize()} effect applied to video {video.id}",
+            duration=video.duration,
+            model_used=f'ffmpeg_{effect}',
+            ratio=video.ratio,
+            status='completed',
+            video_url=f'/media/{output_filename}',
+            generation_completed=timezone.now()
+        )
+
+        logger.info(f"✅ [Session 154] Effect applied: {video.id} → {effect_video.id} ({effect})")
+
+        # Session 155: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                video=effect_video,
+                project=video.project if hasattr(video, 'project') and video.project else None,
+                contribution_type='editing',
+                task_description=f"Applied {effect} color grading effect using ffmpeg",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ [Session 155] Agent contribution tracked for video {effect_video.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ [Session 155] Could not track agent contribution: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(effect_video.id),
+            'video_url': effect_video.video_url,
+            'effect': effect,
+            'message': f'{effect.capitalize()} effect applied successfully'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ [Session 154] Effect error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def _build_effect_filter(effect: str, intensity: float) -> str:
+    """
+    Build ffmpeg filter chain for video effects
+
+    Args:
+        effect: Effect name (cinematic, vibrant, vintage, noir, warm, cool)
+        intensity: Effect intensity (0.0-1.0)
+
+    Returns:
+        str: ffmpeg filter chain
+    """
+    # Base filters for each effect
+    filters = {
+        'cinematic': f"eq=contrast=1.1:saturation=0.9,curves=all='0/0 0.5/0.4 1/1'",
+        'vibrant': f"eq=contrast=1.2:saturation={1.0 + intensity * 0.5}:brightness=0.05",
+        'vintage': f"eq=contrast=0.9:saturation=0.7,curves=r='0/0.1 1/0.9':g='0/0.1 1/0.9':b='0/0.2 1/0.8'",
+        'noir': f"eq=contrast={1.2 + intensity * 0.3}:saturation=0,curves=all='0/0 0.5/{0.45 + intensity * 0.1} 1/1'",
+        'warm': f"eq=saturation=1.1,colortemperature={6500 + intensity * 1500}",
+        'cool': f"eq=saturation=1.1,colortemperature={6500 - intensity * 2000}"
+    }
+
+    return filters.get(effect, filters['cinematic'])

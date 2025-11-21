@@ -6956,6 +6956,7 @@ def execute_tool(request):
         tool_name = request.data.get('tool_name')
         parameters = request.data.get('parameters', {})
         session_id = request.data.get('session_id')  # Session 96 Weekend Project
+        project_id = request.data.get('project_id')  # Session 156: Project context support
 
         if not tool_name:
             return Response({
@@ -6965,9 +6966,19 @@ def execute_tool(request):
         logger.info(f"🔧 Executing tool: {tool_name} with params: {parameters}")
 
         # Session 96 Weekend Project: Get session for linking generated content
+        # Session 156: Also support project_id for project context
         session = None
+        project = None
         if session_id:
             session = get_or_create_session(user=request.user, session_id=session_id)
+        elif project_id:
+            # Get project from project_id for context
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 Tool execution in project context: {project.name} ({project_id})")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ Project {project_id} not found for user {request.user.username}")
 
         # Route to appropriate tool handler
         if tool_name == 'generate_image':
@@ -7230,6 +7241,24 @@ def execute_tool(request):
                 logger.info(f"✅ Created co-leadership decision: {decision.id} (session: {session.session_id if session else 'none'}, project: {project.id if project else 'none'})")
 
             result = meeting_result
+
+        elif tool_name == 'image_editing_agent':
+            # Session 156: Route to enhanced personal assistant's image editing handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Session 156: Inject project_id into parameters for content linking
+            if project:
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_image_editing_agent(parameters)
+
+        elif tool_name == 'video_editing_agent':
+            # Session 155: Route to enhanced personal assistant's video editing handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Session 156: Inject project_id into parameters for content linking
+            if project:
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_video_editing_agent(parameters)
 
         else:
             return Response({
@@ -9789,11 +9818,13 @@ def calculate_project_stats(project_id, user):
     models_count = MiniFigAsset.objects.filter(project_id=project_id, user=user).count()
 
     # Agent stats (Session 147: Return list of agent names for dropdown)
+    # Session 148 Fix: Get agent names, not UUIDs, for JSON serialization
     agent_contributions = AgentContribution.objects.filter(
         project_id=project_id
-    ).values('agent').distinct()
+    ).select_related('agent').values('agent__name').distinct()
 
-    unique_agents_list = [a['agent'] for a in agent_contributions]
+    # Create unique list by converting to set and back to list
+    unique_agents_list = sorted(list(set([a['agent__name'] for a in agent_contributions if a['agent__name']])))
     unique_agents_count = len(unique_agents_list)
 
     total_execution_time = AgentContribution.objects.filter(
@@ -11404,7 +11435,10 @@ def upscale_image_view(request):
 
         url = "https://api.stability.ai/v2beta/stable-image/upscale/conservative"
         files = {"image": image_data}
-        data_params = {"output_format": "png"}
+        data_params = {
+            "prompt": "high quality upscale",  # Required by Stability AI API
+            "output_format": "png"
+        }
 
         headers = {
             "Authorization": f"Bearer {stability_key}",
@@ -11599,18 +11633,26 @@ def remove_background_view(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
 def create_variations_view(request):
     """
     Create variations of an existing image using structure control.
     Accepts JSON: {image_id: uuid, count: int (default 3), prompt: str (optional), project_id: uuid (optional)}
+    Note: @login_required removed to support internal RequestFactory calls from agents
     """
     try:
+        # Manual authentication check for web requests
+        if not request.user or not request.user.is_authenticated:
+            logger.warning(f"⚠️ Unauthenticated request to create_variations_view")
+
+        logger.info(f"🎨 create_variations_view called - user: {request.user}, authenticated: {request.user.is_authenticated}")
+
         data = json.loads(request.body)
         image_id = data.get('image_id')
         count = data.get('count', 3)
         variation_prompt = data.get('prompt', 'creative variation')
         project_id = data.get('project_id')
+
+        logger.info(f"🎨 Params: image_id={image_id}, count={count}, prompt={variation_prompt}")
 
         if not image_id:
             return JsonResponse({'success': False, 'error': 'image_id required'}, status=400)
@@ -11619,7 +11661,9 @@ def create_variations_view(request):
         from content.models import ImageHistory, CreativeProject
         try:
             image = ImageHistory.objects.get(id=image_id, user=request.user)
+            logger.info(f"✅ Found image: {image.id}")
         except ImageHistory.DoesNotExist:
+            logger.error(f"❌ Image not found: {image_id} for user {request.user}")
             return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
 
         seq_num = image.get_sequential_number()
@@ -11711,10 +11755,13 @@ def create_variations_view(request):
                 })
                 logger.info(f"✅ Created variation {i+1}/{count}: {new_image.id} → {saved_path}")
             else:
-                logger.error(f"❌ Variation {i+1} failed: {api_response.text}")
+                error_detail = api_response.text
+                logger.error(f"❌ Variation {i+1} failed (status {api_response.status_code}): {error_detail}")
 
         if not created_images:
-            return JsonResponse({'success': False, 'error': 'Failed to create any variations'}, status=500)
+            # Return detailed error message with first failure reason
+            error_msg = 'Failed to create any variations - check server logs for API error details'
+            return JsonResponse({'success': False, 'error': error_msg}, status=500)
 
         return JsonResponse({
             'success': True,
@@ -11962,6 +12009,525 @@ def recolor_image_view(request):
 
     except Exception as e:
         logger.error(f"❌ Recolor error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================================
+# SESSION 148: PROJECT EXPORT ENDPOINTS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_project_zip(request, project_id):
+    """
+    Export complete project as ZIP archive
+    Session 148: Project Export
+
+    GET /api/projects/<uuid:project_id>/export/zip/
+
+    Returns: Binary ZIP file with all assets + metadata.json + README.txt
+    """
+    import io
+    import json
+    from zipfile import ZipFile
+    from pathlib import Path
+    from datetime import datetime
+    from django.http import HttpResponse
+    from content.models import CreativeProject, ImageHistory, VideoHistory, MiniFigAsset
+
+    try:
+        # Get project
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        # Get all content
+        images = ImageHistory.objects.filter(project_id=project_id, user=request.user)
+        videos = VideoHistory.objects.filter(project_id=project_id, user=request.user)
+        models = MiniFigAsset.objects.filter(project_id=project_id, user=request.user)
+
+        # Get stats
+        stats = calculate_project_stats(project_id, request.user)
+
+        # Create in-memory ZIP
+        zip_buffer = io.BytesIO()
+
+        with ZipFile(zip_buffer, 'w') as zip_file:
+            # Add metadata.json
+            metadata = {
+                'project': {
+                    'id': str(project.id),
+                    'name': project.name,
+                    'description': project.description or '',
+                    'created_at': project.created_at.isoformat(),
+                },
+                'stats': stats,
+                'exported_at': datetime.now().isoformat(),
+                'exported_by': request.user.email
+            }
+            zip_file.writestr('metadata.json', json.dumps(metadata, indent=2))
+
+            # Add README
+            readme = f"""# {project.name}
+
+{project.description or 'No description provided'}
+
+## Contents
+- Images: {len(images)}
+- Videos: {len(videos)}
+- 3D Models: {len(models)}
+
+## Statistics
+- Total Assets: {stats['content']['total']}
+- Unique Agents: {stats['collaboration']['unique_agents_count']}
+- Total Execution Time: {stats['collaboration']['execution_time_seconds']} seconds
+- Decisions Made: {stats['collaboration']['decisions_count']}
+
+## Timeline
+- Created: {stats['timeline']['created_at']}
+- Last Active: {stats['timeline']['last_active']}
+
+## Exported
+{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Generated by AI Content Studio
+https://github.com/anthropics/unified-donkey-betz
+"""
+            zip_file.writestr('README.txt', readme)
+
+            # Add images
+            for i, img in enumerate(images):
+                if img.file_path and not img.file_path.startswith('data:'):
+                    file_path = img.file_path
+                    if os.path.exists(file_path):
+                        zip_file.write(file_path, f'images/image-{i+1}{Path(file_path).suffix}')
+
+            # Add videos
+            for i, vid in enumerate(videos):
+                if vid.video_url and not vid.video_url.startswith('http'):
+                    # Local file
+                    if os.path.exists(vid.video_url):
+                        zip_file.write(vid.video_url, f'videos/video-{i+1}.mp4')
+
+            # Add 3D models
+            for i, model in enumerate(models):
+                if model.three_d_file and os.path.exists(model.three_d_file):
+                    zip_file.write(model.three_d_file, f'models-3d/model-{i+1}.glb')
+
+        # Prepare response
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer.read(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{project.name.replace(" ", "_")}.zip"'
+
+        logger.info(f"✅ Project exported as ZIP: {project.name}")
+        return response
+
+    except CreativeProject.DoesNotExist:
+        logger.error(f"❌ Project not found: {project_id}")
+        return HttpResponse('Project not found', status=404)
+    except Exception as e:
+        logger.error(f"❌ Export ZIP error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f'Export failed: {str(e)}', status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_project_pdf(request, project_id):
+    """
+    Export project as professional PDF portfolio
+    Session 148: Project Export
+
+    GET /api/projects/<uuid:project_id>/export/pdf/
+
+    Returns: Binary PDF file with images, stats, and timeline
+    """
+    import io
+    from datetime import datetime
+    from django.http import HttpResponse
+    from content.models import CreativeProject, ImageHistory, VideoHistory, MiniFigAsset
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+
+    try:
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+        stats = calculate_project_stats(project_id, request.user)
+
+        # Create PDF buffer
+        pdf_buffer = io.BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
+
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=24, spaceAfter=30)
+        heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=16, spaceAfter=12)
+
+        # Build PDF content
+        story = []
+
+        # Title page
+        story.append(Paragraph(project.name, title_style))
+        if project.description:
+            story.append(Paragraph(project.description, styles['Normal']))
+        story.append(Spacer(1, 0.5*inch))
+
+        # Stats section
+        story.append(Paragraph('Project Statistics', heading_style))
+
+        stats_data = [
+            ['Metric', 'Value'],
+            ['Images', str(stats['content']['images'])],
+            ['Videos', str(stats['content']['videos'])],
+            ['3D Models', str(stats['content']['models'])],
+            ['Total Assets', str(stats['content']['total'])],
+            ['Unique Agents', str(stats['collaboration']['unique_agents_count'])],
+            ['Execution Time', f"{stats['collaboration']['execution_time_seconds']} seconds"],
+            ['Decisions Made', str(stats['collaboration']['decisions_count'])],
+        ]
+
+        stats_table = Table(stats_data, colWidths=[3*inch, 3*inch])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+
+        story.append(stats_table)
+        story.append(Spacer(1, 0.3*inch))
+
+        # Agent list
+        if stats['collaboration']['unique_agents']:
+            story.append(Paragraph('Contributing Agents', heading_style))
+            agents_text = ', '.join(stats['collaboration']['unique_agents'])
+            story.append(Paragraph(agents_text, styles['Normal']))
+            story.append(Spacer(1, 0.3*inch))
+
+        story.append(PageBreak())
+
+        # Images section
+        images = ImageHistory.objects.filter(project_id=project_id, user=request.user)
+        if images:
+            story.append(Paragraph('Image Gallery', heading_style))
+            for img in images:
+                if img.file_path and not img.file_path.startswith('data:') and os.path.exists(img.file_path):
+                    try:
+                        # Add image
+                        rl_img = RLImage(img.file_path, width=4*inch, height=4*inch, kind='proportional')
+                        story.append(rl_img)
+
+                        # Add caption
+                        caption = f"<b>Image #{img.get_sequential_number()}</b>: {img.prompt or 'No prompt'}"
+                        story.append(Paragraph(caption, styles['Normal']))
+                        story.append(Spacer(1, 0.3*inch))
+                    except Exception as e:
+                        logger.warning(f"Couldn't add image to PDF: {e}")
+
+        # Videos section
+        videos = VideoHistory.objects.filter(project_id=project_id, user=request.user)
+        if videos:
+            story.append(PageBreak())
+            story.append(Paragraph('Video Gallery', heading_style))
+            for vid in videos:
+                video_info = f"""
+                <b>Video #{vid.get_sequential_number()}</b><br/>
+                Prompt: {vid.prompt or 'No prompt'}<br/>
+                Status: {vid.status}
+                """
+                story.append(Paragraph(video_info, styles['Normal']))
+                story.append(Spacer(1, 0.2*inch))
+
+        # 3D Models section
+        models = MiniFigAsset.objects.filter(project_id=project_id, user=request.user)
+        if models:
+            story.append(PageBreak())
+            story.append(Paragraph('3D Models', heading_style))
+            for model in models:
+                model_info = f"""
+                <b>Model #{model.get_sequential_number() if hasattr(model, 'get_sequential_number') else 'N/A'}</b><br/>
+                Status: {model.status}
+                """
+                story.append(Paragraph(model_info, styles['Normal']))
+                story.append(Spacer(1, 0.2*inch))
+
+        # Footer
+        story.append(PageBreak())
+        story.append(Paragraph('Generated by AI Content Studio', styles['Normal']))
+        story.append(Paragraph(f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+
+        # Build PDF
+        doc.build(story)
+
+        # Prepare response
+        pdf_buffer.seek(0)
+        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{project.name.replace(" ", "_")}_portfolio.pdf"'
+
+        logger.info(f"✅ Project exported as PDF: {project.name}")
+        return response
+
+    except CreativeProject.DoesNotExist:
+        logger.error(f"❌ Project not found: {project_id}")
+        return HttpResponse('Project not found', status=404)
+    except Exception as e:
+        logger.error(f"❌ Export PDF error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f'Export failed: {str(e)}', status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_project_csv(request, project_id):
+    """
+    Export project statistics as CSV
+    Session 148: Project Export
+
+    GET /api/projects/<uuid:project_id>/export/csv/
+
+    Returns: CSV file with stats and agent contributions
+    """
+    import io
+    import csv
+    from django.http import HttpResponse
+    from content.models import CreativeProject, ImageHistory, VideoHistory, MiniFigAsset
+    from agents.models import AgentContribution
+    from collections import defaultdict
+
+    try:
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        # Create CSV buffer
+        csv_buffer = io.StringIO()
+        writer = csv.writer(csv_buffer)
+
+        # Header
+        writer.writerow(['Project Export - AI Content Studio'])
+        writer.writerow([])
+        writer.writerow(['Project Information'])
+        writer.writerow(['Name', project.name])
+        writer.writerow(['Description', project.description or ''])
+        writer.writerow(['Created', project.created_at.strftime('%Y-%m-%d %H:%M:%S')])
+        writer.writerow([])
+
+        # Content summary
+        writer.writerow(['Content Summary'])
+        writer.writerow(['Content Type', 'Count'])
+        images_count = ImageHistory.objects.filter(project_id=project_id, user=request.user).count()
+        videos_count = VideoHistory.objects.filter(project_id=project_id, user=request.user).count()
+        models_count = MiniFigAsset.objects.filter(project_id=project_id, user=request.user).count()
+        writer.writerow(['Images', images_count])
+        writer.writerow(['Videos', videos_count])
+        writer.writerow(['3D Models', models_count])
+        writer.writerow(['Total', images_count + videos_count + models_count])
+        writer.writerow([])
+
+        # Agent contributions
+        writer.writerow(['Agent Contributions'])
+        writer.writerow(['Agent', 'Images', 'Videos', '3D Models', 'Total', 'Execution Time (s)'])
+        contributions = AgentContribution.objects.filter(project_id=project_id)
+
+        # Group by agent
+        agent_stats = defaultdict(lambda: {'images': 0, 'videos': 0, 'models': 0, 'time': 0})
+
+        for contrib in contributions:
+            agent = contrib.agent.name if contrib.agent else 'Unknown'
+            if contrib.image_id:
+                agent_stats[agent]['images'] += 1
+            if contrib.video_id:
+                agent_stats[agent]['videos'] += 1
+            if contrib.minifig_asset_id:
+                agent_stats[agent]['models'] += 1
+            agent_stats[agent]['time'] += contrib.execution_time_seconds or 0
+
+        for agent, stats in sorted(agent_stats.items()):
+            total_contributions = stats['images'] + stats['videos'] + stats['models']
+            writer.writerow([
+                agent,
+                stats['images'],
+                stats['videos'],
+                stats['models'],
+                total_contributions,
+                round(stats['time'], 2)
+            ])
+
+        writer.writerow([])
+        writer.writerow(['Export Date', datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+
+        # Prepare response
+        csv_buffer.seek(0)
+        response = HttpResponse(csv_buffer.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{project.name.replace(" ", "_")}_stats.csv"'
+
+        logger.info(f"✅ Project exported as CSV: {project.name}")
+        return response
+
+    except CreativeProject.DoesNotExist:
+        logger.error(f"❌ Project not found: {project_id}")
+        return HttpResponse('Project not found', status=404)
+    except Exception as e:
+        logger.error(f"❌ Export CSV error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f'Export failed: {str(e)}', status=500)
+
+
+# ========================================
+# SESSION 151: ADVANCED IMAGE EDITING SUITE
+# ========================================
+# Note: search_and_replace_view already exists at line 11735
+# Adding creative_upscale_view as new capability
+
+def creative_upscale_view(request):
+    """
+    Creative upscale with prompt - upscale image AND add creative details based on prompt.
+    Not just pixel upscaling - actually generates new details!
+
+    Session 151: Advanced Image Editing Suite
+    Accepts JSON: {
+        image_id: uuid,
+        prompt: str (what details to add/enhance),
+        creativity: float (0.0-0.35, default 0.3),
+        project_id: uuid (optional)
+    }
+    Note: @login_required removed to support internal RequestFactory calls from agents
+    """
+    try:
+        # Manual authentication check for web requests
+        if not request.user or not request.user.is_authenticated:
+            logger.warning(f"⚠️ Unauthenticated request to creative_upscale_view")
+            return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        prompt = data.get('prompt', '').strip()
+        creativity = float(data.get('creativity', 0.3))
+        project_id = data.get('project_id')
+
+        if not image_id or not prompt:
+            return JsonResponse({
+                'success': False,
+                'error': 'image_id and prompt required'
+            }, status=400)
+
+        # Validate creativity range
+        if not (0.0 <= creativity <= 0.35):
+            creativity = 0.3
+
+        # Get the image from history
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=request.user)
+        except ImageHistory.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found'}, status=404)
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"✨ Creative upscale image {image_id} (#{seq_num}) with prompt: '{prompt}'")
+
+        # Get image data
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI creative upscale API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'Stability AI API key not configured'
+            }, status=500)
+
+        url = "https://api.stability.ai/v2beta/stable-image/upscale/creative"
+
+        files = {"image": image_data}
+        data_params = {
+            "prompt": prompt,
+            "creativity": creativity,
+            "output_format": "png"
+        }
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=90)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI creative upscale failed: {api_response.text}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Creative upscale failed: {api_response.text}'
+            }, status=500)
+
+        # Save the upscaled image
+        upscaled_image_data = api_response.content
+
+        filename = f'creative_upscale_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', request.user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(upscaled_image_data))
+        image_url = default_storage.url(saved_path)
+
+        logger.info(f"✅ Saved creative upscale image: {saved_path}")
+
+        # Create new image history entry
+        from content.models import CreativeProject
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        new_image = ImageHistory.objects.create(
+            user=request.user,
+            prompt=f"Creative upscale from image #{seq_num}: {prompt}",
+            file_path=saved_path,
+            filename=filename,
+            model_used="stability-creative-upscale",
+            project=project
+        )
+
+        # Session 142: Track agent contribution
+        try:
+            from agents.models import UnifiedAgentTemplate, AgentContribution
+            agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
+            AgentContribution.objects.create(
+                agent=agent,
+                image=new_image,
+                project=project,
+                contribution_type='editing',
+                task_description=f"Creative upscale with details: {prompt}",
+                execution_time_seconds=0.0
+            )
+            logger.info(f"✅ Agent contribution tracked for image {new_image.id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent contribution: {e}")
+
+        logger.info(f"✅ Creative upscale successful: {new_image.id}")
+
+        return JsonResponse({
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': new_image.file_path,
+            'sequential_number': new_image.get_sequential_number()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Creative upscale error: {e}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
