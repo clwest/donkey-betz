@@ -58,6 +58,9 @@ from core.views_agent_tracking import (
     mark_contribution_selected
 )
 
+# Import image/export views (Session 148/149)
+from core import views_image, views_share
+
 # Import deployment views
 from core.views_deploy import (
     view_generated_files, download_project, deploy_project,
@@ -281,7 +284,9 @@ from core.views_video import (
     video_gallery, save_video_to_gallery, test_runway_connection,
     get_video_history, toggle_video_favorite, delete_video, increment_video_view,
     increment_video_download, video_to_video_endpoint, video_upscale_endpoint,
-    character_performance_endpoint
+    character_performance_endpoint,
+    # Session 154: Video Enhancement
+    upscale_video, apply_video_effect
 )
 # Session 66 Part 2: DaVinci Resolve video editing
 # Session 72: Added text overlay and color grading endpoints
@@ -865,6 +870,9 @@ urlpatterns = [
     path('api/v1/video/video-to-video/', video_to_video_endpoint, name='video-to-video'),
     path('api/v1/video/upscale/', video_upscale_endpoint, name='video-upscale'),
     path('api/v1/video/character-performance/', character_performance_endpoint, name='character-performance'),
+    # Session 154: Video Enhancement with ffmpeg (free!)
+    path('api/video/upscale/', upscale_video, name='video-upscale-ffmpeg'),
+    path('api/video/effects/', apply_video_effect, name='video-effects'),
     # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
     path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
@@ -910,6 +918,7 @@ urlpatterns = [
     path('api/stability/upscale/', lambda r: __import__('core.views_image', fromlist=['upscale_image_view']).upscale_image_view(r), name='stability-upscale'),
     path('api/stability/create-variations/', lambda r: __import__('core.views_image', fromlist=['create_variations_view']).create_variations_view(r), name='stability-create-variations'),
     path('api/stability/search-and-replace/', lambda r: __import__('core.views_image', fromlist=['search_and_replace_view']).search_and_replace_view(r), name='stability-search-replace'),
+    path('api/stability/creative-upscale/', lambda r: __import__('core.views_image', fromlist=['creative_upscale_view']).creative_upscale_view(r), name='stability-creative-upscale'),  # Session 151
     path('api/stability/erase/', lambda r: __import__('core.views_image', fromlist=['erase_object']).erase_object(r), name='stability-erase'),
     path('api/stability/inpaint/', lambda r: __import__('core.views_image', fromlist=['inpaint_image']).inpaint_image(r), name='stability-inpaint'),
     path('api/stability/outpaint/', lambda r: __import__('core.views_image', fromlist=['outpaint_image']).outpaint_image(r), name='stability-outpaint'),
@@ -1002,6 +1011,17 @@ urlpatterns = [
     path('api/creative-projects/<uuid:project_id>/delete/', delete_project, name='creative-project-delete'),
     path('api/creative-projects/<uuid:project_id>/workflows/', add_workflow_to_project, name='creative-project-add-workflow'),
     path('api/creative-projects/<uuid:project_id>/workflows/<int:workflow_id>/', remove_workflow_from_project, name='creative-project-remove-workflow'),
+
+    # Session 148: Project Export Endpoints
+    path('api/creative-projects/<uuid:project_id>/export/zip/', views_image.export_project_zip, name='export-project-zip'),
+    path('api/creative-projects/<uuid:project_id>/export/pdf/', views_image.export_project_pdf, name='export-project-pdf'),
+    path('api/creative-projects/<uuid:project_id>/export/csv/', views_image.export_project_csv, name='export-project-csv'),
+
+    # Session 149: Project Share Endpoints
+    path('api/creative-projects/<uuid:project_id>/share/create/', views_share.create_project_share, name='create-project-share'),
+    path('api/creative-projects/<uuid:project_id>/share/', views_share.get_project_share, name='get-project-share'),
+    path('api/creative-projects/<uuid:project_id>/share/revoke/', views_share.revoke_project_share, name='revoke-project-share'),
+    path('share/<str:share_token>/', views_share.view_shared_project, name='view-shared-project'),
 
     # Portfolio View (Session 61: Phase C.2.1)
     path('api/portfolio/', get_portfolio, name='portfolio'),
