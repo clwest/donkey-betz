@@ -110,29 +110,31 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             },
 
             # Session 131: Image Editing Agent (replaces 6 individual tools)
+            # Session 152: BATCH OPERATIONS SUPPORT! 🚀
             {
                 "type": "function",
                 "name": "image_editing_agent",
-                "description": "MODIFY EXISTING images only. Requires an existing image_id. Operations: upscale (4x resolution), remove_background (transparent PNG), create_variations (multiple styles of EXISTING image), erase_object (remove specific items), recolor (change colors), refine (enhance/modify EXISTING image). IMPORTANT: This agent modifies images that already exist. For creating NEW images from scratch, use image_generation_agent instead.",
+                "description": "MODIFY EXISTING images only. Requires an existing image_id. Operations: upscale (4x resolution), remove_background (transparent PNG), create_variations (multiple styles), recolor (change colors), search_and_replace (REMOVE objects by omitting replace_prompt OR replace with something else), creative_upscale (4x upscale + add creative details with prompt). IMPORTANT: This agent modifies images that already exist. For creating NEW images from scratch, use image_generation_agent instead. SESSION 152: Now supports BATCH OPERATIONS - process multiple images at once using ranges or lists!",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Operation to perform: 'upscale' | 'remove_background' | 'create_variations' | 'erase_object' | 'recolor' | 'refine'",
-                            "enum": ["upscale", "remove_background", "create_variations", "erase_object", "recolor", "refine"]
+                            "description": "Operation to perform: 'upscale' | 'remove_background' | 'create_variations' | 'recolor' | 'search_and_replace' (remove OR replace objects) | 'creative_upscale'",
+                            "enum": ["upscale", "remove_background", "create_variations", "recolor", "search_and_replace", "creative_upscale"]
                         },
                         "image_id": {
                             "type": "string",
-                            "description": "Image identifier: use sequential number (e.g., '2' for Image #2) OR full UUID"
+                            "description": "Image identifier(s) - supports SINGLE or BATCH: Single: '2' or UUID. BATCH (Session 152): Range '20-25', List '5, 8, 12', Combined '10-15, 20, 25-27'. Examples: 'upscale images 20-25', 'remove backgrounds from images 5, 8, 12', 'create variations of images 10-15'. The agent will process each image sequentially and return a batch summary."
                         },
                         "params": {
                             "type": "object",
-                            "description": "Operation-specific parameters: For erase_object: {object_description: 'text'}. For recolor: {prompt: 'make robot black'}. For refine: {refinement_request: 'enhance quality'}. For create_variations: {count: 3}.",
+                            "description": "Operation-specific parameters: For recolor: {prompt: 'make robot black'}. For create_variations: {count: 3}. For search_and_replace: {search_prompt: 'object to find', replace_prompt: 'optional - omit to REMOVE, include to REPLACE'}. For creative_upscale: {prompt: 'what details to add', creativity: 0.3}.",
                             "properties": {
-                                "object_description": {"type": "string"},
                                 "prompt": {"type": "string"},
-                                "refinement_request": {"type": "string"},
+                                "search_prompt": {"type": "string"},
+                                "replace_prompt": {"type": "string"},
+                                "creativity": {"type": "number"},
                                 "count": {"type": "integer", "default": 3}
                             }
                         },
@@ -236,29 +238,33 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "video_editing_agent",
-                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (cinematic color effects). Use this agent for ANY video editing request.",
+                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!). Session 154: Now supports upscale and apply_effect operations using ffmpeg (no API costs!). Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading'",
-                            "enum": ["add_text_overlay", "apply_color_grading"]
+                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading)",
+                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect"]
                         },
                         "video_id": {
                             "type": "string",
-                            "description": "Video identifier: sequential number OR full UUID"
+                            "description": "Video identifier(s) - supports SINGLE or BATCH: Single: '2' or UUID. BATCH (Session 154): Range '1-3', List '1, 2, 5', Combined '1-3, 5'. Examples: 'upscale videos 1-3', 'apply cinematic effect to videos 1, 2'. The agent will process each video sequentially."
                         },
                         "params": {
                             "type": "object",
-                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style}.",
+                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}.",
                             "properties": {
                                 "text": {"type": "string"},
                                 "position": {"type": "string", "default": "center"},
                                 "start_second": {"type": "number", "default": 0},
                                 "duration": {"type": "number", "default": 3},
                                 "font_size": {"type": "integer", "default": 72},
-                                "style": {"type": "string", "default": "cinematic_warm"}
+                                "style": {"type": "string", "default": "cinematic_warm"},
+                                "scale_factor": {"type": "integer", "enum": [2, 4], "default": 2, "description": "Session 154: Upscale factor (2x or 4x)"},
+                                "quality": {"type": "string", "default": "high", "description": "Session 154: Upscale quality (high or medium)"},
+                                "effect": {"type": "string", "enum": ["cinematic", "vibrant", "vintage", "noir", "warm", "cool"], "default": "cinematic", "description": "Session 154: Color grading effect"},
+                                "intensity": {"type": "number", "default": 0.7, "description": "Session 154: Effect intensity (0.0-1.0)"}
                             }
                         },
                         "project_id": {"type": "string"}
@@ -370,6 +376,66 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             except (IndexError, ImageHistory.DoesNotExist):
                 raise ValueError(f'Image #{image_id} not found')
         return image_id
+
+    def _parse_id_range(self, id_str: str) -> List[str]:
+        """
+        Parse image ID ranges into list of individual IDs (Session 152 - Batch Operations).
+
+        Supports:
+        - Single ID: "5" → ["5"]
+        - Range: "20-25" → ["20", "21", "22", "23", "24", "25"]
+        - List: "5, 8, 12" → ["5", "8", "12"]
+        - Combined: "10-15, 20, 25-27" → ["10", "11", "12", "13", "14", "15", "20", "25", "26", "27"]
+        - Spaces are ignored: "20 - 25, 30" → ["20", "21", "22", "23", "24", "25", "30"]
+
+        Returns: List of ID strings (numbers or UUIDs)
+        """
+        id_str = id_str.strip()
+
+        # Check if it's a UUID (contains dashes but is a valid UUID format)
+        if '-' in id_str and ',' not in id_str:
+            # Could be UUID or range - check if it's a valid UUID
+            try:
+                import uuid as uuid_module
+                uuid_module.UUID(id_str)  # Will raise ValueError if not valid UUID
+                return [id_str]  # Single UUID
+            except ValueError:
+                pass  # Not a UUID, parse as range
+
+        # Parse comma-separated segments
+        segments = [seg.strip() for seg in id_str.split(',')]
+        result = []
+
+        for segment in segments:
+            segment = segment.strip()
+
+            # Check if segment contains range (dash between numbers)
+            if '-' in segment:
+                # Try to parse as range
+                parts = [p.strip() for p in segment.split('-')]
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                    start = int(parts[0])
+                    end = int(parts[1])
+                    if start > end:
+                        raise ValueError(f"Invalid range: {segment} (start > end)")
+                    result.extend([str(i) for i in range(start, end + 1)])
+                else:
+                    # Not a valid range, treat as single ID
+                    result.append(segment)
+            else:
+                # Single ID
+                result.append(segment)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_result = []
+        for id_val in result:
+            if id_val not in seen:
+                seen.add(id_val)
+                unique_result.append(id_val)
+
+        logger.info(f"📋 Parsed ID range '{id_str}' → {len(unique_result)} IDs: {unique_result[:5]}{'...' if len(unique_result) > 5 else ''}")
+        return unique_result
 
     def _handle_image_generation_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Handle image_generation_agent calls - routes to appropriate Creation Agent (Session 134)."""
@@ -490,7 +556,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             }
 
     def _handle_image_editing_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle image_editing_agent calls - routes to specific operation."""
+        """Handle image_editing_agent calls - routes to specific operation (Session 152: Batch support!)."""
         operation = arguments.get('operation')
         image_id = arguments.get('image_id')
         params = arguments.get('params', {})
@@ -498,16 +564,95 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         logger.info(f"🎨 Image Editing Agent: operation={operation}, image_id={image_id}")
 
-        # Session 131: Convert sequential numbers to UUIDs
-        try:
-            image_id = self._resolve_hybrid_image_id(image_id)
-        except ValueError as e:
-            return {'success': False, 'error': str(e)}
+        # Session 152: Check if this is a batch operation (range or list)
+        # Check for comma (list) OR numeric range pattern (e.g., "1-3", "10-20")
+        is_batch = ',' in image_id
 
-        # Build arguments for the specific tool handler
-        tool_args = {'image_id': image_id, 'project_id': project_id}
-        tool_args.update(params)  # Merge operation-specific params
+        if not is_batch and '-' in image_id:
+            # Check if it's a numeric range (not a UUID)
+            # Simple heuristic: if removing dashes leaves only digits (or whitespace+digits), it's a range
+            cleaned = image_id.replace('-', '').replace(' ', '')
+            is_batch = cleaned.isdigit()  # "1-3" → "13" → True, UUID → has letters → False
 
+        if is_batch:
+            # Batch operation - parse range and process each ID
+            try:
+                image_ids = self._parse_id_range(image_id)
+            except ValueError as e:
+                return {'success': False, 'error': f"Invalid ID range: {str(e)}"}
+
+            logger.info(f"⚡ Batch operation: {operation} on {len(image_ids)} images")
+
+            # Process each image
+            results = []
+            successes = []
+            failures = []
+
+            for idx, img_id in enumerate(image_ids, 1):
+                try:
+                    # Resolve hybrid ID to UUID
+                    resolved_id = self._resolve_hybrid_image_id(img_id)
+
+                    # Build arguments for this specific image
+                    tool_args = {'image_id': resolved_id, 'project_id': project_id}
+                    tool_args.update(params)
+
+                    # Execute operation
+                    logger.info(f"  [{idx}/{len(image_ids)}] Processing image {img_id}...")
+                    result = self._execute_single_image_operation(operation, tool_args)
+
+                    if result.get('success'):
+                        successes.append({'id': img_id, 'result': result})
+                    else:
+                        failures.append({'id': img_id, 'error': result.get('error', 'Unknown error')})
+
+                    results.append(result)
+
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"  ❌ Failed to process image {img_id}: {error_msg}")
+                    failures.append({'id': img_id, 'error': error_msg})
+                    results.append({'success': False, 'error': error_msg})
+
+            # Return batch summary
+            total = len(image_ids)
+            success_count = len(successes)
+            failure_count = len(failures)
+
+            summary = f"Batch {operation} complete: {success_count}/{total} succeeded"
+            if failure_count > 0:
+                summary += f", {failure_count} failed"
+
+            return {
+                'success': failure_count == 0,  # Success only if ALL succeeded
+                'message': summary,
+                'batch': True,
+                'total': total,
+                'successes': success_count,
+                'failures': failure_count,
+                'results': results,
+                'details': {
+                    'successful_ids': [s['id'] for s in successes],
+                    'failed_ids': [f['id'] for f in failures],
+                    'errors': [f['error'] for f in failures] if failures else []
+                }
+            }
+        else:
+            # Single image operation (existing logic)
+            try:
+                image_id = self._resolve_hybrid_image_id(image_id)
+            except ValueError as e:
+                return {'success': False, 'error': str(e)}
+
+            # Build arguments for the specific tool handler
+            tool_args = {'image_id': image_id, 'project_id': project_id}
+            tool_args.update(params)
+
+            # Execute operation
+            return self._execute_single_image_operation(operation, tool_args)
+
+    def _execute_single_image_operation(self, operation: str, tool_args: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a single image operation (Session 152: Extracted for batch support)."""
         # Route to appropriate existing tool handler
         if operation == 'upscale':
             return self._tool_upscale_image(tool_args)
@@ -515,12 +660,16 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return self._tool_remove_background(tool_args)
         elif operation == 'create_variations':
             return self._tool_create_variations(tool_args)
-        elif operation == 'erase_object':
-            return self._tool_erase_object(tool_args)
+        # elif operation == 'erase_object':  # Deprecated: use search_and_replace with empty replace_prompt
+        #     return self._tool_erase_object(tool_args)
         elif operation == 'recolor':
             return self._tool_recolor_image(tool_args)
-        elif operation == 'refine':
-            return self._tool_refine_image(tool_args)
+        # elif operation == 'refine':  # TODO: No backend implementation
+        #     return self._tool_refine_image(tool_args)
+        elif operation == 'search_and_replace':
+            return self._tool_search_and_replace(tool_args)  # Session 151 - also handles removal
+        elif operation == 'creative_upscale':
+            return self._tool_creative_upscale(tool_args)  # Session 151
         else:
             return {'success': False, 'error': f"Unknown image operation: {operation}"}
 
@@ -583,7 +732,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return {'success': False, 'error': f"Unknown 3D operation: {operation}"}
 
     def _handle_video_editing_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle video_editing_agent calls - routes to specific operation."""
+        """
+        Handle video_editing_agent calls - routes to specific operation.
+        Session 154: Added upscale and apply_effect operations with batch support.
+        """
         operation = arguments.get('operation')
         video_id = arguments.get('video_id')
         params = arguments.get('params', {})
@@ -591,17 +743,190 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         logger.info(f"✂️ Video Editing Agent: operation={operation}, video_id={video_id}")
 
+        # Session 154: Check if this is a batch operation
+        is_batch = False
+        if isinstance(video_id, str):
+            is_batch = ',' in video_id
+            if not is_batch and '-' in video_id:
+                # Could be a range like "1-3" or a UUID with dashes
+                # Check if it's a numeric range
+                cleaned = video_id.replace('-', '').replace(' ', '')
+                if cleaned.isdigit():
+                    is_batch = True
+
+        # Session 154: Handle batch operations for upscale and apply_effect
+        if is_batch and operation in ['upscale', 'apply_effect']:
+            video_ids = self._parse_id_range(video_id)
+            logger.info(f"🎬 [Session 154] Batch video editing: {len(video_ids)} videos, operation={operation}")
+
+            results = []
+            successes = 0
+            failures = 0
+
+            for vid_id in video_ids:
+                try:
+                    result = self._execute_single_video_enhancement(operation, vid_id, params, project_id)
+                    results.append(result)
+                    if result.get('success'):
+                        successes += 1
+                    else:
+                        failures += 1
+                except Exception as e:
+                    logger.error(f"❌ Error processing video {vid_id}: {e}")
+                    results.append({
+                        'success': False,
+                        'video_id': vid_id,
+                        'error': str(e)
+                    })
+                    failures += 1
+
+            # Return batch summary with properly formatted message
+            operation_names = {
+                'upscale': 'upscaling',
+                'apply_effect': 'effect application'
+            }
+            op_name = operation_names.get(operation, operation)
+
+            if successes == len(video_ids):
+                message = f"✅ Batch {op_name} complete! All {successes} videos processed successfully."
+            elif successes > 0:
+                message = f"⚠️ Batch {op_name} partially complete: {successes}/{len(video_ids)} videos succeeded, {failures} failed."
+            else:
+                message = f"❌ Batch {op_name} failed: All {failures} videos failed to process."
+
+            return {
+                'success': successes > 0,
+                'message': message,
+                'batch': True,
+                'total': len(video_ids),
+                'successes': successes,
+                'failures': failures,
+                'video_ids': [r.get('video_id') for r in results if r.get('success')],
+                'results': results,
+                # Session 155: Add agent metadata for batch operations
+                'agent': 'VideoEditingAgent',
+                'operation': operation,
+                'operation_display': f"Batch {op_name} ({len(video_ids)} videos)"
+            }
+
+        # Single video operation
         # Build arguments for the specific tool handler
         tool_args = {'video_id': video_id, 'project_id': project_id}
         tool_args.update(params)  # Merge operation-specific params
 
-        # Route to appropriate existing tool handler
+        # Route to appropriate tool handler
         if operation == 'add_text_overlay':
             return self._tool_add_text_overlay(tool_args)
         elif operation == 'apply_color_grading':
             return self._tool_apply_color_grading(tool_args)
+        elif operation == 'upscale':
+            # Session 154: ffmpeg upscaling
+            return self._execute_single_video_enhancement(operation, video_id, params, project_id)
+        elif operation == 'apply_effect':
+            # Session 154: ffmpeg color grading effects
+            return self._execute_single_video_enhancement(operation, video_id, params, project_id)
         else:
             return {'success': False, 'error': f"Unknown video editing operation: {operation}"}
+
+    def _execute_single_video_enhancement(self, operation: str, video_id: str, params: Dict[str, Any], project_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Execute a single video enhancement operation (upscale or apply_effect).
+        Session 154: Calls the new ffmpeg-based video enhancement views.
+        """
+        from django.test.client import RequestFactory
+        from django.contrib.auth.models import AnonymousUser
+        import json
+
+        try:
+            factory = RequestFactory()
+
+            if operation == 'upscale':
+                # Build request payload for upscale_video view
+                scale_factor = params.get('scale_factor', 2)
+                quality = params.get('quality', 'high')
+
+                payload = {
+                    'video_id': video_id,
+                    'scale_factor': scale_factor,
+                    'quality': quality,
+                    'project_id': project_id  # Session 156: Pass project_id for linking
+                }
+
+                # Create POST request
+                request = factory.post(
+                    '/api/video/upscale/',
+                    data=json.dumps(payload),
+                    content_type='application/json'
+                )
+                request.user = self.user
+
+                # Call the view
+                from core.views_video import upscale_video
+                response = upscale_video(request)
+
+                # Parse response
+                import json
+                result = json.loads(response.content)
+                logger.info(f"✅ [Session 154] Video upscale result: {result.get('success')}")
+
+                # Normalize response format (convert 'error' to 'message')
+                if not result.get('success') and 'error' in result and 'message' not in result:
+                    result['message'] = result.pop('error')
+
+                # Session 155: Add agent metadata for UI status indicators
+                result['agent'] = 'VideoEditingAgent'
+                result['operation'] = operation
+                result['operation_display'] = f"Upscaling video {scale_factor}x"
+
+                return result
+
+            elif operation == 'apply_effect':
+                # Build request payload for apply_video_effect view
+                effect = params.get('effect', 'cinematic')
+                intensity = params.get('intensity', 0.7)
+
+                payload = {
+                    'video_id': video_id,
+                    'effect': effect,
+                    'intensity': intensity
+                }
+
+                # Create POST request
+                request = factory.post(
+                    '/api/video/effects/',
+                    data=json.dumps(payload),
+                    content_type='application/json'
+                )
+                request.user = self.user
+
+                # Call the view
+                from core.views_video import apply_video_effect
+                response = apply_video_effect(request)
+
+                # Parse response
+                import json
+                result = json.loads(response.content)
+                logger.info(f"✅ [Session 154] Video effect result: {result.get('success')}")
+
+                # Normalize response format (convert 'error' to 'message')
+                if not result.get('success') and 'error' in result and 'message' not in result:
+                    result['message'] = result.pop('error')
+
+                # Session 155: Add agent metadata for UI status indicators
+                result['agent'] = 'VideoEditingAgent'
+                result['operation'] = operation
+                result['operation_display'] = f"Applying {effect} effect"
+
+                return result
+
+            else:
+                return {'success': False, 'message': f"Unknown operation: {operation}"}
+
+        except Exception as e:
+            logger.error(f"❌ [Session 154] Video enhancement error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {'success': False, 'message': str(e)}
 
     def _handle_character_training_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Handle character_training_agent calls - trains FLUX LoRA models (Session 133)."""
@@ -818,13 +1143,18 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
     # Session 128: Updated to use Image Editing Agent
     def _tool_create_variations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the create_image_variations tool - Session 128."""
+        print(f"\n🎨 CREATE_VARIATIONS TOOL CALLED!")
+        print(f"   User: {self.user} (username: {getattr(self.user, 'username', 'N/A')})")
         logger.info(f"🎨 CREATE_VARIATIONS TOOL CALLED!")
+        logger.info(f"   User: {self.user} (username: {getattr(self.user, 'username', 'N/A')})")
         logger.info(f"🤖 Delegating to Image Editing Agent...")
 
         try:
             image_id = arguments['image_id']
             count = arguments.get('count', 3)
             prompt = arguments.get('prompt', 'creative variation')
+
+            print(f"   Image ID: {image_id}, Count: {count}")
 
             # Get current project if in session
             current_project = getattr(getattr(self, 'session', None), 'project', None)
@@ -836,6 +1166,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
+            print(f"   Created agent with user: {agent.user.username}")
 
             # Execute agent workflow
             result = agent.execute(
@@ -968,6 +1299,89 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return {
                 'success': False,
                 'error': f"Failed to refine image: {str(e)}"
+            }
+
+    # Session 151: Advanced Image Editing Tools
+    def _tool_search_and_replace(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute search_and_replace tool - Remove/replace specific objects in images.
+        Session 151: Advanced Image Editing Suite
+        """
+        logger.info(f"🔍 SEARCH_AND_REPLACE TOOL CALLED!")
+        logger.info(f"🤖 Delegating to Image Editing Agent...")
+
+        try:
+            image_id = arguments['image_id']
+            search_prompt = arguments['search_prompt']
+            replace_prompt = arguments.get('replace_prompt', '')  # Optional
+
+            # Get current project if in session
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
+
+            # Delegate to specialized Image Editing Agent
+            from agents.image_editing_agent import ImageEditingAgent
+
+            agent = ImageEditingAgent(
+                user=self.user,
+                project_id=str(current_project.id) if current_project else arguments.get('project_id')
+            )
+
+            # Execute agent workflow
+            result = agent.execute(
+                operation='search_and_replace',
+                image_id=image_id,
+                search_prompt=search_prompt,
+                replace_prompt=replace_prompt
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Search and replace tool error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to search and replace: {str(e)}"
+            }
+
+    def _tool_creative_upscale(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute creative_upscale tool - Upscale with AI-generated creative details.
+        Session 151: Advanced Image Editing Suite
+        """
+        logger.info(f"✨ CREATIVE_UPSCALE TOOL CALLED!")
+        logger.info(f"🤖 Delegating to Image Editing Agent...")
+
+        try:
+            image_id = arguments['image_id']
+            prompt = arguments['prompt']
+            creativity = arguments.get('creativity', 0.3)
+
+            # Get current project if in session
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
+
+            # Delegate to specialized Image Editing Agent
+            from agents.image_editing_agent import ImageEditingAgent
+
+            agent = ImageEditingAgent(
+                user=self.user,
+                project_id=str(current_project.id) if current_project else arguments.get('project_id')
+            )
+
+            # Execute agent workflow
+            result = agent.execute(
+                operation='creative_upscale',
+                image_id=image_id,
+                prompt=prompt,
+                creativity=creativity
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Creative upscale tool error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to creative upscale: {str(e)}"
             }
 
     # Session 127: Video & Audio Tool Handlers
@@ -2030,32 +2444,20 @@ Respond in a helpful, personalized way that:
                 logger.info(f"💾 Stored response_id for chain of thought: {ai_result['response_id'][:20]}...")
 
             if ai_result['success']:
-                # Session 125: Check if GPT returned tool calls
+                # Session 125/155: Check if GPT returned tool calls
                 if 'tool_calls' in ai_result and ai_result['tool_calls']:
                     logger.info(f"🛠️ GPT requested {len(ai_result['tool_calls'])} tool calls")
 
-                    # Execute each tool call
-                    tool_results = []
-                    for tool_call in ai_result['tool_calls']:
-                        result = self._execute_tool_call(tool_call)
-                        tool_results.append(result)
+                    # Session 155 Fix: Return tool_calls to frontend for execution
+                    # DON'T execute in backend - let frontend handle it for proper UX
+                    response = ai_result.get('response', '')
+                    logger.info(f"✅ Returning {len(ai_result['tool_calls'])} tool_calls to frontend for execution")
 
-                    # Build response with tool execution results
-                    response_parts = []
-                    if ai_result['response']:
-                        response_parts.append(ai_result['response'])
-
-                    for result in tool_results:
-                        if result['success']:
-                            response_parts.append(result['message'])
-                        else:
-                            # Handle both 'error' and 'message' keys for failed results
-                            error_msg = result.get('error') or result.get('message', 'Operation failed')
-                            response_parts.append(error_msg if error_msg.startswith('❌') or error_msg.startswith('🚧') else f"❌ {error_msg}")
-
-                    response = "\n\n".join(response_parts)
-                    logger.info(f"✅ Generated REAL AI response with tool execution for {self.user.username}")
-                    return response
+                    # Return dict with both response and tool_calls
+                    return {
+                        'text': response,
+                        'tool_calls': ai_result['tool_calls']
+                    }
                 else:
                     # No tool calls, just return the text response
                     response = ai_result['response']
@@ -2131,6 +2533,51 @@ Respond in a helpful, personalized way that:
         # Generate real AI response
         ai_response = self._generate_ai_response(message, context)
 
+        # Session 155 Fix: Handle dict response with tool_calls
+        if isinstance(ai_response, dict) and 'tool_calls' in ai_response:
+            # GPT requested tool calls - return them to frontend
+            response_text = ai_response.get('text', '')
+            raw_tool_calls = ai_response['tool_calls']
+
+            # Transform Responses API format to frontend-expected format
+            # Responses API: {function: {name, arguments}}
+            # Frontend expects: {name, arguments} where arguments is a dict
+            tool_calls = []
+            for tool_call in raw_tool_calls:
+                if 'function' in tool_call:
+                    # Flatten the structure and parse arguments JSON string
+                    arguments_str = tool_call['function']['arguments']
+                    try:
+                        # Parse JSON string to dict
+                        arguments_dict = json.loads(arguments_str) if isinstance(arguments_str, str) else arguments_str
+                    except json.JSONDecodeError:
+                        logger.warning(f"⚠️ Could not parse arguments JSON: {arguments_str}")
+                        arguments_dict = {}
+
+                    tool_calls.append({
+                        'name': tool_call['function']['name'],
+                        'arguments': arguments_dict
+                    })
+                else:
+                    # Already in correct format
+                    tool_calls.append(tool_call)
+
+            logger.info(f"🔧 Passing {len(tool_calls)} tool_calls to frontend (flattened format)")
+
+            response_data = {
+                'response': response_text,
+                'tool_calls': tool_calls,
+                'suggestions': self.generate_personalized_suggestions(message),
+                'actions': [],  # No actions when tools are being called
+                'confidence': 0.95,  # High confidence for tool execution
+                'ai_generated': True,
+                'model': 'gpt-5-mini'
+            }
+            return response_data
+
+        # No tool calls - regular text response
+        response_text = ai_response if isinstance(ai_response, str) else str(ai_response)
+
         # Determine intent for suggestions
         intent = context.get('intent', 'general')
 
@@ -2142,9 +2589,9 @@ Respond in a helpful, personalized way that:
 
         # Build response dictionary
         response_data = {
-            'response': ai_response,
+            'response': response_text,
             'suggestions': suggestions,
-            'actions': self._extract_actions_from_response(ai_response),
+            'actions': self._extract_actions_from_response(response_text),
             'confidence': confidence,
             'ai_generated': True,  # Flag to indicate real AI was used
             'model': 'gpt-5-mini' if self.llm_enforcer.openai_client else 'intelligent-fallback'
