@@ -292,7 +292,28 @@ from core.views_video import (
     # Session 160: Speed Control, Video Concatenation
     change_video_speed, concatenate_videos,
     # Session 161: DaVinci Expansion Phase 2 (5 new video editing features)
-    rotate_flip_video, fade_video, crop_resize_video, audio_controls, picture_in_picture
+    rotate_flip_video, fade_video, crop_resize_video, audio_controls, picture_in_picture,
+    # Session 163: Phase 3 - Watermark/Logo feature
+    add_watermark,
+    # Session 163: Phase 3 - Blur Region feature
+    blur_region,
+    # Session 164: Phase 3 - Video Stabilization
+    stabilize_video,
+    # Session 164: Phase 3 - Text Animations
+    add_text_animation,
+    # Session 165: Phase 3 - Green Screen / Chroma Key
+    chroma_key,
+    # Session 166: Export Presets
+    export_for_platform,
+    # Session 166: Video Transitions
+    video_transition,
+    # Session 166: Auto-Captioning
+    auto_caption,
+    # Session 167: DaVinci Resolve Studio Integration
+    davinci_status,
+    render_professional,
+    apply_lut,
+    color_grade_professional
 )
 # Session 66 Part 2: DaVinci Resolve video editing
 # Session 72: Added text overlay and color grading endpoints
@@ -895,6 +916,27 @@ urlpatterns = [
     path('api/video/crop/', crop_resize_video, name='video-crop'),
     path('api/video/audio/', audio_controls, name='video-audio'),
     path('api/video/pip/', picture_in_picture, name='video-pip'),
+    # Session 163: Phase 3 - Watermark/Logo feature
+    path('api/video/watermark/', add_watermark, name='video-watermark'),
+    # Session 163: Phase 3 - Blur Region feature
+    path('api/video/blur/', blur_region, name='video-blur'),
+    # Session 164: Phase 3 - Video Stabilization
+    path('api/video/stabilize/', stabilize_video, name='video-stabilize'),
+    # Session 164: Phase 3 - Text Animations
+    path('api/video/text-animation/', add_text_animation, name='video-text-animation'),
+    # Session 165: Phase 3 - Green Screen / Chroma Key
+    path('api/video/chroma-key/', chroma_key, name='video-chroma-key'),
+    # Session 166: Export Presets
+    path('api/video/export/', export_for_platform, name='video-export'),
+    # Session 166: Video Transitions
+    path('api/video/transition/', video_transition, name='video-transition'),
+    # Session 166: Auto-Captioning (Whisper)
+    path('api/video/caption/', auto_caption, name='video-caption'),
+    # Session 167: DaVinci Resolve Studio Integration - Making the $295 COUNT!
+    path('api/video/davinci-status/', davinci_status, name='hybrid-davinci-status'),
+    path('api/video/render-professional/', render_professional, name='video-render-professional'),
+    path('api/video/apply-lut/', apply_lut, name='video-apply-lut'),
+    path('api/video/grade-professional/', color_grade_professional, name='video-grade-professional'),
     # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
     path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),

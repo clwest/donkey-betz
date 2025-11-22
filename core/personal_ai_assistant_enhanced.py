@@ -238,22 +238,22 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "video_editing_agent",
-                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!), extract_frame (pull a still image from any timestamp - FREE!), reverse (play video backwards - FREE!), trim (cut video to specific time range - FREE!), speed_change (slow motion 0.5x or speed up 2x - FREE!), concatenate (combine multiple videos into one - FREE!), rotate_flip (rotate 90/180/270 degrees or flip horizontal/vertical - FREE!), fade (add fade in/out effects - FREE!), crop_resize (crop to region, resize dimensions, or change aspect ratio - FREE!), audio_control (adjust volume, mute, or extract audio - FREE!), picture_in_picture (overlay one video on another - FREE!). Session 161: Added rotate_flip, fade, crop_resize, audio_control, picture_in_picture. Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
+                "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!), extract_frame (pull a still image from any timestamp - FREE!), reverse (play video backwards - FREE!), trim (cut video to specific time range - FREE!), speed_change (slow motion 0.5x or speed up 2x - FREE!), concatenate (combine multiple videos into one - FREE!), rotate_flip (rotate 90/180/270 degrees or flip horizontal/vertical - FREE!), fade (add fade in/out effects - FREE!), crop_resize (crop to region, resize dimensions, or change aspect ratio - FREE!), audio_control (adjust volume, mute, or extract audio - FREE!), picture_in_picture (overlay one video on another - FREE!), add_watermark (overlay logo/image on video with position and opacity - FREE!), blur_region (blur part of video for privacy/censoring - FREE!). Session 163: Added add_watermark and blur_region. Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading) | 'extract_frame' (Session 159 - pull still image at timestamp) | 'reverse' (Session 159 - play video backwards) | 'trim' (Session 159 - cut video to time range) | 'speed_change' (Session 160 - slow motion or speed up) | 'concatenate' (Session 160 - combine multiple videos) | 'rotate_flip' (Session 161 - rotate 90/180/270 or flip) | 'fade' (Session 161 - fade in/out effects) | 'crop_resize' (Session 161 - crop/resize/aspect ratio) | 'audio_control' (Session 161 - volume/mute/extract) | 'picture_in_picture' (Session 161 - overlay video)",
-                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect", "extract_frame", "reverse", "trim", "speed_change", "concatenate", "rotate_flip", "fade", "crop_resize", "audio_control", "picture_in_picture"]
+                            "description": "Operation: 'add_text_overlay' | 'apply_color_grading' | 'upscale' (Session 154 - ffmpeg 2x/4x) | 'apply_effect' (Session 154 - color grading) | 'extract_frame' (Session 159 - pull still image at timestamp) | 'reverse' (Session 159 - play video backwards) | 'trim' (Session 159 - cut video to time range) | 'speed_change' (Session 160 - slow motion or speed up) | 'concatenate' (Session 160 - combine multiple videos) | 'rotate_flip' (Session 161 - rotate 90/180/270 or flip) | 'fade' (Session 161 - fade in/out effects) | 'crop_resize' (Session 161 - crop/resize/aspect ratio) | 'audio_control' (Session 161 - volume/mute/extract) | 'picture_in_picture' (Session 161 - overlay video) | 'add_watermark' (Session 163 - overlay logo/image) | 'blur_region' (Session 163 - blur for privacy) | 'stabilize_video' (Session 164 - fix shaky footage) | 'add_text_animation' (Session 164 - scrolling/animated text) | 'chroma_key' (Session 165 - green/blue screen removal) | 'export_for_platform' (Session 166 - YouTube/TikTok/Instagram export) | 'video_transition' (Session 166 - crossfade/wipe/slide between videos) | 'auto_caption' (Session 166 - Whisper transcription + burned-in subtitles) | 'render_professional' (Session 167 - DaVinci/ffmpeg ProRes/DNxHD export) | 'apply_lut' (Session 167 - apply color LUT) | 'color_grade_professional' (Session 167 - DaVinci color science grading)",
+                            "enum": ["add_text_overlay", "apply_color_grading", "upscale", "apply_effect", "extract_frame", "reverse", "trim", "speed_change", "concatenate", "rotate_flip", "fade", "crop_resize", "audio_control", "picture_in_picture", "add_watermark", "blur_region", "stabilize_video", "add_text_animation", "chroma_key", "export_for_platform", "video_transition", "auto_caption", "render_professional", "apply_lut", "color_grade_professional"]
                         },
                         "video_id": {
                             "type": "string",
-                            "description": "Video identifier(s) - supports SINGLE or BATCH: Single: '2' or UUID. BATCH (Session 154): Range '1-3', List '1, 2, 5', Combined '1-3, 5'. Examples: 'upscale videos 1-3', 'apply cinematic effect to videos 1, 2'. The agent will process each video sequentially. For picture_in_picture: this is the BACKGROUND video."
+                            "description": "Video identifier(s) - supports SINGLE or BATCH: Single: '2' or UUID. BATCH (Session 166): Range '1-3', List '1, 2, 5', Combined '1-3, 5'. Works with ALL operations: upscale, effect, reverse, trim, speed, rotate, fade, crop, audio, watermark, blur, stabilize, text animation, green screen, export presets, auto-caption. Examples: 'stabilize videos 1-3', 'export videos 1, 2, 3 for TikTok', 'add captions to videos 5-8'. Each video processed sequentially. For picture_in_picture/transition: this is the BACKGROUND/first video."
                         },
                         "params": {
                             "type": "object",
-                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}. For extract_frame: {timestamp: seconds, format: 'jpg'|'png'}. For reverse: {reverse_audio: true|false}. For trim: {start_time: seconds, end_time: seconds, keep_audio: true|false}. For speed_change: {speed: 0.5 for slow-mo, 2.0 for 2x speed, preserve_audio: true|false}. For concatenate: {video_ids: ['1', '2', '3'] - list of video IDs to combine}. For rotate_flip: {rotation: 90|180|270|'horizontal'|'vertical'|'both'}. For fade: {fade_in: seconds, fade_out: seconds, fade_color: 'black'|'white'}. For crop_resize: {mode: 'crop'|'resize'|'aspect', width, height, crop_x, crop_y, crop_width, crop_height, aspect: '16:9'|'9:16'|'1:1'|'4:3'}. For audio_control: {audio_operation: 'volume'|'mute'|'extract', volume: 1.5 for 150%, output_format: 'mp3'|'wav'|'aac'}. For picture_in_picture: {overlay_video_id: '2', position: 'top-left'|'top-right'|'bottom-left'|'bottom-right'|'center', scale: 0.25, margin: 10, opacity: 1.0}.",
+                            "description": "For add_text_overlay: {text, position, start_second, duration, font_size}. For apply_color_grading: {style: 'cinematic_warm'}. For upscale: {scale_factor: 2 or 4, quality: 'high'}. For apply_effect: {effect: 'cinematic'|'vibrant'|'vintage'|'noir'|'warm'|'cool', intensity: 0.5-1.0}. For extract_frame: {timestamp: seconds, format: 'jpg'|'png'}. For reverse: {reverse_audio: true|false}. For trim: {start_time: seconds, end_time: seconds, keep_audio: true|false}. For speed_change: {speed: 0.5 for slow-mo, 2.0 for 2x speed, preserve_audio: true|false}. For concatenate: {video_ids: ['1', '2', '3'] - list of video IDs to combine}. For rotate_flip: {rotation: 90|180|270|'horizontal'|'vertical'|'both'}. For fade: {fade_in: seconds, fade_out: seconds, fade_color: 'black'|'white'}. For crop_resize: {mode: 'crop'|'resize'|'aspect', width, height, crop_x, crop_y, crop_width, crop_height, aspect: '16:9'|'9:16'|'1:1'|'4:3'}. For audio_control: {audio_operation: 'volume'|'mute'|'extract', volume: 1.5 for 150%, output_format: 'mp3'|'wav'|'aac'}. For picture_in_picture: {overlay_video_id: '2', position: 'top-left'|'top-right'|'bottom-left'|'bottom-right'|'center', scale: 0.25, margin: 10, opacity: 1.0}. For add_watermark: {image_id: '5' (watermark/logo image), position: 'top_left'|'top_right'|'bottom_left'|'bottom_right'|'center', scale: 0.15 (15% of video width), opacity: 0.8, margin: 20}. For blur_region: {region: 'top_left'|'top_right'|'bottom_left'|'bottom_right'|'center'|'full'|'custom', blur_strength: 1-30 (default 15), x, y, width, height (for custom), start_time, end_time (optional time range)}.",
                             "properties": {
                                 "text": {"type": "string"},
                                 "position": {"type": "string", "default": "center"},
@@ -292,7 +292,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                                 "overlay_video_id": {"type": "string", "description": "Session 161: Video ID for PiP overlay (smaller video)"},
                                 "scale": {"type": "number", "default": 0.25, "description": "Session 161: PiP overlay scale (0.1-0.8, 0.25 = 25% of background size)"},
                                 "margin": {"type": "integer", "default": 10, "description": "Session 161: PiP margin from edge in pixels"},
-                                "opacity": {"type": "number", "default": 1.0, "description": "Session 161: PiP overlay opacity (0.0-1.0)"}
+                                "opacity": {"type": "number", "default": 1.0, "description": "Session 161: PiP overlay opacity (0.0-1.0)"},
+                                "image_id": {"type": "string", "description": "Session 163: Watermark/logo image ID (for add_watermark operation)"},
+                                "region": {"type": "string", "enum": ["top_left", "top_right", "bottom_left", "bottom_right", "center", "full", "custom"], "default": "center", "description": "Session 163: Blur region (for blur_region operation)"},
+                                "blur_strength": {"type": "integer", "default": 15, "description": "Session 163: Blur intensity 1-30 (higher = more blur)"}
                             }
                         },
                         "project_id": {"type": "string"}
@@ -782,10 +785,20 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 if cleaned.isdigit():
                     is_batch = True
 
-        # Session 154: Handle batch operations for upscale and apply_effect
-        if is_batch and operation in ['upscale', 'apply_effect']:
+        # Session 154/166: Handle batch operations for ALL single-video operations
+        # Session 166: Expanded from just upscale/apply_effect to support all video operations
+        batch_supported_operations = [
+            'upscale', 'apply_effect', 'extract_frame', 'reverse', 'trim', 'speed_change',
+            'rotate_flip', 'fade', 'crop_resize', 'audio_control', 'add_watermark',
+            'blur_region', 'stabilize_video', 'add_text_animation', 'chroma_key',
+            'export_for_platform', 'auto_caption',
+            # Session 167: DaVinci Resolve operations
+            'render_professional', 'apply_lut', 'color_grade_professional'
+        ]
+
+        if is_batch and operation in batch_supported_operations:
             video_ids = self._parse_id_range(video_id)
-            logger.info(f"🎬 [Session 154] Batch video editing: {len(video_ids)} videos, operation={operation}")
+            logger.info(f"🎬 [Session 166] Batch video editing: {len(video_ids)} videos, operation={operation}")
 
             results = []
             successes = 0
@@ -793,7 +806,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             for vid_id in video_ids:
                 try:
-                    result = self._execute_single_video_enhancement(operation, vid_id, params, project_id)
+                    # Session 166: Generic batch execution for all operations
+                    result = self._execute_single_batch_video_operation(operation, vid_id, params, project_id)
                     results.append(result)
                     if result.get('success'):
                         successes += 1
@@ -809,9 +823,29 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     failures += 1
 
             # Return batch summary with properly formatted message
+            # Session 166: Expanded operation names dictionary
             operation_names = {
                 'upscale': 'upscaling',
-                'apply_effect': 'effect application'
+                'apply_effect': 'effect application',
+                'extract_frame': 'frame extraction',
+                'reverse': 'reversal',
+                'trim': 'trimming',
+                'speed_change': 'speed adjustment',
+                'rotate_flip': 'rotation/flip',
+                'fade': 'fade effect',
+                'crop_resize': 'crop/resize',
+                'audio_control': 'audio adjustment',
+                'add_watermark': 'watermark',
+                'blur_region': 'blur effect',
+                'stabilize_video': 'stabilization',
+                'add_text_animation': 'text animation',
+                'chroma_key': 'green screen removal',
+                'export_for_platform': 'platform export',
+                'auto_caption': 'auto-captioning',
+                # Session 167: DaVinci Resolve operations
+                'render_professional': 'professional rendering',
+                'apply_lut': 'LUT application',
+                'color_grade_professional': 'professional color grading'
             }
             op_name = operation_names.get(operation, operation)
 
@@ -883,6 +917,39 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         elif operation == 'picture_in_picture':
             # Session 161: Picture-in-picture overlay
             return self._tool_picture_in_picture(tool_args)
+        elif operation == 'add_watermark':
+            # Session 163: Phase 3 - Watermark/logo overlay
+            return self._tool_add_watermark(tool_args)
+        elif operation == 'blur_region':
+            # Session 163: Phase 3 - Blur region for privacy
+            return self._tool_blur_region(tool_args)
+        elif operation == 'stabilize_video':
+            # Session 164: Phase 3 - Video Stabilization
+            return self._tool_stabilize_video(tool_args)
+        elif operation == 'add_text_animation':
+            # Session 164: Phase 3 - Text Animations
+            return self._tool_add_text_animation(tool_args)
+        elif operation == 'chroma_key':
+            # Session 165: Phase 3 - Green Screen / Chroma Key
+            return self._tool_chroma_key(tool_args)
+        elif operation == 'export_for_platform':
+            # Session 166: Export Presets
+            return self._tool_export_for_platform(tool_args)
+        elif operation == 'video_transition':
+            # Session 166: Video Transitions
+            return self._tool_video_transition(tool_args)
+        elif operation == 'auto_caption':
+            # Session 166: Auto-Captioning (Whisper)
+            return self._tool_auto_caption(tool_args)
+        elif operation == 'render_professional':
+            # Session 167: DaVinci/ffmpeg Professional Rendering
+            return self._tool_render_professional(tool_args)
+        elif operation == 'apply_lut':
+            # Session 167: LUT Application
+            return self._tool_apply_lut(tool_args)
+        elif operation == 'color_grade_professional':
+            # Session 167: DaVinci Professional Color Grading
+            return self._tool_color_grade_professional(tool_args)
         else:
             return {'success': False, 'error': f"Unknown video editing operation: {operation}"}
 
@@ -985,6 +1052,68 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import traceback
             logger.error(traceback.format_exc())
             return {'success': False, 'message': str(e)}
+
+    def _execute_single_batch_video_operation(self, operation: str, video_id: str, params: Dict[str, Any], project_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Session 166: Execute a single video operation within a batch.
+        Routes to the appropriate tool handler based on operation type.
+        Supports all video editing operations for batch processing.
+        """
+        # Build tool arguments
+        tool_args = {
+            'video_id': video_id,
+            'project_id': project_id
+        }
+        tool_args.update(params)  # Merge operation-specific params
+
+        try:
+            # Route to appropriate handler based on operation
+            if operation == 'upscale':
+                return self._execute_single_video_enhancement(operation, video_id, params, project_id)
+            elif operation == 'apply_effect':
+                return self._execute_single_video_enhancement(operation, video_id, params, project_id)
+            elif operation == 'extract_frame':
+                return self._tool_extract_video_frame(tool_args)
+            elif operation == 'reverse':
+                return self._tool_reverse_video(tool_args)
+            elif operation == 'trim':
+                return self._tool_trim_video(tool_args)
+            elif operation == 'speed_change':
+                return self._tool_change_video_speed(tool_args)
+            elif operation == 'rotate_flip':
+                return self._tool_rotate_flip(tool_args)
+            elif operation == 'fade':
+                return self._tool_fade_video(tool_args)
+            elif operation == 'crop_resize':
+                return self._tool_crop_resize(tool_args)
+            elif operation == 'audio_control':
+                return self._tool_audio_control(tool_args)
+            elif operation == 'add_watermark':
+                return self._tool_add_watermark(tool_args)
+            elif operation == 'blur_region':
+                return self._tool_blur_region(tool_args)
+            elif operation == 'stabilize_video':
+                return self._tool_stabilize_video(tool_args)
+            elif operation == 'add_text_animation':
+                return self._tool_add_text_animation(tool_args)
+            elif operation == 'chroma_key':
+                return self._tool_chroma_key(tool_args)
+            elif operation == 'export_for_platform':
+                return self._tool_export_for_platform(tool_args)
+            elif operation == 'auto_caption':
+                return self._tool_auto_caption(tool_args)
+            # Session 167: DaVinci Resolve operations
+            elif operation == 'render_professional':
+                return self._tool_render_professional(tool_args)
+            elif operation == 'apply_lut':
+                return self._tool_apply_lut(tool_args)
+            elif operation == 'color_grade_professional':
+                return self._tool_color_grade_professional(tool_args)
+            else:
+                return {'success': False, 'error': f"Unsupported batch operation: {operation}"}
+        except Exception as e:
+            logger.error(f"❌ [Session 166] Batch operation error: {e}")
+            return {'success': False, 'error': str(e), 'video_id': video_id}
 
     def _handle_character_training_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Handle character_training_agent calls - trains FLUX LoRA models (Session 133)."""
@@ -2479,6 +2608,697 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.error(f"❌ Picture-in-picture tool error: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
 
+    def _tool_add_watermark(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the add_watermark tool - Session 163 Phase 3.
+        Adds an image (logo/watermark) overlay to video.
+        """
+        logger.info(f"🏷️ ADD_WATERMARK TOOL CALLED!")
+        logger.info(f"🏷️ Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            image_id = arguments.get('image_id')
+            position = arguments.get('position', 'bottom_right')
+            scale = arguments.get('scale', 0.15)
+            opacity = arguments.get('opacity', 0.8)
+            margin = arguments.get('margin', 20)
+            project_id = arguments.get('project_id')
+
+            if not image_id:
+                return {'success': False, 'error': 'image_id is required for watermark (the logo/watermark image)'}
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'image_id': image_id,
+                'position': position,
+                'scale': scale,
+                'opacity': opacity,
+                'margin': margin,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/watermark/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import add_watermark
+            response = add_watermark(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Watermarked video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Watermark added successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'watermark_image_id': result.get('watermark_image_id'),
+                    'position': result.get('position'),
+                    'scale': result.get('scale'),
+                    'opacity': result.get('opacity'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'add_watermark',
+                    'operation_display': f'Adding watermark at {position}'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Watermark failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Watermark tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_blur_region(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the blur_region tool - Session 163 Phase 3.
+        Adds blur to a region of video for privacy/censoring.
+        """
+        logger.info(f"🔲 BLUR_REGION TOOL CALLED!")
+        logger.info(f"🔲 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            region = arguments.get('region', 'center')
+            blur_strength = arguments.get('blur_strength', 15)
+            x = arguments.get('x', 0)
+            y = arguments.get('y', 0)
+            width = arguments.get('width')
+            height = arguments.get('height')
+            start_time = arguments.get('start_time')
+            end_time = arguments.get('end_time')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'region': region,
+                'blur_strength': blur_strength,
+                'x': x,
+                'y': y,
+                'project_id': project_id
+            }
+            if width:
+                request_data['width'] = width
+            if height:
+                request_data['height'] = height
+            if start_time is not None:
+                request_data['start_time'] = start_time
+            if end_time is not None:
+                request_data['end_time'] = end_time
+
+            request = factory.post('/api/video/blur/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import blur_region
+            response = blur_region(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Blurred video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Blur added successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'region': result.get('region'),
+                    'blur_strength': result.get('blur_strength'),
+                    'blur_area': result.get('blur_area'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'blur_region',
+                    'operation_display': f'Adding blur at {region}'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Blur failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Blur region tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_stabilize_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the stabilize_video tool - Session 164 Phase 3.
+        Stabilizes shaky video footage using ffmpeg's vidstab.
+        """
+        logger.info(f"📹 STABILIZE_VIDEO TOOL CALLED!")
+        logger.info(f"📹 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            shakiness = arguments.get('shakiness', 5)
+            accuracy = arguments.get('accuracy', 15)
+            smoothing = arguments.get('smoothing', 10)
+            crop = arguments.get('crop', 'keep')
+            zoom = arguments.get('zoom', 0)
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'shakiness': shakiness,
+                'accuracy': accuracy,
+                'smoothing': smoothing,
+                'crop': crop,
+                'zoom': zoom,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/stabilize/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import stabilize_video
+            response = stabilize_video(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Stabilized video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Video stabilized successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'shakiness': result.get('shakiness'),
+                    'smoothing': result.get('smoothing'),
+                    'crop': result.get('crop'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'stabilize_video',
+                    'operation_display': 'Stabilizing shaky video'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Stabilization failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Stabilize video tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_add_text_animation(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the add_text_animation tool - Session 164 Phase 3.
+        Adds animated text overlays to videos.
+        """
+        logger.info(f"📝 ADD_TEXT_ANIMATION TOOL CALLED!")
+        logger.info(f"📝 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            text = arguments.get('text', 'Sample Text')
+            animation = arguments.get('animation', 'static')
+            position = arguments.get('position', 'bottom')
+            font_size = arguments.get('font_size', 48)
+            font_color = arguments.get('font_color', 'white')
+            bg_color = arguments.get('bg_color')
+            bg_opacity = arguments.get('bg_opacity', 0.5)
+            start_time = arguments.get('start_time', 0)
+            duration = arguments.get('duration')
+            speed = arguments.get('speed', 100)
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'text': text,
+                'animation': animation,
+                'position': position,
+                'font_size': font_size,
+                'font_color': font_color,
+                'bg_opacity': bg_opacity,
+                'start_time': start_time,
+                'speed': speed,
+                'project_id': project_id
+            }
+            if bg_color:
+                request_data['bg_color'] = bg_color
+            if duration:
+                request_data['duration'] = duration
+
+            request = factory.post('/api/video/text-animation/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import add_text_animation
+            response = add_text_animation(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Text animated video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Text animation added successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'text': result.get('text'),
+                    'animation': result.get('animation'),
+                    'position': result.get('position'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'add_text_animation',
+                    'operation_display': f'Adding {animation} text animation'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Text animation failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Text animation tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_chroma_key(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the chroma_key tool - Session 165 Phase 3.
+        Removes green/blue screen backgrounds and optionally replaces with another background.
+        """
+        logger.info(f"💚 CHROMA_KEY TOOL CALLED!")
+        logger.info(f"💚 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            key_color = arguments.get('key_color', 'green')
+            similarity = arguments.get('similarity', 0.3)
+            blend = arguments.get('blend', 0.1)
+            background_video_id = arguments.get('background_video_id')
+            background_image_id = arguments.get('background_image_id')
+            background_color = arguments.get('background_color')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'key_color': key_color,
+                'similarity': similarity,
+                'blend': blend,
+                'project_id': project_id
+            }
+            if background_video_id:
+                request_data['background_video_id'] = background_video_id
+            if background_image_id:
+                request_data['background_image_id'] = background_image_id
+            if background_color:
+                request_data['background_color'] = background_color
+
+            request = factory.post('/api/video/chroma-key/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import chroma_key
+            response = chroma_key(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Chroma keyed video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Chroma key applied successfully'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'key_color': result.get('key_color'),
+                    'background': result.get('background'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'chroma_key',
+                    'operation_display': f'Removing {key_color} screen background'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Chroma key failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Chroma key tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_export_for_platform(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the export_for_platform tool - Session 166.
+        Exports video optimized for YouTube, TikTok, Instagram, etc.
+        """
+        logger.info(f"📤 EXPORT_FOR_PLATFORM TOOL CALLED!")
+        logger.info(f"📤 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            platform = arguments.get('platform', 'youtube')
+            quality = arguments.get('quality', 'high')
+            max_duration = arguments.get('max_duration')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'platform': platform,
+                'quality': quality,
+                'project_id': project_id
+            }
+            if max_duration:
+                request_data['max_duration'] = max_duration
+
+            request = factory.post('/api/video/export/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import export_for_platform
+            response = export_for_platform(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Video exported for {platform}: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'Video exported for {platform}'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'platform': result.get('platform'),
+                    'preset': result.get('preset'),
+                    'resolution': result.get('resolution'),
+                    'file_size_mb': result.get('file_size_mb'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'export_for_platform',
+                    'operation_display': f'Exporting for {platform}'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Export failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Export for platform tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_video_transition(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the video_transition tool - Session 166.
+        Adds transition effects (crossfade, wipe, slide, etc.) between two videos.
+        """
+        logger.info(f"🔄 VIDEO_TRANSITION TOOL CALLED!")
+        logger.info(f"🔄 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id_1 = arguments.get('video_id_1') or arguments.get('video_id')
+            video_id_2 = arguments.get('video_id_2')
+            transition = arguments.get('transition', 'fade')
+            duration = arguments.get('duration', 1.0)
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id_1': video_id_1,
+                'video_id_2': video_id_2,
+                'transition': transition,
+                'duration': duration,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/transition/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import video_transition
+            response = video_transition(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Transition video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'{transition} transition added'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'transition': result.get('transition'),
+                    'duration': result.get('duration'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'video_transition',
+                    'operation_display': f'Adding {transition} transition'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Transition failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Video transition tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_auto_caption(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the auto_caption tool - Session 166.
+        Extracts audio, transcribes with Whisper, and burns subtitles into video.
+        """
+        logger.info(f"📝 AUTO_CAPTION TOOL CALLED!")
+        logger.info(f"📝 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            language = arguments.get('language', 'auto')
+            font_size = arguments.get('font_size', 24)
+            font_color = arguments.get('font_color', 'white')
+            background_color = arguments.get('background_color', 'black@0.5')
+            position = arguments.get('position', 'bottom')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'language': language,
+                'font_size': font_size,
+                'font_color': font_color,
+                'background_color': background_color,
+                'position': position,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/caption/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import auto_caption
+            response = auto_caption(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Captioned video created: {result.get('video_id')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', 'Auto-captioning complete'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'subtitle_file': result.get('subtitle_file'),
+                    'transcript': result.get('transcript'),
+                    'word_count': result.get('word_count'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'auto_caption',
+                    'operation_display': 'Auto-captioning video'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Auto-captioning failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Auto-caption tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_render_professional(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 167: Professional render with DaVinci Resolve or ffmpeg.
+        Supports ProRes, DNxHD, and other professional codecs.
+        Uses GPU acceleration when DaVinci is running!
+        """
+        logger.info(f"🎬 RENDER_PROFESSIONAL TOOL CALLED!")
+        logger.info(f"🎬 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            codec = arguments.get('codec', 'prores_422_hq')
+            resolution = arguments.get('resolution', '1920x1080')
+            frame_rate = arguments.get('frame_rate', 30)
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'codec': codec,
+                'resolution': resolution,
+                'frame_rate': frame_rate,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/render-professional/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import render_professional
+            response = render_professional(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                gpu_msg = ' (GPU accelerated!)' if result.get('gpu_accelerated') else ''
+                logger.info(f"✅ Professional render complete: {result.get('video_id')}{gpu_msg}")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'Professional {codec} render complete'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'codec': result.get('codec'),
+                    'processor_used': result.get('processor_used'),
+                    'gpu_accelerated': result.get('gpu_accelerated'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'render_professional',
+                    'operation_display': f'Professional {codec} render'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Professional render failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Render professional tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_apply_lut(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 167: Apply LUT (Look-Up Table) to video.
+        Uses DaVinci's color science when available!
+        """
+        logger.info(f"🎨 APPLY_LUT TOOL CALLED!")
+        logger.info(f"🎨 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            lut_name = arguments.get('lut_name', 'cinematic_orange_teal')
+            lut_path = arguments.get('lut_path')
+            intensity = arguments.get('intensity', 1.0)
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'lut_name': lut_name,
+                'lut_path': lut_path,
+                'intensity': intensity,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/apply-lut/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import apply_lut
+            response = apply_lut(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ LUT applied: {result.get('lut_applied')}")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'Applied {lut_name} LUT'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'lut_applied': result.get('lut_applied'),
+                    'processor_used': result.get('processor_used'),
+                    'gpu_accelerated': result.get('gpu_accelerated'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'apply_lut',
+                    'operation_display': f'Applying {lut_name} LUT'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'LUT application failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Apply LUT tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _tool_color_grade_professional(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 167: Professional color grading using DaVinci's color science.
+        DaVinci Resolve is THE industry standard for color grading!
+        """
+        logger.info(f"🎨 COLOR_GRADE_PROFESSIONAL TOOL CALLED!")
+        logger.info(f"🎨 Arguments: {arguments}")
+
+        try:
+            from django.test import RequestFactory
+            import json
+
+            video_id = arguments.get('video_id')
+            grade_type = arguments.get('grade_type', 'cinematic')
+            saturation = arguments.get('saturation', 1.0)
+            contrast = arguments.get('contrast', 1.0)
+            lift = arguments.get('lift')
+            gamma = arguments.get('gamma')
+            gain = arguments.get('gain')
+            project_id = arguments.get('project_id')
+
+            factory = RequestFactory()
+            request_data = {
+                'video_id': video_id,
+                'grade_type': grade_type,
+                'saturation': saturation,
+                'contrast': contrast,
+                'lift': lift,
+                'gamma': gamma,
+                'gain': gain,
+                'project_id': project_id
+            }
+
+            request = factory.post('/api/video/grade-professional/',
+                                   data=json.dumps(request_data),
+                                   content_type='application/json')
+            request.user = self.user
+
+            from core.views_video import color_grade_professional
+            response = color_grade_professional(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                gpu_msg = ' (GPU accelerated!)' if result.get('gpu_accelerated') else ''
+                logger.info(f"✅ Professional grade complete: {grade_type}{gpu_msg}")
+                return {
+                    'success': True,
+                    'message': result.get('message', f'Professional {grade_type} grade complete'),
+                    'video_id': result.get('video_id'),
+                    'video_url': result.get('video_url'),
+                    'grade_type': result.get('grade_type'),
+                    'processor_used': result.get('processor_used'),
+                    'gpu_accelerated': result.get('gpu_accelerated'),
+                    'agent': 'VideoEditingAgent',
+                    'operation': 'color_grade_professional',
+                    'operation_display': f'Professional {grade_type} grading'
+                }
+            else:
+                return {'success': False, 'error': result.get('error', 'Professional grading failed')}
+
+        except Exception as e:
+            logger.error(f"❌ Color grade professional tool error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
     def _parse_video_id_range(self, video_id_str: str) -> list:
         """Parse video ID string into list of IDs. Supports '1-3' and '1, 2, 3' formats."""
         video_ids = []
@@ -3112,6 +3932,14 @@ Respond in a helpful, personalized way that:
                 'crop', 'resize', 'aspect ratio', 'make square', 'make portrait', 'make landscape', '16:9', '9:16', '1:1',  # Crop/Resize
                 'mute', 'volume', 'extract audio', 'audio control',  # Audio Controls
                 'picture in picture', 'pip', 'overlay video', 'put video in corner',  # Picture-in-Picture
+                # Session 163: Watermark/Logo
+                'watermark', 'add watermark', 'logo', 'add logo', 'overlay image', 'brand video',
+                # Session 163: Blur Region
+                'blur', 'add blur', 'blur region', 'privacy blur', 'censor', 'pixelate', 'hide face',
+                # Session 164: Video Stabilization
+                'stabilize', 'stabilize video', 'fix shaky', 'remove shake', 'smooth video', 'deshake', 'camera shake', 'shaky video',
+                # Session 164: Text Animations
+                'text animation', 'animated text', 'scrolling text', 'scroll text', 'add title', 'add credits', 'ticker', 'news ticker', 'rolling credits', 'fade text',
                 # Audio operations
                 'generate voice', 'voiceover', 'text to speech',
                 # 3D & editing
