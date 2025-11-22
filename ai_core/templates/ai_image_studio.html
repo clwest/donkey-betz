@@ -5895,6 +5895,42 @@
                     </div>
                 </div>
 
+                <!-- Session 169: Style Insights Panel -->
+                <div id="styleInsightsPanel" class="p-3 border-bottom" style="border-color: rgba(139, 92, 246, 0.3) !important; background: rgba(139, 92, 246, 0.1); flex-shrink: 0; display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2" onclick="toggleStyleInsights()" style="cursor: pointer;">
+                        <small style="color: #c4b5fd; font-weight: 700;">🧠 AI Learning Your Style</small>
+                        <span id="insightsToggle" style="color: #c4b5fd; font-size: 10px;">▼</span>
+                    </div>
+                    <div id="insightsContent" style="display: block;">
+                        <div id="insightsLoading" style="text-align: center; padding: 10px;">
+                            <small style="color: #a78bfa;">Loading insights...</small>
+                        </div>
+                        <div id="insightsData" style="display: none;">
+                            <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                                <div style="flex: 1; background: rgba(139, 92, 246, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
+                                    <div id="totalInteractions" style="font-size: 18px; font-weight: 700; color: #e9d5ff;">0</div>
+                                    <small style="color: #c4b5fd; font-size: 9px;">Ratings</small>
+                                </div>
+                                <div style="flex: 1; background: rgba(34, 197, 94, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
+                                    <div id="totalPatterns" style="font-size: 18px; font-weight: 700; color: #bbf7d0;">0</div>
+                                    <small style="color: #86efac; font-size: 9px;">Patterns</small>
+                                </div>
+                                <div style="flex: 1; background: rgba(251, 191, 36, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
+                                    <div id="totalSuggestions" style="font-size: 18px; font-weight: 700; color: #fef08a;">0</div>
+                                    <small style="color: #fcd34d; font-size: 9px;">Ideas</small>
+                                </div>
+                            </div>
+                            <div id="recentPatterns" style="margin-top: 8px;">
+                                <!-- Patterns will be inserted here -->
+                            </div>
+                            <div id="aiSuggestions" style="margin-top: 8px; display: none;">
+                                <small style="color: #fcd34d; font-weight: 600;">💡 AI Suggestion:</small>
+                                <div id="suggestionText" style="font-size: 11px; color: #e9d5ff; margin-top: 4px; padding: 8px; background: rgba(251, 191, 36, 0.15); border-radius: 6px; border-left: 3px solid #fbbf24;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Chat Messages -->
                 <div id="aiChatMessages" class="p-3" style="flex: 1; overflow-y: auto; font-size: 14px; background: rgba(0, 0, 0, 0.3); min-height: 0; scroll-behavior: smooth;">
                     <div class="alert alert-info mb-2" style="font-size: 14px;">
@@ -7433,6 +7469,9 @@
                     // Show brief success feedback
                     showRatingFeedback(button, interactionType);
 
+                    // Refresh insights panel to show updated data
+                    setTimeout(loadStyleInsights, 500);
+
                     console.log(`✅ Style interaction recorded: ${interactionType}`);
                 } else {
                     console.error('Failed to record interaction:', data);
@@ -7495,6 +7534,93 @@
             // Remove after animation
             setTimeout(() => feedback.remove(), 1500);
         }
+
+        // Session 169: Style Insights Functions
+        let styleInsightsVisible = true;
+        let lastInsightsData = null;
+
+        async function loadStyleInsights() {
+            console.log('🧠 Loading style insights...');
+            try {
+                const response = await fetch('/api/v1/style-memory/insights/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    lastInsightsData = data;
+                    updateStyleInsightsPanel(data);
+                    console.log('✅ Style insights loaded:', data);
+                }
+            } catch (error) {
+                console.error('❌ Error loading style insights:', error);
+            }
+        }
+
+        function updateStyleInsightsPanel(data) {
+            const panel = document.getElementById('styleInsightsPanel');
+            const loading = document.getElementById('insightsLoading');
+            const dataDiv = document.getElementById('insightsData');
+
+            // Calculate totals
+            const totalInteractions = data.total_interactions || 0;
+            const totalPatterns = (data.recent_patterns || []).length;
+            const totalSuggestions = data.suggestions_available || 0;
+
+            // Show panel if there's any data, or if user has interacted at least once
+            if (totalInteractions > 0 || totalPatterns > 0) {
+                panel.style.display = 'block';
+                loading.style.display = 'none';
+                dataDiv.style.display = 'block';
+
+                // Update counters
+                document.getElementById('totalInteractions').textContent = totalInteractions;
+                document.getElementById('totalPatterns').textContent = totalPatterns;
+                document.getElementById('totalSuggestions').textContent = totalSuggestions;
+
+                // Update patterns
+                const patternsDiv = document.getElementById('recentPatterns');
+                if (data.recent_patterns && data.recent_patterns.length > 0) {
+                    const patternTags = data.recent_patterns.slice(0, 5).map(p =>
+                        `<span style="display: inline-block; padding: 2px 8px; margin: 2px; background: rgba(139, 92, 246, 0.3); border-radius: 12px; font-size: 10px; color: #e9d5ff;">${p.pattern_type}: ${p.pattern_value}</span>`
+                    ).join('');
+                    patternsDiv.innerHTML = `<small style="color: #c4b5fd; font-size: 10px;">Detected preferences:</small><div style="margin-top: 4px;">${patternTags}</div>`;
+                } else {
+                    patternsDiv.innerHTML = '<small style="color: #a78bfa; font-size: 10px;">Rate more content to see patterns!</small>';
+                }
+
+                // Update suggestions
+                const suggestionsDiv = document.getElementById('aiSuggestions');
+                if (data.favorite_styles && data.favorite_styles.length > 0) {
+                    suggestionsDiv.style.display = 'block';
+                    const suggestion = data.favorite_styles[0];
+                    document.getElementById('suggestionText').textContent = `You seem to prefer ${suggestion} styles. Try asking for more content like this!`;
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            } else {
+                // Hide panel if no data
+                panel.style.display = 'none';
+            }
+        }
+
+        function toggleStyleInsights() {
+            const content = document.getElementById('insightsContent');
+            const toggle = document.getElementById('insightsToggle');
+            styleInsightsVisible = !styleInsightsVisible;
+            content.style.display = styleInsightsVisible ? 'block' : 'none';
+            toggle.textContent = styleInsightsVisible ? '▼' : '▶';
+        }
+
+        // Load insights when page loads and after ratings
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load insights after a short delay to let other things initialize
+            setTimeout(loadStyleInsights, 2000);
+        });
         // ============================================================
 
         async function deleteImage(imageId, button) {
