@@ -30,6 +30,126 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# Time module for timestamp generation (Session 167)
+import time
+
+
+# =============================================================================
+# Session 168: Module-level video helper functions
+# Used by render_professional, apply_lut, and grade_professional
+# =============================================================================
+
+def _resolve_video_by_id(video_id, user, project_id=None):
+    """
+    Session 168: Resolve video ID (numeric or UUID) to VideoHistory object.
+
+    Supports:
+    - UUID strings: Returns VideoHistory directly
+    - Numeric IDs: Maps to nth video in project or all user videos
+
+    Args:
+        video_id: String UUID or numeric ID (1-based)
+        user: Django User object
+        project_id: Optional project UUID to scope the search
+
+    Returns:
+        VideoHistory object or None if not found
+    """
+    if isinstance(video_id, str):
+        video_id = video_id.strip().strip('"').strip("'")
+
+    # Try as UUID first
+    try:
+        import uuid as uuid_module
+        video_uuid = uuid_module.UUID(video_id)
+        return VideoHistory.objects.filter(id=video_uuid, user=user).first()
+    except (ValueError, AttributeError, TypeError):
+        pass
+
+    # Try as numeric ID
+    try:
+        numeric_id = int(video_id)
+        if numeric_id < 1:
+            return None
+
+        # Scope by project if provided, order by created_at to match frontend
+        if project_id:
+            videos = VideoHistory.objects.filter(user=user, project_id=project_id).order_by('created_at')
+            scope = 'project'
+        else:
+            videos = VideoHistory.objects.filter(user=user).order_by('created_at')
+            scope = 'all videos'
+
+        if numeric_id > videos.count():
+            return None
+
+        video = videos[numeric_id - 1]
+        logger.info(f"🔄 [Session 168] Resolved hybrid ID {numeric_id} → {video.id} (scope: {scope})")
+        return video
+    except (ValueError, TypeError):
+        return None
+
+
+def _get_video_local_path(video):
+    """
+    Session 168: Get local filesystem path for a VideoHistory object.
+
+    Handles various URL formats:
+    - /media/videos/filename.mp4 -> /full/path/to/media/videos/filename.mp4
+    - https://... -> Downloads to temp file
+    - Local file path -> Returns as-is
+
+    Args:
+        video: VideoHistory object
+
+    Returns:
+        String path to local file, or None if not found
+    """
+    if not video or not video.video_url:
+        return None
+
+    video_url = video.video_url
+
+    # Handle relative media paths
+    if video_url.startswith('/media/'):
+        file_path = video_url[7:]  # Remove '/media/'
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        if os.path.exists(full_path):
+            return full_path
+        # Try without 'videos/' prefix if not found
+        logger.warning(f"⚠️ Video file not found at: {full_path}")
+        return None
+
+    # Handle http/https URLs (Runway uploads, etc.)
+    if video_url.startswith('http://') or video_url.startswith('https://'):
+        try:
+            # Download to temp file
+            response = requests.get(video_url, stream=True, timeout=60)
+            response.raise_for_status()
+
+            # Determine extension from URL or content type
+            ext = 'mp4'
+            if '.mov' in video_url.lower():
+                ext = 'mov'
+            elif '.webm' in video_url.lower():
+                ext = 'webm'
+
+            temp_file = tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False)
+            for chunk in response.iter_content(chunk_size=8192):
+                temp_file.write(chunk)
+            temp_file.close()
+            logger.info(f"📥 Downloaded video to temp file: {temp_file.name}")
+            return temp_file.name
+        except Exception as e:
+            logger.error(f"❌ Failed to download video: {e}")
+            return None
+
+    # Assume it's already a local path
+    if os.path.exists(video_url):
+        return video_url
+
+    return None
+
 
 def resize_image_for_runway(image_url: str, max_size_mb: int = 5, max_dimension: int = 1920) -> str:
     """
