@@ -1,11 +1,17 @@
 """
 Hybrid Video Processor - DaVinci Resolve First, FFmpeg Fallback
 Session 167: Leveraging the $295 DaVinci Resolve Studio investment!
+Session 168: Connected to Render Node for proper DaVinci integration!
 
 This processor intelligently routes video operations:
-1. Checks if DaVinci Resolve Studio is running
-2. Uses DaVinci for premium quality when available (GPU-accelerated, ProRes, etc.)
-3. Falls back to ffmpeg when DaVinci isn't running
+1. Checks if Render Node (port 5001) is available for DaVinci operations
+2. Falls back to direct DaVinci API if render node unavailable but Resolve running
+3. Falls back to ffmpeg when neither is available
+
+Architecture (Session 168):
+- Render Node (localhost:5001) handles DaVinci scripting properly
+- Hybrid processor calls render node API for professional operations
+- FFmpeg provides reliable fallback for all operations
 
 Benefits of DaVinci-First:
 - GPU-accelerated rendering (5-10x faster)
@@ -21,11 +27,20 @@ import os
 import logging
 import subprocess
 import tempfile
+import time
+import requests
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Render Node Configuration (Session 168)
+RENDER_NODE_URL = os.getenv("RENDER_NODE_URL", "http://localhost:5001")
+RENDER_NODE_TOKEN = os.getenv("RENDER_NODE_TOKEN", "dev-token-change-in-production")
+RENDER_NODE_TIMEOUT = 5  # seconds for health check
+RENDER_JOB_POLL_INTERVAL = 2  # seconds between status checks
+RENDER_JOB_MAX_WAIT = 3600  # 1 hour max wait for render
 
 
 class ProcessorMode(Enum):
@@ -51,12 +66,228 @@ class ProcessingResult:
     """Result from video processing operation"""
     success: bool
     output_path: Optional[str] = None
-    processor_used: str = "unknown"  # "davinci" or "ffmpeg"
+    processor_used: str = "unknown"  # "davinci" or "ffmpeg" or "render_node"
     gpu_accelerated: bool = False
     codec_used: Optional[str] = None
     duration_seconds: Optional[float] = None
     error_message: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+# =============================================================================
+# SESSION 168: Render Node Client
+# =============================================================================
+
+class RenderNodeClient:
+    """
+    Client for communicating with the DaVinci Resolve Render Node (Session 103).
+
+    The render node properly manages DaVinci projects, timelines, and rendering
+    via the DaVinciResolveScript API. This client provides a clean interface
+    for the hybrid processor to submit render jobs.
+    """
+
+    def __init__(self, base_url: str = None, token: str = None):
+        """
+        Initialize render node client.
+
+        Args:
+            base_url: Render node URL (default: localhost:5001)
+            token: Authentication token
+        """
+        self.base_url = base_url or RENDER_NODE_URL
+        self.token = token or RENDER_NODE_TOKEN
+        self.headers = {"X-Render-Token": self.token}
+        self._available = None
+
+    def is_available(self) -> bool:
+        """
+        Check if render node is running and healthy.
+
+        Returns:
+            True if render node is available
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/health",
+                timeout=RENDER_NODE_TIMEOUT
+            )
+            if response.status_code == 200:
+                self._available = True
+                logger.info("✅ Render Node is available at %s", self.base_url)
+                return True
+        except requests.exceptions.RequestException as e:
+            logger.debug("Render Node not available: %s", e)
+
+        self._available = False
+        return False
+
+    def get_status(self) -> Dict[str, Any]:
+        """Get render node status including queue info."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/health",
+                timeout=RENDER_NODE_TIMEOUT
+            )
+            if response.status_code == 200:
+                return response.json()
+        except requests.exceptions.RequestException:
+            pass
+
+        return {"status": "unavailable", "queue_size": 0, "active_jobs": 0}
+
+    def start_render(
+        self,
+        clip_paths: list,
+        template: str = "default_mp4",
+        timeline_name: str = None,
+        webhook_url: str = None
+    ) -> Optional[str]:
+        """
+        Submit a render job to the render node.
+
+        Args:
+            clip_paths: List of video file paths to render
+            template: Render template name
+            timeline_name: Custom timeline name
+            webhook_url: URL to notify when complete
+
+        Returns:
+            Job ID if successful, None otherwise
+        """
+        try:
+            payload = {
+                "clip_paths": clip_paths,
+                "template": template
+            }
+            if timeline_name:
+                payload["timeline_name"] = timeline_name
+            if webhook_url:
+                payload["webhook_url"] = webhook_url
+
+            response = requests.post(
+                f"{self.base_url}/render/start",
+                json=payload,
+                headers=self.headers,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                logger.info("🎬 Render job started: %s", data.get("job_id"))
+                return data.get("job_id")
+            else:
+                logger.error("Failed to start render: %s", response.text)
+
+        except requests.exceptions.RequestException as e:
+            logger.error("Render node request failed: %s", e)
+
+        return None
+
+    def get_job_status(self, job_id: str) -> Dict[str, Any]:
+        """
+        Get status of a render job.
+
+        Args:
+            job_id: Job ID from start_render
+
+        Returns:
+            Job status dictionary
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/render/status/{job_id}",
+                headers=self.headers,
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                return response.json()
+
+        except requests.exceptions.RequestException as e:
+            logger.error("Failed to get job status: %s", e)
+
+        return {"status": "unknown", "error_message": "Failed to get status"}
+
+    def wait_for_completion(
+        self,
+        job_id: str,
+        max_wait: int = None,
+        poll_interval: int = None
+    ) -> Dict[str, Any]:
+        """
+        Wait for a render job to complete.
+
+        Args:
+            job_id: Job ID to wait for
+            max_wait: Maximum seconds to wait
+            poll_interval: Seconds between status checks
+
+        Returns:
+            Final job status
+        """
+        max_wait = max_wait or RENDER_JOB_MAX_WAIT
+        poll_interval = poll_interval or RENDER_JOB_POLL_INTERVAL
+
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait:
+            status = self.get_job_status(job_id)
+            job_status = status.get("status", "unknown")
+
+            if job_status in ("completed", "done", "failed", "cancelled"):
+                return status
+
+            logger.debug("Job %s status: %s (%.0f%% progress)",
+                        job_id, job_status, status.get("progress", 0) * 100)
+            time.sleep(poll_interval)
+
+        return {"status": "timeout", "error_message": "Job timed out"}
+
+    def download_result(self, job_id: str, output_path: str) -> bool:
+        """
+        Download the rendered result file.
+
+        Args:
+            job_id: Job ID
+            output_path: Local path to save file
+
+        Returns:
+            True if download successful
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/render/result/{job_id}",
+                headers=self.headers,
+                stream=True,
+                timeout=300  # 5 minutes for large files
+            )
+
+            if response.status_code == 200:
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                with open(output_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                logger.info("✅ Downloaded render result to %s", output_path)
+                return True
+            else:
+                logger.error("Failed to download result: %s", response.status_code)
+
+        except requests.exceptions.RequestException as e:
+            logger.error("Download failed: %s", e)
+
+        return False
+
+
+# Global render node client instance
+_render_node_client: Optional[RenderNodeClient] = None
+
+def get_render_node_client() -> RenderNodeClient:
+    """Get or create the global render node client."""
+    global _render_node_client
+    if _render_node_client is None:
+        _render_node_client = RenderNodeClient()
+    return _render_node_client
 
 
 class HybridVideoProcessor:
@@ -93,11 +324,17 @@ class HybridVideoProcessor:
         self.davinci_running = False
         self.davinci_provider = None
 
-        # Check DaVinci availability
+        # Session 168: Track render node availability
+        self.render_node_available = False
+        self.render_node_client = get_render_node_client()
+
+        # Check DaVinci and render node availability
         self._check_davinci_status()
+        self._check_render_node_status()
 
         logger.info(f"🎬 HybridVideoProcessor initialized")
         logger.info(f"   Mode: {mode.value}")
+        logger.info(f"   Render Node: {'✅ AVAILABLE' if self.render_node_available else '❌ Not running'}")
         logger.info(f"   DaVinci installed: {self.davinci_available}")
         logger.info(f"   DaVinci running: {self.davinci_running}")
 
@@ -132,6 +369,19 @@ class HybridVideoProcessor:
 
         return self.davinci_available, self.davinci_running
 
+    def _check_render_node_status(self) -> bool:
+        """
+        Check if the Render Node service is available.
+
+        Session 168: The render node (Session 103) properly handles DaVinci
+        scripting with project management, timelines, and job queues.
+
+        Returns:
+            True if render node is available
+        """
+        self.render_node_available = self.render_node_client.is_available()
+        return self.render_node_available
+
     def get_status(self) -> Dict[str, Any]:
         """
         Get current processor status.
@@ -141,21 +391,42 @@ class HybridVideoProcessor:
         """
         # Refresh status
         self._check_davinci_status()
+        self._check_render_node_status()
+
+        # Session 168: Determine active processor priority
+        # 1. Render Node (best - proper DaVinci management)
+        # 2. Direct DaVinci (fallback - may have issues)
+        # 3. FFmpeg (always works)
+        if self.render_node_available:
+            active = "render_node"
+            gpu = True
+            pro_codecs = True
+        elif self.davinci_running:
+            active = "davinci"
+            gpu = True
+            pro_codecs = True
+        else:
+            active = "ffmpeg"
+            gpu = False
+            pro_codecs = False
 
         return {
             "mode": self.mode.value,
+            "render_node_available": self.render_node_available,
             "davinci_installed": self.davinci_available,
             "davinci_running": self.davinci_running,
-            "active_processor": "davinci" if self.davinci_running else "ffmpeg",
-            "gpu_acceleration": self.davinci_running,
-            "professional_codecs_available": self.davinci_running,
-            "available_codecs": [c.value for c in ProfessionalCodec] if self.davinci_running else ["h264", "h265"],
+            "active_processor": active,
+            "gpu_acceleration": gpu,
+            "professional_codecs_available": pro_codecs,
+            "available_codecs": [c.value for c in ProfessionalCodec] if pro_codecs else ["h264", "h265"],
             "message": self._get_status_message()
         }
 
     def _get_status_message(self) -> str:
         """Get human-readable status message"""
-        if self.davinci_running:
+        if self.render_node_available:
+            return "🎬 Render Node ACTIVE - Professional DaVinci rendering via API!"
+        elif self.davinci_running:
             return "🎬 DaVinci Resolve Studio ACTIVE - GPU rendering, ProRes, DNxHD available!"
         elif self.davinci_available:
             return "⚠️ DaVinci installed but not running - start Resolve for GPU acceleration"
@@ -163,13 +434,26 @@ class HybridVideoProcessor:
             return "ℹ️ Using ffmpeg - install DaVinci Resolve Studio for professional features"
 
     def _should_use_davinci(self) -> bool:
-        """Determine if we should use DaVinci for this operation"""
+        """
+        Determine if we should use DaVinci for this operation.
+
+        Session 168: Priority order:
+        1. Render Node (if available) - proper project/timeline management
+        2. Direct DaVinci API (if running) - may have queue issues
+        3. FFmpeg (fallback) - always works
+        """
         if self.mode == ProcessorMode.FFMPEG:
             return False
         if self.mode == ProcessorMode.DAVINCI:
-            return self.davinci_running
-        # AUTO mode - use DaVinci if running
-        return self.davinci_running
+            return self.render_node_available or self.davinci_running
+        # AUTO mode - prefer render node, then direct DaVinci
+        return self.render_node_available or self.davinci_running
+
+    def _should_use_render_node(self) -> bool:
+        """Check if render node should be used (Session 168)"""
+        if self.mode == ProcessorMode.FFMPEG:
+            return False
+        return self.render_node_available
 
     def _get_davinci_provider(self):
         """Get or create DaVinci provider instance"""
@@ -212,14 +496,112 @@ class HybridVideoProcessor:
         """
         logger.info(f"🎬 Professional render requested: {codec.value}")
 
-        if self._should_use_davinci():
-            return self._render_with_davinci(
+        # Session 168: Priority order for rendering
+        # 1. Render Node (best - proper DaVinci project management)
+        if self._should_use_render_node():
+            result = self._render_with_render_node(
                 video_path, output_path, codec, resolution, frame_rate
             )
-        else:
-            return self._render_with_ffmpeg(
-                video_path, output_path, codec, resolution, frame_rate,
-                audio_codec, audio_bitrate
+            if result.success:
+                return result
+            logger.warning("⚠️ Render node failed, trying direct DaVinci...")
+
+        # 2. Direct DaVinci API (fallback - may have queue issues)
+        if self._should_use_davinci() and not self._should_use_render_node():
+            result = self._render_with_davinci(
+                video_path, output_path, codec, resolution, frame_rate
+            )
+            if result.success:
+                return result
+            logger.warning("⚠️ Direct DaVinci failed, falling back to ffmpeg...")
+
+        # 3. FFmpeg (always works)
+        return self._render_with_ffmpeg(
+            video_path, output_path, codec, resolution, frame_rate,
+            audio_codec, audio_bitrate
+        )
+
+    def _render_with_render_node(
+        self,
+        video_path: str,
+        output_path: str,
+        codec: ProfessionalCodec,
+        resolution: str,
+        frame_rate: int
+    ) -> ProcessingResult:
+        """
+        Render using the Render Node service (Session 168).
+
+        The render node properly handles DaVinci project creation,
+        timeline management, and job queuing.
+        """
+        logger.info("🎬 Using Render Node for professional DaVinci rendering")
+
+        try:
+            # Map codec to template name
+            template_map = {
+                ProfessionalCodec.PRORES_422: "prores_422",
+                ProfessionalCodec.PRORES_422_HQ: "prores_422_hq",
+                ProfessionalCodec.PRORES_4444: "prores_4444",
+                ProfessionalCodec.DNXHD: "dnxhd",
+                ProfessionalCodec.DNXHR_HQ: "dnxhr_hq",
+                ProfessionalCodec.H264: "default_mp4",
+                ProfessionalCodec.H265: "h265",
+            }
+            template = template_map.get(codec, "default_mp4")
+
+            # Submit render job
+            job_id = self.render_node_client.start_render(
+                clip_paths=[video_path],
+                template=template,
+                timeline_name=f"render_{os.path.basename(video_path)}"
+            )
+
+            if not job_id:
+                return ProcessingResult(
+                    success=False,
+                    processor_used="render_node",
+                    error_message="Failed to start render job"
+                )
+
+            # Wait for completion
+            logger.info(f"⏳ Waiting for render job {job_id}...")
+            result = self.render_node_client.wait_for_completion(job_id)
+
+            if result.get("status") in ("completed", "done"):
+                # Download the result
+                if self.render_node_client.download_result(job_id, output_path):
+                    return ProcessingResult(
+                        success=True,
+                        output_path=output_path,
+                        processor_used="render_node",
+                        gpu_accelerated=True,
+                        codec_used=codec.value,
+                        metadata={
+                            "job_id": job_id,
+                            "render_node": RENDER_NODE_URL
+                        }
+                    )
+                else:
+                    return ProcessingResult(
+                        success=False,
+                        processor_used="render_node",
+                        error_message="Failed to download render result"
+                    )
+            else:
+                error_msg = result.get("error_message", "Unknown error")
+                return ProcessingResult(
+                    success=False,
+                    processor_used="render_node",
+                    error_message=f"Render job failed: {error_msg}"
+                )
+
+        except Exception as e:
+            logger.error(f"❌ Render node error: {e}")
+            return ProcessingResult(
+                success=False,
+                processor_used="render_node",
+                error_message=str(e)
             )
 
     def _render_with_davinci(
