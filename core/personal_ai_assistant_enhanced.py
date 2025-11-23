@@ -3787,6 +3787,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Quick experiments: 10-minute window for rapid iteration
             assets_context = self.get_recent_assets_context()
 
+        # Session 169 Phase 3: Get user's learned style preferences
+        style_preferences_context = self._get_style_preferences_context()
+
         # Extract conversation history from context and load from database
         conversation_context = context.get('conversation_context', '')
         conversation_history = context.get('conversation_history', [])
@@ -3824,7 +3827,9 @@ Recent Memories:
 Recent Agent Activities:
 {agent_context}
 
-Available Assets in Current Context:
+{f'''User Style Preferences (Session 169 - Personalized Generation):
+{style_preferences_context}
+''' if style_preferences_context else ''}Available Assets in Current Context:
 {assets_context}
 
 CRITICAL - Project Context (Session 132):
@@ -3865,6 +3870,7 @@ CRITICAL INSTRUCTIONS:
    - 3D conversion → "🎨 Routing to 3D Generation Agent..."
    - Video editing → "✂️ Routing to Video Editing Agent..."
 12. **TOOL CALLING PREAMBLE (SESSION 129 - GPT-5.1 REQUIREMENT):** When you have access to a tool that can fulfill the user's request, you MUST call that tool. State which agent is handling it, then IMMEDIATELY execute the tool call. Do NOT just say you will do something without actually calling the tool function.
+13. **PERSONALIZED STYLE (SESSION 169 - LEARNING SYSTEM):** If "User Style Preferences" are shown above, incorporate them when generating new content. Example: if user prefers "vibrant" colors and "modern" style, enhance prompts to include those preferences. Say "🧠 Using your learned style preferences..." when applying them.
 
 **Example - CORRECT (Session 131 - Agent Orchestration):**
 User: "Remove background from image 3"
@@ -5157,6 +5163,50 @@ Respond in a helpful, personalized way that:
         except Exception as e:
             logger.error(f"Error loading conversation history: {e}")
             return []
+
+    def _get_style_preferences_context(self) -> str:
+        """
+        Session 169 Phase 3: Get user's learned style preferences for personalized generation.
+
+        Returns:
+            Formatted string of style preferences, or empty string if no preferences.
+        """
+        try:
+            from style_memory.models import StyleMemory, StylePattern
+
+            # Get interaction counts
+            total_interactions = StyleMemory.objects.filter(user=self.user).count()
+            if total_interactions == 0:
+                return ""
+
+            loved_count = StyleMemory.objects.filter(user=self.user, interaction_type='love').count()
+            liked_count = StyleMemory.objects.filter(user=self.user, interaction_type='like').count()
+            disliked_count = StyleMemory.objects.filter(user=self.user, interaction_type='dislike').count()
+
+            # Get detected patterns
+            patterns = StylePattern.objects.filter(user=self.user).order_by('-confidence', '-frequency')[:10]
+
+            if not patterns.exists() and total_interactions < 3:
+                return ""  # Not enough data yet
+
+            # Build the preferences context
+            lines = [f"Style Learning (based on {total_interactions} ratings: {loved_count} loved, {liked_count} liked, {disliked_count} disliked):"]
+
+            if patterns.exists():
+                pattern_groups = {}
+                for p in patterns:
+                    if p.pattern_type not in pattern_groups:
+                        pattern_groups[p.pattern_type] = []
+                    pattern_groups[p.pattern_type].append(p.pattern_value)
+
+                for ptype, values in pattern_groups.items():
+                    lines.append(f"- Preferred {ptype}: {', '.join(values[:3])}")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.debug(f"Error getting style preferences: {e}")
+            return ""
 
     def _format_conversation_context(self, conversations: List[Dict[str, Any]]) -> str:
         """
