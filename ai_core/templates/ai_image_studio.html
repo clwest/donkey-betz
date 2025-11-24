@@ -7847,8 +7847,10 @@
                 const suggestionsDiv = document.getElementById('aiSuggestions');
                 if (data.favorite_styles && data.favorite_styles.length > 0) {
                     suggestionsDiv.style.display = 'block';
-                    const suggestion = data.favorite_styles[0];
-                    document.getElementById('suggestionText').textContent = `You seem to prefer ${suggestion} styles. Try asking for more content like this!`;
+                    // Session 181: favorite_styles contains objects with pattern_value, not strings
+                    const styleObj = data.favorite_styles[0];
+                    const styleName = typeof styleObj === 'object' ? styleObj.pattern_value : styleObj;
+                    document.getElementById('suggestionText').textContent = `You seem to prefer ${styleName} styles. Try asking for more content like this!`;
                 } else {
                     suggestionsDiv.style.display = 'none';
                 }
@@ -7871,6 +7873,72 @@
             // Load insights after a short delay to let other things initialize
             setTimeout(loadStyleInsights, 2000);
         });
+
+        // Session 181: Project-specific style insights functions
+        const projectStyleInsightsVisible = {};
+
+        function toggleProjectStyleInsights(projectId) {
+            const content = document.getElementById(`projectInsightsContent-${projectId}`);
+            const toggle = document.getElementById(`projectInsightsToggle-${projectId}`);
+            projectStyleInsightsVisible[projectId] = !projectStyleInsightsVisible[projectId];
+            content.style.display = projectStyleInsightsVisible[projectId] ? 'block' : 'none';
+            toggle.textContent = projectStyleInsightsVisible[projectId] ? '▼' : '▶';
+        }
+
+        async function loadProjectStyleInsights(projectId) {
+            try {
+                const response = await fetch('/api/style-memory/learning-panel/');
+                if (!response.ok) {
+                    console.log('Style insights not available');
+                    return;
+                }
+                const data = await response.json();
+
+                const panel = document.getElementById(`projectStyleInsightsPanel-${projectId}`);
+                const loadingDiv = document.getElementById(`projectInsightsLoading-${projectId}`);
+                const dataDiv = document.getElementById(`projectInsightsData-${projectId}`);
+
+                if (!panel) return;
+
+                if (data.total_interactions > 0 || (data.recent_patterns && data.recent_patterns.length > 0)) {
+                    panel.style.display = 'block';
+                    loadingDiv.style.display = 'none';
+                    dataDiv.style.display = 'block';
+
+                    // Update counts
+                    document.getElementById(`projectTotalInteractions-${projectId}`).textContent = data.total_interactions || 0;
+                    document.getElementById(`projectTotalPatterns-${projectId}`).textContent = data.recent_patterns ? data.recent_patterns.length : 0;
+                    document.getElementById(`projectTotalSuggestions-${projectId}`).textContent = data.suggestions_available || 0;
+
+                    // Update patterns display
+                    const patternsDiv = document.getElementById(`projectRecentPatterns-${projectId}`);
+                    if (data.recent_patterns && data.recent_patterns.length > 0) {
+                        const patternBadges = data.recent_patterns.slice(0, 5).map(p => {
+                            const icon = p.pattern_type === 'color' ? '🎨' : p.pattern_type === 'style' ? '✨' : '📌';
+                            return `<span style="display: inline-block; background: rgba(255,255,255,0.15); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin: 2px;">${icon} ${p.pattern_value}</span>`;
+                        }).join('');
+                        patternsDiv.innerHTML = patternBadges;
+                    } else {
+                        patternsDiv.innerHTML = '<small style="color: rgba(255,255,255,0.6); font-size: 10px;">Rate more content to see patterns!</small>';
+                    }
+
+                    // Update suggestions
+                    const suggestionsDiv = document.getElementById(`projectAiSuggestions-${projectId}`);
+                    if (data.favorite_styles && data.favorite_styles.length > 0) {
+                        suggestionsDiv.style.display = 'block';
+                        const styleObj = data.favorite_styles[0];
+                        const styleName = typeof styleObj === 'object' ? styleObj.pattern_value : styleObj;
+                        document.getElementById(`projectSuggestionText-${projectId}`).textContent = `You seem to prefer ${styleName} styles. Try asking for more content like this!`;
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                } else {
+                    panel.style.display = 'none';
+                }
+            } catch (error) {
+                console.log('Error loading project style insights:', error);
+            }
+        }
         // ============================================================
 
         async function deleteImage(imageId, button) {
@@ -20380,6 +20448,42 @@
 
                                 <!-- Chat Messages Area -->
                                 <div class="card-body" style="padding: 0; display: flex; flex-direction: column; height: calc(100% - 80px);">
+                                    <!-- Session 181: Style Insights Panel for Project Assistant -->
+                                    <div id="projectStyleInsightsPanel-${project.id}" class="p-3 border-bottom" style="border-color: rgba(255, 255, 255, 0.2) !important; background: rgba(0, 0, 0, 0.2); flex-shrink: 0; display: none;">
+                                        <div class="d-flex justify-content-between align-items-center mb-2" onclick="toggleProjectStyleInsights('${project.id}')" style="cursor: pointer;">
+                                            <small style="color: rgba(255,255,255,0.9); font-weight: 700;">🧠 AI Learning Your Style</small>
+                                            <span id="projectInsightsToggle-${project.id}" style="color: rgba(255,255,255,0.7); font-size: 10px;">▼</span>
+                                        </div>
+                                        <div id="projectInsightsContent-${project.id}" style="display: block;">
+                                            <div id="projectInsightsLoading-${project.id}" style="text-align: center; padding: 10px;">
+                                                <small style="color: rgba(255,255,255,0.7);">Loading insights...</small>
+                                            </div>
+                                            <div id="projectInsightsData-${project.id}" style="display: none;">
+                                                <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                                                    <div style="flex: 1; background: rgba(255, 255, 255, 0.15); padding: 8px; border-radius: 8px; text-align: center;">
+                                                        <div id="projectTotalInteractions-${project.id}" style="font-size: 18px; font-weight: 700; color: white;">0</div>
+                                                        <small style="color: rgba(255,255,255,0.8); font-size: 9px;">Ratings</small>
+                                                    </div>
+                                                    <div style="flex: 1; background: rgba(255, 255, 255, 0.15); padding: 8px; border-radius: 8px; text-align: center;">
+                                                        <div id="projectTotalPatterns-${project.id}" style="font-size: 18px; font-weight: 700; color: white;">0</div>
+                                                        <small style="color: rgba(255,255,255,0.8); font-size: 9px;">Patterns</small>
+                                                    </div>
+                                                    <div style="flex: 1; background: rgba(255, 255, 255, 0.15); padding: 8px; border-radius: 8px; text-align: center;">
+                                                        <div id="projectTotalSuggestions-${project.id}" style="font-size: 18px; font-weight: 700; color: white;">0</div>
+                                                        <small style="color: rgba(255,255,255,0.8); font-size: 9px;">Ideas</small>
+                                                    </div>
+                                                </div>
+                                                <div id="projectRecentPatterns-${project.id}" style="margin-top: 8px;">
+                                                    <!-- Patterns will be inserted here -->
+                                                </div>
+                                                <div id="projectAiSuggestions-${project.id}" style="margin-top: 8px; display: none;">
+                                                    <small style="color: #fcd34d; font-weight: 600;">💡 AI Suggestion:</small>
+                                                    <div id="projectSuggestionText-${project.id}" style="font-size: 11px; color: white; margin-top: 4px; padding: 8px; background: rgba(251, 191, 36, 0.2); border-radius: 6px; border-left: 3px solid #fbbf24;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div id="project-chat-messages-${project.id}"
                                          style="flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.1);">
                                         <div class="text-center" style="color: rgba(255,255,255,0.7); padding: 60px 20px;">
@@ -20456,6 +20560,8 @@
             setTimeout(() => loadProjectShareStatus(project.id), 900);
             // Session 173: Check for active training and resume tracker if needed
             setTimeout(() => checkActiveTraining(project.id, project.name), 1000);
+            // Session 181: Load style insights for project assistant
+            setTimeout(() => loadProjectStyleInsights(project.id), 1100);
 
             // Session 146: Populate Project Stats
             if (project.stats) {
