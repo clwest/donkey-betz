@@ -621,6 +621,47 @@ def get_decision_detail(request, decision_id):
         }, status=500)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_decision(request, decision_id):
+    """
+    Delete a co-leadership decision.
+
+    Session 180: Delete endpoint for cleaning up decision timeline.
+
+    Only the user who initiated the decision can delete it.
+    Cascades to delete related recommendations, human_decision, and outcome.
+    """
+    try:
+        # Get decision (permission check via user ownership)
+        decision = CoLeadershipDecision.objects.get(
+            id=decision_id,
+            initiated_by=request.user
+        )
+
+        title = decision.title
+        decision.delete()
+
+        logger.info(f"🗑️ Deleted decision: {title} (user: {request.user.username})")
+
+        return Response({
+            'success': True,
+            'message': f'Decision "{title}" deleted successfully'
+        })
+
+    except CoLeadershipDecision.DoesNotExist:
+        return Response({
+            'error': 'Decision not found or access denied'
+        }, status=404)
+
+    except Exception as e:
+        logger.error(f"❌ Error deleting decision: {str(e)}")
+        return Response({
+            'error': 'Failed to delete decision',
+            'details': str(e)
+        }, status=500)
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def manage_preferences(request):

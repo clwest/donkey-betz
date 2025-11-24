@@ -29,6 +29,13 @@ urlpatterns = [
         name='get-decision-detail'
     ),
 
+    # Delete decision (Session 180)
+    path(
+        'decisions/<uuid:decision_id>/delete/',
+        views.delete_decision,
+        name='delete-decision'
+    ),
+
     # Human decision commit
     path(
         'decisions/<uuid:decision_id>/human_decision/',
