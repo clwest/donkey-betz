@@ -1,4 +1,4 @@
-<!-- Session 180 Part 3: Collapsible Asset Sections - v1732507500 -->
+<!-- Session 180 Part 3: Collapsible Sections Complete - v1732508100 -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -20172,19 +20172,23 @@
                                     Generating logos...
                                 </div>
                             </div>
+                            </div><!-- End section-content-workflows -->
                         </div>
                     </div>
                 </div>
 
                 <!-- Session 148: Enhanced Export & Share -->
+                <!-- Session 180 Part 3: Collapsible -->
                 <div class="mb-4">
                     <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'export')">
                                 <h5 style="color: white; margin: 0;">
+                                    <span id="section-toggle-export-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                                     📦 Export & Share
                                 </h5>
                             </div>
+                            <div id="section-content-export-${project.id}">
                             <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
                                 Download your project assets or share them with others.
                             </p>
@@ -20282,7 +20286,7 @@
                                     </div>
                                 </div>
                             </div>
-                            </div><!-- End section-content-workflows -->
+                            </div><!-- End section-content-export -->
                         </div>
                     </div>
                 </div>
