@@ -19930,29 +19930,24 @@
                 <div class="row">
                     <!-- LEFT: Project Content (60%) -->
                     <div class="col-lg-7">
-                        <!-- Project Info - Session 180 Part 3: Collapsible -->
+                        <!-- Project Info - Session 180 Part 3: Collapsible, Session 181: Read-only display -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'info')">
                                 <h5 style="color: #f59e0b; margin: 0;">
                                     <span id="section-toggle-info-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                                     📋 Project Information
                                 </h5>
-                                <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); saveProjectInfo('${project.id}')" id="save-project-btn">
-                                    💾 Save Changes
-                                </button>
                             </div>
                     <div id="section-content-info-${project.id}">
                     <table class="table table-dark">
                         <tr>
                             <td style="width: 150px;"><strong>Status:</strong></td>
                             <td>
-                                <select id="project-status-${project.id}" class="form-select form-select-sm bg-dark text-light" style="width: auto; display: inline-block;">
-                                    <option value="planning" ${project.status === 'planning' ? 'selected' : ''}>📋 Planning</option>
-                                    <option value="in_progress" ${project.status === 'in_progress' ? 'selected' : ''}>🚀 In Progress</option>
-                                    <option value="review" ${project.status === 'review' ? 'selected' : ''}>👀 Review</option>
-                                    <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
-                                    <option value="archived" ${project.status === 'archived' ? 'selected' : ''}>📦 Archived</option>
-                                </select>
+                                ${project.status === 'planning' ? '📋 Planning' :
+                                  project.status === 'in_progress' ? '🚀 In Progress' :
+                                  project.status === 'review' ? '👀 Review' :
+                                  project.status === 'completed' ? '✅ Completed' :
+                                  project.status === 'archived' ? '📦 Archived' : project.status}
                             </td>
                         </tr>
                         ${project.total_workflows > 0 ? `<tr>
@@ -19961,42 +19956,33 @@
                         </tr>` : ''}
                         <tr>
                             <td><strong>Goal:</strong></td>
-                            <td>
-                                <textarea id="project-goal-${project.id}" class="form-control form-control-sm bg-dark text-light" rows="2" style="font-size: 14px;">${project.goal}</textarea>
-                            </td>
+                            <td style="white-space: pre-wrap;">${project.goal || '<span class="text-muted">Not set</span>'}</td>
                         </tr>
                         <tr>
                             <td><strong>Description:</strong></td>
-                            <td>
-                                <textarea id="project-description-${project.id}" class="form-control form-control-sm bg-dark text-light" rows="3" placeholder="Add project description..." style="font-size: 14px;">${project.description || ''}</textarea>
-                            </td>
+                            <td style="white-space: pre-wrap;">${project.description || '<span class="text-muted">Not set</span>'}</td>
                         </tr>
                         <tr>
                             <td><strong>Category:</strong></td>
-                            <td>
-                                <input type="text" id="project-category-${project.id}" class="form-control form-control-sm bg-dark text-light" value="${project.category || ''}" placeholder="e.g., Branding, Marketing" style="width: 200px; display: inline-block;">
-                            </td>
+                            <td>${project.category || '<span class="text-muted">Not set</span>'}</td>
                         </tr>
                         <tr>
                             <td><strong>Colors:</strong></td>
                             <td>
-                                <input type="text" id="project-colors-${project.id}" class="form-control form-control-sm bg-dark text-light" value="${project.colors || ''}" placeholder="e.g., navy blue, gold, white" style="width: 300px; display: inline-block;">
-                                <small class="text-muted ms-2">AI will use these colors when generating content</small>
+                                ${project.colors || '<span class="text-muted">Not set</span>'}
+                                ${project.colors ? '<small class="text-muted ms-2">(AI uses these when generating content)</small>' : ''}
                             </td>
                         </tr>
                         <tr>
                             <td><strong>Tags:</strong></td>
                             <td>
-                                <div id="project-tags-${project.id}" class="d-inline-block">
-                                    ${project.tags && project.tags.length > 0 ? project.tags.map(tag => `<span class="badge bg-secondary me-1">${tag} <span style="cursor: pointer;" onclick="removeProjectTag('${project.id}', '${tag}')">×</span></span>`).join('') : '<span class="text-muted">No tags</span>'}
-                                </div>
-                                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="addProjectTag('${project.id}')">+ Add Tag</button>
+                                ${project.tags && project.tags.length > 0 ? project.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('') : '<span class="text-muted">No tags</span>'}
                             </td>
                         </tr>
                         <tr>
                             <td><strong>Deadline:</strong></td>
                             <td>
-                                <input type="datetime-local" id="project-deadline-${project.id}" class="form-control form-control-sm bg-dark text-light" value="${project.deadline ? new Date(project.deadline).toISOString().slice(0, 16) : ''}" style="width: 220px; display: inline-block;">
+                                ${project.deadline ? new Date(project.deadline).toLocaleString() : '<span class="text-muted">Not set</span>'}
                                 ${project.is_overdue ? '<span class="badge bg-danger ms-2">OVERDUE</span>' : ''}
                             </td>
                         </tr>
