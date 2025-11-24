@@ -7887,7 +7887,13 @@
 
         async function loadProjectStyleInsights(projectId) {
             try {
-                const response = await fetch('/api/style-memory/learning-panel/');
+                const response = await fetch('/api/v1/style-memory/insights/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
                 if (!response.ok) {
                     console.log('Style insights not available');
                     return;
