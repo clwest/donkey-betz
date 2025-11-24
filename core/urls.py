@@ -309,6 +309,10 @@ from core.views_video import (
     video_transition,
     # Session 166: Auto-Captioning
     auto_caption,
+    # Session 175: Lip Sync & Talking Character Pipeline
+    lip_sync,
+    lip_sync_status,
+    talking_character,
     # Session 167: DaVinci Resolve Studio Integration
     davinci_status,
     render_professional,
@@ -935,6 +939,11 @@ urlpatterns = [
     path('api/video/transition/', video_transition, name='video-transition'),
     # Session 166: Auto-Captioning (Whisper)
     path('api/video/caption/', auto_caption, name='video-caption'),
+    # Session 175: Lip Sync (Sync Labs via Replicate)
+    path('api/video/lip-sync/', lip_sync, name='video-lip-sync'),
+    path('api/video/lip-sync/status/<str:prediction_id>/', lip_sync_status, name='video-lip-sync-status'),
+    # Session 175: Talking Character Pipeline (Image + Text → Talking Video)
+    path('api/video/talking-character/', talking_character, name='video-talking-character'),
     # Session 167: DaVinci Resolve Studio Integration - Making the $295 COUNT!
     path('api/video/davinci-status/', davinci_status, name='hybrid-davinci-status'),
     path('api/video/render-professional/', render_professional, name='video-render-professional'),

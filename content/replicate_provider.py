@@ -69,6 +69,17 @@ class ThreeDGenerationResult:
     error_message: str = ""
 
 
+@dataclass
+class LipSyncResult:
+    """Result from lip sync video generation (Sync Labs Lipsync-2)"""
+    success: bool
+    prediction_id: str = ""
+    video_url: str = ""  # Output video URL with synced lips
+    status: str = "starting"  # starting, processing, succeeded, failed
+    error_message: str = ""
+    estimated_time: int = 60  # Estimated processing time in seconds
+
+
 class ReplicateProvider:
     """
     Replicate API provider for character training & generation
@@ -654,6 +665,174 @@ class ReplicateProvider:
             }
         except Exception as e:
             logger.error(f"3D generation status check error: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+
+    # ===== LIP SYNC (Sync Labs Lipsync-2) =====
+    # Session 175: Add lip sync for video production workflows
+
+    def lip_sync(
+        self,
+        video_url: str,
+        audio_url: str,
+        sync_mode: str = "cut_off",
+        temperature: float = 0.5,
+        active_speaker: bool = False
+    ) -> LipSyncResult:
+        """
+        Generate video with lip-synced speech using Sync Labs Lipsync-2
+
+        Takes a video and audio file, and generates a new video where the
+        speaker's lips are synced to match the audio.
+
+        Args:
+            video_url: URL to input video file (.mp4)
+            audio_url: URL to input audio file (.wav, .mp3)
+            sync_mode: How to handle audio/video duration mismatch
+                       - "cut_off": Cut video when audio ends (default)
+                       - "loop": Loop video to match audio length
+                       - "bounce": Bounce (reverse) video to match audio
+                       - "silence": Add silence if audio is shorter
+                       - "remap": Remap video timing to match audio
+            temperature: Expression intensity 0-1 (0.5 = natural, 1 = expressive)
+            active_speaker: Auto-detect and only sync the active speaker
+
+        Returns:
+            LipSyncResult with prediction_id for polling
+
+        Cost: ~$0.05 per second of output video
+        """
+
+        if not self.available:
+            return LipSyncResult(
+                success=False,
+                error_message=ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
+            )
+
+        if not video_url:
+            return LipSyncResult(
+                success=False,
+                error_message="video_url is required - provide a URL to the input video"
+            )
+
+        if not audio_url:
+            return LipSyncResult(
+                success=False,
+                error_message="audio_url is required - provide a URL to the audio file"
+            )
+
+        # Validate sync_mode
+        valid_modes = ["loop", "bounce", "cut_off", "silence", "remap"]
+        if sync_mode not in valid_modes:
+            sync_mode = "cut_off"
+            logger.warning(f"Invalid sync_mode, defaulting to 'cut_off'")
+
+        # Clamp temperature
+        temperature = max(0.0, min(1.0, temperature))
+
+        try:
+            logger.info(f"🎬 [LIP SYNC] Starting lip sync generation")
+            logger.info(f"   Video: {video_url[:80]}...")
+            logger.info(f"   Audio: {audio_url[:80]}...")
+            logger.info(f"   Mode: {sync_mode}, Temperature: {temperature}")
+
+            # Use Sync Labs Lipsync-2 model on Replicate
+            # Model: sync/lipsync-2
+            prediction = self.client.predictions.create(
+                model="sync/lipsync-2",
+                input={
+                    "video": video_url,
+                    "audio": audio_url,
+                    "sync_mode": sync_mode,
+                    "temperature": temperature,
+                    "active_speaker": active_speaker
+                }
+            )
+
+            logger.info(f"✅ [LIP SYNC] Prediction created: {prediction.id}")
+            logger.info(f"   Status: {prediction.status}")
+
+            return LipSyncResult(
+                success=True,
+                prediction_id=prediction.id,
+                status=prediction.status,
+                estimated_time=60  # Typically 30-120 seconds
+            )
+
+        except ReplicateError as e:
+            logger.error(f"Replicate lip sync error: {str(e)}")
+            return LipSyncResult(
+                success=False,
+                error_message=f"Lip sync failed: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Lip sync error: {str(e)}")
+            return LipSyncResult(
+                success=False,
+                error_message=str(e)
+            )
+
+    def check_lip_sync_status(self, prediction_id: str) -> Dict[str, Any]:
+        """
+        Check status of a lip sync prediction
+
+        Args:
+            prediction_id: The prediction ID from lip_sync()
+
+        Returns:
+            Dict with status, progress, video_url (if complete), and error info
+        """
+
+        if not self.available:
+            return {
+                "success": False,
+                "error_message": ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
+            }
+
+        try:
+            prediction = self.client.predictions.get(prediction_id)
+
+            result = {
+                "success": True,
+                "prediction_id": prediction.id,
+                "status": prediction.status,
+            }
+
+            # Map status to progress
+            if prediction.status == "starting":
+                result["progress"] = 10
+                result["progress_message"] = "Initializing lip sync..."
+            elif prediction.status == "processing":
+                result["progress"] = 50
+                result["progress_message"] = "Syncing lip movements to audio..."
+            elif prediction.status == "succeeded":
+                result["progress"] = 100
+                result["progress_message"] = "Lip sync complete!"
+                # Output is the video URL
+                if prediction.output:
+                    result["video_url"] = prediction.output
+                    logger.info(f"✅ [LIP SYNC] Complete: {prediction.output}")
+            elif prediction.status == "failed":
+                result["progress"] = 0
+                result["progress_message"] = "Lip sync failed"
+                result["error"] = prediction.error or "Unknown error"
+                logger.error(f"❌ [LIP SYNC] Failed: {prediction.error}")
+            elif prediction.status == "canceled":
+                result["progress"] = 0
+                result["progress_message"] = "Lip sync canceled"
+
+            return result
+
+        except ReplicateError as e:
+            logger.error(f"Failed to check lip sync status: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+        except Exception as e:
+            logger.error(f"Lip sync status check error: {str(e)}")
             return {
                 "success": False,
                 "error_message": str(e)

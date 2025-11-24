@@ -7522,6 +7522,492 @@ def auto_caption(request):
 
 
 # =============================================================================
+# SESSION 175: LIP SYNC - Sync Labs Lipsync-2 via Replicate
+# Make AI-generated characters TALK with natural mouth movements!
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def lip_sync(request):
+    """
+    Session 175: Generate video with lip-synced speech.
+
+    Takes a video and audio file, returns a new video where the speaker's
+    lips are synced to match the audio. Uses Sync Labs Lipsync-2 via Replicate.
+
+    POST /api/video/lip-sync/
+
+    Request body:
+        - video_url OR video_id: Source video (must have a face visible)
+        - audio_url OR audio_id: Audio to sync lips to
+        - sync_mode: How to handle duration mismatch (default: "cut_off")
+            - "cut_off": Cut video when audio ends
+            - "loop": Loop video to match audio length
+            - "bounce": Bounce video to match audio
+        - temperature: Expression intensity 0-1 (default: 0.5)
+        - active_speaker: Auto-detect active speaker (default: false)
+        - project_id: Optional project association
+
+    Returns:
+        - prediction_id: ID for polling status
+        - estimated_time: Estimated processing time
+
+    Cost: ~$0.05 per second of output video
+    """
+    logger.info("🎬 [Session 175] Lip sync request received")
+
+    try:
+        # Parse request
+        data = json.loads(request.body) if request.body else {}
+
+        # Get video input
+        video_url = data.get('video_url')
+        video_id = data.get('video_id')
+
+        # Get audio input
+        audio_url = data.get('audio_url')
+        audio_id = data.get('audio_id')
+
+        # Options
+        sync_mode = data.get('sync_mode', 'cut_off')
+        temperature = float(data.get('temperature', 0.5))
+        active_speaker = data.get('active_speaker', False)
+        project_id = data.get('project_id')
+
+        # Resolve video URL from video_id if needed
+        if not video_url and video_id:
+            from content.models import VideoHistory
+            try:
+                video = VideoHistory.objects.get(id=video_id)
+                if video.video_url:
+                    video_url = video.video_url
+                elif video.video_file:
+                    # Need a public URL - construct from request
+                    video_url = request.build_absolute_uri(video.video_file.url)
+            except VideoHistory.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Video {video_id} not found'
+                }, status=404)
+
+        # Resolve audio URL from audio_id if needed (if we add audio history)
+        # For now, audio_url is required
+        if not audio_url and audio_id:
+            # TODO: Add audio history lookup when audio model exists
+            return JsonResponse({
+                'success': False,
+                'error': 'audio_id lookup not yet supported, use audio_url'
+            }, status=400)
+
+        if not video_url:
+            return JsonResponse({
+                'success': False,
+                'error': 'video_url or video_id is required'
+            }, status=400)
+
+        if not audio_url:
+            return JsonResponse({
+                'success': False,
+                'error': 'audio_url is required - provide URL to audio file'
+            }, status=400)
+
+        logger.info(f"   Video: {video_url[:60]}...")
+        logger.info(f"   Audio: {audio_url[:60]}...")
+        logger.info(f"   Mode: {sync_mode}, Temp: {temperature}")
+
+        # Call Replicate provider
+        from content.replicate_provider import get_replicate_provider
+
+        provider = get_replicate_provider()
+        result = provider.lip_sync(
+            video_url=video_url,
+            audio_url=audio_url,
+            sync_mode=sync_mode,
+            temperature=temperature,
+            active_speaker=active_speaker
+        )
+
+        if not result.success:
+            return JsonResponse({
+                'success': False,
+                'error': result.error_message
+            }, status=500)
+
+        # Store prediction info for polling
+        # We'll create the VideoHistory entry when the prediction completes
+        response_data = {
+            'success': True,
+            'prediction_id': result.prediction_id,
+            'status': result.status,
+            'estimated_time': result.estimated_time,
+            'message': 'Lip sync started! Use the prediction_id to check status.',
+            'poll_endpoint': f'/api/video/lip-sync/status/{result.prediction_id}/',
+            'agent': 'LipSyncAgent',
+            'operation': 'lip_sync',
+            'operation_display': 'Syncing lip movements to audio'
+        }
+
+        if project_id:
+            response_data['project_id'] = project_id
+
+        logger.info(f"✅ [Session 175] Lip sync started: {result.prediction_id}")
+        return JsonResponse(response_data)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ [Session 175] Lip sync error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def lip_sync_status(request, prediction_id):
+    """
+    Session 175: Check lip sync prediction status.
+
+    GET /api/video/lip-sync/status/<prediction_id>/
+
+    Returns:
+        - status: starting, processing, succeeded, failed
+        - progress: 0-100
+        - video_url: URL of synced video (when complete)
+        - error: Error message (if failed)
+    """
+    logger.info(f"🎬 [Session 175] Checking lip sync status: {prediction_id}")
+
+    try:
+        from content.replicate_provider import get_replicate_provider
+
+        provider = get_replicate_provider()
+        result = provider.check_lip_sync_status(prediction_id)
+
+        if not result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error_message', 'Unknown error')
+            }, status=500)
+
+        response = {
+            'success': True,
+            'prediction_id': prediction_id,
+            'status': result.get('status'),
+            'progress': result.get('progress', 0),
+            'progress_message': result.get('progress_message', '')
+        }
+
+        # If complete, include video URL and save to gallery
+        if result.get('status') == 'succeeded' and result.get('video_url'):
+            response['video_url'] = result['video_url']
+            response['message'] = 'Lip sync complete! Video is ready.'
+
+            # Session 176: Save lip-synced video to VideoHistory
+            # Check if we already saved this prediction to avoid duplicates
+            from content.models import VideoHistory, CreativeProject
+            existing = VideoHistory.objects.filter(
+                parameters__prediction_id=prediction_id
+            ).first()
+
+            if not existing:
+                try:
+                    # Download video from Replicate
+                    import requests
+                    from django.core.files.base import ContentFile
+                    from django.core.files.storage import default_storage
+                    import uuid
+
+                    logger.info(f"📥 Downloading lip-synced video from Replicate...")
+                    video_response = requests.get(result['video_url'], timeout=120, stream=True)
+                    video_response.raise_for_status()
+
+                    # Read video content
+                    video_content = b''
+                    for chunk in video_response.iter_content(chunk_size=8192):
+                        if chunk:
+                            video_content += chunk
+
+                    logger.info(f"✅ Downloaded {len(video_content)} bytes")
+
+                    # Save to local storage
+                    video_id = str(uuid.uuid4())
+                    filename = f"talking_character_{video_id}.mp4"
+                    filepath = f"videos/{request.user.id}/lip_synced_{filename}"
+
+                    saved_path = default_storage.save(filepath, ContentFile(video_content))
+                    local_video_url = default_storage.url(saved_path)
+
+                    logger.info(f"✅ Saved locally: {local_video_url}")
+
+                    # Create VideoHistory record
+                    video_history = VideoHistory.objects.create(
+                        user=request.user,
+                        video_id=video_id,
+                        video_url=local_video_url,
+                        prompt="Talking character with lip sync",
+                        model_used='sync_labs_lipsync2',
+                        video_type='lip_synced_talking_character',
+                        status='completed',
+                        parameters={
+                            'prediction_id': prediction_id,
+                            'original_video_url': result['video_url'],
+                            'pipeline_stage': 'lip_sync_complete'
+                        }
+                    )
+
+                    # Associate with project if we can find it from the request
+                    # The frontend should have passed project_id, but if not we skip
+                    project_id = request.GET.get('project_id') or request.POST.get('project_id')
+                    if project_id:
+                        try:
+                            project = CreativeProject.objects.get(id=project_id)
+                            video_history.project = project
+                            video_history.save()
+                            logger.info(f"✅ Associated video with project: {project_id}")
+                        except CreativeProject.DoesNotExist:
+                            logger.warning(f"⚠️ Project {project_id} not found")
+
+                    response['video_history_id'] = str(video_history.id)
+                    logger.info(f"✅ Saved lip-synced video to gallery: {video_history.id}")
+
+                except Exception as e:
+                    logger.error(f"⚠️ Failed to save lip-synced video: {e}")
+                    # Don't fail the request - video URL is still valid
+
+        elif result.get('status') == 'failed':
+            response['error'] = result.get('error', 'Lip sync failed')
+
+        return JsonResponse(response)
+
+    except Exception as e:
+        logger.error(f"❌ [Session 175] Lip sync status error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# SESSION 175: TALKING CHARACTER PIPELINE - Complete Image → Video → Lip Sync!
+# One-step talking character video generation! 🎨→🎬→👄✨
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def talking_character(request):
+    """
+    Session 175: Generate a complete talking character video from image + text.
+
+    This is the end-to-end pipeline that combines:
+    1. Text-to-Speech (ElevenLabs) - Generate audio from script
+    2. Image-to-Video (Runway) - Animate the character image
+    3. Lip Sync (Sync Labs) - Sync mouth movements to audio
+
+    POST /api/video/talking-character/
+
+    Request body:
+        - image_url OR image_id: Character image to animate
+        - text: Script text for character to speak
+        - voice: ElevenLabs voice name (default: "Rachel")
+        - motion_prompt: Description of motion (default: "subtle talking motion")
+        - duration: Target video duration in seconds (5 or 10)
+        - sync_mode: Lip sync mode (cut_off, loop, bounce)
+        - temperature: Expression intensity 0-1 (default: 0.5)
+        - project_id: Optional project association
+        - sync: Wait for completion (default: false)
+
+    Returns:
+        Async mode (sync=false):
+            - audio_url: Generated speech audio
+            - video_task_id: Runway task ID for video generation
+            - status: Current pipeline status
+
+        Sync mode (sync=true):
+            - final_video_url: Complete talking character video
+            - All intermediate URLs (audio, base_video)
+
+    Cost per 10-second video: ~$0.60-1.00
+        - TTS: ~$0.05
+        - Image-to-Video: ~$0.15 (10 Runway credits)
+        - Lip Sync: ~$0.50 (10 seconds × $0.05)
+    """
+    logger.info("🎬 [Session 175] Talking character request received")
+
+    try:
+        # Parse request
+        data = json.loads(request.body) if request.body else {}
+
+        # Get image input
+        image_url = data.get('image_url')
+        image_id = data.get('image_id')
+
+        # Get script and voice
+        text = data.get('text')
+        voice = data.get('voice', 'Rachel')
+
+        # Video options
+        motion_prompt = data.get('motion_prompt', 'subtle talking motion, slight head movements')
+        duration = int(data.get('duration', 5))
+
+        # Lip sync options
+        sync_mode = data.get('sync_mode', 'cut_off')
+        temperature = float(data.get('temperature', 0.5))
+
+        # Project and mode
+        project_id = data.get('project_id')
+        sync = data.get('sync', False)  # Wait for completion?
+
+        # Resolve image URL from image_id if needed
+        if not image_url and image_id:
+            user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+            if user:
+                from content.models import ImageHistory
+                try:
+                    # Support hybrid ID (numeric or UUID)
+                    if str(image_id).isdigit():
+                        # Numeric ID - get nth image
+                        images = ImageHistory.objects.filter(user=user).order_by('created_at')
+                        numeric_id = int(image_id)
+                        if numeric_id > 0 and numeric_id <= images.count():
+                            image = images[numeric_id - 1]
+                        else:
+                            return JsonResponse({
+                                'success': False,
+                                'error': f'Image {image_id} not found (you have {images.count()} images)'
+                            }, status=404)
+                    else:
+                        # UUID
+                        image = ImageHistory.objects.get(id=image_id, user=user)
+
+                    # Get public URL
+                    if image.image_url:
+                        image_url = image.image_url
+                    elif image.image_file:
+                        image_url = request.build_absolute_uri(image.image_file.url)
+                except ImageHistory.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Image {image_id} not found'
+                    }, status=404)
+
+        # Validate inputs
+        if not image_url:
+            return JsonResponse({
+                'success': False,
+                'error': 'image_url or image_id is required'
+            }, status=400)
+
+        if not text:
+            return JsonResponse({
+                'success': False,
+                'error': 'text is required - provide script for character to speak'
+            }, status=400)
+
+        if duration not in [5, 10]:
+            return JsonResponse({
+                'success': False,
+                'error': 'duration must be 5 or 10 seconds'
+            }, status=400)
+
+        logger.info(f"   Image: {image_url[:60]}...")
+        logger.info(f"   Text: {text[:50]}...")
+        logger.info(f"   Voice: {voice}, Duration: {duration}s")
+        logger.info(f"   Mode: {'SYNC (wait for completion)' if sync else 'ASYNC (return task IDs)'}")
+
+        # Create pipeline instance
+        from content.talking_character_pipeline import get_talking_character_pipeline
+
+        pipeline = get_talking_character_pipeline(user=request.user if hasattr(request, 'user') else None)
+
+        # Show cost estimate
+        cost_estimate = pipeline.estimate_cost(text, duration)
+        logger.info(f"   💰 Estimated cost: ${cost_estimate['total_cost']:.3f}")
+
+        # Execute pipeline
+        if sync:
+            # Synchronous mode - wait for completion
+            result = pipeline.generate_talking_video_sync(
+                image_url=image_url,
+                text=text,
+                voice=voice,
+                motion_prompt=motion_prompt,
+                duration=duration,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                project_id=project_id,
+                timeout=300
+            )
+        else:
+            # Asynchronous mode - return task IDs
+            result = pipeline.generate_talking_video_async(
+                image_url=image_url,
+                text=text,
+                voice=voice,
+                motion_prompt=motion_prompt,
+                duration=duration,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                project_id=project_id
+            )
+
+        # Convert PipelineResult to JSON response
+        response_data = {
+            'success': result.success,
+            'status': result.status.value,
+            'current_stage': result.current_stage,
+            'progress_percent': result.progress_percent,
+            'progress_message': result.progress_message,
+            'estimated_cost': result.estimated_cost,
+            'agent': 'TalkingCharacterAgent',
+            'operation': 'talking_character',
+            'operation_display': 'Creating talking character video'
+        }
+
+        # Add task IDs for polling
+        if result.tts_task_id:
+            response_data['tts_task_id'] = result.tts_task_id
+        if result.video_task_id:
+            response_data['video_task_id'] = result.video_task_id
+            response_data['video_poll_endpoint'] = f'/api/video/status/{result.video_task_id}/'
+        if result.lipsync_task_id:
+            response_data['lipsync_task_id'] = result.lipsync_task_id
+            response_data['lipsync_poll_endpoint'] = f'/api/video/lip-sync/status/{result.lipsync_task_id}/'
+
+        # Add URLs when available
+        if result.audio_url:
+            response_data['audio_url'] = result.audio_url
+        if result.base_video_url:
+            response_data['base_video_url'] = result.base_video_url
+        if result.final_video_url:
+            response_data['final_video_url'] = result.final_video_url
+
+        # Add error info if failed
+        if not result.success:
+            response_data['error'] = result.error_message
+            response_data['failed_stage'] = result.failed_stage
+
+        if project_id:
+            response_data['project_id'] = project_id
+
+        status_code = 200 if result.success else 500
+
+        logger.info(f"✅ [Session 175] Talking character pipeline: {result.status.value}")
+        return JsonResponse(response_data, status=status_code)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ [Session 175] Talking character error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
 # SESSION 167: DaVinci Resolve Studio Integration - Making the $295 COUNT!
 # One person + AI Assistant + AI Agents = UNSTOPPABLE! 🚀
 # =============================================================================

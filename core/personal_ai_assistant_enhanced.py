@@ -148,21 +148,22 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             },
 
             # Session 131: Video Generation Agent (replaces 4 tools)
+            # Session 175: Added lip_sync for character speech animation
             {
                 "type": "function",
                 "name": "video_generation_agent",
-                "description": "Handle all video generation operations: generate (create video from text), animate (transform image to moving video), extend (make video longer), chain (combine multiple videos). Use this agent for ANY video generation request.",
+                "description": "Handle video generation operations: generate (create video from text prompt), animate (transform image to moving video WITHOUT speech), extend (make video longer), chain (combine multiple videos), lip_sync (sync existing audio to existing video). NOTE: For 'make image talk' or 'create talking character', use talking_character_agent instead (it combines TTS + animation + lip sync). Use THIS agent for: video from text prompts, silent animation from images, video extension, video chaining, or manual lip sync when you already have separate audio and video files.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "operation": {
                             "type": "string",
-                            "description": "Operation: 'generate' | 'animate' | 'extend' | 'chain'",
-                            "enum": ["generate", "animate", "extend", "chain"]
+                            "description": "Operation: 'generate' | 'animate' | 'extend' | 'chain' | 'lip_sync' (Session 175 - sync lips to audio)",
+                            "enum": ["generate", "animate", "extend", "chain", "lip_sync"]
                         },
                         "params": {
                             "type": "object",
-                            "description": "Operation-specific parameters. For generate: {prompt, duration}. For animate: {image_id, motion_prompt, duration}. For extend: {video_id, extension_seconds, prompt}. For chain: {video_ids, add_transitions}.",
+                            "description": "Operation-specific parameters. For generate: {prompt, duration}. For animate: {image_id, motion_prompt, duration}. For extend: {video_id, extension_seconds, prompt}. For chain: {video_ids, add_transitions}. For lip_sync (Session 175): {video_url, audio_url, sync_mode, temperature}.",
                             "properties": {
                                 "prompt": {"type": "string"},
                                 "duration": {"type": "integer", "default": 5},
@@ -171,7 +172,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                                 "video_id": {"type": "string"},
                                 "extension_seconds": {"type": "integer", "default": 10},
                                 "video_ids": {"type": "array", "items": {"type": "string"}},
-                                "add_transitions": {"type": "boolean", "default": True}
+                                "add_transitions": {"type": "boolean", "default": True},
+                                "video_url": {"type": "string", "description": "Session 175: URL to video with face for lip sync"},
+                                "audio_url": {"type": "string", "description": "Session 175: URL to audio file to sync lips to"},
+                                "sync_mode": {"type": "string", "enum": ["cut_off", "loop", "bounce"], "default": "cut_off", "description": "Session 175: How to handle duration mismatch"},
+                                "temperature": {"type": "number", "default": 0.5, "description": "Session 175: Expression intensity 0-1 (0.5 = natural)"}
                             }
                         },
                         "project_id": {
@@ -369,6 +374,58 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["question"]
                 }
+            },
+
+            # Session 175: Talking Character Agent (Image + Text → Talking Video)
+            {
+                "type": "function",
+                "name": "talking_character_agent",
+                "description": "⭐ PREFERRED for 'make image talk' requests ⭐ Create complete talking character videos from a still image and text script in ONE STEP. This pipeline combines Text-to-Speech (ElevenLabs) + Image-to-Video (Runway) + Lip Sync (Sync Labs) to bring static characters to life with natural speech and mouth movements. Use when user wants: 'make image X talk and say...', 'create talking video', 'add speech to image', 'animate character with voice', 'talking character', 'AI spokesperson video', etc. This is the ONLY tool that generates speech + animation + lip sync automatically. Perfect for: YouTube explainer videos, marketing content, AI spokesperson videos, social media content. Cost: ~$0.60-1.00 per 10-second video.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "Character image to animate. Can use sequential number (e.g., '1', '5') or full UUID. Image should show a clear face for best lip sync results."
+                        },
+                        "text": {
+                            "type": "string",
+                            "description": "Script text for the character to speak. Keep it concise - 1-2 sentences work best for 5-10 second videos."
+                        },
+                        "voice": {
+                            "type": "string",
+                            "default": "Rachel",
+                            "description": "ElevenLabs voice name: Rachel (default), Antoni, Bella, Callum, Charlotte, Daniel, Domi, Elli, Emily, George, Matilda, Sam. Rachel = professional female, Antoni = male narrator."
+                        },
+                        "duration": {
+                            "type": "integer",
+                            "enum": [5, 10],
+                            "default": 5,
+                            "description": "Target video duration in seconds. 5 seconds = ~15-20 words, 10 seconds = ~30-40 words."
+                        },
+                        "motion_prompt": {
+                            "type": "string",
+                            "default": "subtle talking motion, slight head movements",
+                            "description": "Optional description of character motion during speech (e.g., 'subtle talking motion', 'expressive hand gestures', 'professional presenter stance')."
+                        },
+                        "sync_mode": {
+                            "type": "string",
+                            "enum": ["cut_off", "loop", "bounce"],
+                            "default": "cut_off",
+                            "description": "How to handle duration mismatch between audio and video: cut_off (cut video when audio ends - recommended), loop (repeat video), bounce (reverse-repeat video)."
+                        },
+                        "temperature": {
+                            "type": "number",
+                            "default": 0.5,
+                            "description": "Lip sync expression intensity 0-1. 0.5 = natural (recommended), 0.8 = expressive, 0.3 = subtle."
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Optional project ID to associate the talking character video with."
+                        }
+                    },
+                    "required": ["image_id", "text"]
+                }
             }
         ]
 
@@ -413,6 +470,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_character_training_agent(arguments)
             elif function_name == 'coleadership_agent':
                 result = self._handle_coleadership_agent(arguments)
+            elif function_name == 'talking_character_agent':
+                result = self._tool_talking_character(arguments)
             else:
                 result = {
                     'success': False,
@@ -764,6 +823,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return self._tool_extend_video(tool_args)
         elif operation == 'chain':
             return self._tool_chain_videos(tool_args)
+        elif operation == 'lip_sync':
+            # Session 175: Lip sync for talking characters
+            return self._tool_lip_sync(tool_args)
         else:
             return {'success': False, 'error': f"Unknown video operation: {operation}"}
 
@@ -1894,6 +1956,249 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         except Exception as e:
             logger.error(f"❌ Chain videos tool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # Session 175: Lip Sync for talking characters
+    def _tool_lip_sync(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the lip_sync tool - Session 175.
+
+        Sync lip movements in a video to match audio, making characters talk naturally.
+        Uses Sync Labs Lipsync-2 via Replicate API.
+        """
+        logger.info(f"🎬 LIP_SYNC TOOL CALLED!")
+
+        try:
+            video_url = arguments.get('video_url')
+            audio_url = arguments.get('audio_url')
+            sync_mode = arguments.get('sync_mode', 'cut_off')
+            temperature = float(arguments.get('temperature', 0.5))
+            project_id = arguments.get('project_id')
+
+            if not video_url:
+                return {'success': False, 'error': 'video_url is required - provide URL to video with face'}
+
+            if not audio_url:
+                return {'success': False, 'error': 'audio_url is required - provide URL to audio file'}
+
+            logger.info(f"   Video: {video_url[:60]}...")
+            logger.info(f"   Audio: {audio_url[:60]}...")
+            logger.info(f"   Mode: {sync_mode}, Temperature: {temperature}")
+
+            # Call Replicate provider directly
+            from content.replicate_provider import get_replicate_provider
+
+            provider = get_replicate_provider()
+            result = provider.lip_sync(
+                video_url=video_url,
+                audio_url=audio_url,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                active_speaker=False
+            )
+
+            if not result.success:
+                return {
+                    'success': False,
+                    'error': result.error_message
+                }
+
+            # Return prediction info for polling
+            return {
+                'success': True,
+                'prediction_id': result.prediction_id,
+                'status': result.status,
+                'estimated_time': result.estimated_time,
+                'poll_endpoint': f'/api/video/lip-sync/status/{result.prediction_id}/',
+                'message': f"🎬 **Lip Sync Started!**\n\n" +
+                          f"Your video is being processed to sync lip movements to the audio.\n\n" +
+                          f"**Prediction ID:** `{result.prediction_id}`\n" +
+                          f"**Estimated Time:** ~{result.estimated_time} seconds\n\n" +
+                          f"Use the poll endpoint to check status when complete.",
+                'agent': 'LipSyncAgent',
+                'operation': 'lip_sync',
+                'operation_display': 'Syncing lip movements to audio'
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Lip sync tool error: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'error': str(e)}
+
+    # Session 175: Talking Character Pipeline for complete video creation
+    def _tool_talking_character(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the talking_character tool - Session 175.
+
+        Complete pipeline: Image + Text → Talking Character Video
+        Combines TTS (ElevenLabs) + Image-to-Video (Runway) + Lip Sync (Sync Labs)
+        """
+        logger.info(f"🎬 TALKING_CHARACTER TOOL CALLED!")
+
+        try:
+            image_id = arguments.get('image_id')
+            image_url = arguments.get('image_url')
+            text = arguments.get('text')
+            voice = arguments.get('voice', 'Rachel')
+            duration = int(arguments.get('duration', 5))
+            motion_prompt = arguments.get('motion_prompt', 'subtle talking motion, slight head movements')
+            sync_mode = arguments.get('sync_mode', 'cut_off')
+            temperature = float(arguments.get('temperature', 0.5))
+
+            # Get current project if in session
+            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            project_id = str(current_project.id) if current_project else arguments.get('project_id')
+
+            # Validate inputs
+            if not image_id and not image_url:
+                return {'success': False, 'error': 'image_id or image_url is required - provide character image to animate'}
+
+            if not text:
+                return {'success': False, 'error': 'text is required - provide script for character to speak'}
+
+            if duration not in [5, 10]:
+                return {'success': False, 'error': 'duration must be 5 or 10 seconds'}
+
+            logger.info(f"   Image ID: {image_id}")
+            logger.info(f"   Text: {text[:50]}...")
+            logger.info(f"   Voice: {voice}, Duration: {duration}s")
+
+            # Create pipeline instance
+            from content.talking_character_pipeline import get_talking_character_pipeline
+
+            pipeline = get_talking_character_pipeline(user=self.user)
+
+            # Show cost estimate
+            cost_estimate = pipeline.estimate_cost(text, duration)
+            logger.info(f"   💰 Estimated cost: ${cost_estimate['total_cost']:.3f}")
+
+            # Resolve image URL from image_id if needed
+            if not image_url and image_id:
+                from content.models import ImageHistory
+                try:
+                    # Support hybrid ID (numeric or UUID)
+                    if str(image_id).isdigit():
+                        # Numeric ID - get nth image
+                        images = ImageHistory.objects.filter(user=self.user).order_by('created_at')
+                        numeric_id = int(image_id)
+                        if numeric_id > 0 and numeric_id <= images.count():
+                            image = images[numeric_id - 1]
+                            # Get public URL from file_path
+                            if image.file_path:
+                                # file_path can be a data URI, HTTP URL, or local path
+                                if image.file_path.startswith('http'):
+                                    image_url = image.file_path
+                                elif image.file_path.startswith('data:'):
+                                    # Data URI - can't use for video generation
+                                    return {
+                                        'success': False,
+                                        'error': f'Image {image_id} is a data URI - please use an uploaded image with a URL'
+                                    }
+                                else:
+                                    # Local file path - convert to URL
+                                    # Ensure path starts with / for proper URL construction
+                                    path = image.file_path if image.file_path.startswith('/') else f"/{image.file_path}"
+                                    image_url = f"http://localhost:8000{path}"
+                        else:
+                            return {
+                                'success': False,
+                                'error': f'Image {image_id} not found (you have {images.count()} images)'
+                            }
+                    else:
+                        # UUID
+                        image = ImageHistory.objects.get(id=image_id, user=self.user)
+                        if image.file_path:
+                            # file_path can be a data URI, HTTP URL, or local path
+                            if image.file_path.startswith('http'):
+                                image_url = image.file_path
+                            elif image.file_path.startswith('data:'):
+                                # Data URI - can't use for video generation
+                                return {
+                                    'success': False,
+                                    'error': f'Image {image_id} is a data URI - please use an uploaded image with a URL'
+                                }
+                            else:
+                                # Local file path - convert to URL
+                                # Ensure path starts with / for proper URL construction
+                                path = image.file_path if image.file_path.startswith('/') else f"/{image.file_path}"
+                                image_url = f"http://localhost:8000{path}"
+                except ImageHistory.DoesNotExist:
+                    return {'success': False, 'error': f'Image {image_id} not found'}
+
+            if not image_url:
+                return {'success': False, 'error': 'Could not resolve image URL'}
+
+            # Start async pipeline (returns task IDs for polling)
+            result = pipeline.generate_talking_video_async(
+                image_url=image_url,
+                text=text,
+                voice=voice,
+                motion_prompt=motion_prompt,
+                duration=duration,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                project_id=project_id
+            )
+
+            if not result.success:
+                return {
+                    'success': False,
+                    'error': result.error_message,
+                    'failed_stage': result.failed_stage
+                }
+
+            # Return pipeline status with task IDs for polling
+            response = {
+                'success': True,
+                'status': result.status.value,
+                'current_stage': result.current_stage,
+                'progress_percent': result.progress_percent,
+                'progress_message': result.progress_message,
+                'estimated_cost': result.estimated_cost,
+                'message': f"🎬 **Talking Character Pipeline Started!**\n\n" +
+                          f"Your character is being brought to life with speech!\n\n" +
+                          f"**Stage:** {result.current_stage}\n" +
+                          f"**Progress:** {result.progress_percent}%\n" +
+                          f"**Estimated Cost:** ${result.estimated_cost:.3f}\n\n" +
+                          f"{result.progress_message}\n\n" +
+                          f"The pipeline will automatically proceed through:\n" +
+                          f"1. 🎤 Audio generation (ElevenLabs)\n" +
+                          f"2. 🎬 Image animation (Runway)\n" +
+                          f"3. 👄 Lip sync (Sync Labs)\n\n" +
+                          f"I'll keep you updated as each stage completes!",
+                'agent': 'TalkingCharacterAgent',
+                'operation': 'talking_character',
+                'operation_display': 'Creating talking character video'
+            }
+
+            # Add task IDs for polling
+            if result.tts_task_id:
+                response['tts_task_id'] = result.tts_task_id
+            if result.video_task_id:
+                response['video_task_id'] = result.video_task_id
+                response['video_poll_endpoint'] = f'/api/video/status/{result.video_task_id}/'
+            if result.lipsync_task_id:
+                response['lipsync_task_id'] = result.lipsync_task_id
+                response['lipsync_poll_endpoint'] = f'/api/video/lip-sync/status/{result.lipsync_task_id}/'
+
+            # Add URLs when available
+            if result.audio_url:
+                response['audio_url'] = result.audio_url
+            if result.base_video_url:
+                response['base_video_url'] = result.base_video_url
+            if result.final_video_url:
+                response['final_video_url'] = result.final_video_url
+
+            if project_id:
+                response['project_id'] = project_id
+
+            return response
+
+        except Exception as e:
+            logger.error(f"❌ Talking character tool error: {e}")
+            import traceback
+            traceback.print_exc()
             return {'success': False, 'error': str(e)}
 
     # Session 128: Updated to use Audio Generation Agent

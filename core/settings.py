@@ -477,6 +477,16 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Cloudinary configuration (Session 176)
+# Used for publicly accessible URLs (required by external APIs like Sync Labs)
+import cloudinary
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'donkeybetz'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+    secure=True
+)
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -835,6 +845,21 @@ CELERY_TASK_ROUTES = {
 CELERY_WORKER_CONCURRENCY = int(os.environ.get('CELERY_WORKER_CONCURRENCY', '4'))
 CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Celery Beat Schedule - Session 175: Character Training Polling
+# Note: These are also registered via django_celery_beat DatabaseScheduler
+CELERY_BEAT_SCHEDULE = {
+    # Poll pending character trainings every 30 seconds
+    'poll-pending-trainings': {
+        'task': 'content.tasks.poll_pending_trainings',
+        'schedule': 30.0,  # Every 30 seconds
+    },
+    # Clean up stale trainings every hour
+    'cleanup-stale-trainings': {
+        'task': 'content.tasks.cleanup_stale_trainings',
+        'schedule': 3600.0,  # Every hour
+    },
+}
 
 # DRF Spectacular Settings for API Documentation
 SPECTACULAR_SETTINGS = {
