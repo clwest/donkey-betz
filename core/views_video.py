@@ -7572,6 +7572,7 @@ def lip_sync(request):
         sync_mode = data.get('sync_mode', 'cut_off')
         temperature = float(data.get('temperature', 0.5))
         active_speaker = data.get('active_speaker', False)
+        lipsync_model = data.get('lipsync_model', 'auto')  # Session 177: Model selection
         project_id = data.get('project_id')
 
         # Resolve video URL from video_id if needed
@@ -7614,18 +7615,32 @@ def lip_sync(request):
         logger.info(f"   Video: {video_url[:60]}...")
         logger.info(f"   Audio: {audio_url[:60]}...")
         logger.info(f"   Mode: {sync_mode}, Temp: {temperature}")
+        logger.info(f"   Lip Sync Model: {lipsync_model}")  # Session 177
 
         # Call Replicate provider
         from content.replicate_provider import get_replicate_provider
 
         provider = get_replicate_provider()
-        result = provider.lip_sync(
-            video_url=video_url,
-            audio_url=audio_url,
-            sync_mode=sync_mode,
-            temperature=temperature,
-            active_speaker=active_speaker
-        )
+
+        # Session 177: Select model based on lipsync_model parameter
+        if lipsync_model == 'latentsync' or lipsync_model == 'auto':
+            # Use ByteDance LatentSync (cartoon-optimized)
+            logger.info("🎨 Using ByteDance LatentSync (cartoon-optimized)")
+            result = provider.lip_sync_latent(
+                video_url=video_url,
+                audio_url=audio_url,
+                bbox_shift=0
+            )
+        else:
+            # Use Sync Labs Lipsync-2 (photorealistic)
+            logger.info("👤 Using Sync Labs Lipsync-2 (photorealistic)")
+            result = provider.lip_sync(
+                video_url=video_url,
+                audio_url=audio_url,
+                sync_mode=sync_mode,
+                temperature=temperature,
+                active_speaker=active_speaker
+            )
 
         if not result.success:
             return JsonResponse({
@@ -7743,18 +7758,33 @@ def lip_sync_status(request, prediction_id):
 
                     logger.info(f"✅ Saved locally: {local_video_url}")
 
+                    # Session 177: Determine which model was used
+                    # Get the original video to check parameters
+                    original_video = VideoHistory.objects.filter(
+                        video_id=prediction_id.split('_')[0] if '_' in prediction_id else prediction_id
+                    ).first()
+
+                    lipsync_model_used = 'bytedance_latentsync'  # Default to new model
+                    if original_video and original_video.parameters:
+                        lipsync_model_used = original_video.parameters.get('lipsync_model', 'latentsync')
+                        if lipsync_model_used == 'sync_labs':
+                            lipsync_model_used = 'sync_labs_lipsync2'
+                        elif lipsync_model_used in ['auto', 'latentsync']:
+                            lipsync_model_used = 'bytedance_latentsync'
+
                     # Create VideoHistory record
                     video_history = VideoHistory.objects.create(
                         user=request.user,
                         video_id=video_id,
                         video_url=local_video_url,
                         prompt="Talking character with lip sync",
-                        model_used='sync_labs_lipsync2',
+                        model_used=lipsync_model_used,
                         video_type='lip_synced_talking_character',
                         status='completed',
                         parameters={
                             'prediction_id': prediction_id,
                             'original_video_url': result['video_url'],
+                            'lipsync_model': lipsync_model_used,
                             'pipeline_stage': 'lip_sync_complete'
                         }
                     )
@@ -7762,14 +7792,18 @@ def lip_sync_status(request, prediction_id):
                     # Associate with project if we can find it from the request
                     # The frontend should have passed project_id, but if not we skip
                     project_id = request.GET.get('project_id') or request.POST.get('project_id')
+                    logger.info(f"🔍 Looking for project_id in request: GET={request.GET.get('project_id')}, POST={request.POST.get('project_id')}")
+
                     if project_id:
                         try:
                             project = CreativeProject.objects.get(id=project_id)
                             video_history.project = project
                             video_history.save()
-                            logger.info(f"✅ Associated video with project: {project_id}")
+                            logger.info(f"✅ Associated lip-synced video with project: {project_id}")
                         except CreativeProject.DoesNotExist:
                             logger.warning(f"⚠️ Project {project_id} not found")
+                    else:
+                        logger.warning(f"⚠️ No project_id found in request - video will be orphaned!")
 
                     response['video_history_id'] = str(video_history.id)
                     logger.info(f"✅ Saved lip-synced video to gallery: {video_history.id}")

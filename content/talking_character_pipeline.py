@@ -146,6 +146,7 @@ class TalkingCharacterPipeline:
         duration: int = 5,
         sync_mode: str = "cut_off",
         temperature: float = 0.5,
+        lipsync_model: str = "auto",
         project_id: str = None
     ) -> PipelineResult:
         """
@@ -162,10 +163,11 @@ class TalkingCharacterPipeline:
             duration: Target duration in seconds (5 or 10)
             sync_mode: Lip sync mode (cut_off, loop, bounce)
             temperature: Lip sync expression intensity (0-1)
+            lipsync_model: Which model to use (auto/latentsync/sync_labs)
             project_id: Optional project association
 
         Returns:
-            PipelineResult with task IDs for polling
+            PipelineResult with task IDs for polling (note: lipsync_model is stored for later use)
         """
         result = PipelineResult(
             success=False,
@@ -267,6 +269,7 @@ class TalkingCharacterPipeline:
                             'duration': duration,
                             'sync_mode': sync_mode,
                             'temperature': temperature,
+                            'lipsync_model': lipsync_model,  # Session 177: Store for later use
                             'pipeline_stage': 'image_to_video'
                         }
                     )
@@ -303,7 +306,8 @@ class TalkingCharacterPipeline:
         audio_url: str,
         video_url: str,
         sync_mode: str = "cut_off",
-        temperature: float = 0.5
+        temperature: float = 0.5,
+        lipsync_model: str = "auto"
     ) -> PipelineResult:
         """
         Continue pipeline after video generation completes.
@@ -315,6 +319,10 @@ class TalkingCharacterPipeline:
             video_url: URL to generated video
             sync_mode: Lip sync mode
             temperature: Expression intensity
+            lipsync_model: Which model to use:
+                          - "auto": Auto-detect (photorealistic → sync_labs, stylized → latentsync)
+                          - "sync_labs": Sync Labs Lipsync-2 (photorealistic humans)
+                          - "latentsync": ByteDance LatentSync (cartoon/stylized)
 
         Returns:
             PipelineResult with lip sync task ID
@@ -328,21 +336,42 @@ class TalkingCharacterPipeline:
         )
 
         try:
+            # Session 177: Model selection logic
+            # Default to latentsync for better cartoon/stylized character support
+            if lipsync_model == "auto":
+                lipsync_model = "latentsync"  # Default to cartoon-optimized model
+                logger.info(f"🎨 [PIPELINE] Auto-selected LatentSync (cartoon-optimized)")
+
             result.current_stage = "Syncing lip movements"
             result.progress_percent = 70
-            result.progress_message = "👄 Syncing lips to audio with Sync Labs..."
 
-            logger.info(f"👄 [PIPELINE] Stage 3: Lip Sync")
+            if lipsync_model == "latentsync":
+                result.progress_message = "👄 Syncing lips with ByteDance LatentSync (cartoon-optimized)..."
+                logger.info(f"👄 [PIPELINE] Stage 3: Lip Sync (LatentSync - Cartoon Optimized)")
+            else:
+                result.progress_message = "👄 Syncing lips with Sync Labs (photorealistic)..."
+                logger.info(f"👄 [PIPELINE] Stage 3: Lip Sync (Sync Labs - Photorealistic)")
+
             logger.info(f"   Video: {video_url[:60]}...")
             logger.info(f"   Audio: {audio_url[:60]}...")
+            logger.info(f"   Model: {lipsync_model}")
 
-            # Call Sync Labs Lipsync-2
-            lipsync_result = self.replicate_provider.lip_sync(
-                video_url=video_url,
-                audio_url=audio_url,
-                sync_mode=sync_mode,
-                temperature=temperature
-            )
+            # Call appropriate lip sync model
+            if lipsync_model == "latentsync":
+                # ByteDance LatentSync - optimized for cartoon/stylized characters
+                lipsync_result = self.replicate_provider.lip_sync_latent(
+                    video_url=video_url,
+                    audio_url=audio_url,
+                    bbox_shift=0
+                )
+            else:
+                # Sync Labs Lipsync-2 - optimized for photorealistic humans
+                lipsync_result = self.replicate_provider.lip_sync(
+                    video_url=video_url,
+                    audio_url=audio_url,
+                    sync_mode=sync_mode,
+                    temperature=temperature
+                )
 
             if not lipsync_result.success:
                 result.success = False
@@ -385,6 +414,7 @@ class TalkingCharacterPipeline:
         duration: int = 5,
         sync_mode: str = "cut_off",
         temperature: float = 0.5,
+        lipsync_model: str = "auto",
         project_id: str = None,
         timeout: int = 300
     ) -> PipelineResult:
@@ -454,12 +484,13 @@ class TalkingCharacterPipeline:
 
         result.base_video_url = video_url
 
-        # Start lip sync
+        # Start lip sync with model selection
         lipsync_result = self.continue_pipeline_after_video(
             audio_url=result.audio_url,
             video_url=video_url,
             sync_mode=sync_mode,
-            temperature=temperature
+            temperature=temperature,
+            lipsync_model=lipsync_model
         )
 
         if not lipsync_result.success:

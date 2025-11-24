@@ -12546,12 +12546,14 @@
         async function pollTalkingCharacterPipeline(pipelineData, projectId = null) {
             console.log('🎬 Starting talking character pipeline polling:', pipelineData);
 
-            const { audio_url, video_task_id, video_poll_endpoint } = pipelineData;
+            const { audio_url, video_task_id, video_poll_endpoint, lipsync_model = 'auto' } = pipelineData;
 
             if (!audio_url || !video_task_id) {
                 console.error('❌ Missing required pipeline data:', pipelineData);
                 return;
             }
+
+            console.log(`🎨 Using lip sync model: ${lipsync_model}`);
 
             // Stage 2: Poll video generation until complete
             console.log('⏳ Stage 2/3: Waiting for video generation...');
@@ -12576,6 +12578,7 @@
                                     audio_url: audio_url,
                                     sync_mode: 'cut_off',
                                     temperature: 0.5,
+                                    lipsync_model: lipsync_model,  // Session 177: Pass model selection
                                     project_id: projectId
                                 })
                             });
