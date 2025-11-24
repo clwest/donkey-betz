@@ -430,6 +430,9 @@ class RunwayMLProvider:
                 # Remove /media/ prefix if present
                 if url_path.startswith('/media/'):
                     url_path = url_path[7:]  # Remove '/media/'
+                elif url_path.startswith('/'):
+                    # Remove leading slash for paths like /generated_images/...
+                    url_path = url_path[1:]
 
                 # Construct full file path
                 file_path = os.path.join(settings.MEDIA_ROOT, url_path)
@@ -459,10 +462,16 @@ class RunwayMLProvider:
                 logger.error(f"Failed to convert local media to base64: {str(e)}")
                 raise Exception(f"Failed to prepare image: {str(e)}")
 
-        # If it's a public URL
+        # If it's a public URL (but not localhost!)
         if image_input.startswith('http'):
-            # Public URL - RunwayML can fetch directly
-            return image_input
+            # Session 176: Localhost URLs need to be converted to base64 or uploaded
+            if 'localhost' in image_input or '127.0.0.1' in image_input:
+                # This is a localhost URL, convert to base64
+                logger.info(f"⚠️ Localhost URL detected, converting to base64...")
+                # Fall through to local file handling below
+            else:
+                # True public URL - RunwayML can fetch directly
+                return image_input
 
         # If it's a local file path, convert to base64
         try:

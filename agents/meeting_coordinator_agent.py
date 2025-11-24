@@ -32,7 +32,7 @@ from openai import OpenAI
 from agents.models import UnifiedAgentTemplate, AgentSpecialization
 from agents.cto_agent import CTOAgent
 from agents.coo_agent import COOAgent
-from intelligence.shared_memory import AgentMemoryInterface
+from intelligence.shared_memory import AgentMemoryInterface, redis_client
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -123,6 +123,11 @@ class MeetingCoordinatorAgent:
             # Phase 1: Collect perspectives from each participant
             agent_responses = {}
 
+            # Session 175: Get memory context BEFORE generating perspectives
+            # This makes agents personalized and informed by past decisions
+            memory_context = self._get_context_for_agents(topic, project_id)
+            logger.info(f"🧠 Memory context gathered: {len(memory_context)} chars")
+
             # Session 100: Dynamic agent perspective collection
             for participant_name in participants:
                 try:
@@ -130,8 +135,12 @@ class MeetingCoordinatorAgent:
                     agent_template = UnifiedAgentTemplate.objects.get(name=participant_name)
 
                     # Generate perspective using GPT-5-mini with agent's system prompt
+                    # Session 175: Now includes memory context for personalized responses
                     perspective_prompt = f"""
 Topic for discussion: {topic}
+
+RELEVANT CONTEXT FROM MEMORY:
+{memory_context}
 
 You are {agent_template.display_name}. Based on your role and expertise:
 {agent_template.system_prompt}
@@ -140,6 +149,9 @@ Provide your perspective on this topic in 2-3 sentences. Focus on:
 - Your area of expertise
 - Key considerations from your domain
 - Specific recommendations
+
+IMPORTANT: Reference the context above when relevant. If past decisions apply, mention them.
+If user preferences are noted, factor them into your recommendation.
 """
 
                     # Session 173: Use gpt-4o-mini for faster, more reliable responses
@@ -305,3 +317,122 @@ You prioritize:
 - Risk awareness (identify potential blockers)
 
 You are concise, strategic, and focused on outcomes."""
+
+    def _get_context_for_agents(self, topic: str, project_id: Optional[str] = None) -> str:
+        """
+        Gather all relevant context from memory systems for informed agent perspectives.
+
+        Session 175: Integrates Boardroom with Memory System so agents give
+        personalized, context-aware recommendations.
+
+        Args:
+            topic: The meeting topic
+            project_id: Optional project context
+
+        Returns:
+            Context string to inject into agent prompts
+        """
+        context_parts = []
+
+        # 1. Past boardroom decisions from Redis
+        try:
+            past_meetings = []
+            pattern = f"{self.memory.memory.memory_prefix}agent:meeting_coordinator:boardroom_*"
+            meeting_keys = redis_client.keys(pattern)
+
+            for key in meeting_keys[:10]:  # Last 10 meetings max
+                data = redis_client.get(key)
+                if data:
+                    meeting = json.loads(data)
+                    content = meeting.get('content', {})
+                    if isinstance(content, dict):
+                        past_meetings.append({
+                            'topic': content.get('topic', 'Unknown'),
+                            'decisions': content.get('decisions', []),
+                            'date': meeting.get('timestamp', '')[:10]  # Just the date
+                        })
+
+            if past_meetings:
+                # Sort by timestamp descending and take last 3
+                past_meetings = sorted(past_meetings, key=lambda x: x.get('date', ''), reverse=True)[:3]
+                context_parts.append("PAST BOARDROOM DECISIONS:")
+                for m in past_meetings:
+                    decisions_str = ', '.join(m.get('decisions', [])[:2])  # First 2 decisions
+                    if decisions_str:
+                        context_parts.append(f"  - {m['topic']}: {decisions_str}")
+                    else:
+                        context_parts.append(f"  - {m['topic']}: (discussed)")
+        except Exception as e:
+            logger.warning(f"Could not retrieve past meetings: {e}")
+
+        # 2. User's style preferences from StyleMemory
+        if self.user:
+            try:
+                from style_memory.models import StyleMemory
+
+                # Get recent likes/loves
+                positive_interactions = StyleMemory.objects.filter(
+                    user=self.user,
+                    interaction_type__in=['like', 'love', 'rate_5', 'rate_4']
+                ).order_by('-created_at')[:15]
+
+                # Get recent dislikes
+                negative_interactions = StyleMemory.objects.filter(
+                    user=self.user,
+                    interaction_type__in=['dislike', 'rate_1', 'rate_2']
+                ).order_by('-created_at')[:5]
+
+                if positive_interactions.exists() or negative_interactions.exists():
+                    context_parts.append("\nUSER STYLE PREFERENCES:")
+
+                    if positive_interactions:
+                        # Extract style elements user likes
+                        liked_styles = set()
+                        for interaction in positive_interactions:
+                            if interaction.style_elements:
+                                liked_styles.update(interaction.style_elements[:3])
+                        if liked_styles:
+                            context_parts.append(f"  - Prefers: {', '.join(list(liked_styles)[:5])}")
+                        else:
+                            context_parts.append(f"  - Has {positive_interactions.count()} liked/loved items")
+
+                    if negative_interactions:
+                        disliked_styles = set()
+                        for interaction in negative_interactions:
+                            if interaction.style_elements:
+                                disliked_styles.update(interaction.style_elements[:3])
+                        if disliked_styles:
+                            context_parts.append(f"  - Dislikes: {', '.join(list(disliked_styles)[:5])}")
+                        else:
+                            context_parts.append(f"  - Has {negative_interactions.count()} disliked items")
+
+            except Exception as e:
+                logger.warning(f"Could not retrieve style preferences: {e}")
+
+        # 3. Project context if project_id provided
+        if project_id:
+            try:
+                from content.models import Project
+                project = Project.objects.get(id=project_id)
+                context_parts.append(f"\nPROJECT CONTEXT:")
+                context_parts.append(f"  - Name: {project.name}")
+                if project.description:
+                    context_parts.append(f"  - Description: {project.description[:100]}...")
+                context_parts.append(f"  - Images: {project.images.count()}")
+                context_parts.append(f"  - Videos: {project.videos.count()}")
+            except Exception as e:
+                logger.debug(f"Could not retrieve project context: {e}")
+
+        # 4. Get global context from memory system
+        try:
+            global_context = self.memory.memory.get_global_context()
+            active_agents = len(global_context.get('agents', {}))
+            if active_agents > 0:
+                context_parts.append(f"\nSYSTEM STATE: {active_agents} agents currently active")
+        except Exception as e:
+            logger.debug(f"Could not get global context: {e}")
+
+        if context_parts:
+            return "\n".join(context_parts)
+        else:
+            return "No prior context available - this appears to be a new discussion topic."

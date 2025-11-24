@@ -12542,6 +12542,143 @@
         // Session 69: Make pollVideoStatus globally accessible for AI Assistant
         window.pollVideoStatus = pollVideoStatus;
 
+        // Session 175: Poll talking character pipeline (3 stages: TTS → Video → Lip Sync)
+        async function pollTalkingCharacterPipeline(pipelineData, projectId = null) {
+            console.log('🎬 Starting talking character pipeline polling:', pipelineData);
+
+            const { audio_url, video_task_id, video_poll_endpoint } = pipelineData;
+
+            if (!audio_url || !video_task_id) {
+                console.error('❌ Missing required pipeline data:', pipelineData);
+                return;
+            }
+
+            // Stage 2: Poll video generation until complete
+            console.log('⏳ Stage 2/3: Waiting for video generation...');
+            const videoInterval = setInterval(async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/v1/video/status/${video_task_id}/`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(videoInterval);
+                        console.log('✅ Stage 2/3 Complete! Video ready:', data.video_url);
+
+                        // Stage 3: Start lip sync with the completed video + audio
+                        console.log('⏳ Stage 3/3: Starting lip sync...');
+
+                        try {
+                            const lipsyncResponse = await authenticatedFetch('/api/video/lip-sync/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    video_url: data.video_url,
+                                    audio_url: audio_url,
+                                    sync_mode: 'cut_off',
+                                    temperature: 0.5,
+                                    project_id: projectId
+                                })
+                            });
+
+                            const lipsyncData = await lipsyncResponse.json();
+
+                            if (lipsyncData.success) {
+                                console.log('✅ Lip sync started!', lipsyncData);
+                                // Poll lip sync status
+                                pollLipSyncStatus(lipsyncData.prediction_id, projectId);
+                            } else {
+                                console.error('❌ Lip sync failed to start:', lipsyncData.error);
+                                if (projectId && typeof addProjectChatMessage === 'function') {
+                                    addProjectChatMessage(projectId, 'error', `❌ Lip sync failed: ${lipsyncData.error}`);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('❌ Error starting lip sync:', error);
+                            if (projectId && typeof addProjectChatMessage === 'function') {
+                                addProjectChatMessage(projectId, 'error', `❌ Error starting lip sync: ${error.message}`);
+                            }
+                        }
+
+                    } else if (data.status === 'failed') {
+                        clearInterval(videoInterval);
+                        console.error('❌ Video generation failed:', data.error);
+                        if (projectId && typeof addProjectChatMessage === 'function') {
+                            addProjectChatMessage(projectId, 'error', `❌ Video generation failed: ${data.error || 'Unknown error'}`);
+                        }
+                    } else {
+                        console.log(`⏳ Video processing: ${data.progress}% - ${data.progress_message}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Error polling video status:', error);
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        // Session 175: Poll lip sync status until complete
+        async function pollLipSyncStatus(predictionId, projectId = null) {
+            console.log(`👄 Starting lip sync polling for prediction ${predictionId}`);
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    // Session 176: Pass project_id in query params for video association
+                    const url = projectId
+                        ? `/api/video/lip-sync/status/${predictionId}/?project_id=${projectId}`
+                        : `/api/video/lip-sync/status/${predictionId}/`;
+                    const response = await authenticatedFetch(url);
+                    const data = await response.json();
+
+                    if (data.status === 'succeeded') {
+                        clearInterval(pollInterval);
+                        console.log('✅ Stage 3/3 Complete! Talking character video ready:', data.video_url);
+
+                        // Refresh gallery to show the final video
+                        loadVideoGallery();
+
+                        // Add completion message to chat
+                        const completionMessage = `✅ **Your Talking Character is Ready!**\n\n` +
+                            `🎬 Complete 3-stage pipeline finished!\n` +
+                            `✓ Audio generated\n` +
+                            `✓ Character animated\n` +
+                            `✓ Lips synchronized\n\n` +
+                            `**FINAL_VIDEO:** ${data.video_url}\n\n` +
+                            `<video controls style="max-width: 100%; border-radius: 8px; margin: 10px 0;">\n` +
+                            `  <source src="${data.video_url}" type="video/mp4">\n` +
+                            `  Your browser does not support the video tag.\n` +
+                            `</video>\n\n` +
+                            `📥 [Download Talking Character Video](${data.video_url})\n\n` +
+                            `💰 Cost: ~$0.60-1.00 | 🎤 Voice + 🎬 Animation + 👄 Lip Sync`;
+
+                        if (projectId && typeof addProjectChatMessage === 'function') {
+                            addProjectChatMessage(projectId, 'assistant', completionMessage);
+                            setTimeout(() => refreshProjectAssets(projectId), 1000);
+                        } else if (window.aiAssistant) {
+                            window.aiAssistant.addMessage('assistant', completionMessage);
+                        }
+
+                        // Notification
+                        if (typeof notifyVideoComplete === 'function') {
+                            notifyVideoComplete('talking_character');
+                        }
+
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        console.error('❌ Lip sync failed:', data.error);
+                        if (projectId && typeof addProjectChatMessage === 'function') {
+                            addProjectChatMessage(projectId, 'error', `❌ Lip sync failed: ${data.error || 'Unknown error'}`);
+                        }
+                    } else {
+                        console.log(`👄 Lip sync processing: ${data.progress}% - ${data.progress_message || 'Syncing lips...'}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Error polling lip sync status:', error);
+                }
+            }, 5000); // Poll every 5 seconds (lip sync takes longer)
+        }
+
+        // Make polling functions globally accessible
+        window.pollTalkingCharacterPipeline = pollTalkingCharacterPipeline;
+        window.pollLipSyncStatus = pollLipSyncStatus;
+
         // Session 81: Poll audio task status (similar to video polling)
         async function pollAudioStatus(taskId, audioType) {
             console.log(`🎵 Starting audio polling for task ${taskId} (type: ${audioType})`);
@@ -16686,6 +16823,11 @@
                             return `🎬 **Video Generation Agent:** Chaining videos together...`;
                         }
                         return `🎬 **Video Generation Agent:** Processing video...`;
+                    } else if (toolName === 'talking_character_agent') {
+                        // Session 175: Talking Character Pipeline
+                        const text = params.text || 'speech';
+                        const preview = text.length > 30 ? text.substring(0, 30) + '...' : text;
+                        return `🎬 **Talking Character Agent:** Creating 3-stage pipeline (TTS → Animation → Lip Sync) for "${preview}"...`;
                     }
                 } catch (e) {
                     console.error('Error in getProgressMessage:', e);
@@ -17314,6 +17456,31 @@
                             message += `⏱️ **Generation Time:** ~45-60 seconds\n\n`;
                             message += `💾 **Format:** GLB (3D-printable)\n\n`;
                             message += `💡 The 3D model will appear in your project when complete. Refresh the page in about a minute to see it!\n\n`;
+                        } else if (result.tool === 'talking_character_agent') {
+                            // Session 175: Talking Character Pipeline
+                            message += `🎬 **Talking Character Pipeline Started!**\n\n`;
+                            message += `✅ Stage 1/3: Speech audio generated\n`;
+                            message += `⏳ Stage 2/3: Animating character...\n`;
+                            message += `⏳ Stage 3/3: Waiting for lip sync...\n\n`;
+
+                            if (result.result.audio_url) {
+                                message += `🎤 **Audio:** Ready\n`;
+                            }
+                            if (result.result.estimated_cost) {
+                                message += `💰 **Estimated Cost:** $${result.result.estimated_cost.toFixed(2)}\n\n`;
+                            }
+
+                            message += `⏱️ **Total Time:** ~2-3 minutes for complete pipeline\n\n`;
+                            message += `💡 The video will auto-update with lip sync when all 3 stages complete!\n\n`;
+
+                            // Session 175: Start automatic pipeline polling
+                            if (result.result.audio_url && result.result.video_task_id && typeof window.pollTalkingCharacterPipeline === 'function') {
+                                console.log('🎬 Starting talking character pipeline polling:', result.result);
+                                const projectId = this.projectId || null;
+                                setTimeout(() => window.pollTalkingCharacterPipeline(result.result, projectId), 100);
+                            } else if (result.result.audio_url && result.result.video_task_id) {
+                                console.error('❌ pollTalkingCharacterPipeline function not found - pipeline won\'t auto-complete!');
+                            }
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
@@ -22598,7 +22765,8 @@
                             }
                         }, 2000);
                     }
-                } else {
+                } else if (!tool_calls || tool_calls.length === 0) {
+                    // Session 175: Only show error if there are no tool calls either
                     addProjectChatMessage(projectId, 'error', '❌ No response from assistant');
                     statusDiv.innerHTML = '';
                 }
@@ -26712,6 +26880,62 @@
         // Initialize character training when tab is shown
         document.getElementById('character-training-tab')?.addEventListener('shown.bs.tab', function() {
             loadMyCharacters();
+        });
+
+        // Session 175: Sync pending trainings on page load
+        // This catches trainings that completed while the user was away
+        async function syncPendingTrainings() {
+            try {
+                const response = await fetch('/api/characters/', {
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const characters = data.characters || [];
+
+                // Find characters that are pending or training
+                const pendingCharacters = characters.filter(c =>
+                    c.training_status === 'pending' || c.training_status === 'training'
+                );
+
+                if (pendingCharacters.length === 0) {
+                    console.log('📊 No pending trainings to sync');
+                    return;
+                }
+
+                console.log(`📊 Found ${pendingCharacters.length} pending trainings, syncing status...`);
+
+                // Check each one for updated status
+                for (const character of pendingCharacters) {
+                    try {
+                        const statusResponse = await fetch(`/api/characters/${character.id}/training-status/`, {
+                            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                        });
+
+                        if (statusResponse.ok) {
+                            const statusData = await statusResponse.json();
+                            if (statusData.training_status === 'completed') {
+                                console.log(`✅ Training completed while away: ${character.name}`);
+                                showCharacterSuccess(`Good news! "${character.name}" finished training while you were away. It's ready to use!`);
+                            } else if (statusData.training_status === 'failed') {
+                                console.log(`❌ Training failed while away: ${character.name}`);
+                                showCharacterError(`Training for "${character.name}" failed: ${statusData.error_message || 'Unknown error'}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.log(`Could not sync ${character.name}:`, e.message);
+                    }
+                }
+            } catch (error) {
+                console.log('📊 Could not sync pending trainings:', error.message);
+            }
+        }
+
+        // Run sync on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Delay slightly to let other initializations complete
+            setTimeout(syncPendingTrainings, 2000);
         });
 
         // ===== MULTI-IMAGE UPLOAD =====

@@ -157,11 +157,8 @@ class ElevenLabsProvider:
                 }
 
             # Save audio to temp file and upload to storage
-            # For now, we'll return the audio data directly
             audio_data = response.content
 
-            # In production, we would upload to S3/CDN
-            # For now, we'll create a data URI or save to media folder
             import os
             import uuid
             from django.core.files.base import ContentFile
@@ -170,14 +167,38 @@ class ElevenLabsProvider:
             # Generate unique filename
             file_id = str(uuid.uuid4())
             filename = f"elevenlabs_speech_{file_id}.mp3"
-            filepath = f"audio/elevenlabs/{filename}"
 
-            # Save to Django storage
-            saved_path = default_storage.save(filepath, ContentFile(audio_data))
-            audio_url = default_storage.url(saved_path)
+            # Session 176: Upload to Cloudinary for public URL access
+            # Sync Labs API needs publicly accessible URLs, localhost won't work
+            try:
+                import cloudinary
+                import cloudinary.uploader
+
+                logger.info(f"☁️ Uploading audio to Cloudinary for public access...")
+                upload_result = cloudinary.uploader.upload(
+                    audio_data,
+                    resource_type='video',  # Cloudinary uses 'video' for audio files
+                    public_id=f'audio/elevenlabs/{file_id}',
+                    format='mp3'
+                )
+                audio_url = upload_result['secure_url']
+                logger.info(f"✅ Audio uploaded to Cloudinary: {audio_url[:60]}...")
+
+            except Exception as cloudinary_error:
+                logger.warning(f"⚠️ Cloudinary upload failed: {cloudinary_error}")
+                logger.info(f"📁 Falling back to local storage...")
+
+                # Fallback to local storage
+                filepath = f"audio/elevenlabs/{filename}"
+                saved_path = default_storage.save(filepath, ContentFile(audio_data))
+                audio_url = default_storage.url(saved_path)
+
+                # Convert relative path to full URI
+                if audio_url.startswith('/'):
+                    audio_url = f"http://localhost:8000{audio_url}"
 
             logger.info(f"✅ Speech generated successfully!")
-            logger.info(f"🎵 Audio saved: {audio_url}")
+            logger.info(f"🎵 Audio URL: {audio_url}")
 
             return {
                 "success": True,

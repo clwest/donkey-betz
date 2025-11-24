@@ -7306,6 +7306,16 @@ def execute_tool(request):
                 parameters['project_id'] = str(project.id)
             result = assistant._handle_coleadership_agent(parameters)
 
+        elif tool_name == 'talking_character_agent':
+            # Session 175: Route to enhanced personal assistant's talking character handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Set project as instance attribute for pipeline context
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._tool_talking_character(parameters)
+
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
