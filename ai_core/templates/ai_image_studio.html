@@ -1,4 +1,4 @@
-<!-- Session 180 Part 3: Collapsible Project Sections - v1732506900 -->
+<!-- Session 180 Part 3: Collapsible Asset Sections - v1732507500 -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -20288,19 +20288,13 @@
                 </div>
 
                 <!-- Session 63: Project Asset Gallery -->
-                <!-- Session 180 Part 3: Collapsible -->
                 <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'assets')">
-                        <h5 style="color: #f59e0b; margin: 0;">
-                            <span id="section-toggle-assets-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
-                            📦 Project Assets
-                        </h5>
-                        <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); refreshProjectAssets('${project.id}')" title="Refresh asset gallery">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="color: #f59e0b;">📦 Project Assets</h5>
+                        <button class="btn btn-sm btn-info" onclick="refreshProjectAssets('${project.id}')" title="Refresh asset gallery">
                             🔄 Refresh
                         </button>
                     </div>
-
-                    <div id="section-content-assets-${project.id}">
                     <!-- Session 147: Search/Filter Controls -->
                     <div class="mb-3 p-3 rounded" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
                         <div class="row g-2">
@@ -20366,7 +20360,6 @@
                             <p class="mt-2 text-muted">Loading assets...</p>
                         </div>
                     </div>
-                    </div><!-- End section-content-assets -->
                 </div>
                     </div>
                     <!-- End LEFT column -->
@@ -23222,15 +23215,43 @@
                 </div>
             `;
 
+            // Session 180 Part 3: Collapsible asset sections (Images, Videos, 3D Models)
             let sectionsHtml = '';
             if (images.length > 0) {
-                sectionsHtml += `<div class="col-12 mt-4"><h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">📸 Images (${images.length})</h5></div>${images.map(renderAssetCard).join('')}`;
+                sectionsHtml += `
+                    <div class="col-12 mt-4">
+                        <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'images')">
+                            <span id="asset-toggle-images-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                            📸 Images (${images.length})
+                        </h5>
+                    </div>
+                    <div id="asset-content-images-${projectId}" class="col-12">
+                        <div class="row g-3 mt-2">${images.map(renderAssetCard).join('')}</div>
+                    </div>`;
             }
             if (videos.length > 0) {
-                sectionsHtml += `<div class="col-12 mt-4"><h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">🎬 Videos (${videos.length})</h5></div>${videos.map(renderAssetCard).join('')}`;
+                sectionsHtml += `
+                    <div class="col-12 mt-4">
+                        <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'videos')">
+                            <span id="asset-toggle-videos-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                            🎬 Videos (${videos.length})
+                        </h5>
+                    </div>
+                    <div id="asset-content-videos-${projectId}" class="col-12">
+                        <div class="row g-3 mt-2">${videos.map(renderAssetCard).join('')}</div>
+                    </div>`;
             }
             if (models3d.length > 0) {
-                sectionsHtml += `<div class="col-12 mt-4"><h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">🎨 3D Models (${models3d.length})</h5></div>${models3d.map(renderAssetCard).join('')}`;
+                sectionsHtml += `
+                    <div class="col-12 mt-4">
+                        <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'models3d')">
+                            <span id="asset-toggle-models3d-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                            🎨 3D Models (${models3d.length})
+                        </h5>
+                    </div>
+                    <div id="asset-content-models3d-${projectId}" class="col-12">
+                        <div class="row g-3 mt-2">${models3d.map(renderAssetCard).join('')}</div>
+                    </div>`;
             }
             container.innerHTML = sectionsHtml;
         }
@@ -23405,17 +23426,21 @@
                     `;
 
                     // Session 127 Part 2 (continued): Render three separate sections
+                    // Session 180 Part 3: Collapsible asset sections
                     let sectionsHtml = '';
 
                     // Images Section
                     if (images.length > 0) {
                         sectionsHtml += `
                             <div class="col-12 mt-4">
-                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">
+                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'images')">
+                                    <span id="asset-toggle-images-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                                     📸 Images (${images.length})
                                 </h5>
                             </div>
-                            ${images.map(renderAssetCard).join('')}
+                            <div id="asset-content-images-${projectId}" class="col-12">
+                                <div class="row g-3 mt-2">${images.map(renderAssetCard).join('')}</div>
+                            </div>
                         `;
                     }
 
@@ -23423,11 +23448,14 @@
                     if (videos.length > 0) {
                         sectionsHtml += `
                             <div class="col-12 mt-4">
-                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">
+                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'videos')">
+                                    <span id="asset-toggle-videos-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                                     🎬 Videos (${videos.length})
                                 </h5>
                             </div>
-                            ${videos.map(renderAssetCard).join('')}
+                            <div id="asset-content-videos-${projectId}" class="col-12">
+                                <div class="row g-3 mt-2">${videos.map(renderAssetCard).join('')}</div>
+                            </div>
                         `;
                     }
 
@@ -23435,11 +23463,14 @@
                     if (models3d.length > 0) {
                         sectionsHtml += `
                             <div class="col-12 mt-4">
-                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 16px;">
+                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'models3d')">
+                                    <span id="asset-toggle-models3d-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                                     🎨 3D Models (${models3d.length})
                                 </h5>
                             </div>
-                            ${models3d.map(renderAssetCard).join('')}
+                            <div id="asset-content-models3d-${projectId}" class="col-12">
+                                <div class="row g-3 mt-2">${models3d.map(renderAssetCard).join('')}</div>
+                            </div>
                         `;
                     }
 
@@ -23803,8 +23834,45 @@
         }
 
         /**
+         * Session 180 Part 3: Toggle collapsible asset sections (Images, Videos, 3D Models)
+         */
+        function toggleAssetSection(projectId, assetType) {
+            const content = document.getElementById(`asset-content-${assetType}-${projectId}`);
+            const toggle = document.getElementById(`asset-toggle-${assetType}-${projectId}`);
+
+            if (!content || !toggle) {
+                console.warn(`Asset section not found: ${assetType} for project ${projectId}`);
+                return;
+            }
+
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                // Expand with animation
+                content.style.display = 'block';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-10px)';
+                toggle.textContent = '▼';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                    content.style.opacity = '1';
+                    content.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                // Collapse
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+
+            // Store preference in localStorage
+            const prefs = JSON.parse(localStorage.getItem('assetSectionPrefs') || '{}');
+            prefs[`${assetType}-${projectId}`] = !isHidden; // Store collapsed state
+            localStorage.setItem('assetSectionPrefs', JSON.stringify(prefs));
+        }
+
+        /**
          * Session 180 Part 3: Toggle collapsible project sections
-         * Used for Project Info, Decision Timeline, Quick Workflows, Project Assets
+         * Used for Project Info, Decision Timeline, Quick Workflows
          */
         function toggleProjectSection(projectId, sectionName) {
             const content = document.getElementById(`section-content-${sectionName}-${projectId}`);
