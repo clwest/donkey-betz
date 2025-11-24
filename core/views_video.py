@@ -7974,3 +7974,243 @@ def color_grade_professional(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# Session 171: ElevenLabs Audio Integration
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def generate_voice_view(request):
+    """
+    Generate standalone audio from text using ElevenLabs.
+
+    Session 171: Completes the ElevenLabs integration that was missing from Session 82.
+
+    Expected JSON body:
+        - text: str - Text to convert to speech
+        - voice: str - Voice preset (Rachel, Drew, Clyde, Paul, Aria, etc.)
+        - project_id: str (optional) - Project to associate audio with
+
+    Returns:
+        - success: bool
+        - audio_url: str - URL to generated audio file
+        - task_id: str - Unique ID for the audio
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+
+        text = data.get('text')
+        voice = data.get('voice', 'Rachel')
+        project_id = data.get('project_id')
+
+        if not text:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'text is required'
+            }, status=400)
+
+        logger.info(f"🎤 [Session 171] Generating voice with ElevenLabs...")
+        logger.info(f"   Voice: {voice}")
+        logger.info(f"   Text: {text[:60]}...")
+
+        # Call ElevenLabs provider
+        from content.elevenlabs_provider import elevenlabs_provider
+
+        result = elevenlabs_provider.text_to_speech(
+            text=text,
+            voice=voice
+        )
+
+        if result.get('success'):
+            logger.info(f"✅ [Session 171] Voice generated successfully!")
+            logger.info(f"   Audio URL: {result.get('audio_url')}")
+
+            return JsonResponse({
+                'success': True,
+                'audio_url': result.get('audio_url'),
+                'task_id': result.get('task_id'),
+                'voice': voice,
+                'agent': 'AudioGenerationAgent',
+                'operation': 'generate_voice',
+                'operation_display': f'Voice generation ({voice})'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error_message': result.get('error_message', 'Voice generation failed')
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ [Session 171] Generate voice error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error_message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_voiceover_view(request):
+    """
+    Add voiceover to an existing video using ElevenLabs + ffmpeg.
+
+    Session 171: Generates voice audio and mixes it with video.
+
+    Expected JSON body:
+        - video_id: str - Video to add voiceover to
+        - text: str - Text for voiceover narration
+        - voice: str - Voice preset (Rachel, Drew, Clyde, Paul, Aria, etc.)
+        - volume: float (optional) - Voiceover volume 0.0-1.0 (default 0.8)
+        - project_id: str (optional) - Project to associate result with
+
+    Returns:
+        - success: bool
+        - video_url: str - URL to new video with voiceover
+        - video_id: str - ID of new video
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+
+        video_id = data.get('video_id')
+        text = data.get('text')
+        voice = data.get('voice', 'Rachel')
+        volume = float(data.get('volume', 0.8))
+        project_id = data.get('project_id')
+
+        if not video_id:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'video_id is required'
+            }, status=400)
+
+        if not text:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'text is required'
+            }, status=400)
+
+        logger.info(f"🎤 [Session 171] Adding voiceover to video {video_id}...")
+        logger.info(f"   Voice: {voice}")
+        logger.info(f"   Volume: {volume}")
+        logger.info(f"   Text: {text[:60]}...")
+
+        # Get the video
+        video = _resolve_video_by_id(video_id, request.user, project_id)
+        if not video:
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Video {video_id} not found'
+            }, status=404)
+
+        video_path = _get_video_local_path(video)
+        if not video_path or not os.path.exists(video_path):
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Video file not found on disk'
+            }, status=404)
+
+        # Step 1: Generate voice audio
+        logger.info(f"   Step 1: Generating voice audio...")
+        from content.elevenlabs_provider import elevenlabs_provider
+
+        audio_result = elevenlabs_provider.text_to_speech(
+            text=text,
+            voice=voice
+        )
+
+        if not audio_result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'error_message': f"Voice generation failed: {audio_result.get('error_message')}"
+            }, status=500)
+
+        audio_url = audio_result.get('audio_url')
+        logger.info(f"   ✅ Voice audio generated: {audio_url}")
+
+        # Step 2: Get audio file path
+        # audio_url is like /media/audio/elevenlabs/filename.mp3
+        if audio_url.startswith('/media/'):
+            audio_path = os.path.join(settings.MEDIA_ROOT, audio_url.replace('/media/', ''))
+        else:
+            audio_path = audio_url
+
+        if not os.path.exists(audio_path):
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Generated audio file not found'
+            }, status=500)
+
+        # Step 3: Mix audio with video using ffmpeg
+        logger.info(f"   Step 2: Mixing audio with video...")
+        timestamp = int(time.time())
+        output_filename = f"voiceover_{video.id}_{timestamp}.mp4"
+        output_path = os.path.join(settings.MEDIA_ROOT, 'videos', output_filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        import subprocess
+
+        # FFmpeg command to mix audio
+        # This replaces original audio with voiceover
+        # Use amix if you want to blend both audio tracks
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', video_path,
+            '-i', audio_path,
+            '-map', '0:v',  # Video from first input
+            '-map', '1:a',  # Audio from second input
+            '-c:v', 'copy',  # Copy video codec (fast)
+            '-c:a', 'aac',   # Re-encode audio to AAC
+            '-b:a', '192k',
+            '-shortest',     # End when shortest stream ends
+            output_path
+        ]
+
+        logger.info(f"   FFmpeg command: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+        if result.returncode != 0:
+            logger.error(f"   FFmpeg error: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error_message': f'FFmpeg mixing failed: {result.stderr[:200]}'
+            }, status=500)
+
+        logger.info(f"   ✅ Audio mixed successfully!")
+
+        # Step 4: Create new video record
+        new_video = VideoHistory.objects.create(
+            user=request.user,
+            prompt=f"Voiceover ({voice}) added to video {video.id}",
+            video_url=f'/media/videos/{output_filename}',
+            status='completed',
+            project=video.project if hasattr(video, 'project') else None
+        )
+
+        logger.info(f"✅ [Session 171] Voiceover added successfully!")
+        logger.info(f"   New video ID: {new_video.id}")
+        logger.info(f"   Video URL: {new_video.video_url}")
+
+        return JsonResponse({
+            'success': True,
+            'video_id': str(new_video.id),
+            'video_url': new_video.video_url,
+            'voice': voice,
+            'original_video_id': str(video.id),
+            'agent': 'AudioGenerationAgent',
+            'operation': 'add_voiceover',
+            'operation_display': f'Voiceover addition ({voice})'
+        })
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"❌ [Session 171] FFmpeg timeout")
+        return JsonResponse({
+            'success': False,
+            'error_message': 'Audio mixing timed out'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"❌ [Session 171] Add voiceover error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error_message': str(e)}, status=500)

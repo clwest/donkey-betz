@@ -30,7 +30,7 @@ from content.replicate_provider import get_replicate_provider
 logger = logging.getLogger(__name__)
 
 # Training image requirements
-MIN_IMAGES = 5  # Lowered for testing (production: 10)
+MIN_IMAGES = 4  # Session 173: Lowered to 4 (Replicate supports 4+ for FLUX LoRA)
 MAX_IMAGES = 20
 MIN_RESOLUTION = 512
 MAX_RESOLUTION = 2048

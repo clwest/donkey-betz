@@ -8,11 +8,11 @@ from .models import StyleMemory, StylePattern, StyleSuggestion, ContentLineage
 
 class StyleMemorySerializer(serializers.ModelSerializer):
     """Serializer for StyleMemory model"""
-    
+
     class Meta:
         model = StyleMemory
         fields = [
-            'id', 'user', 'content_id', 'parent_content_id', 'interaction_type',
+            'id', 'user', 'project_id', 'content_id', 'parent_content_id', 'interaction_type',
             'recipe', 'style_elements', 'color_palette', 'notes', 'prompt',
             'model_used', 'parameters', 'created_at', 'updated_at'
         ]
@@ -59,8 +59,9 @@ class ContentLineageSerializer(serializers.ModelSerializer):
 
 class InteractionRequestSerializer(serializers.Serializer):
     """Serializer for capturing interactions"""
-    
+
     content_id = serializers.CharField(max_length=255)
+    content_type = serializers.CharField(max_length=50, required=False, default='image')  # Session 172
     interaction_type = serializers.ChoiceField(choices=[
         'love', 'like', 'dislike', 'save', 'share', 'download', 'remix', 'delete',
         'rate_1', 'rate_2', 'rate_3', 'rate_4', 'rate_5',  # Support star ratings
@@ -68,6 +69,11 @@ class InteractionRequestSerializer(serializers.Serializer):
     ])
     parent_content_id = serializers.CharField(max_length=255, required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+    # Session 172: Project-focused learning
+    project_id = serializers.CharField(max_length=36, required=False, allow_null=True, allow_blank=True)
+    prompt = serializers.CharField(required=False, allow_blank=True)
+    model_used = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    parameters = serializers.DictField(required=False, default=dict)
 
 
 class StyleInsightsSerializer(serializers.Serializer):

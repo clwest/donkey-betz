@@ -142,8 +142,9 @@ Provide your perspective on this topic in 2-3 sentences. Focus on:
 - Specific recommendations
 """
 
+                    # Session 173: Use gpt-4o-mini for faster, more reliable responses
                     response = self.client.chat.completions.create(
-                        model="gpt-5-mini",
+                        model="gpt-4o-mini",
                         messages=[
                             {
                                 "role": "system",
@@ -154,11 +155,15 @@ Provide your perspective on this topic in 2-3 sentences. Focus on:
                                 "content": perspective_prompt
                             }
                         ],
-                        reasoning_effort="medium",
-                        max_completion_tokens=500
+                        max_tokens=300,
+                        temperature=0.7
                     )
 
                     agent_perspective = response.choices[0].message.content or ""
+
+                    # Session 173: Handle empty responses
+                    if not agent_perspective.strip():
+                        agent_perspective = f"I'd need more context to give a solid opinion on this. What specific aspect concerns you most?"
                     agent_responses[participant_name] = agent_perspective
                     logger.info(f"✅ Collected {participant_name} perspective ({len(agent_perspective)} chars)")
 

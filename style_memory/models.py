@@ -33,6 +33,9 @@ class StyleMemory(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='style_memories')
+    # Session 172: Project-focused learning - each project has its own style preferences
+    # Using CharField to store project UUID for simplicity (avoids FK migration issues)
+    project_id = models.CharField(max_length=36, null=True, blank=True, db_index=True)
     content_id = models.CharField(max_length=255, db_index=True)
     parent_content_id = models.CharField(max_length=255, null=True, blank=True)
     interaction_type = models.CharField(max_length=20, choices=INTERACTION_TYPES)
@@ -67,6 +70,8 @@ class StyleMemory(models.Model):
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['content_id']),
             models.Index(fields=['interaction_type']),
+            # Session 172: Project-focused learning index
+            models.Index(fields=['user', 'project_id', '-created_at']),
         ]
         
     def __str__(self):
