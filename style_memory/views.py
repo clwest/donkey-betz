@@ -1,5 +1,9 @@
 """
 Style Memory views for tracking and analyzing user style preferences.
+
+Session 179: Fixed hardcoded style elements bug - now uses StyleExtractor
+to extract real style characteristics from prompts using keyword matching
+and optional GPT analysis.
 """
 
 from rest_framework import status
@@ -19,25 +23,34 @@ from .serializers import (
     StyleInsightsSerializer,
     VariationRequestSerializer
 )
+from .style_extractor import extract_styles
 import random
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  # Allow any for testing
 def capture_interaction(request):
-    """Capture user interaction with generated content"""
+    """
+    Capture user interaction with generated content.
+
+    Session 179: Now extracts REAL style elements from the prompt using
+    StyleExtractor instead of hardcoded values.
+    """
     print(f"DEBUG: Received data: {request.data}")
     print(f"DEBUG: Headers: {request.headers}")
     serializer = InteractionRequestSerializer(data=request.data)
     if not serializer.is_valid():
         print(f"DEBUG: Validation errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     # Get or create test user
     from django.contrib.auth import get_user_model
     User = get_user_model()
-    
+
     if request.user.is_authenticated:
         user = request.user
     else:
@@ -45,8 +58,30 @@ def capture_interaction(request):
         user = User.objects.filter(username='chris').first()
         if not user:
             user = User.objects.first()
-    
-    # Create style memory entry
+
+    # Session 179: Extract REAL styles from the prompt
+    prompt = serializer.validated_data.get('prompt', '')
+    parameters = serializer.validated_data.get('parameters', {})
+
+    # Use StyleExtractor to get real style elements
+    style_result = extract_styles(
+        prompt=prompt,
+        metadata={'parameters': parameters, 'model': serializer.validated_data.get('model_used', '')},
+        use_gpt=True  # Enable GPT for complex prompts
+    )
+
+    logger.info(f"Style extraction result: {style_result}")
+
+    # Build recipe from extracted data
+    recipe = {
+        'style': style_result['style_elements'][0] if style_result['style_elements'] else 'general',
+        'color_scheme': 'extracted' if style_result['color_palette'] else 'inferred',
+        'mood': style_result['mood'],
+        'extraction_confidence': style_result['confidence'],
+        'extraction_method': style_result['extraction_method']
+    }
+
+    # Create style memory entry with REAL extracted styles
     # Session 172: Accept project_id for project-focused learning
     style_memory = StyleMemory.objects.create(
         user=user,
@@ -55,16 +90,12 @@ def capture_interaction(request):
         interaction_type=serializer.validated_data['interaction_type'],
         parent_content_id=serializer.validated_data.get('parent_content_id'),
         notes=serializer.validated_data.get('notes', ''),
-        prompt=serializer.validated_data.get('prompt', ''),  # Store prompt for learning
+        prompt=prompt,  # Store prompt for learning
         model_used=serializer.validated_data.get('model_used', ''),  # Store model for learning
-        parameters=serializer.validated_data.get('parameters', {}),  # Store params
-        recipe={
-            'style': 'modern',
-            'color_scheme': 'vibrant',
-            'mood': 'energetic'
-        },
-        style_elements=['minimalist', 'bold', 'contemporary'],
-        color_palette=['#FF6B6B', '#4ECDC4', '#45B7D1']
+        parameters=parameters,  # Store params
+        recipe=recipe,
+        style_elements=style_result['style_elements'],  # REAL extracted styles!
+        color_palette=style_result['color_palette']     # REAL extracted colors!
     )
     
     # Update or create patterns
