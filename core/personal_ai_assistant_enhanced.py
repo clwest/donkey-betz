@@ -4274,6 +4274,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         # Session 169 Phase 3: Get user's learned style preferences
         style_preferences_context = self._get_style_preferences_context()
 
+        # Session 181: Get project brief context for AI guidance
+        project_brief_context = self._get_project_brief_context()
+
         # Extract conversation history from context and load from database
         conversation_context = context.get('conversation_context', '')
         conversation_history = context.get('conversation_history', [])
@@ -4316,11 +4319,15 @@ Recent Agent Activities:
 ''' if style_preferences_context else ''}Available Assets in Current Context:
 {assets_context}
 
-CRITICAL - Project Context (Session 132):
+CRITICAL - Project Context (Session 132 + Session 181 Enhancement):
 {f"- Active Project ID: {self._current_context.get('project_id')}" if hasattr(self, '_current_context') and self._current_context and 'project_id' in self._current_context else "- No active project"}
 - When using image_generation_agent, video_generation_agent, audio_generation_agent, three_d_generation_agent, or video_editing_agent, you MUST include the project_id parameter with the EXACT UUID shown above
 - DO NOT make up project IDs like "admin-project-assets" or "user-project" - use the actual UUID from "Active Project ID" above
 - If no Active Project ID is shown above, omit the project_id parameter (let the system handle it)
+
+{f'''PROJECT BRIEF (Session 181 - Creative Direction):
+{project_brief_context}
+''' if project_brief_context else ''}
 
 IMPORTANT - Image & Video References:
 - When user says "image 2", "image number two", or "image #2", they mean Image #2 from the list above
@@ -5660,6 +5667,66 @@ Respond in a helpful, personalized way that:
         except Exception as e:
             logger.error(f"Error loading conversation history: {e}")
             return []
+
+    def _get_project_brief_context(self) -> str:
+        """
+        Session 181: Build comprehensive project brief for AI context.
+
+        Provides the AI Assistant with full project information including:
+        - Project name and status
+        - Goal and description (the creative brief)
+        - Category and tags for style guidance
+        - Color palette preferences
+
+        This allows the AI to generate content that aligns with the project's
+        vision without requiring the user to repeat the brief each time.
+
+        Returns:
+            Formatted project brief string, or empty string if no active project.
+        """
+        try:
+            project = getattr(self, 'project', None)
+            if not project:
+                return ""
+
+            lines = []
+            lines.append(f"📁 **Active Project: {project.name}**")
+            lines.append(f"   Status: {project.get_status_display()}")
+
+            # Goal is the most important - the creative brief
+            if project.goal:
+                lines.append(f"   🎯 Goal: {project.goal}")
+
+            # Description provides additional context
+            if project.description:
+                lines.append(f"   📝 Description: {project.description}")
+
+            # Category helps with style decisions
+            if project.category:
+                lines.append(f"   📂 Category: {project.category}")
+
+            # Color palette is critical for visual consistency
+            if project.colors:
+                lines.append(f"   🎨 Color Palette: {project.colors}")
+
+            # Tags provide style keywords
+            if project.tags and len(project.tags) > 0:
+                lines.append(f"   🏷️ Style Tags: {', '.join(project.tags)}")
+
+            # Add guidance for AI
+            lines.append("")
+            lines.append("**IMPORTANT - Project Brief Integration (Session 181):**")
+            lines.append("- Use the Goal and Description above as your creative brief")
+            lines.append("- Match the Color Palette when generating visual content")
+            lines.append("- Incorporate Style Tags into image/video generation prompts")
+            lines.append("- Maintain consistency with the project's Category aesthetic")
+            lines.append("- If user's request is vague, infer style from project context")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"Error building project brief context: {e}")
+            return ""
 
     def _get_style_preferences_context(self) -> str:
         """
