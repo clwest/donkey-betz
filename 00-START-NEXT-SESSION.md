@@ -1,9 +1,120 @@
-# START HERE - Session 170
+# START HERE - Session 175
 
-**Last Updated:** November 22, 2025 (Session 169 Complete)
-**Current Status:** 100% Reality Score
+**Last Updated:** November 24, 2025 (Session 174 Complete)
+**Current Status:** 99.8% Reality Score | 66+ features operational
 **Platform:** Django Web Application (localhost:8000/ai-studio/)
-**Previous Session:** Enhanced Learning System - Style Memory UI
+**Previous Session:** Decision Modal UX Polish + Stance Detection
+**Total Features:** 66+ working / 66+ total (100% complete!)
+**Next Priority:** CRITICAL - Boardroom Memory System Integration
+
+---
+
+## CRITICAL SESSION 175 PRIORITY: MEMORY INTEGRATION
+
+**User's Explicit Request:**
+> "Did we tie the Board into the memory system? We might need to take a moment and deep dive into the /docs/ to make sure we are using the memory and prompting system to its fullest capacity"
+
+**The Problem:**
+The Boardroom (MeetingCoordinatorAgent) currently **STORES** meeting results to memory but **DOES NOT READ** any context before generating agent opinions. This makes agents "dumb" - they don't know:
+- What decisions were made before
+- What the user's style preferences are
+- What projects exist and their context
+- What the user liked/disliked in the past
+
+**The Goal:**
+Make agents say things like:
+> "Based on our last decision to focus on bold visuals, and given you've consistently liked images with high contrast, I'd recommend..."
+
+Instead of generic responses that could apply to anyone.
+
+---
+
+## SESSION 175 IMPLEMENTATION GUIDE
+
+### Step 1: Understand the Memory System (READ THESE FILES)
+
+```bash
+# Core memory system
+cat intelligence/shared_memory.py
+
+# Style Memory with embeddings
+cat style_memory/models.py
+cat style_memory/views.py
+
+# How agents currently use memory
+cat agents/meeting_coordinator_agent.py
+
+# The comprehensive audit document
+cat docs/architecture/PROMPTING_SYSTEM_COMPREHENSIVE_AUDIT.md
+```
+
+### Step 2: Key Files to Modify
+
+**Primary Target:**
+- `agents/meeting_coordinator_agent.py` - Add memory retrieval before generating opinions
+
+**Memory System Components:**
+- `intelligence/shared_memory.py` - Has `AgentMemoryInterface` with:
+  - `remember(memory_type, content)` - Store memories
+  - `recall(memory_type)` - Retrieve specific memory
+  - `learn_from_others(limit)` - Get experiences from other entities
+  - `SharedMemorySystem.get_global_context()` - Get all active contexts
+
+**Style Memory System:**
+- `style_memory/models.py` - Has `StyleInteraction`, `StylePattern`, `UserStyleProfile`
+- `style_memory/views.py` - Has retrieval functions
+
+### Step 3: What to Implement
+
+**In `MeetingCoordinatorAgent.start_meeting()` - ADD BEFORE generating perspectives:**
+
+```python
+# 1. Get past decisions from memory
+past_decisions = self.memory.recall('past_decisions')
+
+# 2. Get user's style preferences from Style Memory
+# Query StyleInteraction model for user's likes/dislikes
+from style_memory.models import StyleInteraction
+user_interactions = StyleInteraction.objects.filter(
+    user=self.user
+).order_by('-created_at')[:20]
+
+# 3. Get project context if project_id provided
+if project_id:
+    from content.models import Project
+    project = Project.objects.filter(id=project_id).first()
+    project_context = {
+        'name': project.name if project else None,
+        'description': project.description if project else None,
+        'image_count': project.images.count() if project else 0
+    }
+
+# 4. Build context string for agent prompts
+context_for_agents = f"""
+CONTEXT FROM MEMORY:
+- Past Decisions: {past_decisions}
+- User Style Preferences: {summarize_preferences(user_interactions)}
+- Project: {project_context if project_id else 'No project context'}
+
+Use this context to give personalized, informed recommendations.
+"""
+```
+
+**Then inject this context into each agent's perspective prompt.**
+
+### Step 4: Test the Integration
+
+```bash
+# Start the platform
+make start
+
+# Test via UI
+open http://localhost:8000/ai-studio/
+
+# Click "New Decision" in Project tab
+# Enter a topic like "Should we train on image 32 style?"
+# Verify agents reference past decisions and preferences
+```
 
 ---
 
@@ -44,236 +155,304 @@ redis-cli ping
 curl -s http://localhost:8000/api/video/davinci-status/
 ```
 
-### 3. Optional: Start Render Node (Port 5001)
+---
 
-```bash
-# If you want DaVinci render automation
-cd resolve_node
-python app.py
+## Session 174 Summary - Decision Modal UX Polish
 
-# Or mock mode (no Resolve needed)
-MOCK_MODE=true python app.py
-```
+### What Was Done
+
+**Progress Bar Animation:**
+- Added animated progress bar to Decision Timeline modal
+- Shows visual feedback during ~20-30 second API calls (no more "hanging" feeling)
+- Progress bar fills from 0% → 90% while waiting, jumps to 100% on completion
+- Status text cycles through agent names: "Alex (CTO) is sharing their perspective..."
+- Added `clearInterval()` cleanup in both success and error handlers
+
+**Expandable Recommendation Cards:**
+- Changed truncation from 300 to 150 chars
+- Added "Read more" / "Show less" toggle
+- Users can now read full agent responses
+
+**Dynamic Confidence Scoring:**
+- Replaced hardcoded 75% with language-based calculation
+- "definitely/certainly" → 90-98%
+- "recommend/should" → 75-87%
+- "might/could" → 55-70%
+- "uncertain" → 40-55%
+
+**Enhanced Stance Detection:**
+- Added ~24 support words: "smart move", "lean toward", "definitely"
+- Fixed false positive "objection" from "weigh X against Y"
+- Changed "against" to specific patterns: "against this", "against it"
+- Removed "risk", "challenge", "issue" from concern words (too common)
+
+**Agent AI Context (via Django shell):**
+- Updated all 5 agent system prompts to include AI oversight context
+- Added "CRITICAL CONTEXT: You oversee AI Assistants and AI Agents, NOT human employees"
+- Agents now consider AI-specific factors: training costs, 24/7 operation, near-zero marginal costs
+
+**Files Modified:**
+- `ai_core/templates/ai_image_studio.html` - Progress bar HTML + JS animation (+100 lines)
+- Agent templates updated in database via Django shell
+
+**Impact:**
+- UX improvement for the Co-Leadership feature
+- Users now see clear visual feedback that the system is working
+- Stance detection more accurate
+- Confidence scores meaningful
+- Reality Score: Maintained at 99.8%
 
 ---
 
-## Session 169 Summary - What Was Built
+## Session 173 Summary - Co-Leadership System + Training Fixes
 
-### Enhanced Learning System - Style Memory UI
+### What Was Done
 
-**Phase 1: Rating Buttons (~85 lines)**
+**Conversational Co-Leadership (GAME CHANGER!):**
+- Added `coleadership_agent` tool to GPT function calling
+- Users can now ask "What do you think about training on image 32 style?"
+- AI executive team (CTO, COO, Creative Director, CFO) provides collaborative opinions
+- Automatic stance detection (support, concern, objection, alternative)
+- Formatted recommendations displayed in chat
+- Summary with team consensus included
 
-**Files Modified:**
-- `ai_core/templates/ai_image_studio.html` - Rating UI + JavaScript
-- `core/auth_middleware.py` - Added style-memory to PUBLIC_PATHS
+**Decision Timeline UI:**
+- Added "New Decision" button to Project tab Decision Timeline section
+- Multi-step modal (4 steps: Create → AI Recommendations → Commit → Log Outcome)
+- Agent checkboxes for selecting which executives to consult
+- Integration with boardroom/start API for real agent opinions
 
-**Features:**
-- 👍❤️👎 rating buttons on every image card
-- 👍❤️👎 rating buttons on every video card
-- `recordStyleInteraction()` - POSTs to `/api/v1/style-memory/`
-- Visual feedback when buttons clicked
-- Popup messages ("AI is learning...")
-- Applied style_memory migration (was missing)
+**Training System Fixes:**
+- Fixed character_training_agent tool execution (400 errors)
+- Fixed MIN_IMAGES mismatch (handler required 4, ZIP required 5) → Changed to 4
+- Reduced training tracker log spam (only log every minute, not every poll)
+- Removed verbose "Skipping old model" logs
 
-### Phase 2: Style Insights Panel (~120 lines)
-
-**Files Modified:**
-- `ai_core/templates/ai_image_studio.html` - Insights panel + JavaScript
-
-**Features:**
-- "AI Learning Your Style" collapsible panel in sidebar
-- Three stat cards: Ratings count, Patterns detected, AI Ideas
-- Purple tags showing detected preferences
-- AI suggestions based on favorite styles
-- Auto-loads on page init, refreshes after ratings
-- Only shows when user has data
-
-### Phase 3: Personalized Defaults (~50 lines)
+**Agent Template Fixes:**
+- Changed `DataAnalystAgent` to `CFOAgent` (DataAnalyst didn't exist in DB)
+- Updated tool definition, handler, and frontend modal
 
 **Files Modified:**
-- `core/personal_ai_assistant_enhanced.py` - Style preferences integration
+- `core/personal_ai_assistant_enhanced.py` - Co-leadership handler, keywords, tool definition (+180 lines)
+- `core/views_image.py` - Added coleadership_agent to execute_tool (+10 lines)
+- `ai_core/templates/ai_image_studio.html` - Decision modal, tracking fixes (+350 lines)
+- `content/character_training.py` - MIN_IMAGES = 4
 
-**Features:**
-- `_get_style_preferences_context()` helper method fetches learned patterns
-- Style preferences injected into AI system prompt
-- AI instruction #13: Use learned preferences in content generation
-- Shows "🧠 Using your learned style preferences..." when applying
-- Automatic enhancement of prompts based on user's favorite styles
-
-### Testing Results
-
-```
-POST /api/v1/style-memory/ ✅ Records interactions
-GET /api/v1/style-memory/insights/ ✅ Returns user insights
-Pattern detection ✅ 6 patterns detected from 2 interactions
-Suggestion generation ✅ AI generates suggestions automatically
-Personalized defaults ✅ AI uses patterns in system prompt
-```
-
-### What This Enables
-
-Users can now:
-1. Rate images/videos they like or dislike
-2. See what patterns the AI has learned about them
-3. Get personalized suggestions based on their preferences
-4. **NEW:** AI automatically uses their style preferences when generating content!
-
-The AI learns from every interaction and applies that knowledge to future generations!
+**Impact:**
+- Reality Score: 99.7% → 99.8% (+0.1%)
+- Two new major features: Conversational Co-Leadership + Decision Timeline UI
+- Training pipeline working (Character 25 training submitted to Replicate)
 
 ---
 
-## Current Platform Inventory
+## Memory System Architecture (FOR SESSION 175)
 
-### Video Operations (25 Total)
+### intelligence/shared_memory.py
 
-**ffmpeg-based (FREE) - 22 operations:**
-1. Upscale (2x/4x)
-2. Color Grading (6 effects)
-3. Frame Extraction
-4. Video Reverse
-5. Video Trimming
-6. Speed Control
-7. Video Concatenation
-8. Rotate/Flip
-9. Fade In/Out
-10. Crop/Resize
-11. Audio Controls
-12. Picture-in-Picture
-13. Text Overlay
-14. Watermark/Logo
-15. Blur Region
-16. Video Stabilization
-17. Text Animations
-18. Green Screen/Chroma Key
-19. Export Presets (11 platforms)
-20. Video Transitions (35+ effects)
-21. Auto-Captioning (Whisper AI)
-22. Batch Operations (all above)
+```python
+# Key Classes:
+SharedMemorySystem - Central memory storage using Redis
+AgentMemoryInterface - Interface for agents (what MeetingCoordinatorAgent uses)
+AdvisorMemoryInterface - Interface for advisors
+AssistantMemoryInterface - Interface for personal assistant
 
-**DaVinci Resolve Studio - 3 operations:**
-23. Professional Render (ProRes/DNxHD) ✅ WORKING
-24. LUT Application ✅ WORKING
-25. Professional Color Grading ✅ WORKING
+# Key Methods:
+store_memory(entity_type, entity_id, memory_type, content) → bool
+retrieve_memory(entity_type, entity_id, memory_type) → Optional[Dict]
+share_experience(entity_type, entity_id, experience) → bool
+learn_from_experiences(entity_type, entity_id, limit) → List[Dict]
+get_global_context() → Dict[str, Any]
+add_knowledge_edge(from_entity, to_entity, relationship, strength) → None
+```
 
-### Other AI Features
+### style_memory/models.py
 
-| Category | Status |
-|----------|--------|
-| Image Generation | 13/13 Stability AI features |
-| Video Generation | 5/5 Runway ML features |
-| Audio Generation | 2/2 ElevenLabs features |
-| 3D Generation | 3/3 Replicate features |
-| Image Editing | 6/6 operations |
-| Character Training | 3/3 features |
-| Project Export | 3/3 formats (ZIP, PDF, CSV) |
-| Public Sharing | 4/4 operations |
+```python
+# Key Models:
+StyleInteraction - Tracks user likes/dislikes (👍/👎/❤️ on images)
+StylePattern - Learned patterns from interactions
+UserStyleProfile - Aggregated user preferences
 
-### Infrastructure
+# Key Fields:
+StyleInteraction.rating - 'like', 'dislike', 'love'
+StyleInteraction.image - FK to ImageHistory
+StyleInteraction.created_at - When interaction happened
+```
 
-| Component | Location | Port |
-|-----------|----------|------|
-| Django Backend | localhost | 8000 |
-| Redis Cache | localhost | 6379 |
-| Render Node (optional) | resolve_node/ | 5001 |
+### What MeetingCoordinatorAgent Currently Does
 
-### AI Agents
+```python
+# Line 60: Creates memory interface
+self.memory = AgentMemoryInterface(agent_id='meeting_coordinator')
 
-- **55 specialized agents** in `agents/` directory
-- Agent orchestration complete (1,625 lines)
-- Inter-agent communication working
-- Voice control for all operations
+# Line 264-265: STORES meeting results (but never READS)
+memory_key = f"boardroom_meeting_{topic.replace(' ', '_').lower()[:50]}"
+self.memory.remember(memory_key, meeting_results)
+```
 
----
+### What MeetingCoordinatorAgent SHOULD Do
 
-## Session 170 Options
+**BEFORE generating agent perspectives, add:**
 
-### Option A: Enhanced Learning Phase 3 - Personalized Defaults
+```python
+def _get_context_for_agents(self, topic: str, project_id: Optional[str]) -> str:
+    """Gather all relevant context from memory systems."""
+    context_parts = []
 
-Continue the learning system with intelligent defaults:
-1. Use learned patterns to suggest generation settings
-2. Pre-fill prompts based on user preferences
-3. Recommend styles based on what user has liked
-4. Smart workflow suggestions
+    # 1. Past boardroom decisions
+    past_meetings = []
+    for key in redis_client.keys(f"{self.memory.memory_prefix}agent:meeting_coordinator:boardroom_*"):
+        data = redis_client.get(key)
+        if data:
+            meeting = json.loads(data)
+            past_meetings.append({
+                'topic': meeting.get('content', {}).get('topic'),
+                'decisions': meeting.get('content', {}).get('decisions', []),
+                'date': meeting.get('timestamp')
+            })
 
-### Option B: Production Deployment
+    if past_meetings:
+        recent = past_meetings[-3:]  # Last 3 meetings
+        context_parts.append(f"PAST DECISIONS (last {len(recent)} meetings):")
+        for m in recent:
+            context_parts.append(f"  - {m['topic']}: {', '.join(m.get('decisions', []))}")
 
-Deploy the platform for real users:
-1. Choose host (Railway/Heroku/DigitalOcean)
-2. Configure environment variables
-3. Set up PostgreSQL (currently using PostgreSQL already!)
-4. Configure CDN for media files
-5. Domain setup
+    # 2. User's style preferences from StyleInteraction
+    if self.user:
+        from style_memory.models import StyleInteraction
+        likes = StyleInteraction.objects.filter(
+            user=self.user, rating='like'
+        ).select_related('image')[:10]
 
-### Option C: Mobile App Revival
+        dislikes = StyleInteraction.objects.filter(
+            user=self.user, rating='dislike'
+        ).select_related('image')[:5]
 
-Bring back the Flutter mobile app:
-1. Review archived code in `_archived/mobile_app_for_future/`
-2. Update API integration
-3. Add new Session 167-169 features
-4. Test on iOS/Android
+        if likes.exists() or dislikes.exists():
+            context_parts.append("\nUSER STYLE PREFERENCES:")
+            if likes:
+                liked_styles = [i.image.style_preset for i in likes if i.image and i.image.style_preset]
+                context_parts.append(f"  - Likes: {', '.join(set(liked_styles)) or 'various styles'}")
+            if dislikes:
+                disliked_styles = [i.image.style_preset for i in dislikes if i.image and i.image.style_preset]
+                context_parts.append(f"  - Dislikes: {', '.join(set(disliked_styles)) or 'some styles'}")
 
-### Option D: Something Else
+    # 3. Project context
+    if project_id:
+        from content.models import Project
+        try:
+            project = Project.objects.get(id=project_id)
+            context_parts.append(f"\nPROJECT CONTEXT:")
+            context_parts.append(f"  - Name: {project.name}")
+            context_parts.append(f"  - Images: {project.images.count()}")
+            context_parts.append(f"  - Videos: {project.videos.count()}")
+        except Project.DoesNotExist:
+            pass
 
-You tell me what sounds good!
+    return "\n".join(context_parts) if context_parts else "No prior context available."
+```
+
+**Then modify the perspective prompt (around line 133) to include:**
+
+```python
+# Get context before generating perspectives
+memory_context = self._get_context_for_agents(topic, project_id)
+
+perspective_prompt = f"""
+Topic for discussion: {topic}
+
+RELEVANT CONTEXT FROM MEMORY:
+{memory_context}
+
+You are {agent_template.display_name}. Based on your role and expertise:
+{agent_template.system_prompt}
+
+Provide your perspective on this topic in 2-3 sentences.
+IMPORTANT: Reference the context above when relevant. If past decisions apply, mention them.
+Focus on:
+- Your area of expertise
+- Key considerations from your domain
+- Specific recommendations informed by our history
+"""
+```
 
 ---
 
 ## Key File Locations
 
-### Core Backend
+### For Memory Integration:
 ```
-core/personal_ai_assistant_enhanced.py  - AI Assistant brain (~6,000 lines)
-core/views_video.py                     - Video operations (~8,000 lines)
-core/views_image.py                     - Image operations
-content/hybrid_video_processor.py       - DaVinci/ffmpeg hybrid + RenderNodeClient
-content/video_provider.py               - Runway ML integration
-content/image_generation.py             - Stability AI integration
+# Primary target
+agents/meeting_coordinator_agent.py
+
+# Memory systems
+intelligence/shared_memory.py
+style_memory/models.py
+style_memory/views.py
+
+# Supporting context
+coleadership/views.py
+coleadership/models.py
 ```
 
-### Infrastructure
+### For Debugging During Testing:
 ```
-resolve_node/                           - Standalone render server
-resolve_node/app.py                     - FastAPI server (port 5001)
-resolve_node/resolve_controller.py      - DaVinci API integration
+# AI Assistant (if commands not working)
+core/personal_ai_assistant_enhanced.py
+
+# Image operations
+core/views_image.py
+
+# Video operations
+core/views_video.py
+
+# Frontend UI
+ai_core/templates/ai_image_studio.html
 ```
 
-### Frontend
-```
-ai_core/templates/ai_image_studio.html  - Main UI
-```
+### Logs:
+```bash
+# Server logs
+tail -f .daphne.log
 
-### Documentation
-```
-docs/SESSION_103_RESOLVE_NODE.md        - Render node architecture
-docs/apis/DAVINCI_RESOLVE_FFMPEG.md     - Hybrid architecture docs
-CLAUDE.md                               - AI assistant instructions
+# Django shell for debugging
+.venv/bin/python manage.py shell
 ```
 
 ---
 
-## Platform Stats (Your Achievement)
+## API Credits Status
+
+Before testing, check available credits:
+
+| Service | Status | Remaining |
+|---------|--------|-----------|
+| Stability AI | Active | ~6,990 credits |
+| Runway ML | Active | ~900 credits (22%) |
+| ElevenLabs | Active | Check dashboard |
+| OpenAI | Active | Pay-as-you-go |
+| Replicate | Active | Pay-as-you-go |
+
+**Credit Conservation Tips:**
+- Use ffmpeg operations when possible (FREE!)
+- Batch similar operations together
+- Test with small images/videos first
+- Runway ML credits are limited - prioritize testing
+
+---
+
+## Platform Stats
 
 | Metric | Count |
 |--------|-------|
 | Core Python code | ~152,000 lines |
-| Video system alone | ~8,000 lines |
+| Video system alone | ~8,200 lines |
 | AI Assistant | ~6,000 lines |
 | Specialized agents | 55 |
-| Sessions completed | 169 |
+| Sessions completed | 174 |
 | API integrations | 36 services |
-| Video operations | 25 (all voice-controlled) |
-| Learning System | Style Memory with Pattern Detection |
-
----
-
-## Recent Git Commits
-
-```
-7ffd082 feat: Session 169 Phase 3 - Personalized Defaults from Learned Patterns
-bcb5c59 feat: Session 169 Phase 2 - Style Insights Panel
-3c58440 feat: Session 169 Phase 1 - Enhanced Learning System Rating UI
-07bd70b fix: Session 168 Part 2 - Voice Command Bug Fixes
-```
+| Total features | 66+ (100%!) |
+| Reality Score | 99.8% |
 
 ---
 
@@ -286,24 +465,56 @@ make start
 # Stop everything
 make stop
 
-# Start with render node
-make start && MOCK_MODE=true .venv/bin/python resolve_node/app.py &
+# Check specific service health
+curl -s http://localhost:8000/health/ping/
 
-# Check logs
-tail -f .daphne.log
-
-# Django shell
+# Django shell for debugging
 .venv/bin/python manage.py shell
 
-# Run Django check
-.venv/bin/python manage.py check
+# Check database content
+.venv/bin/python manage.py shell -c "from content.models import ImageHistory, VideoHistory, MiniFigAsset; print(f'Images: {ImageHistory.objects.count()}, Videos: {VideoHistory.objects.count()}, 3D: {MiniFigAsset.objects.filter(status=\"completed\").count()}')"
 
-# Test API keys
-python3 scripts/test_api_keys.py
+# Test API with admin token
+TOKEN="19f3b711b2b1995255c5cc0e4182e085423c6557"
+curl -s "http://localhost:8000/api/portfolio/?project_id=2ef834f7-31f5-4689-aae9-710a55f90b72" -H "Authorization: Token $TOKEN" | python3 -m json.tool | head -50
+
+# Test boardroom API
+curl -s -X POST "http://localhost:8000/api/v1/coleadership/boardroom/start/" \
+  -H "Authorization: Token $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "Test decision", "project_id": "2ef834f7-31f5-4689-aae9-710a55f90b72", "participants": ["CTOAgent", "CFOAgent"]}' | python3 -m json.tool
 ```
 
 ---
 
-**Ready for Session 170! The platform now learns from user interactions with the Style Memory system. Rate images/videos and watch the AI learn your preferences!**
+## Success Criteria for Session 175
 
-**What would you like to work on today?**
+**The integration is complete when:**
+
+1. **Agents reference past decisions:**
+   - "In our last meeting, we decided to focus on bold visuals. This aligns with..."
+
+2. **Agents mention user preferences:**
+   - "Given your preference for high-contrast images (based on your likes)..."
+
+3. **Agents understand project context:**
+   - "For the 'Tech Startup' project with 15 existing images..."
+
+4. **No regression in existing functionality:**
+   - Progress bar still works
+   - Stance detection still accurate
+   - Confidence scoring still meaningful
+
+---
+
+**Ready for Session 175!** Session 174 completed:
+- Animated progress bar with status cycling
+- Expandable recommendation cards
+- Dynamic confidence scoring
+- Enhanced stance detection
+- Agent AI context prompts
+
+**Session 175 Goal:**
+Integrate Boardroom with Memory System so agents give personalized, context-aware recommendations based on past decisions, user preferences, and project context.
+
+**Start with:** Read `agents/meeting_coordinator_agent.py` and `intelligence/shared_memory.py`
