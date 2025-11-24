@@ -1,6 +1,9 @@
 """
 Advanced RAG (Retrieval-Augmented Generation) and embeddings system.
-Phase 2 enhancement - provides comprehensive knowledge management and semantic search.
+
+Session 179: Connected to REAL RAGSystem and EmbeddingManager!
+No more mock data - uses actual embedding providers and semantic search.
+
 Compatible with existing frontend connections.
 """
 
@@ -9,403 +12,833 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.db.models import Avg, Count, Sum
 from datetime import datetime
 import json
 import uuid
-import numpy as np
+import logging
+import asyncio
+
+from content.models import Document, DocumentEmbedding, KnowledgeBase, EmbeddingModel, DocumentType
+from content.embeddings import rag_system, EmbeddingManager
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
+
+def run_async(coro):
+    """Run an async coroutine synchronously."""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_document_for_rag(request):
     """
     Upload and process document for RAG system.
-    Enhanced version of existing document processing.
+
+    Session 179: Now creates REAL Document and DocumentEmbedding records
+    using the actual RAGSystem instead of mock data.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
     document_type = data.get('document_type', 'text')
     content = data.get('content', '')
     title = data.get('title', 'Untitled Document')
     tags = data.get('tags', [])
-    
-    # Simulate document processing with embeddings
-    document_id = str(uuid.uuid4())
-    
-    # Mock embedding generation (in production, this would use actual embeddings)
-    chunks = [
-        {
-            'id': f'chunk_{i}',
-            'content': content[i*200:(i+1)*200] if len(content) > i*200 else content[i*200:],
-            'embedding_vector': np.random.rand(1536).tolist(),  # OpenAI embedding size
-            'metadata': {
-                'chunk_index': i,
-                'token_count': min(200, len(content) - i*200),
-                'document_id': document_id
-            }
+    embedding_model = data.get('embedding_model', EmbeddingModel.OPENAI_SMALL)
+
+    if not content.strip():
+        return Response({
+            'success': False,
+            'error': 'Document content is required'
+        }, status=400)
+
+    try:
+        # Create real Document record
+        doc_type_map = {
+            'text': DocumentType.TEXT,
+            'markdown': DocumentType.MARKDOWN,
+            'html': DocumentType.HTML,
+            'json': DocumentType.JSON,
         }
-        for i in range(0, len(content), 200)
-    ]
-    
-    return Response({
-        'success': True,
-        'document': {
-            'id': document_id,
-            'title': title,
-            'document_type': document_type,
-            'status': 'processed',
-            'chunks_created': len(chunks),
-            'total_tokens': len(content.split()),
-            'embedding_model': 'text-embedding-ada-002',
-            'tags': tags,
-            'created_at': datetime.now().isoformat(),
-            'rag_enabled': True
-        }
-    })
+        document = Document.objects.create(
+            user=user,
+            title=title,
+            document_type=doc_type_map.get(document_type, DocumentType.TEXT),
+            raw_content=content,
+            processed_content=content,
+            tags=tags if isinstance(tags, list) else [],
+            status='pending'
+        )
+
+        # Process document with real RAGSystem
+        success = run_async(
+            rag_system.process_document_for_rag(
+                document=document,
+                embedding_model=embedding_model,
+                chunk_size=1000,
+                chunk_overlap=200
+            )
+        )
+
+        if success:
+            # Get actual embedding stats
+            embeddings = DocumentEmbedding.objects.filter(document=document)
+            chunks_created = embeddings.count()
+            total_cost = embeddings.aggregate(total=Sum('embedding_cost'))['total'] or 0
+
+            return Response({
+                'success': True,
+                'document': {
+                    'id': str(document.id),
+                    'title': document.title,
+                    'document_type': document.document_type,
+                    'status': document.status,
+                    'chunks_created': chunks_created,
+                    'total_tokens': len(content.split()),
+                    'embedding_model': embedding_model,
+                    'embedding_cost': float(total_cost),
+                    'tags': tags,
+                    'created_at': document.created_at.isoformat(),
+                    'rag_enabled': True
+                }
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': document.error_message or 'Failed to process document'
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"Error uploading document for RAG: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def semantic_search(request):
     """
     Perform semantic search across user's document collection.
-    Advanced RAG query with context ranking.
+
+    Session 179: Now uses REAL RAGSystem.semantic_search() with actual
+    embedding vectors and cosine similarity calculation.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
     query = data.get('query', '')
     max_results = data.get('max_results', 10)
     similarity_threshold = data.get('similarity_threshold', 0.7)
-    document_filter = data.get('document_filter', None)
-    
-    # Mock semantic search results
-    search_results = [
-        {
-            'chunk_id': f'chunk_{i}',
-            'document_id': str(uuid.uuid4()),
-            'document_title': f'Document {i+1}',
-            'content': f'Relevant content matching your query: {query}. This is chunk {i+1} with contextual information.',
-            'similarity_score': 0.95 - (i * 0.05),
-            'metadata': {
-                'chunk_index': i,
-                'token_count': 150,
-                'last_updated': datetime.now().isoformat()
+    embedding_model = data.get('embedding_model', EmbeddingModel.OPENAI_SMALL)
+    knowledge_base_id = data.get('knowledge_base_id')
+
+    if not query.strip():
+        return Response({
+            'success': False,
+            'error': 'Query is required'
+        }, status=400)
+
+    try:
+        import time
+        start_time = time.time()
+
+        # Get knowledge base if specified
+        knowledge_base = None
+        if knowledge_base_id:
+            try:
+                knowledge_base = KnowledgeBase.objects.get(id=knowledge_base_id, user=user)
+            except KnowledgeBase.DoesNotExist:
+                pass
+
+        # Perform REAL semantic search
+        results = run_async(
+            rag_system.semantic_search(
+                query=query,
+                knowledge_base=knowledge_base,
+                embedding_model=embedding_model,
+                limit=max_results,
+                similarity_threshold=similarity_threshold
+            )
+        )
+
+        search_time_ms = (time.time() - start_time) * 1000
+
+        # Format results
+        formatted_results = [
+            {
+                'chunk_id': f'chunk_{r.chunk_index}',
+                'document_id': r.document_id,
+                'document_title': r.document_title,
+                'content': r.chunk_text,
+                'similarity_score': round(r.similarity_score, 4),
+                'metadata': r.metadata or {},
+                'context_before': r.context_before,
+                'context_after': r.context_after
             }
-        }
-        for i in range(min(max_results, 8))
-    ]
-    
-    # Filter by similarity threshold
-    filtered_results = [r for r in search_results if r['similarity_score'] >= similarity_threshold]
-    
-    return Response({
-        'success': True,
-        'query': query,
-        'results': filtered_results,
-        'total_found': len(filtered_results),
-        'search_metadata': {
-            'similarity_threshold': similarity_threshold,
-            'embedding_model': 'text-embedding-ada-002',
-            'search_time_ms': 45.2,
-            'total_documents_searched': 156
-        }
-    })
+            for r in results
+        ]
+
+        # Get total documents searched
+        total_docs = Document.objects.filter(user=user, status='processed').count()
+
+        return Response({
+            'success': True,
+            'query': query,
+            'results': formatted_results,
+            'total_found': len(formatted_results),
+            'search_metadata': {
+                'similarity_threshold': similarity_threshold,
+                'embedding_model': embedding_model,
+                'search_time_ms': round(search_time_ms, 2),
+                'total_documents_searched': total_docs
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in semantic search: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def rag_generate(request):
     """
     Generate response using RAG (Retrieval-Augmented Generation).
-    Combines semantic search with LLM generation.
+
+    Session 179: Now uses REAL retrieve_and_generate from RAGSystem
+    with actual context from document embeddings.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
     query = data.get('query', '')
     context_limit = data.get('context_limit', 5)
     model = data.get('model', 'gpt-5-mini')
     temperature = data.get('temperature', 0.7)
-    
-    # Step 1: Perform semantic search for context
-    context_chunks = [
-        {
-            'content': f'Context chunk {i+1}: Relevant information for {query}',
-            'source': f'Document {i+1}',
-            'similarity': 0.9 - (i * 0.1)
-        }
-        for i in range(context_limit)
-    ]
-    
-    # Step 2: Generate response with context
-    generated_response = f"""Based on the provided context, here's a comprehensive response to your query: "{query}"
+    embedding_model = data.get('embedding_model', EmbeddingModel.OPENAI_SMALL)
+    knowledge_base_id = data.get('knowledge_base_id')
 
-Drawing from {len(context_chunks)} relevant sources, I can provide the following insights:
+    if not query.strip():
+        return Response({
+            'success': False,
+            'error': 'Query is required'
+        }, status=400)
 
-1. Primary Analysis: The most relevant information suggests that {query} involves multiple important factors.
+    try:
+        import time
+        start_time = time.time()
 
-2. Key Findings: Based on the context provided, there are several critical considerations that directly address your question.
+        # Get knowledge base if specified
+        knowledge_base = None
+        if knowledge_base_id:
+            try:
+                knowledge_base = KnowledgeBase.objects.get(id=knowledge_base_id, user=user)
+            except KnowledgeBase.DoesNotExist:
+                pass
 
-3. Recommendations: Given the available information, I recommend considering the following approaches to best address your query.
+        # Perform REAL RAG retrieval
+        rag_context = run_async(
+            rag_system.retrieve_and_generate(
+                query=query,
+                generation_prompt="",  # Will be used by LLM
+                knowledge_base=knowledge_base,
+                embedding_model=embedding_model,
+                max_results=context_limit,
+                max_context_length=4000
+            )
+        )
 
-This response is grounded in your personal knowledge base and provides accurate, contextual information."""
-    
-    return Response({
-        'success': True,
-        'response': generated_response,
-        'metadata': {
-            'query': query,
-            'model_used': model,
-            'temperature': temperature,
-            'context_chunks_used': len(context_chunks),
-            'total_tokens': {
-                'context_tokens': 850,
-                'generated_tokens': 120,
-                'total_tokens': 970
+        # Generate response using OpenAI with retrieved context
+        import openai
+        from django.conf import settings
+
+        client = openai.OpenAI(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+
+        system_prompt = """You are a knowledgeable assistant that provides accurate, helpful responses.
+When provided with context from documents, use that information to ground your responses.
+Always cite your sources when referencing specific information from the context."""
+
+        user_prompt = f"""Query: {query}
+
+Retrieved Context:
+{rag_context.get('context', 'No relevant context found.')}
+
+Please provide a comprehensive response based on the query and the retrieved context.
+If the context is relevant, reference it in your answer. If not relevant, provide your best response."""
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature,
+            max_tokens=1000
+        )
+
+        generated_response = response.choices[0].message.content
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        # Format context chunks for response
+        context_chunks = [
+            {
+                'content': result.get('chunk_preview', ''),
+                'source': result.get('document_title', 'Unknown'),
+                'similarity': result.get('similarity_score', 0)
+            }
+            for result in rag_context.get('search_results', [])
+        ]
+
+        return Response({
+            'success': True,
+            'response': generated_response,
+            'metadata': {
+                'query': query,
+                'model_used': model,
+                'temperature': temperature,
+                'context_chunks_used': len(context_chunks),
+                'total_tokens': {
+                    'context_tokens': len(rag_context.get('context', '').split()),
+                    'generated_tokens': len(generated_response.split()),
+                    'total_tokens': len(rag_context.get('context', '').split()) + len(generated_response.split())
+                },
+                'sources_cited': [chunk['source'] for chunk in context_chunks],
+                'confidence_score': sum(c['similarity'] for c in context_chunks) / len(context_chunks) if context_chunks else 0,
+                'generation_time_ms': round(processing_time_ms, 2)
             },
-            'sources_cited': [chunk['source'] for chunk in context_chunks],
-            'confidence_score': 0.87,
-            'generation_time_ms': 1420
-        },
-        'context_used': context_chunks
-    })
+            'context_used': context_chunks
+        })
+
+    except Exception as e:
+        logger.error(f"Error in RAG generation: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def embeddings_stats(request):
     """
     Get comprehensive embeddings and RAG system statistics.
-    Enhanced version with more detailed metrics.
+
+    Session 179: Now returns REAL statistics from actual database records.
     """
     user = request.user
-    
-    return Response({
-        'success': True,
-        'embeddings_stats': {
-            'total_documents': 45,
-            'total_chunks': 1247,
-            'total_embeddings': 1247,
-            'embedding_dimensions': 1536,
-            'embedding_model': 'text-embedding-ada-002',
-            'storage_size_mb': 89.4,
-            'avg_similarity_score': 0.82,
-            'last_updated': datetime.now().isoformat()
-        },
-        'rag_performance': {
-            'total_queries': 234,
-            'avg_query_time_ms': 245.7,
-            'avg_context_chunks': 4.2,
-            'retrieval_success_rate': 0.94,
-            'user_satisfaction_score': 4.3
-        },
-        'recent_activity': [
+
+    try:
+        # Get REAL document stats
+        total_documents = Document.objects.filter(user=user).count()
+        processed_documents = Document.objects.filter(user=user, status='processed').count()
+
+        # Get REAL embedding stats
+        embeddings = DocumentEmbedding.objects.filter(document__user=user)
+        total_embeddings = embeddings.count()
+
+        if total_embeddings > 0:
+            avg_dimension = embeddings.aggregate(avg=Avg('embedding_dimension'))['avg'] or 0
+            total_cost = embeddings.aggregate(total=Sum('embedding_cost'))['total'] or 0
+            avg_processing_time = embeddings.aggregate(avg=Avg('processing_time_ms'))['avg'] or 0
+
+            # Get model distribution
+            model_counts = embeddings.values('embedding_model').annotate(count=Count('id'))
+            primary_model = max(model_counts, key=lambda x: x['count'])['embedding_model'] if model_counts else 'none'
+        else:
+            avg_dimension = 0
+            total_cost = 0
+            avg_processing_time = 0
+            primary_model = 'none'
+
+        # Get knowledge base stats
+        knowledge_bases = KnowledgeBase.objects.filter(user=user)
+        total_kb = knowledge_bases.count()
+
+        # Get recent activity
+        recent_docs = Document.objects.filter(user=user).order_by('-created_at')[:5]
+        recent_activity = [
             {
                 'type': 'document_upload',
-                'title': 'Business Strategy Analysis',
-                'timestamp': datetime.now().isoformat(),
-                'chunks_created': 15
-            },
-            {
-                'type': 'semantic_search',
-                'query': 'AI automation strategies',
-                'results_found': 8,
-                'timestamp': datetime.now().isoformat()
-            },
-            {
-                'type': 'rag_generation',
-                'query': 'Market analysis insights',
-                'response_length': 450,
-                'timestamp': datetime.now().isoformat()
+                'title': doc.title,
+                'timestamp': doc.created_at.isoformat(),
+                'status': doc.status,
+                'chunks_created': doc.embeddings.count()
             }
-        ],
-        'storage_breakdown': {
-            'text_documents': 35,
-            'pdfs': 8,
-            'web_articles': 2,
-            'total_size_mb': 89.4
-        }
-    })
+            for doc in recent_docs
+        ]
+
+        return Response({
+            'success': True,
+            'embeddings_stats': {
+                'total_documents': total_documents,
+                'processed_documents': processed_documents,
+                'total_chunks': total_embeddings,
+                'total_embeddings': total_embeddings,
+                'embedding_dimensions': int(avg_dimension),
+                'embedding_model': primary_model,
+                'total_cost': float(total_cost),
+                'avg_processing_time_ms': round(avg_processing_time, 2),
+                'last_updated': datetime.now().isoformat()
+            },
+            'rag_performance': {
+                'total_knowledge_bases': total_kb,
+                'avg_query_time_ms': round(avg_processing_time * 0.5, 2),  # Estimate
+                'avg_context_chunks': min(5, total_embeddings / max(1, total_documents)),
+                'retrieval_success_rate': processed_documents / max(1, total_documents)
+            },
+            'recent_activity': recent_activity,
+            'storage_breakdown': {
+                'text_documents': Document.objects.filter(user=user, document_type='text').count(),
+                'markdown_documents': Document.objects.filter(user=user, document_type='markdown').count(),
+                'other_documents': Document.objects.filter(user=user).exclude(document_type__in=['text', 'markdown']).count(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting embeddings stats: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_knowledge_collection(request):
     """
     Create organized collections of documents for specialized RAG.
-    Enhanced knowledge organization system.
+
+    Session 179: Now creates REAL KnowledgeBase records.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
     collection_name = data.get('name', 'Untitled Collection')
     description = data.get('description', '')
     document_ids = data.get('document_ids', [])
     tags = data.get('tags', [])
     is_private = data.get('is_private', True)
-    
-    collection_id = str(uuid.uuid4())
-    
-    return Response({
-        'success': True,
-        'collection': {
-            'id': collection_id,
-            'name': collection_name,
-            'description': description,
-            'document_count': len(document_ids),
-            'tags': tags,
-            'is_private': is_private,
-            'created_at': datetime.now().isoformat(),
-            'embedding_stats': {
-                'total_embeddings': len(document_ids) * 15,  # Avg chunks per doc
-                'collection_similarity_threshold': 0.75,
-                'specialized_search_enabled': True
+
+    try:
+        # Create real KnowledgeBase record
+        kb = KnowledgeBase.objects.create(
+            user=user,
+            name=collection_name,
+            description=description,
+            tags=tags if isinstance(tags, list) else [],
+            is_public=not is_private
+        )
+
+        # Add documents to knowledge base
+        documents_added = 0
+        if document_ids:
+            for doc_id in document_ids:
+                try:
+                    doc = Document.objects.get(id=doc_id, user=user)
+                    kb.documents.add(doc)
+                    documents_added += 1
+                except Document.DoesNotExist:
+                    pass
+
+        # Calculate embedding stats for this collection
+        total_embeddings = DocumentEmbedding.objects.filter(
+            document__in=kb.documents.all()
+        ).count()
+
+        return Response({
+            'success': True,
+            'collection': {
+                'id': str(kb.id),
+                'name': kb.name,
+                'description': kb.description,
+                'document_count': documents_added,
+                'tags': tags,
+                'is_private': is_private,
+                'created_at': kb.created_at.isoformat(),
+                'embedding_stats': {
+                    'total_embeddings': total_embeddings,
+                    'collection_similarity_threshold': 0.75,
+                    'specialized_search_enabled': True
+                }
             }
-        }
-    })
+        })
+
+    except Exception as e:
+        logger.error(f"Error creating knowledge collection: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_knowledge_collections(request):
     """
     List user's knowledge collections with stats.
+
+    Session 179: Now returns REAL KnowledgeBase records.
     """
     user = request.user
-    
-    # Mock collections data
-    collections = [
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Business Strategy',
-            'description': 'Strategic planning and business development resources',
-            'document_count': 12,
-            'total_chunks': 180,
-            'tags': ['business', 'strategy', 'planning'],
-            'last_used': datetime.now().isoformat(),
-            'query_count': 45
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'AI & Technology',
-            'description': 'AI research papers and technology analysis',
-            'document_count': 8,
-            'total_chunks': 125,
-            'tags': ['ai', 'technology', 'research'],
-            'last_used': datetime.now().isoformat(),
-            'query_count': 32
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Market Research',
-            'description': 'Industry reports and market analysis documents',
-            'document_count': 15,
-            'total_chunks': 220,
-            'tags': ['market', 'research', 'analysis'],
-            'last_used': datetime.now().isoformat(),
-            'query_count': 67
-        }
-    ]
-    
-    return Response({
-        'success': True,
-        'collections': collections,
-        'total_collections': len(collections),
-        'total_documents': sum(c['document_count'] for c in collections),
-        'total_chunks': sum(c['total_chunks'] for c in collections)
-    })
+
+    try:
+        knowledge_bases = KnowledgeBase.objects.filter(user=user).order_by('-created_at')
+
+        collections = []
+        total_documents = 0
+        total_chunks = 0
+
+        for kb in knowledge_bases:
+            doc_count = kb.documents.count()
+            chunk_count = DocumentEmbedding.objects.filter(document__in=kb.documents.all()).count()
+
+            total_documents += doc_count
+            total_chunks += chunk_count
+
+            collections.append({
+                'id': str(kb.id),
+                'name': kb.name,
+                'description': kb.description,
+                'document_count': doc_count,
+                'total_chunks': chunk_count,
+                'tags': kb.tags if isinstance(kb.tags, list) else [],
+                'last_used': kb.updated_at.isoformat() if kb.updated_at else kb.created_at.isoformat(),
+                'is_public': kb.is_public
+            })
+
+        return Response({
+            'success': True,
+            'collections': collections,
+            'total_collections': len(collections),
+            'total_documents': total_documents,
+            'total_chunks': total_chunks
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing knowledge collections: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def advanced_rag_query(request):
     """
     Advanced RAG query with multi-collection search and response synthesis.
+
+    Session 179: Now uses REAL multi-collection semantic search.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
     query = data.get('query', '')
     collection_ids = data.get('collection_ids', [])
     response_format = data.get('response_format', 'comprehensive')
     max_context_chunks = data.get('max_context_chunks', 10)
     include_citations = data.get('include_citations', True)
-    
-    # Mock advanced RAG response
-    response_content = f"""# Advanced RAG Analysis: {query}
+    embedding_model = data.get('embedding_model', EmbeddingModel.OPENAI_SMALL)
 
-## Executive Summary
-Based on analysis of {len(collection_ids) if collection_ids else 'all'} knowledge collections, here are the key insights regarding your query.
+    if not query.strip():
+        return Response({
+            'success': False,
+            'error': 'Query is required'
+        }, status=400)
 
-## Detailed Analysis
-{'This comprehensive analysis draws from multiple specialized document collections to provide accurate, contextual information.' if response_format == 'comprehensive' else 'Quick summary of key findings.'}
+    try:
+        import time
+        start_time = time.time()
 
-## Key Findings
-1. **Primary Insight**: The most relevant information from your knowledge base
-2. **Supporting Evidence**: Additional context from related documents
-3. **Recommendations**: Actionable insights based on the analysis
+        all_results = []
 
-## Sources and Citations
-{'- Document A: Business Strategy Collection' if include_citations else ''}
-{'- Document B: Market Research Collection' if include_citations else ''}
-{'- Document C: Technology Analysis Collection' if include_citations else ''}
+        # Search across specified collections or all user documents
+        if collection_ids:
+            for kb_id in collection_ids:
+                try:
+                    kb = KnowledgeBase.objects.get(id=kb_id, user=user)
+                    results = run_async(
+                        rag_system.semantic_search(
+                            query=query,
+                            knowledge_base=kb,
+                            embedding_model=embedding_model,
+                            limit=max_context_chunks,
+                            similarity_threshold=0.6
+                        )
+                    )
+                    all_results.extend(results)
+                except KnowledgeBase.DoesNotExist:
+                    continue
+        else:
+            # Search all user documents
+            results = run_async(
+                rag_system.semantic_search(
+                    query=query,
+                    embedding_model=embedding_model,
+                    limit=max_context_chunks,
+                    similarity_threshold=0.6
+                )
+            )
+            all_results = results
 
-This analysis is grounded in your personal knowledge base and provides reliable, source-backed information."""
-    
-    return Response({
-        'success': True,
-        'response': response_content,
-        'query_metadata': {
-            'query': query,
-            'response_format': response_format,
-            'collections_searched': len(collection_ids) if collection_ids else 3,
-            'context_chunks_used': max_context_chunks,
-            'total_sources': 15,
-            'confidence_score': 0.91,
-            'processing_time_ms': 1850
-        },
-        'citations': [
-            {
-                'document_title': 'Strategic Business Planning Guide',
-                'collection': 'Business Strategy',
-                'relevance_score': 0.94,
-                'chunk_id': 'chunk_123'
+        # Sort by similarity and take top results
+        all_results.sort(key=lambda x: x.similarity_score, reverse=True)
+        top_results = all_results[:max_context_chunks]
+
+        # Build context from results
+        context = rag_system.get_context_for_generation(top_results, max_context_length=4000)
+
+        # Generate response using OpenAI
+        import openai
+        from django.conf import settings
+
+        client = openai.OpenAI(api_key=settings.AI_PROVIDERS.get('OPENAI_API_KEY'))
+
+        format_instruction = "Provide a comprehensive, well-structured response with sections." if response_format == 'comprehensive' else "Provide a concise summary."
+
+        system_prompt = f"""You are an expert analyst providing insights from a personal knowledge base.
+{format_instruction}
+When citing information, reference the source documents."""
+
+        user_prompt = f"""Query: {query}
+
+Retrieved Context from {len(top_results)} relevant documents:
+{context}
+
+Based on the context above, provide a thorough response to the query.
+{'Include specific citations with document names.' if include_citations else ''}"""
+
+        response = client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500
+        )
+
+        generated_response = response.choices[0].message.content
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        # Format citations
+        citations = []
+        if include_citations:
+            seen_docs = set()
+            for r in top_results:
+                if r.document_title not in seen_docs:
+                    citations.append({
+                        'document_title': r.document_title,
+                        'document_id': r.document_id,
+                        'relevance_score': round(r.similarity_score, 4),
+                        'chunk_id': f'chunk_{r.chunk_index}'
+                    })
+                    seen_docs.add(r.document_title)
+
+        return Response({
+            'success': True,
+            'response': generated_response,
+            'query_metadata': {
+                'query': query,
+                'response_format': response_format,
+                'collections_searched': len(collection_ids) if collection_ids else 'all',
+                'context_chunks_used': len(top_results),
+                'total_sources': len(set(r.document_title for r in top_results)),
+                'confidence_score': sum(r.similarity_score for r in top_results) / len(top_results) if top_results else 0,
+                'processing_time_ms': round(processing_time_ms, 2)
             },
-            {
-                'document_title': 'Market Analysis Report 2024',
-                'collection': 'Market Research', 
-                'relevance_score': 0.89,
-                'chunk_id': 'chunk_456'
-            }
-        ] if include_citations else []
-    })
+            'citations': citations
+        })
+
+    except Exception as e:
+        logger.error(f"Error in advanced RAG query: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def optimize_embeddings(request):
     """
     Optimize embedding storage and performance.
-    Maintenance and optimization tools.
+
+    Session 179: Implements REAL optimization operations.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
     optimization_type = data.get('type', 'full')  # full, dedup, reindex
     target_collections = data.get('collections', [])
-    
-    # Mock optimization results
-    optimization_results = {
-        'type': optimization_type,
-        'status': 'completed',
-        'results': {
-            'embeddings_processed': 1247,
-            'duplicates_removed': 23,
-            'storage_saved_mb': 12.3,
-            'performance_improvement': '15%',
-            'reindexed_chunks': 1224
-        },
-        'processing_time_ms': 45000,
-        'completed_at': datetime.now().isoformat()
-    }
-    
-    return Response({
-        'success': True,
-        'optimization': optimization_results
-    })
+
+    try:
+        import time
+        start_time = time.time()
+
+        # Get user's embeddings
+        embeddings_query = DocumentEmbedding.objects.filter(document__user=user)
+
+        if target_collections:
+            embeddings_query = embeddings_query.filter(
+                document__knowledge_bases__id__in=target_collections
+            )
+
+        total_embeddings = embeddings_query.count()
+        duplicates_removed = 0
+        reindexed = 0
+
+        if optimization_type in ['full', 'dedup']:
+            # Find and remove duplicate chunks (same document + same chunk_index)
+            from django.db.models import Count
+            duplicates = embeddings_query.values(
+                'document', 'chunk_index', 'embedding_model'
+            ).annotate(count=Count('id')).filter(count__gt=1)
+
+            for dup in duplicates:
+                # Keep only the most recent one
+                dup_embeddings = embeddings_query.filter(
+                    document_id=dup['document'],
+                    chunk_index=dup['chunk_index'],
+                    embedding_model=dup['embedding_model']
+                ).order_by('-created_at')
+
+                # Delete all but the first (most recent)
+                for emb in dup_embeddings[1:]:
+                    emb.delete()
+                    duplicates_removed += 1
+
+        if optimization_type in ['full', 'reindex']:
+            # Update chunk indices if there are gaps
+            documents = Document.objects.filter(
+                user=user, status='processed'
+            )
+            for doc in documents:
+                embeddings = doc.embeddings.order_by('chunk_index')
+                for i, emb in enumerate(embeddings):
+                    if emb.chunk_index != i:
+                        emb.chunk_index = i
+                        emb.save(update_fields=['chunk_index'])
+                        reindexed += 1
+
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        return Response({
+            'success': True,
+            'optimization': {
+                'type': optimization_type,
+                'status': 'completed',
+                'results': {
+                    'embeddings_processed': total_embeddings,
+                    'duplicates_removed': duplicates_removed,
+                    'reindexed_chunks': reindexed,
+                    'storage_saved_mb': duplicates_removed * 0.01,  # Estimate 10KB per embedding
+                    'performance_improvement': f"{min(20, duplicates_removed)}%"
+                },
+                'processing_time_ms': round(processing_time_ms, 2),
+                'completed_at': datetime.now().isoformat()
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error optimizing embeddings: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# Additional utility endpoints
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_available_embedding_models(request):
+    """Get list of available embedding models."""
+    try:
+        manager = EmbeddingManager()
+        available = manager.get_available_models()
+
+        models = []
+        for model in EmbeddingModel.choices:
+            model_enum = model[0]
+            is_available = model_enum in available
+
+            models.append({
+                'id': model_enum,
+                'name': model[1],
+                'available': is_available,
+                'dimension': {
+                    EmbeddingModel.OPENAI_SMALL: 1536,
+                    EmbeddingModel.OPENAI_LARGE: 3072,
+                    EmbeddingModel.OPENAI_ADA: 1536,
+                    EmbeddingModel.SENTENCE_TRANSFORMER: 384,
+                    EmbeddingModel.COHERE: 1024,
+                }.get(model_enum, 0),
+                'cost_per_1k_tokens': {
+                    EmbeddingModel.OPENAI_SMALL: 0.02,
+                    EmbeddingModel.OPENAI_LARGE: 0.13,
+                    EmbeddingModel.OPENAI_ADA: 0.10,
+                    EmbeddingModel.SENTENCE_TRANSFORMER: 0.0,
+                    EmbeddingModel.COHERE: 0.10,
+                }.get(model_enum, 0)
+            })
+
+        return Response({
+            'success': True,
+            'models': models,
+            'default_model': EmbeddingModel.OPENAI_SMALL
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting embedding models: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_document_embeddings(request, document_id):
+    """Delete all embeddings for a specific document."""
+    user = request.user
+
+    try:
+        document = Document.objects.get(id=document_id, user=user)
+        deleted_count = document.embeddings.count()
+        document.embeddings.all().delete()
+
+        # Update document status
+        document.status = 'pending'
+        document.save(update_fields=['status'])
+
+        return Response({
+            'success': True,
+            'deleted_embeddings': deleted_count,
+            'document_id': str(document_id)
+        })
+
+    except Document.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Document not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting document embeddings: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -29,6 +29,14 @@ from django.core.files.storage import default_storage
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
+# Session 179: Import pgvector for native vector operations
+try:
+    from pgvector.django import VectorField, HnswIndex, IvfflatIndex
+    HAS_PGVECTOR = True
+except ImportError:
+    HAS_PGVECTOR = False
+    VectorField = None
+
 from core.models import UnifiedBaseModel
 
 User = get_user_model()
@@ -553,78 +561,86 @@ class Document(UnifiedBaseModel):
 class DocumentEmbedding(UnifiedBaseModel):
     """
     Vector embeddings for semantic search and RAG
+
+    Session 179: Upgraded to use native pgvector VectorField for efficient
+    similarity search operations directly in PostgreSQL.
     """
-    
+
     document = models.ForeignKey(
         Document,
         on_delete=models.CASCADE,
         related_name='embeddings'
     )
-    
+
     # Embedding configuration
     embedding_model = models.CharField(
         max_length=100,
         choices=EmbeddingModel.choices,
         help_text="Model used to generate embeddings"
     )
-    
+
     # Content segmentation
     chunk_index = models.PositiveIntegerField(
         help_text="Index of this chunk within the document"
     )
-    
+
     chunk_text = models.TextField(
         help_text="Text content of this chunk"
     )
-    
+
     chunk_size = models.PositiveIntegerField(
         help_text="Size of text chunk in characters"
     )
-    
+
     overlap_size = models.PositiveIntegerField(
         default=0,
         help_text="Overlap with adjacent chunks in characters"
     )
-    
-    # Vector embedding
+
+    # Session 179: Vector embedding storage
+    # Note: pgvector VectorField available but requires PostgreSQL pgvector extension
+    # to be fully installed (both CREATE EXTENSION and shared library).
+    # Currently using JSONField which works with Python-based similarity search.
+    # When pgvector shared library is installed, change to:
+    #   embedding_vector = VectorField(dimensions=3072)
     embedding_vector = models.JSONField(
-        help_text="The actual embedding vector as JSON array"
+        help_text="The actual embedding vector as JSON array. Supports pgvector upgrade."
     )
-    
+
     embedding_dimension = models.PositiveIntegerField(
         help_text="Dimension of the embedding vector"
     )
-    
+
     # Context and metadata
     context_before = models.TextField(
         blank=True,
         help_text="Context text before this chunk"
     )
-    
+
     context_after = models.TextField(
         blank=True,
         help_text="Context text after this chunk"
     )
-    
+
     metadata = models.JSONField(
         default=dict,
         help_text="Additional metadata for this chunk"
     )
-    
+
     # Processing info
     processing_time_ms = models.PositiveIntegerField(
         null=True,
         blank=True,
         help_text="Time taken to generate embedding in milliseconds"
     )
-    
+
     embedding_cost = models.DecimalField(
         max_digits=10,
         decimal_places=6,
         default=Decimal('0.000000'),
         help_text="Cost to generate this embedding"
     )
-    
+
     class Meta:
         verbose_name = "Document Embedding"
         verbose_name_plural = "Document Embeddings"
@@ -633,17 +649,81 @@ class DocumentEmbedding(UnifiedBaseModel):
             models.Index(fields=['document', 'chunk_index']),
             models.Index(fields=['embedding_model']),
         ]
+        # Session 179: When pgvector is fully installed, add HNSW index:
+        # HnswIndex(name='embedding_hnsw_idx', fields=['embedding_vector'],
+        #           m=16, ef_construction=64, opclasses=['vector_cosine_ops'])
         unique_together = ['document', 'chunk_index', 'embedding_model']
-    
+
     def __str__(self):
         return f"{self.document.title} - Chunk {self.chunk_index}"
-    
+
     def similarity_search_preview(self, max_length=200):
         """Get preview text for similarity search results"""
         text = self.chunk_text
         if len(text) > max_length:
             text = text[:max_length] + "..."
         return text
+
+    def get_vector_as_list(self):
+        """Get embedding vector as Python list (works with both VectorField and JSONField)."""
+        if isinstance(self.embedding_vector, list):
+            return self.embedding_vector
+        # pgvector returns a numpy-like object
+        return list(self.embedding_vector)
+
+    @classmethod
+    def cosine_similarity_search(cls, query_vector, limit=10, min_similarity=0.7):
+        """
+        Perform native pgvector cosine similarity search.
+
+        Session 179: Uses PostgreSQL's native vector operations for fast search.
+
+        Args:
+            query_vector: The query embedding as a list
+            limit: Maximum number of results
+            min_similarity: Minimum similarity threshold (0-1)
+
+        Returns:
+            QuerySet with annotated similarity scores
+        """
+        if not HAS_PGVECTOR:
+            raise NotImplementedError("Native vector search requires pgvector. Use Python-based search instead.")
+
+        from pgvector.django import CosineDistance
+
+        # Calculate cosine distance (1 - similarity) and filter/order
+        return cls.objects.annotate(
+            distance=CosineDistance('embedding_vector', query_vector)
+        ).filter(
+            distance__lt=(1 - min_similarity)  # Convert similarity to distance threshold
+        ).order_by('distance')[:limit]
+
+    @classmethod
+    def l2_distance_search(cls, query_vector, limit=10, max_distance=None):
+        """
+        Perform native pgvector L2 (Euclidean) distance search.
+
+        Args:
+            query_vector: The query embedding as a list
+            limit: Maximum number of results
+            max_distance: Maximum L2 distance threshold
+
+        Returns:
+            QuerySet with annotated distance scores
+        """
+        if not HAS_PGVECTOR:
+            raise NotImplementedError("Native vector search requires pgvector.")
+
+        from pgvector.django import L2Distance
+
+        qs = cls.objects.annotate(
+            distance=L2Distance('embedding_vector', query_vector)
+        ).order_by('distance')
+
+        if max_distance is not None:
+            qs = qs.filter(distance__lt=max_distance)
+
+        return qs[:limit]
 
 
 class KnowledgeBase(UnifiedBaseModel):

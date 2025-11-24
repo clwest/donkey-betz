@@ -1506,7 +1506,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             image_id = arguments['image_id']
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1541,7 +1541,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             image_id = arguments['image_id']  # Already converted by handler
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1583,7 +1583,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             print(f"   Image ID: {image_id}, Count: {count}")
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1622,7 +1622,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             object_description = arguments['object_description']
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1660,7 +1660,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             select_prompt = arguments.get('select_prompt')
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1701,7 +1701,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             refinement_request = arguments['refinement_request']
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1742,7 +1742,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             replace_prompt = arguments.get('replace_prompt', '')  # Optional
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1783,7 +1783,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             creativity = arguments.get('creativity', 0.3)
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Delegate to specialized Image Editing Agent
             from agents.image_editing_agent import ImageEditingAgent
@@ -1825,7 +1825,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             ratio = arguments.get('ratio', '1280:720')
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Video Generation Agent
             from agents.video_generation_agent import VideoGenerationAgent
@@ -2054,8 +2054,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             temperature = float(arguments.get('temperature', 0.5))
             lipsync_model = arguments.get('lipsync_model', 'auto')  # Session 177: Model selection
 
-            # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            # Get current project - Session 179: Fixed to use self.project directly
+            current_project = getattr(self, 'project', None)
             project_id = str(current_project.id) if current_project else arguments.get('project_id')
 
             # Validate inputs
@@ -2223,7 +2223,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             voice = arguments.get('voice', 'Rachel')
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Audio Generation Agent
             from agents.audio_generation_agent import AudioGenerationAgent
@@ -2258,7 +2258,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             voice = arguments.get('voice', 'Rachel')
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Audio Generation Agent
             from agents.audio_generation_agent import AudioGenerationAgent
@@ -2402,7 +2402,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             font_size = arguments.get('font_size', 72)
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128 Part 2: Delegate to specialized Video Editing Agent
             from agents.video_editing_agent import VideoEditingAgent
@@ -2440,7 +2440,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             style = arguments.get('style', 'cinematic_warm')
 
             # Get current project if in session
-            current_project = getattr(getattr(self, 'session', None), 'project', None)
+            current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128 Part 2: Delegate to specialized Video Editing Agent
             from agents.video_editing_agent import VideoEditingAgent
@@ -5659,7 +5659,11 @@ Respond in a helpful, personalized way that:
 
     def _get_style_preferences_context(self) -> str:
         """
-        Session 169 Phase 3: Get user's learned style preferences for personalized generation.
+        Session 169 Phase 3 + Session 179 Enhancement:
+        Get user's learned style preferences for personalized generation.
+
+        Session 179: Now also includes semantic style context from embeddings
+        when available, enabling more sophisticated preference matching.
 
         Returns:
             Formatted string of style preferences, or empty string if no preferences.
@@ -5694,6 +5698,20 @@ Respond in a helpful, personalized way that:
 
                 for ptype, values in pattern_groups.items():
                     lines.append(f"- Preferred {ptype}: {', '.join(values[:3])}")
+
+            # Session 179: Try to add semantic context from embeddings
+            try:
+                from style_memory.embedding_bridge import get_style_context_for_user
+                # Get the current prompt/context for semantic matching
+                current_context = getattr(self, '_current_prompt', '')
+                if current_context:
+                    semantic_context = get_style_context_for_user(self.user, current_context)
+                    if semantic_context:
+                        lines.append("\nSemantic style match:")
+                        lines.append(semantic_context)
+            except Exception as embed_err:
+                # Embeddings not available or not populated - that's fine
+                logger.debug(f"Semantic style context not available: {embed_err}")
 
             return "\n".join(lines)
 

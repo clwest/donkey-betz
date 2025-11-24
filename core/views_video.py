@@ -2386,7 +2386,7 @@ def extract_video_frame(request):
         file_size = os.path.getsize(output_path)
         logger.info(f"✅ Frame extracted: {output_path} ({file_size / 1024:.1f} KB)")
 
-        # Get project if project_id provided
+        # Get project - Session 179: Inherit from source video if not explicitly provided
         project = None
         if project_id:
             from content.models import CreativeProject
@@ -2395,6 +2395,10 @@ def extract_video_frame(request):
                 logger.info(f"🔗 [Session 159] Linking extracted frame to project: {project.name}")
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ [Session 159] Project {project_id} not found")
+        elif video.project:
+            # Session 179: Inherit from source video
+            project = video.project
+            logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create ImageHistory record for the extracted frame
         # Use the correct field names for ImageHistory model
@@ -2622,7 +2626,7 @@ def reverse_video(request):
         file_size = os.path.getsize(output_path)
         logger.info(f"✅ Reversed video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
 
-        # Get project if project_id provided
+        # Get project - Session 179: Inherit from source video if not explicitly provided
         project = None
         if project_id:
             from content.models import CreativeProject
@@ -2631,6 +2635,10 @@ def reverse_video(request):
                 logger.info(f"🔗 [Session 159] Linking reversed video to project: {project.name}")
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ [Session 159] Project {project_id} not found")
+        elif video.project:
+            # Session 179: Inherit from source video
+            project = video.project
+            logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create VideoHistory record for the reversed video
         reversed_video = VideoHistory.objects.create(
@@ -2887,7 +2895,7 @@ def trim_video(request):
         file_size = os.path.getsize(output_path)
         logger.info(f"✅ Trimmed video created: {output_path} ({file_size / 1024 / 1024:.2f} MB)")
 
-        # Get project if project_id provided
+        # Get project - Session 179: Inherit from source video if not explicitly provided
         project = None
         if project_id:
             from content.models import CreativeProject
@@ -2896,6 +2904,10 @@ def trim_video(request):
                 logger.info(f"🔗 [Session 159] Linking trimmed video to project: {project.name}")
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ [Session 159] Project {project_id} not found")
+        elif video.project:
+            # Session 179: Inherit from source video
+            project = video.project
+            logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create VideoHistory record
         trimmed_video = VideoHistory.objects.create(
@@ -3159,7 +3171,7 @@ def change_video_speed(request):
         original_duration = video.duration or 5  # Default to 5 if unknown
         new_duration = original_duration / speed
 
-        # Get project if project_id provided
+        # Get project - Session 179: Inherit from source video if not explicitly provided
         project = None
         if project_id:
             from content.models import CreativeProject
@@ -3168,6 +3180,10 @@ def change_video_speed(request):
                 logger.info(f"🔗 [Session 160] Linking speed video to project: {project.name}")
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ [Session 160] Project {project_id} not found")
+        elif video.project:
+            # Session 179: Inherit from source video
+            project = video.project
+            logger.info(f"🔗 [Session 179] Inheriting project from source video: {project.name}")
 
         # Create VideoHistory record
         speed_video = VideoHistory.objects.create(
