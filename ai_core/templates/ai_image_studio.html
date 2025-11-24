@@ -1,4 +1,4 @@
-<!-- Session 180: Collapsible Decision Timeline - v1732502200 -->
+<!-- Session 180 Part 3: Collapsible Project Sections - v1732506900 -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -19860,13 +19860,16 @@
 
             detailContent.innerHTML = `
                 <!-- Session 146: Project Stats Header -->
+                <!-- Session 180 Part 3: Collapsible -->
                 <div class="mb-4 p-4 rounded" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: 2px solid #a78bfa;">
-                    <h5 class="text-white mb-3">
+                    <h5 class="text-white mb-3" style="cursor: pointer; margin: 0;" onclick="toggleProjectSection('${project.id}', 'stats')">
+                        <span id="section-toggle-stats-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                         <i class="fas fa-chart-bar"></i> Project Stats
                     </h5>
 
+                    <div id="section-content-stats-${project.id}">
                     <!-- Content Stats -->
-                    <div class="row g-3 mb-3">
+                    <div class="row g-3 mb-3 mt-3">
                         <div class="col-4">
                             <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
                                 <div style="font-size: 28px;">📸</div>
@@ -19920,20 +19923,25 @@
                         📅 Created <span id="stats-created-${project.id}">...</span> •
                         Last active <span id="stats-active-${project.id}">...</span>
                     </div>
+                    </div><!-- End section-content-stats -->
                 </div>
 
                 <!-- Session 125: Split View Layout - Project & Assistant Side by Side -->
                 <div class="row">
                     <!-- LEFT: Project Content (60%) -->
                     <div class="col-lg-7">
-                        <!-- Project Info -->
+                        <!-- Project Info - Session 180 Part 3: Collapsible -->
                         <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 style="color: #f59e0b;">Project Information</h5>
-                                <button class="btn btn-sm btn-info" onclick="saveProjectInfo('${project.id}')" id="save-project-btn">
+                            <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'info')">
+                                <h5 style="color: #f59e0b; margin: 0;">
+                                    <span id="section-toggle-info-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                                    📋 Project Information
+                                </h5>
+                                <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); saveProjectInfo('${project.id}')" id="save-project-btn">
                                     💾 Save Changes
                                 </button>
                             </div>
+                    <div id="section-content-info-${project.id}">
                     <table class="table table-dark">
                         <tr>
                             <td style="width: 150px;"><strong>Status:</strong></td>
@@ -19991,42 +19999,52 @@
                             <td>${new Date(project.updated_at).toLocaleString()}</td>
                         </tr>
                     </table>
+                    </div><!-- End section-content-info -->
                 </div>
 
                 <!-- Session 100: Part 9 - Decision Timeline -->
                 <!-- Session 173: Enhanced with Start Decision button -->
+                <!-- Session 180 Part 3: Collapsible -->
                 <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 style="color: #9333ea;">🎯 Decision Timeline</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'decisions')">
+                        <h5 style="color: #9333ea; margin: 0;">
+                            <span id="section-toggle-decisions-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                            🎯 Decision Timeline
+                        </h5>
                         <div>
-                            <button class="btn btn-sm me-2" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;" onclick="showStartDecisionModal('${project.id}')" title="Start a new collaborative decision">
+                            <button class="btn btn-sm me-2" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;" onclick="event.stopPropagation(); showStartDecisionModal('${project.id}')" title="Start a new collaborative decision">
                                 ➕ New Decision
                             </button>
-                            <button class="btn btn-sm" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;" onclick="refreshProjectDecisions('${project.id}')" title="Refresh decisions">
+                            <button class="btn btn-sm" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;" onclick="event.stopPropagation(); refreshProjectDecisions('${project.id}')" title="Refresh decisions">
                                 🔄 Refresh
                             </button>
                         </div>
                     </div>
+                    <div id="section-content-decisions-${project.id}">
                     <div id="project-decisions-${project.id}">
                         <div class="text-center py-4">
                             <div class="spinner-border" style="color: #9333ea;" role="status"></div>
                             <p class="mt-2 text-muted">Loading decision timeline...</p>
                         </div>
                     </div>
+                    </div><!-- End section-content-decisions -->
                 </div>
 
                 <!-- Session 180: Removed Agent Contributions section (data not meaningful yet)
                      TODO: Re-add when execution_time and user_rating are being recorded -->
 
                 <!-- Session 125: Phase 6 - Workflow Templates -->
+                <!-- Session 180 Part 3: Collapsible -->
                 <div class="mb-4">
                     <div class="card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none;">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'workflows')">
                                 <h5 style="color: white; margin: 0;">
+                                    <span id="section-toggle-workflows-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
                                     ⚡ Quick Workflows
                                 </h5>
                             </div>
+                            <div id="section-content-workflows-${project.id}">
                             <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
                                 Execute multi-step workflows with one click! Perfect for common tasks.
                             </p>
@@ -20264,19 +20282,25 @@
                                     </div>
                                 </div>
                             </div>
+                            </div><!-- End section-content-workflows -->
                         </div>
                     </div>
                 </div>
 
                 <!-- Session 63: Project Asset Gallery -->
+                <!-- Session 180 Part 3: Collapsible -->
                 <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 style="color: #f59e0b;">📦 Project Assets</h5>
-                        <button class="btn btn-sm btn-info" onclick="refreshProjectAssets('${project.id}')" title="Refresh asset gallery">
+                    <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'assets')">
+                        <h5 style="color: #f59e0b; margin: 0;">
+                            <span id="section-toggle-assets-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                            📦 Project Assets
+                        </h5>
+                        <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); refreshProjectAssets('${project.id}')" title="Refresh asset gallery">
                             🔄 Refresh
                         </button>
                     </div>
 
+                    <div id="section-content-assets-${project.id}">
                     <!-- Session 147: Search/Filter Controls -->
                     <div class="mb-3 p-3 rounded" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
                         <div class="row g-2">
@@ -20342,6 +20366,7 @@
                             <p class="mt-2 text-muted">Loading assets...</p>
                         </div>
                     </div>
+                    </div><!-- End section-content-assets -->
                 </div>
                     </div>
                     <!-- End LEFT column -->
@@ -23775,6 +23800,44 @@
                     }, 10);
                 }
             }
+        }
+
+        /**
+         * Session 180 Part 3: Toggle collapsible project sections
+         * Used for Project Info, Decision Timeline, Quick Workflows, Project Assets
+         */
+        function toggleProjectSection(projectId, sectionName) {
+            const content = document.getElementById(`section-content-${sectionName}-${projectId}`);
+            const toggle = document.getElementById(`section-toggle-${sectionName}-${projectId}`);
+
+            if (!content || !toggle) {
+                console.warn(`Section not found: ${sectionName} for project ${projectId}`);
+                return;
+            }
+
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                // Expand with animation
+                content.style.display = 'block';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-10px)';
+                toggle.textContent = '▼';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                    content.style.opacity = '1';
+                    content.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                // Collapse
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+
+            // Store preference in localStorage
+            const prefs = JSON.parse(localStorage.getItem('projectSectionPrefs') || '{}');
+            prefs[`${sectionName}-${projectId}`] = !isHidden; // Store collapsed state
+            localStorage.setItem('projectSectionPrefs', JSON.stringify(prefs));
         }
 
         /**
