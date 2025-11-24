@@ -310,8 +310,9 @@ def start_boardroom_meeting(request):
             try:
                 # Validate UUID format
                 project_uuid = uuid_module.UUID(project_id)
+                # Session 173: CreativeProject uses 'id' not 'project_id'
                 project = CreativeProject.objects.get(
-                    project_id=project_uuid,
+                    id=project_uuid,
                     user=request.user
                 )
             except (CreativeProject.DoesNotExist, ValueError, TypeError):
@@ -404,7 +405,7 @@ def start_boardroom_meeting(request):
         return Response({
             'success': True,
             'topic': topic,
-            'project_id': str(project.project_id) if project else None,
+            'project_id': str(project.id) if project else None,
             'participants': meeting_result.get('participants', []),
             'agent_responses': meeting_result.get('agent_responses', {}),
             'summary': meeting_result.get('summary', ''),
@@ -480,7 +481,7 @@ def list_decisions(request):
                 'has_outcome': decision.has_outcome,
                 'status': status,
                 'outcome_attribution': outcome_attribution,
-                'project_id': str(decision.project.project_id) if decision.project else None,
+                'project_id': str(decision.project.id) if decision.project else None,
                 'project_name': decision.project.name if decision.project else None
             }
 
@@ -547,7 +548,7 @@ def get_decision_detail(request, decision_id):
         # Add project info if exists
         if decision.project:
             decision_data['project'] = {
-                'id': str(decision.project.project_id),
+                'id': str(decision.project.id),
                 'name': decision.project.name
             }
 

@@ -1742,7 +1742,8 @@ class ImageHistory(UnifiedBaseModel):
     )
 
     # CreativeDirectorAgent fields (Session 90 - Multi-option generation + learning)
-    seed = models.IntegerField(
+    # Session 172: Changed to BigIntegerField - Stability AI seeds can exceed 2^31
+    seed = models.BigIntegerField(
         null=True,
         blank=True,
         help_text="Random seed used for generation (enables exact reproduction)"
@@ -2257,6 +2258,23 @@ class MiniFigAsset(UnifiedBaseModel):
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+
+    def get_sequential_number(self):
+        """
+        Get sequential number for this 3D model (per user, chronological)
+
+        Session 172: Added for consistency with ImageHistory and VideoHistory
+        Returns 1-based sequential number for easy voice commands
+        Example: "Download 3D model 2" instead of "Download 3D model de49ce16-..."
+        """
+        # Count how many 3D models this user has created BEFORE this one
+        earlier_models = MiniFigAsset.objects.filter(
+            user=self.user,
+            created_at__lt=self.created_at
+        ).count()
+
+        # Sequential number is count + 1 (1-based indexing)
+        return earlier_models + 1
 
     def increment_view_count(self):
         """Increment view counter"""

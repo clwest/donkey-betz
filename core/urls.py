@@ -313,7 +313,10 @@ from core.views_video import (
     davinci_status,
     render_professional,
     apply_lut,
-    color_grade_professional
+    color_grade_professional,
+    # Session 171: ElevenLabs Audio Integration
+    generate_voice_view,
+    add_voiceover_view
 )
 # Session 66 Part 2: DaVinci Resolve video editing
 # Session 72: Added text overlay and color grading endpoints
@@ -937,6 +940,9 @@ urlpatterns = [
     path('api/video/render-professional/', render_professional, name='video-render-professional'),
     path('api/video/apply-lut/', apply_lut, name='video-apply-lut'),
     path('api/video/grade-professional/', color_grade_professional, name='video-grade-professional'),
+    # Session 171: ElevenLabs Audio Integration
+    path('api/tool/generate-voice/', generate_voice_view, name='generate-voice'),
+    path('api/tool/add-voiceover/', add_voiceover_view, name='add-voiceover'),
     # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
     path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),

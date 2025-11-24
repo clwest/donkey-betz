@@ -47,12 +47,17 @@ def capture_interaction(request):
             user = User.objects.first()
     
     # Create style memory entry
+    # Session 172: Accept project_id for project-focused learning
     style_memory = StyleMemory.objects.create(
         user=user,
+        project_id=serializer.validated_data.get('project_id'),  # Project-focused learning
         content_id=serializer.validated_data['content_id'],
         interaction_type=serializer.validated_data['interaction_type'],
         parent_content_id=serializer.validated_data.get('parent_content_id'),
         notes=serializer.validated_data.get('notes', ''),
+        prompt=serializer.validated_data.get('prompt', ''),  # Store prompt for learning
+        model_used=serializer.validated_data.get('model_used', ''),  # Store model for learning
+        parameters=serializer.validated_data.get('parameters', {}),  # Store params
         recipe={
             'style': 'modern',
             'color_scheme': 'vibrant',

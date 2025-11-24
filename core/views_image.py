@@ -3798,8 +3798,14 @@ def unified_gallery(request):
 
             # Convert to unified format
             for model in model_queryset:
+                # Session 172: Prefer local file path over CDN URL (CDN URLs expire)
                 # Build absolute URL for 3D file
-                model_url = model.three_d_file
+                if model.local_glb_path:
+                    # Use local file (never expires)
+                    model_url = f'/media/{model.local_glb_path}'
+                else:
+                    # Fallback to CDN URL (may be expired)
+                    model_url = model.three_d_file or ''
                 preview_url = model.preview_image_url or ''
 
                 if model_url and not model_url.startswith(('http://', 'https://')):
@@ -7270,6 +7276,36 @@ def execute_tool(request):
                 parameters['project_id'] = str(project.id)
             result = assistant._handle_video_generation_agent(parameters)
 
+        elif tool_name == 'three_d_generation_agent':
+            # Session 172: Route to enhanced personal assistant's 3D generation handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Set project as instance attribute for 3D generation
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_three_d_generation_agent(parameters)
+
+        elif tool_name == 'character_training_agent':
+            # Session 173: Route to enhanced personal assistant's character training handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Set project as instance attribute for training context
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_character_training_agent(parameters)
+
+        elif tool_name == 'coleadership_agent':
+            # Session 173: Route to enhanced personal assistant's co-leadership handler
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            # Set project as instance attribute for decision context
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_coleadership_agent(parameters)
+
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -10561,8 +10597,12 @@ def get_portfolio(request):
                 if project_id and not projects:
                     continue
 
+                # Session 172: Prefer local file path over CDN URL (CDN URLs expire)
                 # Build absolute URL for 3D file
-                model_url = model_obj.three_d_file or ''
+                if model_obj.local_glb_path:
+                    model_url = f'/media/{model_obj.local_glb_path}'
+                else:
+                    model_url = model_obj.three_d_file or ''
                 preview_url = model_obj.preview_image_url or ''
 
                 if model_url and not model_url.startswith(('http://', 'https://')):

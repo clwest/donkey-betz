@@ -334,6 +334,41 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["image_ids", "style_name"]
                 }
+            },
+
+            # Session 173: Co-Leadership Agent (Conversational AI-Human collaboration)
+            {
+                "type": "function",
+                "name": "coleadership_agent",
+                "description": "Get collaborative opinions and recommendations from AI executive team (CTO, COO, Creative Director, CFO, Data Analyst) on creative decisions. Use when user asks 'what do you think', 'should we', 'get opinions', 'is this a good direction', 'thoughts on', 'feedback on', 'worth pursuing', 'ask the team', etc. Can reference specific images/content to get opinions on style, direction, or training decisions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "The decision question or topic to get opinions on. Include any context from the user's message."
+                        },
+                        "image_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of image IDs being discussed (e.g., ['32', '15']). Extract any image numbers mentioned in the user's message."
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Additional context about the decision (e.g., 'considering for style training', 'evaluating creative direction')"
+                        },
+                        "participants": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Which agents to consult. Defaults to all. Options: 'CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'CFOAgent', 'DataAnalystAgent'"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Project ID for context"
+                        }
+                    },
+                    "required": ["question"]
+                }
             }
         ]
 
@@ -376,6 +411,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_video_editing_agent(arguments)
             elif function_name == 'character_training_agent':
                 result = self._handle_character_training_agent(arguments)
+            elif function_name == 'coleadership_agent':
+                result = self._handle_coleadership_agent(arguments)
             else:
                 result = {
                     'success': False,
@@ -1257,6 +1294,137 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return {
                 'success': False,
                 'error': f"Failed to start training: {str(e)}"
+            }
+
+    # Session 173: Co-Leadership Agent Handler
+    def _handle_coleadership_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle co-leadership opinion requests - get collaborative AI agent recommendations.
+
+        This enables conversational co-leadership: users can ask questions like
+        "Should we train on images like #32?" and get opinions from the AI executive team.
+        """
+        question = arguments.get('question', '')
+        image_ids = arguments.get('image_ids', [])
+        context = arguments.get('context', '')
+        # Session 173: Default to 5 executive agents for comprehensive team input
+        participants = arguments.get('participants', ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'CFOAgent', 'DataAnalystAgent'])
+        project_id = arguments.get('project_id') or getattr(getattr(self, 'project', None), 'id', None)
+
+        logger.info(f"🎯 Co-Leadership Agent: Getting opinions on '{question}'")
+        logger.info(f"   Image IDs: {image_ids}")
+        logger.info(f"   Participants: {participants}")
+
+        try:
+            # Build enriched topic with image context
+            topic = question
+            if image_ids:
+                # Get image details for context
+                from content.models import ImageHistory
+                image_details = []
+                for img_id in image_ids:
+                    try:
+                        # Try sequential number first
+                        seq_num = int(img_id)
+                        images = ImageHistory.objects.filter(user=self.user).order_by('created_at')
+                        if seq_num > 0 and seq_num <= images.count():
+                            img = images[seq_num - 1]
+                            image_details.append(f"Image #{seq_num}: {img.prompt[:100] if img.prompt else 'No prompt'}")
+                    except (ValueError, TypeError):
+                        pass
+
+                if image_details:
+                    topic += f"\n\nReferenced images:\n" + "\n".join(image_details)
+
+            if context:
+                topic += f"\n\nAdditional context: {context}"
+
+            # Call the boardroom API
+            from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+
+            coordinator = MeetingCoordinatorAgent(user=self.user)
+            meeting_result = coordinator.start_meeting(
+                topic=topic,
+                project_id=str(project_id) if project_id else None,
+                participants=participants
+            )
+
+            if meeting_result.get('status') != 'complete':
+                return {
+                    'success': False,
+                    'error': 'Failed to get team opinions',
+                    'details': meeting_result.get('message', 'Unknown error')
+                }
+
+            # Format recommendations conversationally
+            agent_responses = meeting_result.get('agent_responses', {})
+            recommendations = []
+
+            stance_emoji = {
+                'support': '👍',
+                'concern': '⚠️',
+                'objection': '👎',
+                'alternative': '💡',
+                'neutral': '🤔'
+            }
+
+            for agent_name, response_text in agent_responses.items():
+                # Infer stance
+                stance = 'neutral'
+                lower_text = response_text.lower()
+                if any(w in lower_text for w in ['recommend', 'support', 'approve', 'yes', 'definitely', 'great idea']):
+                    stance = 'support'
+                elif any(w in lower_text for w in ['concern', 'risk', 'caution', 'careful', 'consider']):
+                    stance = 'concern'
+                elif any(w in lower_text for w in ['object', 'against', 'reject', 'no', 'not recommend']):
+                    stance = 'objection'
+                elif any(w in lower_text for w in ['alternative', 'instead', 'another option', 'what if']):
+                    stance = 'alternative'
+
+                emoji = stance_emoji.get(stance, '🤔')
+                agent_display = agent_name.replace('Agent', '')
+                recommendations.append({
+                    'agent': agent_display,
+                    'stance': stance,
+                    'emoji': emoji,
+                    'response': response_text
+                })
+
+            # Build conversational response
+            response_parts = [f"**🎯 Team Opinions on: {question}**\n"]
+
+            for rec in recommendations:
+                response_parts.append(f"\n**{rec['emoji']} {rec['agent']}** ({rec['stance']})")
+                response_parts.append(f"{rec['response'][:500]}{'...' if len(rec['response']) > 500 else ''}\n")
+
+            # Add summary
+            support_count = sum(1 for r in recommendations if r['stance'] == 'support')
+            concern_count = sum(1 for r in recommendations if r['stance'] in ['concern', 'objection'])
+
+            if support_count > concern_count:
+                summary = "📊 **Summary:** The team is generally supportive!"
+            elif concern_count > support_count:
+                summary = "📊 **Summary:** There are concerns to address."
+            else:
+                summary = "📊 **Summary:** Mixed opinions - consider all perspectives."
+
+            response_parts.append(f"\n{summary}")
+            response_parts.append("\n\n*Use the Decision Timeline to formally commit your choice and track outcomes.*")
+
+            return {
+                'success': True,
+                'message': '\n'.join(response_parts),
+                'recommendations': recommendations,
+                'summary': meeting_result.get('summary', ''),
+                'question': question,
+                'image_ids': image_ids
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Co-Leadership error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to get team opinions: {str(e)}"
             }
 
     # Session 128: Updated to use Image Editing Agent
@@ -3962,9 +4130,16 @@ Respond in a helpful, personalized way that:
                 'generate voice', 'voiceover', 'text to speech',
                 # 3D & editing
                 'convert to 3d', 'text overlay', 'color grading',
-                # Character training (Session 133)
+                # Character training (Session 133) - Session 173: Added 'flux' keyword
                 'train style', 'train model', 'train lora', 'learn style', 'character training',
-                'create style model', 'learn visual style', 'train project style'
+                'create style model', 'learn visual style', 'train project style',
+                'flux lora', 'flux model', 'train a flux',
+                # Session 173: Co-Leadership / Opinion requests
+                'what do you think', 'what does the team think', 'get opinions', 'get the team',
+                'should we', 'should i', 'opinion on', 'thoughts on', 'feedback on',
+                'creative team', 'technical team', 'cto think', 'coo think',
+                'is this a good', 'worth pursuing', 'good direction', 'right approach',
+                'ask the agents', 'consult the team', 'team input', 'agent opinions'
             ]
             is_operation = any(keyword in message.lower() for keyword in operation_keywords)
 
@@ -4010,7 +4185,8 @@ Respond in a helpful, personalized way that:
 
                     # Session 155 Fix: Return tool_calls to frontend for execution
                     # DON'T execute in backend - let frontend handle it for proper UX
-                    response = ai_result.get('response', '')
+                    # Session 173 FIX: LLM enforcer returns 'content' not 'response'
+                    response = ai_result.get('content', '') or ai_result.get('response', '')
                     logger.info(f"✅ Returning {len(ai_result['tool_calls'])} tool_calls to frontend for execution")
 
                     # Return dict with both response and tool_calls
@@ -4020,7 +4196,8 @@ Respond in a helpful, personalized way that:
                     }
                 else:
                     # No tool calls, just return the text response
-                    response = ai_result['response']
+                    # Session 173 FIX: LLM enforcer returns 'content' not 'response'
+                    response = ai_result.get('content', '') or ai_result.get('response', '')
                     logger.info(f"✅ Generated REAL AI response for {self.user.username}")
                     return response
             else:
