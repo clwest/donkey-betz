@@ -19955,10 +19955,10 @@
                                 </select>
                             </td>
                         </tr>
-                        <tr>
+                        ${project.total_workflows > 0 ? `<tr>
                             <td><strong>Progress:</strong></td>
                             <td>${project.progress_percentage}% (${project.completed_workflows}/${project.total_workflows} workflows)</td>
-                        </tr>
+                        </tr>` : ''}
                         <tr>
                             <td><strong>Goal:</strong></td>
                             <td>
@@ -19978,6 +19978,13 @@
                             </td>
                         </tr>
                         <tr>
+                            <td><strong>Colors:</strong></td>
+                            <td>
+                                <input type="text" id="project-colors-${project.id}" class="form-control form-control-sm bg-dark text-light" value="${project.colors || ''}" placeholder="e.g., navy blue, gold, white" style="width: 300px; display: inline-block;">
+                                <small class="text-muted ms-2">AI will use these colors when generating content</small>
+                            </td>
+                        </tr>
+                        <tr>
                             <td><strong>Tags:</strong></td>
                             <td>
                                 <div id="project-tags-${project.id}" class="d-inline-block">
@@ -19988,7 +19995,10 @@
                         </tr>
                         <tr>
                             <td><strong>Deadline:</strong></td>
-                            <td>${deadline} ${project.is_overdue ? '<span class="badge bg-danger">OVERDUE</span>' : ''}</td>
+                            <td>
+                                <input type="datetime-local" id="project-deadline-${project.id}" class="form-control form-control-sm bg-dark text-light" value="${project.deadline ? new Date(project.deadline).toISOString().slice(0, 16) : ''}" style="width: 220px; display: inline-block;">
+                                ${project.is_overdue ? '<span class="badge bg-danger ms-2">OVERDUE</span>' : ''}
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>Created:</strong></td>
@@ -20588,6 +20598,9 @@
                 const goal = document.getElementById(`project-goal-${projectId}`).value.trim();
                 const description = document.getElementById(`project-description-${projectId}`).value.trim();
                 const category = document.getElementById(`project-category-${projectId}`).value.trim();
+                const colors = document.getElementById(`project-colors-${projectId}`).value.trim();
+                const deadlineInput = document.getElementById(`project-deadline-${projectId}`).value;
+                const deadline = deadlineInput ? new Date(deadlineInput).toISOString() : null;
 
                 const response = await fetch(`/api/creative-projects/${projectId}/update/`, {
                     method: 'PATCH',
@@ -20599,7 +20612,9 @@
                         status,
                         goal,
                         description,
-                        category
+                        category,
+                        colors,
+                        deadline
                     })
                 });
 
