@@ -380,7 +380,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "talking_character_agent",
-                "description": "⭐ PREFERRED for 'make image talk' requests ⭐ Create complete talking character videos from a still image and text script in ONE STEP. This pipeline combines Text-to-Speech (ElevenLabs) + Image-to-Video (Runway) + Lip Sync (Sync Labs) to bring static characters to life with natural speech and mouth movements. Use when user wants: 'make image X talk and say...', 'create talking video', 'add speech to image', 'animate character with voice', 'talking character', 'AI spokesperson video', etc. This is the ONLY tool that generates speech + animation + lip sync automatically. Perfect for: YouTube explainer videos, marketing content, AI spokesperson videos, social media content. Cost: ~$0.60-1.00 per 10-second video.",
+                "description": "⭐ PREFERRED for 'make image talk' requests ⭐ Create complete talking character videos from a still image and text script in ONE STEP. This pipeline combines Text-to-Speech (ElevenLabs) + Image-to-Video (Runway) + Lip Sync to bring static characters to life with natural speech and mouth movements. NOW SUPPORTS CARTOON/STYLIZED CHARACTERS! Use when user wants: 'make image X talk and say...', 'create talking video', 'add speech to image', 'animate character with voice', 'talking character', 'AI spokesperson video', etc. IMPORTANT: When user says 'using [name] voice' or 'with [name] voice', extract that name as the voice parameter! Available voices: Rachel, Antoni, Bella, Callum, Charlotte, Daniel, Domi, Elli, Emily, George, Matilda, Sam. This is the ONLY tool that generates speech + animation + lip sync automatically. Works great with both photorealistic AND cartoon/Pixar-style characters! Perfect for: YouTube explainer videos, marketing content, AI spokesperson videos, social media content. Cost: ~$0.60-1.00 per 10-second video.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -395,7 +395,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         "voice": {
                             "type": "string",
                             "default": "Rachel",
-                            "description": "ElevenLabs voice name: Rachel (default), Antoni, Bella, Callum, Charlotte, Daniel, Domi, Elli, Emily, George, Matilda, Sam. Rachel = professional female, Antoni = male narrator."
+                            "enum": ["Rachel", "Antoni", "Bella", "Callum", "Charlotte", "Daniel", "Domi", "Elli", "Emily", "George", "Matilda", "Sam"],
+                            "description": "ElevenLabs voice name. MUST extract from user's request if they say 'using [name] voice' or 'with [name] voice'. Rachel=professional female (default), Antoni=male narrator, Daniel=deep male, Emily=calm female, Bella=expressive female, George=warm male."
                         },
                         "duration": {
                             "type": "integer",
@@ -418,6 +419,12 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             "type": "number",
                             "default": 0.5,
                             "description": "Lip sync expression intensity 0-1. 0.5 = natural (recommended), 0.8 = expressive, 0.3 = subtle."
+                        },
+                        "lipsync_model": {
+                            "type": "string",
+                            "enum": ["auto", "latentsync", "sync_labs"],
+                            "default": "auto",
+                            "description": "Which lip sync model to use: 'auto' (cartoon-optimized - RECOMMENDED), 'latentsync' (ByteDance - best for cartoon/stylized/Pixar characters), 'sync_labs' (best for photorealistic humans). Default 'auto' intelligently selects cartoon-optimized model for best results."
                         },
                         "project_id": {
                             "type": "string",
@@ -2045,6 +2052,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             motion_prompt = arguments.get('motion_prompt', 'subtle talking motion, slight head movements')
             sync_mode = arguments.get('sync_mode', 'cut_off')
             temperature = float(arguments.get('temperature', 0.5))
+            lipsync_model = arguments.get('lipsync_model', 'auto')  # Session 177: Model selection
 
             # Get current project if in session
             current_project = getattr(getattr(self, 'session', None), 'project', None)
@@ -2063,6 +2071,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.info(f"   Image ID: {image_id}")
             logger.info(f"   Text: {text[:50]}...")
             logger.info(f"   Voice: {voice}, Duration: {duration}s")
+            logger.info(f"   Lip Sync Model: {lipsync_model}")  # Session 177
 
             # Create pipeline instance
             from content.talking_character_pipeline import get_talking_character_pipeline
@@ -2130,6 +2139,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 return {'success': False, 'error': 'Could not resolve image URL'}
 
             # Start async pipeline (returns task IDs for polling)
+            # Session 177: Pass lipsync_model parameter for cartoon support
             result = pipeline.generate_talking_video_async(
                 image_url=image_url,
                 text=text,
@@ -2138,6 +2148,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 duration=duration,
                 sync_mode=sync_mode,
                 temperature=temperature,
+                lipsync_model=lipsync_model,
                 project_id=project_id
             )
 

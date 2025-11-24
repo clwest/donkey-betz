@@ -774,12 +774,97 @@ class ReplicateProvider:
                 error_message=str(e)
             )
 
-    def check_lip_sync_status(self, prediction_id: str) -> Dict[str, Any]:
+    def lip_sync_latent(
+        self,
+        video_url: str,
+        audio_url: str,
+        bbox_shift: int = 0
+    ) -> LipSyncResult:
         """
-        Check status of a lip sync prediction
+        Generate video with lip-synced speech using ByteDance LatentSync
+
+        OPTIMIZED FOR: Cartoon, stylized, Pixar-style, and non-photorealistic characters!
+
+        LatentSync uses an audio-conditioned latent diffusion model without
+        intermediate motion representation, making it more flexible for
+        stylized and animated content.
 
         Args:
-            prediction_id: The prediction ID from lip_sync()
+            video_url: URL to input video file (.mp4)
+            audio_url: URL to input audio file (.wav, .mp3)
+            bbox_shift: Bounding box shift for face detection (0 = default)
+
+        Returns:
+            LipSyncResult with prediction_id for polling
+
+        Cost: ~$0.05-0.10 per second of output video
+        Model: bytedance/latentsync (January 2025)
+        """
+
+        if not self.available:
+            return LipSyncResult(
+                success=False,
+                error_message=ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
+            )
+
+        if not video_url:
+            return LipSyncResult(
+                success=False,
+                error_message="video_url is required - provide a URL to the input video"
+            )
+
+        if not audio_url:
+            return LipSyncResult(
+                success=False,
+                error_message="audio_url is required - provide a URL to the audio file"
+            )
+
+        try:
+            logger.info(f"🎨 [LATENT SYNC] Starting cartoon-optimized lip sync")
+            logger.info(f"   Video: {video_url[:80]}...")
+            logger.info(f"   Audio: {audio_url[:80]}...")
+            logger.info(f"   Model: ByteDance LatentSync (cartoon-optimized)")
+
+            # Use ByteDance LatentSync model - optimized for stylized content
+            # Model: bytedance/latentsync
+            prediction = self.client.predictions.create(
+                model="bytedance/latentsync",
+                input={
+                    "video": video_url,
+                    "audio": audio_url,
+                    "bbox_shift": bbox_shift
+                }
+            )
+
+            logger.info(f"✅ [LATENT SYNC] Prediction created: {prediction.id}")
+            logger.info(f"   Status: {prediction.status}")
+
+            return LipSyncResult(
+                success=True,
+                prediction_id=prediction.id,
+                status=prediction.status,
+                estimated_time=100  # Typically completes in ~100 seconds
+            )
+
+        except ReplicateError as e:
+            logger.error(f"LatentSync error: {str(e)}")
+            return LipSyncResult(
+                success=False,
+                error_message=f"LatentSync failed: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"LatentSync error: {str(e)}")
+            return LipSyncResult(
+                success=False,
+                error_message=str(e)
+            )
+
+    def check_lip_sync_status(self, prediction_id: str) -> Dict[str, Any]:
+        """
+        Check status of a lip sync prediction (works for both Sync Labs and LatentSync)
+
+        Args:
+            prediction_id: The prediction ID from lip_sync() or lip_sync_latent()
 
         Returns:
             Dict with status, progress, video_url (if complete), and error info
