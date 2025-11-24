@@ -20015,45 +20015,8 @@
                     </div>
                 </div>
 
-                <!-- Session 125: Phase 5 - Agent Contributions -->
-                <div class="mb-4">
-                    <div class="card" style="background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); border: none;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 style="color: white; margin: 0;">
-                                    🤖 Agent Contributions
-                                </h5>
-                                <button class="btn btn-sm btn-light" onclick="loadAgentContributions('${project.id}')" title="Refresh agent data">
-                                    🔄 Refresh
-                                </button>
-                            </div>
-                            <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
-                                See which AI agents helped create this project and what they contributed.
-                            </p>
-
-                            <!-- Stats Summary -->
-                            <div id="agent-stats-${project.id}" class="mb-3">
-                                <div class="text-center py-3">
-                                    <div class="spinner-border spinner-border-sm text-light" role="status"></div>
-                                    <p class="small mt-2 mb-0" style="color: rgba(255,255,255,0.8);">Loading agent data...</p>
-                                </div>
-                            </div>
-
-                            <!-- Agent List -->
-                            <div id="agent-list-${project.id}" class="mb-3"></div>
-
-                            <!-- Timeline Toggle -->
-                            <div class="text-center">
-                                <button class="btn btn-sm btn-light" onclick="toggleAgentTimeline('${project.id}')" id="timeline-toggle-${project.id}">
-                                    📅 Show Timeline
-                                </button>
-                            </div>
-
-                            <!-- Timeline (initially hidden) -->
-                            <div id="agent-timeline-${project.id}" style="display: none;" class="mt-3"></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Session 180: Removed Agent Contributions section (data not meaningful yet)
+                     TODO: Re-add when execution_time and user_rating are being recorded -->
 
                 <!-- Session 125: Phase 6 - Workflow Templates -->
                 <div class="mb-4">
@@ -20470,8 +20433,7 @@
             setTimeout(() => refreshProjectSessions(project.id), 600);
             // Session 100: Auto-load project decisions timeline after rendering
             setTimeout(() => refreshProjectDecisions(project.id), 700);
-            // Session 125: Auto-load agent contributions after rendering
-            setTimeout(() => loadAgentContributions(project.id), 800);
+            // Session 180: Removed agent contributions auto-load (section removed)
             // Session 149: Auto-load project share status
             setTimeout(() => loadProjectShareStatus(project.id), 900);
             // Session 173: Check for active training and resume tracker if needed
@@ -21024,34 +20986,30 @@
         /**
          * Session 125: Render agent stats summary
          */
+        // Session 180: Simplified stats display - removed time (always 0) and N/A rating
         function renderAgentStats(projectId, stats) {
+            // Build contribution type badges
+            const typeBadges = stats.contribution_types ?
+                Object.entries(stats.contribution_types).map(([type, count]) =>
+                    `<span class="badge me-1" style="background: rgba(255,255,255,0.15); font-size: 0.75rem;">${type}: ${count}</span>`
+                ).join('') : '';
+
             const statsHtml = `
-                <div class="row g-2 text-center">
-                    <div class="col-3">
+                <div class="row g-2 text-center mb-2">
+                    <div class="col-6">
                         <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: white;">${stats.total_contributions || 0}</div>
-                            <div class="small" style="color: rgba(255,255,255,0.7);">Contributions</div>
+                            <div style="font-size: 28px; font-weight: 700; color: white;">${stats.total_contributions || 0}</div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">Total Tasks</div>
                         </div>
                     </div>
-                    <div class="col-3">
+                    <div class="col-6">
                         <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: white;">${stats.unique_agents || 0}</div>
-                            <div class="small" style="color: rgba(255,255,255,0.7);">Agents</div>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: white;">${(stats.total_execution_time || 0).toFixed(1)}s</div>
-                            <div class="small" style="color: rgba(255,255,255,0.7);">Time</div>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: white;">${stats.average_rating ? '⭐'.repeat(Math.round(stats.average_rating)) : 'N/A'}</div>
-                            <div class="small" style="color: rgba(255,255,255,0.7);">Rating</div>
+                            <div style="font-size: 28px; font-weight: 700; color: white;">${stats.unique_agents || 0}</div>
+                            <div class="small" style="color: rgba(255,255,255,0.7);">AI Agents</div>
                         </div>
                     </div>
                 </div>
+                ${typeBadges ? `<div class="text-center">${typeBadges}</div>` : ''}
             `;
 
             document.getElementById(`agent-stats-${projectId}`).innerHTML = statsHtml;
@@ -21070,27 +21028,35 @@
                 return;
             }
 
-            const agentsHtml = agents.map(agent => `
-                <div class="mb-2 p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 3px solid #ec4899;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div style="flex: 1;">
-                            <div style="color: white; font-weight: 600; margin-bottom: 4px;">
-                                🤖 ${agent.agent_name || 'Unknown Agent'}
+            // Session 180: Fixed display - show contribution types instead of meaningless percentage sum
+            const agentsHtml = agents.map(agent => {
+                // Format type breakdown as badges
+                const typeBadges = agent.type_breakdown ?
+                    Object.entries(agent.type_breakdown).map(([type, count]) =>
+                        `<span class="badge me-1" style="background: rgba(255,255,255,0.2); font-size: 0.7rem;">${type}: ${count}</span>`
+                    ).join('') : '';
+
+                return `
+                    <div class="mb-2 p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 3px solid #ec4899;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div style="color: white; font-weight: 600; margin-bottom: 4px;">
+                                    🤖 ${agent.agent_name || 'Unknown Agent'}
+                                </div>
+                                <div class="small mb-1" style="color: rgba(255,255,255,0.7);">
+                                    ${agent.contribution_count} contribution${agent.contribution_count !== 1 ? 's' : ''}
+                                    ${agent.avg_rating ? ` • ⭐ ${agent.avg_rating.toFixed(1)}` : ''}
+                                </div>
+                                <div>${typeBadges}</div>
                             </div>
-                            <div class="small" style="color: rgba(255,255,255,0.7);">
-                                ${agent.contribution_count} contribution${agent.contribution_count !== 1 ? 's' : ''} •
-                                ${(agent.avg_execution_time || 0).toFixed(1)}s avg time
-                                ${agent.avg_rating ? ` • ⭐ ${agent.avg_rating.toFixed(1)}` : ''}
+                            <div class="text-end">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #fcd34d;">${agent.contribution_count}</div>
+                                <div class="small" style="color: rgba(255,255,255,0.6);">tasks</div>
                             </div>
-                        </div>
-                        <div class="text-end">
-                            <div class="small" style="color: #fcd34d; font-weight: 600;">${agent.total_percentage || 0}%</div>
-                            <div class="small" style="color: rgba(255,255,255,0.6);">contribution</div>
                         </div>
                     </div>
-                    ${agent.agent_description ? `<div class="small mt-2" style="color: rgba(255,255,255,0.6);">${agent.agent_description}</div>` : ''}
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById(`agent-list-${projectId}`).innerHTML = agentsHtml;
         }

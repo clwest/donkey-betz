@@ -4808,6 +4808,10 @@ Respond in a helpful, personalized way that:
         # Session 126: Store context for tool execution (so tools can access project_id)
         self._current_context = full_context
 
+        # Session 180: Store current prompt for semantic style matching
+        # This enables get_style_context_for_user() to find relevant style preferences
+        self._current_prompt = message
+
         # Session 135: Set project and session as instance attributes for all code paths
         # This ensures GPT function calling can access project context via getattr(self, 'project', None)
         self.project = None
