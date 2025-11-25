@@ -488,3 +488,224 @@ def get_user_minifigs(user: User, status: Optional[str] = None) -> List[MiniFigA
         queryset = queryset.filter(status=status)
 
     return queryset.order_by('-created_at')
+
+
+def repair_mesh_for_print(minifig_id: str) -> Dict:
+    """
+    Repair a 3D mesh to make it 3D-printable.
+
+    Session 182: Mesh repair for 3D printing preparation.
+    Enhanced with aggressive repair techniques for AI-generated models.
+
+    Uses trimesh to:
+    - Fill holes in the mesh
+    - Fix inverted normals
+    - Remove degenerate faces
+    - Make mesh watertight (manifold)
+    - Voxel-based reconstruction for severely broken meshes
+
+    Args:
+        minifig_id: MiniFigAsset UUID
+
+    Returns:
+        Dict with repair results:
+        {
+            'success': bool,
+            'original_file': str,
+            'repaired_file': str,
+            'is_watertight': bool,
+            'vertices': int,
+            'faces': int,
+            'repairs_made': list,
+            'error': str (if failed)
+        }
+    """
+    import os
+    import numpy as np
+    import trimesh
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+
+    try:
+        minifig = MiniFigAsset.objects.get(id=minifig_id)
+    except MiniFigAsset.DoesNotExist:
+        return {'success': False, 'error': f'MiniFigAsset {minifig_id} not found'}
+
+    # Check if we have a local GLB file
+    if not minifig.local_glb_path:
+        return {'success': False, 'error': 'No local GLB file available. File may not have been downloaded yet.'}
+
+    # Get absolute path to input file
+    input_path = os.path.join(settings.MEDIA_ROOT, minifig.local_glb_path)
+
+    if not os.path.exists(input_path):
+        return {'success': False, 'error': f'GLB file not found at {input_path}'}
+
+    logger.info(f"🔧 Starting mesh repair for MiniFigAsset {minifig_id}")
+    logger.info(f"   Input file: {input_path}")
+
+    repairs_made = []
+
+    try:
+        # Load the mesh - try different approaches
+        scene_or_mesh = trimesh.load(input_path)
+
+        # Handle Scene vs Mesh
+        if isinstance(scene_or_mesh, trimesh.Scene):
+            # Combine all meshes in the scene into one
+            if len(scene_or_mesh.geometry) > 0:
+                meshes = list(scene_or_mesh.geometry.values())
+                # Filter to only actual meshes
+                meshes = [m for m in meshes if isinstance(m, trimesh.Trimesh)]
+                if len(meshes) == 0:
+                    return {'success': False, 'error': 'GLB file contains no valid mesh geometry'}
+                elif len(meshes) == 1:
+                    mesh = meshes[0]
+                    repairs_made.append(f"Extracted single mesh from scene")
+                else:
+                    # Concatenate all meshes into one
+                    mesh = trimesh.util.concatenate(meshes)
+                    repairs_made.append(f"Combined {len(meshes)} meshes from scene into one")
+            else:
+                return {'success': False, 'error': 'GLB file contains no mesh geometry'}
+        else:
+            mesh = scene_or_mesh
+
+        # Ensure we have a Trimesh object
+        if not isinstance(mesh, trimesh.Trimesh):
+            return {'success': False, 'error': f'Loaded object is not a mesh: {type(mesh)}'}
+
+        original_vertices = len(mesh.vertices)
+        original_faces = len(mesh.faces)
+        original_watertight = mesh.is_watertight
+
+        logger.info(f"   Original mesh: {original_vertices} vertices, {original_faces} faces, watertight={original_watertight}")
+
+        # PHASE 1: Basic cleanup
+        # 1. Remove degenerate faces (zero-area triangles)
+        mesh.remove_degenerate_faces()
+        if len(mesh.faces) != original_faces:
+            repairs_made.append(f"Removed {original_faces - len(mesh.faces)} degenerate faces")
+
+        # 2. Remove duplicate faces
+        mesh.remove_duplicate_faces()
+
+        # 3. Merge close vertices (within tolerance)
+        mesh.merge_vertices()
+        repairs_made.append("Merged close vertices")
+
+        # 4. Remove unreferenced vertices
+        mesh.remove_unreferenced_vertices()
+
+        # 5. Remove infinite values if any
+        mesh.remove_infinite_values()
+
+        # PHASE 2: Fix normals and orientation
+        # Fix winding order and normals
+        mesh.fix_normals()
+        repairs_made.append("Fixed face normals and winding order")
+
+        # PHASE 3: Fill holes
+        mesh.fill_holes()
+        if mesh.is_watertight:
+            repairs_made.append("Filled holes - mesh is now watertight")
+
+        # PHASE 4: If still not watertight, try voxel reconstruction
+        if not mesh.is_watertight:
+            logger.info("   Mesh still not watertight, attempting voxel reconstruction...")
+            try:
+                # Calculate appropriate voxel pitch based on mesh size
+                bounds = mesh.bounds
+                max_dimension = max(bounds[1] - bounds[0])
+                # Use 256 voxels along the longest dimension for good detail
+                pitch = max_dimension / 256.0
+
+                # Voxelize and convert back to mesh
+                voxel_grid = mesh.voxelized(pitch=pitch)
+                mesh = voxel_grid.marching_cubes
+
+                repairs_made.append(f"Applied voxel reconstruction (pitch={pitch:.4f})")
+
+                # Re-apply basic fixes after voxelization
+                mesh.fix_normals()
+                mesh.fill_holes()
+
+                if mesh.is_watertight:
+                    repairs_made.append("Voxel reconstruction made mesh watertight!")
+            except Exception as voxel_error:
+                logger.warning(f"   Voxel reconstruction failed: {voxel_error}")
+                repairs_made.append(f"Voxel reconstruction skipped: {str(voxel_error)[:50]}")
+
+        # PHASE 5: Final processing
+        mesh = mesh.process(validate=True)
+        repairs_made.append("Final processing complete")
+
+        final_vertices = len(mesh.vertices)
+        final_faces = len(mesh.faces)
+        final_watertight = mesh.is_watertight
+
+        logger.info(f"   Repaired mesh: {final_vertices} vertices, {final_faces} faces, watertight={final_watertight}")
+
+        # Generate output filenames - both GLB and STL
+        glb_filename = f"minifig-{minifig_id}-printready.glb"
+        stl_filename = f"minifig-{minifig_id}-printready.stl"
+        glb_rel_path = f"3d_models/{glb_filename}"
+        stl_rel_path = f"3d_models/{stl_filename}"
+        glb_path = os.path.join(settings.MEDIA_ROOT, glb_rel_path)
+        stl_path = os.path.join(settings.MEDIA_ROOT, stl_rel_path)
+
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(glb_path), exist_ok=True)
+
+        # Export repaired mesh in both formats
+        mesh.export(glb_path, file_type='glb')
+        mesh.export(stl_path, file_type='stl')
+
+        glb_size_kb = os.path.getsize(glb_path) / 1024
+        stl_size_kb = os.path.getsize(stl_path) / 1024
+
+        # Update MiniFigAsset metadata
+        minifig.metadata['print_ready_glb'] = glb_rel_path
+        minifig.metadata['print_ready_stl'] = stl_rel_path
+        minifig.metadata['print_ready_file'] = glb_rel_path  # Keep for backwards compatibility
+        minifig.metadata['print_ready_stats'] = {
+            'is_watertight': final_watertight,
+            'vertices': final_vertices,
+            'faces': final_faces,
+            'repairs_made': repairs_made,
+            'original_watertight': original_watertight,
+            'original_vertices': original_vertices,
+            'original_faces': original_faces
+        }
+        minifig.save(update_fields=['metadata'])
+
+        logger.info(f"✅ Mesh repair complete!")
+        logger.info(f"   GLB file: {glb_path} ({glb_size_kb:.1f} KB)")
+        logger.info(f"   STL file: {stl_path} ({stl_size_kb:.1f} KB)")
+        logger.info(f"   Watertight: {final_watertight}")
+        logger.info(f"   Repairs: {repairs_made}")
+
+        return {
+            'success': True,
+            'original_file': minifig.local_glb_path,
+            'repaired_glb': glb_rel_path,
+            'repaired_stl': stl_rel_path,
+            'repaired_file': glb_rel_path,  # Keep for backwards compatibility
+            'is_watertight': final_watertight,
+            'vertices': final_vertices,
+            'faces': final_faces,
+            'repairs_made': repairs_made,
+            'glb_size_kb': round(glb_size_kb, 1),
+            'stl_size_kb': round(stl_size_kb, 1),
+            'file_size_kb': round(glb_size_kb, 1),  # Keep for backwards compatibility
+            'original_stats': {
+                'watertight': original_watertight,
+                'vertices': original_vertices,
+                'faces': original_faces
+            }
+        }
+
+    except Exception as e:
+        error_msg = f"Mesh repair failed: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
+        return {'success': False, 'error': error_msg}

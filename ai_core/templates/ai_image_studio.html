@@ -10,7 +10,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>✅ VIDEO GALLERY FIXED v3.0 ✅ AI Image Studio</title>
-    <!-- Cache Buster: 2025-11-17-FULLSCREEN-FIX - Project modals now truly fullscreen -->
+    <!-- Cache Buster: 2025-11-25-SESSION182-3D-POLLING-FIX - Fixed data scope in finally block -->
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -6315,6 +6315,142 @@
             return fetch(url, mergedOptions);
         }
 
+        /**
+         * Session 182: GLOBAL Asset Card Renderer
+         * Single source of truth for rendering all asset cards (images, videos, 3D models)
+         * Used by: refreshProjectAssets, filterProjectAssets, MiniFig Gallery, and future views
+         *
+         * @param {Object} asset - The asset object with properties: id, type, status, content_url, thumbnail_url, prompt, sequential_number, is_favorite, view_count, download_count
+         * @param {string} projectId - The project ID (can be null for non-project views)
+         * @param {Object} options - Rendering options: { showBulkSelect: true, showRating: true, cardStyle: 'compact'|'full' }
+         * @returns {string} HTML string for the card
+         */
+        function renderAssetCard(asset, projectId = null, options = {}) {
+            const {
+                showBulkSelect = true,
+                showRating = true,
+                cardStyle = 'compact'  // 'compact' for project view, 'full' for gallery view
+            } = options;
+
+            // Determine asset type label
+            const typeLabel = asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : '3D Model';
+            const typeIcon = asset.type === 'image' ? '📸' : asset.type === 'video' ? '🎬' : '🎨';
+
+            // Build the media preview section
+            let mediaPreview = '';
+            if (asset.type === 'image') {
+                mediaPreview = `
+                    <img src="${asset.thumbnail_url || asset.content_url}"
+                         class="card-img-top"
+                         style="height: 200px; object-fit: cover; cursor: pointer;"
+                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')"
+                         alt="${asset.prompt || 'Generated image'}">
+                `;
+            } else if (asset.type === 'video') {
+                mediaPreview = `
+                    <video class="card-img-top" controls style="height: 200px; object-fit: cover; background: #000;" data-video-url="${asset.content_url}">
+                        <source src="${asset.content_url}" type="video/mp4">
+                        Your browser does not support video playback.
+                    </video>
+                `;
+            } else if (asset.type === '3d_model') {
+                const hasValidUrl = asset.content_url && !asset.content_url.includes('replicate.delivery');
+                const statusText = asset.status === 'pending' || asset.status === 'processing' ? '⏳ Processing...' : (asset.content_url ? '⚠️ Model Expired' : '⏳ Processing...');
+                mediaPreview = `
+                    <div class="card-img-top" style="height: 200px; background: linear-gradient(135deg, #1a103e 0%, #2d1b69 100%); position: relative;" data-model-url="${asset.content_url || ''}">
+                        ${hasValidUrl ? `
+                            <model-viewer
+                                src="${asset.content_url}"
+                                alt="${asset.prompt || '3D Model'}"
+                                auto-rotate
+                                camera-controls
+                                style="width: 100%; height: 100%;"
+                                loading="lazy"
+                                reveal="auto">
+                            </model-viewer>
+                        ` : `
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                <div style="font-size: 48px; margin-bottom: 8px; opacity: 0.6;">🎨</div>
+                                <div style="background: rgba(147, 51, 234, 0.8); color: white; padding: 6px 12px; border-radius: 12px; font-size: 11px;">
+                                    ${statusText}
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            // Build bulk select checkbox
+            const bulkSelectHtml = showBulkSelect && projectId ? `
+                <div style="position: absolute; top: 8px; left: 8px; z-index: 10;">
+                    <input type="checkbox" class="asset-select-checkbox" data-asset-id="${asset.id}" data-asset-type="${asset.type}" data-project-id="${projectId}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #22d3ee;" onclick="event.stopPropagation(); updateBulkSelectState('${projectId}', '${asset.type}')">
+                </div>
+            ` : '';
+
+            // Build action buttons
+            const favoriteFunction = asset.type === 'video' ? 'toggleVideoFavorite' : 'toggleFavorite';
+            const deleteFunction = asset.type === 'image' ? 'deleteImageFromProject' : asset.type === '3d_model' ? 'delete3DModelFromProject' : 'deleteVideoFromProject';
+
+            // 3D Print button only for completed 3D models
+            const printButton = (asset.type === '3d_model' && asset.status === 'completed') ? `
+                <button class="btn btn-action-print" onclick="event.stopPropagation(); prepareForPrint('${asset.id}', '${projectId}')" title="Prepare for 3D Printing (mesh repair)" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                    🖨️
+                </button>
+            ` : '';
+
+            const actionButtons = `
+                <div class="unified-card-actions">
+                    <button class="btn btn-action-favorite ${asset.is_favorite ? 'is-favorite' : ''}" onclick="event.stopPropagation(); ${favoriteFunction}('${asset.id}', this)" title="Favorite">
+                        ${asset.is_favorite ? '⭐' : '☆'}
+                    </button>
+                    <button class="btn btn-action-download" onclick="event.stopPropagation(); downloadImageFromProject('${asset.id}', '${asset.content_url}', ${asset.sequential_number || 'null'}, '${asset.type}')" title="Download">
+                        📥
+                    </button>
+                    ${printButton}
+                    <button class="btn btn-action-delete" onclick="event.stopPropagation(); ${deleteFunction}('${asset.id}', '${projectId}')" title="Delete">
+                        🗑️
+                    </button>
+                </div>
+            `;
+
+            // Build rating buttons
+            const ratingButtons = showRating && projectId ? `
+                <div class="d-flex justify-content-center align-items-center mt-2 rating-buttons" style="gap: 6px; padding: 4px; background: rgba(99, 102, 241, 0.1); border-radius: 6px;">
+                    <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="like" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'like', this, '${projectId}')" title="Like - AI learns this style for this project" style="padding: 3px 8px; background: transparent; border: 1px solid #22c55e; border-radius: 4px; transition: all 0.2s;">
+                        <span style="font-size: 12px;">👍</span>
+                    </button>
+                    <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="love" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'love', this, '${projectId}')" title="Love - your favorite style for this project!" style="padding: 3px 8px; background: transparent; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s;">
+                        <span style="font-size: 12px;">❤️</span>
+                    </button>
+                    <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="dislike" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'dislike', this, '${projectId}')" title="Dislike - AI avoids this style for this project" style="padding: 3px 8px; background: transparent; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s;">
+                        <span style="font-size: 12px;">👎</span>
+                    </button>
+                </div>
+            ` : '';
+
+            // Truncate prompt for display
+            const displayPrompt = asset.prompt && asset.prompt.length > 60 ? asset.prompt.substring(0, 60) + '...' : (asset.prompt || 'No prompt');
+
+            return `
+                <div class="col-md-4 col-lg-3">
+                    <div class="card h-100 unified-gallery-card" style="background: #222; border: 1px solid #444; position: relative;">
+                        ${bulkSelectHtml}
+                        ${mediaPreview}
+                        <div class="card-body p-2">
+                            <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">🆔 ${typeLabel} #${asset.sequential_number || asset.id}</p>
+                            <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">${displayPrompt}</p>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted">${asset.type === '3d_model' ? '3D' : asset.type}</small>
+                                <small class="text-muted">${asset.view_count || 0} 👁️ · ${asset.download_count || 0} 📥</small>
+                            </div>
+                            ${actionButtons}
+                            ${ratingButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         // Update Quality Info
         function updateQualityInfo() {
             const quality = document.getElementById('quality').value;
@@ -8132,6 +8268,133 @@
             }
         }
 
+        // Session 181: Delete 3D model from project
+        async function delete3DModelFromProject(modelId, projectId) {
+            if (!confirm('Are you sure you want to delete this 3D model? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/content/minifigs/${modelId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10002; font-weight: 600;';
+                    toast.textContent = '✅ 3D model deleted successfully';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+
+                    // Refresh the project assets gallery
+                    refreshProjectAssets(projectId);
+                } else {
+                    alert('Failed to delete 3D model: ' + data.error);
+                }
+
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Error deleting 3D model');
+            }
+        }
+
+        // Session 182: Prepare 3D model for printing (mesh repair)
+        async function prepareForPrint(modelId, projectId) {
+            // Show loading toast
+            const loadingToast = document.createElement('div');
+            loadingToast.id = 'print-loading-toast';
+            loadingToast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10002; font-weight: 600;';
+            loadingToast.innerHTML = '🔧 Preparing mesh for 3D printing...<br><small style="opacity: 0.8;">Repairing holes, fixing normals, cleaning up...</small>';
+            document.body.appendChild(loadingToast);
+
+            try {
+                const response = await fetch(`/api/v1/content/minifigs/${modelId}/prepare-for-print/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                // Remove loading toast
+                const existingToast = document.getElementById('print-loading-toast');
+                if (existingToast) existingToast.remove();
+
+                if (data.success) {
+                    // Show success modal with repair details and both download options
+                    const modal = document.createElement('div');
+                    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10003; display: flex; align-items: center; justify-content: center;';
+                    modal.innerHTML = `
+                        <div style="background: #1a1a2e; border: 2px solid #10b981; border-radius: 16px; padding: 32px; max-width: 520px; color: white;">
+                            <h3 style="color: #10b981; margin-bottom: 20px;">🖨️ Ready for 3D Printing!</h3>
+                            <div style="background: rgba(16, 185, 129, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                                <p style="margin: 0 0 10px 0;"><strong>Mesh Status:</strong> ${data.is_watertight ? '✅ Watertight (printable!)' : '⚠️ Not fully watertight'}</p>
+                                <p style="margin: 0 0 10px 0;"><strong>Vertices:</strong> ${data.vertices.toLocaleString()}</p>
+                                <p style="margin: 0 0 10px 0;"><strong>Faces:</strong> ${data.faces.toLocaleString()}</p>
+                            </div>
+                            <div style="background: rgba(99, 102, 241, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                                <p style="margin: 0 0 8px 0; font-weight: 600; color: #818cf8;">Repairs Made:</p>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
+                                    ${data.repairs_made.map(r => `<li>${r}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div style="background: rgba(34, 211, 238, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                                <p style="margin: 0 0 12px 0; font-weight: 600; color: #22d3ee;">📥 Download Options:</p>
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <a href="${data.stl_url}" download style="flex: 1; min-width: 140px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: 600; text-align: center; display: flex; flex-direction: column; align-items: center;">
+                                        <span style="font-size: 24px; margin-bottom: 4px;">📦</span>
+                                        <span>STL File</span>
+                                        <span style="font-size: 11px; opacity: 0.8;">${data.stl_size_kb || '?'} KB</span>
+                                        <span style="font-size: 10px; opacity: 0.7; margin-top: 2px;">Most Compatible</span>
+                                    </a>
+                                    <a href="${data.glb_url}" download style="flex: 1; min-width: 140px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: 600; text-align: center; display: flex; flex-direction: column; align-items: center;">
+                                        <span style="font-size: 24px; margin-bottom: 4px;">🎨</span>
+                                        <span>GLB File</span>
+                                        <span style="font-size: 11px; opacity: 0.8;">${data.glb_size_kb || data.file_size_kb} KB</span>
+                                        <span style="font-size: 10px; opacity: 0.7; margin-top: 2px;">With Colors</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                                <button onclick="this.closest('div').parentNode.remove()" style="background: #374151; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Close</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+                    console.log('✅ Mesh repair complete:', data);
+                } else {
+                    // Show error toast
+                    const errorToast = document.createElement('div');
+                    errorToast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10002; font-weight: 600;';
+                    errorToast.textContent = '❌ ' + (data.error || 'Failed to prepare mesh for printing');
+                    document.body.appendChild(errorToast);
+                    setTimeout(() => errorToast.remove(), 5000);
+                }
+
+            } catch (error) {
+                // Remove loading toast
+                const existingToast = document.getElementById('print-loading-toast');
+                if (existingToast) existingToast.remove();
+
+                console.error('Prepare for print error:', error);
+                const errorToast = document.createElement('div');
+                errorToast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10002; font-weight: 600;';
+                errorToast.textContent = '❌ Error preparing mesh for printing';
+                document.body.appendChild(errorToast);
+                setTimeout(() => errorToast.remove(), 5000);
+            }
+        }
+
         // Session 181: Bulk selection and delete functions
         function toggleSelectAll(projectId, assetType) {
             const typeKey = assetType === '3d_model' ? 'models3d' : assetType + 's';
@@ -8199,7 +8462,7 @@
                     } else if (assetType === 'video') {
                         endpoint = `/api/v1/video/history/${assetId}/`;
                     } else if (assetType === '3d_model') {
-                        endpoint = `/api/3d-models/${assetId}/delete/`;
+                        endpoint = `/api/v1/content/minifigs/${assetId}/delete/`;
                     }
 
                     const response = await fetch(endpoint, {
@@ -20274,12 +20537,12 @@
                                     </div>
                                 </div>
 
-                                <!-- Template 2: Social Media Kit -->
+                                <!-- Template 2: Social Media Kit - Session 182: Branding mode selection -->
                                 <div class="col-md-6">
                                     <div class="p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
                                          onmouseover="this.style.background='rgba(255,255,255,0.15)'"
                                          onmouseout="this.style.background='rgba(255,255,255,0.1)'"
-                                         onclick="executeWorkflow('${project.id}', 'social_media_kit')">
+                                         onclick="showBrandingModeModal('${project.id}')">
                                         <div style="color: white; font-weight: 600; margin-bottom: 8px;">
                                             📱 Social Media Kit
                                         </div>
@@ -21393,10 +21656,163 @@
         }
 
         /**
+         * Session 182: Show branding mode selection before Social Media Kit
+         * Allows user to choose between exact match (image-to-image) or creative variations (LoRA)
+         */
+        async function showBrandingModeModal(projectId) {
+            // Fetch project images for source selection
+            const response = await fetch(`/api/portfolio/?project_id=${projectId}`, {
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            });
+            const data = await response.json();
+            const images = (data.portfolio || []).filter(a => a.type === 'image');
+
+            if (images.length === 0) {
+                showNotification('No images in project. Please create images first.', 'warning');
+                return;
+            }
+
+            // Create modal HTML
+            const modalHtml = `
+                <div class="modal fade" id="brandingModeModal-${projectId}" tabindex="-1" style="z-index: 10001;">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%); color: white; border: 1px solid #6366f1;">
+                            <div class="modal-header border-bottom border-secondary">
+                                <h5 class="modal-title">📱 Social Media Kit - Choose Branding Mode</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3">
+                                    <!-- Exact Match Mode -->
+                                    <div class="col-md-6">
+                                        <div class="branding-mode-card p-3" style="background: rgba(34, 197, 94, 0.1); border: 2px solid #22c55e; border-radius: 12px; cursor: pointer; height: 100%;"
+                                             onclick="selectBrandingMode('${projectId}', 'exact_match')"
+                                             onmouseover="this.style.background='rgba(34, 197, 94, 0.2)'"
+                                             onmouseout="this.style.background='rgba(34, 197, 94, 0.1)'">
+                                            <div style="font-size: 32px; text-align: center; margin-bottom: 12px;">🎯</div>
+                                            <h6 style="color: #22c55e; text-align: center; margin-bottom: 8px;">Exact Match</h6>
+                                            <p class="small text-muted mb-2">Use your selected image as the base for ALL social media formats. Best for consistent logo/mascot branding.</p>
+                                            <ul class="small text-muted mb-0" style="padding-left: 16px;">
+                                                <li>Same visual across all sizes</li>
+                                                <li>Adapts/crops for each format</li>
+                                                <li>Perfect brand consistency</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <!-- Creative Variations Mode -->
+                                    <div class="col-md-6">
+                                        <div class="branding-mode-card p-3" style="background: rgba(168, 85, 247, 0.1); border: 2px solid #a855f7; border-radius: 12px; cursor: pointer; height: 100%;"
+                                             onclick="selectBrandingMode('${projectId}', 'creative_variations')"
+                                             onmouseover="this.style.background='rgba(168, 85, 247, 0.2)'"
+                                             onmouseout="this.style.background='rgba(168, 85, 247, 0.1)'">
+                                            <div style="font-size: 32px; text-align: center; margin-bottom: 12px;">🎨</div>
+                                            <h6 style="color: #a855f7; text-align: center; margin-bottom: 8px;">Creative Variations</h6>
+                                            <p class="small text-muted mb-2">Use your trained LoRA style to generate new creative interpretations for each format.</p>
+                                            <ul class="small text-muted mb-0" style="padding-left: 16px;">
+                                                <li>Fresh designs per format</li>
+                                                <li>Same style/aesthetic</li>
+                                                <li>More creative variety</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Source Image Selection (shown for Exact Match) -->
+                                <div id="sourceImageSelection-${projectId}" style="display: none; margin-top: 20px;">
+                                    <h6 style="color: #22d3ee; margin-bottom: 12px;">Select Source Image:</h6>
+                                    <div class="row g-2" style="max-height: 200px; overflow-y: auto;">
+                                        ${images.map(img => `
+                                            <div class="col-3">
+                                                <img src="${img.thumbnail_url || img.content_url}"
+                                                     class="source-image-option"
+                                                     data-image-id="${img.id}"
+                                                     data-image-url="${img.content_url}"
+                                                     style="width: 100%; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s;"
+                                                     onclick="selectSourceImage('${projectId}', '${img.id}', '${img.content_url}', this)"
+                                                     title="Image #${img.sequential_number || img.id}">
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-top border-secondary">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" id="startBrandingWorkflow-${projectId}" class="btn btn-primary" disabled onclick="startBrandingWorkflow('${projectId}')">
+                                    🚀 Start Social Media Kit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById(`brandingModeModal-${projectId}`);
+            if (existingModal) existingModal.remove();
+
+            // Add modal to body and show it
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById(`brandingModeModal-${projectId}`));
+            modal.show();
+
+            // Store state
+            window.brandingModeState = window.brandingModeState || {};
+            window.brandingModeState[projectId] = { mode: null, sourceImageId: null, sourceImageUrl: null };
+        }
+
+        function selectBrandingMode(projectId, mode) {
+            window.brandingModeState[projectId].mode = mode;
+
+            // Update UI
+            document.querySelectorAll(`#brandingModeModal-${projectId} .branding-mode-card`).forEach(card => {
+                card.style.borderWidth = '2px';
+            });
+
+            const sourceSelection = document.getElementById(`sourceImageSelection-${projectId}`);
+            const startBtn = document.getElementById(`startBrandingWorkflow-${projectId}`);
+
+            if (mode === 'exact_match') {
+                sourceSelection.style.display = 'block';
+                // Only enable if source image is selected
+                startBtn.disabled = !window.brandingModeState[projectId].sourceImageId;
+            } else {
+                sourceSelection.style.display = 'none';
+                startBtn.disabled = false;
+            }
+        }
+
+        function selectSourceImage(projectId, imageId, imageUrl, element) {
+            window.brandingModeState[projectId].sourceImageId = imageId;
+            window.brandingModeState[projectId].sourceImageUrl = imageUrl;
+
+            // Update selection UI
+            document.querySelectorAll(`#brandingModeModal-${projectId} .source-image-option`).forEach(img => {
+                img.style.borderColor = 'transparent';
+            });
+            element.style.borderColor = '#22c55e';
+
+            // Enable start button
+            document.getElementById(`startBrandingWorkflow-${projectId}`).disabled = false;
+        }
+
+        async function startBrandingWorkflow(projectId) {
+            const state = window.brandingModeState[projectId];
+            console.log(`🎨 Starting Social Media Kit in ${state.mode} mode`);
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById(`brandingModeModal-${projectId}`));
+            modal.hide();
+
+            // Execute workflow with mode context
+            executeWorkflow(projectId, 'social_media_kit', state);
+        }
+
+        /**
          * Session 125: Phase 6 - Execute Workflow Template
          * Fixed: Resume project session for full AI context!
+         * Session 182: Added brandingState parameter for mode-aware generation
          */
-        async function executeWorkflow(projectId, workflowType) {
+        async function executeWorkflow(projectId, workflowType, brandingState = null) {
             console.log(`⚡ Executing workflow: ${workflowType} for project: ${projectId}`);
 
             // Show progress UI early
@@ -21601,6 +22017,74 @@
 
                 // Step 3: Define workflow templates
                 // Session 173: If trained model exists, use it for consistency!
+                // Session 182: Social Media Kit now supports branding modes
+
+                // Build social media kit steps based on branding mode
+                let socialMediaKitSteps;
+                let isExactMatchMode = false;  // Session 182: Track if we're in Exact Match mode
+
+                if (brandingState && brandingState.mode === 'exact_match' && brandingState.sourceImageId) {
+                    // Session 182: Exact Match mode - use direct resize tool (no GPT)
+                    isExactMatchMode = true;
+                    const sourceId = brandingState.sourceImageId;
+                    socialMediaKitSteps = [
+                        {
+                            tool: 'resize_image_for_format',
+                            params: {
+                                image_id: sourceId,
+                                target_width: 1200,
+                                target_height: 628,
+                                fit_mode: 'cover',
+                                format_name: 'Social Media Banner',
+                                project_id: projectId
+                            },
+                            status: 'Creating banner (1200x628)...'
+                        },
+                        {
+                            tool: 'resize_image_for_format',
+                            params: {
+                                image_id: sourceId,
+                                target_width: 1080,
+                                target_height: 1080,
+                                fit_mode: 'cover',
+                                format_name: 'Social Media Post',
+                                project_id: projectId
+                            },
+                            status: 'Creating post image (1080x1080)...'
+                        },
+                        {
+                            tool: 'resize_image_for_format',
+                            params: {
+                                image_id: sourceId,
+                                target_width: 400,
+                                target_height: 400,
+                                fit_mode: 'cover',
+                                format_name: 'Profile Avatar',
+                                project_id: projectId
+                            },
+                            status: 'Creating profile image (400x400)...'
+                        }
+                    ];
+                    console.log(`🎯 Social Media Kit: Exact Match mode with source image ${sourceId}`);
+                } else {
+                    // Creative Variations mode: Use LoRA or style context
+                    socialMediaKitSteps = [
+                        {
+                            message: `Create a social media banner (1200x628)${effectiveStyleContext}`,
+                            status: 'Creating banner (creative)...'
+                        },
+                        {
+                            message: `Create 3 social media post images (1080x1080)${effectiveStyleContext}`,
+                            status: 'Creating post images (creative)...'
+                        },
+                        {
+                            message: `Create a profile/avatar image (400x400)${effectiveStyleContext}`,
+                            status: 'Creating profile image (creative)...'
+                        }
+                    ];
+                    console.log(`🎨 Social Media Kit: Creative Variations mode`);
+                }
+
                 const workflows = {
                     logo_package: {
                         name: 'Logo Package',
@@ -21617,20 +22101,7 @@
                     },
                     social_media_kit: {
                         name: 'Social Media Kit',
-                        steps: [
-                            {
-                                message: `Create a social media banner (1200x628)${effectiveStyleContext}`,
-                                status: 'Creating banner...'
-                            },
-                            {
-                                message: `Create 3 social media post images (1080x1080)${effectiveStyleContext}`,
-                                status: 'Creating post images...'
-                            },
-                            {
-                                message: `Create a profile/avatar image (400x400)${effectiveStyleContext}`,
-                                status: 'Creating profile image...'
-                            }
-                        ]
+                        steps: socialMediaKitSteps
                     },
                     video_marketing: {
                         name: 'Video Marketing',
@@ -21667,12 +22138,16 @@
 
                 // Step 4: Execute workflow steps with proper project context
                 // Session 131: Proper flow - Assistant → Agent → Session
-                // Each workflow step routes through GPT-5.1 → Agent Orchestrators → Database
+                // Session 182: Exact Match mode uses direct tool calls (no GPT)
                 const totalSteps = workflow.steps.length;
 
                 // Session 131: Use project-embedded assistant (maintains project context)
                 console.log(`📁 Using project-embedded assistant for: ${projectName} (${projectId})`);
-                console.log(`🎯 Flow: Workflow → Assistant (GPT-5.1) → Agent Orchestrator → Session`);
+                if (isExactMatchMode) {
+                    console.log(`🎯 Flow: Workflow → Direct Tool Execution → Database (Exact Match)`);
+                } else {
+                    console.log(`🎯 Flow: Workflow → Assistant (GPT-5.1) → Agent Orchestrator → Session`);
+                }
 
                 for (let i = 0; i < workflow.steps.length; i++) {
                     const step = workflow.steps[i];
@@ -21684,14 +22159,51 @@
                     document.getElementById(`workflow-progress-bar-${projectId}`).style.width = `${progressPercent}%`;
                     document.getElementById(`workflow-status-${projectId}`).textContent = step.status;
 
-                    console.log(`⚡ Workflow step ${stepNum}/${totalSteps}: ${step.message}`);
+                    // Session 182: Handle both direct tool mode and GPT message mode
+                    if (step.tool) {
+                        // Direct tool execution (Exact Match mode)
+                        console.log(`🔧 Direct tool step ${stepNum}/${totalSteps}: ${step.tool}`, step.params);
 
-                    // Session 131: Send message via project-embedded chat
-                    await sendProjectMessageFromWorkflow(projectId, step.message);
+                        try {
+                            const toolResponse = await fetch('/api/executor/run-tool/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    tool_name: step.tool,
+                                    parameters: step.params,
+                                    project_id: projectId
+                                })
+                            });
 
-                    // Wait for step to complete
-                    // This gives AI time to process and generate content
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                            const toolResult = await toolResponse.json();
+                            if (toolResult.success) {
+                                console.log(`✅ Tool ${step.tool} completed:`, toolResult);
+                                showNotification(`✅ ${step.params.format_name} created!`, 'success');
+                            } else {
+                                console.error(`❌ Tool ${step.tool} failed:`, toolResult.error || toolResult.message);
+                                showNotification(`Step ${stepNum} failed: ${toolResult.error || toolResult.message}`, 'warning');
+                            }
+                        } catch (toolError) {
+                            console.error(`❌ Tool execution error:`, toolError);
+                            showNotification(`Step ${stepNum} error: ${toolError.message}`, 'danger');
+                        }
+
+                        // Short delay between direct tool calls
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    } else {
+                        // GPT message mode (Creative Variations)
+                        console.log(`⚡ Workflow step ${stepNum}/${totalSteps}: ${step.message}`);
+
+                        // Session 131: Send message via project-embedded chat
+                        await sendProjectMessageFromWorkflow(projectId, step.message);
+
+                        // Wait for step to complete
+                        // This gives AI time to process and generate content
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    }
                 }
 
                 // Workflow complete!
@@ -22387,7 +22899,7 @@
                         console.log('🔧 Set projectId on aiAssistant:', projectId);
                         const toolResults = await window.aiAssistant.executeTools(toolCalls);
                         console.log('🔧 Tool execution results:', toolResults);
-                        addProjectChatMessage(projectId, 'assistant', assistantResponse || '✅ Tool execution started!');
+                        addProjectChatMessage(projectId, 'assistant', assistantResponse || '✅ Tool execution completed!');
                         statusDiv.innerHTML = '✅ Tools executed';
                     } else {
                         console.warn('⚠️ window.aiAssistant.executeTools not available');
@@ -23361,81 +23873,8 @@
             const videos = assets.filter(a => a.type === 'video');
             const models3d = assets.filter(a => a.type === '3d_model');
 
-            // Session 172: Consistent card styling matching All Gallery
-            // Session 181: Added checkbox for bulk selection
-            const renderAssetCard = (asset) => `
-                <div class="col-md-4 col-lg-3">
-                    <div class="card h-100 unified-gallery-card" style="background: #222; border: 1px solid #444; position: relative;">
-                        <!-- Session 181: Bulk selection checkbox -->
-                        <div style="position: absolute; top: 8px; left: 8px; z-index: 10;">
-                            <input type="checkbox" class="asset-select-checkbox" data-asset-id="${asset.id}" data-asset-type="${asset.type}" data-project-id="${projectId}" style="width: 20px; height: 20px; cursor: pointer; accent-color: #22d3ee;" onclick="event.stopPropagation(); updateBulkSelectState('${projectId}', '${asset.type}')">
-                        </div>
-                        ${asset.type === 'image' ? `
-                            <img src="${asset.thumbnail_url || asset.content_url}" class="card-img-top" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewAsset(this, '${asset.id}', '${asset.type}')" alt="${asset.prompt || 'Generated image'}">
-                        ` : asset.type === 'video' ? `
-                            <!-- Session 172: Actual video player like Videos tab -->
-                            <video class="card-img-top" controls style="height: 200px; object-fit: cover; background: #000;" data-video-url="${asset.content_url}">
-                                <source src="${asset.content_url}" type="video/mp4">
-                                Your browser does not support video playback.
-                            </video>
-                        ` : asset.type === '3d_model' ? `
-                            <!-- Session 172: Interactive 3D model viewer with fallback -->
-                            <div class="card-img-top" style="height: 200px; background: linear-gradient(135deg, #1a103e 0%, #2d1b69 100%); position: relative;" data-model-url="${asset.content_url || ''}">
-                                ${asset.content_url && !asset.content_url.includes('replicate.delivery') ? `
-                                    <model-viewer
-                                        src="${asset.content_url}"
-                                        alt="${asset.prompt || '3D Model'}"
-                                        auto-rotate
-                                        camera-controls
-                                        style="width: 100%; height: 100%;"
-                                        loading="lazy"
-                                        reveal="auto">
-                                    </model-viewer>
-                                ` : `
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                        <div style="font-size: 48px; margin-bottom: 8px; opacity: 0.6;">🎨</div>
-                                        <div style="background: rgba(147, 51, 234, 0.8); color: white; padding: 6px 12px; border-radius: 12px; font-size: 11px;">
-                                            ${asset.content_url ? '⚠️ Model Expired' : '⏳ Processing...'}
-                                        </div>
-                                    </div>
-                                `}
-                            </div>
-                        ` : ''}
-                        <div class="card-body p-2">
-                            <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">🆔 ${asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : '3D Model'} #${asset.sequential_number || asset.id}</p>
-                            <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">${asset.prompt && asset.prompt.length > 60 ? asset.prompt.substring(0, 60) + '...' : asset.prompt || 'No prompt'}</p>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted">${asset.type === '3d_model' ? '3D' : asset.type}</small>
-                                <small class="text-muted">${asset.view_count || 0} 👁️ · ${asset.download_count || 0} 📥</small>
-                            </div>
-                            <!-- Session 172: Consistent Action Buttons -->
-                            <div class="unified-card-actions">
-                                <button class="btn btn-action-favorite ${asset.is_favorite ? 'is-favorite' : ''}" onclick="event.stopPropagation(); ${asset.type === 'video' ? 'toggleVideoFavorite' : 'toggleFavorite'}('${asset.id}', this)" title="Favorite">
-                                    ${asset.is_favorite ? '⭐' : '☆'}
-                                </button>
-                                <button class="btn btn-action-download" onclick="event.stopPropagation(); downloadImageFromProject('${asset.id}', '${asset.content_url}', ${asset.sequential_number || 'null'}, '${asset.type}')" title="Download">
-                                    📥
-                                </button>
-                                <button class="btn btn-action-delete" onclick="event.stopPropagation(); ${asset.type === 'image' ? 'deleteImageFromProject' : 'deleteVideoFromProject'}('${asset.id}', '${projectId}')" title="Delete">
-                                    🗑️
-                                </button>
-                            </div>
-                            <!-- Session 172: Project-Focused Learning Buttons -->
-                            <div class="d-flex justify-content-center align-items-center mt-2 rating-buttons" style="gap: 6px; padding: 4px; background: rgba(99, 102, 241, 0.1); border-radius: 6px;">
-                                <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="like" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'like', this, '${projectId}')" title="Like - AI learns this style for this project" style="padding: 3px 8px; background: transparent; border: 1px solid #22c55e; border-radius: 4px; transition: all 0.2s;">
-                                    <span style="font-size: 12px;">👍</span>
-                                </button>
-                                <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="love" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'love', this, '${projectId}')" title="Love - your favorite style for this project!" style="padding: 3px 8px; background: transparent; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s;">
-                                    <span style="font-size: 12px;">❤️</span>
-                                </button>
-                                <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="dislike" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'dislike', this, '${projectId}')" title="Dislike - AI avoids this style for this project" style="padding: 3px 8px; background: transparent; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s;">
-                                    <span style="font-size: 12px;">👎</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            // Session 182: Use global renderAssetCard function
+            const renderCard = (asset) => renderAssetCard(asset, projectId);
 
             // Session 180 Part 3: Collapsible asset sections (Images, Videos, 3D Models)
             // Session 181: Added bulk select and delete controls
@@ -23460,7 +23899,7 @@
                         </div>
                     </div>
                     <div id="asset-content-images-${projectId}" class="col-12">
-                        <div class="row g-3 mt-2">${images.map(renderAssetCard).join('')}</div>
+                        <div class="row g-3 mt-2">${images.map(renderCard).join('')}</div>
                     </div>`;
             }
             if (videos.length > 0) {
@@ -23483,7 +23922,7 @@
                         </div>
                     </div>
                     <div id="asset-content-videos-${projectId}" class="col-12">
-                        <div class="row g-3 mt-2">${videos.map(renderAssetCard).join('')}</div>
+                        <div class="row g-3 mt-2">${videos.map(renderCard).join('')}</div>
                     </div>`;
             }
             if (models3d.length > 0) {
@@ -23506,7 +23945,7 @@
                         </div>
                     </div>
                     <div id="asset-content-models3d-${projectId}" class="col-12">
-                        <div class="row g-3 mt-2">${models3d.map(renderAssetCard).join('')}</div>
+                        <div class="row g-3 mt-2">${models3d.map(renderCard).join('')}</div>
                     </div>`;
             }
             container.innerHTML = sectionsHtml;
@@ -23596,142 +24035,102 @@
                     const videos = data.portfolio.filter(a => a.type === 'video');
                     const models3d = data.portfolio.filter(a => a.type === '3d_model');
 
-                    // Session 172: Consistent card styling matching All Gallery
-                    const renderAssetCard = (asset) => `
-                        <div class="col-md-4 col-lg-3">
-                            <div class="card h-100 unified-gallery-card" style="background: #222; border: 1px solid #444;">
-                                ${asset.type === 'image' ? `
-                                    <img src="${asset.thumbnail_url || asset.content_url}"
-                                         class="card-img-top"
-                                         style="height: 200px; object-fit: cover; cursor: pointer;"
-                                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')"
-                                         alt="${asset.prompt || 'Generated image'}">
-                                ` : asset.type === 'video' ? `
-                                    <!-- Session 172: Actual video player like Videos tab -->
-                                    <video class="card-img-top" controls style="height: 200px; object-fit: cover; background: #000;" data-video-url="${asset.content_url}">
-                                        <source src="${asset.content_url}" type="video/mp4">
-                                        Your browser does not support video playback.
-                                    </video>
-                                ` : asset.type === '3d_model' ? `
-                                    <!-- Session 172: Interactive 3D model viewer with fallback -->
-                                    <div class="card-img-top" style="height: 200px; background: linear-gradient(135deg, #1a103e 0%, #2d1b69 100%); position: relative;" data-model-url="${asset.content_url || ''}">
-                                        ${asset.content_url && !asset.content_url.includes('replicate.delivery') ? `
-                                            <model-viewer
-                                                src="${asset.content_url}"
-                                                alt="${asset.prompt || '3D Model'}"
-                                                auto-rotate
-                                                camera-controls
-                                                style="width: 100%; height: 100%;"
-                                                loading="lazy"
-                                                reveal="auto">
-                                            </model-viewer>
-                                        ` : `
-                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                                <div style="font-size: 48px; margin-bottom: 8px; opacity: 0.6;">🎨</div>
-                                                <div style="background: rgba(147, 51, 234, 0.8); color: white; padding: 6px 12px; border-radius: 12px; font-size: 11px;">
-                                                    ${asset.content_url ? '⚠️ Model Expired' : '⏳ Processing...'}
-                                                </div>
-                                            </div>
-                                        `}
-                                    </div>
-                                ` : `
-                                    <div class="card-img-top d-flex align-items-center justify-content-center"
-                                         style="height: 200px; background: #333; cursor: pointer;"
-                                         onclick="viewAsset(this, '${asset.id}', '${asset.type}')">
-                                        <span style="font-size: 48px;">🎵</span>
-                                    </div>
-                                `}
-                                <div class="card-body p-2">
-                                    <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">
-                                        🆔 ${asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : asset.type === '3d_model' ? '3D Model' : 'Audio'} #${asset.sequential_number || asset.id}
-                                    </p>
-                                    <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">
-                                        ${asset.prompt && asset.prompt.length > 60 ? asset.prompt.substring(0, 60) + '...' : asset.prompt || 'No prompt'}
-                                    </p>
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-muted">${asset.type === '3d_model' ? '3D' : asset.type}</small>
-                                        <small class="text-muted">${asset.view_count || 0} 👁️ · ${asset.download_count || 0} 📥</small>
-                                    </div>
-                                    <!-- Session 172: Consistent Action Buttons -->
-                                    <div class="unified-card-actions">
-                                        <button class="btn btn-action-favorite ${asset.is_favorite ? 'is-favorite' : ''}" onclick="event.stopPropagation(); ${asset.type === 'video' ? 'toggleVideoFavorite' : 'toggleFavorite'}('${asset.id}', this)" title="Favorite">
-                                            ${asset.is_favorite ? '⭐' : '☆'}
-                                        </button>
-                                        <button class="btn btn-action-download" onclick="event.stopPropagation(); downloadImageFromProject('${asset.id}', '${asset.content_url}', ${asset.sequential_number || 'null'}, '${asset.type}')" title="Download">
-                                            📥
-                                        </button>
-                                        <button class="btn btn-action-delete" onclick="event.stopPropagation(); ${asset.type === 'image' ? 'deleteImageFromProject' : 'deleteVideoFromProject'}('${asset.id}', '${projectId}')" title="Delete">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                    <!-- Session 172: Project-Focused Learning Buttons -->
-                                    <div class="d-flex justify-content-center align-items-center mt-2 rating-buttons" style="gap: 6px; padding: 4px; background: rgba(99, 102, 241, 0.1); border-radius: 6px;">
-                                        <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="like" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'like', this, '${projectId}')" title="Like - AI learns this style for this project" style="padding: 3px 8px; background: transparent; border: 1px solid #22c55e; border-radius: 4px; transition: all 0.2s;">
-                                            <span style="font-size: 12px;">👍</span>
-                                        </button>
-                                        <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="love" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'love', this, '${projectId}')" title="Love - your favorite style for this project!" style="padding: 3px 8px; background: transparent; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s;">
-                                            <span style="font-size: 12px;">❤️</span>
-                                        </button>
-                                        <button class="btn btn-sm rating-btn" data-content-id="${asset.id}" data-content-type="${asset.type}" data-project-id="${projectId}" data-rating="dislike" onclick="event.stopPropagation(); recordStyleInteraction('${asset.id}', '${asset.type}', 'dislike', this, '${projectId}')" title="Dislike - AI avoids this style for this project" style="padding: 3px 8px; background: transparent; border: 1px solid #ef4444; border-radius: 4px; transition: all 0.2s;">
-                                            <span style="font-size: 12px;">👎</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    // Session 182: Use global renderAssetCard function
+                    const renderCard = (asset) => renderAssetCard(asset, projectId);
 
                     // Session 127 Part 2 (continued): Render three separate sections
                     // Session 180 Part 3: Collapsible asset sections
                     let sectionsHtml = '';
 
-                    // Images Section
+                    // Images Section - Session 181: Added bulk select/delete
                     if (images.length > 0) {
                         sectionsHtml += `
                             <div class="col-12 mt-4">
-                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'images')">
-                                    <span id="asset-toggle-images-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
-                                    📸 Images (${images.length})
-                                </h5>
+                                <div class="d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #22d3ee; padding-bottom: 8px;">
+                                    <h5 style="color: #22d3ee; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'images')">
+                                        <span id="asset-toggle-images-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                                        📸 Images (${images.length})
+                                    </h5>
+                                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                        <label style="color: #22d3ee; font-size: 12px; cursor: pointer; margin: 0;">
+                                            <input type="checkbox" id="select-all-images-${projectId}" onclick="toggleSelectAll('${projectId}', 'image')" style="margin-right: 4px; accent-color: #22d3ee;">
+                                            Select All
+                                        </label>
+                                        <button id="delete-selected-images-${projectId}" class="btn btn-sm btn-outline-danger" onclick="deleteSelectedAssets('${projectId}', 'image')" style="display: none; font-size: 11px; padding: 2px 8px;">
+                                            🗑️ Delete Selected (<span id="selected-count-images-${projectId}">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div id="asset-content-images-${projectId}" class="col-12">
-                                <div class="row g-3 mt-2">${images.map(renderAssetCard).join('')}</div>
+                                <div class="row g-3 mt-2">${images.map(renderCard).join('')}</div>
                             </div>
                         `;
                     }
 
-                    // Videos Section
+                    // Videos Section - Session 181: Added bulk select/delete
                     if (videos.length > 0) {
                         sectionsHtml += `
                             <div class="col-12 mt-4">
-                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'videos')">
-                                    <span id="asset-toggle-videos-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
-                                    🎬 Videos (${videos.length})
-                                </h5>
+                                <div class="d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #22d3ee; padding-bottom: 8px;">
+                                    <h5 style="color: #22d3ee; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'videos')">
+                                        <span id="asset-toggle-videos-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                                        🎬 Videos (${videos.length})
+                                    </h5>
+                                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                        <label style="color: #22d3ee; font-size: 12px; cursor: pointer; margin: 0;">
+                                            <input type="checkbox" id="select-all-videos-${projectId}" onclick="toggleSelectAll('${projectId}', 'video')" style="margin-right: 4px; accent-color: #22d3ee;">
+                                            Select All
+                                        </label>
+                                        <button id="delete-selected-videos-${projectId}" class="btn btn-sm btn-outline-danger" onclick="deleteSelectedAssets('${projectId}', 'video')" style="display: none; font-size: 11px; padding: 2px 8px;">
+                                            🗑️ Delete Selected (<span id="selected-count-videos-${projectId}">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div id="asset-content-videos-${projectId}" class="col-12">
-                                <div class="row g-3 mt-2">${videos.map(renderAssetCard).join('')}</div>
+                                <div class="row g-3 mt-2">${videos.map(renderCard).join('')}</div>
                             </div>
                         `;
                     }
 
-                    // 3D Models Section
+                    // 3D Models Section - Session 181: Added bulk select/delete
                     if (models3d.length > 0) {
                         sectionsHtml += `
                             <div class="col-12 mt-4">
-                                <h5 style="color: #22d3ee; border-bottom: 2px solid #22d3ee; padding-bottom: 8px; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'models3d')">
-                                    <span id="asset-toggle-models3d-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
-                                    🎨 3D Models (${models3d.length})
-                                </h5>
+                                <div class="d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #22d3ee; padding-bottom: 8px;">
+                                    <h5 style="color: #22d3ee; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'models3d')">
+                                        <span id="asset-toggle-models3d-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                                        🎨 3D Models (${models3d.length})
+                                    </h5>
+                                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                        <label style="color: #22d3ee; font-size: 12px; cursor: pointer; margin: 0;">
+                                            <input type="checkbox" id="select-all-models3d-${projectId}" onclick="toggleSelectAll('${projectId}', '3d_model')" style="margin-right: 4px; accent-color: #22d3ee;">
+                                            Select All
+                                        </label>
+                                        <button id="delete-selected-models3d-${projectId}" class="btn btn-sm btn-outline-danger" onclick="deleteSelectedAssets('${projectId}', '3d_model')" style="display: none; font-size: 11px; padding: 2px 8px;">
+                                            🗑️ Delete Selected (<span id="selected-count-models3d-${projectId}">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div id="asset-content-models3d-${projectId}" class="col-12">
-                                <div class="row g-3 mt-2">${models3d.map(renderAssetCard).join('')}</div>
+                                <div class="row g-3 mt-2">${models3d.map(renderCard).join('')}</div>
                             </div>
                         `;
                     }
 
                     container.innerHTML = sectionsHtml;
                     console.log(`✅ Loaded ${data.portfolio.length} assets for project ${projectId} (📸 ${images.length} images, 🎬 ${videos.length} videos, 🎨 ${models3d.length} 3D models)`);
+
+                    // Session 182: Check for pending 3D models and start polling
+                    const pending3DModels = models3d.filter(a =>
+                        a.status === 'pending' || a.status === 'processing'
+                    );
+                    if (pending3DModels.length > 0) {
+                        console.log(`🔄 Found ${pending3DModels.length} pending 3D models - starting auto-poll`);
+                        startPending3DModelPolling(projectId, pending3DModels);
+                    }
                 } else {
                     // No assets yet
                     container.innerHTML = `
@@ -23753,6 +24152,81 @@
                 // Session 147: Release loading flag
                 assetLoadingFlags[projectId] = false;
             }
+        }
+
+        /**
+         * Session 182: Auto-poll pending 3D models until completion
+         * Polls every 5 seconds and refreshes UI when models complete
+         */
+        const pending3DModelPollers = {};  // Track active pollers per project
+
+        function startPending3DModelPolling(projectId, pendingModels) {
+            // Don't start multiple pollers for same project
+            if (pending3DModelPollers[projectId]) {
+                console.log(`⏸️ Poller already running for project ${projectId}`);
+                return;
+            }
+
+            const modelIds = pendingModels.map(m => m.id);
+            console.log(`🔄 Starting 3D model poller for: ${modelIds.join(', ')}`);
+
+            pending3DModelPollers[projectId] = setInterval(async () => {
+                try {
+                    let allComplete = true;
+                    let anyUpdated = false;
+
+                    for (const modelId of modelIds) {
+                        // Poll each pending model's status
+                        const response = await fetch(`/api/v1/content/minifigs/${modelId}/`, {
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            const model = data.minifig;
+
+                            if (model.status === 'completed') {
+                                console.log(`✅ 3D Model ${modelId} completed!`);
+                                anyUpdated = true;
+                            } else if (model.status === 'failed') {
+                                console.log(`❌ 3D Model ${modelId} failed: ${model.error_message}`);
+                                anyUpdated = true;
+                            } else {
+                                // Still pending/processing
+                                allComplete = false;
+                                console.log(`⏳ 3D Model ${modelId} still ${model.status}...`);
+                            }
+                        }
+                    }
+
+                    // If any model updated, refresh the project assets
+                    if (anyUpdated) {
+                        showNotification('🎉 3D Model generation complete!', 'success');
+                        refreshProjectAssets(projectId);
+                    }
+
+                    // If all models complete, stop polling
+                    if (allComplete) {
+                        console.log(`✅ All 3D models complete - stopping poller for project ${projectId}`);
+                        clearInterval(pending3DModelPollers[projectId]);
+                        delete pending3DModelPollers[projectId];
+                    }
+
+                } catch (error) {
+                    console.error('Error polling 3D model status:', error);
+                }
+            }, 5000);  // Poll every 5 seconds
+
+            // Safety timeout - stop polling after 10 minutes max
+            setTimeout(() => {
+                if (pending3DModelPollers[projectId]) {
+                    console.log(`⏰ Polling timeout reached for project ${projectId}`);
+                    clearInterval(pending3DModelPollers[projectId]);
+                    delete pending3DModelPollers[projectId];
+                }
+            }, 600000);  // 10 minutes
         }
 
         /**
@@ -29524,6 +29998,15 @@
                                         ⏳ Model Not Ready
                                     </button>
                                     `}
+                                    ${mf.status === 'completed' ? `
+                                    <button onclick="prepareForPrint('${mf.id}', null)"
+                                            class="btn btn-sm"
+                                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; font-weight: 600; transition: all 0.3s;"
+                                            onmouseover="this.style.transform='scale(1.02)'; this.style.opacity='0.9'"
+                                            onmouseout="this.style.transform='scale(1)'; this.style.opacity='1'">
+                                        🖨️ Prepare for 3D Printing
+                                    </button>
+                                    ` : ''}
                                     <button onclick="showMiniFigDetails('${mf.id}')"
                                             class="btn btn-outline-info btn-sm"
                                             style="border-width: 2px; border-color: var(--cyan); color: var(--cyan); font-weight: 600; transition: all 0.3s;"
