@@ -519,6 +519,8 @@ class ReplicateProvider:
                 error_message="At least one image URL is required"
             )
 
+        # Track opened file handles for cleanup (Phase 2 P1: Fix file handle leaks)
+        opened_files = []
         try:
             # Process image URLs/paths - Replicate SDK handles file uploads automatically
             processed_images = []
@@ -534,7 +536,10 @@ class ReplicateProvider:
                         file_path = pathlib.Path(img_path)
                         if file_path.exists():
                             # Use 'file' prefix for Replicate SDK file upload
-                            processed_images.append(open(img_path, 'rb'))
+                            # Track for cleanup to prevent file handle leaks
+                            file_handle = open(img_path, 'rb')
+                            opened_files.append(file_handle)
+                            processed_images.append(file_handle)
                         else:
                             logger.warning(f"File not found: {img_path}")
                 else:
@@ -580,11 +585,6 @@ class ReplicateProvider:
             logger.info(f"   Status: {prediction.status}")
             logger.info(f"   Estimated time: <1 minute")
 
-            # Close any open file handles
-            for img in processed_images:
-                if hasattr(img, 'close'):
-                    img.close()
-
             return ThreeDGenerationResult(
                 success=True,
                 prediction_id=prediction.id,
@@ -592,28 +592,24 @@ class ReplicateProvider:
             )
 
         except ReplicateError as e:
-            # Close any open file handles on error
-            for img in processed_images:
-                if hasattr(img, 'close'):
-                    img.close()
             logger.error(f"Replicate API error: {str(e)}")
             return ThreeDGenerationResult(
                 success=False,
                 error_message=f"Replicate API error: {str(e)}"
             )
         except Exception as e:
-            # Close any open file handles on error
-            try:
-                for img in processed_images:
-                    if hasattr(img, 'close'):
-                        img.close()
-            except:
-                pass
             logger.error(f"3D generation submission error: {str(e)}")
             return ThreeDGenerationResult(
                 success=False,
                 error_message=str(e)
             )
+        finally:
+            # Phase 2 P1: Ensure all file handles are closed to prevent leaks
+            for file_handle in opened_files:
+                try:
+                    file_handle.close()
+                except Exception:
+                    pass
 
 
     def check_3d_generation_status(self, prediction_id: str) -> Dict[str, Any]:

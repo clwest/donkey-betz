@@ -27,11 +27,50 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from content.models import ContentGeneration, VideoHistory, ImageHistory
 from content.video_provider import runway_provider
 from django.utils import timezone
+from core.utils.url_validator import validate_url_for_download, validate_url_permissive
+
+# Phase 2 P1: Rate limiting for video operations
+from core.decorators import rate_limit
+# Phase 2 P1: Input validation
+from core.validators import validate_prompt, sanitize_prompt, validate_uuid, validate_numeric_range, validate_url
+# Phase 2 P1: Safe error handling
+from core.responses import safe_error_message, handle_exception
 
 logger = logging.getLogger(__name__)
 
 # Time module for timestamp generation (Session 167)
 import time
+
+
+# =============================================================================
+# Session 185: Safe subprocess runner with timeout
+# Prevents hung ffmpeg processes on corrupt files or infinite streams
+# =============================================================================
+
+def _run_ffmpeg(cmd, timeout=None, long_operation=False):
+    """
+    Run ffmpeg command with timeout protection.
+
+    Args:
+        cmd: Command list to execute
+        timeout: Custom timeout in seconds (optional)
+        long_operation: If True, use FFMPEG_TIMEOUT_LONG setting
+
+    Returns:
+        subprocess.CompletedProcess result
+
+    Raises:
+        subprocess.TimeoutExpired: If command times out
+    """
+    if timeout is None:
+        timeout = settings.FFMPEG_TIMEOUT_LONG if long_operation else settings.FFMPEG_TIMEOUT
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return result
+    except subprocess.TimeoutExpired:
+        logger.error(f"ffmpeg operation timed out after {timeout}s: {' '.join(cmd[:5])}...")
+        raise
 
 
 # =============================================================================
@@ -122,6 +161,12 @@ def _get_video_local_path(video):
 
     # Handle http/https URLs (Runway uploads, etc.)
     if video_url.startswith('http://') or video_url.startswith('https://'):
+        # Session 185: SSRF protection - validate URL before downloading
+        is_valid, error = validate_url_for_download(video_url)
+        if not is_valid:
+            logger.warning(f"🛡️ SSRF Protection blocked URL: {video_url} - {error}")
+            return None
+
         try:
             # Download to temp file
             response = requests.get(video_url, stream=True, timeout=60)
@@ -180,6 +225,11 @@ def resize_image_for_runway(image_url: str, max_size_mb: int = 5, max_dimension:
             original_format = img.format or 'PNG'
         else:
             # Remote URL - download it
+            # Session 185: SSRF protection - validate URL before downloading
+            is_valid, error = validate_url_permissive(image_url)
+            if not is_valid:
+                raise ValueError(f"SSRF Protection blocked URL: {error}")
+
             response = requests.get(image_url, timeout=10)
             response.raise_for_status()
             image_data = response.content
@@ -290,10 +340,11 @@ def resize_image_for_runway(image_url: str, max_size_mb: int = 5, max_dimension:
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  # Set to IsAuthenticated in production
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video generation (5 requests/min)
 def text_to_video(request):
     """
     Generate video from text prompt using RunwayML.
-    
+
     Expected payload:
     {
         "prompt": "A majestic eagle soaring...",
@@ -306,17 +357,28 @@ def text_to_video(request):
     """
     try:
         data = request.data
-        
-        # Validate required fields
+
+        # Phase 2 P1: Validate prompt
         prompt = data.get('prompt', '').strip()
-        if not prompt:
+        is_valid, validation_error = validate_prompt(prompt, min_length=1, max_length=2000)
+        if not is_valid:
             return JsonResponse({
                 'success': False,
-                'error': 'Prompt is required'
+                'error': validation_error,
+                'error_code': 'VALIDATION_ERROR'
             }, status=400)
-        
+
+        # Sanitize prompt to prevent injection
+        prompt = sanitize_prompt(prompt)
+
         # Extract parameters with defaults
         duration = int(data.get('duration', 4))  # Changed default to 4 for veo3.1 models
+
+        # Phase 2 P1: Validate duration
+        dur_valid, dur_error = validate_numeric_range(duration, 2, 10, 'duration')
+        if not dur_valid:
+            return JsonResponse({'success': False, 'error': dur_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
+
         quality = data.get('quality', 'veo3.1_fast')  # Updated default model
         style = data.get('style', 'realistic')
         enhance_prompt = data.get('enhance_prompt', True)
@@ -388,10 +450,11 @@ def text_to_video(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video generation (5 requests/min)
 def image_to_video(request):
     """
     Generate video from image using RunwayML.
-    
+
     Expected payload:
     {
         "image_url": "https://...",
@@ -403,7 +466,7 @@ def image_to_video(request):
     """
     try:
         data = request.data
-        
+
         # Validate required fields
         image_url = data.get('image_url', '').strip()
         image_id = data.get('image_id')
@@ -415,16 +478,36 @@ def image_to_video(request):
         if not image_url and not image_id:
             return JsonResponse({
                 'success': False,
-                'error': 'Image URL or image ID is required'
+                'error': 'Image URL or image ID is required',
+                'error_code': 'VALIDATION_ERROR'
             }, status=400)
-        
+
+        # Phase 2 P1: Validate image_url if provided
+        if image_url:
+            is_valid, url_error = validate_url(image_url)
+            if not is_valid:
+                return JsonResponse({'success': False, 'error': url_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
+
+        # Phase 2 P1: Validate image_id if provided
+        if image_id:
+            is_valid, uuid_error = validate_uuid(str(image_id))
+            if not is_valid:
+                return JsonResponse({'success': False, 'error': uuid_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
+
         motion_prompt = data.get('motion_prompt', '').strip()
-        if not motion_prompt:
+
+        # Phase 2 P1: Validate motion_prompt
+        is_valid, prompt_error = validate_prompt(motion_prompt, min_length=1, max_length=2000)
+        if not is_valid:
             return JsonResponse({
                 'success': False,
-                'error': 'Motion prompt is required'
+                'error': prompt_error,
+                'error_code': 'VALIDATION_ERROR'
             }, status=400)
-        
+
+        # Sanitize motion prompt
+        motion_prompt = sanitize_prompt(motion_prompt)
+
         # If image_id is provided, try to get the URL from our database
         if image_id and not image_url:
             try:
@@ -950,12 +1033,13 @@ def get_video_history(request):
 
         # Build query
         # Session 96: Exclude videos with expired external CDN URLs
+        # Phase 2 P1: Use select_related to avoid N+1 queries on source_image
         from django.db.models import Q
         queryset = VideoHistory.objects.filter(user=request.user).exclude(
             Q(video_url__icontains='cloudfront.net') |
             Q(video_url__icontains='storage.googleapis.com') |
             Q(video_url__icontains='_jwt=')
-        )
+        ).select_related('source_image', 'project', 'session')
 
         # Apply filters
         if video_type:
@@ -1300,6 +1384,7 @@ def test_runway_connection(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def video_to_video_endpoint(request):
     """
     POST /api/v1/video/video-to-video/
@@ -1403,6 +1488,7 @@ def video_to_video_endpoint(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def video_upscale_endpoint(request):
     """
     POST /api/v1/video/upscale/
@@ -1505,6 +1591,7 @@ def video_upscale_endpoint(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def extend_video_endpoint(request):
     """
     POST /api/v1/video/extend/
@@ -1616,6 +1703,7 @@ def extend_video_endpoint(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def character_performance_endpoint(request):
     """
     POST /api/v1/video/character-performance/
@@ -1764,6 +1852,7 @@ def character_performance_endpoint(request):
 # ============================================================================
 
 
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def upscale_video(request):
     """
     Upscale a video using ffmpeg lanczos scaling
@@ -1902,7 +1991,7 @@ def upscale_video(request):
         logger.info(f"🚀 Running ffmpeg upscale: {' '.join(cmd)}")
 
         import subprocess
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
             logger.error(f"❌ ffmpeg upscale failed: {result.stderr}")
@@ -2119,7 +2208,7 @@ def apply_video_effect(request):
         logger.info(f"🚀 Running ffmpeg effect: {effect}")
 
         import subprocess
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
             logger.error(f"❌ ffmpeg effect failed: {result.stderr}")
@@ -2362,7 +2451,7 @@ def extract_video_frame(request):
         logger.info(f"🚀 Running ffmpeg frame extraction: {' '.join(cmd)}")
 
         import subprocess
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
             logger.error(f"❌ ffmpeg frame extraction failed: {result.stderr}")
@@ -2602,7 +2691,7 @@ def reverse_video(request):
 
         logger.info(f"🚀 Running ffmpeg reverse: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
             logger.error(f"❌ ffmpeg reverse failed: {result.stderr}")
@@ -2871,7 +2960,7 @@ def trim_video(request):
 
         logger.info(f"🚀 Running ffmpeg trim: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
             logger.error(f"❌ ffmpeg trim failed: {result.stderr}")
@@ -2972,6 +3061,7 @@ def trim_video(request):
 # Cost: FREE! Uses ffmpeg locally
 # =============================================================================
 
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def change_video_speed(request):
     """
     Session 160: Change video playback speed using ffmpeg.
@@ -3084,7 +3174,7 @@ def change_video_speed(request):
         has_audio = False
         try:
             probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source_path]
-            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
             has_audio = 'audio' in probe_result.stdout
             logger.info(f"🔊 [Session 160] Video has audio: {has_audio}")
         except Exception as e:
@@ -3148,7 +3238,7 @@ def change_video_speed(request):
 
         logger.info(f"🔧 [Session 160] Running: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
             logger.error(f"❌ [Session 160] ffmpeg speed change failed: {result.stderr}")
@@ -3250,6 +3340,7 @@ def change_video_speed(request):
 # Cost: FREE! Uses ffmpeg locally
 # =============================================================================
 
+@rate_limit('video_processing')  # Phase 2 P1: Rate limit video processing (5 requests/min)
 def concatenate_videos(request):
     """
     Session 160: Concatenate multiple videos into one using ffmpeg.
@@ -3362,7 +3453,7 @@ def concatenate_videos(request):
 
         logger.info(f"🔧 [Session 160] Running: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # If concat demuxer failed (different codecs), try re-encoding
         if result.returncode != 0:
@@ -3383,7 +3474,7 @@ def concatenate_videos(request):
             ]
 
             logger.info(f"🔧 [Session 160] Re-encode: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = _run_ffmpeg(cmd)
 
             # If still failing (maybe no audio), try video-only
             if result.returncode != 0:
@@ -3401,7 +3492,7 @@ def concatenate_videos(request):
                 ]
 
                 logger.info(f"🔧 [Session 160] Video-only: {' '.join(cmd)}")
-                result = subprocess.run(cmd, capture_output=True, text=True)
+                result = _run_ffmpeg(cmd)
 
         # Clean up concat list
         try:
@@ -3642,7 +3733,7 @@ def rotate_flip_video(request):
         ]
 
         logger.info(f"🚀 Running ffmpeg rotate: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp file
         if temp_dir and os.path.exists(temp_dir):
@@ -3832,7 +3923,7 @@ def fade_video(request):
         if not duration:
             # Get duration from ffprobe
             probe_cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', input_path]
-            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
             try:
                 duration = float(probe_result.stdout.strip())
             except:
@@ -3878,7 +3969,7 @@ def fade_video(request):
             ]
 
         logger.info(f"🚀 Running ffmpeg fade: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp file
         if temp_dir and os.path.exists(temp_dir):
@@ -4082,7 +4173,7 @@ def crop_resize_video(request):
 
         # Get current video dimensions
         probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', input_path]
-        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
         try:
             current_dims = probe_result.stdout.strip().split('x')
             current_width = int(current_dims[0])
@@ -4173,7 +4264,7 @@ def crop_resize_video(request):
         ]
 
         logger.info(f"🚀 Running ffmpeg crop/resize: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp file
         if temp_dir and os.path.exists(temp_dir):
@@ -4430,7 +4521,7 @@ def audio_controls(request):
             return JsonResponse({'success': False, 'error': f'Invalid operation: {operation}. Use: volume, mute, or extract'}, status=400)
 
         logger.info(f"🚀 Running ffmpeg audio: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp file
         if temp_dir and os.path.exists(temp_dir):
@@ -4635,7 +4726,7 @@ def picture_in_picture(request):
 
         # Get background video dimensions
         probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', bg_path]
-        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
         try:
             bg_dims = probe_result.stdout.strip().split('x')
             bg_width = int(bg_dims[0])
@@ -4685,7 +4776,7 @@ def picture_in_picture(request):
         ]
 
         logger.info(f"🚀 Running ffmpeg PiP: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp dir
         import shutil
@@ -4768,7 +4859,7 @@ def _video_has_audio(video_path):
     """Helper to check if video has an audio stream."""
     try:
         cmd = ['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', video_path]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
         return 'audio' in result.stdout
     except:
         return True  # Assume it has audio if we can't check
@@ -5006,7 +5097,7 @@ def add_watermark(request):
         ]
 
         logger.info(f"🚀 Running ffmpeg watermark: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp files
         if temp_dir and os.path.exists(temp_dir):
@@ -5210,7 +5301,7 @@ def blur_region(request):
         try:
             probe_cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
                         '-show_entries', 'stream=width,height', '-of', 'csv=p=0', input_video_path]
-            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
             dimensions = probe_result.stdout.strip().split(',')
             video_width = int(dimensions[0])
             video_height = int(dimensions[1])
@@ -5296,7 +5387,7 @@ def blur_region(request):
         ]
 
         logger.info(f"🚀 Running ffmpeg blur: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = _run_ffmpeg(cmd)
 
         # Clean up temp files
         if temp_dir and os.path.exists(temp_dir):
@@ -7610,7 +7701,7 @@ def lip_sync(request):
         # Resolve audio URL from audio_id if needed (if we add audio history)
         # For now, audio_url is required
         if not audio_url and audio_id:
-            # TODO: Add audio history lookup when audio model exists
+            # NOTE: audio_id lookup pending AudioHistory model implementation
             return JsonResponse({
                 'success': False,
                 'error': 'audio_id lookup not yet supported, use audio_url'

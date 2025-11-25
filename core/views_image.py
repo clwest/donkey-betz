@@ -32,6 +32,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from PIL import Image as PILImage
 
+# Phase 2 P1: Rate limiting for image operations
+from core.decorators import rate_limit
+# Phase 2 P1: Input validation
+from core.validators import validate_prompt, sanitize_prompt, validate_uuid, validate_numeric_range
+# Phase 2 P1: Safe error handling
+from core.responses import safe_error_message, handle_exception
+
 logger = logging.getLogger(__name__)
 
 
@@ -461,6 +468,7 @@ from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@rate_limit('ai_generation')  # Phase 2 P1: Rate limit AI generation (10 requests/min)
 def gallery_generate(request):
     """
     Generate images using Stable Diffusion or Replicate
@@ -496,21 +504,50 @@ def gallery_generate(request):
 
         # Extract parameters
         prompt = data.get('prompt', '')
-        if not prompt:
+
+        # Phase 2 P1: Validate prompt
+        is_valid, validation_error = validate_prompt(prompt, min_length=1, max_length=2000)
+        if not is_valid:
             return Response({
                 'success': False,
-                'error': 'Prompt is required'
+                'error': validation_error,
+                'error_code': 'VALIDATION_ERROR'
             }, status=400)
 
+        # Sanitize prompt to prevent injection
+        prompt = sanitize_prompt(prompt)
+
         negative_prompt = data.get('negative_prompt', 'blurry, low quality, distorted')
+        if negative_prompt:
+            negative_prompt = sanitize_prompt(negative_prompt)
+
+        # Phase 2 P1: Validate dimensions
         width = int(data.get('width', 1024))
         height = int(data.get('height', 1024))
+        width_valid, width_error = validate_numeric_range(width, 256, 2048, 'width')
+        if not width_valid:
+            return Response({'success': False, 'error': width_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
+        height_valid, height_error = validate_numeric_range(height, 256, 2048, 'height')
+        if not height_valid:
+            return Response({'success': False, 'error': height_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
+
+        # Phase 2 P1: Validate num_images
         num_images = int(data.get('num_images', 1))
+        num_valid, num_error = validate_numeric_range(num_images, 1, 10, 'num_images')
+        if not num_valid:
+            return Response({'success': False, 'error': num_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
+
         style = data.get('style', 'photorealistic')
         quality = data.get('quality', 'balanced')  # NEW: Support for quality selector
 
         # Session 124: Extract project_id for project-scoped generation
         project_id = data.get('project_id')
+
+        # Phase 2 P1: Validate project_id if provided
+        if project_id:
+            is_valid, uuid_error = validate_uuid(project_id)
+            if not is_valid:
+                return Response({'success': False, 'error': uuid_error, 'error_code': 'VALIDATION_ERROR'}, status=400)
         project = None
 
         # Check direct parameter first
@@ -1086,6 +1123,7 @@ def _enhance_prompt_rule_based(original_prompt: str, style: str, style_guidance:
 
 @csrf_exempt
 @api_view(['POST'])
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def remove_background(request):
     """
     Remove background from an uploaded image using Stability AI.
@@ -1170,6 +1208,7 @@ def remove_background(request):
 
 @csrf_exempt
 @api_view(['POST'])
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def recolor_image(request):
     """
     Recolor a specific object in an image using Stability AI.
@@ -1278,6 +1317,7 @@ def recolor_image(request):
 
 @csrf_exempt
 @api_view(['POST'])
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def upscale_image(request):
     """
     Upscale an image using Stability AI.
@@ -1862,9 +1902,10 @@ def image_history(request):
 
         # Start with user's images
         # Session 94: Exclude data URI images (too large for JSON response)
+        # Phase 2 P1: Use select_related/prefetch_related to avoid N+1 queries
         queryset = ImageHistory.objects.filter(user=user).exclude(
             file_path__startswith='data:'
-        )
+        ).select_related('project', 'session').prefetch_related('child_images')
 
         # Apply filters
         image_type = request.query_params.get('image_type')
@@ -3833,7 +3874,8 @@ def unified_gallery(request):
                     'scale': model.metadata.get('scale', 'medium'),
                 })
 
-        # TODO: Add audio when AudioHistory model is created
+        # NOTE: Audio support will be added when AudioHistory model is created.
+        # See content/models.py for current model inventory.
         # if media_type in ['all', 'audio']:
         #     audio_queryset = AudioHistory.objects.filter(user=user)
         #     ...
@@ -4002,7 +4044,7 @@ def session_gallery(request):
             },
             'images': images,
             'videos': videos,
-            'audio': []  # TODO: Add audio when available
+            'audio': []  # NOTE: Audio support pending AudioHistory model
         }
 
         logger.info(f"📊 Session gallery: {session_id} - {len(images)} images, {len(videos)} videos")
@@ -7059,7 +7101,7 @@ def execute_tool(request):
 
             # Store batch_id for later reference
             if result.get('success'):
-                # TODO: Store in session or context manager
+                # NOTE: batch_id stored in result for frontend reference
                 logger.info(f"✅ Generated {len(result.get('options', []))} options, batch_id: {result.get('batch_id')}")
 
         elif tool_name == 'save_as_template':
@@ -10971,7 +11013,7 @@ def get_portfolio(request):
                 })
 
         # Query audio
-        # TODO: Implement AudioHistory model first (currently using Runway ML but no model tracking)
+        # NOTE: AudioHistory model not yet implemented. Audio via Runway ML without model tracking.
         # if not content_type or content_type == 'audio':
         #     audio_items = AudioHistory.objects.filter(**audio_filter).select_related('user')
         #     for aud in audio_items:
@@ -11782,6 +11824,7 @@ def get_meeting_details(request, meeting_key):
 # ========================================
 
 @login_required
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def upscale_image_view(request):
     """
     Upscale an existing image from history using its ID.
@@ -11903,6 +11946,7 @@ def upscale_image_view(request):
 
 
 @login_required
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def remove_background_view(request):
     """
     Remove background from an existing image from history using its ID.
@@ -12020,6 +12064,7 @@ def remove_background_view(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def create_variations_view(request):
     """
     Create variations of an existing image using structure control.
@@ -12164,6 +12209,7 @@ def create_variations_view(request):
 
 
 @login_required
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def search_and_replace_view(request):
     """
     Search and replace objects in an image (erase functionality).
@@ -12289,6 +12335,7 @@ def search_and_replace_view(request):
 
 
 @login_required
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def recolor_image_view(request):
     """
     Recolor specific objects/areas in an image.
@@ -12773,6 +12820,7 @@ def export_project_csv(request, project_id):
 # Note: search_and_replace_view already exists at line 11735
 # Adding creative_upscale_view as new capability
 
+@rate_limit('image_processing')  # Phase 2 P1: Rate limit image operations (20 requests/min)
 def creative_upscale_view(request):
     """
     Creative upscale with prompt - upscale image AND add creative details based on prompt.

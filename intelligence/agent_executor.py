@@ -77,7 +77,7 @@ class ToolRegistry:
 
     def web_search(self, query: str, **kwargs) -> Dict:
         """Search the web for information"""
-        # TODO: Implement real web search (Serper, Google, etc.)
+        # NOTE: Web search returns mock results. Integrate Serper/Google API for production.
         logger.info(f"[TOOL] web_search: {query}")
         return {
             'tool': 'web_search',
@@ -108,10 +108,10 @@ class ToolRegistry:
             }
 
     def calculate(self, expression: str, **kwargs) -> Dict:
-        """Perform mathematical calculations"""
+        """Perform mathematical calculations using safe evaluation."""
         logger.info(f"[TOOL] calculate: {expression}")
         try:
-            result = eval(expression)  # Safe for controlled env
+            result = self._safe_eval(expression)
             return {
                 'tool': 'calculate',
                 'expression': expression,
@@ -125,6 +125,60 @@ class ToolRegistry:
                 'error': str(e),
                 'executed': False
             }
+
+    def _safe_eval(self, expression: str) -> float:
+        """
+        Safely evaluate mathematical expressions without using eval().
+
+        Supports: +, -, *, /, ** (power), parentheses, and numbers (int/float).
+        Does NOT support: function calls, imports, attribute access, etc.
+        """
+        import ast
+        import operator
+
+        # Allowed operators
+        operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+            ast.USub: operator.neg,
+            ast.UAdd: operator.pos,
+            ast.Mod: operator.mod,
+            ast.FloorDiv: operator.floordiv,
+        }
+
+        def _eval_node(node):
+            """Recursively evaluate AST nodes."""
+            if isinstance(node, ast.Expression):
+                return _eval_node(node.body)
+            elif isinstance(node, ast.Constant):  # Python 3.8+
+                if isinstance(node.value, (int, float)):
+                    return node.value
+                raise ValueError(f"Unsupported constant type: {type(node.value)}")
+            elif isinstance(node, ast.Num):  # Python 3.7 compatibility
+                return node.n
+            elif isinstance(node, ast.BinOp):
+                if type(node.op) not in operators:
+                    raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+                left = _eval_node(node.left)
+                right = _eval_node(node.right)
+                return operators[type(node.op)](left, right)
+            elif isinstance(node, ast.UnaryOp):
+                if type(node.op) not in operators:
+                    raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
+                operand = _eval_node(node.operand)
+                return operators[type(node.op)](operand)
+            else:
+                raise ValueError(f"Unsupported expression type: {type(node).__name__}")
+
+        try:
+            # Parse expression into AST
+            tree = ast.parse(expression, mode='eval')
+            return _eval_node(tree)
+        except SyntaxError as e:
+            raise ValueError(f"Invalid mathematical expression: {expression}") from e
 
     def odds_data(self, game_id: int, **kwargs) -> Dict:
         """Get betting odds data"""
@@ -601,9 +655,9 @@ class AgentExecutor:
         """
         tool_results = []
 
-        # TODO: Implement proper tool call parsing
-        # For now, just return empty list
-        # In production, parse LLM response for tool calls and execute
+        # NOTE: Tool call parsing not fully implemented for this executor.
+        # The main AI assistant uses GPT-5.1 function calling which handles this natively.
+        # See core/personal_ai_assistant_enhanced.py for production tool execution.
 
         return tool_results
 

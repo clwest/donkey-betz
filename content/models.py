@@ -23,6 +23,7 @@ from enum import Enum
 from pathlib import Path
 
 from django.db import models
+from django.db.models import F
 from django.contrib.auth import get_user_model
 # from django.contrib.postgres.fields import ArrayField  # Not available in SQLite
 from django.core.files.storage import default_storage
@@ -278,22 +279,32 @@ class ContentTemplate(UnifiedBaseModel):
         return prompt
     
     def update_stats(self, generation_time=None, success=True, rating=None):
-        """Update template usage statistics"""
-        self.usage_count += 1
-        
+        """Update template usage statistics using atomic F() expressions to prevent race conditions"""
+        # Phase 2 P1: Use atomic update for usage_count to prevent race conditions
+        PromptTemplate.objects.filter(pk=self.pk).update(usage_count=F('usage_count') + 1)
+
+        # Refresh from DB to get the new count for calculations
+        self.refresh_from_db(fields=['usage_count'])
+
+        update_fields = []
+
         if generation_time is not None:
             total_time = self.avg_generation_time * (self.usage_count - 1) + generation_time
             self.avg_generation_time = total_time / self.usage_count
-        
+            update_fields.append('avg_generation_time')
+
         if success is not None:
             total_success = self.success_rate * (self.usage_count - 1) + (1 if success else 0)
             self.success_rate = total_success / self.usage_count
-        
+            update_fields.append('success_rate')
+
         if rating is not None:
             total_rating = self.avg_user_rating * (self.usage_count - 1) + rating
             self.avg_user_rating = total_rating / self.usage_count
-        
-        self.save()
+            update_fields.append('avg_user_rating')
+
+        if update_fields:
+            self.save(update_fields=update_fields)
 
 
 class Document(UnifiedBaseModel):
@@ -552,10 +563,13 @@ class Document(UnifiedBaseModel):
         self.save(update_fields=['processing_log'])
     
     def increment_view_count(self):
-        """Increment view count and update last accessed"""
-        self.view_count += 1
-        self.last_accessed = timezone.now()
-        self.save(update_fields=['view_count', 'last_accessed'])
+        """Increment view count and update last accessed using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        Document.objects.filter(pk=self.pk).update(
+            view_count=F('view_count') + 1,
+            last_accessed=timezone.now()
+        )
+        self.refresh_from_db(fields=['view_count', 'last_accessed'])
 
 
 class DocumentEmbedding(UnifiedBaseModel):
@@ -1941,14 +1955,16 @@ class ImageHistory(UnifiedBaseModel):
         return earlier_images + 1
 
     def increment_view_count(self):
-        """Increment view counter"""
-        self.view_count += 1
-        self.save(update_fields=['view_count'])
-    
+        """Increment view counter using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        ImageHistory.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
+        self.refresh_from_db(fields=['view_count'])
+
     def increment_download_count(self):
-        """Increment download counter"""
-        self.download_count += 1
-        self.save(update_fields=['download_count'])
+        """Increment download counter using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        ImageHistory.objects.filter(pk=self.pk).update(download_count=F('download_count') + 1)
+        self.refresh_from_db(fields=['download_count'])
     
     def get_lineage(self):
         """Get full lineage of edits (parent chain)"""
@@ -2187,14 +2203,16 @@ class VideoHistory(UnifiedBaseModel):
         return f"{self.user.username} - {self.video_type} - {self.video_id}"
 
     def increment_view_count(self):
-        """Increment view counter"""
-        self.view_count += 1
-        self.save(update_fields=['view_count'])
+        """Increment view counter using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        VideoHistory.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
+        self.refresh_from_db(fields=['view_count'])
 
     def increment_download_count(self):
-        """Increment download counter"""
-        self.download_count += 1
-        self.save(update_fields=['download_count'])
+        """Increment download counter using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        VideoHistory.objects.filter(pk=self.pk).update(download_count=F('download_count') + 1)
+        self.refresh_from_db(fields=['download_count'])
 
     def get_sequential_number(self):
         """
@@ -2394,14 +2412,16 @@ class MiniFigAsset(UnifiedBaseModel):
         return earlier_models + 1
 
     def increment_view_count(self):
-        """Increment view counter"""
-        self.view_count += 1
-        self.save(update_fields=['view_count'])
+        """Increment view counter using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        MiniFigAsset.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
+        self.refresh_from_db(fields=['view_count'])
 
     def increment_download_count(self):
-        """Increment download counter"""
-        self.download_count += 1
-        self.save(update_fields=['download_count'])
+        """Increment download counter using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        MiniFigAsset.objects.filter(pk=self.pk).update(download_count=F('download_count') + 1)
+        self.refresh_from_db(fields=['download_count'])
 
 
 class WorkflowHistory(UnifiedBaseModel):
@@ -3601,10 +3621,13 @@ class ProjectShare(models.Model):
         return self.is_active and not self.is_expired()
 
     def increment_view_count(self):
-        """Increment view count and update last_viewed"""
-        self.view_count += 1
-        self.last_viewed = timezone.now()
-        self.save(update_fields=['view_count', 'last_viewed'])
+        """Increment view count and update last_viewed using atomic F() expression"""
+        # Phase 2 P1: Use atomic update to prevent race conditions
+        ShareableLink.objects.filter(pk=self.pk).update(
+            view_count=F('view_count') + 1,
+            last_viewed=timezone.now()
+        )
+        self.refresh_from_db(fields=['view_count', 'last_viewed'])
 
     def get_share_url(self, request=None):
         """Get full share URL"""

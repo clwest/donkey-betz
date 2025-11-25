@@ -1,0 +1,58 @@
+{% comment %}
+AI Studio Base Template
+=======================
+
+Session 186: Created as part of Phase 3 Architecture Improvements (Task 3.3)
+
+This is the modular base template for AI Studio.
+Currently, ai_image_studio.html remains the working template.
+This base template provides the structure for future migration.
+
+Usage:
+    {% extends 'ai_studio/base.html' %}
+
+    {% block title %}Custom Page Title{% endblock %}
+    {% block content %}
+        Your tab content here
+    {% endblock %}
+{% endcomment %}
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include 'ai_studio/partials/_head.html' %}
+</head>
+<body>
+    <!-- Page Wrapper for Sidebar Layout -->
+    <div class="page-wrapper" style="display: flex; min-height: 100vh;">
+        <!-- Main Content Area -->
+        <div class="main-content" id="mainContent" style="flex: 1; transition: margin-right 0.3s ease; margin-right: 0;">
+            <div class="container py-5">
+                {% include 'ai_studio/partials/_header.html' %}
+
+                {% include 'ai_studio/partials/_navigation.html' %}
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="studioTabContent">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Sidebar -->
+        {% block sidebar %}{% endblock %}
+    </div>
+
+    <!-- AI Assistant Toggle Button -->
+    <button id="aiSidebarToggle" class="btn btn-primary"
+            style="position: fixed; right: 20px; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; border-radius: 50%; z-index: 1060; font-size: 24px; padding: 0; border: 3px solid rgba(251, 191, 36, 0.5); background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.9)); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(251, 191, 36, 0.5); transition: all 0.3s ease;"
+            title="Open AI Assistant"
+            onmouseover="this.style.transform='translateY(-50%) scale(1.1)'"
+            onmouseout="this.style.transform='translateY(-50%) scale(1)'">
+        🤖
+    </button>
+
+    {% include 'ai_studio/partials/_scripts.html' %}
+</body>
+</html>

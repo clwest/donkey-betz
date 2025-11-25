@@ -1,0 +1,72 @@
+{% comment %}
+AI Studio Navigation Partial
+============================
+
+Session 186: Created as part of Phase 3 Architecture Improvements (Task 3.3)
+
+Contains:
+- Main tab navigation
+- Tab content structure placeholder
+
+Usage:
+    {% include 'ai_studio/partials/_navigation.html' %}
+{% endcomment %}
+
+<!-- Tabbed Navigation with Visual Grouping -->
+<ul class="nav nav-tabs" id="studioTabs" role="tablist">
+    <!-- Images (Grouped) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab" title="AI Image Generation & Editing">
+            🎨 Images
+        </button>
+    </li>
+
+    <!-- Character Training -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="character-training-tab" data-bs-toggle="tab" data-bs-target="#character-training" type="button" role="tab" title="Train custom character models for consistent generation">
+            🧑‍🎨 Characters
+        </button>
+    </li>
+
+    <!-- Video (Grouped) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" title="AI Video Generation">
+            🎬 Video
+        </button>
+    </li>
+
+    <!-- Audio (Grouped) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" title="AI Audio Generation">
+            🎵 Audio
+        </button>
+    </li>
+
+    <!-- All Gallery (Unified) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="all-gallery-tab" data-bs-toggle="tab" data-bs-target="#all-gallery" type="button" role="tab" title="Browse all content (images, videos, audio)">
+            📊 All Gallery
+        </button>
+    </li>
+
+    <!-- Projects -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button" role="tab" title="Manage creative projects and workflows">
+            📁 Projects
+        </button>
+    </li>
+
+    <!-- Portfolio -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="portfolio-tab" data-bs-toggle="tab" data-bs-target="#portfolio" type="button" role="tab" title="View all content from all projects">
+            🎨 Portfolio
+        </button>
+    </li>
+
+    <!-- Leadership Dashboard -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="leadership-tab" data-bs-toggle="tab" data-bs-target="#leadership" type="button" role="tab" title="Your AI-Human Co-Leadership Dashboard">
+            🎯 Leadership
+        </button>
+    </li>
+</ul>

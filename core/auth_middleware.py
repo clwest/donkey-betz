@@ -308,9 +308,24 @@ class RateLimitingMiddleware(MiddlewareMixin):
         return ip
     
     def is_rate_limited(self, client_ip, endpoint, limit, window):
-        """Check if client is rate limited (stub - implement with Redis)"""
-        # This would be implemented using Redis or Django cache
-        # For now, return False to avoid blocking
+        """Check if client is rate limited using Django cache (Redis-backed)"""
+        from django.core.cache import cache
+
+        cache_key = f"rate_limit:{endpoint}:{client_ip}"
+
+        # Get current count
+        current_count = cache.get(cache_key, 0)
+
+        if current_count >= limit:
+            return True
+
+        # Increment counter
+        if current_count == 0:
+            # First request in window
+            cache.set(cache_key, 1, window)
+        else:
+            cache.incr(cache_key)
+
         return False
 
 
