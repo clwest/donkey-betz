@@ -71,14 +71,36 @@ def assistant_chat_bypass(request):
 
         response_data = assistant.process_message(message, context)
 
-        # Ensure all data is JSON serializable
-        clean_response = {}
-        for key, value in response_data.items():
-            try:
-                json.dumps(value)
-                clean_response[key] = value
-            except (TypeError, ValueError):
-                clean_response[key] = str(value)
+        # Session 184: Handle different response types
+        # process_message can return a string OR a dict with tool_calls
+        if isinstance(response_data, str):
+            # Simple string response
+            clean_response = {
+                'message': response_data,
+                'success': True
+            }
+        elif isinstance(response_data, dict):
+            # Dict response (possibly with tool_calls)
+            clean_response = {}
+            for key, value in response_data.items():
+                try:
+                    json.dumps(value)
+                    clean_response[key] = value
+                except (TypeError, ValueError):
+                    clean_response[key] = str(value)
+
+            # Session 184: Ensure 'message' key exists for frontend
+            if 'text' in clean_response and 'message' not in clean_response:
+                clean_response['message'] = clean_response['text']
+
+            # Session 184: Pass tool_calls directly at top level for frontend!
+            # Frontend expects: data.tool_calls, not data.data.tool_calls
+            clean_response['success'] = True
+        else:
+            clean_response = {
+                'message': str(response_data),
+                'success': True
+            }
 
         # Add minimal debug info
         clean_response['debug_info'] = {
@@ -87,16 +109,13 @@ def assistant_chat_bypass(request):
             'message_length': len(message)
         }
 
-        result = {
-            'success': True,
-            'data': clean_response
-        }
-
+        # Session 184: Return response FLAT (not wrapped in {success, data})
+        # Frontend expects: data.tool_calls, data.message directly
         # Test final serialization
-        json.dumps(result)
+        json.dumps(clean_response)
 
         return HttpResponse(
-            json.dumps(result),
+            json.dumps(clean_response),
             content_type='application/json'
         )
 

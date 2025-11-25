@@ -16326,33 +16326,76 @@
                 this.addMessage('user', message);
 
                 // Session 129: Enhanced thinking indicator with AI Assistant branding
-                const typingId = this.addMessage('assistant', '🤖 **AI Assistant:** Analyzing your request...', true);
+                // Session 184: Changed to let so it can be reassigned in continuation loop
+                let typingId = this.addMessage('assistant', '🤖 **AI Assistant:** Analyzing your request...', true);
 
                 try {
-                    // Call AI backend
-                    const response = await this.callAI(message);
+                    // Session 184: Autonomous workflow continuation loop
+                    // Allow up to 5 iterations to prevent infinite loops
+                    let currentMessage = message;
+                    let iteration = 0;
+                    const MAX_ITERATIONS = 5;
 
-                    // Remove typing indicator
-                    this.removeMessage(typingId);
+                    while (iteration < MAX_ITERATIONS) {
+                        iteration++;
+                        console.log(`🔄 Autonomous workflow iteration ${iteration}/${MAX_ITERATIONS}`);
 
-                    // Session 58: Phase B.3 - Track assistant response in conversation history
-                    this.conversation.push({
-                        role: 'assistant',
-                        content: response.message
-                    });
+                        // Call AI backend
+                        const response = await this.callAI(currentMessage);
 
-                    // Add AI response with metadata (includes prompt if available)
-                    // Session 58: Phase B.3 - Add workflow execution button
-                    this.addMessage('assistant', response.message, false, {
-                        prompt: response.prompt || response.params?.prompt,
-                        showExecuteButton: response.showExecuteButton,
-                        action: response.action,
-                        params: response.params
-                    });
+                        // Remove typing indicator
+                        this.removeMessage(typingId);
 
-                    // Execute action if needed (and not requiring user confirmation)
-                    if (response.action && !response.showExecuteButton) {
-                        await this.executeAction(response.action, response.params);
+                        // Session 58: Phase B.3 - Track assistant response in conversation history
+                        this.conversation.push({
+                            role: 'assistant',
+                            content: response.message
+                        });
+
+                        // Add AI response with metadata (includes prompt if available)
+                        // Session 58: Phase B.3 - Add workflow execution button
+                        this.addMessage('assistant', response.message, false, {
+                            prompt: response.prompt || response.params?.prompt,
+                            showExecuteButton: response.showExecuteButton,
+                            action: response.action,
+                            params: response.params
+                        });
+
+                        // Session 184: Check if we have tool_results to continue with
+                        if (response.tool_results && response.tool_results.length > 0) {
+                            console.log('🔧 Tool results received, continuing autonomous workflow:', response.tool_results);
+
+                            // Format tool results as continuation message for the AI
+                            const toolSummary = response.tool_results.map(r => {
+                                if (r.success) {
+                                    return `✅ ${r.tool}: ${JSON.stringify(r.result).substring(0, 200)}`;
+                                } else {
+                                    return `❌ ${r.tool}: ${r.error}`;
+                                }
+                            }).join('\n');
+
+                            // Build continuation message
+                            currentMessage = `Tool execution results:\n${toolSummary}\n\nPlease continue with the next steps of the original request. If all tasks are complete, provide a summary.`;
+
+                            // Show thinking indicator for continuation
+                            typingId = this.addMessage('assistant', '🤖 **AI Assistant:** Processing results and continuing...', true);
+
+                            continue; // Continue to next iteration
+                        }
+
+                        // Execute action if needed (and not requiring user confirmation)
+                        if (response.action && !response.showExecuteButton) {
+                            await this.executeAction(response.action, response.params);
+                        }
+
+                        // No more tool calls - we're done
+                        console.log('✅ Autonomous workflow complete (no more tool_results)');
+                        break;
+                    }
+
+                    if (iteration >= MAX_ITERATIONS) {
+                        console.warn('⚠️ Reached max iterations for autonomous workflow');
+                        this.addMessage('assistant', '⚠️ Workflow paused after maximum steps. You can continue with additional requests.');
                     }
 
                 } catch (error) {
