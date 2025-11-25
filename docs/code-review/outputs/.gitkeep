@@ -1,0 +1,3 @@
+# This directory stores code review session outputs
+# Files will be named: session-X-output.md (where X is 1-8)
+# Final consolidated report: ../FINAL-CODE-REVIEW-REPORT.md

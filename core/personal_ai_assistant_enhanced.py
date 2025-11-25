@@ -520,7 +520,6 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     logger.info(f"💡 Auto-injected project_id: {arguments['project_id']}")
 
             logger.info(f"🔧 Executing tool: {function_name} with args: {arguments}")
-            print(f"🔧🔧🔧 GPT CALLED TOOL: {function_name}")  # Console output for debugging
 
             # Session 132: Route to agent orchestrators
             if function_name == 'image_generation_agent':
@@ -1636,10 +1635,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
     # Session 128: Updated to use Image Editing Agent
     def _tool_create_variations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the create_image_variations tool - Session 128."""
-        print(f"\n🎨 CREATE_VARIATIONS TOOL CALLED!")
-        print(f"   User: {self.user} (username: {getattr(self.user, 'username', 'N/A')})")
         logger.info(f"🎨 CREATE_VARIATIONS TOOL CALLED!")
-        logger.info(f"   User: {self.user} (username: {getattr(self.user, 'username', 'N/A')})")
+        logger.debug(f"User: {getattr(self.user, 'username', 'N/A')}")
         logger.info(f"🤖 Delegating to Image Editing Agent...")
 
         try:
@@ -1647,7 +1644,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             count = arguments.get('count', 3)
             prompt = arguments.get('prompt', 'creative variation')
 
-            print(f"   Image ID: {image_id}, Count: {count}")
+            logger.debug(f"Image ID: {image_id}, Count: {count}")
 
             # Get current project if in session
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
@@ -1659,7 +1656,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
-            print(f"   Created agent with user: {agent.user.username}")
+            logger.debug(f"Created agent with user: {agent.user.username}")
 
             # Execute agent workflow
             result = agent.execute(
@@ -4540,8 +4537,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         Returns:
             AI-generated response string
         """
-        print(f"🔍 DEBUG SESSION 184: _generate_ai_response() ENTERED!")
-        logger.info(f"🔍 DEBUG SESSION 184: _generate_ai_response() ENTERED!")
+        logger.debug("_generate_ai_response() ENTERED")
         # Build comprehensive context using UnifiedMemoryManager
         recent_memories = self.memory_manager.retrieve_memories(
             user=self.user,
@@ -4706,7 +4702,7 @@ Respond in a helpful, personalized way that:
 
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
-            print(f"🔍 DEBUG SESSION 184: Starting LLM call for message: {message[:50]}...")
+            logger.debug(f"Starting LLM call for message: {message[:50]}...")
             # Session 129: Get previous response_id for GPT-5.1 chain of thought
             previous_response_id = None
             current_session = getattr(self, 'session', None)
@@ -4784,7 +4780,6 @@ Respond in a helpful, personalized way that:
                     "tools": [{"type": "function", "name": t["name"]} for t in tools]
                 }
                 logger.info(f"🔧 Calling LLM with {len(tools)} tools (mode: auto)...")
-            print(f"🔍 DEBUG SESSION 184: Calling enforce_real_ai with {len(tools)} tools, tool_choice mode={tool_choice.get('mode')}")
             # Session 184: Increased max_tokens from 500 to 1500 to prevent
             # truncation of tool call arguments (JSON can be longer than expected!)
             ai_result = self.llm_enforcer.enforce_real_ai(
@@ -4798,7 +4793,6 @@ Respond in a helpful, personalized way that:
                 tool_choice=tool_choice  # Session 129: Allowed tools with auto mode
                 # temperature=0.7  # GPT-5 only supports default temperature
             )
-            print(f"🔍 DEBUG SESSION 184: LLM returned: success={ai_result.get('success')}, has_tool_calls={'tool_calls' in ai_result}")
             logger.info(f"✅ LLM returned: success={ai_result.get('success')}, has_tool_calls={'tool_calls' in ai_result}")
 
             # Session 129: Store new response_id for next turn
@@ -4836,12 +4830,8 @@ Respond in a helpful, personalized way that:
 
         except Exception as e:
             import traceback
-            print(f"❌ DEBUG SESSION 184: LLM EXCEPTION: {e}")
-            print(f"❌ DEBUG SESSION 184: Full traceback:\n{traceback.format_exc()}")
-            logger.error(f"❌ DEBUG SESSION 184: LLM EXCEPTION: {e}")
-            logger.error(f"❌ DEBUG SESSION 184: Full traceback:\n{traceback.format_exc()}")
             logger.error(f"❌ LLM ERROR: {e}")
-            logger.error(f"❌ Full traceback:\n{traceback.format_exc()}")
+            logger.debug(f"Full traceback:\n{traceback.format_exc()}")
             logger.warning(f"⚠️ LLM not available (likely no API keys configured): {e}")
             logger.info("📋 Using intelligent fallback response with conversation context")
             return self._generate_intelligent_fallback(message, context)
@@ -4900,10 +4890,10 @@ Respond in a helpful, personalized way that:
         Returns:
             Response dictionary with AI-generated content
         """
-        print(f"🔍 DEBUG SESSION 184: _generate_response() ENTERED, calling _generate_ai_response()...")
+        logger.debug("_generate_response() ENTERED, calling _generate_ai_response()")
         # Generate real AI response
         ai_response = self._generate_ai_response(message, context)
-        print(f"🔍 DEBUG SESSION 184: _generate_ai_response() returned type={type(ai_response)}")
+        logger.debug(f"_generate_ai_response() returned type={type(ai_response)}")
 
         # Session 155 Fix: Handle dict response with tool_calls
         if isinstance(ai_response, dict) and 'tool_calls' in ai_response:
@@ -5091,8 +5081,7 @@ Respond in a helpful, personalized way that:
         Returns:
             Response dictionary with enhanced capabilities
         """
-        print(f"🔍 DEBUG SESSION 184: process_message() CALLED with: {message[:80]}...")
-        logger.info(f"🔍 DEBUG SESSION 184: process_message() CALLED with: {message[:80]}...")
+        logger.debug(f"process_message() CALLED with: {message[:80]}...")
 
         # Analyze user patterns and conversation history for contextual memory
         user_patterns = self._analyze_user_patterns()
@@ -5406,9 +5395,9 @@ Respond in a helpful, personalized way that:
             return response_data
 
         # Regular message processing with AI instead of templates
-        print(f"🔍 DEBUG SESSION 184: About to call _generate_response()")
+        logger.debug("About to call _generate_response()")
         response_data = self._generate_response(message, full_context)
-        print(f"🔍 DEBUG SESSION 184: _generate_response() returned type={type(response_data)}, keys={response_data.keys() if isinstance(response_data, dict) else 'N/A'}")
+        logger.debug(f"_generate_response() returned type={type(response_data)}")
 
         # Session 135: Inject task_id from tool execution (enables video polling notifications)
         if hasattr(self, '_last_tool_result') and self._last_tool_result:

@@ -41,26 +41,49 @@ LLM_HTTP_TIMEOUT = int(os.getenv("LLM_HTTP_TIMEOUT", "30"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # Security
-SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
+
+# Validate SECRET_KEY is secure
+if not SECRET_KEY:
+    if os.environ.get('DEBUG', 'False') == 'True':
+        # In development, generate a random key if none provided (will change on restart)
+        SECRET_KEY = get_random_secret_key()
+    else:
+        raise ValueError(
+            "SECRET_KEY environment variable must be set in production. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+        )
+elif len(SECRET_KEY) < 50:
+    raise ValueError(
+        f"SECRET_KEY must be at least 50 characters (current: {len(SECRET_KEY)}). "
+        "Generate a secure key with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+    )
+
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Dynamic ALLOWED_HOSTS for production
-if DEBUG:
-    # Dev hosts - removed wildcard for security
-    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,192.168.*').split(',')
-else:
-    # Production hosts
-    default_hosts = [
-        'localhost',
-        '127.0.0.1',
+ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
+
+# Security: Prevent wildcard '*' in production
+if not DEBUG and '*' in ALLOWED_HOSTS:
+    raise ValueError(
+        "ALLOWED_HOSTS cannot contain '*' in production (DEBUG=False). "
+        "Please specify explicit hostnames in ALLOWED_HOSTS environment variable."
+    )
+
+if not DEBUG:
+    # Add default production hosts if not already present
+    default_production_hosts = [
         '.donkeybetz.com',  # Allow all subdomains
         '.vercel.app',      # Allow Vercel deployments
         '.netlify.app',     # Allow Netlify deployments
         '.herokuapp.com',   # Allow Heroku deployments
         '.railway.app',     # Allow Railway deployments
     ]
-    custom_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
-    ALLOWED_HOSTS = default_hosts + custom_hosts
+    for host in default_production_hosts:
+        if host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
 
 # Platform Configuration
 PLATFORM_NAME = os.environ.get('PLATFORM_NAME', 'Unified Donkey Betz')
@@ -383,7 +406,7 @@ REST_FRAMEWORK = {
         'core.mobile_authentication.CsrfExemptSessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Temporarily allow all requests
+        'rest_framework.permissions.IsAuthenticated',  # Require authentication by default
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
@@ -696,12 +719,26 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Rate Limiting Configuration
 RATE_LIMIT_ENABLED = env_bool('RATE_LIMIT_ENABLED', not DEBUG)
+
+# Centralized rate limit configuration (requests per window in seconds)
+# Used by core/rate_limiter.py and core/decorators.py
+RATE_LIMITS = {
+    'default': {'requests': 100, 'window': 60},  # 100 requests per minute
+    'ai_generation': {'requests': 10, 'window': 60},  # 10 AI calls per minute
+    'video_processing': {'requests': 5, 'window': 60},  # 5 video ops per minute
+    'image_processing': {'requests': 20, 'window': 60},  # 20 image ops per minute
+    'api_expensive': {'requests': 20, 'window': 60},  # 20 expensive ops per minute
+    'auth_login': {'requests': 5, 'window': 300},  # 5 login attempts per 5 minutes
+    'auth_register': {'requests': 3, 'window': 3600},  # 3 registrations per hour
+    'auth_password_reset': {'requests': 3, 'window': 3600},  # 3 resets per hour
+}
+
 if RATE_LIMIT_ENABLED:
     RATELIMIT_ENABLE = True
     # RATELIMIT_VIEW = 'core.views.ratelimit_exceeded'  # Uncomment when view is created
     RATELIMIT_RATE = env('RATELIMIT_RATE', '100/h')  # Default: 100 requests per hour
-    
-    # Specific rate limits
+
+    # Specific rate limits (legacy format)
     LOGIN_RATE_LIMIT = env('LOGIN_RATE_LIMIT', '5/m')  # 5 login attempts per minute
     API_RATE_LIMIT = env('API_RATE_LIMIT', '1000/h')  # 1000 API calls per hour
     REGISTER_RATE_LIMIT = env('REGISTER_RATE_LIMIT', '3/h')  # 3 registrations per hour
@@ -860,6 +897,11 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 3600.0,  # Every hour
     },
 }
+
+# ffmpeg Timeout Configuration (in seconds)
+# Used for all subprocess calls to ffmpeg to prevent hung processes
+FFMPEG_TIMEOUT = int(os.environ.get('FFMPEG_TIMEOUT', 300))  # 5 minutes default
+FFMPEG_TIMEOUT_LONG = int(os.environ.get('FFMPEG_TIMEOUT_LONG', 600))  # 10 minutes for concatenation, complex ops
 
 # DRF Spectacular Settings for API Documentation
 SPECTACULAR_SETTINGS = {

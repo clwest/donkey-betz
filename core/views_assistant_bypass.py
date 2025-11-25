@@ -1,13 +1,21 @@
 """
 Bypass view for AI Assistant that avoids all Django session/cache/middleware issues
+
+Security Notes:
+- CSRF protection is handled by DisableCSRFForAuthEndpoints middleware for /api/ paths
+- Authentication is required (returns 401 if not authenticated)
+- Frontend sends X-CSRFToken header via authenticatedFetch()
+- Rate limiting applied via @rate_limit decorator (Phase 2 P1 fix)
 """
 import json
 import logging
 from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
+from core.decorators import rate_limit
+from core.validators import validate_prompt, sanitize_prompt, validate_uuid
+from core.responses import safe_error_message
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -20,9 +28,11 @@ except ImportError:
     logger.info("Using standard Personal AI Assistant")
 
 
-@csrf_exempt
+# Note: @csrf_exempt removed - CSRF handling is done by DisableCSRFForAuthEndpoints middleware
+# which properly exempts /api/ paths when token authentication is present
 @never_cache
 @require_POST
+@rate_limit('ai_generation')  # Phase 2 P1: Rate limit AI generation (10 requests/min)
 def assistant_chat_bypass(request):
     """
     Completely bypass Django's session/cache system for AI Assistant chat.
@@ -38,23 +48,38 @@ def assistant_chat_bypass(request):
         data = json.loads(body)
         message = data.get('message', '').strip()
 
-        if not message:
+        # Phase 2 P1: Input validation for AI prompts
+        is_valid, validation_error = validate_prompt(message, min_length=1, max_length=10000)
+        if not is_valid:
             return HttpResponse(
-                json.dumps({'error': 'Message is required'}),
+                json.dumps({'error': validation_error, 'error_code': 'VALIDATION_ERROR'}),
                 content_type='application/json',
                 status=400
             )
 
+        # Sanitize the message to prevent XSS/injection
+        message = sanitize_prompt(message)
+
         # Session 125: Get authenticated user (not default user!)
         if not request.user.is_authenticated:
             return HttpResponse(
-                json.dumps({'error': 'Authentication required'}),
+                json.dumps({'error': 'Authentication required', 'error_code': 'UNAUTHORIZED'}),
                 content_type='application/json',
                 status=401
             )
 
         user = request.user
         project_id = data.get('project_id')  # Session 125: Get project context
+
+        # Phase 2 P1: Validate project_id if provided
+        if project_id:
+            is_valid, uuid_error = validate_uuid(project_id)
+            if not is_valid:
+                return HttpResponse(
+                    json.dumps({'error': uuid_error, 'error_code': 'VALIDATION_ERROR'}),
+                    content_type='application/json',
+                    status=400
+                )
 
         logger.info(f"Processing message for {user.username}: {message[:50]}...")
         if project_id:
@@ -126,17 +151,17 @@ def assistant_chat_bypass(request):
             status=400
         )
     except Exception as e:
-        logger.error(f"Bypass endpoint error: {e}")
+        # Phase 2 P1: Use safe error message to prevent information leakage
+        safe_message = safe_error_message(e, context='AI assistant')
 
         # Create safe fallback response
         fallback = {
             'success': True,
             'data': {
-                'response': f"🤖 Your message was received: \"{message[:30] if 'message' in locals() else 'unknown'}...\"\n\nThe AI Assistant is working but experiencing minor technical issues. Using bypass mode.",
+                'response': f"🤖 {safe_message}",
                 'ai_generated': False,
                 'model': 'bypass_fallback',
                 'debug_info': {
-                    'error': str(e),
                     'bypass_mode': True
                 }
             }

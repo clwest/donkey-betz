@@ -775,7 +775,7 @@ class AgentContribution(UnifiedBaseModel):
         help_text="3D model created by agent"
     )
 
-    # NOTE: AudioHistory model doesn't exist yet (TODO in content app)
+    # NOTE: AudioHistory model pending implementation in content app
     # audio = models.ForeignKey(
     #     'content.AudioHistory',
     #     null=True,
@@ -874,7 +874,7 @@ class AgentContribution(UnifiedBaseModel):
             content_type = f"video #{self.video.get_sequential_number()}"
         elif self.minifig_asset:
             content_type = f"3D model #{self.minifig_asset.id}"
-        # elif self.audio:  # TODO: Uncomment when AudioHistory exists
+        # elif self.audio:  # NOTE: Enable when AudioHistory model is created
         #     content_type = f"audio #{self.audio.id}"
 
         return f"{self.agent.display_name} → {content_type} ({self.contribution_type})"
@@ -888,7 +888,7 @@ class AgentContribution(UnifiedBaseModel):
             return {'type': 'video', 'id': str(self.video.id), 'number': self.video.get_sequential_number()}
         elif self.minifig_asset:
             return {'type': '3d_model', 'id': str(self.minifig_asset.id)}
-        # elif self.audio:  # TODO: Uncomment when AudioHistory exists
+        # elif self.audio:  # NOTE: Enable when AudioHistory model is created
         #     return {'type': 'audio', 'id': str(self.audio.id)}
         return {'type': 'project', 'id': str(self.project.id)}
 
