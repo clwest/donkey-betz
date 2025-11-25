@@ -1852,6 +1852,14 @@ class ImageHistory(UnifiedBaseModel):
         help_text="When user selected this option"
     )
 
+    # Session 182: Persistent sequential number for consistent ID across frontend/backend
+    sequential_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Permanent sequential number per user (never changes, even if earlier images deleted)"
+    )
+
     class Meta:
         verbose_name = "Image History"
         verbose_name_plural = "Image History"
@@ -1865,6 +1873,8 @@ class ImageHistory(UnifiedBaseModel):
             # CreativeDirectorAgent indexes
             models.Index(fields=['generation_batch_id']),
             models.Index(fields=['user', 'was_selected']),
+            # Session 182: Sequential number lookup
+            models.Index(fields=['user', 'sequential_number']),
         ]
     
     def __str__(self):
@@ -1886,21 +1896,48 @@ class ImageHistory(UnifiedBaseModel):
             return default_storage.url(self.thumbnail)
         return self.get_full_url()
 
+    def save(self, *args, **kwargs):
+        """
+        Session 182: Auto-assign sequential_number on creation.
+        This ensures a permanent, stable ID that never changes.
+        """
+        if self._state.adding and self.sequential_number is None:
+            # Get the highest sequential number for this user
+            from django.db.models import Max
+            max_seq = ImageHistory.objects.filter(user=self.user).aggregate(
+                Max('sequential_number')
+            )['sequential_number__max']
+
+            # If no existing sequential numbers, start from count of existing images
+            if max_seq is None:
+                # Backfill scenario: count existing images
+                existing_count = ImageHistory.objects.filter(user=self.user).count()
+                self.sequential_number = existing_count + 1
+            else:
+                self.sequential_number = max_seq + 1
+
+        super().save(*args, **kwargs)
+
     def get_sequential_number(self):
         """
         Get sequential number for this image (per user, chronological)
 
         Session 96 Weekend Project: Hybrid Image ID system
+        Session 182: Now returns persistent sequential_number if set
+
         Returns 1-based sequential number for easy voice commands
         Example: "Use image 12" instead of "Use image d4f7b3c2-8a9e-4d1f..."
         """
-        # Count how many images this user has created BEFORE this one
+        # Session 182: Return stored sequential number if available
+        if self.sequential_number is not None:
+            return self.sequential_number
+
+        # Fallback: Calculate dynamically (for legacy images without sequential_number)
         earlier_images = ImageHistory.objects.filter(
             user=self.user,
             created_at__lt=self.created_at
         ).count()
 
-        # Sequential number is count + 1 (1-based indexing)
         return earlier_images + 1
 
     def increment_view_count(self):

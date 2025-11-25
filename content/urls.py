@@ -34,6 +34,8 @@ urlpatterns = [
     path('social/list/', blog_list, name='social-list'),  # Using same view for now
     # MiniFig Assets API (Session 111)
     path('minifigs/<uuid:minifig_id>/', minifig_views.get_minifig_detail, name='minifig-detail'),
+    path('minifigs/<uuid:minifig_id>/delete/', minifig_views.delete_minifig, name='minifig-delete'),  # Session 181
+    path('minifigs/<uuid:minifig_id>/prepare-for-print/', minifig_views.prepare_for_print, name='minifig-prepare-for-print'),  # Session 182
     path('minifigs/', minifig_views.list_minifigs, name='minifig-list'),
 ]
 

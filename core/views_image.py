@@ -6986,13 +6986,22 @@ def execute_tool(request):
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ Project {project_id} not found for user {request.user.username}")
 
+        # Session 182: Inject project_id into parameters for project association
+        if project_id and 'project_id' not in parameters:
+            parameters['project_id'] = project_id
+            logger.info(f"📁 Injected project_id into parameters: {project_id}")
+
         # Route to appropriate tool handler
-        if tool_name == 'generate_image':
+        # Session 181: Added agent name aliases for GPT function calling compatibility
+        if tool_name in ('generate_image', 'image_generation_agent'):
             result = _execute_generate_image(request.user, parameters, session=session)
-        elif tool_name == 'generate_video':
+        elif tool_name in ('generate_video', 'video_generation_agent'):
             result = _execute_generate_video(request.user, parameters, session=session)
         elif tool_name == 'inpaint':
             result = _execute_inpaint(request.user, parameters)
+        elif tool_name == 'resize_image_for_format':
+            # Session 182: Resize image for social media formats (Exact Match mode)
+            result = _execute_resize_image_for_format(request.user, parameters)
         elif tool_name == 'web_search':
             result = _execute_web_search(parameters)
         elif tool_name == 'scrape_website':
@@ -7520,10 +7529,29 @@ def _execute_generate_image(user, parameters, session=None):
         style = parameters.get('style', '')  # Optional style
         expected_text = parameters.get('expected_text', '').strip()  # Session 66: For Vision refinement
 
+        # Session 181: Support custom sizes from image_generation_agent
+        width = parameters.get('width')
+        height = parameters.get('height')
+        if width and height:
+            size = f"{width}x{height}"
+        else:
+            size = parameters.get('size', '1024x1024')
+
+        # Session 182: Get project for association
+        project = None
+        project_id = parameters.get('project_id')
+        if project_id:
+            from projects.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=user)
+                logger.info(f"📁 Image will be associated with project: {project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ Project {project_id} not found")
+
         if not prompt:
             raise ValueError("Prompt is required for image generation")
 
-        logger.info(f"🎨 Executor generating image: {prompt[:50]}... (model: {model}, style: {style})")
+        logger.info(f"🎨 Executor generating image: {prompt[:50]}... (model: {model}, style: {style}, size: {size})")
         if expected_text:
             logger.info(f"👁️ Expected text for verification: '{expected_text}'")
 
@@ -7542,7 +7570,7 @@ def _execute_generate_image(user, parameters, session=None):
         service = ImageGenerationService()
         result = service.generate_image(
             prompt=prompt,
-            size="1024x1024",
+            size=size,  # Session 181: Use dynamic size
             style=style if style else "photographic",
             quality=quality,
             provider='stability',
@@ -7587,6 +7615,7 @@ def _execute_generate_image(user, parameters, session=None):
 
         # Save to ImageHistory for tracking
         # Session 96 Weekend Project: Link to AI conversation session
+        # Session 182: Link to project for Social Media Kit workflow
         history_record = save_to_history(
             user=user,
             file_path=file_path,
@@ -7596,7 +7625,8 @@ def _execute_generate_image(user, parameters, session=None):
             model_used=model,
             style=style,
             parent_image=None,
-            session=session  # Session 96: Link to AI conversation
+            session=session,  # Session 96: Link to AI conversation
+            project=project   # Session 182: Link to project
         )
 
         logger.info(f"✅ Executor generated image successfully: {saved_url}")
@@ -9357,6 +9387,168 @@ def _execute_inpaint(user, parameters):
         raise
 
 
+def _execute_resize_image_for_format(user, parameters):
+    """
+    Session 182: Resize/adapt an image for different social media formats.
+
+    This creates a new image by resizing and/or cropping the source image
+    to fit the target dimensions while maintaining the visual content.
+
+    Parameters:
+        source_image_id (str): UUID of the source image
+        target_width (int): Target width in pixels
+        target_height (int): Target height in pixels
+        format_name (str): Optional name for the format (e.g., "banner", "avatar")
+        fit_mode (str): "cover" (crop to fill), "contain" (fit within), "stretch"
+        project_id (str): Optional project to associate with
+
+    Returns:
+        dict: {
+            'success': True,
+            'image_url': 'URL to resized image',
+            'image_id': 'History ID',
+            'format': 'banner/post/avatar'
+        }
+    """
+    from PIL import Image
+    from io import BytesIO
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from content.models import ImageHistory
+    import os
+
+    try:
+        # Session 182: Accept both 'image_id' and 'source_image_id' for compatibility
+        source_image_id = parameters.get('image_id') or parameters.get('source_image_id')
+        target_width = int(parameters.get('target_width', 1080))
+        target_height = int(parameters.get('target_height', 1080))
+        format_name = parameters.get('format_name', 'resized')
+        fit_mode = parameters.get('fit_mode', 'cover')
+        project_id = parameters.get('project_id')
+
+        if not source_image_id:
+            raise ValueError("image_id or source_image_id is required")
+
+        # Session 182: Support hybrid ID resolution (sequential number or UUID)
+        source_image = None
+        try:
+            # First, try as UUID
+            source_image = ImageHistory.objects.get(id=source_image_id, user=user)
+        except (ImageHistory.DoesNotExist, ValueError):
+            # Try as sequential number (e.g., "7" or "#7")
+            try:
+                seq_num = int(str(source_image_id).replace('#', '').strip())
+                # Get all user's images ordered by creation date
+                user_images = ImageHistory.objects.filter(user=user).order_by('created_at')
+                if 1 <= seq_num <= user_images.count():
+                    source_image = user_images[seq_num - 1]  # Sequential numbers are 1-based
+                    logger.info(f"📍 Resolved sequential number #{seq_num} to image {source_image.id}")
+            except (ValueError, TypeError):
+                pass
+
+        if not source_image:
+            raise ValueError(f"Source image {source_image_id} not found")
+
+        # Load the image
+        source_path = source_image.file_path
+        if source_path.startswith('/'):
+            full_path = source_path
+        else:
+            full_path = os.path.join(settings.MEDIA_ROOT, source_path)
+
+        if not os.path.exists(full_path):
+            # Try with default_storage
+            if default_storage.exists(source_path):
+                with default_storage.open(source_path, 'rb') as f:
+                    img = Image.open(f)
+                    img.load()
+            else:
+                raise ValueError(f"Source image file not found: {source_path}")
+        else:
+            img = Image.open(full_path)
+
+        # Convert to RGB if necessary
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+
+        original_width, original_height = img.size
+        target_ratio = target_width / target_height
+        original_ratio = original_width / original_height
+
+        if fit_mode == 'cover':
+            # Crop to fill target dimensions (most common for social media)
+            if original_ratio > target_ratio:
+                # Image is wider, crop sides
+                new_width = int(original_height * target_ratio)
+                left = (original_width - new_width) // 2
+                img = img.crop((left, 0, left + new_width, original_height))
+            else:
+                # Image is taller, crop top/bottom
+                new_height = int(original_width / target_ratio)
+                top = (original_height - new_height) // 2
+                img = img.crop((0, top, original_width, top + new_height))
+            # Resize to target
+            img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+        elif fit_mode == 'contain':
+            # Fit within dimensions with padding
+            img.thumbnail((target_width, target_height), Image.Resampling.LANCZOS)
+            # Create background and paste centered
+            background = Image.new('RGB', (target_width, target_height), (255, 255, 255))
+            offset = ((target_width - img.size[0]) // 2, (target_height - img.size[1]) // 2)
+            background.paste(img, offset)
+            img = background
+
+        else:  # stretch
+            img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+        # Save to buffer
+        buffer = BytesIO()
+        img.save(buffer, format='PNG', quality=95)
+        buffer.seek(0)
+
+        # Save to storage
+        new_filename = f"generated_images/{user.id}/{format_name}_{uuid.uuid4().hex[:8]}.png"
+        file_path = default_storage.save(new_filename, ContentFile(buffer.read()))
+        saved_url = default_storage.url(file_path)
+
+        # Get project if specified
+        project = None
+        if project_id:
+            from content.models import CreativeProject
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=user)
+            except CreativeProject.DoesNotExist:
+                pass
+
+        # Save to ImageHistory
+        history_record = save_to_history(
+            user=user,
+            file_path=file_path,
+            image_type='resized',
+            prompt=f"Resized for {format_name} ({target_width}x{target_height}) from Image #{source_image.get_sequential_number()}",
+            parameters={'source_id': str(source_image_id), 'width': target_width, 'height': target_height, 'fit_mode': fit_mode},
+            model_used='PIL',
+            style=format_name,
+            parent_image=source_image,
+            project=project
+        )
+
+        logger.info(f"✅ Resized image for {format_name}: {target_width}x{target_height}")
+
+        return {
+            'success': True,
+            'image_url': saved_url,
+            'image_id': str(history_record.id) if history_record else None,
+            'format': format_name,
+            'dimensions': f"{target_width}x{target_height}"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_resize_image_for_format: {str(e)}")
+        raise
+
+
 def _execute_web_search(parameters):
     """
     Execute web search tool
@@ -10573,10 +10765,11 @@ def get_portfolio(request):
         if not content_type or content_type == '3d_model' or content_type == 'model':
             from content.models import MiniFigAsset
 
-            # Only show completed 3D models
+            # Session 182: Show all 3D models (including pending/processing for polling)
+            # Frontend will handle display based on status
             models_query = MiniFigAsset.objects.filter(
                 user=request.user,
-                status='completed'
+                status__in=['completed', 'pending', 'processing']
             ).select_related('user')
 
             # Session 137: Apply search filter
@@ -10624,6 +10817,7 @@ def get_portfolio(request):
                     'id': str(model_obj.id),
                     'sequential_number': model_obj.get_sequential_number() if hasattr(model_obj, 'get_sequential_number') else 0,
                     'type': '3d_model',
+                    'status': model_obj.status,  # Session 182: Expose status for frontend polling
                     'content_url': model_url,
                     'thumbnail_url': preview_url,
                     'prompt': model_obj.title,
