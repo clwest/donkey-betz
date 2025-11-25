@@ -7541,7 +7541,7 @@ def _execute_generate_image(user, parameters, session=None):
         project = None
         project_id = parameters.get('project_id')
         if project_id:
-            from projects.models import CreativeProject
+            from content.models import CreativeProject
             try:
                 project = CreativeProject.objects.get(id=project_id, user=user)
                 logger.info(f"📁 Image will be associated with project: {project.name}")
@@ -7746,13 +7746,20 @@ def _extract_image_reference(text, user):
 
     if matches:
         sequential_num = int(matches[0])
-        # Sequential number is just the database ID
+        # Session 183: Use sequential_number field (not id which is UUID)
+        # Order by -created_at to handle duplicate sequential numbers
         try:
-            image = ImageHistory.objects.get(id=sequential_num, user=user)
-            logger.info(f"📸 Resolved 'image {sequential_num}' to: {image.filename} (ID: {image.id})")
-            return image
-        except ImageHistory.DoesNotExist:
-            logger.warning(f"⚠️ Image #{sequential_num} not found for user {user.username}")
+            image = ImageHistory.objects.filter(
+                sequential_number=sequential_num,
+                user=user
+            ).order_by('-created_at').first()
+            if image:
+                logger.info(f"📸 Resolved 'image {sequential_num}' to: {image.filename} (ID: {image.id})")
+                return image
+            else:
+                logger.warning(f"⚠️ Image #{sequential_num} not found for user {user.username}")
+        except Exception as e:
+            logger.warning(f"⚠️ Error finding image #{sequential_num}: {e}")
 
     # Pattern 2: UUID pattern (8-4-4-4-12 format)
     uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
@@ -7776,11 +7783,16 @@ def _execute_generate_video(user, parameters, session=None):
 
     Session 65: Phase 2.2 - Autonomous video generation
     Session 96: Weekend Project - Link generated videos to AI session
+    Session 183: Support both direct params and operation-based params from GPT
 
     Parameters:
         prompt (str): Video description
         duration (int): Duration in seconds (5 or 10) - optional
         session (AISession): AI conversation session - optional
+
+    Also supports operation-based format from GPT:
+        operation (str): 'animate' or 'generate'
+        params (dict): {prompt, image_id, duration}
 
     Returns:
         dict: {
@@ -7792,8 +7804,26 @@ def _execute_generate_video(user, parameters, session=None):
         }
     """
     try:
-        prompt = parameters.get('prompt', '').strip()
-        duration = parameters.get('duration', 6)  # Default to 6 seconds (Runway ML accepts 4, 6, or 8)
+        # Session 183: Handle operation-based format from GPT
+        operation = parameters.get('operation')
+        if operation:
+            # GPT sent operation-based params, extract the actual params
+            inner_params = parameters.get('params', {})
+            # Session 183: GPT may send motion_prompt OR prompt for animate operation
+            prompt = inner_params.get('prompt', '') or inner_params.get('motion_prompt', '')
+            prompt = prompt.strip() if prompt else ''
+            duration = inner_params.get('duration', 6)
+            # For animate operation, get image_id
+            if operation == 'animate' and inner_params.get('image_id'):
+                parameters['source_image_id'] = inner_params.get('image_id')
+                # Session 183: If no prompt provided for animate, use a default motion prompt
+                if not prompt:
+                    prompt = "smooth natural motion with subtle movement"
+            logger.info(f"🎬 Session 183: Extracted from operation={operation}: prompt={prompt[:50] if prompt else 'N/A'}...")
+        else:
+            # Direct params format
+            prompt = parameters.get('prompt', '').strip()
+            duration = parameters.get('duration', 6)  # Default to 6 seconds (Runway ML accepts 4, 6, or 8)
 
         if not prompt:
             raise ValueError("Prompt is required for video generation")
@@ -7819,12 +7849,33 @@ def _execute_generate_video(user, parameters, session=None):
 
         if source_image_id:
             # Session 122: AI explicitly passed an image ID - use it!
+            # Session 183: Support hybrid IDs (numbers like "13" or UUIDs)
             try:
                 from content.models import ImageHistory
-                source_image = ImageHistory.objects.get(id=source_image_id, user=user)
-                logger.info(f"📸 Session 122: AI passed explicit source_image_id: {source_image_id}")
+
+                # Session 183: Handle numeric IDs (sequential_number) vs UUIDs
+                image_id_str = str(source_image_id).strip()
+                if image_id_str.isdigit():
+                    # It's a sequential number - resolve to UUID
+                    # Session 183: Order by -created_at to get newest record (handles duplicate sequential numbers)
+                    seq_num = int(image_id_str)
+                    source_image = ImageHistory.objects.filter(
+                        user=user,
+                        sequential_number=seq_num
+                    ).order_by('-created_at').first()
+                    if source_image:
+                        logger.info(f"📸 Session 183: Resolved sequential #{seq_num} to UUID {source_image.id} (file: {source_image.file_path[:50] if source_image.file_path else 'N/A'}...)")
+                    else:
+                        logger.warning(f"⚠️ No image found with sequential_number={seq_num}")
+                else:
+                    # It's a UUID
+                    source_image = ImageHistory.objects.get(id=source_image_id, user=user)
+                    logger.info(f"📸 Session 122: AI passed explicit source_image_id: {source_image_id}")
             except ImageHistory.DoesNotExist:
                 logger.warning(f"⚠️ Source image {source_image_id} not found, falling back to text-to-video")
+                source_image = None
+            except Exception as e:
+                logger.warning(f"⚠️ Error resolving image ID {source_image_id}: {e}, falling back to text-to-video")
                 source_image = None
 
         if not source_image:
@@ -7873,10 +7924,19 @@ def _execute_generate_video(user, parameters, session=None):
 
         # Session 119: BUGFIX - Assign project if session already has one
         # When resuming a session with existing project, videos need to be linked immediately
+        # Session 183: Also check for project_id in parameters (workflow passes it directly)
         video_project = None
         if session and session.project:
             video_project = session.project
-            logger.info(f"📁 Assigning video to project: {session.project.name}")
+            logger.info(f"📁 Assigning video to project from session: {session.project.name}")
+        elif parameters.get('project_id'):
+            # Session 183: Get project from parameters (workflow/direct tool call)
+            from content.models import CreativeProject
+            try:
+                video_project = CreativeProject.objects.get(id=parameters['project_id'])
+                logger.info(f"📁 Assigning video to project from parameters: {video_project.name}")
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ Project {parameters['project_id']} not found")
 
         video = VideoHistory.objects.create(
             user=user,
@@ -9521,13 +9581,25 @@ def _execute_resize_image_for_format(user, parameters):
             except CreativeProject.DoesNotExist:
                 pass
 
+        # Session 183: Detect if this is a social media kit image based on format_name
+        is_social_media = any(keyword in format_name.lower() for keyword in [
+            'social media', 'banner', 'post', 'avatar', 'profile', 'story', 'instagram', 'facebook', 'twitter', 'linkedin'
+        ])
+
         # Save to ImageHistory
         history_record = save_to_history(
             user=user,
             file_path=file_path,
-            image_type='resized',
+            image_type='social_media' if is_social_media else 'resized',
             prompt=f"Resized for {format_name} ({target_width}x{target_height}) from Image #{source_image.get_sequential_number()}",
-            parameters={'source_id': str(source_image_id), 'width': target_width, 'height': target_height, 'fit_mode': fit_mode},
+            parameters={
+                'source_id': str(source_image_id),
+                'width': target_width,
+                'height': target_height,
+                'fit_mode': fit_mode,
+                'is_social_media_kit': is_social_media,
+                'format_name': format_name
+            },
             model_used='PIL',
             style=format_name,
             parent_image=source_image,
@@ -9770,13 +9842,14 @@ def start_workflow_execution(request):
         "prompt": "User's prompt",
         "improved_prompt": "AI-improved prompt (optional)",
         "config": {...},  // Workflow configuration
-        "input_image_id": 123  // Optional
+        "input_image_id": 123,  // Optional
+        "project_id": "uuid-string"  // Optional - Session 183
     }
 
     Returns: {"workflow_history_id": 123}
     """
     try:
-        from content.models import WorkflowHistory
+        from content.models import WorkflowHistory, CreativeProject
 
         workflow_type = request.data.get('workflow_type', '').strip()
         workflow_name = request.data.get('workflow_name', '').strip()
@@ -9784,15 +9857,25 @@ def start_workflow_execution(request):
         improved_prompt = request.data.get('improved_prompt', '').strip()
         config = request.data.get('config', {})
         input_image_id = request.data.get('input_image_id')
+        project_id = request.data.get('project_id')  # Session 183: Project association
 
         if not workflow_type or not workflow_name:
             return Response({
                 'error': 'workflow_type and workflow_name are required'
             }, status=400)
 
+        # Session 183: Get project if provided
+        project = None
+        if project_id:
+            try:
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"⚠️ Project {project_id} not found for user {request.user.id}")
+
         # Create workflow history record
         workflow_history = WorkflowHistory.objects.create(
             user=request.user,
+            project=project,  # Session 183: Associate with project
             workflow_type=workflow_type,
             workflow_name=workflow_name,
             prompt=prompt,
@@ -10082,6 +10165,10 @@ def calculate_project_stats(project_id, user):
     # Decision count (from Decision Timeline / Co-Leadership)
     decisions_count = CoLeadershipDecision.objects.filter(project_id=project_id).count()
 
+    # Session 183: Workflow count (from WorkflowHistory)
+    from content.models import WorkflowHistory
+    workflows_count = WorkflowHistory.objects.filter(project_id=project_id, user=user).count()
+
     # Get project created_at
     from content.models import CreativeProject
     try:
@@ -10124,6 +10211,7 @@ def calculate_project_stats(project_id, user):
             'unique_agents': unique_agents_list,  # Session 147: List of agent names
             'unique_agents_count': unique_agents_count,  # Session 147: Count for stats display
             'decisions_count': decisions_count,
+            'workflows_count': workflows_count,  # Session 183: Workflows completed
             'execution_time_seconds': int(total_execution_time)
         },
         'timeline': {
@@ -10669,6 +10757,7 @@ def get_portfolio(request):
                     'id': str(img.id),
                     'sequential_number': img.get_sequential_number(),  # Session 117: Sequential ID
                     'type': 'image',
+                    'image_type': img.image_type,  # Session 183: For social media filtering
                     'content_url': img.get_full_url(),
                     'thumbnail_url': img.get_thumbnail_url(),
                     'prompt': img.prompt,
@@ -10681,6 +10770,7 @@ def get_portfolio(request):
                     'is_favorite': img.is_favorite,
                     'user_rating': getattr(img, 'user_rating', None),  # Session 147: For sorting by rating
                     'projects': projects,
+                    'parameters': img.parameters,  # Session 183: For social media filtering
                     'metadata': {
                         'width': img.image_width,
                         'height': img.image_height,

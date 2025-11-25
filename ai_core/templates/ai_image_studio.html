@@ -6329,11 +6329,19 @@
             const {
                 showBulkSelect = true,
                 showRating = true,
-                cardStyle = 'compact'  // 'compact' for project view, 'full' for gallery view
+                cardStyle = 'compact',  // 'compact' for project view, 'full' for gallery view
+                socialMediaIndex = null  // Session 183: If set, display as "Social Media #X" instead of "Image #X"
             } = options;
 
-            // Determine asset type label
-            const typeLabel = asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : '3D Model';
+            // Determine asset type label - Session 183: Special handling for social media
+            let typeLabel, displayNumber;
+            if (socialMediaIndex !== null) {
+                typeLabel = 'Social Media';
+                displayNumber = socialMediaIndex;
+            } else {
+                typeLabel = asset.type === 'image' ? 'Image' : asset.type === 'video' ? 'Video' : '3D Model';
+                displayNumber = asset.sequential_number || asset.id;
+            }
             const typeIcon = asset.type === 'image' ? '📸' : asset.type === 'video' ? '🎬' : '🎨';
 
             // Build the media preview section
@@ -6437,7 +6445,7 @@
                         ${bulkSelectHtml}
                         ${mediaPreview}
                         <div class="card-body p-2">
-                            <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">🆔 ${typeLabel} #${asset.sequential_number || asset.id}</p>
+                            <p class="small mb-1" style="font-weight: 700; color: #22d3ee;">🆔 ${typeLabel} #${displayNumber}</p>
                             <p class="small mb-1 text-truncate text-muted" title="${asset.prompt || 'No prompt'}" style="font-size: 11px;">${displayPrompt}</p>
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <small class="text-muted">${asset.type === '3d_model' ? '3D' : asset.type}</small>
@@ -20341,16 +20349,16 @@
                         </div>
                         <div class="col-4">
                             <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
-                                <div style="font-size: 28px;">🎯</div>
-                                <div class="h4 text-white mb-0" id="stats-decisions-${project.id}">0</div>
-                                <div class="small text-light">Decisions</div>
+                                <div style="font-size: 28px;">⚡</div>
+                                <div class="h4 text-white mb-0" id="stats-workflows-${project.id}">0</div>
+                                <div class="small text-light">Workflows</div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="text-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
-                                <div style="font-size: 28px;">⏱️</div>
-                                <div class="h4 text-white mb-0" id="stats-time-${project.id}">0s</div>
-                                <div class="small text-light">Total Time</div>
+                                <div style="font-size: 28px;">📱</div>
+                                <div class="h4 text-white mb-0" id="stats-socialmedia-${project.id}">0</div>
+                                <div class="small text-light">Social Media</div>
                             </div>
                         </div>
                     </div>
@@ -20435,33 +20443,8 @@
                     </div><!-- End section-content-info -->
                 </div>
 
-                <!-- Session 100: Part 9 - Decision Timeline -->
-                <!-- Session 173: Enhanced with Start Decision button -->
-                <!-- Session 180 Part 3: Collapsible -->
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'decisions')">
-                        <h5 style="color: #9333ea; margin: 0;">
-                            <span id="section-toggle-decisions-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
-                            🎯 Decision Timeline
-                        </h5>
-                        <div>
-                            <button class="btn btn-sm me-2" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;" onclick="event.stopPropagation(); showStartDecisionModal('${project.id}')" title="Start a new collaborative decision">
-                                ➕ New Decision
-                            </button>
-                            <button class="btn btn-sm" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;" onclick="event.stopPropagation(); refreshProjectDecisions('${project.id}')" title="Refresh decisions">
-                                🔄 Refresh
-                            </button>
-                        </div>
-                    </div>
-                    <div id="section-content-decisions-${project.id}">
-                    <div id="project-decisions-${project.id}">
-                        <div class="text-center py-4">
-                            <div class="spinner-border" style="color: #9333ea;" role="status"></div>
-                            <p class="mt-2 text-muted">Loading decision timeline...</p>
-                        </div>
-                    </div>
-                    </div><!-- End section-content-decisions -->
-                </div>
+                <!-- Session 183: Removed Decision Timeline (premature complexity for v1)
+                     TODO: Re-add when meaningful decision tracking is implemented -->
 
                 <!-- Session 180: Removed Agent Contributions section (data not meaningful yet)
                      TODO: Re-add when execution_time and user_rating are being recorded -->
@@ -20941,23 +20924,11 @@
 
                 // Collaboration stats
                 document.getElementById(`stats-agents-${project.id}`).textContent = project.stats.collaboration.unique_agents_count || project.stats.collaboration.unique_agents?.length || 0;
-                document.getElementById(`stats-decisions-${project.id}`).textContent = project.stats.collaboration.decisions_count;
+                document.getElementById(`stats-workflows-${project.id}`).textContent = project.stats.collaboration.workflows_count || 0;
 
-                // Format execution time (seconds to readable format)
-                const totalSeconds = project.stats.collaboration.execution_time_seconds;
-                let timeText;
-                if (totalSeconds < 60) {
-                    timeText = `${totalSeconds}s`;
-                } else if (totalSeconds < 3600) {
-                    const minutes = Math.floor(totalSeconds / 60);
-                    const seconds = totalSeconds % 60;
-                    timeText = seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-                } else {
-                    const hours = Math.floor(totalSeconds / 3600);
-                    const minutes = Math.floor((totalSeconds % 3600) / 60);
-                    timeText = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-                }
-                document.getElementById(`stats-time-${project.id}`).textContent = timeText;
+                // Session 183: Social Media count - will be updated when assets load
+                // Initialize to 0, actual count set by refreshProjectAssets
+                document.getElementById(`stats-socialmedia-${project.id}`).textContent = project.stats.content.social_media || 0;
 
                 // Timeline (relative time)
                 if (project.stats.timeline.created_at) {
@@ -21913,17 +21884,35 @@
 
                 if (projectAssets.length > 0) {
                     // Session 132: Skip editing prompts - find first REAL generation prompt
-                    const editingKeywords = ['removed', 'upscaled', 'refined', 'erased', 'recolored', 'background removed', 'variation of'];
+                    // Session 183: Comprehensive filter for all non-original prompts
+                    const editingKeywords = [
+                        // Editing operations
+                        'removed', 'upscaled', 'refined', 'erased', 'recolored', 'background removed',
+                        'replaced', 'upscaled from', 'replaced \'',
+                        // Variations
+                        'variation of', 'variation 1', 'variation 2', 'variation 3', 'variation 4', 'variation 5',
+                        // 3D conversions
+                        'mini-fig', 'minifig', '3d model', 'converted to 3d',
+                        // Social media resizes
+                        'resized for', 'social media', 'banner', 'profile avatar',
+                        // References to other images
+                        'image #', 'from image', 'of image #',
+                        // Workflow-generated content
+                        'logo design, variation', 'professional logo design'
+                    ];
                     let sampleAsset = null;
 
-                    for (const asset of projectAssets) {
+                    // Session 183: Only consider images, not 3D models or videos
+                    const imageAssets = projectAssets.filter(a => a.type === 'image');
+
+                    for (const asset of imageAssets) {
                         if (asset.prompt) {
                             const promptLower = asset.prompt.toLowerCase();
                             const isEditingPrompt = editingKeywords.some(keyword => promptLower.includes(keyword));
 
                             if (!isEditingPrompt && asset.prompt.length > 20) {
                                 sampleAsset = asset;
-                                console.log(`🎨 Found original generation prompt (skipped ${projectAssets.indexOf(asset)} editing operations)`);
+                                console.log(`🎨 Found original generation prompt (skipped ${imageAssets.indexOf(asset)} non-generation assets)`);
                                 break;
                             }
                         }
@@ -22085,19 +22074,93 @@
                     console.log(`🎨 Social Media Kit: Creative Variations mode`);
                 }
 
+                // Session 183: Build Logo Package steps - Exact Match mode for images + video generation
+                // Use project style context for consistent branding
+                const logoBasePrompt = referencePrompt || `${projectName} brand logo`;
+                const logoPackageSteps = [
+                    {
+                        tool: 'generate_image',
+                        params: {
+                            prompt: `${logoBasePrompt}, professional logo design, variation 1, clean vector style, white background`,
+                            model: 'sd3-large',
+                            style: 'digital-art',
+                            project_id: projectId
+                        },
+                        status: 'Generating logo variation 1...'
+                    },
+                    {
+                        tool: 'generate_image',
+                        params: {
+                            prompt: `${logoBasePrompt}, professional logo design, variation 2, minimalist style, white background`,
+                            model: 'sd3-large',
+                            style: 'digital-art',
+                            project_id: projectId
+                        },
+                        status: 'Generating logo variation 2...'
+                    },
+                    {
+                        tool: 'generate_image',
+                        params: {
+                            prompt: `${logoBasePrompt}, professional logo design, variation 3, bold modern style, white background`,
+                            model: 'sd3-large',
+                            style: 'digital-art',
+                            project_id: projectId
+                        },
+                        status: 'Generating logo variation 3...'
+                    },
+                    {
+                        // Video step uses GPT to select best logo and animate it
+                        message: `Create a 6-second promo video animating the best logo from this project. Use smooth zoom and rotation effects.`,
+                        status: 'Creating promo video 1...'
+                    },
+                    {
+                        message: `Create another 6-second promo video with a different logo variation. Use dynamic reveal animation.`,
+                        status: 'Creating promo video 2...'
+                    }
+                ];
+                console.log(`🎨 Logo Package: Exact Match mode with base prompt: "${logoBasePrompt.substring(0, 50)}..."`);
+
+                // Session 183: Build Video Marketing steps - Exact Match mode for images + video generation
+                const heroBasePrompt = referencePrompt || `${projectName} brand visual`;
+                const videoMarketingSteps = [
+                    {
+                        tool: 'generate_image',
+                        params: {
+                            prompt: `${heroBasePrompt}, hero image for marketing, cinematic wide shot, professional photography style`,
+                            model: 'sd3-large',
+                            style: 'photographic',
+                            aspect_ratio: '16:9',
+                            project_id: projectId
+                        },
+                        status: 'Generating hero image 1...'
+                    },
+                    {
+                        tool: 'generate_image',
+                        params: {
+                            prompt: `${heroBasePrompt}, hero image for marketing, dramatic lighting, product showcase style`,
+                            model: 'sd3-large',
+                            style: 'photographic',
+                            aspect_ratio: '16:9',
+                            project_id: projectId
+                        },
+                        status: 'Generating hero image 2...'
+                    },
+                    {
+                        // Video steps use GPT to animate the hero images
+                        message: `Create a 6-second marketing video from the first hero image. Add cinematic camera movement and subtle motion.`,
+                        status: 'Creating marketing video 1...'
+                    },
+                    {
+                        message: `Create a 6-second marketing video from the second hero image. Add dramatic zoom and professional motion effects.`,
+                        status: 'Creating marketing video 2...'
+                    }
+                ];
+                console.log(`🎨 Video Marketing: Exact Match mode with base prompt: "${heroBasePrompt.substring(0, 50)}..."`);
+
                 const workflows = {
                     logo_package: {
                         name: 'Logo Package',
-                        steps: [
-                            {
-                                message: `Create 3 logo variations${effectiveStyleContext}`,
-                                status: 'Generating 3 logo variations...'
-                            },
-                            {
-                                message: `Create 2 promo videos using the logos${effectiveStyleContext}`,
-                                status: 'Creating promo videos...'
-                            }
-                        ]
+                        steps: logoPackageSteps
                     },
                     social_media_kit: {
                         name: 'Social Media Kit',
@@ -22105,16 +22168,7 @@
                     },
                     video_marketing: {
                         name: 'Video Marketing',
-                        steps: [
-                            {
-                                message: `Create 2 hero images for the brand${effectiveStyleContext}`,
-                                status: 'Generating hero images...'
-                            },
-                            {
-                                message: `Create 2 marketing videos using the hero images${effectiveStyleContext}`,
-                                status: 'Creating marketing videos...'
-                            }
-                        ]
+                        steps: videoMarketingSteps
                     },
                     brand_refresh: {
                         name: 'Brand Refresh',
@@ -22135,6 +22189,42 @@
                 }
 
                 console.log(`⚡ Starting workflow: ${workflow.name} (${workflow.steps.length} steps)`);
+
+                // Session 183: Map frontend workflow types to database types
+                const workflowTypeMapping = {
+                    'logo_package': 'logo_creator',
+                    'social_media_kit': 'social_media_pack',
+                    'video_marketing': 'product_mockup',
+                    'brand_refresh': 'creative_upscale'
+                };
+                const dbWorkflowType = workflowTypeMapping[workflowType] || 'style_explorer';
+
+                // Session 183: Start tracking workflow execution
+                let workflowHistoryId = null;
+                const workflowStartTime = Date.now();
+                try {
+                    const startResponse = await fetch('/api/workflows/execution/start/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            workflow_type: dbWorkflowType,
+                            workflow_name: workflow.name,
+                            prompt: effectiveStyleContext || '',
+                            config: { steps: workflow.steps.map(s => s.message || s.tool || 'direct') },
+                            project_id: projectId
+                        })
+                    });
+                    const startResult = await startResponse.json();
+                    if (startResult.success) {
+                        workflowHistoryId = startResult.workflow_history_id;
+                        console.log(`📊 Workflow tracking started: ID ${workflowHistoryId}`);
+                    }
+                } catch (trackingError) {
+                    console.warn('⚠️ Could not start workflow tracking:', trackingError);
+                }
 
                 // Step 4: Execute workflow steps with proper project context
                 // Session 131: Proper flow - Assistant → Agent → Session
@@ -22164,6 +22254,16 @@
                         // Direct tool execution (Exact Match mode)
                         console.log(`🔧 Direct tool step ${stepNum}/${totalSteps}: ${step.tool}`, step.params);
 
+                        // Session 183: Show step start in embedded chat
+                        const chatMessages = document.getElementById(`project-chat-messages-${projectId}`);
+                        if (chatMessages) {
+                            const stepMsg = document.createElement('div');
+                            stepMsg.className = 'message assistant-message';
+                            stepMsg.innerHTML = `<div class="message-content"><strong>🔧 Step ${stepNum}/${totalSteps}:</strong> ${step.status}</div>`;
+                            chatMessages.appendChild(stepMsg);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+
                         try {
                             const toolResponse = await fetch('/api/executor/run-tool/', {
                                 method: 'POST',
@@ -22181,7 +22281,17 @@
                             const toolResult = await toolResponse.json();
                             if (toolResult.success) {
                                 console.log(`✅ Tool ${step.tool} completed:`, toolResult);
-                                showNotification(`✅ ${step.params.format_name} created!`, 'success');
+                                showNotification(`✅ ${step.status.replace('...', '')} - Done!`, 'success');
+
+                                // Session 183: Show completion in chat
+                                if (chatMessages) {
+                                    const doneMsg = document.createElement('div');
+                                    doneMsg.className = 'message assistant-message';
+                                    const imageUrl = toolResult.result?.image_url;
+                                    doneMsg.innerHTML = `<div class="message-content">✅ <strong>Complete!</strong>${imageUrl ? `<br><img src="${imageUrl}" style="max-width:200px;max-height:200px;border-radius:8px;margin-top:8px;">` : ''}</div>`;
+                                    chatMessages.appendChild(doneMsg);
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                }
                             } else {
                                 console.error(`❌ Tool ${step.tool} failed:`, toolResult.error || toolResult.message);
                                 showNotification(`Step ${stepNum} failed: ${toolResult.error || toolResult.message}`, 'warning');
@@ -22209,6 +22319,36 @@
                 // Workflow complete!
                 showNotification(`✅ ${workflow.name} complete! Refreshing project assets...`, 'success');
 
+                // Session 183: Mark workflow as completed
+                if (workflowHistoryId) {
+                    const executionTime = (Date.now() - workflowStartTime) / 1000;  // seconds
+                    try {
+                        await fetch(`/api/workflows/execution/${workflowHistoryId}/complete/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                status: 'completed',
+                                execution_time: executionTime,
+                                result_images: []  // Could populate with created asset IDs
+                            })
+                        });
+                        console.log(`📊 Workflow ${workflowHistoryId} marked completed (${executionTime.toFixed(1)}s)`);
+
+                        // Update workflow count in header
+                        const workflowCountEl = document.getElementById(`stats-workflows-${projectId}`);
+                        if (workflowCountEl) {
+                            const currentCount = parseInt(workflowCountEl.textContent) || 0;
+                            workflowCountEl.textContent = currentCount + 1;
+                            console.log(`📊 Updated workflow count: ${currentCount} → ${currentCount + 1}`);
+                        }
+                    } catch (completeError) {
+                        console.warn('⚠️ Could not mark workflow complete:', completeError);
+                    }
+                }
+
                 // Wait a bit longer before refreshing to ensure all assets are saved
                 setTimeout(() => {
                     progressDiv.style.display = 'none';
@@ -22220,6 +22360,27 @@
                 console.error('❌ Workflow error:', error);
                 showNotification(`Workflow failed: ${error.message}`, 'danger');
                 progressDiv.style.display = 'none';
+
+                // Session 183: Mark workflow as failed if we were tracking it
+                if (workflowHistoryId) {
+                    try {
+                        await fetch(`/api/workflows/execution/${workflowHistoryId}/complete/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                status: 'failed',
+                                execution_time: (Date.now() - workflowStartTime) / 1000,
+                                error_message: error.message
+                            })
+                        });
+                        console.log(`📊 Workflow ${workflowHistoryId} marked failed`);
+                    } catch (failError) {
+                        console.warn('⚠️ Could not mark workflow failed:', failError);
+                    }
+                }
             }
         }
 
@@ -22899,6 +23060,26 @@
                         console.log('🔧 Set projectId on aiAssistant:', projectId);
                         const toolResults = await window.aiAssistant.executeTools(toolCalls);
                         console.log('🔧 Tool execution results:', toolResults);
+
+                        // Session 183: Trigger video polling for any task_ids returned from tool execution
+                        if (toolResults && Array.isArray(toolResults)) {
+                            for (const result of toolResults) {
+                                // Check for task_id in result.result (video generation returns this)
+                                if (result?.result?.task_id && typeof window.pollVideoStatus === 'function') {
+                                    console.log(`📹 Starting video polling for task_id: ${result.result.task_id}`);
+                                    setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant', projectId), 100);
+                                }
+                                // Also check for task_ids array (batch video generation)
+                                if (result?.result?.task_ids && Array.isArray(result.result.task_ids)) {
+                                    for (let i = 0; i < result.result.task_ids.length; i++) {
+                                        const taskId = result.result.task_ids[i];
+                                        console.log(`📹 Starting video polling for batch task_id: ${taskId}`);
+                                        setTimeout(() => window.pollVideoStatus(taskId, 'assistant', projectId), 100 + (i * 50));
+                                    }
+                                }
+                            }
+                        }
+
                         addProjectChatMessage(projectId, 'assistant', assistantResponse || '✅ Tool execution completed!');
                         statusDiv.innerHTML = '✅ Tools executed';
                     } else {
@@ -23869,7 +24050,15 @@
 
         function renderFilteredAssets(projectId, assets, container) {
             // Group assets by type
-            const images = assets.filter(a => a.type === 'image');
+            // Session 183: Separate social media kit images from regular images
+            const allImages = assets.filter(a => a.type === 'image');
+            const socialMediaImages = allImages.filter(a =>
+                a.image_type === 'social_media' ||
+                (a.parameters && a.parameters.is_social_media_kit) ||
+                (a.style && ['Social Media Banner', 'Social Media Post', 'Profile Avatar'].includes(a.style)) ||
+                (a.prompt && a.prompt.toLowerCase().includes('resized for social media'))
+            );
+            const images = allImages.filter(a => !socialMediaImages.includes(a));
             const videos = assets.filter(a => a.type === 'video');
             const models3d = assets.filter(a => a.type === '3d_model');
 
@@ -23900,6 +24089,30 @@
                     </div>
                     <div id="asset-content-images-${projectId}" class="col-12">
                         <div class="row g-3 mt-2">${images.map(renderCard).join('')}</div>
+                    </div>`;
+            }
+            // Session 183: Social Media Kit Section
+            if (socialMediaImages.length > 0) {
+                sectionsHtml += `
+                    <div class="col-12 mt-4">
+                        <div class="d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #f472b6; padding-bottom: 8px;">
+                            <h5 style="color: #f472b6; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'socialmedia')">
+                                <span id="asset-toggle-socialmedia-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                                📱 Social Media Kit (${socialMediaImages.length})
+                            </h5>
+                            <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                <label style="color: #f472b6; font-size: 12px; cursor: pointer; margin: 0;">
+                                    <input type="checkbox" id="select-all-socialmedia-${projectId}" onclick="toggleSelectAll('${projectId}', 'image', 'socialmedia')" style="margin-right: 4px; accent-color: #f472b6;">
+                                    Select All
+                                </label>
+                                <button id="delete-selected-socialmedia-${projectId}" class="btn btn-sm btn-outline-danger" onclick="deleteSelectedAssets('${projectId}', 'image', 'socialmedia')" style="display: none; font-size: 11px; padding: 2px 8px;">
+                                    🗑️ Delete Selected (<span id="selected-count-socialmedia-${projectId}">0</span>)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="asset-content-socialmedia-${projectId}" class="col-12">
+                        <div class="row g-3 mt-2">${socialMediaImages.map((asset, index) => renderAssetCard(asset, projectId, { socialMediaIndex: index + 1 })).join('')}</div>
                     </div>`;
             }
             if (videos.length > 0) {
@@ -24031,7 +24244,15 @@
 
                 if (data.success && data.portfolio && data.portfolio.length > 0) {
                     // Session 127 Part 2 (continued): Group assets by type
-                    const images = data.portfolio.filter(a => a.type === 'image');
+                    // Session 183: Separate social media kit images from regular images
+                    const allImages = data.portfolio.filter(a => a.type === 'image');
+                    const socialMediaImages = allImages.filter(a =>
+                        a.image_type === 'social_media' ||
+                        (a.parameters && a.parameters.is_social_media_kit) ||
+                        (a.style && ['Social Media Banner', 'Social Media Post', 'Profile Avatar'].includes(a.style)) ||
+                        (a.prompt && a.prompt.toLowerCase().includes('resized for social media'))
+                    );
+                    const images = allImages.filter(a => !socialMediaImages.includes(a));
                     const videos = data.portfolio.filter(a => a.type === 'video');
                     const models3d = data.portfolio.filter(a => a.type === '3d_model');
 
@@ -24064,6 +24285,32 @@
                             </div>
                             <div id="asset-content-images-${projectId}" class="col-12">
                                 <div class="row g-3 mt-2">${images.map(renderCard).join('')}</div>
+                            </div>
+                        `;
+                    }
+
+                    // Session 183: Social Media Kit Section
+                    if (socialMediaImages.length > 0) {
+                        sectionsHtml += `
+                            <div class="col-12 mt-4">
+                                <div class="d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #f472b6; padding-bottom: 8px;">
+                                    <h5 style="color: #f472b6; margin-bottom: 0; cursor: pointer;" onclick="toggleAssetSection('${projectId}', 'socialmedia')">
+                                        <span id="asset-toggle-socialmedia-${projectId}" style="display: inline-block; width: 20px; font-size: 12px;">▼</span>
+                                        📱 Social Media Kit (${socialMediaImages.length})
+                                    </h5>
+                                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                                        <label style="color: #f472b6; font-size: 12px; cursor: pointer; margin: 0;">
+                                            <input type="checkbox" id="select-all-socialmedia-${projectId}" onclick="toggleSelectAll('${projectId}', 'image', 'socialmedia')" style="margin-right: 4px; accent-color: #f472b6;">
+                                            Select All
+                                        </label>
+                                        <button id="delete-selected-socialmedia-${projectId}" class="btn btn-sm btn-outline-danger" onclick="deleteSelectedAssets('${projectId}', 'image', 'socialmedia')" style="display: none; font-size: 11px; padding: 2px 8px;">
+                                            🗑️ Delete Selected (<span id="selected-count-socialmedia-${projectId}">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="asset-content-socialmedia-${projectId}" class="col-12">
+                                <div class="row g-3 mt-2">${socialMediaImages.map((asset, index) => renderAssetCard(asset, projectId, { socialMediaIndex: index + 1 })).join('')}</div>
                             </div>
                         `;
                     }
@@ -24121,7 +24368,13 @@
                     }
 
                     container.innerHTML = sectionsHtml;
-                    console.log(`✅ Loaded ${data.portfolio.length} assets for project ${projectId} (📸 ${images.length} images, 🎬 ${videos.length} videos, 🎨 ${models3d.length} 3D models)`);
+                    console.log(`✅ Loaded ${data.portfolio.length} assets for project ${projectId} (📸 ${images.length} images, 📱 ${socialMediaImages.length} social media, 🎬 ${videos.length} videos, 🎨 ${models3d.length} 3D models)`);
+
+                    // Session 183: Update social media count in project stats
+                    const socialMediaStat = document.getElementById(`stats-socialmedia-${projectId}`);
+                    if (socialMediaStat) {
+                        socialMediaStat.textContent = socialMediaImages.length;
+                    }
 
                     // Session 182: Check for pending 3D models and start polling
                     const pending3DModels = models3d.filter(a =>
