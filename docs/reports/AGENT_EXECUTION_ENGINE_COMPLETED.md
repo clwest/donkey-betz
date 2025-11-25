@@ -185,7 +185,7 @@ STRIPE_PUBLISHABLE_KEY=your_key_here
 SERPER_API_KEY=your_key_here  # Optional, for enhanced search
 
 # Database
-DATABASE_URL=postgresql://user:pass@localhost/dbname
+DATABASE_URL=<your-postgresql-connection-string>
 ```
 
 ### API Keys Setup
