@@ -7564,70 +7564,109 @@ def _execute_generate_image(user, parameters, session=None):
         }
         quality = model_to_quality.get(model, 'balanced')
 
+        # Session 184: Support count parameter for batch image generation
+        # Extract count from parameters or nested params object
+        count = parameters.get('count', 1)
+        if isinstance(parameters.get('params'), dict):
+            count = parameters['params'].get('count', count)
+        count = min(max(int(count), 1), 5)  # Clamp between 1 and 5
+
+        logger.info(f"🎨 Generating {count} image(s) with prompt: {prompt[:50]}...")
+
         # Use ImageGenerationService directly (same as gallery_generate)
         from content.image_generation import ImageGenerationService
-
         service = ImageGenerationService()
-        result = service.generate_image(
-            prompt=prompt,
-            size=size,  # Session 181: Use dynamic size
-            style=style if style else "photographic",
-            quality=quality,
-            provider='stability',
-            negative_prompt='blurry, low quality, distorted',
-            num_images=1
-        )
 
-        if not result.success:
-            raise Exception(f"Image generation failed: {result.error if hasattr(result, 'error') else 'Unknown error'}")
+        # Session 184: Generate multiple images in a loop
+        generated_images = []
+        for i in range(count):
+            logger.info(f"🎨 Generating image {i + 1}/{count}...")
 
-        # Get the first generated image
-        images = result.images
-        if not images:
-            raise Exception("No images generated")
+            result = service.generate_image(
+                prompt=prompt,
+                size=size,  # Session 181: Use dynamic size
+                style=style if style else "photographic",
+                quality=quality,
+                provider='stability',
+                negative_prompt='blurry, low quality, distorted',
+                num_images=1
+            )
 
-        image_data = images[0]
-        image_url = image_data if isinstance(image_data, str) else image_data.get('url')
+            if not result.success:
+                logger.error(f"❌ Image {i + 1} generation failed: {result.error if hasattr(result, 'error') else 'Unknown error'}")
+                continue  # Try to generate remaining images
 
-        # Save image to storage
-        image_id = str(uuid.uuid4())
-        filename = f"generated_images/{user.id}/{image_id}.png"
+            # Get the generated image
+            images = result.images
+            if not images:
+                logger.error(f"❌ Image {i + 1}: No image returned")
+                continue
 
-        # Handle base64 data URIs vs regular URLs
-        if image_url.startswith('data:image'):
-            # Extract base64 data from data URI
-            import re
-            base64_match = re.search(r'base64,(.+)', image_url)
-            if base64_match:
-                image_bytes = base64.b64decode(base64_match.group(1))
-                file_path = default_storage.save(filename, ContentFile(image_bytes))
-                saved_url = default_storage.url(file_path)
-            else:
-                raise Exception("Invalid base64 data URI")
-        else:
-            # Regular HTTP/HTTPS URL - download it
-            response = requests.get(image_url, timeout=30)
-            if response.status_code == 200:
-                file_path = default_storage.save(filename, ContentFile(response.content))
-                saved_url = default_storage.url(file_path)
-            else:
-                raise Exception(f"Failed to download image: {response.status_code}")
+            image_data = images[0]
+            image_url = image_data if isinstance(image_data, str) else image_data.get('url')
 
-        # Save to ImageHistory for tracking
-        # Session 96 Weekend Project: Link to AI conversation session
-        # Session 182: Link to project for Social Media Kit workflow
-        history_record = save_to_history(
-            user=user,
-            file_path=file_path,
-            image_type='generated',
-            prompt=prompt,
-            parameters={'model': model, 'style': style, 'quality': quality},
-            model_used=model,
-            style=style,
-            parent_image=None,
-            session=session,  # Session 96: Link to AI conversation
-            project=project   # Session 182: Link to project
-        )
+            # Save image to storage
+            image_id = str(uuid.uuid4())
+            filename = f"generated_images/{user.id}/{image_id}.png"
+
+            # Handle base64 data URIs vs regular URLs
+            try:
+                if image_url.startswith('data:image'):
+                    # Extract base64 data from data URI
+                    import re
+                    base64_match = re.search(r'base64,(.+)', image_url)
+                    if base64_match:
+                        image_bytes = base64.b64decode(base64_match.group(1))
+                        file_path = default_storage.save(filename, ContentFile(image_bytes))
+                        saved_url = default_storage.url(file_path)
+                    else:
+                        raise Exception("Invalid base64 data URI")
+                else:
+                    # Regular HTTP/HTTPS URL - download it
+                    response = requests.get(image_url, timeout=30)
+                    if response.status_code == 200:
+                        file_path = default_storage.save(filename, ContentFile(response.content))
+                        saved_url = default_storage.url(file_path)
+                    else:
+                        raise Exception(f"Failed to download image: {response.status_code}")
+
+                # Save to ImageHistory for tracking
+                # Session 96 Weekend Project: Link to AI conversation session
+                # Session 182: Link to project for Social Media Kit workflow
+                history_record = save_to_history(
+                    user=user,
+                    file_path=file_path,
+                    image_type='generated',
+                    prompt=prompt,
+                    parameters={'model': model, 'style': style, 'quality': quality, 'batch_index': i + 1},
+                    model_used=model,
+                    style=style,
+                    parent_image=None,
+                    session=session,  # Session 96: Link to AI conversation
+                    project=project   # Session 182: Link to project
+                )
+
+                generated_images.append({
+                    'image_url': saved_url,
+                    'image_id': str(history_record.id) if history_record else None,
+                    'file_path': file_path,
+                    'batch_index': i + 1
+                })
+
+                logger.info(f"✅ Image {i + 1}/{count} generated successfully: {saved_url}")
+
+            except Exception as img_error:
+                logger.error(f"❌ Error saving image {i + 1}: {str(img_error)}")
+                continue
+
+        # Check if we generated any images
+        if not generated_images:
+            raise Exception("No images were generated successfully")
+
+        # Use the first image for backwards compatibility
+        saved_url = generated_images[0]['image_url']
+        file_path = generated_images[0].get('file_path', '')
+        history_record = type('obj', (object,), {'id': generated_images[0]['image_id']})() if generated_images[0]['image_id'] else None
 
         logger.info(f"✅ Executor generated image successfully: {saved_url}")
 
@@ -7699,7 +7738,11 @@ def _execute_generate_image(user, parameters, session=None):
             'model': model,
             'style': style,
             'refinement_history': refinement_history if refinement_history else None,
-            'autonomous_refinement': len(refinement_history) > 1 if refinement_history else False
+            'autonomous_refinement': len(refinement_history) > 1 if refinement_history else False,
+            # Session 184: Include all generated images for batch requests
+            'images': generated_images,
+            'total_generated': len(generated_images),
+            'requested_count': count
         }
 
         # Session 96: Include project creation info if project was auto-created

@@ -85,13 +85,17 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             "type": "string",
                             "description": "Text description of the image to generate (e.g., 'modern tech company logo', 'social media banner with vibrant colors', 'professional profile picture')"
                         },
+                        "count": {
+                            "type": "integer",
+                            "default": 1,
+                            "description": "Number of images to generate (1-5). IMPORTANT: Use this when user asks for multiple images, e.g., 'create 3 logos' -> count=3, 'make 5 banners' -> count=5"
+                        },
                         "params": {
                             "type": "object",
                             "description": "Optional generation parameters",
                             "properties": {
                                 "width": {"type": "integer", "default": 1024, "description": "Image width (512-2048)"},
                                 "height": {"type": "integer", "default": 1024, "description": "Image height (512-2048)"},
-                                "count": {"type": "integer", "default": 1, "description": "Number of images to generate (1-4)"},
                                 "quality": {"type": "string", "enum": ["fast", "balanced", "high", "premium"], "default": "balanced", "description": "Quality level: fast (core), balanced (sdxl), high (sd3), premium (ultra)"},
                                 "style": {"type": "string", "default": "photorealistic", "description": "Style preset or custom style description"}
                             }
@@ -433,6 +437,64 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["image_id", "text"]
                 }
+            },
+
+            # Session 184: Web Search Tool - RESTORED from Session 65!
+            {
+                "type": "function",
+                "name": "web_search",
+                "description": "Search the web using Google via Serper API. Use this when the user asks for current information, trends, research, competitor analysis, or needs to find something online. CRITICAL: Use this tool when user says 'research', 'find out about', 'search for', 'look up', 'what are the latest', etc. This enables the 'research and create' autonomous workflow where you can research a topic then generate content based on findings.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to find information about"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+
+            # Session 184: Create Brand Video Tool - RESTORED from Session 67!
+            {
+                "type": "function",
+                "name": "create_brand_video",
+                "description": "Create a complete brand video from concept to finished product using automated workflow. Orchestrates Runway ML video generation with professional styling. Use when user wants a complete brand video, promotional video, or multiple video clips for a brand/project. Generates 2-5 video clips that can later be chained with transitions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "brand_name": {
+                            "type": "string",
+                            "description": "The brand or company name"
+                        },
+                        "concept": {
+                            "type": "string",
+                            "description": "The video concept or message (e.g., 'luxury coffee experience', 'eco-friendly technology', 'cyberpunk aesthetics')"
+                        },
+                        "style": {
+                            "type": "string",
+                            "enum": ["cinematic", "modern", "playful", "elegant", "energetic"],
+                            "default": "modern",
+                            "description": "Visual style: cinematic (dramatic lighting), modern (clean minimal), playful (colorful fun), elegant (sophisticated), energetic (fast-paced)"
+                        },
+                        "include_branding": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Whether to add brand name text overlay at start/end"
+                        },
+                        "video_count": {
+                            "type": "integer",
+                            "default": 3,
+                            "description": "Number of video clips to generate (2-5)"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Optional project ID to associate videos with"
+                        }
+                    },
+                    "required": ["brand_name", "concept"]
+                }
             }
         ]
 
@@ -479,6 +541,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_coleadership_agent(arguments)
             elif function_name == 'talking_character_agent':
                 result = self._tool_talking_character(arguments)
+            # Session 184: Restored tools for autonomous "research and create" workflow
+            elif function_name == 'web_search':
+                result = self._handle_web_search(arguments)
+            elif function_name == 'create_brand_video':
+                result = self._handle_create_brand_video(arguments)
             else:
                 result = {
                     'success': False,
@@ -2208,6 +2275,233 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         except Exception as e:
             logger.error(f"❌ Talking character tool error: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'error': str(e)}
+
+    # Session 184: Restored web_search handler from Session 65
+    def _handle_web_search(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle web_search tool - Session 184 (restored from Session 65).
+
+        Searches the web using Serper API (Google search).
+        Enables the "research and create" autonomous workflow.
+        """
+        import os
+        import requests
+
+        logger.info(f"🔍 WEB_SEARCH TOOL CALLED!")
+
+        try:
+            query = arguments.get('query', '').strip()
+
+            if not query:
+                return {'success': False, 'error': 'Query is required for web search'}
+
+            logger.info(f"🔍 Searching web for: {query}")
+
+            # Use Serper API for Google search
+            serper_key = os.getenv('SERPER_API_KEY')
+            if not serper_key:
+                return {
+                    'success': False,
+                    'error': 'Serper API key not configured. Add SERPER_API_KEY to your .env file.'
+                }
+
+            # Call Serper API
+            url = "https://google.serper.dev/search"
+            headers = {
+                "X-API-KEY": serper_key,
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "q": query,
+                "num": 5  # Get top 5 results
+            }
+
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Extract organic search results
+            results = []
+            organic = data.get('organic', [])
+            for item in organic[:5]:  # Top 5 results
+                results.append({
+                    'title': item.get('title', ''),
+                    'link': item.get('link', ''),
+                    'snippet': item.get('snippet', '')
+                })
+
+            logger.info(f"✅ Found {len(results)} search results for '{query}'")
+
+            return {
+                'success': True,
+                'results': results,
+                'query': query,
+                'message': f"Found {len(results)} results for '{query}'. Use these insights to inform your creative work!"
+            }
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Web search API error: {e}")
+            return {'success': False, 'error': f'Web search failed: {str(e)}'}
+        except Exception as e:
+            logger.error(f"❌ Web search error: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # Session 184: Restored create_brand_video handler from Session 67
+    def _handle_create_brand_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle create_brand_video tool - Session 184 (restored from Session 67).
+
+        Creates a complete brand video from concept to finished product.
+        Orchestrates Runway ML video generation with professional styling.
+        """
+        logger.info(f"🎬 CREATE_BRAND_VIDEO TOOL CALLED!")
+
+        try:
+            brand_name = arguments.get('brand_name', '').strip()
+            concept = arguments.get('concept', '').strip()
+            style = arguments.get('style', 'modern')
+            include_branding = arguments.get('include_branding', True)
+            video_count = arguments.get('video_count', 3)
+            project_id = arguments.get('project_id')
+
+            # Get current project if not provided
+            if not project_id:
+                current_project = getattr(self, 'project', None)
+                if current_project:
+                    project_id = str(current_project.id)
+
+            if not brand_name:
+                return {'success': False, 'error': 'Brand name is required'}
+            if not concept:
+                return {'success': False, 'error': 'Concept is required'}
+
+            # Validate video_count (2-5)
+            if video_count < 2 or video_count > 5:
+                logger.warning(f"⚠️ Invalid video_count {video_count}, defaulting to 3")
+                video_count = 3
+
+            logger.info(f"🎬 Creating brand video for {brand_name}: {concept} ({style} style, {video_count} clips)")
+
+            # Style-specific prompt modifiers
+            style_modifiers = {
+                'cinematic': 'dramatic lighting, cinematic composition, film grain, depth of field',
+                'modern': 'clean lines, minimalist, bright natural lighting, contemporary design',
+                'playful': 'vibrant colors, dynamic movement, fun energy, cheerful atmosphere',
+                'elegant': 'sophisticated, refined aesthetic, smooth movements, luxury feel',
+                'energetic': 'fast-paced, dynamic transitions, bold colors, high energy'
+            }
+
+            style_prompt = style_modifiers.get(style, style_modifiers['modern'])
+
+            # Generate prompts for each video clip
+            prompts = []
+            if video_count == 2:
+                prompts = [
+                    f"{concept}, {style_prompt}, opening shot",
+                    f"{brand_name} showcase, {concept}, {style_prompt}, closing scene"
+                ]
+            elif video_count == 3:
+                prompts = [
+                    f"{concept}, {style_prompt}, establishing shot",
+                    f"{brand_name} product or service, {concept}, {style_prompt}, detail view",
+                    f"{concept}, {style_prompt}, powerful closing scene with {brand_name}"
+                ]
+            elif video_count == 4:
+                prompts = [
+                    f"{concept}, {style_prompt}, opening sequence",
+                    f"{brand_name} highlights, {concept}, {style_prompt}, feature showcase",
+                    f"{concept} in action, {style_prompt}, dynamic demonstration",
+                    f"{brand_name} finale, {concept}, {style_prompt}, memorable closing"
+                ]
+            else:  # 5 clips
+                prompts = [
+                    f"{concept}, {style_prompt}, captivating opening",
+                    f"{brand_name} introduction, {concept}, {style_prompt}",
+                    f"{concept}, {style_prompt}, mid-point highlight",
+                    f"{brand_name} key features, {concept}, {style_prompt}",
+                    f"{concept}, {style_prompt}, impactful conclusion with {brand_name}"
+                ]
+
+            # Generate all videos using Runway ML
+            from content.video_provider import runway_provider
+            from content.models import VideoHistory
+
+            task_ids = []
+            video_ids = []
+            total_estimated_time = 0
+
+            for i, prompt in enumerate(prompts):
+                logger.info(f"🎬 Generating clip {i+1}/{len(prompts)}: {prompt[:60]}...")
+
+                result = runway_provider.text_to_video(
+                    prompt=prompt,
+                    duration=8,  # 8 seconds per clip for professional feel
+                    quality='veo3.1_fast',
+                    style='realistic',
+                    enhance_prompt=True,
+                    enhancement_level='advanced',
+                    ratio='1920:1080'
+                )
+
+                if not result.success:
+                    logger.warning(f"⚠️ Clip {i+1} generation failed: {result.error_message}")
+                    continue
+
+                # Store in VideoHistory
+                video = VideoHistory.objects.create(
+                    user=self.user,
+                    prompt=prompt,
+                    task_id=result.task_id,
+                    status='processing',
+                    parameters={
+                        'duration': 8,
+                        'quality': 'veo3.1_fast',
+                        'style': style,
+                        'type': 'brand_video_clip',
+                        'brand_name': brand_name,
+                        'clip_number': i + 1,
+                        'total_clips': len(prompts),
+                        'estimated_time': result.estimated_time,
+                        'include_branding': include_branding,
+                        'project_id': project_id
+                    }
+                )
+
+                # Associate with project if available
+                if project_id:
+                    try:
+                        from core.models import Project
+                        project = Project.objects.get(id=project_id)
+                        video.project = project
+                        video.save()
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not associate video with project: {e}")
+
+                task_ids.append(result.task_id)
+                video_ids.append(str(video.id))
+                total_estimated_time += result.estimated_time
+
+            logger.info(f"✅ Started {len(task_ids)} video generations for {brand_name}")
+
+            return {
+                'success': True,
+                'brand_name': brand_name,
+                'task_ids': task_ids,
+                'video_ids': video_ids,
+                'prompts': prompts,
+                'video_count': len(task_ids),
+                'estimated_time': total_estimated_time,
+                'include_branding': include_branding,
+                'project_id': project_id,
+                'message': f'🎬 Started generating {len(task_ids)} video clips for {brand_name}! Videos will appear in your gallery when ready (~{total_estimated_time}s). Once complete, you can chain them together with transitions and branding!'
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Create brand video error: {e}")
             import traceback
             traceback.print_exc()
             return {'success': False, 'error': str(e)}
@@ -4246,6 +4540,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         Returns:
             AI-generated response string
         """
+        print(f"🔍 DEBUG SESSION 184: _generate_ai_response() ENTERED!")
+        logger.info(f"🔍 DEBUG SESSION 184: _generate_ai_response() ENTERED!")
         # Build comprehensive context using UnifiedMemoryManager
         recent_memories = self.memory_manager.retrieve_memories(
             user=self.user,
@@ -4410,6 +4706,7 @@ Respond in a helpful, personalized way that:
 
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
+            print(f"🔍 DEBUG SESSION 184: Starting LLM call for message: {message[:50]}...")
             # Session 129: Get previous response_id for GPT-5.1 chain of thought
             previous_response_id = None
             current_session = getattr(self, 'session', None)
@@ -4462,7 +4759,12 @@ Respond in a helpful, personalized way that:
                 'should we', 'should i', 'opinion on', 'thoughts on', 'feedback on',
                 'creative team', 'technical team', 'cto think', 'coo think',
                 'is this a good', 'worth pursuing', 'good direction', 'right approach',
-                'ask the agents', 'consult the team', 'team input', 'agent opinions'
+                'ask the agents', 'consult the team', 'team input', 'agent opinions',
+                # Session 184: Web Search & Brand Video keywords (restored autonomous workflow)
+                'research', 'search for', 'look up', 'find out', 'what are the latest',
+                'brand video', 'create brand', 'promotional video', 'promo videos',
+                'create logos', 'create logo', 'make logos', 'make logo',
+                'cyberpunk', 'cinematic style', 'modern style', 'playful style'
             ]
             is_operation = any(keyword in message.lower() for keyword in operation_keywords)
 
@@ -4482,17 +4784,21 @@ Respond in a helpful, personalized way that:
                     "tools": [{"type": "function", "name": t["name"]} for t in tools]
                 }
                 logger.info(f"🔧 Calling LLM with {len(tools)} tools (mode: auto)...")
+            print(f"🔍 DEBUG SESSION 184: Calling enforce_real_ai with {len(tools)} tools, tool_choice mode={tool_choice.get('mode')}")
+            # Session 184: Increased max_tokens from 500 to 1500 to prevent
+            # truncation of tool call arguments (JSON can be longer than expected!)
             ai_result = self.llm_enforcer.enforce_real_ai(
                 prompt=message,
                 context=system_prompt,
                 agent_name="PersonalAssistant",
                 task_type="conversation",
-                max_tokens=500,
+                max_tokens=1500,  # Session 184: Increased from 500 to prevent tool call truncation!
                 tools=tools,  # Enable tool calling
                 previous_response_id=previous_response_id,  # Session 129: Chain of thought
                 tool_choice=tool_choice  # Session 129: Allowed tools with auto mode
                 # temperature=0.7  # GPT-5 only supports default temperature
             )
+            print(f"🔍 DEBUG SESSION 184: LLM returned: success={ai_result.get('success')}, has_tool_calls={'tool_calls' in ai_result}")
             logger.info(f"✅ LLM returned: success={ai_result.get('success')}, has_tool_calls={'tool_calls' in ai_result}")
 
             # Session 129: Store new response_id for next turn
@@ -4530,6 +4836,10 @@ Respond in a helpful, personalized way that:
 
         except Exception as e:
             import traceback
+            print(f"❌ DEBUG SESSION 184: LLM EXCEPTION: {e}")
+            print(f"❌ DEBUG SESSION 184: Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"❌ DEBUG SESSION 184: LLM EXCEPTION: {e}")
+            logger.error(f"❌ DEBUG SESSION 184: Full traceback:\n{traceback.format_exc()}")
             logger.error(f"❌ LLM ERROR: {e}")
             logger.error(f"❌ Full traceback:\n{traceback.format_exc()}")
             logger.warning(f"⚠️ LLM not available (likely no API keys configured): {e}")
@@ -4590,8 +4900,10 @@ Respond in a helpful, personalized way that:
         Returns:
             Response dictionary with AI-generated content
         """
+        print(f"🔍 DEBUG SESSION 184: _generate_response() ENTERED, calling _generate_ai_response()...")
         # Generate real AI response
         ai_response = self._generate_ai_response(message, context)
+        print(f"🔍 DEBUG SESSION 184: _generate_ai_response() returned type={type(ai_response)}")
 
         # Session 155 Fix: Handle dict response with tool_calls
         if isinstance(ai_response, dict) and 'tool_calls' in ai_response:
@@ -4779,6 +5091,9 @@ Respond in a helpful, personalized way that:
         Returns:
             Response dictionary with enhanced capabilities
         """
+        print(f"🔍 DEBUG SESSION 184: process_message() CALLED with: {message[:80]}...")
+        logger.info(f"🔍 DEBUG SESSION 184: process_message() CALLED with: {message[:80]}...")
+
         # Analyze user patterns and conversation history for contextual memory
         user_patterns = self._analyze_user_patterns()
 
@@ -5091,7 +5406,9 @@ Respond in a helpful, personalized way that:
             return response_data
 
         # Regular message processing with AI instead of templates
+        print(f"🔍 DEBUG SESSION 184: About to call _generate_response()")
         response_data = self._generate_response(message, full_context)
+        print(f"🔍 DEBUG SESSION 184: _generate_response() returned type={type(response_data)}, keys={response_data.keys() if isinstance(response_data, dict) else 'N/A'}")
 
         # Session 135: Inject task_id from tool execution (enables video polling notifications)
         if hasattr(self, '_last_tool_result') and self._last_tool_result:

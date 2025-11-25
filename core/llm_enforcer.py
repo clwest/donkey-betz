@@ -303,6 +303,10 @@ RESPONSE:"""
         # The Responses API returns tool calls in response.output[], not response.tool_calls!
         tool_calls = None
         if hasattr(response, 'output') and response.output:
+            # Session 184: Debug - log what types we're seeing in the output
+            output_types = [getattr(item, 'type', type(item).__name__) for item in response.output]
+            logger.info(f"🔍 DEBUG SESSION 184: response.output types = {output_types}")
+
             # Filter for ResponseFunctionToolCall items in the output list
             function_calls = [item for item in response.output if hasattr(item, 'type') and item.type == 'function_call']
 
