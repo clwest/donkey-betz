@@ -406,8 +406,11 @@ class RunwayMLProvider:
             return image_input
 
         # Check if it's a local media path (relative or full URL)
+        # Session 183: Also check for relative paths like 'generated_images/...'
         is_local_media = (
-            image_input.startswith('/media/') or  # Relative path
+            image_input.startswith('/media/') or  # Absolute path with /media/
+            image_input.startswith('generated_images/') or  # Session 183: Relative path in MEDIA_ROOT
+            image_input.startswith('minifigs/') or  # Session 183: Another relative path type
             'localhost' in image_input or          # Localhost URL
             '127.0.0.1' in image_input or         # 127.0.0.1 URL
             (image_input.startswith('http') and '/media/' in image_input)  # Any URL with /media/

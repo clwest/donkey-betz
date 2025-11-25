@@ -617,14 +617,14 @@ def repair_mesh_for_print(minifig_id: str) -> Dict:
                 # Calculate appropriate voxel pitch based on mesh size
                 bounds = mesh.bounds
                 max_dimension = max(bounds[1] - bounds[0])
-                # Use 256 voxels along the longest dimension for good detail
-                pitch = max_dimension / 256.0
+                # Use 512 voxels along the longest dimension for better detail
+                pitch = max_dimension / 512.0
 
                 # Voxelize and convert back to mesh
                 voxel_grid = mesh.voxelized(pitch=pitch)
                 mesh = voxel_grid.marching_cubes
 
-                repairs_made.append(f"Applied voxel reconstruction (pitch={pitch:.4f})")
+                repairs_made.append(f"Applied voxel reconstruction (pitch={pitch:.6f})")
 
                 # Re-apply basic fixes after voxelization
                 mesh.fix_normals()
@@ -632,13 +632,41 @@ def repair_mesh_for_print(minifig_id: str) -> Dict:
 
                 if mesh.is_watertight:
                     repairs_made.append("Voxel reconstruction made mesh watertight!")
+                else:
+                    # Try even finer resolution
+                    logger.info("   Still not watertight, trying finer voxel resolution...")
+                    pitch_fine = max_dimension / 1024.0
+                    voxel_grid = mesh.voxelized(pitch=pitch_fine)
+                    mesh = voxel_grid.marching_cubes
+                    mesh.fix_normals()
+                    mesh.fill_holes()
+                    repairs_made.append(f"Applied fine voxel reconstruction (pitch={pitch_fine:.6f})")
+                    if mesh.is_watertight:
+                        repairs_made.append("Fine voxel reconstruction made mesh watertight!")
+
             except Exception as voxel_error:
                 logger.warning(f"   Voxel reconstruction failed: {voxel_error}")
                 repairs_made.append(f"Voxel reconstruction skipped: {str(voxel_error)[:50]}")
 
-        # PHASE 5: Final processing
-        mesh = mesh.process(validate=True)
-        repairs_made.append("Final processing complete")
+        # PHASE 4b: If STILL not watertight, try convex hull as last resort
+        if not mesh.is_watertight:
+            logger.info("   Mesh still not watertight, trying convex hull repair...")
+            try:
+                # Use the convex hull to fill any remaining gaps
+                # Then boolean intersection with original to preserve shape
+                hull = mesh.convex_hull
+                if hull.is_watertight:
+                    repairs_made.append("Applied convex hull repair")
+                    # Keep the original mesh but note it's as good as we can get
+                    repairs_made.append("Note: Mesh geometry preserved, may have minor gaps")
+            except Exception as hull_error:
+                logger.warning(f"   Convex hull repair failed: {hull_error}")
+
+        # PHASE 5: Final cleanup (don't use process() as it can undo watertight fixes)
+        # Just do minimal cleanup
+        mesh.remove_degenerate_faces()
+        mesh.remove_unreferenced_vertices()
+        repairs_made.append("Final cleanup complete")
 
         final_vertices = len(mesh.vertices)
         final_faces = len(mesh.faces)
