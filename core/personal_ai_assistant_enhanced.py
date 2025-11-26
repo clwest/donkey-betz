@@ -545,6 +545,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_web_search(arguments)
             elif function_name == 'create_brand_video':
                 result = self._handle_create_brand_video(arguments)
+            # Session 189: Create project from research workflow
+            elif function_name == 'create_project_from_research':
+                result = self._handle_create_project_from_research(arguments)
             else:
                 result = {
                     'success': False,
@@ -2346,6 +2349,110 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"❌ Web search error: {e}")
             return {'success': False, 'error': str(e)}
+
+    # Session 189: Create project from research workflow
+    def _handle_create_project_from_research(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle create_project_from_research tool - Session 189.
+
+        Creates a new creative project from research results and generated images.
+        This enables the "research → create → organize" autonomous workflow.
+        """
+        logger.info(f"📁 CREATE_PROJECT_FROM_RESEARCH TOOL CALLED!")
+
+        try:
+            from content.models import CreativeProject, ImageHistory
+            from core.utils.id_resolver import resolve_image_id
+
+            project_name = arguments.get('project_name', 'Research Project')
+            research_summary = arguments.get('research_summary', '')
+            image_ids = arguments.get('image_ids', [])
+            category = arguments.get('category', 'branding')
+            suggested_next_steps = arguments.get('suggested_next_steps', [])
+
+            logger.info(f"📁 Creating project: {project_name}")
+            logger.info(f"   Category: {category}")
+            logger.info(f"   Images to include: {image_ids}")
+
+            # Create the project
+            project = CreativeProject.objects.create(
+                user=self.user,
+                name=project_name,
+                category=category,
+                goal=research_summary[:500] if research_summary else f"Research-based project: {project_name}",
+                status='active',
+                metadata={
+                    'auto_generated': True,
+                    'source': 'research_workflow',
+                    'research_summary': research_summary,
+                    'suggested_next_steps': suggested_next_steps
+                }
+            )
+
+            logger.info(f"✅ Project created: {project.id}")
+
+            # Associate images with the project
+            images_linked = 0
+            linked_image_details = []
+
+            for img_id in image_ids:
+                try:
+                    # Session 194: resolve_image_id returns (instance, error) tuple
+                    # The instance is already the ImageHistory object, no need to re-fetch
+                    image, error = resolve_image_id(img_id, self.user)
+                    if image and not error:
+                        image.project = project
+                        image.save(update_fields=['project'])
+                        images_linked += 1
+                        linked_image_details.append({
+                            'id': str(image.id),
+                            'sequential': img_id,
+                            'prompt': (image.prompt[:50] + '...') if image.prompt and len(image.prompt) > 50 else image.prompt
+                        })
+                        logger.info(f"   ✅ Linked image {img_id} to project")
+                    else:
+                        logger.warning(f"   ⚠️ Could not resolve image {img_id}: {error}")
+                except Exception as e:
+                    logger.warning(f"   ⚠️ Could not link image {img_id}: {e}")
+
+            # Build response message
+            response_parts = [
+                f"## 📁 Project Created: **{project_name}**\n",
+                f"**Category:** {category.replace('_', ' ').title()}",
+                f"**Images Included:** {images_linked}",
+            ]
+
+            if research_summary:
+                response_parts.append(f"\n### 📋 Research Summary\n{research_summary[:300]}{'...' if len(research_summary) > 300 else ''}")
+
+            if linked_image_details:
+                response_parts.append("\n### 🖼️ Project Images")
+                for img in linked_image_details:
+                    response_parts.append(f"- Image #{img['sequential']}: {img['prompt'] or 'No prompt'}")
+
+            if suggested_next_steps:
+                response_parts.append("\n### 🚀 Suggested Next Steps")
+                for step in suggested_next_steps:
+                    response_parts.append(f"- {step}")
+
+            response_parts.append(f"\n\n✨ **Your project is ready!** You can find it in the project dropdown above.")
+            response_parts.append(f"\n💡 Say \"switch to project {project_name[:20]}\" to start working on it!")
+
+            return {
+                'success': True,
+                'message': '\n'.join(response_parts),
+                'project_id': str(project.id),
+                'project_name': project_name,
+                'images_linked': images_linked,
+                'linked_images': linked_image_details
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Create project from research error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to create project: {str(e)}"
+            }
 
     # Session 184: Restored create_brand_video handler from Session 67
     def _handle_create_brand_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -4654,6 +4761,44 @@ CRITICAL INSTRUCTIONS:
    - Video editing → "✂️ Routing to Video Editing Agent..."
 12. **TOOL CALLING PREAMBLE (SESSION 129 - GPT-5.1 REQUIREMENT):** When you have access to a tool that can fulfill the user's request, you MUST call that tool. State which agent is handling it, then IMMEDIATELY execute the tool call. Do NOT just say you will do something without actually calling the tool function.
 13. **PERSONALIZED STYLE (SESSION 169 - LEARNING SYSTEM):** If "User Style Preferences" are shown above, incorporate them when generating new content. Example: if user prefers "vibrant" colors and "modern" style, enhance prompts to include those preferences. Say "🧠 Using your learned style preferences..." when applying them.
+14. **SINGLE TOOL CALL FOR COUNTED REQUESTS (SESSION 189):** When the user requests a specific number of items (e.g., "create 3 images"), generate ALL requested items in ONE tool call by setting the count parameter appropriately. Do NOT make multiple tool calls to generate the same type of content. Example: "create 3 DreamWorks images" = ONE call to image_generation_agent with count=3, NOT three separate calls.
+15. **NO HALLUCINATING COMPLETED WORK (SESSION 189 - CRITICAL):** NEVER claim that images, videos, or other content has been created unless you actually called the tool in THIS conversation turn. If you receive tool results that only show "web_search" was executed, you CANNOT claim images were generated. You MUST call image_generation_agent to actually create images. The continuation message will tell you which tools were ACTUALLY executed - only those tools have run.
+16. **NEVER REPEAT COMPLETED WORK (SESSION 189 - CRITICAL):** When you receive a continuation message, it will include a "COMPLETED WORK" section showing what has ALREADY been done:
+    - If you see "🛑 IMAGE GENERATION COMPLETE", do NOT call image_generation_agent again.
+    - If you see "🛑 STRATEGIC/EXECUTIVE REVIEW COMPLETE", do NOT call coleadership_agent or strategic_review again.
+    - Instead, proceed to the NEXT STEP suggested in the continuation message.
+    REPEATING TOOL CALLS WASTES USER CREDITS AND IS STRICTLY FORBIDDEN.
+17. **WORKFLOW ORCHESTRATION AGENT (SESSION 191 - HIGHEST PRIORITY):**
+    ⚡ CRITICAL: For ANY request involving BOTH "research" AND "create/make/generate":
+    ✅ Call workflow_orchestration_agent(workflow="research_and_create_logos", topic="...", count=N)
+    ⛔ DO NOT call web_search, coleadership_agent, image_generation_agent, or character_training_agent individually!
+    ⛔ DO NOT call audio_generation_agent - logo workflows do NOT need audio!
+
+    The workflow_orchestration_agent will AUTOMATICALLY handle ALL steps:
+    1. Web research (research trends and best practices)
+    2. Executive review (get co-leadership creative direction)
+    3. Image generation (create the logos)
+    4. Project organization (save everything to a project)
+
+    Examples that MUST use workflow_orchestration_agent:
+    - "Research modern AI company logo trends and create 3 professional logos"
+      → workflow_orchestration_agent(workflow="research_and_create_logos", topic="modern AI company", count=3)
+    - "Look up fitness brand logos and make 5 designs"
+      → workflow_orchestration_agent(workflow="research_and_create_logos", topic="fitness brand", count=5)
+
+    This ensures proper order and prevents tool calling errors. ONE tool call handles everything!
+
+18. **LOGO GENERATION RULE (SESSION 190):** When generating logos:
+    - Each image should contain EXACTLY ONE logo design, NOT multiple logos
+    - Use count parameter to generate multiple separate images (e.g., count=3 for 3 different logo images)
+    - WRONG: "three distinct logo concepts in one image" or "logo set with multiple designs"
+    - CORRECT: "single professional logo design" with count=3 to get 3 separate logo images
+    - The prompt should describe ONE logo. The count parameter handles creating multiple images.
+
+**Example - CORRECT (Session 191 - Workflow Orchestration Agent):**
+User: "Research cloud computing logo trends and create 3 modern logos"
+Call: workflow_orchestration_agent(workflow="research_and_create_logos", topic="cloud computing", count=3)
+[ONE tool call handles ALL steps automatically: research → executive review → image generation → project creation]
 
 **Example - CORRECT (Session 131 - Agent Orchestration):**
 User: "Remove background from image 3"

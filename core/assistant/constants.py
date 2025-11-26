@@ -125,3 +125,13 @@ DEFAULT_LORA_SCALE = 0.8
 CONVERSATION_HISTORY_LIMIT = 20
 MEMORY_RETRIEVAL_LIMIT = 10
 EMBEDDING_SEARCH_LIMIT = 5
+
+# Workflow types for WorkflowOrchestrationAgent (Session 191)
+WORKFLOW_TYPES = [
+    'research_and_create_logos',
+    # Future workflows:
+    # 'research_and_create_images',
+    # 'research_and_create_video',
+    # 'logo_package',
+    # 'brand_identity',
+]

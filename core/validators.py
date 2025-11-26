@@ -53,12 +53,13 @@ DANGEROUS_PATTERNS = [
 ]
 
 
-def validate_prompt(prompt: str, max_length: int = MAX_PROMPT_LENGTH) -> Tuple[bool, Optional[str]]:
+def validate_prompt(prompt: str, min_length: int = 1, max_length: int = MAX_PROMPT_LENGTH) -> Tuple[bool, Optional[str]]:
     """
     Validate AI prompt input.
 
     Args:
         prompt: User-provided prompt text
+        min_length: Minimum required length (default 1)
         max_length: Maximum allowed length
 
     Returns:
@@ -74,6 +75,9 @@ def validate_prompt(prompt: str, max_length: int = MAX_PROMPT_LENGTH) -> Tuple[b
 
     if not prompt:
         return False, "Prompt cannot be empty"
+
+    if len(prompt) < min_length:
+        return False, f"Prompt must be at least {min_length} characters"
 
     if len(prompt) > max_length:
         return False, f"Prompt exceeds maximum length of {max_length} characters"
