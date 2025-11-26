@@ -332,7 +332,7 @@ from core.views_davinci import (
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
-    control_sketch, control_structure, execute_workflow_step, unified_gallery, session_gallery, list_sessions, get_project_sessions, get_session_analytics, get_session_assets, delete_session, promote_session_to_project, unified_batch_download, unified_toggle_favorite,
+    control_sketch, control_structure, control_unified, execute_workflow_step, unified_gallery, session_gallery, list_sessions, get_project_sessions, get_session_analytics, get_session_assets, delete_session, promote_session_to_project, unified_batch_download, unified_toggle_favorite,
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
     list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
@@ -1109,6 +1109,7 @@ urlpatterns = [
     # Image-to-Image Control (Session 38: Feature 11)
     path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),
     path('api/stability/control/structure/', control_structure, name='stability-control-structure'),
+    path('api/stability/control/', control_unified, name='stability-control-unified'),  # Session 199: Unified endpoint
 
     # Workflow Execution (Session 41: Real API Integration)
     path('api/workflow/execute/', execute_workflow_step, name='workflow-execute-step'),
