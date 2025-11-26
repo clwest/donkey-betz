@@ -569,14 +569,21 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
     # Session 131: Agent Handler Methods
     def _resolve_hybrid_image_id(self, image_id: str) -> str:
-        """Convert sequential image numbers to UUIDs (Session 131)."""
+        """Convert sequential image numbers to UUIDs (Session 131, Session 196 - fixed)."""
         if image_id.isdigit():
             from content.models import ImageHistory
             try:
                 seq_num = int(image_id)
+                # Session 196: Try sequential_number field first (permanent identifier)
+                image = ImageHistory.objects.filter(user=self.user, sequential_number=seq_num).first()
+                if image:
+                    resolved_id = str(image.id)
+                    logger.info(f"✅ Converted image #{seq_num} (seq_number) → UUID {resolved_id[:8]}...")
+                    return resolved_id
+                # Fallback to positional index for backward compatibility
                 image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[seq_num - 1]
                 resolved_id = str(image.id)
-                logger.info(f"✅ Converted image #{seq_num} → UUID {resolved_id[:8]}...")
+                logger.info(f"✅ Converted image #{seq_num} (positional) → UUID {resolved_id[:8]}...")
                 return resolved_id
             except (IndexError, ImageHistory.DoesNotExist):
                 raise ValueError(f'Image #{image_id} not found')
@@ -5363,10 +5370,14 @@ Respond in a helpful, personalized way that:
 
         # Session 129: Intelligent routing for image editing operations
         # Route to EditingOrchestratorAgent automatically (no need to say "agent")
+        # Session 198: Fixed! 'remove text', 'erase', 'remove object' now use 'erase' operation
+        # which uses search-and-replace API to find and remove objects (not inpaint which adds content)
         edit_phrases = {
-            'remove text': 'inpaint',
-            'erase': 'inpaint',
-            'remove object': 'inpaint',
+            'remove text': 'erase',  # Session 198: Was 'inpaint' (wrong!) - now uses search-and-replace
+            'erase': 'erase',        # Session 198: Was 'inpaint' (wrong!) - now uses search-and-replace
+            'remove object': 'erase', # Session 198: Was 'inpaint' (wrong!) - now uses search-and-replace
+            'remove the': 'erase',   # Session 198: Added - "remove the watermark", "remove the text"
+            'delete': 'erase',       # Session 198: Added - "delete the text"
             'fix': 'inpaint',
             'remove background': 'remove_bg',
             'remove bg': 'remove_bg',
@@ -5390,8 +5401,9 @@ Respond in a helpful, personalized way that:
 
         if detected_operation:
             # Extract image ID from message (e.g., "remove text from image 2" -> "2")
+            # Session 197: Try UUID pattern FIRST to avoid partial matches like "634" from "634f0b6d..."
             import re
-            image_id_match = re.search(r'image\s+(?:number\s+)?(\d+|[0-9a-f-]{36})', message.lower())
+            image_id_match = re.search(r'image\s+(?:number\s+)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d+)', message.lower())
 
             if image_id_match:
                 image_id = image_id_match.group(1)
@@ -5404,19 +5416,35 @@ Respond in a helpful, personalized way that:
 
                 # Prepare parameters based on operation
                 parameters = {}
-                if detected_operation == 'inpaint':
-                    # Extract what to remove/change from message
-                    if 'remove text' in message.lower():
-                        parameters['prompt'] = 'remove all text'
-                    elif 'erase' in message.lower():
-                        # Try to extract what to erase
-                        erase_match = re.search(r'erase\s+(\w+)', message.lower())
-                        if erase_match:
-                            parameters['prompt'] = f'remove {erase_match.group(1)}'
-                        else:
-                            parameters['prompt'] = 'remove object'
-                    else:
-                        parameters['prompt'] = 'fix and improve'
+                if detected_operation == 'erase':
+                    # Session 198: NEW! Erase uses search_prompt to find and remove objects
+                    # Extract what to remove from message: "remove text", "erase watermark", "delete the logo"
+                    # Common patterns: "remove X from", "erase X from", "delete X from", "remove the X"
+                    erase_patterns = [
+                        r'remove\s+(?:the\s+)?(\w+(?:\s+\w+)?)\s+from',  # "remove text from", "remove the watermark from"
+                        r'erase\s+(?:the\s+)?(\w+(?:\s+\w+)?)\s+from',   # "erase text from", "erase the logo from"
+                        r'delete\s+(?:the\s+)?(\w+(?:\s+\w+)?)\s+from',  # "delete text from"
+                        r'remove\s+(?:the\s+)?(\w+(?:\s+\w+)?)',         # "remove text" (no "from")
+                        r'erase\s+(?:the\s+)?(\w+(?:\s+\w+)?)',          # "erase watermark"
+                        r'delete\s+(?:the\s+)?(\w+(?:\s+\w+)?)',         # "delete logo"
+                    ]
+                    search_prompt = None
+                    for pattern in erase_patterns:
+                        match = re.search(pattern, message.lower())
+                        if match:
+                            search_prompt = match.group(1).strip()
+                            break
+
+                    # Default fallback if nothing specific found
+                    if not search_prompt:
+                        search_prompt = 'text'  # Most common use case
+
+                    parameters['search_prompt'] = search_prompt
+                    logger.info(f"🧹 Erase operation: search_prompt='{search_prompt}'")
+
+                elif detected_operation == 'inpaint':
+                    # Inpaint is for ADDING/REPLACING content, not removing
+                    parameters['prompt'] = 'fix and improve'
                 elif detected_operation == 'recolor':
                     # Extract color from message
                     color_match = re.search(r'(?:make it|change to|recolor to?)\s+(\w+)', message.lower())

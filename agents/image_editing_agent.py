@@ -420,7 +420,9 @@ class ImageEditingAgent:
                 return {
                     'success': True,
                     'message': f"✨ Successfully {action} '{target}'{replacement}. Result will appear in gallery shortly (~30 seconds).",
-                    'image_id': result.get('image_id')
+                    'image_id': result.get('image_id'),
+                    'image_url': result.get('image_url'),  # Session 196: Pass through for frontend display
+                    'sequential_number': result.get('sequential_number')  # Session 196: Pass through for reference
                 }
             else:
                 return {
@@ -499,9 +501,14 @@ class ImageEditingAgent:
             # Try UUID first
             return ImageHistory.objects.get(id=image_id, user=self.user)
         except (ValueError, ImageHistory.DoesNotExist, Exception):  # Session 137: Catch all exceptions including ValidationError
-            # Try sequential number
+            # Session 196: Try sequential_number field first (permanent identifier)
             try:
                 seq_num = int(image_id)
+                # First try to match by sequential_number field
+                image = ImageHistory.objects.filter(user=self.user, sequential_number=seq_num).first()
+                if image:
+                    return image
+                # Fallback to positional index for backward compatibility
                 images = ImageHistory.objects.filter(user=self.user).order_by('created_at')
                 if seq_num > 0 and seq_num <= images.count():
                     return images[seq_num - 1]

@@ -15,18 +15,40 @@ Handles complex multi-step workflows like:
 "Make the text bigger, then change it to blue, then add a shadow"
 
 Session 90 - The Perfect Workflow: Phase 2 "Refine with Editing Tools"
+Session 197 - Fixed to call Stability AI APIs directly (not via ImageGenerationService)
 """
 
+import os
 import uuid
+import requests
+import logging
 from typing import Dict, List, Optional
 from datetime import datetime
+from dataclasses import dataclass
 
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 
 from content.models import ImageHistory
-from content.image_generation import ImageGenerationService
 from ai_core.agents.agent_memory_interface import AgentMemoryInterface
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class EditingResult:
+    """Result of an editing operation."""
+    success: bool
+    images: List[str] = None  # List of image URLs/paths
+    error_message: str = None
+    model_used: str = None
+
+    def __post_init__(self):
+        if self.images is None:
+            self.images = []
 
 
 class EditingStep:
@@ -85,12 +107,199 @@ class EditingOrchestratorAgent:
             redis_db=3
         )
 
-        self.stability = ImageGenerationService()
+        # Session 197: Get API key for direct Stability AI calls
+        self.stability_api_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEYS')
 
         self.memory.log_agent_action(
             action="agent_initialized",
             details={"user_id": user.id}
         )
+
+    # ========================================
+    # STABILITY AI API METHODS (Session 197)
+    # ========================================
+
+    def _call_stability_api(self, endpoint: str, image_path: str, data: Dict, mask_path: str = None) -> EditingResult:
+        """
+        Call Stability AI editing API with local image file.
+
+        Args:
+            endpoint: API endpoint (e.g., 'edit/inpaint', 'edit/erase')
+            image_path: Absolute path to local image file
+            data: Form data for the API
+            mask_path: Optional path to mask file
+
+        Returns:
+            EditingResult with success status and image URL
+        """
+        if not self.stability_api_key:
+            return EditingResult(success=False, error_message="Stability AI API key not configured")
+
+        url = f"https://api.stability.ai/v2beta/stable-image/{endpoint}"
+
+        try:
+            # Read the image file
+            with open(image_path, 'rb') as f:
+                image_content = f.read()
+
+            files = {
+                'image': ('image.png', image_content, 'image/png')
+            }
+
+            # Add mask if provided
+            if mask_path and os.path.exists(mask_path):
+                with open(mask_path, 'rb') as f:
+                    mask_content = f.read()
+                files['mask'] = ('mask.png', mask_content, 'image/png')
+
+            headers = {
+                'Authorization': f'Bearer {self.stability_api_key}',
+                'Accept': 'image/*'
+            }
+
+            # Session 198: Enhanced logging for debugging
+            logger.info(f"🎨 Calling Stability AI: {endpoint}")
+            logger.info(f"📤 API Request URL: {url}")
+            logger.info(f"📤 API Request data: {data}")
+            logger.info(f"📤 Image file size: {len(image_content)} bytes")
+            if mask_path:
+                logger.info(f"📤 Mask file provided: {mask_path}")
+
+            response = requests.post(url, headers=headers, files=files, data=data, timeout=120)
+
+            # Session 198: Enhanced response logging
+            logger.info(f"📥 Response status: {response.status_code}")
+            logger.info(f"📥 Response size: {len(response.content)} bytes")
+
+            if response.status_code == 200:
+                # Session 198: Compare input vs output size to verify modification
+                size_diff = len(response.content) - len(image_content)
+                size_ratio = len(response.content) / len(image_content) if len(image_content) > 0 else 0
+                logger.info(f"📊 Size comparison: input={len(image_content)} bytes, output={len(response.content)} bytes, diff={size_diff}, ratio={size_ratio:.2f}")
+
+                # Save result image
+                result_filename = f"generated_images/{self.user.id}/{uuid.uuid4()}.png"
+                saved_path = default_storage.save(result_filename, ContentFile(response.content))
+                saved_url = default_storage.url(saved_path)
+
+                logger.info(f"✅ Stability AI {endpoint} complete - saved to {saved_path}")
+
+                return EditingResult(
+                    success=True,
+                    images=[saved_path],
+                    model_used='stability-ai'
+                )
+            else:
+                error_msg = response.text
+                logger.error(f"❌ Stability AI error: {response.status_code} - {error_msg}")
+                return EditingResult(success=False, error_message=f"API error: {error_msg}")
+
+        except Exception as e:
+            logger.error(f"❌ Stability API call failed: {str(e)}")
+            return EditingResult(success=False, error_message=str(e))
+
+    def _inpaint(self, image_path: str, prompt: str, mask_path: str = None) -> EditingResult:
+        """Inpaint areas of an image using Stability AI."""
+        data = {
+            'prompt': prompt,
+            'output_format': 'png'
+        }
+        return self._call_stability_api('edit/inpaint', image_path, data, mask_path)
+
+    def _erase(self, image_path: str, mask_path: str = None, search_prompt: str = None) -> EditingResult:
+        """
+        Erase objects from an image using Stability AI.
+
+        If mask_path is provided, uses the erase endpoint with mask.
+        If search_prompt is provided (no mask), uses search-and-replace to find and remove objects.
+        """
+        logger.info(f"🧹 _erase() called: image_path={image_path}, mask_path={mask_path}, search_prompt={search_prompt}")
+
+        if mask_path and os.path.exists(mask_path):
+            # Use mask-based erase
+            logger.info(f"🧹 Using MASK-BASED erase with mask: {mask_path}")
+            data = {
+                'output_format': 'png'
+            }
+            return self._call_stability_api('edit/erase', image_path, data, mask_path)
+        elif search_prompt:
+            # Session 197/198: No mask - use search-and-replace to find and remove objects
+            # This uses AI to identify the object and remove it
+            # Session 198 FIX: Stability AI search-and-replace REQUIRES a 'prompt' parameter
+            # Session 198 v2: Different prompts work better for different image types:
+            # - For photos: "seamless continuation of the surrounding image"
+            # - For graphics/logos: "empty space, nothing, blank area matching the background"
+            # We'll use a more aggressive removal prompt that works for both
+            data = {
+                'search_prompt': search_prompt,
+                'prompt': 'nothing, empty space, blank area, remove completely',  # Session 198 v2: More aggressive removal
+                'output_format': 'png'
+            }
+            logger.info(f"🧹 Using SEARCH-AND-REPLACE to erase: search_prompt='{search_prompt}'")
+            logger.info(f"🧹 API data being sent: {data}")
+            return self._call_stability_api('edit/search-and-replace', image_path, data)
+        else:
+            logger.error("🧹 Erase FAILED: No mask or search_prompt provided!")
+            return EditingResult(
+                success=False,
+                error_message="Erase requires either a mask or a search prompt describing what to remove"
+            )
+
+    def _outpaint(self, image_path: str, prompt: str, left: int = 0, right: int = 0, up: int = 0, down: int = 0) -> EditingResult:
+        """Outpaint (extend) an image using Stability AI."""
+        data = {
+            'prompt': prompt,
+            'output_format': 'png',
+            'left': left,
+            'right': right,
+            'up': up,
+            'down': down
+        }
+        return self._call_stability_api('edit/outpaint', image_path, data)
+
+    def _remove_background(self, image_path: str) -> EditingResult:
+        """Remove background from an image using Stability AI."""
+        data = {
+            'output_format': 'png'
+        }
+        return self._call_stability_api('edit/remove-background', image_path, data)
+
+    def _upscale(self, image_path: str, creative: bool = False, prompt: str = None) -> EditingResult:
+        """Upscale an image using Stability AI."""
+        endpoint = 'upscale/creative' if creative else 'upscale/conservative'
+        data = {
+            'output_format': 'png'
+        }
+        if creative and prompt:
+            data['prompt'] = prompt
+        return self._call_stability_api(endpoint, image_path, data)
+
+    def _search_and_replace(self, image_path: str, search_prompt: str, replace_prompt: str = None) -> EditingResult:
+        """Search and replace objects in an image using Stability AI."""
+        # Session 198 FIX: Stability AI search-and-replace REQUIRES a 'prompt' parameter
+        # For removal (no replace_prompt), use a smart prompt that blends with surroundings
+        if replace_prompt:
+            effective_prompt = replace_prompt
+        else:
+            effective_prompt = 'seamless continuation of the surrounding image, clean and smooth'
+
+        data = {
+            'search_prompt': search_prompt,
+            'prompt': effective_prompt,  # Session 198: Always required
+            'output_format': 'png'
+        }
+        logger.info(f"🔍 Search-and-replace: search='{search_prompt}', prompt='{effective_prompt}'")
+        return self._call_stability_api('edit/search-and-replace', image_path, data)
+
+    def _recolor(self, image_path: str, prompt: str, select_prompt: str = None) -> EditingResult:
+        """Recolor objects in an image using Stability AI."""
+        data = {
+            'prompt': prompt,
+            'output_format': 'png'
+        }
+        if select_prompt:
+            data['select_prompt'] = select_prompt
+        return self._call_stability_api('edit/search-and-recolor', image_path, data)
 
     def create_editing_workflow(
         self,
@@ -178,14 +387,23 @@ class EditingOrchestratorAgent:
             Dict with result
         """
         try:
-            # Session 122: Support hybrid IDs - numeric IDs like "213" or full UUIDs
+            # Session 122/197: Support hybrid IDs - numeric IDs like "213" or full UUIDs
             # Resolve numeric ID to UUID if needed
             if isinstance(image_id, str) and image_id.isdigit():
-                # User asked for "image 213" - get the 213th image chronologically
+                # User asked for "image 101" - first try sequential_number field
                 numeric_index = int(image_id)
-                try:
-                    source_image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[numeric_index - 1]  # 1-indexed
-                except (IndexError, ImageHistory.DoesNotExist):
+                # Session 197: Try sequential_number field first (matches what UI displays)
+                source_image = ImageHistory.objects.filter(user=self.user, sequential_number=numeric_index).first()
+                if not source_image:
+                    # Fallback to positional index for backward compatibility
+                    try:
+                        source_image = ImageHistory.objects.filter(user=self.user).order_by('created_at')[numeric_index - 1]  # 1-indexed
+                    except (IndexError, ImageHistory.DoesNotExist):
+                        return {
+                            'success': False,
+                            'error': f'Image {numeric_index} not found. You have {ImageHistory.objects.filter(user=self.user).count()} images.'
+                        }
+                if not source_image:
                     return {
                         'success': False,
                         'error': f'Image {numeric_index} not found. You have {ImageHistory.objects.filter(user=self.user).count()} images.'
@@ -214,7 +432,9 @@ class EditingOrchestratorAgent:
             image_path = source_image.file_path
             if not image_path.startswith(('http://', 'https://', 'data:')):
                 # It's a relative path - make it absolute
-                image_path = os.path.join(settings.BASE_DIR, image_path)
+                # Session 197: Use MEDIA_ROOT not BASE_DIR - database stores paths relative to MEDIA_ROOT
+                # e.g., "generated_images/user_id/uuid.png" is stored in "media/generated_images/user_id/uuid.png"
+                image_path = os.path.join(settings.MEDIA_ROOT, image_path)
 
                 # Check if file exists
                 if not os.path.exists(image_path):
@@ -223,74 +443,88 @@ class EditingOrchestratorAgent:
                         'error': f'Image file not found at: {image_path}. The file may have been moved or deleted.'
                     }
 
-            # Execute operation based on type
+            # Session 197: Execute operation using internal Stability AI methods
             if operation == 'inpaint':
-                result = self.stability.inpaint(
-                    image_url=image_path,
-                    prompt=parameters.get('prompt'),
-                    mask=parameters.get('mask'),
-                    **{k: v for k, v in parameters.items() if k not in ['prompt', 'mask']}
+                result = self._inpaint(
+                    image_path=image_path,
+                    prompt=parameters.get('prompt', ''),
+                    mask_path=parameters.get('mask')
+                )
+
+            elif operation == 'erase':
+                # Session 197: Support both mask-based erase and text-based erase
+                result = self._erase(
+                    image_path=image_path,
+                    mask_path=parameters.get('mask'),
+                    search_prompt=parameters.get('search_prompt') or parameters.get('prompt')
                 )
 
             elif operation == 'outpaint':
-                result = self.stability.outpaint(
-                    image_url=image_path,
-                    **parameters
+                result = self._outpaint(
+                    image_path=image_path,
+                    prompt=parameters.get('prompt', ''),
+                    left=parameters.get('left', 0),
+                    right=parameters.get('right', 0),
+                    up=parameters.get('up', 0),
+                    down=parameters.get('down', 0)
                 )
 
             elif operation == 'recolor':
-                result = self.stability.recolor(
-                    image_url=image_path,
-                    prompt=parameters.get('prompt'),
-                    **{k: v for k, v in parameters.items() if k != 'prompt'}
+                result = self._recolor(
+                    image_path=image_path,
+                    prompt=parameters.get('prompt', ''),
+                    select_prompt=parameters.get('select_prompt')
                 )
 
-            elif operation == 'image_to_image':
-                result = self.stability.image_to_image(
-                    base_image=image_path,
-                    prompt=parameters.get('prompt'),
-                    strength=parameters.get('strength', 0.65),
-                    **{k: v for k, v in parameters.items() if k not in ['prompt', 'strength']}
+            elif operation == 'search_and_replace':
+                result = self._search_and_replace(
+                    image_path=image_path,
+                    search_prompt=parameters.get('search_prompt', ''),
+                    replace_prompt=parameters.get('replace_prompt')
                 )
 
-            elif operation == 'remove_bg':
-                result = self.stability.remove_background(
-                    image_url=image_path
+            elif operation == 'remove_bg' or operation == 'remove_background':
+                result = self._remove_background(
+                    image_path=image_path
                 )
 
             elif operation == 'upscale':
-                result = self.stability.upscale(
-                    image_url=image_path,
-                    **parameters
+                result = self._upscale(
+                    image_path=image_path,
+                    creative=parameters.get('creative', False),
+                    prompt=parameters.get('prompt')
                 )
 
             else:
                 return {
                     'success': False,
-                    'error': f'Unknown operation: {operation}'
+                    'error': f'Unknown operation: {operation}. Supported: inpaint, erase, outpaint, recolor, search_and_replace, remove_bg, upscale'
                 }
 
             if result.success:
                 # Create ImageHistory record for result
-                # ImageGenerationResult.images is a list, get the first one
-                result_image_url = result.images[0] if result.images else None
+                # EditingResult.images is a list, get the first one (file path)
+                result_image_path = result.images[0] if result.images else None
 
-                if not result_image_url:
+                if not result_image_path:
                     return {
                         'success': False,
                         'error': 'No image returned from operation'
                     }
 
+                # Session 197: Inherit project from source image so edited images appear in same project
                 result_image = ImageHistory.objects.create(
                     user=self.user,
                     prompt=f"{operation}: {parameters.get('prompt', 'N/A')}",
-                    filename=f'{operation}_{image_id}.png',
-                    file_path=result_image_url,
-                    image_type=operation,
+                    filename=f'{operation}_{uuid.uuid4().hex[:8]}.png',
+                    file_path=result_image_path,
+                    image_type='generated',  # Use standard type for display compatibility
                     model_used=result.model_used or source_image.model_used,
                     style=source_image.style,
                     image_width=source_image.image_width,
-                    image_height=source_image.image_height
+                    image_height=source_image.image_height,
+                    project=source_image.project,  # Session 197: Inherit project from source
+                    session=source_image.session   # Session 197: Inherit session too
                 )
 
                 self.memory.log_agent_action(
@@ -298,15 +532,21 @@ class EditingOrchestratorAgent:
                     details={
                         'operation': operation,
                         'source_image_id': image_id,
-                        'result_image_id': result_image.id
+                        'result_image_id': str(result_image.id),
+                        'project_id': str(source_image.project.id) if source_image.project else None
                     }
                 )
+
+                # Session 197: Return proper URL for frontend display
+                result_url = default_storage.url(result_image_path) if result_image_path else None
 
                 return {
                     'success': True,
                     'operation': operation,
                     'result_image_id': str(result_image.id),
-                    'result_image_url': result_image_url,
+                    'result_image_url': result_url,
+                    'result_image_path': result_image_path,
+                    'project_id': str(source_image.project.id) if source_image.project else None,
                     'message': f'✅ {operation} completed successfully'
                 }
             else:

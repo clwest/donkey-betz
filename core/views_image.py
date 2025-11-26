@@ -1548,6 +1548,8 @@ def erase_object(request):
     """
     Erase objects from image using Stability AI erase endpoint.
     Requires: image file, mask (drawn areas to erase)
+    Optional: project_id, source_image_id for proper association
+    Session 198: Updated to support project association and proper image history
     """
     try:
         if 'image' not in request.FILES or 'mask' not in request.FILES:
@@ -1558,6 +1560,8 @@ def erase_object(request):
 
         image_file = request.FILES['image']
         mask_file = request.FILES['mask']
+        project_id = request.POST.get('project_id')
+        source_image_id = request.POST.get('source_image_id')
 
         stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
 
@@ -1567,7 +1571,7 @@ def erase_object(request):
                 'error': 'Stability AI API key not configured'
             }, status=500)
 
-        logger.info(f"🖌️ Erase request for {image_file.name}")
+        logger.info(f"🖌️ Erase request - project: {project_id}, source_image: {source_image_id}")
 
         url = "https://api.stability.ai/v2beta/stable-image/edit/erase"
 
@@ -1583,29 +1587,58 @@ def erase_object(request):
             'Accept': 'image/*'
         }
 
-        response = requests.post(url, headers=headers, files=files, data=data)
+        logger.info(f"📤 Calling Stability AI erase endpoint...")
+        response = requests.post(url, headers=headers, files=files, data=data, timeout=60)
+        logger.info(f"📥 Response status: {response.status_code}, size: {len(response.content)} bytes")
 
         if response.status_code == 200:
-            # Save to server
+            # Session 198: Save with proper user folder structure
             filename = f'erased_{uuid.uuid4().hex[:8]}.png'
-            filepath = os.path.join('generated_images', filename)
+            filepath = os.path.join('generated_images', request.user.username, filename)
             saved_path = default_storage.save(filepath, ContentFile(response.content))
             image_url = default_storage.url(saved_path)
 
             logger.info(f"✅ Erase complete - saved to {saved_path}")
 
-            # Save to history (Session 36: Feature 9)
-            save_to_history(
+            # Session 198: Get project and source image for proper association
+            from content.models import ImageHistory, CreativeProject
+            project = None
+            source_image = None
+
+            if project_id:
+                try:
+                    project = CreativeProject.objects.get(id=project_id, user=request.user)
+                except CreativeProject.DoesNotExist:
+                    pass
+
+            if source_image_id:
+                try:
+                    source_image = ImageHistory.objects.get(id=source_image_id, user=request.user)
+                    # Inherit project from source if not specified
+                    if not project and source_image.project:
+                        project = source_image.project
+                except ImageHistory.DoesNotExist:
+                    pass
+
+            # Create ImageHistory record with project association
+            new_image = ImageHistory.objects.create(
                 user=request.user,
+                prompt=f"Erased from image #{source_image.get_sequential_number() if source_image else 'unknown'}",
                 file_path=saved_path,
+                filename=filename,
+                model_used='stability-erase',
                 image_type='erased',
-                prompt='',
-                parameters={'operation': 'erase'}
+                project=project,
+                session=source_image.session if source_image else None
             )
+
+            logger.info(f"✅ Created ImageHistory: {new_image.id}, project: {project.id if project else 'none'}")
 
             return JsonResponse({
                 'success': True,
-                'image_url': image_url
+                'image_url': image_url,
+                'image_id': str(new_image.id),
+                'sequential_number': new_image.get_sequential_number()
             })
         else:
             error_msg = response.text
@@ -1616,7 +1649,7 @@ def erase_object(request):
             }, status=500)
 
     except Exception as e:
-        logger.error(f"❌ Erase error: {str(e)}")
+        logger.error(f"❌ Erase error: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -1629,6 +1662,8 @@ def inpaint_image(request):
     """
     Inpaint (regenerate) areas of image using Stability AI inpaint endpoint.
     Requires: image file, mask (areas to regenerate), prompt (what to generate)
+    Optional: project_id, source_image_id for proper association
+    Session 199: Updated to support project association and proper image history (like erase)
     """
     try:
         if 'image' not in request.FILES or 'mask' not in request.FILES:
@@ -1646,8 +1681,10 @@ def inpaint_image(request):
 
         image_file = request.FILES['image']
         mask_file = request.FILES['mask']
+        project_id = request.POST.get('project_id')
+        source_image_id = request.POST.get('source_image_id')
 
-        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEYS')
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
 
         if not stability_key:
             return JsonResponse({
@@ -1655,7 +1692,7 @@ def inpaint_image(request):
                 'error': 'Stability AI API key not configured'
             }, status=500)
 
-        logger.info(f"🎨 Inpaint request: {prompt}")
+        logger.info(f"🎨 Inpaint request - prompt: {prompt}, project: {project_id}, source_image: {source_image_id}")
 
         url = "https://api.stability.ai/v2beta/stable-image/edit/inpaint"
 
@@ -1674,29 +1711,58 @@ def inpaint_image(request):
             'Accept': 'image/*'
         }
 
-        response = requests.post(url, headers=headers, files=files, data=data)
+        logger.info(f"📤 Calling Stability AI inpaint endpoint...")
+        response = requests.post(url, headers=headers, files=files, data=data, timeout=60)
+        logger.info(f"📥 Response status: {response.status_code}, size: {len(response.content)} bytes")
 
         if response.status_code == 200:
-            # Save to server
+            # Session 199: Save with proper user folder structure
             filename = f'inpainted_{uuid.uuid4().hex[:8]}.png'
-            filepath = os.path.join('generated_images', filename)
+            filepath = os.path.join('generated_images', request.user.username, filename)
             saved_path = default_storage.save(filepath, ContentFile(response.content))
             image_url = default_storage.url(saved_path)
 
             logger.info(f"✅ Inpaint complete - saved to {saved_path}")
 
-            # Save to history (Session 36: Feature 9)
-            save_to_history(
+            # Session 199: Get project and source image for proper association
+            from content.models import ImageHistory, CreativeProject
+            project = None
+            source_image = None
+
+            if project_id:
+                try:
+                    project = CreativeProject.objects.get(id=project_id, user=request.user)
+                except CreativeProject.DoesNotExist:
+                    pass
+
+            if source_image_id:
+                try:
+                    source_image = ImageHistory.objects.get(id=source_image_id, user=request.user)
+                    # Inherit project from source if not specified
+                    if not project and source_image.project:
+                        project = source_image.project
+                except ImageHistory.DoesNotExist:
+                    pass
+
+            # Create ImageHistory record with project association
+            new_image = ImageHistory.objects.create(
                 user=request.user,
+                prompt=f"Inpainted: {prompt} (from #{source_image.get_sequential_number() if source_image else 'unknown'})",
                 file_path=saved_path,
+                filename=filename,
+                model_used='stability-inpaint',
                 image_type='inpainted',
-                prompt=prompt,
-                parameters={'operation': 'inpaint', 'prompt': prompt}
+                project=project,
+                session=source_image.session if source_image else None
             )
+
+            logger.info(f"✅ Created ImageHistory: {new_image.id}, project: {project.id if project else 'none'}")
 
             return JsonResponse({
                 'success': True,
-                'image_url': image_url
+                'image_url': image_url,
+                'image_id': str(new_image.id),
+                'sequential_number': new_image.get_sequential_number()
             })
         else:
             error_msg = response.text
@@ -1707,7 +1773,7 @@ def inpaint_image(request):
             }, status=500)
 
     except Exception as e:
-        logger.error(f"❌ Inpaint error: {str(e)}")
+        logger.error(f"❌ Inpaint error: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -1924,6 +1990,11 @@ def image_history(request):
         if is_favorite is not None:
             queryset = queryset.filter(is_favorite=is_favorite.lower() == 'true')
 
+        # Session 197: Filter by project_id
+        project_id = request.query_params.get('project_id') or request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
         # Get total count
         total = queryset.count()
 
@@ -1975,6 +2046,108 @@ def image_history(request):
 
     except Exception as e:
         logger.error(f"❌ Image history error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_image(request):
+    """
+    Session 197: Upload an image file to a project.
+
+    Request (multipart/form-data):
+    - image: File upload
+    - project_id: UUID of the project
+    - description: Optional description/prompt
+
+    Returns:
+    {
+        "success": true,
+        "image_id": "uuid",
+        "sequential_number": 42,
+        "url": "/media/..."
+    }
+    """
+    try:
+        from content.models import ImageHistory
+        from projects.models import CreativeProject
+        import uuid as uuid_lib
+        from PIL import Image
+        import io
+
+        # Get the uploaded file
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response({'success': False, 'error': 'No image file provided'}, status=400)
+
+        # Get project
+        project_id = request.data.get('project_id')
+        project = None
+        if project_id:
+            try:
+                if isinstance(project_id, str):
+                    project_id = uuid_lib.UUID(project_id)
+                project = CreativeProject.objects.get(id=project_id, user=request.user)
+            except CreativeProject.DoesNotExist:
+                return Response({'success': False, 'error': 'Project not found'}, status=404)
+
+        # Get description
+        description = request.data.get('description', '') or request.data.get('prompt', 'Uploaded image')
+
+        # Read image and get dimensions
+        image_data = image_file.read()
+        img = Image.open(io.BytesIO(image_data))
+        width, height = img.size
+
+        # Generate unique filename
+        ext = image_file.name.split('.')[-1].lower() if '.' in image_file.name else 'png'
+        if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+            ext = 'png'
+        filename = f"uploaded_{uuid_lib.uuid4().hex[:12]}.{ext}"
+
+        # Save to media directory
+        import os
+        from django.conf import settings
+
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploaded_images')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        file_path = os.path.join(upload_dir, filename)
+        with open(file_path, 'wb') as f:
+            f.write(image_data)
+
+        # Create ImageHistory record
+        relative_path = f"uploaded_images/{filename}"
+
+        image_record = ImageHistory.objects.create(
+            user=request.user,
+            filename=filename,
+            file_path=relative_path,
+            image_type='uploaded',
+            prompt=description,
+            parameters={},
+            model_used='upload',
+            image_width=width,
+            image_height=height,
+            file_size_bytes=len(image_data),
+            project=project
+        )
+
+        logger.info(f"📤 Image uploaded: {filename} (ID: {image_record.id})")
+
+        return Response({
+            'success': True,
+            'image_id': str(image_record.id),
+            'sequential_number': image_record.get_sequential_number(),
+            'url': image_record.get_full_url(),
+            'filename': filename
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Image upload error: {str(e)}")
         return Response({
             'success': False,
             'error': str(e)
@@ -12279,6 +12452,7 @@ def search_and_replace_view(request):
         seq_num = image.get_sequential_number()
         action = "Erasing" if not replace_prompt else "Replacing"
         logger.info(f"🎯 {action} '{search_prompt}' in image {image_id} (sequential #{seq_num})")
+        logger.info(f"   Replace prompt: '{replace_prompt if replace_prompt else '(seamless blend - text removal mode)'}'")  # Session 197: Debug logging
 
         # Get image data (handle both data URIs and file paths)
         if image.file_path.startswith('data:'):
@@ -12297,9 +12471,20 @@ def search_and_replace_view(request):
         url = "https://api.stability.ai/v2beta/stable-image/edit/search-and-replace"
 
         files = {'image': image_data}
+
+        # Session 197/198: Improved text removal logic
+        # When removing text (no replace_prompt), use a smarter replacement that preserves the image
+        # Session 198 v2: "seamless continuation" creates weird shapes on graphics/logos
+        # Using a more aggressive removal prompt that works better for both photos and graphics
+        if not replace_prompt:
+            # For text removal, tell the API to remove completely and fill with background
+            effective_prompt = "nothing, empty space, blank area, remove completely"
+        else:
+            effective_prompt = replace_prompt
+
         data_params = {
             'search_prompt': search_prompt,
-            'prompt': replace_prompt if replace_prompt else 'plain background',  # Always required by API
+            'prompt': effective_prompt,
             'output_format': 'png'
         }
 
