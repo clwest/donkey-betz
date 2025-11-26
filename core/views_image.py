@@ -7035,7 +7035,24 @@ def execute_tool(request):
 
         # Route to appropriate tool handler
         # Session 181: Added agent name aliases for GPT function calling compatibility
-        if tool_name in ('generate_image', 'image_generation_agent'):
+        # Session 191: Workflow Orchestration Agent - HIGHEST PRIORITY
+        # This agent handles multi-step workflows like "research and create logos"
+        if tool_name == 'workflow_orchestration_agent':
+            from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+
+            agent = WorkflowOrchestrationAgent(
+                user=request.user,
+                project_id=parameters.get('project_id') or (str(project.id) if project else None)
+            )
+
+            result = agent.execute(
+                workflow=parameters.get('workflow'),
+                topic=parameters.get('topic'),
+                count=parameters.get('count', 3),
+                style_preferences=parameters.get('style_preferences', '')
+            )
+
+        elif tool_name in ('generate_image', 'image_generation_agent'):
             result = _execute_generate_image(request.user, parameters, session=session)
         elif tool_name in ('generate_video', 'video_generation_agent'):
             result = _execute_generate_video(request.user, parameters, session=session)
@@ -7052,6 +7069,14 @@ def execute_tool(request):
             result = _execute_send_email(request.user, parameters)
         elif tool_name == 'create_brand_video':
             result = _execute_create_brand_video(request.user, parameters)
+        # Session 189: Create project from research workflow
+        elif tool_name == 'create_project_from_research':
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            result = assistant._handle_create_project_from_research(parameters)
+        # Session 189: Strategic review - co-leadership review BEFORE image generation
+        elif tool_name == 'strategic_review':
+            result = _execute_strategic_review(request.user, parameters)
         elif tool_name == 'chain_videos':
             result = _execute_chain_videos(request.user, parameters)
         elif tool_name == 'add_text_to_video':
@@ -7087,6 +7112,25 @@ def execute_tool(request):
             from agents.audio_agent import get_audio_agent
             audio_agent = get_audio_agent(user=request.user)
             result = audio_agent.generate_sound_effect(**parameters)
+        elif tool_name == 'audio_generation_agent':
+            # Session 190: GPT sometimes calls this generic name - route to appropriate audio handler
+            # But if no text is provided, return error explaining the tool wasn't needed
+            text = parameters.get('text') or parameters.get('prompt') or parameters.get('message')
+            if not text:
+                result = {
+                    'success': False,
+                    'error': 'audio_generation_agent requires a "text" parameter. Did you mean to call create_project_from_research instead?',
+                    'suggestion': 'For logo creation workflows, the final step should be create_project_from_research, not audio_generation_agent.'
+                }
+            else:
+                from agents.audio_agent import get_audio_agent
+                audio_agent = get_audio_agent(user=request.user)
+                operation = parameters.get('operation', 'speech')
+                if operation == 'sound_effect':
+                    result = audio_agent.generate_sound_effect(**{k: v for k, v in parameters.items() if k != 'operation'})
+                else:
+                    # Default to speech generation
+                    result = audio_agent.generate_speech(text=text)
         elif tool_name == 'generate_with_options':
             # Session 90: Route to WorkflowCoordinatorAgent - Multi-generation with learning
             from ai_core.agents.workflow_coordinator_agent import WorkflowCoordinatorAgent
@@ -12966,3 +13010,138 @@ def creative_upscale_view(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def _execute_strategic_review(user, parameters):
+    """
+    Execute strategic review by co-leadership agents.
+
+    Session 189: Get executive team review BEFORE generating content.
+    This ensures research findings are analyzed by CTO, COO, and Creative Director
+    who then provide strategic direction for the content creation.
+
+    Parameters:
+        research_topic (str): The original research topic
+        research_findings (str): Summary of web search results
+        content_type (str): Type of content to create (logo, banner, etc.)
+        user_context (str): Additional user context
+
+    Returns:
+        dict: {
+            'success': True,
+            'strategic_direction': {
+                'key_insights': [...],
+                'creative_recommendations': [...],
+                'prompt_suggestions': [...],
+                'technical_considerations': [...],
+                'executive_summary': str
+            },
+            'participants': ['CTO', 'COO', 'Creative Director'],
+            'meeting_summary': str
+        }
+    """
+    try:
+        research_topic = parameters.get('research_topic', '').strip()
+        research_findings = parameters.get('research_findings', '').strip()
+        content_type = parameters.get('content_type', 'general')
+        user_context = parameters.get('user_context', '')
+
+        if not research_topic or not research_findings:
+            raise ValueError("research_topic and research_findings are required")
+
+        logger.info(f"🏢 Strategic Review: Analyzing research for '{research_topic}'")
+        logger.info(f"📋 Content type: {content_type}, Findings length: {len(research_findings)} chars")
+
+        # Use MeetingCoordinatorAgent for strategic boardroom discussion
+        from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+        coordinator = MeetingCoordinatorAgent(user=user)
+
+        # Build strategic review topic with research context
+        meeting_topic = f"""Strategic Review: {research_topic}
+
+RESEARCH FINDINGS:
+{research_findings[:2000]}
+
+CONTENT TYPE TO CREATE: {content_type}
+USER CONTEXT: {user_context}
+
+OBJECTIVE: Provide strategic direction and creative recommendations for content creation based on this research.
+Include specific prompt suggestions that incorporate the research insights."""
+
+        # Start boardroom meeting with relevant executives
+        # Include Creative Director for this creative-focused review
+        participants = ['CTOAgent', 'COOAgent']
+
+        # Check if CreativeDirectorAgent exists, add if so
+        from agents.models import UnifiedAgentTemplate
+        try:
+            UnifiedAgentTemplate.objects.get(name='CreativeDirectorAgent')
+            participants.append('CreativeDirectorAgent')
+        except UnifiedAgentTemplate.DoesNotExist:
+            logger.info("CreativeDirectorAgent not found, proceeding with CTO + COO")
+
+        meeting_results = coordinator.start_meeting(
+            topic=meeting_topic,
+            participants=participants
+        )
+
+        # Process meeting results into strategic direction format
+        if meeting_results.get('status') != 'complete':
+            raise Exception(f"Strategic review failed: {meeting_results.get('error', 'Unknown error')}")
+
+        # Extract key insights and recommendations from agent responses
+        key_insights = []
+        creative_recommendations = []
+        prompt_suggestions = []
+        technical_considerations = []
+
+        for agent_name, response in meeting_results.get('agent_responses', {}).items():
+            # Extract insights based on agent type
+            if 'CTO' in agent_name:
+                technical_considerations.append(f"[CTO] {response}")
+            elif 'COO' in agent_name:
+                key_insights.append(f"[Operations] {response}")
+            elif 'Creative' in agent_name:
+                creative_recommendations.append(f"[Creative] {response}")
+
+        # Generate prompt suggestions based on decisions
+        decisions = meeting_results.get('decisions', [])
+        for i, decision in enumerate(decisions[:3]):
+            prompt_suggestions.append(decision)
+
+        # Build executive summary
+        executive_summary = meeting_results.get('summary', 'Strategic review complete.')
+
+        result = {
+            'success': True,
+            'strategic_direction': {
+                'key_insights': key_insights,
+                'creative_recommendations': creative_recommendations,
+                'prompt_suggestions': prompt_suggestions if prompt_suggestions else [
+                    f"Modern {content_type} design incorporating research trends",
+                    f"Professional {content_type} with industry best practices",
+                    f"Creative {content_type} that stands out from competitors"
+                ],
+                'technical_considerations': technical_considerations,
+                'executive_summary': executive_summary
+            },
+            'participants': participants,
+            'meeting_summary': executive_summary,
+            'action_items': meeting_results.get('action_items', []),
+            'research_topic': research_topic,
+            'content_type': content_type
+        }
+
+        logger.info(f"✅ Strategic Review complete: {len(prompt_suggestions)} prompt suggestions, "
+                    f"{len(key_insights)} insights from {len(participants)} executives")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_strategic_review: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }

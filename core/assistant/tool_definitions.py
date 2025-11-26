@@ -20,6 +20,7 @@ from core.assistant.constants import (
     COLOR_GRADING_EFFECTS,
     PROFESSIONAL_CODECS,
     ASPECT_RATIOS,
+    WORKFLOW_TYPES,
 )
 
 
@@ -33,6 +34,7 @@ def get_tool_definitions() -> List[Dict]:
         List of tool definition dictionaries
     """
     return [
+        _get_workflow_orchestration_agent_definition(),  # Session 191: PRIORITY - multi-step workflows
         _get_image_generation_agent_definition(),
         _get_image_editing_agent_definition(),
         _get_video_generation_agent_definition(),
@@ -44,7 +46,71 @@ def get_tool_definitions() -> List[Dict]:
         _get_talking_character_agent_definition(),
         _get_web_search_definition(),
         _get_create_brand_video_definition(),
+        _get_create_project_from_research_definition(),  # Session 189
+        _get_strategic_review_definition(),  # Session 189: Research → Review → Create workflow
     ]
+
+
+def _get_workflow_orchestration_agent_definition() -> Dict:
+    """
+    Workflow orchestration agent for multi-step creative workflows.
+
+    Session 191: This agent ensures GPT cannot deviate from intended workflows.
+    Instead of calling multiple tools, GPT calls this ONE agent which
+    internally executes the correct steps in order.
+
+    CRITICAL: This should be the FIRST tool GPT considers for any request
+    that involves RESEARCH + CREATION (multiple steps).
+    """
+    return {
+        "type": "function",
+        "name": "workflow_orchestration_agent",
+        "description": """CRITICAL: Use this agent for ANY multi-step request that involves RESEARCH + CREATION.
+
+WHEN TO USE THIS AGENT:
+- "Research X and create Y logos/images" → workflow='research_and_create_logos'
+- "Look up trends for X and make logos" → workflow='research_and_create_logos'
+- "Find out about X then create Y professional logos" → workflow='research_and_create_logos'
+
+This agent will AUTOMATICALLY execute ALL required steps in the correct order:
+1. Web research (web_search)
+2. Executive team review (coleadership_agent)
+3. Image generation (image_generation_agent)
+4. Project organization (create_project_from_research)
+
+DO NOT try to call these tools individually for research+create requests!
+The workflow agent ensures proper order and prevents errors.
+
+For SIMPLE single-step requests (just "create a logo" without research, "upscale image 3"), use the individual agents directly.""",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "workflow": {
+                    "type": "string",
+                    "enum": WORKFLOW_TYPES,
+                    "description": "Workflow type. Use 'research_and_create_logos' for any request involving research + logo/image creation."
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "The main topic to research (e.g., 'modern AI company', 'tech startup', 'coffee shop', 'fitness brand'). Extract the key subject from the user's request."
+                },
+                "count": {
+                    "type": "integer",
+                    "default": 3,
+                    "description": "Number of logos/images to create (1-5). Extract from user request like 'create 3 logos' → count=3."
+                },
+                "style_preferences": {
+                    "type": "string",
+                    "description": "Optional style preferences mentioned by user (e.g., 'minimalist', 'bold colors', 'geometric', 'professional')"
+                },
+                "project_id": {
+                    "type": "string",
+                    "description": "Optional existing project ID to add content to"
+                }
+            },
+            "required": ["workflow", "topic"]
+        }
+    }
 
 
 def _get_image_generation_agent_definition() -> Dict:
@@ -487,5 +553,95 @@ def _get_create_brand_video_definition() -> Dict:
                 }
             },
             "required": ["brand_name", "concept"]
+        }
+    }
+
+
+def _get_create_project_from_research_definition() -> Dict:
+    """
+    Session 189: Create a new project from research results and generated content.
+
+    This enables the "research → create → organize" workflow where the AI can:
+    1. Research a topic (web_search)
+    2. Generate starter images
+    3. Package everything into a new project
+    """
+    return {
+        "type": "function",
+        "name": "create_project_from_research",
+        "description": "Create a new creative project from research results and generated images. Use this AFTER completing research (web_search) and generating starter images (image_generation_agent). This packages everything into an organized project that the user can continue working on. Use when: 1) Research has been completed, 2) Images have been generated, 3) User would benefit from having an organized project. DO NOT use this for simple one-off image generations.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_name": {
+                    "type": "string",
+                    "description": "A clear, professional project name (e.g., 'AI Content Platform Branding', 'Mechanic Shop Logos'). Should reflect the research topic and content type."
+                },
+                "research_summary": {
+                    "type": "string",
+                    "description": "A brief summary of the research findings (2-3 sentences). This becomes the project's context and helps future AI interactions."
+                },
+                "image_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of image IDs (sequential numbers like '1', '2', '3') to include in the project. These should be the images just generated."
+                },
+                "category": {
+                    "type": "string",
+                    "enum": ["branding", "marketing", "social_media", "product", "entertainment", "education", "other"],
+                    "default": "branding",
+                    "description": "Project category based on the content type"
+                },
+                "suggested_next_steps": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "3-5 suggested next steps for the user (e.g., 'Upscale favorite images', 'Create video animations', 'Train a character model')"
+                }
+            },
+            "required": ["project_name", "research_summary", "image_ids"]
+        }
+    }
+
+
+def _get_strategic_review_definition() -> Dict:
+    """
+    Session 189: Get executive team review of research before generating content.
+
+    This enables the "research → strategic review → create" workflow where:
+    1. Research is conducted (web_search)
+    2. Executive team (CTO, COO, Creative Director) reviews findings
+    3. They provide strategic direction and creative recommendations
+    4. THEN images/content are generated based on their guidance
+
+    This makes the co-leadership agents an integral part of the creative process,
+    not just reactive reviewers of finished work.
+    """
+    return {
+        "type": "function",
+        "name": "strategic_review",
+        "description": "IMPORTANT: Call this AFTER web_search but BEFORE image_generation_agent. Get strategic review and creative direction from the executive team (CTO, COO, Creative Director) based on research findings. They will analyze the research and provide: 1) Key insights to incorporate, 2) Creative direction recommendations, 3) Technical considerations, 4) Specific prompt suggestions for image generation. This ensures the co-leadership agents guide the creative process rather than just reviewing finished work.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "research_topic": {
+                    "type": "string",
+                    "description": "The original research topic/request from the user"
+                },
+                "research_findings": {
+                    "type": "string",
+                    "description": "Summary of key findings from web_search - include competitor info, trends, best practices discovered"
+                },
+                "content_type": {
+                    "type": "string",
+                    "enum": ["logo", "banner", "social_media", "brand_identity", "marketing", "video", "general"],
+                    "default": "general",
+                    "description": "What type of content will be created based on this research"
+                },
+                "user_context": {
+                    "type": "string",
+                    "description": "Any additional context from the user's original request (brand name, preferences, constraints, etc.)"
+                }
+            },
+            "required": ["research_topic", "research_findings"]
         }
     }
