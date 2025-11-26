@@ -126,12 +126,13 @@ CONVERSATION_HISTORY_LIMIT = 20
 MEMORY_RETRIEVAL_LIMIT = 10
 EMBEDDING_SEARCH_LIMIT = 5
 
-# Workflow types for WorkflowOrchestrationAgent (Session 191)
+# Workflow types for WorkflowOrchestrationAgent (Session 191/200)
 WORKFLOW_TYPES = [
     'research_and_create_logos',
-    # Future workflows:
-    # 'research_and_create_images',
-    # 'research_and_create_video',
-    # 'logo_package',
-    # 'brand_identity',
+    # Session 199/200: New workflows
+    'youtube_thumbnail_package',   # Research + create YouTube thumbnails (1280x720)
+    'brand_identity_package',      # Research + create brand identity (logo + variations)
+    'product_photography_kit',     # Research + create product photography
+    'video_thumbnail_series',      # Research + create consistent thumbnail series (1280x720)
+    'logo_to_video',               # Animate existing logo into video with audio
 ]

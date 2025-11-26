@@ -56,6 +56,7 @@ def _get_workflow_orchestration_agent_definition() -> Dict:
     Workflow orchestration agent for multi-step creative workflows.
 
     Session 191: This agent ensures GPT cannot deviate from intended workflows.
+    Session 199: Added youtube_thumbnail_package, social_media_kit, logo_to_video
     Instead of calling multiple tools, GPT calls this ONE agent which
     internally executes the correct steps in order.
 
@@ -65,20 +66,38 @@ def _get_workflow_orchestration_agent_definition() -> Dict:
     return {
         "type": "function",
         "name": "workflow_orchestration_agent",
-        "description": """CRITICAL: Use this agent for ANY multi-step request that involves RESEARCH + CREATION.
+        "description": """CRITICAL: Use this agent for ANY multi-step request that involves RESEARCH + CREATION or ANIMATION workflows.
 
-WHEN TO USE THIS AGENT:
-- "Research X and create Y logos/images" → workflow='research_and_create_logos'
-- "Look up trends for X and make logos" → workflow='research_and_create_logos'
-- "Find out about X then create Y professional logos" → workflow='research_and_create_logos'
+AVAILABLE WORKFLOWS:
 
-This agent will AUTOMATICALLY execute ALL required steps in the correct order:
-1. Web research (web_search)
-2. Executive team review (coleadership_agent)
-3. Image generation (image_generation_agent)
-4. Project organization (create_project_from_research)
+1. research_and_create_logos - Research topic and create professional logos
+   - "Research X and create Y logos" → workflow='research_and_create_logos'
+   - Steps: research → executive review → generate logos (1024x1024) → create project
 
-DO NOT try to call these tools individually for research+create requests!
+2. youtube_thumbnail_package - Research and create YouTube thumbnail variations
+   - "Create YouTube thumbnails for X" → workflow='youtube_thumbnail_package'
+   - Steps: research CTR best practices → review → generate thumbnails (1280x720) → create project
+
+3. brand_identity_package - Research and create complete brand identity
+   - "Create a brand identity for X" → workflow='brand_identity_package'
+   - "Build brand package for X" → workflow='brand_identity_package'
+   - Steps: research brand trends → review → generate brand images → create project
+
+4. product_photography_kit - Research and create professional product images
+   - "Create product photos for X" → workflow='product_photography_kit'
+   - "Product photography for X" → workflow='product_photography_kit'
+   - Steps: research product photography → review → generate product images → create project
+
+5. video_thumbnail_series - Create consistent thumbnails for video series
+   - "Create thumbnail series for X" → workflow='video_thumbnail_series'
+   - "Make thumbnails for my X video series" → workflow='video_thumbnail_series'
+   - Steps: research series branding → review → generate consistent thumbnails (1280x720) → create project
+
+6. logo_to_video - Animate an existing logo into video
+   - "Animate logo 5 into a video" → workflow='logo_to_video', image_id='5'
+   - Steps: select logo → animate (Runway) → add audio (optional) → create project
+
+DO NOT try to call individual tools for these multi-step requests!
 The workflow agent ensures proper order and prevents errors.
 
 For SIMPLE single-step requests (just "create a logo" without research, "upscale image 3"), use the individual agents directly.""",
@@ -88,7 +107,7 @@ For SIMPLE single-step requests (just "create a logo" without research, "upscale
                 "workflow": {
                     "type": "string",
                     "enum": WORKFLOW_TYPES,
-                    "description": "Workflow type. Use 'research_and_create_logos' for any request involving research + logo/image creation."
+                    "description": "Workflow type: 'research_and_create_logos' (logos), 'youtube_thumbnail_package' (thumbnails), 'social_media_kit' (social graphics), 'logo_to_video' (animate logo)"
                 },
                 "topic": {
                     "type": "string",
@@ -103,12 +122,16 @@ For SIMPLE single-step requests (just "create a logo" without research, "upscale
                     "type": "string",
                     "description": "Optional style preferences mentioned by user (e.g., 'minimalist', 'bold colors', 'geometric', 'professional')"
                 },
+                "image_id": {
+                    "type": "string",
+                    "description": "Image ID to animate (for logo_to_video workflow). Can use sequential number like '5' or full UUID. Required when workflow='logo_to_video'."
+                },
                 "project_id": {
                     "type": "string",
                     "description": "Optional existing project ID to add content to"
                 }
             },
-            "required": ["workflow", "topic"]
+            "required": ["workflow"]
         }
     }
 

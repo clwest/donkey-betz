@@ -6663,11 +6663,179 @@
                 'image', 'images', 'banner', 'banners'
             ];
 
+            // Session 199: YouTube thumbnail keywords
+            const youtubeKeywords = [
+                'youtube thumbnail', 'youtube thumbnails', 'thumbnail', 'thumbnails',
+                'youtube cover', 'video thumbnail'
+            ];
+
+            // Session 200: Brand identity keywords
+            const brandIdentityKeywords = [
+                'brand identity', 'brand package', 'branding package', 'brand kit',
+                'complete branding', 'brand design', 'visual identity'
+            ];
+
+            // Session 200: Product photography keywords
+            const productPhotoKeywords = [
+                'product photo', 'product photography', 'product shot', 'product image',
+                'e-commerce photo', 'product pics', 'commercial photo'
+            ];
+
+            // Session 200: Thumbnail series keywords
+            const thumbnailSeriesKeywords = [
+                'thumbnail series', 'video series thumbnail', 'playlist thumbnail',
+                'series of thumbnails', 'consistent thumbnails', 'episode thumbnails'
+            ];
+
+            // Session 199: Logo to video keywords
+            const animateLogoKeywords = [
+                'animate logo', 'animate the logo', 'logo animation', 'animated logo',
+                'logo to video', 'make logo move', 'create video from logo'
+            ];
+
             // Check if message contains BOTH research AND creation intent
             const hasResearch = researchKeywords.some(k => lower.includes(k));
             const hasCreate = createKeywords.some(k => lower.includes(k));
             const hasLogoIntent = logoKeywords.some(k => lower.includes(k));
+            const hasYoutubeIntent = youtubeKeywords.some(k => lower.includes(k));
+            const hasBrandIdentityIntent = brandIdentityKeywords.some(k => lower.includes(k));
+            const hasProductPhotoIntent = productPhotoKeywords.some(k => lower.includes(k));
+            const hasThumbnailSeriesIntent = thumbnailSeriesKeywords.some(k => lower.includes(k));
+            const hasAnimateLogoIntent = animateLogoKeywords.some(k => lower.includes(k));
 
+            // Session 199: Detect logo_to_video workflow (no research needed)
+            if (hasAnimateLogoIntent) {
+                console.log('🎯 Session 199: Detected logo_to_video workflow pattern');
+
+                // Extract image ID if mentioned
+                let imageId = null;
+                const imageIdMatch = message.match(/(?:logo|image)\s*(?:#|number)?\s*(\d+)/i);
+                if (imageIdMatch) {
+                    imageId = imageIdMatch[1];
+                }
+
+                // Extract topic from message
+                let topic = '';
+                const topicMatch = message.match(/animate\s+(?:the\s+)?(?:logo|image)\s*(?:#?\d+)?\s*(?:for|of|from)?\s*(.+)/i);
+                if (topicMatch) {
+                    topic = topicMatch[1].replace(/\s+/g, ' ').trim();
+                }
+                if (!topic) topic = 'logo animation';
+
+                return {
+                    workflow: 'logo_to_video',
+                    topic: topic,
+                    image_id: imageId,
+                    count: 1
+                };
+            }
+
+            // Session 199: Detect youtube_thumbnail_package workflow
+            if ((hasResearch || hasCreate) && hasYoutubeIntent) {
+                console.log('🎯 Session 199: Detected youtube_thumbnail_package workflow pattern');
+
+                let topic = '';
+                const topicMatch = message.match(/(?:thumbnail|thumbnails?)\s+(?:for|about|on)\s+(.+?)(?:\s+video)?$/i);
+                if (topicMatch) {
+                    topic = topicMatch[1].replace(/\s+/g, ' ').trim();
+                } else {
+                    // Try to extract from "create YouTube thumbnails for X"
+                    const altMatch = message.match(/(?:youtube|thumbnail)\s+(.+?)(?:\s+thumbnail)?$/i);
+                    if (altMatch) topic = altMatch[1];
+                }
+                if (!topic) topic = 'video content';
+
+                // Extract count
+                let count = 3;
+                const countMatch = message.match(/(\d+)\s*(?:thumbnail|variation)/i);
+                if (countMatch) count = parseInt(countMatch[1]);
+
+                return {
+                    workflow: 'youtube_thumbnail_package',
+                    topic: topic,
+                    count: count,
+                    style_preferences: ''
+                };
+            }
+
+            // Session 200: Detect brand_identity_package workflow
+            if ((hasResearch || hasCreate) && hasBrandIdentityIntent) {
+                console.log('🎯 Session 200: Detected brand_identity_package workflow pattern');
+
+                let topic = '';
+                const topicMatch = message.match(/(?:brand\s+identity|brand\s+package|branding)\s+(?:for|about)\s+(.+)/i);
+                if (topicMatch) {
+                    topic = topicMatch[1].replace(/\s+/g, ' ').trim();
+                }
+                if (!topic) topic = 'brand';
+
+                let count = 3;
+                const countMatch = message.match(/(\d+)\s*(?:image|variation|logo)/i);
+                if (countMatch) count = parseInt(countMatch[1]);
+
+                // Extract style preferences
+                const styleWords = ['minimalist', 'bold', 'modern', 'classic', 'colorful', 'simple', 'elegant', 'professional', 'geometric', 'flat', 'vintage', 'retro'];
+                const styles = styleWords.filter(s => lower.includes(s));
+
+                return {
+                    workflow: 'brand_identity_package',
+                    topic: topic,
+                    count: count,
+                    style_preferences: styles.join(', ')
+                };
+            }
+
+            // Session 200: Detect product_photography_kit workflow
+            if ((hasResearch || hasCreate) && hasProductPhotoIntent) {
+                console.log('🎯 Session 200: Detected product_photography_kit workflow pattern');
+
+                let topic = '';
+                const topicMatch = message.match(/product\s+(?:photo|photography|shot|image)s?\s+(?:for|of|about)\s+(.+)/i);
+                if (topicMatch) {
+                    topic = topicMatch[1].replace(/\s+/g, ' ').trim();
+                }
+                if (!topic) topic = 'product';
+
+                let count = 3;
+                const countMatch = message.match(/(\d+)\s*(?:photo|shot|image)/i);
+                if (countMatch) count = parseInt(countMatch[1]);
+
+                // Extract style preferences
+                const styleWords = ['minimalist', 'dramatic', 'natural', 'studio', 'lifestyle', 'white background', 'clean', 'professional'];
+                const styles = styleWords.filter(s => lower.includes(s));
+
+                return {
+                    workflow: 'product_photography_kit',
+                    topic: topic,
+                    count: count,
+                    style_preferences: styles.join(', ')
+                };
+            }
+
+            // Session 200: Detect video_thumbnail_series workflow
+            if ((hasResearch || hasCreate) && hasThumbnailSeriesIntent) {
+                console.log('🎯 Session 200: Detected video_thumbnail_series workflow pattern');
+
+                let topic = '';
+                const topicMatch = message.match(/(?:thumbnail\s+series|series\s+of\s+thumbnails?)\s+(?:for|about)\s+(.+)/i);
+                if (topicMatch) {
+                    topic = topicMatch[1].replace(/\s+/g, ' ').trim();
+                }
+                if (!topic) topic = 'video series';
+
+                let count = 3;
+                const countMatch = message.match(/(\d+)\s*(?:thumbnail|episode)/i);
+                if (countMatch) count = parseInt(countMatch[1]);
+
+                return {
+                    workflow: 'video_thumbnail_series',
+                    topic: topic,
+                    count: count,
+                    style_preferences: ''
+                };
+            }
+
+            // Original: research_and_create_logos workflow
             if (hasResearch && hasCreate && hasLogoIntent) {
                 console.log('🎯 Session 192: Detected research+create workflow pattern');
 
@@ -17907,27 +18075,65 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     };
                 }
 
-                // Session 192: Check for "research and create" workflow patterns FIRST
+                // Session 192/200: Check for workflow patterns FIRST
                 // This bypasses GPT tool selection which was ignoring workflow_orchestration_agent
                 const workflowParams = detectWorkflowPattern(message);
                 if (workflowParams) {
-                    console.log('🎯 Session 192: Intercepting for workflow orchestration:', workflowParams);
+                    console.log('🎯 Session 200: Intercepting for workflow orchestration:', workflowParams);
 
                     // Get the project ID if we have one
                     const projectId = this.activeProjectId || null;
 
+                    // Session 200: Build workflow-specific message
+                    let workflowMessage = '';
+                    let workflowSteps = '';
+
+                    switch (workflowParams.workflow) {
+                        case 'youtube_thumbnail_package':
+                            workflowMessage = `🔄 **Starting YouTube Thumbnail Workflow**\n\nI'll research best practices and create ${workflowParams.count} thumbnail variations for **${workflowParams.topic}**.`;
+                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching thumbnail best practices & CTR optimization\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} thumbnails (1280x720)\n4. 📁 Organizing into project`;
+                            break;
+                        case 'brand_identity_package':
+                            workflowMessage = `🔄 **Starting Brand Identity Workflow**\n\nI'll research brand trends and create ${workflowParams.count} brand identity images for **${workflowParams.topic}**.`;
+                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching brand identity trends\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} brand images\n4. 📁 Organizing into project`;
+                            break;
+                        case 'product_photography_kit':
+                            workflowMessage = `🔄 **Starting Product Photography Workflow**\n\nI'll research product photography and create ${workflowParams.count} professional shots for **${workflowParams.topic}**.`;
+                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching product photography styles\n2. 🏢 Executive team creative direction\n3. 📸 Generating ${workflowParams.count} product photos\n4. 📁 Organizing into project`;
+                            break;
+                        case 'video_thumbnail_series':
+                            workflowMessage = `🔄 **Starting Thumbnail Series Workflow**\n\nI'll research series branding and create ${workflowParams.count} consistent thumbnails for **${workflowParams.topic}**.`;
+                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching thumbnail series branding\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} consistent thumbnails (1280x720)\n4. 📁 Organizing into project`;
+                            break;
+                        case 'logo_to_video':
+                            workflowMessage = `🔄 **Starting Logo Animation Workflow**\n\nI'll animate ${workflowParams.image_id ? 'image #' + workflowParams.image_id : 'your logo'} into a professional video.`;
+                            workflowSteps = `\n\n**Steps:**\n1. 🖼️ Selecting logo image\n2. 🎬 Creating animated video (Runway)\n3. 🔊 Adding audio (optional)\n4. 📁 Organizing into project`;
+                            break;
+                        default: // research_and_create_logos
+                            workflowMessage = `🔄 **Starting Research & Create Workflow**\n\nI'll research **${workflowParams.topic}** and create ${workflowParams.count} professional logos for you.`;
+                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching trends and best practices\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} logos\n4. 📁 Organizing into project`;
+                    }
+
+                    // Build arguments with optional image_id for logo_to_video
+                    const toolArguments = {
+                        workflow: workflowParams.workflow,
+                        topic: workflowParams.topic,
+                        count: workflowParams.count,
+                        style_preferences: workflowParams.style_preferences || '',
+                        project_id: projectId
+                    };
+
+                    // Session 200: Add image_id for logo_to_video workflow
+                    if (workflowParams.image_id) {
+                        toolArguments.image_id = workflowParams.image_id;
+                    }
+
                     // Execute workflow directly - this creates a synthetic tool_call
                     return {
-                        message: `🔄 **Starting Research & Create Workflow**\n\nI'll research **${workflowParams.topic}** and create ${workflowParams.count} professional logos for you.\n\n**Steps:**\n1. 🔍 Researching trends and best practices\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} logos\n4. 📁 Organizing into project\n\n*This is an automated workflow - please wait...*`,
+                        message: workflowMessage + workflowSteps + `\n\n*This is an automated workflow - please wait...*`,
                         tool_calls: [{
                             name: 'workflow_orchestration_agent',
-                            arguments: {
-                                workflow: workflowParams.workflow,
-                                topic: workflowParams.topic,
-                                count: workflowParams.count,
-                                style_preferences: workflowParams.style_preferences,
-                                project_id: projectId
-                            }
+                            arguments: toolArguments
                         }]
                     };
                 }
@@ -19263,7 +19469,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             if (res.recommendations && res.recommendations.length > 0) {
                                 message += `💡 **Team Recommendations:**\n`;
                                 res.recommendations.forEach((rec, idx) => {
-                                    message += `${idx + 1}. ${rec}\n`;
+                                    // Session 200: Handle recommendation objects with agent/response properties
+                                    if (typeof rec === 'object' && rec !== null) {
+                                        const agentName = rec.agent || 'Agent';
+                                        const response = rec.response || rec.recommendation || JSON.stringify(rec);
+                                        message += `${idx + 1}. **${agentName}:** ${response.substring(0, 200)}...\n`;
+                                    } else {
+                                        message += `${idx + 1}. ${rec}\n`;
+                                    }
                                 });
                                 message += `\n`;
                             }
