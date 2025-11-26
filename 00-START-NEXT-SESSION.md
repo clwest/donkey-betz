@@ -1,150 +1,176 @@
-# Session 202: Agent Architecture Deep Dive & Spider Integration
+# Session 207: Spider Implementation & Agent Refinements
 
 **Date:** November 26, 2025
-**Previous Session:** 201 (Style System & Prompting Fix)
+**Previous Session:** 206 (Dashboards, Features & Collaboration COMPLETE!)
 **Current Reality Score:** 100%
-**Status:** Ready for Agent Architecture Audit
 
 ---
 
-## Session 201 - STYLE SYSTEM FIXED!
+## Session 206 Accomplishments - COMPLETE!
 
-### What We Fixed
+### Phase A: UI Dashboards - DONE
 
-1. **Kung Fu Panda Bug** - Style expansions included character names that overrode user topics
-2. **Bypassed Style System** - Workflow agent was using its own mini style dictionary instead of the 80+ built-in styles
-3. **Missing Styles** - Added 14 new animation styles including DreamWorks, South Park, Simpsons, etc.
+1. **Preferences Dashboard** (Tab: "Preferences")
+   - API: `core/views_preferences.py` (680 lines, 9 endpoints)
+   - Full UI with domain cards (Image, Video, Audio, Research)
+   - Learning stage indicator (new/learning/established)
+   - Preference history display
+   - Reset/clear functionality
 
-### New Animation Styles Added
+2. **Spider Status Dashboard** (Tab: "Spiders")
+   - Uses existing API: `core/views_spider_dashboard.py`
+   - Category grid with active/dormant counts
+   - Active/Dormant spider lists with execute buttons
+   - Live activity feed
+   - 7-day trends chart
 
-| Style Key | Shows |
-|-----------|-------|
-| `dreamworks` | DreamWorks 3D animation |
-| `south_park` | South Park cutout style |
-| `simpsons` | The Simpsons |
-| `family_guy` | Family Guy |
-| `ghibli` | Studio Ghibli |
-| `looney_tunes` | Looney Tunes |
-| `rick_and_morty` | Rick and Morty |
-| `archer` | Archer |
-| `adventure_time` | Adventure Time |
-| `gravity_falls` | Gravity Falls |
-| `bojack` | BoJack Horseman |
+### Phase B: Advanced Features - DONE
 
-### Files Modified in Session 201
+1. **Smart Style Suggestions** - `GET/POST /api/preferences/suggestions/`
+   - Analyzes prompt keywords for style matching
+   - Uses user preference history from StyleMemory
+   - Confidence scoring per suggestion (0-100)
+   - Supports image, video, audio domains
 
-| File | Changes |
-|------|---------|
-| `content/image_generation.py` | Added 14 new animation styles to `_apply_style_to_prompt()` |
-| `agents/workflow_orchestration_agent.py` | Fixed to use built-in 80+ styles, removed character references |
-| `ai_core/templates/ai_image_studio.html` | Fixed images vs logos detection, style extraction |
-| `docs/sessions/SESSION_201_STYLE_SYSTEM_FIX.md` | Session documentation |
+2. **Batch Preference Learning** - `POST /api/preferences/learn/`
+   - Learns from project content
+   - Analyzes styles, models, aspect ratios
+   - Weights based on frequency
 
----
-
-## Session 202 Focus: Agent Architecture Deep Dive
-
-### Goal
-
-Step back and audit ALL agents to ensure:
-1. Every agent is being utilized properly
-2. Agent flows are not being bypassed
-3. The spider network is integrated for real-time research
-4. No duplicate functionality exists
-
-### Known Agents to Audit
-
-**Content Generation Agents:**
-- `image_generation_agent` - Generate new images
-- `image_editing_agent` - Modify existing images (upscale, remove bg, etc.)
-- `video_generation_agent` - Generate/animate videos
-- `video_editing_agent` - Edit videos (trim, speed, effects)
-- `audio_generation_agent` - Text-to-speech, sound effects
-- `three_d_generation_agent` - Image to 3D model conversion
-- `character_training_agent` - Train custom character models
-- `talking_character_agent` - Create talking character videos
-
-**Orchestration Agents:**
-- `workflow_orchestration_agent` - Multi-step research + creation workflows
-- `coleadership_agent` - Executive team meetings (CTO, COO, etc.)
-
-**Research/Analysis Agents:**
-- `web_search` - Web research capabilities
-- Various spiders (need to audit)
-
-### Key Questions to Answer
-
-1. **What agents exist?** - Full inventory of all agents
-2. **How are they called?** - Tool definitions, frontend detection, backend handlers
-3. **Are any being bypassed?** - Like we found with the style system
-4. **What spiders exist?** - And how can they feed into agents?
-5. **What's underutilized?** - Features that exist but aren't being used
-
-### Agent Architecture Files
-
-**Agent Definitions:**
-- `agents/` directory - All agent implementations
-- `core/assistant/tool_definitions.py` - GPT tool schemas
-- `core/assistant/constants.py` - Operation enums
-
-**Agent Handlers:**
-- `core/views_image.py` - `execute_tool()` function
-- `core/personal_ai_assistant_enhanced.py` - Assistant agent handling
-
-**Frontend:**
-- `ai_core/templates/ai_image_studio.html` - `executeTools()`, `formatToolResults()`
+3. **Multi-Agent Collaboration** - `AgentRouter.consult()`
+   - Agents can now consult each other
+   - Logging and statistics tracking
+   - Convenience function: `from agents.router import consult`
 
 ---
 
-## Spider Network (To Explore)
+## Spider Status Summary
 
-The platform has spider capabilities that could enhance agent research:
+### Active Spiders (29 real implementations)
+- financial, innovation, social_sentiment, market_data, news_harvester
+- toptal, guru, peopleperhour, ninetyninedesigns, flexjobs, remoteok
+- medium, gumroad, substack, patreon, kofi, producthunt
+- coingecko, yahoo_finance
+- huggingface, kaggle, github_jobs, stackoverflow_jobs
+- horse_racing, combat_sports
+- courtlistener, justia, findlaw, lii
 
-**Potential Spider Integration:**
-- Real-time market research
-- Trend analysis
-- Competitor monitoring
-- Price tracking
-- Content discovery
-
-**Questions:**
-- Where are spiders defined?
-- How do they currently operate?
-- Can they feed data to agents?
-- What APIs/sources do they crawl?
+### Placeholder Spiders (17 - need real implementations)
+**Freelance:** weworkremotely, angellist, dribbble, behance
+**Education:** teachable, udemy, skillshare
+**Financial:** etherscan, opensea, seekingalpha, bloomberg_terminal, reuters_eikon
+**Tech:** hackernews, devto, hashnode, indiegogo, kickstarter
 
 ---
 
-## Server Commands
+## API Endpoints Created (Session 206)
+
+```
+# Preferences Dashboard
+GET  /api/preferences/                    # All preferences
+GET  /api/preferences/stats/              # Learning statistics
+GET  /api/preferences/history/            # Preference history
+DELETE /api/preferences/clear/            # Clear all
+POST /api/preferences/learn/              # Learn from project
+GET/POST /api/preferences/suggestions/    # Smart style suggestions
+POST /api/preferences/apply-suggestion/   # Apply suggestion
+GET/PUT/DELETE /api/preferences/{domain}/ # Domain-specific
+```
+
+---
+
+## New Methods Added (Session 206)
+
+### AgentRouter (agents/router.py)
+```python
+# Multi-agent consultation
+result = AgentRouter.consult(
+    requesting_agent='ImageAgent',
+    specialist='research',
+    question='Find trending cyberpunk styles',
+    context={'focus': 'neon'},
+    user=request.user
+)
+
+# Convenience function
+from agents.router import consult
+result = consult('ImageAgent', 'research', 'query', {}, user)
+
+# Get collaboration stats
+stats = AgentRouter.get_collaboration_stats(user)
+```
+
+---
+
+## Fixed Issues in Session 206
+
+- Fixed stale `EditingOrchestratorAgent` imports in 5 files:
+  - `core/views_agent_ecosystem.py`
+  - `ai_core/agents/iteration_agent.py`
+  - `ai_core/agents/workflow_coordinator_agent.py`
+  - `core/personal_ai_assistant_enhanced.py`
+  - `scripts/test_agent_ecosystem.py`
+
+---
+
+## Current Focus: Spider Implementation
+
+### Priority Order for Implementing Real Spiders
+1. **hackernews** - Tech discussions (already has TechCommunitySpider base)
+2. **devto** - Developer content
+3. **dribbble** - Design trends
+4. **behance** - Professional portfolios
+
+### Implementation Pattern
+```python
+# Example: Create ai_core/spiders/specialized/hackernews_spider.py
+from .tech_community_spider import TechCommunitySpider
+
+class HackerNewsSpider(TechCommunitySpider):
+    """Real HackerNews implementation"""
+
+    async def scrape(self, *args, **kwargs):
+        # Use HN API: https://hacker-news.firebaseio.com/v0/
+        pass
+```
+
+---
+
+## Quick Commands
 
 ```bash
-# Full restart
-pkill -f daphne; pkill -f redis; rm -f .daphne.pid && make start
+# Start server
+make start
 
-# Check health
-curl http://localhost:8000/health/ping/
-
-# Open AI Studio
+# Open AI Studio (see new Preferences and Spiders tabs!)
 open http://localhost:8000/ai-studio/
+
+# Test preferences API
+curl http://localhost:8000/api/preferences/
+
+# Test style suggestions
+curl "http://localhost:8000/api/preferences/suggestions/?prompt=cyberpunk+city"
+
+# Test spider dashboard
+curl http://localhost:8000/api/spider-dashboard/network/
 ```
 
 ---
 
-## Style System Reference (80+ Styles)
+## Key Files Reference
 
-The built-in style system is in `content/image_generation.py`:
+### Created in Session 206
+- `core/views_preferences.py` - Complete preferences API (680 lines)
 
-**Example usage:**
-```
-"Create a cyberpunk city" → Uses built-in cyberpunk expansion
-"Create a dreamworks style mascot" → Uses new dreamworks expansion
-"Create a watercolor landscape" → Uses watercolor expansion
-```
+### Modified in Session 206
+- `core/urls.py` - Added preference routes (8 new endpoints)
+- `agents/router.py` - Added consult(), _log_collaboration(), get_collaboration_stats()
+- `ai_core/templates/ai_image_studio.html` - Two new tabs + ~500 lines JS
 
-**Full style list:** See `_apply_style_to_prompt()` method (lines 173-280)
+### Spider Integration (Existing)
+- `ai_core/spiders/integration.py` - SpiderPlatformIntegration class
+- `ai_core/spiders/spider_registry.py` - Spider registry with 46 entries
 
 ---
 
-**Reality Score:** 100%
-**Built-in Styles:** 80+
-**Next Focus:** Agent architecture audit & spider integration
+**Full Plan:** `docs/plans/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md`

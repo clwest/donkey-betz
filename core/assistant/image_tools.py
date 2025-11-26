@@ -3,9 +3,10 @@ Image Tool Handlers for AI Assistant
 ====================================
 
 Tool execution handlers for image generation and editing operations.
-Delegates to specialized ImageEditingAgent for actual execution.
+Delegates to unified ImageAgent for actual execution.
 
 Session 184: Extracted from personal_ai_assistant_enhanced.py
+Session 202: Updated to use unified ImageAgent
 """
 
 import logging
@@ -32,14 +33,14 @@ class ImageToolsMixin:
             image_id = arguments['image_id']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='upscale',
                 image_id=image_id
             )
@@ -62,14 +63,14 @@ class ImageToolsMixin:
             image_id = arguments['image_id']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='remove_background',
                 image_id=image_id
             )
@@ -98,15 +99,15 @@ class ImageToolsMixin:
 
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
             logger.debug(f"Created agent with user: {agent.user.username}")
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='variations',
                 image_id=image_id,
                 count=count,
@@ -132,14 +133,14 @@ class ImageToolsMixin:
             object_description = arguments['object_description']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='erase_object',
                 image_id=image_id,
                 search_prompt=object_description
@@ -165,14 +166,14 @@ class ImageToolsMixin:
             select_prompt = arguments.get('select_prompt')
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='recolor',
                 image_id=image_id,
                 prompt=prompt,
@@ -198,14 +199,14 @@ class ImageToolsMixin:
             refinement_request = arguments['refinement_request']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='refine',
                 image_id=image_id,
                 prompt=refinement_request
@@ -231,14 +232,14 @@ class ImageToolsMixin:
             replace_prompt = arguments.get('replace_prompt', '')
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='search_and_replace',
                 image_id=image_id,
                 search_prompt=search_prompt,
@@ -265,14 +266,14 @@ class ImageToolsMixin:
             creativity = arguments.get('creativity', 0.3)
             current_project = getattr(self, 'project', None)
 
-            from agents.image_editing_agent import ImageEditingAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
-            result = agent.execute(
+            result = agent.edit(
                 operation='creative_upscale',
                 image_id=image_id,
                 prompt=prompt,

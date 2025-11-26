@@ -7351,6 +7351,67 @@ def execute_tool(request):
         # Route to appropriate tool handler
         # Session 181: Added agent name aliases for GPT function calling compatibility
         # Session 191: Workflow Orchestration Agent - HIGHEST PRIORITY
+        # Session 202: AgentRouter for unified routing (Phase 2)
+
+        # Try router-based routing first for supported intents
+        # This gradually migrates tools to the new unified agent architecture
+        # Session 204: Phase 5 - Tool Consolidation (expanded tool list)
+        ROUTER_ENABLED_TOOLS = {
+            # Image operations through unified ImageAgent
+            'upscale_image', 'remove_background', 'create_variations',
+            'recolor_image', 'erase_object', 'search_and_replace',
+            'creative_upscale', 'inpaint', 'outpaint',
+            # Audio operations through unified AudioAgent
+            'generate_speech', 'generate_sound_effect', 'add_voiceover',
+            # Video operations through unified VideoAgent
+            'add_text_to_video', 'add_music_to_video', 'apply_color_grade',
+            'chain_videos',
+            # Research operations through unified ResearchAgent (Session 203)
+            'web_search', 'research_topic', 'research',
+            # Training operations (Session 204)
+            'character_training_agent', 'train_character', 'train_style',
+            # Talking character (Session 204)
+            'talking_character_agent', 'create_talking_character', 'make_image_talk',
+            # Workflow operations (Session 204)
+            'workflow_orchestration_agent', 'create_brand_video',
+            # Leadership operations (Session 204)
+            'coleadership_agent', 'strategic_review', 'create_project_from_research',
+        }
+
+        if tool_name in ROUTER_ENABLED_TOOLS:
+            try:
+                from agents.router import AgentRouter
+                logger.info(f"🔀 Using AgentRouter.execute_tool for: {tool_name}")
+
+                # Session 204: Use execute_tool for full agent routing with preference support
+                result = AgentRouter.execute_tool(
+                    tool_name=tool_name,
+                    arguments=parameters,
+                    user=request.user,
+                    session=session,
+                    project=project
+                )
+
+                if result.get('success', True):
+                    logger.info(f"✅ Router success for {tool_name}")
+                else:
+                    # Fall through to legacy handling if router fails
+                    logger.warning(f"⚠️ Router failed, falling back to legacy: {result.get('error')}")
+                    result = None
+            except Exception as e:
+                logger.error(f"❌ Router error, falling back to legacy: {e}")
+                result = None
+
+            # If router succeeded, return early
+            if result is not None and result.get('success', True):
+                return Response({
+                    'success': True,
+                    'result': result,
+                    'tool_name': tool_name,
+                    'routed': True
+                })
+
+        # Legacy routing - will be gradually migrated to AgentRouter
         # This agent handles multi-step workflows like "research and create logos"
         if tool_name == 'workflow_orchestration_agent':
             from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
@@ -7929,6 +7990,8 @@ def _execute_generate_image(user, parameters, session=None):
         model = parameters.get('model', 'sdxl')  # Default to sdxl (best balance)
         style = parameters.get('style', '')  # Optional style
         expected_text = parameters.get('expected_text', '').strip()  # Session 66: For Vision refinement
+        # Session 201: Use negative_prompt from parameters (for text-free logos)
+        negative_prompt = parameters.get('negative_prompt', 'blurry, low quality, distorted')
 
         # Session 181: Support custom sizes from image_generation_agent
         width = parameters.get('width')
@@ -7973,6 +8036,7 @@ def _execute_generate_image(user, parameters, session=None):
         count = min(max(int(count), 1), 5)  # Clamp between 1 and 5
 
         logger.info(f"🎨 Generating {count} image(s) with prompt: {prompt[:50]}...")
+        logger.info(f"🚫 Negative prompt: {negative_prompt[:80]}..." if len(negative_prompt) > 80 else f"🚫 Negative prompt: {negative_prompt}")
 
         # Use ImageGenerationService directly (same as gallery_generate)
         from content.image_generation import ImageGenerationService
@@ -7989,7 +8053,7 @@ def _execute_generate_image(user, parameters, session=None):
                 style=style if style else "photographic",
                 quality=quality,
                 provider='stability',
-                negative_prompt='blurry, low quality, distorted',
+                negative_prompt=negative_prompt,  # Session 201: Use parameter (for text-free logos)
                 num_images=1
             )
 
@@ -10742,6 +10806,7 @@ def get_project(request, project_id):
             'created_at': project.created_at.isoformat(),
             'updated_at': project.updated_at.isoformat(),
             'stats': stats,  # Session 146: Project Stats Header
+            'metadata': project.metadata,  # Session 201: Rich workflow data (research links, agent recommendations)
             'workflows': workflows_data
         }
 

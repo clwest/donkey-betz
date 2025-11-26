@@ -136,19 +136,28 @@ class MeetingCoordinatorAgent:
 
                     # Generate perspective using GPT-5-mini with agent's system prompt
                     # Session 175: Now includes memory context for personalized responses
+                    # Session 201: Added AI-awareness context so agents know they're advising on AI generation
                     perspective_prompt = f"""
 Topic for discussion: {topic}
 
 RELEVANT CONTEXT FROM MEMORY:
 {memory_context}
 
+CRITICAL CONTEXT - AI GENERATION PLATFORM:
+You are an executive advisor on an AI CONTENT GENERATION platform. The images/content being discussed
+will be created by AI models (Stability AI, Runway ML, etc.), NOT human designers. This means:
+- AI excels at: style transfer, composition, mood, color palettes, abstract concepts
+- AI struggles with: text/typography, specific details, counting objects, hands/fingers
+- Your recommendations should be AI-FRIENDLY: use descriptive keywords, style references, mood descriptors
+- Avoid suggesting things AI can't do well (like "add elegant typography" - AI can't render text reliably)
+
 You are {agent_template.display_name}. Based on your role and expertise:
 {agent_template.system_prompt}
 
 Provide your perspective on this topic in 2-3 sentences. Focus on:
-- Your area of expertise
-- Key considerations from your domain
-- Specific recommendations
+- Your area of expertise AS IT APPLIES TO AI GENERATION
+- What prompt keywords or style directions would help the AI
+- Specific, actionable recommendations for the AI prompt
 
 IMPORTANT: Reference the context above when relevant. If past decisions apply, mention them.
 If user preferences are noted, factor them into your recommendation.

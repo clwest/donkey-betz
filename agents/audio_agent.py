@@ -1,15 +1,18 @@
 """
-Audio Agent - Session 81
-========================
+Audio Agent - Unified Audio Specialist
+======================================
 
-Specialized agent for audio generation operations.
-Maintains state of generated audio files and responds to agent queries.
+Session 81: Original creation
+Session 202: CONSOLIDATED - Merged AudioGenerationAgent into this unified agent
+Session 203: Added preference learning and memory (Phase 4)
 
-Features:
+This is the ONE agent for ALL audio operations:
 - Text-to-speech generation with state tracking
-- Text-to-sound generation with state tracking
+- Sound effect generation
+- Video voiceover addition
 - Query handlers for cross-agent communication
 - Memory-based state management via shared memory system
+- USER PREFERENCE LEARNING (Session 203)
 
 Example Usage:
     audio_agent = AudioAgent(user=request.user)
@@ -20,9 +23,27 @@ Example Usage:
         voice="Rachel"
     )
 
+    # Generate with learned preferences (voice auto-applied)
+    result = audio_agent.generate_speech(text="Hello world")
+
+    # Generate sound effect
+    result = audio_agent.generate_sound_effect(
+        description="Thunder rumbling in the distance"
+    )
+
+    # Add voiceover to video
+    result = audio_agent.add_voiceover(
+        video_id='123',
+        text="This is the narration",
+        voice="Drew"
+    )
+
     # Query most recent audio
     recent = audio_agent.get_most_recent_audio()
     # Returns: {'audio_url': 'https://...', 'type': 'speech', ...}
+
+    # Get user's preferences
+    prefs = audio_agent.get_user_preferences()
 """
 
 from __future__ import annotations
@@ -48,14 +69,16 @@ class AudioAgent:
     Maintains state and responds to queries from other agents.
     """
 
-    def __init__(self, user: Optional[User] = None):
+    def __init__(self, user: Optional[User] = None, project_id: Optional[str] = None):
         """
         Initialize Audio Agent.
 
         Args:
             user: User who initiated the agent (optional)
+            project_id: Optional project ID to associate results with
         """
         self.user = user
+        self.project_id = project_id
         self.agent_name = 'AudioAgent'
 
         # Initialize memory interface for state management
@@ -64,7 +87,49 @@ class AudioAgent:
         # Get or create agent template
         self.template = self._get_or_create_template()
 
+        # Session 203: Initialize preference manager for memory
+        self._preference_manager = None
+
         logger.info(f"🎵 Audio Agent initialized for user: {user.username if user else 'system'}")
+
+    @property
+    def preference_manager(self):
+        """Lazy load preference manager."""
+        if self._preference_manager is None and self.user:
+            from agents.preference_manager import AgentPreferenceManager
+            self._preference_manager = AgentPreferenceManager(self.user, self.project_id)
+        return self._preference_manager
+
+    def get_user_preferences(self) -> Dict[str, Any]:
+        """
+        Get user's learned audio preferences.
+
+        Returns:
+            Dict with preferred voice, model, etc.
+        """
+        if self.preference_manager:
+            return self.preference_manager.get_audio_preferences()
+        return {}
+
+    def get_preferred_voice(self) -> str:
+        """Get user's preferred voice for speech generation."""
+        if self.preference_manager:
+            return self.preference_manager.get_preferred_voice()
+        return 'Rachel'  # Default voice
+
+    def _apply_preferences(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply user preferences to parameters (fill in missing values).
+        User-specified values always take precedence.
+        """
+        if self.preference_manager:
+            return self.preference_manager.apply_preferences('audio', params)
+        return params
+
+    def _record_success(self, params: Dict[str, Any], user_rating: Optional[int] = None):
+        """Record a successful generation for preference learning."""
+        if self.preference_manager:
+            self.preference_manager.record_successful_generation('audio', params, user_rating)
 
     def _get_or_create_template(self) -> UnifiedAgentTemplate:
         """Get or create AudioAgent template in database"""
@@ -346,6 +411,132 @@ class AudioAgent:
 
         except Exception as e:
             logger.error(f"Failed to add to recent list: {str(e)}")
+
+    # ===== SESSION 202: UNIFIED METHODS (from AudioGenerationAgent) =====
+
+    def add_voiceover(
+        self,
+        video_id: str,
+        text: str,
+        voice: str = 'Rachel',
+        project_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Add voiceover narration to an existing video.
+        Session 202: Consolidated from AudioGenerationAgent.
+
+        Args:
+            video_id: UUID or sequential number of video to add voiceover to
+            text: Narration text to speak
+            voice: Voice preset (Rachel, Drew, Clyde, Paul, Aria, etc.)
+            project_id: Optional project ID to associate result with
+
+        Returns:
+            Dict with success status and video results
+        """
+        try:
+            from django.test import RequestFactory
+            from core.views_video import add_voiceover_view
+            import json
+
+            logger.info(f"🎤 AudioAgent adding voiceover to video {video_id}")
+            logger.info(f"   Voice: {voice}")
+            logger.info(f"   Text: {text[:60]}...")
+
+            factory = RequestFactory()
+            data = {
+                'video_id': str(video_id),
+                'text': text,
+                'voice': voice
+            }
+            if project_id:
+                data['project_id'] = project_id
+
+            request = factory.post(
+                '/api/tool/add-voiceover/',
+                json.dumps(data),
+                content_type='application/json'
+            )
+            request.user = self.user
+
+            response = add_voiceover_view(request)
+            result = json.loads(response.content)
+
+            if result.get('success'):
+                logger.info(f"✅ Voiceover added to video {video_id}")
+
+                # Store in memory
+                audio_data = {
+                    'audio_url': None,  # Audio is embedded in video
+                    'video_url': result.get('video_url'),
+                    'type': 'voiceover',
+                    'text': text,
+                    'voice': voice,
+                    'video_id': str(video_id),
+                    'status': 'completed',
+                    'user_id': str(self.user.id) if self.user else None,
+                    'created_at': timezone.now().isoformat()
+                }
+                self.memory.remember('most_recent_audio', audio_data)
+                self._add_to_recent_list(audio_data)
+
+                return {
+                    'success': True,
+                    'video_url': result.get('video_url'),
+                    'voice': voice,
+                    'text_preview': text[:100] if len(text) > 100 else text,
+                    'message': f"✅ Voiceover added successfully! Video is ready with {voice} narration."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error_message', 'Voiceover addition failed')
+                }
+
+        except Exception as e:
+            logger.error(f"❌ AudioAgent.add_voiceover failed: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Failed to add voiceover: {str(e)}"
+            }
+
+    def generate(
+        self,
+        operation: str,
+        text: str,
+        voice: str = 'Rachel',
+        video_id: Optional[str] = None,
+        duration: float = 5.0,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Unified generation method that routes to appropriate operation.
+        Session 202: Provides consistent API interface.
+
+        Args:
+            operation: Type of operation ('speech', 'voice', 'sound_effect', 'voiceover')
+            text: Text to process
+            voice: Voice preset for speech operations
+            video_id: Video ID for voiceover operation
+            duration: Duration for sound effects
+            **kwargs: Additional parameters
+
+        Returns:
+            Dict with success status and results
+        """
+        if operation in ['speech', 'voice', 'generate_voice', 'text_to_speech']:
+            return self.generate_speech(text=text, voice=voice, **kwargs)
+        elif operation in ['sound', 'sound_effect', 'generate_sound', 'text_to_sound']:
+            return self.generate_sound_effect(description=text, duration=duration, **kwargs)
+        elif operation in ['voiceover', 'add_voiceover']:
+            if not video_id:
+                return {'success': False, 'error': 'video_id is required for voiceover operation'}
+            return self.add_voiceover(video_id=video_id, text=text, voice=voice, **kwargs)
+        else:
+            return {
+                'success': False,
+                'error': f"Unknown operation: {operation}. Supported: speech, sound_effect, voiceover"
+            }
 
     # ===== QUERY HANDLERS =====
 

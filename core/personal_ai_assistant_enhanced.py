@@ -499,9 +499,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         ]
 
     # Session 125: Tool Execution Handler
+    # Session 204: Updated to use AgentRouter for unified tool execution
     def _execute_tool_call(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute a tool call from GPT.
+
+        Session 204: Now routes through AgentRouter for most tools,
+        falling back to legacy handlers for complex/special cases.
 
         Args:
             tool_call: Tool call dictionary from GPT response
@@ -521,7 +525,48 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             logger.info(f"🔧 Executing tool: {function_name} with args: {arguments}")
 
-            # Session 132: Route to agent orchestrators
+            # Session 204: Try router-based execution first for supported tools
+            # This integrates preference learning and unified agent architecture
+            ROUTER_ENABLED_TOOLS = {
+                # Research operations
+                'web_search', 'research_topic', 'research',
+                # Training operations
+                'character_training_agent', 'train_character', 'train_style',
+                # Talking character
+                'talking_character_agent', 'create_talking_character',
+                # Leadership operations
+                'coleadership_agent', 'strategic_review',
+                # Workflow operations
+                'workflow_orchestration_agent', 'create_brand_video',
+                'create_project_from_research',
+            }
+
+            if function_name in ROUTER_ENABLED_TOOLS:
+                try:
+                    from agents.router import AgentRouter
+                    logger.info(f"🔀 Using AgentRouter for: {function_name}")
+
+                    result = AgentRouter.execute_tool(
+                        tool_name=function_name,
+                        arguments=arguments,
+                        user=self.user,
+                        session=getattr(self, 'session', None),
+                        project=getattr(self, 'project', None)
+                    )
+
+                    if result.get('success', True):
+                        logger.info(f"✅ Router success for {function_name}")
+                        self._last_tool_result = result
+                        return result
+                    else:
+                        logger.warning(f"⚠️ Router failed, falling back to legacy: {result.get('error')}")
+                        # Fall through to legacy handlers
+                except Exception as e:
+                    logger.warning(f"⚠️ Router error, falling back to legacy: {e}")
+                    # Fall through to legacy handlers
+
+            # Legacy handlers (Session 132) - gradually migrating to AgentRouter
+            # These handlers have complex logic specific to this assistant
             if function_name == 'image_generation_agent':
                 result = self._handle_image_generation_agent(arguments)
             elif function_name == 'image_editing_agent':
@@ -1514,17 +1559,52 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             }
 
             for agent_name, response_text in agent_responses.items():
-                # Infer stance
-                stance = 'neutral'
+                # Session 201: Improved stance detection with scoring system
+                # Count positive and negative signals, then determine overall stance
                 lower_text = response_text.lower()
-                if any(w in lower_text for w in ['recommend', 'support', 'approve', 'yes', 'definitely', 'great idea']):
-                    stance = 'support'
-                elif any(w in lower_text for w in ['concern', 'risk', 'caution', 'careful', 'consider']):
-                    stance = 'concern'
-                elif any(w in lower_text for w in ['object', 'against', 'reject', 'no', 'not recommend']):
+
+                # Positive signals (supportive)
+                positive_words = [
+                    'recommend', 'support', 'approve', 'yes', 'definitely', 'great idea',
+                    'would suggest', 'lean toward', 'go with', 'perfect', 'excellent',
+                    'love', 'works well', 'ideal', 'strong', 'effective', 'good choice',
+                    'should work', 'will help', 'great fit', 'nicely', 'complements',
+                    'resonates', 'aligns', 'enhances', 'strengthens'
+                ]
+                positive_count = sum(1 for w in positive_words if w in lower_text)
+
+                # Negative signals (concern/objection)
+                negative_words = [
+                    'concern', 'risk', 'caution', 'careful', 'worry', 'issue',
+                    'problem', 'danger', 'warning', 'hesitant', 'unsure', 'doubt',
+                    'reconsider', 'rethink', 'not sure', 'might not'
+                ]
+                negative_count = sum(1 for w in negative_words if w in lower_text)
+
+                # Objection signals (strong negative)
+                objection_words = ['object', 'against', 'reject', 'no', 'not recommend', 'bad idea', 'avoid', 'don\'t']
+                objection_count = sum(1 for w in objection_words if w in lower_text)
+
+                # Alternative signals
+                alternative_words = ['alternative', 'instead', 'another option', 'what if', 'consider also', 'or we could']
+                alternative_count = sum(1 for w in alternative_words if w in lower_text)
+
+                # Determine stance based on scoring
+                if objection_count > 0 and objection_count >= positive_count:
                     stance = 'objection'
-                elif any(w in lower_text for w in ['alternative', 'instead', 'another option', 'what if']):
+                elif alternative_count > 0 and alternative_count > positive_count:
                     stance = 'alternative'
+                elif positive_count > negative_count:
+                    stance = 'support'
+                elif negative_count > positive_count:
+                    stance = 'concern'
+                else:
+                    # Default to support if giving constructive suggestions
+                    # Most agents in a creative review are being helpful
+                    if any(w in lower_text for w in ['suggest', 'would', 'could', 'should', 'try']):
+                        stance = 'support'
+                    else:
+                        stance = 'neutral'
 
                 emoji = stance_emoji.get(stance, '🤔')
                 agent_display = agent_name.replace('Agent', '')
@@ -1585,15 +1665,16 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            # Session 202: Consolidated to unified ImageAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
             # Execute agent workflow
-            result = agent.execute(
+            result = agent.edit(
                 operation='upscale',
                 image_id=image_id
             )
@@ -1620,15 +1701,16 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            # Session 202: Consolidated to unified ImageAgent
+            from agents.image_agent import ImageAgent
 
-            agent = ImageEditingAgent(
+            agent = ImageAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
             # Execute agent workflow
-            result = agent.execute(
+            result = agent.edit(
                 operation='remove_background',
                 image_id=image_id
             )
@@ -2357,13 +2439,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.error(f"❌ Web search error: {e}")
             return {'success': False, 'error': str(e)}
 
-    # Session 189: Create project from research workflow
+    # Session 189/201: Create project from research workflow
     def _handle_create_project_from_research(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Handle create_project_from_research tool - Session 189.
+        Handle create_project_from_research tool - Session 189/201.
 
         Creates a new creative project from research results and generated images.
-        This enables the "research → create → organize" autonomous workflow.
+        Session 201: Now auto-fills ALL project fields from workflow data.
         """
         logger.info(f"📁 CREATE_PROJECT_FROM_RESEARCH TOOL CALLED!")
 
@@ -2371,27 +2453,44 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             from content.models import CreativeProject, ImageHistory
             from core.utils.id_resolver import resolve_image_id
 
+            # Session 201: Extract all available project fields
             project_name = arguments.get('project_name', 'Research Project')
+            description = arguments.get('description', '')
+            goal = arguments.get('goal', '')
             research_summary = arguments.get('research_summary', '')
+            executive_direction = arguments.get('executive_direction', '')
+            research_links = arguments.get('research_links', [])  # Session 201: Full research sources
+            agent_recommendations = arguments.get('agent_recommendations', [])  # Session 201: Agent recommendations
             image_ids = arguments.get('image_ids', [])
+            video_ids = arguments.get('video_ids', [])
             category = arguments.get('category', 'branding')
+            colors = arguments.get('colors', '')
+            tags = arguments.get('tags', [])
             suggested_next_steps = arguments.get('suggested_next_steps', [])
 
             logger.info(f"📁 Creating project: {project_name}")
             logger.info(f"   Category: {category}")
+            logger.info(f"   Colors: {colors}")
+            logger.info(f"   Tags: {tags}")
             logger.info(f"   Images to include: {image_ids}")
 
-            # Create the project
+            # Session 201: Create project with ALL fields populated
             project = CreativeProject.objects.create(
                 user=self.user,
                 name=project_name,
+                description=description or f"Auto-generated project for {project_name}",
+                goal=goal or (research_summary[:500] if research_summary else f"Research-based project: {project_name}"),
                 category=category,
-                goal=research_summary[:500] if research_summary else f"Research-based project: {project_name}",
-                status='active',
+                colors=colors,
+                tags=tags,
+                status='in_progress',  # Has content, so in progress
                 metadata={
                     'auto_generated': True,
                     'source': 'research_workflow',
                     'research_summary': research_summary,
+                    'executive_direction': executive_direction,
+                    'research_links': research_links,  # Session 201: Full research sources with links
+                    'agent_recommendations': agent_recommendations,  # Session 201: Agent recommendations with stance
                     'suggested_next_steps': suggested_next_steps
                 }
             )
@@ -5410,7 +5509,8 @@ Respond in a helpful, personalized way that:
                 logger.info(f"🎨 Extracted image_id: '{image_id}' for operation: '{detected_operation}'")
 
                 # Initialize EditingOrchestratorAgent
-                from ai_core.agents.editing_orchestrator_agent import EditingOrchestratorAgent
+                # Session 206: EditingOrchestratorAgent was merged into ImageAgent in Phase 1
+                from agents.image_agent import ImageAgent as EditingOrchestratorAgent
                 editing_agent = EditingOrchestratorAgent(user=self.user)
                 logger.info(f"✅ EditingOrchestratorAgent initialized for user: {self.user}")
 
