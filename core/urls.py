@@ -1004,6 +1004,7 @@ urlpatterns = [
 
     # Image History / Gallery endpoints (Session 36: Feature 9)
     path('api/images/history/', image_history, name='image-history'),
+    path('api/v1/images/upload/', lambda r: __import__('core.views_image', fromlist=['upload_image']).upload_image(r), name='upload-image'),  # Session 197
     path('api/images/<uuid:image_id>/favorite/', toggle_favorite, name='toggle-favorite'),
     path('api/images/<uuid:image_id>/delete/', delete_image, name='delete-image'),
     path('api/images/view/<uuid:image_id>/', track_image_view, name='track-image-view'),  # Session 53: Track views
