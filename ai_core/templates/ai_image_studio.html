@@ -6567,6 +6567,31 @@
             return null;
         }
 
+        // Session 201: Global markdown formatter for project descriptions and other content
+        function formatMarkdown(text) {
+            if (!text) return '';
+
+            // Convert bold **text**
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+            // Convert italic *text* (must be after bold)
+            text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+
+            // Convert markdown links [text](url)
+            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #60a5fa;">$1</a>');
+
+            // Convert numbered lists (1. item)
+            text = text.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 1em;">$1. $2</div>');
+
+            // Convert bullet points (- item)
+            text = text.replace(/^[-•]\s+(.+)$/gm, '<div style="margin-left: 1em;">• $1</div>');
+
+            // Convert line breaks
+            text = text.replace(/\n/g, '<br>');
+
+            return text;
+        }
+
         // Show notification helper
         function showNotification(message, type = 'info', duration = 3000) {
             // Create a simple toast notification
@@ -6836,8 +6861,16 @@
             }
 
             // Original: research_and_create_logos workflow
+            // Session 201: Now distinguishes between "logos" (text-free) and "images" (general artwork)
             if (hasResearch && hasCreate && hasLogoIntent) {
-                console.log('🎯 Session 192: Detected research+create workflow pattern');
+                // Session 201: Determine if user wants logos (text-free) or general images
+                // Use word boundary checks to avoid false positives (e.g., "branding" shouldn't match "brand")
+                // Note: \bimages?\b matches both "image" and "images"
+                const wantsLogos = /\blogos?\b/i.test(lower) || /\bbrand\b/i.test(lower) || /\bemblems?\b/i.test(lower) || /\bicons?\b/i.test(lower);
+                const wantsImages = (/\bimages?\b/i.test(lower) || /\bpictures?\b/i.test(lower) || /\bartworks?\b/i.test(lower) || /\billustrations?\b/i.test(lower)) && !wantsLogos;
+
+                const workflowType = wantsImages ? 'research_and_create_images' : 'research_and_create_logos';
+                console.log(`🎯 Session 201: Detected ${workflowType} workflow pattern (wantsLogos: ${wantsLogos}, wantsImages: ${wantsImages})`);
 
                 // Session 192 FIX: Better topic extraction using pattern matching
                 // Look for "research X" or "research X and create" patterns
@@ -6885,14 +6918,39 @@
                 }
 
                 // Extract style preferences if any
-                const styleWords = ['minimalist', 'bold', 'modern', 'classic', 'colorful', 'simple', 'elegant', 'professional', 'geometric', 'flat'];
+                // Session 201: Support both keyword styles AND custom "X style" patterns
+                const styleWords = ['minimalist', 'bold', 'modern', 'classic', 'colorful', 'simple', 'elegant', 'professional', 'geometric', 'flat', 'retro', 'vintage', 'futuristic', 'playful', 'corporate', 'hand-drawn', 'watercolor', 'neon', 'gradient', '3d', 'isometric', 'cartoon', 'realistic'];
                 const styles = styleWords.filter(s => lower.includes(s));
+
+                // Session 201: Extract custom style patterns like "DreamWorks style", "Pixar style", "in the style of X"
+                const customStylePatterns = [
+                    /using\s+(?:the\s+)?(.+?)\s+style/i,           // "using the DreamWorks style"
+                    /in\s+(?:the\s+)?(.+?)\s+style/i,              // "in the Pixar style"
+                    /(?:with|like)\s+(?:a\s+)?(.+?)\s+style/i,     // "with a retro style"
+                    /(.+?)\s+style\s+(?:logo|image|design)/i,      // "DreamWorks style logo"
+                    /(?:make\s+it|create)\s+(?:in\s+)?(.+?)\s+style/i  // "make it DreamWorks style"
+                ];
+
+                for (const pattern of customStylePatterns) {
+                    const match = message.match(pattern);
+                    if (match && match[1]) {
+                        const customStyle = match[1].trim();
+                        // Avoid duplicates and common filler words
+                        if (customStyle && !styles.includes(customStyle.toLowerCase()) &&
+                            !['the', 'a', 'an', 'my', 'your'].includes(customStyle.toLowerCase())) {
+                            styles.push(customStyle);
+                            console.log('🎨 Session 201: Extracted custom style:', customStyle);
+                            break; // Only capture one custom style to avoid conflicts
+                        }
+                    }
+                }
+
                 const stylePreferences = styles.join(', ');
 
-                console.log('🎯 Session 192: Extracted topic:', topic, 'count:', count, 'styles:', stylePreferences);
+                console.log('🎯 Session 201: Extracted topic:', topic, 'count:', count, 'styles:', stylePreferences);
 
                 return {
-                    workflow: 'research_and_create_logos',
+                    workflow: workflowType,
                     topic: topic,
                     count: count,
                     style_preferences: stylePreferences
@@ -16570,24 +16628,28 @@
             }
 
             // Session 189: Update workflow status indicator
+            // Session 201: Format markdown in status messages
             updateWorkflowStatus(status, isComplete = false) {
                 const container = document.getElementById('workflowStatusContainer');
                 const statusText = document.getElementById('workflowStatusText');
 
                 if (!container || !statusText) return;
 
+                // Session 201: Format any markdown in status
+                const formattedStatus = formatMarkdown(status);
+
                 if (isComplete) {
                     // Hide the status after completion
                     setTimeout(() => {
                         container.style.display = 'none';
                     }, 2000);
-                    statusText.innerHTML = status;
+                    statusText.innerHTML = formattedStatus;
                     // Change to success styling
                     container.querySelector('.spinner-border')?.classList.add('d-none');
                 } else {
                     // Show and update status
                     container.style.display = 'block';
-                    statusText.innerHTML = status;
+                    statusText.innerHTML = formattedStatus;
                     container.querySelector('.spinner-border')?.classList.remove('d-none');
                 }
             }
@@ -17786,7 +17848,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                     originalContent.includes('**Learning Insight:**');
 
                 // Session 64: Format assistant messages for readability
-                if (role === 'assistant' && !isTemporary) {
+                // Session 201: Also format temporary messages (thinking indicators) so markdown renders properly
+                if (role === 'assistant') {
                     content = this.formatMessage(content);
                 }
 
@@ -19465,20 +19528,58 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 message += `📋 **Meeting Summary:**\n${res.summary}\n\n`;
                             }
 
-                            // Display recommendations
+                            // Display recommendations - Session 201: Expandable cards
                             if (res.recommendations && res.recommendations.length > 0) {
-                                message += `💡 **Team Recommendations:**\n`;
+                                message += `💡 **Team Recommendations:**\n\n`;
+
                                 res.recommendations.forEach((rec, idx) => {
-                                    // Session 200: Handle recommendation objects with agent/response properties
+                                    // Session 200/201: Handle recommendation objects with expandable display
                                     if (typeof rec === 'object' && rec !== null) {
                                         const agentName = rec.agent || 'Agent';
                                         const response = rec.response || rec.recommendation || JSON.stringify(rec);
-                                        message += `${idx + 1}. **${agentName}:** ${response.substring(0, 200)}...\n`;
+                                        const stance = rec.stance || 'neutral';
+                                        const emoji = rec.emoji || (stance === 'support' ? '✅' : stance === 'concern' ? '⚠️' : stance === 'objection' ? '❌' : '🤔');
+
+                                        // Unique ID for this recommendation's expand/collapse
+                                        const recId = `rec_${Date.now()}_${idx}`;
+
+                                        // Show preview (first 150 chars) with expand option
+                                        const preview = response.length > 150 ? response.substring(0, 150) + '...' : response;
+                                        const hasMore = response.length > 150;
+
+                                        message += `**${emoji} ${agentName}** _(${stance})_\n`;
+                                        message += `<span id="${recId}_preview">${preview}</span>`;
+
+                                        if (hasMore) {
+                                            message += ` <a href="#" onclick="document.getElementById('${recId}_full').style.display='block';document.getElementById('${recId}_preview').style.display='none';this.style.display='none';return false;" style="color:#fbbf24;font-size:12px;">[show more]</a>`;
+                                            message += `<span id="${recId}_full" style="display:none;">${response} <a href="#" onclick="document.getElementById('${recId}_preview').style.display='inline';document.getElementById('${recId}_full').style.display='none';document.querySelector('[onclick*=\\'${recId}_full\\']').style.display='inline';return false;" style="color:#fbbf24;font-size:12px;">[show less]</a></span>`;
+                                        }
+                                        message += `\n\n`;
                                     } else {
                                         message += `${idx + 1}. ${rec}\n`;
                                     }
                                 });
-                                message += `\n`;
+                            }
+
+                            // Session 201: Show stance summary
+                            if (res.recommendations && res.recommendations.length > 0) {
+                                const supportCount = res.recommendations.filter(r => r.stance === 'support').length;
+                                const concernCount = res.recommendations.filter(r => ['concern', 'objection'].includes(r.stance)).length;
+                                const neutralCount = res.recommendations.length - supportCount - concernCount;
+
+                                let summaryText = '📊 **Consensus:** ';
+                                if (supportCount > concernCount) {
+                                    summaryText += `Team is supportive (${supportCount} in favor`;
+                                    if (concernCount > 0) summaryText += `, ${concernCount} concerns`;
+                                    summaryText += ')';
+                                } else if (concernCount > supportCount) {
+                                    summaryText += `Team has concerns (${concernCount} flagged issues`;
+                                    if (supportCount > 0) summaryText += `, ${supportCount} supportive`;
+                                    summaryText += ')';
+                                } else {
+                                    summaryText += 'Mixed opinions - consider all perspectives';
+                                }
+                                message += summaryText + '\n\n';
                             }
 
                             // Display the question they discussed
@@ -22109,9 +22210,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 </h5>
                             </div>
                     <div id="section-content-info-${project.id}">
-                    <table class="table table-dark">
+
+                    <!-- Session 201: Enhanced Project Information with workflow data -->
+
+                    <!-- Basic Info Table -->
+                    <table class="table table-dark table-sm mb-3">
                         <tr>
-                            <td style="width: 150px;"><strong>Status:</strong></td>
+                            <td style="width: 120px;"><strong>Status:</strong></td>
                             <td>
                                 ${project.status === 'planning' ? '📋 Planning' :
                                   project.status === 'in_progress' ? '🚀 In Progress' :
@@ -22125,46 +22230,110 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <td>${project.progress_percentage}% (${project.completed_workflows}/${project.total_workflows} workflows)</td>
                         </tr>` : ''}
                         <tr>
-                            <td><strong>Goal:</strong></td>
-                            <td style="white-space: pre-wrap;">${project.goal || '<span class="text-muted">Not set</span>'}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Description:</strong></td>
-                            <td style="white-space: pre-wrap;">${project.description || '<span class="text-muted">Not set</span>'}</td>
-                        </tr>
-                        <tr>
                             <td><strong>Category:</strong></td>
-                            <td>${project.category || '<span class="text-muted">Not set</span>'}</td>
+                            <td>${project.category ? project.category.replace(/[-_]/g, ' ').replace(/\//g, ' / ') : '<span class="text-muted">Not set</span>'}</td>
                         </tr>
                         <tr>
                             <td><strong>Colors:</strong></td>
                             <td>
                                 ${project.colors || '<span class="text-muted">Not set</span>'}
-                                ${project.colors ? '<small class="text-muted ms-2">(AI uses these when generating content)</small>' : ''}
                             </td>
                         </tr>
                         <tr>
                             <td><strong>Tags:</strong></td>
                             <td>
-                                ${project.tags && project.tags.length > 0 ? project.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('') : '<span class="text-muted">No tags</span>'}
+                                ${project.tags && project.tags.length > 0 ? project.tags.map(tag => `<span class="badge bg-secondary me-1" style="font-size: 11px;">${tag}</span>`).join('') : '<span class="text-muted">No tags</span>'}
                             </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Deadline:</strong></td>
-                            <td>
-                                ${project.deadline ? new Date(project.deadline).toLocaleString() : '<span class="text-muted">Not set</span>'}
-                                ${project.is_overdue ? '<span class="badge bg-danger ms-2">OVERDUE</span>' : ''}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Created:</strong></td>
-                            <td>${new Date(project.created_at).toLocaleString()}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Last Updated:</strong></td>
-                            <td>${new Date(project.updated_at).toLocaleString()}</td>
                         </tr>
                     </table>
+
+                    <!-- Goal & Description -->
+                    ${project.goal ? `
+                    <div class="mb-3 p-2" style="background: rgba(245, 158, 11, 0.1); border-radius: 6px; border-left: 3px solid #f59e0b;">
+                        <div class="small text-muted mb-1">🎯 Goal</div>
+                        <div style="font-size: 13px;">${project.goal}</div>
+                    </div>` : ''}
+
+                    ${project.description ? `
+                    <div class="mb-3 p-2" style="background: rgba(100, 100, 100, 0.1); border-radius: 6px;">
+                        <div class="small text-muted mb-1">📝 Description</div>
+                        <div id="project-description-${project.id}" style="font-size: 13px;">${formatMarkdown(project.description)}</div>
+                    </div>` : ''}
+
+                    <!-- Session 201: Research Sources -->
+                    ${project.metadata && project.metadata.research_links && project.metadata.research_links.length > 0 ? `
+                    <div class="mb-3 p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSubsection('${project.id}', 'research')">
+                            <div class="small" style="color: #3b82f6; font-weight: 600;">
+                                🔍 Research Sources (${project.metadata.research_links.length})
+                                <span id="subsection-toggle-research-${project.id}" style="font-size: 10px; margin-left: 5px;">▼</span>
+                            </div>
+                        </div>
+                        <div id="subsection-content-research-${project.id}">
+                            ${project.metadata.research_links.map((link, idx) => `
+                                <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 4px;">
+                                    <a href="${link.link}" target="_blank" style="color: #60a5fa; font-size: 12px; font-weight: 500;">
+                                        ${idx + 1}. ${link.title || 'Source'}
+                                    </a>
+                                    <div class="small text-muted mt-1" style="font-size: 11px;">${link.snippet || ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>` : ''}
+
+                    <!-- Session 201: Executive Recommendations with expandable dropdowns -->
+                    ${project.metadata && project.metadata.agent_recommendations && project.metadata.agent_recommendations.length > 0 ? `
+                    <div class="mb-3 p-2" style="background: rgba(168, 85, 247, 0.1); border-radius: 6px; border-left: 3px solid #a855f7;">
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSubsection('${project.id}', 'executives')">
+                            <div class="small" style="color: #a855f7; font-weight: 600;">
+                                👔 Executive Team Recommendations (${project.metadata.agent_recommendations.length})
+                                <span id="subsection-toggle-executives-${project.id}" style="font-size: 10px; margin-left: 5px;">▼</span>
+                            </div>
+                        </div>
+                        <div id="subsection-content-executives-${project.id}">
+                            ${project.metadata.agent_recommendations.map((rec, idx) => `
+                                <div class="mb-2" style="background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                                    <div class="d-flex justify-content-between align-items-center p-2" style="cursor: pointer;" onclick="toggleExecutiveRec('${project.id}', ${idx})">
+                                        <span style="color: #c4b5fd; font-weight: 500; font-size: 12px;">
+                                            <span id="exec-toggle-${project.id}-${idx}" style="display: inline-block; width: 14px; font-size: 10px;">▶</span>
+                                            ${rec.stance === 'support' ? '✅' : rec.stance === 'concern' ? '⚠️' : '🤔'} ${rec.agent || 'Agent'}
+                                        </span>
+                                        <span class="badge ${rec.stance === 'support' ? 'bg-success' : rec.stance === 'concern' ? 'bg-warning text-dark' : 'bg-secondary'}" style="font-size: 10px;">
+                                            ${rec.stance === 'support' ? 'Supportive' : rec.stance === 'concern' ? 'Has Concerns' : 'Neutral'}
+                                        </span>
+                                    </div>
+                                    <div id="exec-content-${project.id}-${idx}" style="display: none; padding: 8px 12px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(168, 85, 247, 0.3);">
+                                        <div style="font-size: 12px; color: rgba(255,255,255,0.9); line-height: 1.5;">${rec.response || rec.recommendation || rec.recommendation_text || 'No recommendation provided.'}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>` : ''}
+
+                    <!-- Session 201: Suggested Next Steps -->
+                    ${project.metadata && project.metadata.suggested_next_steps && project.metadata.suggested_next_steps.length > 0 ? `
+                    <div class="mb-3 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 3px solid #22c55e;">
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSubsection('${project.id}', 'nextsteps')">
+                            <div class="small" style="color: #22c55e; font-weight: 600;">
+                                🚀 Suggested Next Steps
+                                <span id="subsection-toggle-nextsteps-${project.id}" style="font-size: 10px; margin-left: 5px;">▼</span>
+                            </div>
+                        </div>
+                        <div id="subsection-content-nextsteps-${project.id}">
+                            <ul class="mb-0 ps-3" style="font-size: 12px;">
+                                ${project.metadata.suggested_next_steps.map(step => `<li style="margin-bottom: 4px;">${step}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>` : ''}
+
+                    <!-- Dates (collapsed by default) -->
+                    <div class="small text-muted" style="font-size: 11px;">
+                        Created: ${new Date(project.created_at).toLocaleDateString()} •
+                        Updated: ${new Date(project.updated_at).toLocaleDateString()}
+                        ${project.deadline ? ` • Deadline: ${new Date(project.deadline).toLocaleDateString()}` : ''}
+                        ${project.is_overdue ? '<span class="badge bg-danger ms-1" style="font-size: 9px;">OVERDUE</span>' : ''}
+                    </div>
+
                     </div><!-- End section-content-info -->
                 </div>
 
@@ -28593,6 +28762,78 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const prefs = JSON.parse(localStorage.getItem('projectSectionPrefs') || '{}');
             prefs[`${sectionName}-${projectId}`] = !isHidden; // Store collapsed state
             localStorage.setItem('projectSectionPrefs', JSON.stringify(prefs));
+        }
+
+        /**
+         * Session 201: Toggle project information subsections (Research, Executives, Next Steps)
+         * Similar to toggleProjectSection but for nested subsections within Project Information
+         */
+        function toggleProjectSubsection(projectId, subsectionName) {
+            const content = document.getElementById(`subsection-content-${subsectionName}-${projectId}`);
+            const toggle = document.getElementById(`subsection-toggle-${subsectionName}-${projectId}`);
+
+            if (!content || !toggle) {
+                console.warn(`Subsection not found: ${subsectionName} for project ${projectId}`);
+                return;
+            }
+
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                // Expand with animation
+                content.style.display = 'block';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-5px)';
+                toggle.textContent = '▼';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+                    content.style.opacity = '1';
+                    content.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                // Collapse
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+
+            // Store preference in localStorage
+            const prefs = JSON.parse(localStorage.getItem('projectSubsectionPrefs') || '{}');
+            prefs[`${subsectionName}-${projectId}`] = !isHidden;
+            localStorage.setItem('projectSubsectionPrefs', JSON.stringify(prefs));
+        }
+
+        /**
+         * Session 201: Toggle individual executive recommendation dropdowns
+         * Allows users to expand/collapse each executive's full recommendation
+         */
+        function toggleExecutiveRec(projectId, idx) {
+            const content = document.getElementById(`exec-content-${projectId}-${idx}`);
+            const toggle = document.getElementById(`exec-toggle-${projectId}-${idx}`);
+
+            if (!content || !toggle) {
+                console.warn(`Executive rec not found: ${projectId}-${idx}`);
+                return;
+            }
+
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                // Expand with smooth animation
+                content.style.display = 'block';
+                content.style.opacity = '0';
+                content.style.maxHeight = '0';
+                toggle.textContent = '▼';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.2s ease, max-height 0.3s ease';
+                    content.style.opacity = '1';
+                    content.style.maxHeight = '500px';
+                }, 10);
+            } else {
+                // Collapse
+                content.style.display = 'none';
+                content.style.maxHeight = '0';
+                toggle.textContent = '▶';
+            }
         }
 
         /**

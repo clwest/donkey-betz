@@ -1,101 +1,117 @@
-# Session 201: Co-Leadership & Project Formatting
+# Session 202: Agent Architecture Deep Dive & Spider Integration
 
 **Date:** November 26, 2025
-**Previous Session:** 200 (Workflow Orchestrations COMPLETE!)
+**Previous Session:** 201 (Style System & Prompting Fix)
 **Current Reality Score:** 100%
-**Status:** Ready for Co-Leadership & Project Formatting Improvements
+**Status:** Ready for Agent Architecture Audit
 
 ---
 
-## Session 200 - WORKFLOW ORCHESTRATIONS COMPLETE!
+## Session 201 - STYLE SYSTEM FIXED!
 
-### What We Built
+### What We Fixed
 
-**6 Workflow Orchestration Types** now available:
+1. **Kung Fu Panda Bug** - Style expansions included character names that overrode user topics
+2. **Bypassed Style System** - Workflow agent was using its own mini style dictionary instead of the 80+ built-in styles
+3. **Missing Styles** - Added 14 new animation styles including DreamWorks, South Park, Simpsons, etc.
 
-| Workflow | Description | Output Size | Trigger Examples |
-|----------|-------------|-------------|------------------|
-| `research_and_create_logos` | Research + create logos | 1024x1024 | "Research X and create 3 logos" |
-| `youtube_thumbnail_package` | Research + create thumbnails | 1280x720 | "Create YouTube thumbnails for X" |
-| `brand_identity_package` | Research + create brand identity | 1024x1024 | "Create brand identity for X" |
-| `product_photography_kit` | Research + create product photos | 1024x1024 | "Product photography for X" |
-| `video_thumbnail_series` | Research + create consistent series | 1280x720 | "Create thumbnail series for X" |
-| `logo_to_video` | Animate existing logo | Video | "Animate logo 5 into video" |
+### New Animation Styles Added
 
-### Bug Fixes in Session 200
+| Style Key | Shows |
+|-----------|-------|
+| `dreamworks` | DreamWorks 3D animation |
+| `south_park` | South Park cutout style |
+| `simpsons` | The Simpsons |
+| `family_guy` | Family Guy |
+| `ghibli` | Studio Ghibli |
+| `looney_tunes` | Looney Tunes |
+| `rick_and_morty` | Rick and Morty |
+| `archer` | Archer |
+| `adventure_time` | Adventure Time |
+| `gravity_falls` | Gravity Falls |
+| `bojack` | BoJack Horseman |
 
-| Bug | Fix |
-|-----|-----|
-| `[object Object]` in team recommendations | Extract `agent` and `response` from recommendation objects |
-| Brand identity creating mockup sheets | Changed prompt to generate single clean logos |
-| Generic messages for all workflows | Added workflow-specific frontend messages |
-| Missing style extraction | Added "rustic", "vintage", etc. to style keywords |
-
-### Files Modified in Session 200
+### Files Modified in Session 201
 
 | File | Changes |
 |------|---------|
-| `agents/workflow_orchestration_agent.py` | 6 workflows, content-type handlers, fixed brand identity prompt |
-| `core/assistant/constants.py` | Updated `WORKFLOW_TYPES` list |
-| `core/assistant/tool_definitions.py` | GPT tool description for all 6 workflows |
-| `ai_core/templates/ai_image_studio.html` | Detection patterns, workflow messages, `[object Object]` fix |
+| `content/image_generation.py` | Added 14 new animation styles to `_apply_style_to_prompt()` |
+| `agents/workflow_orchestration_agent.py` | Fixed to use built-in 80+ styles, removed character references |
+| `ai_core/templates/ai_image_studio.html` | Fixed images vs logos detection, style extraction |
+| `docs/sessions/SESSION_201_STYLE_SYSTEM_FIX.md` | Session documentation |
 
 ---
 
-## Next Session Focus: Co-Leadership & Project Formatting
+## Session 202 Focus: Agent Architecture Deep Dive
 
-### Priority 1: Co-Leadership System Improvements
+### Goal
 
-The executive review step currently works but needs refinement:
+Step back and audit ALL agents to ensure:
+1. Every agent is being utilized properly
+2. Agent flows are not being bypassed
+3. The spider network is integrated for real-time research
+4. No duplicate functionality exists
 
-**Current Issues to Address:**
-1. **Response formatting** - Agent recommendations sometimes cut off or display oddly
-2. **Question quality** - The questions posed to co-leaders could be more specific
-3. **Direction extraction** - Better parsing of creative direction from agent responses
-4. **Visual presentation** - How the co-leader meeting results display in the chat
+### Known Agents to Audit
 
-**Key Files:**
-- `coleadership/views.py` - Backend co-leadership meeting logic
-- `coleadership/services.py` - Agent coordination
-- `ai_core/templates/ai_image_studio.html` - Frontend display (lines 19358-19380)
-- `agents/workflow_orchestration_agent.py` - `_execute_coleadership_step()` method
+**Content Generation Agents:**
+- `image_generation_agent` - Generate new images
+- `image_editing_agent` - Modify existing images (upscale, remove bg, etc.)
+- `video_generation_agent` - Generate/animate videos
+- `video_editing_agent` - Edit videos (trim, speed, effects)
+- `audio_generation_agent` - Text-to-speech, sound effects
+- `three_d_generation_agent` - Image to 3D model conversion
+- `character_training_agent` - Train custom character models
+- `talking_character_agent` - Create talking character videos
 
-### Priority 2: Project Creation & Formatting
+**Orchestration Agents:**
+- `workflow_orchestration_agent` - Multi-step research + creation workflows
+- `coleadership_agent` - Executive team meetings (CTO, COO, etc.)
 
-**Current Issues to Address:**
-1. **Project naming** - Sometimes includes extra words or odd formatting
-2. **Project categorization** - Categories could be more specific
-3. **Asset organization** - How images are grouped and displayed
-4. **Suggested next steps** - Could be more contextual
+**Research/Analysis Agents:**
+- `web_search` - Web research capabilities
+- Various spiders (need to audit)
 
-**Key Files:**
-- `agents/workflow_orchestration_agent.py` - `_execute_create_project_step()` method
-- `content/models.py` - Project model
-- `ai_core/templates/ai_image_studio.html` - Project display components
+### Key Questions to Answer
+
+1. **What agents exist?** - Full inventory of all agents
+2. **How are they called?** - Tool definitions, frontend detection, backend handlers
+3. **Are any being bypassed?** - Like we found with the style system
+4. **What spiders exist?** - And how can they feed into agents?
+5. **What's underutilized?** - Features that exist but aren't being used
+
+### Agent Architecture Files
+
+**Agent Definitions:**
+- `agents/` directory - All agent implementations
+- `core/assistant/tool_definitions.py` - GPT tool schemas
+- `core/assistant/constants.py` - Operation enums
+
+**Agent Handlers:**
+- `core/views_image.py` - `execute_tool()` function
+- `core/personal_ai_assistant_enhanced.py` - Assistant agent handling
+
+**Frontend:**
+- `ai_core/templates/ai_image_studio.html` - `executeTools()`, `formatToolResults()`
 
 ---
 
-## How the Workflow System Works
+## Spider Network (To Explore)
 
-```
-User: "Create a brand identity for my coffee shop"
-         ↓
-Frontend: detectWorkflowPattern() → {workflow: 'brand_identity_package', topic: 'coffee shop'}
-         ↓
-Frontend: Creates synthetic tool_call for workflow_orchestration_agent
-         ↓
-Backend: WorkflowOrchestrationAgent.execute_workflow()
-         ↓
-Step 1: _execute_web_search_step() → Research brand trends
-         ↓
-Step 2: _execute_coleadership_step() → Get executive direction  ← FOCUS AREA
-         ↓
-Step 3: _execute_image_generation_step() → Generate logos
-         ↓
-Step 4: _execute_create_project_step() → Organize into project  ← FOCUS AREA
-         ↓
-Frontend: Display results with workflow completion message
-```
+The platform has spider capabilities that could enhance agent research:
+
+**Potential Spider Integration:**
+- Real-time market research
+- Trend analysis
+- Competitor monitoring
+- Price tracking
+- Content discovery
+
+**Questions:**
+- Where are spiders defined?
+- How do they currently operate?
+- Can they feed data to agents?
+- What APIs/sources do they crawl?
 
 ---
 
@@ -114,45 +130,21 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Key Code Locations
+## Style System Reference (80+ Styles)
 
-**Workflow Orchestration:**
-- `agents/workflow_orchestration_agent.py` - Main workflow agent (~850 lines)
-- `WORKFLOWS` dict - Workflow step definitions (lines 57-250)
-- `_execute_coleadership_step()` - Co-leader meeting (lines 456-530)
-- `_execute_create_project_step()` - Project creation (lines 620-750)
+The built-in style system is in `content/image_generation.py`:
 
-**Co-Leadership System:**
-- `coleadership/views.py` - Meeting endpoints
-- `coleadership/services.py` - Agent coordination logic
-- `coleadership/models.py` - Decision tracking models
-
-**Frontend Display:**
-- `ai_core/templates/ai_image_studio.html`
-- `formatToolResults()` - Tool result formatting (line ~19300)
-- Team recommendations display (lines 19358-19380)
-- Workflow completion handler (lines 17008-17106)
-
----
-
-## Testing Workflows
-
+**Example usage:**
 ```
-# Test brand identity (fixed in Session 200)
-"Create a brand identity for my coffee shop with a rustic style"
-
-# Test YouTube thumbnails (verified working)
-"Research and make thumbnails for my video about machine learning"
-
-# Test product photography
-"Product photography for handmade candles"
-
-# Test thumbnail series
-"Create a thumbnail series for my Python tutorial videos"
+"Create a cyberpunk city" → Uses built-in cyberpunk expansion
+"Create a dreamworks style mascot" → Uses new dreamworks expansion
+"Create a watercolor landscape" → Uses watercolor expansion
 ```
+
+**Full style list:** See `_apply_style_to_prompt()` method (lines 173-280)
 
 ---
 
 **Reality Score:** 100%
-**Workflows:** 6 types available
-**Next Focus:** Co-leadership formatting & project creation polish
+**Built-in Styles:** 80+
+**Next Focus:** Agent architecture audit & spider integration
