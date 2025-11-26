@@ -90,6 +90,18 @@ from core.views_spider_dashboard import (
     spider_data_stats,
     execute_spider
 )
+
+# Session 206: Import preferences dashboard views
+from core.views_preferences import (
+    get_all_preferences,
+    domain_preferences,
+    clear_all_preferences,
+    preference_history,
+    learn_from_project,
+    preference_stats,
+    smart_style_suggestions,
+    apply_style_suggestion,
+)
 from core.views_spider_data import (
     get_spider_items,
     get_spider_summary,
@@ -569,6 +581,16 @@ urlpatterns = [
     path('api/ai/configuration/', ai_configuration, name='ai-configuration'),
     path('api/agents/assigned/', agents_assigned, name='agents-assigned'),
     path('api/commands/execute/', execute_command, name='execute-command'),
+
+    # Session 206: Preferences Dashboard APIs
+    path('api/preferences/', get_all_preferences, name='preferences-all'),
+    path('api/preferences/stats/', preference_stats, name='preferences-stats'),
+    path('api/preferences/history/', preference_history, name='preferences-history'),
+    path('api/preferences/clear/', clear_all_preferences, name='preferences-clear-all'),
+    path('api/preferences/learn/', learn_from_project, name='preferences-learn'),
+    path('api/preferences/suggestions/', smart_style_suggestions, name='preferences-suggestions'),
+    path('api/preferences/apply-suggestion/', apply_style_suggestion, name='preferences-apply-suggestion'),
+    path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),
 
     # Intelligence endpoints (temporary fix)
     path('api/v1/intelligence/skynet/status/', skynet_status, name='skynet-status'),

@@ -1,25 +1,42 @@
 """
-Video Agent - Session 81
-========================
+Video Agent - Unified Video Specialist
+======================================
 
-Specialized agent for video operations.
-Can query Audio Agent for audio files and add them to videos.
+Session 81: Original creation
+Session 202: CONSOLIDATED - Merged VideoGenerationAgent + VideoEditingAgent into this unified agent
+Session 203: Added preference learning and memory (Phase 4)
 
-Features:
-- Video-to-video transformation
+This is the ONE agent for ALL video operations:
+- Text-to-video generation (RunwayML)
+- Image-to-video animation (RunwayML)
+- Video extension
 - Text overlay addition
 - Color grading
 - Music/audio mixing (queries AudioAgent)
 - Video chaining
+- Video editing operations
+- USER PREFERENCE LEARNING (Session 203)
 
 Example Usage:
     video_agent = VideoAgent(user=request.user)
 
+    # Generate video from text
+    result = video_agent.generate(prompt="A beautiful sunset over the ocean")
+
+    # Generate with learned preferences (duration, quality auto-applied)
+    result = video_agent.generate(prompt="A dancing donkey")
+
+    # Animate an image
+    result = video_agent.animate_image(image_id='123', motion_prompt='zoom in slowly')
+
     # Add music to video (auto-queries AudioAgent)
-    result = video_agent.add_music_to_video(
-        video_selection='last',
-        audio_url=None  # Will query AudioAgent automatically
-    )
+    result = video_agent.add_music_to_video(video_selection='last')
+
+    # Edit video
+    result = video_agent.edit(video_id='456', operation='add_text_overlay', text='Hello')
+
+    # Get user's preferences
+    prefs = video_agent.get_user_preferences()
 """
 
 from __future__ import annotations
@@ -48,14 +65,16 @@ class VideoAgent:
     Can query other agents for required data.
     """
 
-    def __init__(self, user: Optional[User] = None):
+    def __init__(self, user: Optional[User] = None, project_id: Optional[str] = None):
         """
         Initialize Video Agent.
 
         Args:
             user: User who initiated the agent (optional)
+            project_id: Optional project ID to associate results with
         """
         self.user = user
+        self.project_id = project_id
         self.agent_name = 'VideoAgent'
 
         # Initialize memory interface for state management
@@ -64,7 +83,43 @@ class VideoAgent:
         # Get or create agent template
         self.template = self._get_or_create_template()
 
+        # Session 203: Initialize preference manager for memory
+        self._preference_manager = None
+
         logger.info(f"🎬 Video Agent initialized for user: {user.username if user else 'system'}")
+
+    @property
+    def preference_manager(self):
+        """Lazy load preference manager."""
+        if self._preference_manager is None and self.user:
+            from agents.preference_manager import AgentPreferenceManager
+            self._preference_manager = AgentPreferenceManager(self.user, self.project_id)
+        return self._preference_manager
+
+    def get_user_preferences(self) -> Dict[str, Any]:
+        """
+        Get user's learned video preferences.
+
+        Returns:
+            Dict with preferred duration, quality, aspect_ratio, etc.
+        """
+        if self.preference_manager:
+            return self.preference_manager.get_video_preferences()
+        return {}
+
+    def _apply_preferences(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply user preferences to parameters (fill in missing values).
+        User-specified values always take precedence.
+        """
+        if self.preference_manager:
+            return self.preference_manager.apply_preferences('video', params)
+        return params
+
+    def _record_success(self, params: Dict[str, Any], user_rating: Optional[int] = None):
+        """Record a successful generation for preference learning."""
+        if self.preference_manager:
+            self.preference_manager.record_successful_generation('video', params, user_rating)
 
     def _get_or_create_template(self) -> UnifiedAgentTemplate:
         """Get or create VideoAgent template in database"""
@@ -1404,6 +1459,347 @@ class VideoAgent:
                 'success': False,
                 'error': str(e)
             }
+
+    # ===== SESSION 202: UNIFIED GENERATION METHODS (from VideoGenerationAgent) =====
+
+    def generate(
+        self,
+        prompt: str,
+        image_id: Optional[str] = None,
+        duration: int = 5,
+        quality: str = 'gen4_turbo',
+        ratio: str = '1280:720',
+        project=None,
+        session=None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Generate a video from text prompt or image.
+        Session 202: Consolidated from VideoGenerationAgent.
+
+        Args:
+            prompt: Text description for text-to-video, or motion description for image-to-video
+            image_id: Optional image UUID or sequential number for image-to-video
+            duration: Video duration in seconds (4-10)
+            quality: Model quality ('gen4_turbo', 'veo3.1_fast', 'veo3.1', etc.)
+            ratio: Aspect ratio ('1280:720', '1920:1080', etc.)
+            project: Optional project to associate with
+            session: Optional session to associate with
+
+        Returns:
+            Dict with success status, task_id, and estimated time
+        """
+        from content.models import VideoHistory, ImageHistory
+        from content.video_provider import runway_provider
+
+        logger.info(f"🎬 VideoAgent generating video")
+        logger.info(f"   User: {self.user.username if self.user else 'system'}")
+        logger.info(f"   Type: {'Image-to-Video' if image_id else 'Text-to-Video'}")
+        logger.info(f"   Quality: {quality} | Duration: {duration}s | Ratio: {ratio}")
+
+        try:
+            if image_id:
+                # Image-to-video - delegate to existing animate_image method
+                return self.animate_image(
+                    image_id=image_id,
+                    motion_prompt=prompt,
+                    duration=duration,
+                    project=project,
+                    session=session,
+                    quality=quality,
+                    **kwargs
+                )
+            else:
+                # Text-to-video workflow
+                logger.info(f"✅ Text prompt validated: {prompt[:80]}...")
+                logger.info(f"🚀 Creating text-to-video job with RunwayML {quality}...")
+
+                result = runway_provider.text_to_video(
+                    prompt=prompt,
+                    duration=duration,
+                    quality=quality,
+                    ratio=ratio,
+                    **kwargs
+                )
+
+                if not result.success:
+                    logger.error(f"❌ RunwayML generation failed: {result.error_message}")
+                    return {
+                        'success': False,
+                        'error': result.error_message
+                    }
+
+                logger.info(f"✅ Video generation job created")
+                logger.info(f"   Task ID: {result.task_id}")
+
+                # Create VideoHistory record
+                video_history = VideoHistory.objects.create(
+                    user=self.user,
+                    prompt=prompt,
+                    video_type='text_to_video',
+                    status='pending',
+                    runway_task_id=result.task_id,
+                    duration=duration,
+                    model_used=quality,
+                    project=project,
+                    session=session
+                )
+
+                # Track agent contribution
+                try:
+                    from agents.models import UnifiedAgentTemplate, AgentContribution
+                    agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                    AgentContribution.objects.create(
+                        agent=agent,
+                        video=video_history,
+                        project=project,
+                        contribution_type='generation',
+                        task_description=f"Generated text-to-video (duration={duration}s, quality={quality})",
+                        execution_time_seconds=0.0
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Failed to create agent contribution: {e}")
+
+                # Store in memory
+                video_data = {
+                    'video_id': str(video_history.id),
+                    'task_id': result.task_id,
+                    'prompt': prompt,
+                    'type': 'text_to_video',
+                    'user_id': self.user.id if self.user else None,
+                    'created_at': timezone.now().isoformat()
+                }
+                self.memory.remember('most_recent_video', video_data)
+
+                return {
+                    'success': True,
+                    'video_id': str(video_history.id),
+                    'task_id': result.task_id,
+                    'status': result.status,
+                    'estimated_time_seconds': result.estimated_time,
+                    'message': f'Video generation started. Estimated time: {result.estimated_time}s'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ VideoAgent.generate failed: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def check_status(self, video_id: str) -> Dict[str, Any]:
+        """
+        Check the status of a video generation job.
+        Session 202: Consolidated from VideoGenerationAgent.
+
+        Args:
+            video_id: VideoHistory UUID
+
+        Returns:
+            Dict with status, video URL, progress, and completion info
+        """
+        from content.models import VideoHistory
+        from content.video_provider import runway_provider
+
+        logger.info(f"🔍 VideoAgent checking status for video {video_id}")
+
+        try:
+            video = VideoHistory.objects.get(id=video_id, user=self.user)
+
+            if not video.runway_task_id:
+                return {
+                    'success': False,
+                    'error': 'No RunwayML task ID found for this video'
+                }
+
+            result = runway_provider.check_status(video.runway_task_id)
+
+            status_map = {
+                'pending': 'pending',
+                'processing': 'processing',
+                'completed': 'completed',
+                'failed': 'failed'
+            }
+            video.status = status_map.get(result.status, result.status)
+
+            if result.status == 'completed':
+                logger.info(f"✅ Video generation completed!")
+                if result.video_url:
+                    video.video_url = result.video_url
+                    video.duration = result.duration if result.duration else video.duration
+            elif result.status == 'failed':
+                logger.error(f"❌ Video generation failed: {result.error_message}")
+                video.error_message = result.error_message
+
+            video.save()
+
+            response = {
+                'success': True,
+                'video_id': video_id,
+                'status': video.status,
+                'progress': result.progress,
+                'progress_message': result.progress_message
+            }
+
+            if video.status == 'completed' and video.video_url:
+                response['video_url'] = video.video_url
+                response['duration'] = video.duration
+                response['message'] = 'Video ready! Click to play or download.'
+            elif video.status == 'failed':
+                response['error'] = video.error_message or 'Video generation failed'
+            elif video.status in ['pending', 'processing']:
+                response['message'] = result.progress_message or 'Generating video...'
+
+            return response
+
+        except VideoHistory.DoesNotExist:
+            return {'success': False, 'error': f'Video {video_id} not found'}
+        except Exception as e:
+            logger.error(f"❌ Status check failed: {str(e)}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def extend_video(
+        self,
+        video_id: str,
+        extension_seconds: int = 10,
+        prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Extend an existing video by generating a continuation.
+        Session 202: Consolidated from VideoGenerationAgent.
+
+        Args:
+            video_id: VideoHistory UUID of video to extend
+            extension_seconds: Seconds to add (4-10)
+            prompt: Optional prompt to guide extension
+
+        Returns:
+            Dict with success status and new video job info
+        """
+        from content.models import VideoHistory
+        from content.video_provider import runway_provider
+
+        logger.info(f"🎬 VideoAgent extending video {video_id} by {extension_seconds}s")
+
+        try:
+            original_video = VideoHistory.objects.get(id=video_id, user=self.user)
+
+            if original_video.status != 'completed':
+                return {'success': False, 'error': 'Original video must be completed before extending'}
+
+            if not original_video.video_url:
+                return {'success': False, 'error': 'Original video URL not found'}
+
+            if not prompt:
+                prompt = "Continue the motion and atmosphere from the video"
+
+            result = runway_provider.extend_video(
+                video_url=original_video.video_url,
+                extension_seconds=extension_seconds,
+                prompt=prompt
+            )
+
+            if not result.success:
+                return {'success': False, 'error': result.error_message}
+
+            extended_video = VideoHistory.objects.create(
+                user=self.user,
+                prompt=f"Extension of video {video_id}: {prompt}",
+                video_type='video_extension',
+                status='pending',
+                runway_task_id=result.task_id,
+                duration=extension_seconds,
+                model_used=original_video.model_used,
+                project=original_video.project
+            )
+
+            # Track agent contribution
+            try:
+                from agents.models import UnifiedAgentTemplate, AgentContribution
+                agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
+                AgentContribution.objects.create(
+                    agent=agent,
+                    video=extended_video,
+                    project=original_video.project,
+                    contribution_type='editing',
+                    task_description=f"Extended video {video_id} by {extension_seconds}s",
+                    execution_time_seconds=0.0
+                )
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+
+            return {
+                'success': True,
+                'video_id': str(extended_video.id),
+                'task_id': result.task_id,
+                'status': result.status,
+                'estimated_time_seconds': result.estimated_time,
+                'message': f'Video extension started. Original + {extension_seconds}s extension.'
+            }
+
+        except VideoHistory.DoesNotExist:
+            return {'success': False, 'error': f'Video {video_id} not found'}
+        except Exception as e:
+            logger.error(f"❌ VideoAgent.extend_video failed: {str(e)}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def edit(
+        self,
+        video_id: str,
+        operation: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Execute a video editing operation.
+        Session 202: Consolidated from VideoEditingAgent.
+
+        Args:
+            operation: Type of operation ('add_text_overlay', 'apply_color_grading',
+                      'trim_video', 'speed_adjust')
+            video_id: UUID or sequential number of the video to edit
+            **kwargs: Operation-specific parameters
+
+        Returns:
+            Dict with success status and edited video results
+        """
+        logger.info(f"🎬 VideoAgent editing video {video_id}: {operation}")
+
+        operation_map = {
+            'add_text_overlay': self.add_text_to_video,
+            'apply_color_grading': self.apply_color_grade,
+            'apply_color_grade': self.apply_color_grade,
+            'add_music': self.add_music_to_video,
+            'chain': self.chain_videos_davinci,
+        }
+
+        if operation in operation_map:
+            method = operation_map[operation]
+            if operation == 'add_text_overlay':
+                return method(
+                    text=kwargs.get('text', ''),
+                    video_selection=f'video_id:{video_id}',
+                    position=kwargs.get('position', 'center'),
+                    start_time=kwargs.get('start_second', 0),
+                    duration=kwargs.get('duration', 3)
+                )
+            elif operation in ['apply_color_grading', 'apply_color_grade']:
+                return method(
+                    video_selection=f'video_id:{video_id}',
+                    color_grade=kwargs.get('style', 'cinematic_warm')
+                )
+            elif operation == 'add_music':
+                return method(
+                    video_selection=f'video_id:{video_id}',
+                    audio_url=kwargs.get('audio_url'),
+                    audio_volume=kwargs.get('volume', 0.3)
+                )
+            else:
+                return method(**kwargs)
+
+        return {
+            'success': False,
+            'error': f'Unknown operation: {operation}. Supported: {list(operation_map.keys())}'
+        }
 
     # ===== QUERY HANDLERS =====
 

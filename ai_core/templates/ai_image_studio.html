@@ -1398,6 +1398,20 @@
                     🎯 Leadership
                 </button>
             </li>
+
+            <!-- Session 206: Preferences Dashboard -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" title="Your AI Learning Preferences">
+                    🧠 Preferences
+                </button>
+            </li>
+
+            <!-- Session 206: Spider Status Dashboard -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="spiders-tab" data-bs-toggle="tab" data-bs-target="#spiders" type="button" role="tab" title="Spider Network Status">
+                    🕷️ Spiders
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -6318,6 +6332,395 @@
 
             </div>
             <!-- END LEADERSHIP TAB -->
+
+            <!-- SESSION 206: PREFERENCES DASHBOARD TAB -->
+            <div class="tab-pane fade" id="preferences" role="tabpanel">
+                <h3 class="mb-4">🧠 AI Learning Preferences</h3>
+                <p class="text-muted mb-4">See what your AI has learned about your creative preferences. Edit or reset at any time.</p>
+
+                <!-- Loading State -->
+                <div id="preferences-loading" class="text-center py-5">
+                    <div class="spinner-border" style="color: #06b6d4;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading your preferences...</p>
+                </div>
+
+                <!-- Preferences Container (hidden until loaded) -->
+                <div id="preferences-container" style="display: none;">
+
+                    <!-- Learning Stage Banner -->
+                    <div id="learning-stage-banner" class="alert mb-4" style="background: rgba(6, 182, 212, 0.15); border: 1px solid #06b6d4;">
+                        <div class="d-flex align-items-center">
+                            <span class="fs-4 me-3" id="learning-stage-icon">🌱</span>
+                            <div>
+                                <strong id="learning-stage-title">Learning Stage</strong>
+                                <p class="mb-0 small" id="learning-stage-description">We're still learning your preferences</p>
+                            </div>
+                            <div class="ms-auto">
+                                <button class="btn btn-sm btn-outline-info" onclick="loadPreferencesStats()">
+                                    📊 View Stats
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preference Stats Row -->
+                    <div class="row mb-4" id="preference-stats-row">
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="pref-total-interactions">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Interactions</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="pref-total-choices">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Choices Made</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="pref-styles-learned">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Styles Learned</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="pref-models-learned">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Models Preferred</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Domain Preferences Cards -->
+                    <div class="row mb-4">
+                        <!-- Image Preferences -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #8b5cf6;">🎨 Image Preferences</h5>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="clearDomainPreferences('image')" title="Reset to defaults">
+                                        🗑️ Reset
+                                    </button>
+                                </div>
+                                <div class="card-body" id="image-preferences-body">
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Style</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-image-style" onchange="updatePreference('image', 'style', this.value)">
+                                            <option value="">Default (No preference)</option>
+                                            <option value="photorealistic">Photorealistic</option>
+                                            <option value="digital-art">Digital Art</option>
+                                            <option value="anime">Anime</option>
+                                            <option value="3d-model">3D Model</option>
+                                            <option value="cinematic">Cinematic</option>
+                                            <option value="neon-punk">Neon Punk</option>
+                                            <option value="fantasy-art">Fantasy Art</option>
+                                        </select>
+                                        <small class="text-info" id="pref-image-style-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Model</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-image-model" onchange="updatePreference('image', 'model', this.value)">
+                                            <option value="">Default (Ultra)</option>
+                                            <option value="sd3-large-turbo">SD3 Large Turbo (Fast)</option>
+                                            <option value="sd3.5-large">SD3.5 Large</option>
+                                            <option value="ultra">Ultra (Best Quality)</option>
+                                            <option value="core">Core (Balanced)</option>
+                                        </select>
+                                        <small class="text-info" id="pref-image-model-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Aspect Ratio</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-image-aspect_ratio" onchange="updatePreference('image', 'aspect_ratio', this.value)">
+                                            <option value="">Default (1:1)</option>
+                                            <option value="1:1">1:1 Square</option>
+                                            <option value="16:9">16:9 Widescreen</option>
+                                            <option value="9:16">9:16 Portrait</option>
+                                            <option value="4:3">4:3 Standard</option>
+                                            <option value="3:2">3:2 Photo</option>
+                                        </select>
+                                        <small class="text-info" id="pref-image-aspect_ratio-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Video Preferences -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #ec4899;">🎬 Video Preferences</h5>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="clearDomainPreferences('video')" title="Reset to defaults">
+                                        🗑️ Reset
+                                    </button>
+                                </div>
+                                <div class="card-body" id="video-preferences-body">
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Duration</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-video-duration" onchange="updatePreference('video', 'duration', this.value)">
+                                            <option value="">Default (5s)</option>
+                                            <option value="5">5 seconds</option>
+                                            <option value="10">10 seconds</option>
+                                        </select>
+                                        <small class="text-info" id="pref-video-duration-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Resolution</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-video-resolution" onchange="updatePreference('video', 'resolution', this.value)">
+                                            <option value="">Default (720p)</option>
+                                            <option value="720p">720p</option>
+                                            <option value="1080p">1080p</option>
+                                        </select>
+                                        <small class="text-info" id="pref-video-resolution-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Audio Preferences -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #10b981;">🎵 Audio Preferences</h5>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="clearDomainPreferences('audio')" title="Reset to defaults">
+                                        🗑️ Reset
+                                    </button>
+                                </div>
+                                <div class="card-body" id="audio-preferences-body">
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Voice</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-audio-voice_id" onchange="updatePreference('audio', 'voice_id', this.value)">
+                                            <option value="">Default (Rachel)</option>
+                                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Professional)</option>
+                                            <option value="AZnzlk1XvdvUeBnXmlld">Domi (Friendly)</option>
+                                            <option value="EXAVITQu4vr4xnSDxMaL">Bella (Warm)</option>
+                                            <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Young)</option>
+                                        </select>
+                                        <small class="text-info" id="pref-audio-voice_id-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Preferred Stability</label>
+                                        <input type="range" class="form-range" id="pref-audio-stability" min="0" max="1" step="0.1" value="0.5" onchange="updatePreference('audio', 'stability', this.value)">
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Variable</small>
+                                            <small class="text-muted" id="pref-audio-stability-value">0.5</small>
+                                            <small class="text-muted">Stable</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Research Preferences -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #3b82f6;">🔬 Research Preferences</h5>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="clearDomainPreferences('research')" title="Reset to defaults">
+                                        🗑️ Reset
+                                    </button>
+                                </div>
+                                <div class="card-body" id="research-preferences-body">
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Search Depth</label>
+                                        <select class="form-select form-select-sm bg-dark text-white" id="pref-research-depth" onchange="updatePreference('research', 'depth', this.value)">
+                                            <option value="">Default (Standard)</option>
+                                            <option value="quick">Quick (Fast overview)</option>
+                                            <option value="standard">Standard (Balanced)</option>
+                                            <option value="deep">Deep (Comprehensive)</option>
+                                        </select>
+                                        <small class="text-info" id="pref-research-depth-learned" style="display: none;">✓ Learned from your choices</small>
+                                    </div>
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Include Sources</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="pref-research-include_academic" onchange="updatePreference('research', 'include_academic', this.checked)">
+                                            <label class="form-check-label text-light" for="pref-research-include_academic">Academic papers</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="pref-research-include_news" onchange="updatePreference('research', 'include_news', this.checked)" checked>
+                                            <label class="form-check-label text-light" for="pref-research-include_news">News articles</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preference History Section -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #fbbf24;">📜 Recent Learning Activity</h5>
+                            <button class="btn btn-sm btn-outline-warning" onclick="loadPreferenceHistory()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="preference-history-list" style="max-height: 300px; overflow-y: auto;">
+                                <p class="text-muted text-center">Loading history...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions Row -->
+                    <div class="row">
+                        <div class="col-12 d-flex justify-content-between">
+                            <button class="btn btn-outline-danger" onclick="clearAllPreferences()">
+                                🗑️ Reset All Preferences
+                            </button>
+                            <button class="btn btn-outline-info" onclick="learnFromProject()">
+                                📚 Learn from Project
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- END PREFERENCES TAB -->
+
+            <!-- SESSION 206: SPIDER STATUS DASHBOARD TAB -->
+            <div class="tab-pane fade" id="spiders" role="tabpanel">
+                <h3 class="mb-4">🕷️ Spider Network Status</h3>
+                <p class="text-muted mb-4">Monitor your data spiders, see what they've collected, and control the network.</p>
+
+                <!-- Loading State -->
+                <div id="spiders-loading" class="text-center py-5">
+                    <div class="spinner-border" style="color: #f97316;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading spider network...</p>
+                </div>
+
+                <!-- Spiders Container (hidden until loaded) -->
+                <div id="spiders-container" style="display: none;">
+
+                    <!-- Network Stats Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="spider-total-count">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Spiders</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="spider-active-count">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Active Now</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="spider-data-collected">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Data Collected</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="spider-success-rate">0%</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Success Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spider Categories Grid -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #f97316;">🕸️ Spider Categories</h5>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-success me-2" onclick="refreshSpiderNetwork()">
+                                            🔄 Refresh
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="runAllActiveSpiders()">
+                                            ⚡ Run All Active
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="spider-categories-grid" class="row g-3">
+                                        <!-- Categories will be dynamically populated -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Spiders List -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #22c55e;">✅ Active Spiders</h5>
+                                </div>
+                                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                    <div id="active-spiders-list">
+                                        <p class="text-muted text-center">Loading active spiders...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #ef4444;">😴 Dormant Spiders</h5>
+                                </div>
+                                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                    <div id="dormant-spiders-list">
+                                        <p class="text-muted text-center">Loading dormant spiders...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Feed -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #8b5cf6;">📡 Live Activity Feed</h5>
+                            <small class="text-muted" id="spider-last-updated">Updated just now</small>
+                        </div>
+                        <div class="card-body" style="max-height: 250px; overflow-y: auto;">
+                            <div id="spider-activity-feed">
+                                <p class="text-muted text-center">Loading activity feed...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Collection Trends -->
+                    <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #06b6d4;">📊 Data Collection Trends (7 Days)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="spider-trends-chart" style="height: 200px;">
+                                <div class="d-flex justify-content-around align-items-end h-100" id="trends-bars">
+                                    <!-- Trend bars will be dynamically populated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- END SPIDERS TAB -->
 
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
@@ -33069,6 +33472,595 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             loadLeadershipStats();
             loadExecutiveMeetings(); // Session 100: Part 11
         });
+
+        // Session 206: Preferences Dashboard
+        document.getElementById('preferences-tab')?.addEventListener('shown.bs.tab', function() {
+            console.log('🧠 Preferences tab activated - loading preferences...');
+            loadPreferences();
+        });
+
+        // Session 206: Load All Preferences
+        async function loadPreferences() {
+            const loadingEl = document.getElementById('preferences-loading');
+            const container = document.getElementById('preferences-container');
+
+            try {
+                loadingEl.style.display = 'block';
+                container.style.display = 'none';
+
+                const response = await fetch('/api/preferences/', {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load preferences');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Populate preferences
+                    populatePreferences(data.preferences);
+
+                    // Load stats
+                    await loadPreferencesStats();
+
+                    // Load history
+                    await loadPreferenceHistory();
+
+                    loadingEl.style.display = 'none';
+                    container.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Error loading preferences:', error);
+                loadingEl.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading preferences:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Session 206: Populate Preference Values
+        function populatePreferences(preferences) {
+            // Image preferences
+            if (preferences.image) {
+                setSelectValue('pref-image-style', preferences.image.style);
+                setSelectValue('pref-image-model', preferences.image.model);
+                setSelectValue('pref-image-aspect_ratio', preferences.image.aspect_ratio);
+            }
+
+            // Video preferences
+            if (preferences.video) {
+                setSelectValue('pref-video-duration', preferences.video.duration);
+                setSelectValue('pref-video-resolution', preferences.video.resolution);
+            }
+
+            // Audio preferences
+            if (preferences.audio) {
+                setSelectValue('pref-audio-voice_id', preferences.audio.voice_id);
+                const stabilityEl = document.getElementById('pref-audio-stability');
+                if (stabilityEl && preferences.audio.stability) {
+                    stabilityEl.value = preferences.audio.stability;
+                    document.getElementById('pref-audio-stability-value').textContent = preferences.audio.stability;
+                }
+            }
+
+            // Research preferences
+            if (preferences.research) {
+                setSelectValue('pref-research-depth', preferences.research.depth);
+                const academicEl = document.getElementById('pref-research-include_academic');
+                const newsEl = document.getElementById('pref-research-include_news');
+                if (academicEl) academicEl.checked = preferences.research.include_academic || false;
+                if (newsEl) newsEl.checked = preferences.research.include_news !== false;
+            }
+
+            // Update learning stage banner
+            updateLearningStage(preferences.learning_stage || 'new');
+        }
+
+        function setSelectValue(id, value) {
+            const el = document.getElementById(id);
+            if (el && value) {
+                el.value = value;
+                // Show "learned" indicator
+                const learnedEl = document.getElementById(id + '-learned');
+                if (learnedEl) learnedEl.style.display = 'block';
+            }
+        }
+
+        function updateLearningStage(stage) {
+            const iconEl = document.getElementById('learning-stage-icon');
+            const titleEl = document.getElementById('learning-stage-title');
+            const descEl = document.getElementById('learning-stage-description');
+            const bannerEl = document.getElementById('learning-stage-banner');
+
+            const stages = {
+                'new': {
+                    icon: '🌱',
+                    title: 'Just Getting Started',
+                    description: "We're still learning your preferences. Keep creating to teach the AI your style!",
+                    color: '#06b6d4'
+                },
+                'learning': {
+                    icon: '📈',
+                    title: 'Learning Your Style',
+                    description: 'Good progress! The AI is starting to understand your preferences.',
+                    color: '#8b5cf6'
+                },
+                'established': {
+                    icon: '🎯',
+                    title: 'Preferences Established',
+                    description: 'Your AI knows your style well and will suggest matching defaults.',
+                    color: '#10b981'
+                }
+            };
+
+            const stageInfo = stages[stage] || stages['new'];
+            iconEl.textContent = stageInfo.icon;
+            titleEl.textContent = stageInfo.title;
+            descEl.textContent = stageInfo.description;
+            bannerEl.style.borderColor = stageInfo.color;
+            bannerEl.style.background = `rgba(${stageInfo.color === '#06b6d4' ? '6, 182, 212' : stageInfo.color === '#8b5cf6' ? '139, 92, 246' : '16, 185, 129'}, 0.15)`;
+        }
+
+        // Session 206: Load Preferences Stats
+        async function loadPreferencesStats() {
+            try {
+                const response = await fetch('/api/preferences/stats/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+
+                if (!response.ok) throw new Error('Failed to load stats');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('pref-total-interactions').textContent = data.stats.total_interactions || 0;
+                    document.getElementById('pref-total-choices').textContent = data.stats.total_choices || 0;
+                    document.getElementById('pref-styles-learned').textContent = data.stats.preferred_styles_count || 0;
+                    document.getElementById('pref-models-learned').textContent = data.stats.preferred_models_count || 0;
+                    updateLearningStage(data.stats.learning_stage);
+                }
+            } catch (error) {
+                console.error('Error loading preference stats:', error);
+            }
+        }
+
+        // Session 206: Load Preference History
+        async function loadPreferenceHistory() {
+            const container = document.getElementById('preference-history-list');
+            try {
+                const response = await fetch('/api/preferences/history/?limit=20', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+
+                if (!response.ok) throw new Error('Failed to load history');
+
+                const data = await response.json();
+
+                if (data.success && data.history.length > 0) {
+                    let html = '';
+                    data.history.forEach(item => {
+                        const date = new Date(item.created_at).toLocaleDateString();
+                        const typeEmoji = {
+                            'love': '❤️', 'like': '👍', 'dislike': '👎',
+                            'rate_5': '⭐⭐⭐⭐⭐', 'rate_4': '⭐⭐⭐⭐', 'rate_3': '⭐⭐⭐',
+                            'rate_2': '⭐⭐', 'rate_1': '⭐'
+                        }[item.interaction_type] || '📝';
+
+                        html += `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <div>
+                                    <span class="me-2">${typeEmoji}</span>
+                                    <span class="text-light">${item.interaction_type}</span>
+                                    ${item.style_elements ? `<small class="text-muted ms-2">${JSON.stringify(item.style_elements).substring(0, 50)}...</small>` : ''}
+                                </div>
+                                <small class="text-muted">${date}</small>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center py-3">No learning activity yet. Start creating to build your preference history!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading preference history:', error);
+                container.innerHTML = '<p class="text-danger text-center">Error loading history</p>';
+            }
+        }
+
+        // Session 206: Update Single Preference
+        async function updatePreference(domain, preferenceType, value) {
+            try {
+                const response = await fetch(`/api/preferences/${domain}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ [preferenceType]: value })
+                });
+
+                if (!response.ok) throw new Error('Failed to update preference');
+
+                const data = await response.json();
+                if (data.success) {
+                    // Show learned indicator
+                    const learnedEl = document.getElementById(`pref-${domain}-${preferenceType}-learned`);
+                    if (learnedEl) {
+                        learnedEl.style.display = 'block';
+                        learnedEl.textContent = '✓ Updated!';
+                        setTimeout(() => { learnedEl.textContent = '✓ Learned from your choices'; }, 2000);
+                    }
+                    console.log(`✅ Updated ${domain}.${preferenceType} = ${value}`);
+                }
+            } catch (error) {
+                console.error('Error updating preference:', error);
+                alert('Failed to update preference: ' + error.message);
+            }
+        }
+
+        // Session 206: Clear Domain Preferences
+        async function clearDomainPreferences(domain) {
+            if (!confirm(`Reset all ${domain} preferences to defaults?`)) return;
+
+            try {
+                const response = await fetch(`/api/preferences/${domain}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+
+                if (!response.ok) throw new Error('Failed to clear preferences');
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`${domain} preferences reset to defaults!`);
+                    loadPreferences();
+                }
+            } catch (error) {
+                console.error('Error clearing preferences:', error);
+                alert('Failed to clear preferences: ' + error.message);
+            }
+        }
+
+        // Session 206: Clear All Preferences
+        async function clearAllPreferences() {
+            if (!confirm('Reset ALL preferences to defaults? This cannot be undone.')) return;
+
+            try {
+                const response = await fetch('/api/preferences/clear/', {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+
+                if (!response.ok) throw new Error('Failed to clear preferences');
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('All preferences reset to defaults!');
+                    loadPreferences();
+                }
+            } catch (error) {
+                console.error('Error clearing all preferences:', error);
+                alert('Failed to clear preferences: ' + error.message);
+            }
+        }
+
+        // Session 206: Learn from Project
+        async function learnFromProject() {
+            // Get current project ID from the page (if available)
+            const projectId = window.currentProjectId || document.querySelector('[data-project-id]')?.dataset?.projectId;
+
+            if (!projectId) {
+                alert('Please open a project first to learn from its content.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/preferences/learn/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ project_id: projectId })
+                });
+
+                if (!response.ok) throw new Error('Failed to learn from project');
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Learned preferences from ${data.images_analyzed} images in "${data.project_name}"!`);
+                    loadPreferences();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error learning from project:', error);
+                alert('Failed to learn from project: ' + error.message);
+            }
+        }
+
+        // Session 206: Spider Status Dashboard
+        document.getElementById('spiders-tab')?.addEventListener('shown.bs.tab', function() {
+            console.log('🕷️ Spiders tab activated - loading network status...');
+            loadSpiderNetwork();
+        });
+
+        // Session 206: Load Spider Network Data
+        async function loadSpiderNetwork() {
+            const loadingEl = document.getElementById('spiders-loading');
+            const container = document.getElementById('spiders-container');
+
+            try {
+                loadingEl.style.display = 'block';
+                container.style.display = 'none';
+
+                // Load network data, activity, and stats in parallel
+                const [networkRes, activityRes, statsRes] = await Promise.all([
+                    fetch('/api/spider-dashboard/network/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/spider-dashboard/activity/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/spider-dashboard/data/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                ]);
+
+                const networkData = await networkRes.json();
+                const activityData = await activityRes.json();
+                const statsData = await statsRes.json();
+
+                // Populate stats
+                document.getElementById('spider-total-count').textContent = networkData.totalSpiders || 0;
+                document.getElementById('spider-active-count').textContent = networkData.activeSpiders || 0;
+                document.getElementById('spider-data-collected').textContent = formatNumber(networkData.dataCollected || 0);
+                document.getElementById('spider-success-rate').textContent = `${networkData.successRate || 0}%`;
+
+                // Populate spider categories
+                populateSpiderCategories(networkData.spiders || []);
+
+                // Populate active/dormant lists
+                populateSpiderLists(networkData.spiders || []);
+
+                // Populate activity feed
+                populateSpiderActivity(activityData.activities || []);
+
+                // Populate trends chart
+                populateTrendsChart(statsData.trends || []);
+
+                // Update timestamp
+                document.getElementById('spider-last-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+                loadingEl.style.display = 'none';
+                container.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading spider network:', error);
+                loadingEl.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading spider network:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        // Session 206: Populate Spider Categories Grid
+        function populateSpiderCategories(spiders) {
+            const container = document.getElementById('spider-categories-grid');
+
+            // Group spiders by category
+            const categories = {};
+            spiders.forEach(spider => {
+                const cat = spider.category || 'other';
+                if (!categories[cat]) {
+                    categories[cat] = { spiders: [], active: 0, total: 0 };
+                }
+                categories[cat].spiders.push(spider);
+                categories[cat].total++;
+                if (spider.status === 'Active' || spider.status === 'Scanning') {
+                    categories[cat].active++;
+                }
+            });
+
+            // Category display info
+            const categoryInfo = {
+                'job': { name: 'Jobs', icon: '💼', color: '#3b82f6' },
+                'freelance': { name: 'Freelance', icon: '🎯', color: '#8b5cf6' },
+                'market': { name: 'Market', icon: '📊', color: '#10b981' },
+                'content': { name: 'Content', icon: '📝', color: '#ec4899' },
+                'finance': { name: 'Finance', icon: '💰', color: '#f59e0b' },
+                'tech': { name: 'Tech', icon: '🔬', color: '#06b6d4' },
+                'social': { name: 'Social', icon: '📱', color: '#ef4444' },
+                'news': { name: 'News', icon: '📰', color: '#84cc16' },
+                'competitor': { name: 'Competition', icon: '🔍', color: '#a855f7' },
+                'investment': { name: 'Investing', icon: '📈', color: '#22c55e' },
+                'crypto': { name: 'Crypto', icon: '₿', color: '#f97316' },
+                'github': { name: 'GitHub', icon: '🐙', color: '#6366f1' },
+                'research': { name: 'Research', icon: '📚', color: '#14b8a6' },
+                'legal': { name: 'Legal', icon: '⚖️', color: '#d946ef' }
+            };
+
+            let html = '';
+            Object.entries(categories).slice(0, 12).forEach(([cat, data]) => {
+                const info = categoryInfo[cat] || { name: cat, icon: '🕷️', color: '#6b7280' };
+                const statusColor = data.active > 0 ? '#22c55e' : '#6b7280';
+
+                html += `
+                    <div class="col-md-3 col-sm-4 col-6">
+                        <div class="p-3 text-center" style="background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid ${info.color}40; cursor: pointer;" onclick="filterSpidersByCategory('${cat}')">
+                            <div style="font-size: 2rem;">${info.icon}</div>
+                            <div class="text-light fw-bold">${info.name}</div>
+                            <div class="d-flex justify-content-center gap-2 mt-1">
+                                <span style="color: ${statusColor}; font-size: 0.8rem;">● ${data.active} active</span>
+                                <span class="text-muted" style="font-size: 0.8rem;">/ ${data.total}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Session 206: Populate Active/Dormant Spider Lists
+        function populateSpiderLists(spiders) {
+            const activeContainer = document.getElementById('active-spiders-list');
+            const dormantContainer = document.getElementById('dormant-spiders-list');
+
+            const activeSpiders = spiders.filter(s => s.status === 'Active' || s.status === 'Scanning');
+            const dormantSpiders = spiders.filter(s => s.status === 'Idle');
+
+            // Active spiders
+            if (activeSpiders.length > 0) {
+                activeContainer.innerHTML = activeSpiders.map(spider => `
+                    <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.2);">
+                        <div>
+                            <span class="me-2">${spider.icon}</span>
+                            <span class="text-light">${spider.name}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="color: #22c55e; font-size: 0.8rem;">${spider.dataCollected} items</span>
+                            <button class="btn btn-sm btn-outline-success" onclick="executeSpider(${spider.id}, '${spider.name}')" style="padding: 2px 8px; font-size: 0.7rem;">Run</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                activeContainer.innerHTML = '<p class="text-muted text-center py-3">No active spiders</p>';
+            }
+
+            // Dormant spiders
+            if (dormantSpiders.length > 0) {
+                dormantContainer.innerHTML = dormantSpiders.map(spider => `
+                    <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <div>
+                            <span class="me-2">${spider.icon}</span>
+                            <span class="text-light">${spider.name}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-warning" onclick="activateSpider(${spider.id}, '${spider.name}')" style="padding: 2px 8px; font-size: 0.7rem;">Activate</button>
+                    </div>
+                `).join('');
+            } else {
+                dormantContainer.innerHTML = '<p class="text-muted text-center py-3">All spiders are active!</p>';
+            }
+        }
+
+        // Session 206: Populate Activity Feed
+        function populateSpiderActivity(activities) {
+            const container = document.getElementById('spider-activity-feed');
+
+            if (activities.length > 0) {
+                container.innerHTML = activities.slice(0, 15).map(activity => {
+                    const time = new Date(activity.timestamp).toLocaleTimeString();
+                    return `
+                        <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 8px;">
+                            <div>
+                                <span class="text-warning me-2">🕷️</span>
+                                <span class="text-light">${activity.spider}</span>
+                                <span class="text-muted ms-2">${activity.action}</span>
+                            </div>
+                            <small class="text-muted">${time}</small>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted text-center py-3">No recent activity</p>';
+            }
+        }
+
+        // Session 206: Populate Trends Chart
+        function populateTrendsChart(trends) {
+            const container = document.getElementById('trends-bars');
+
+            if (trends.length > 0) {
+                const maxCount = Math.max(...trends.map(t => t.count), 1);
+
+                container.innerHTML = trends.map(trend => {
+                    const height = Math.max(10, (trend.count / maxCount) * 150);
+                    const day = new Date(trend.date).toLocaleDateString('en-US', { weekday: 'short' });
+                    return `
+                        <div class="text-center" style="flex: 1;">
+                            <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); width: 30px; height: ${height}px; margin: 0 auto; border-radius: 4px 4px 0 0;"></div>
+                            <div class="text-muted small mt-1">${day}</div>
+                            <div class="text-light small">${trend.count}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted text-center">No trend data available</p>';
+            }
+        }
+
+        // Session 206: Refresh Spider Network
+        async function refreshSpiderNetwork() {
+            await loadSpiderNetwork();
+        }
+
+        // Session 206: Execute Spider
+        async function executeSpider(spiderId, spiderName) {
+            try {
+                const response = await fetch('/api/spider-dashboard/execute/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ spider_id: spiderId, spider_name: spiderName })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    alert(`Spider "${spiderName}" started!`);
+                    await loadSpiderNetwork();
+                } else {
+                    alert('Failed to start spider: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error executing spider:', error);
+                alert('Failed to execute spider: ' + error.message);
+            }
+        }
+
+        // Session 206: Activate Dormant Spider
+        async function activateSpider(spiderId, spiderName) {
+            // For now, just run it - in future could change status in DB
+            await executeSpider(spiderId, spiderName);
+        }
+
+        // Session 206: Run All Active Spiders
+        async function runAllActiveSpiders() {
+            if (!confirm('Run all active spiders? This may take some time.')) return;
+
+            try {
+                // Get all active spiders and run them
+                const response = await fetch('/api/spider-dashboard/network/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                const activeSpiders = (data.spiders || []).filter(s => s.status === 'Active');
+
+                for (const spider of activeSpiders.slice(0, 5)) { // Limit to 5 to avoid overload
+                    await executeSpider(spider.id, spider.name);
+                }
+
+                alert(`Started ${Math.min(5, activeSpiders.length)} spiders!`);
+                await loadSpiderNetwork();
+            } catch (error) {
+                console.error('Error running all spiders:', error);
+                alert('Failed to run spiders: ' + error.message);
+            }
+        }
+
+        // Session 206: Filter Spiders by Category
+        function filterSpidersByCategory(category) {
+            console.log(`Filtering spiders by category: ${category}`);
+            // Could implement filtering UI here in future
+        }
 
         // Session 100: Load Leadership Stats
         async function loadLeadershipStats() {

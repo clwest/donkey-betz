@@ -20,7 +20,8 @@ from typing import Dict, Optional
 from django.contrib.auth.models import User
 
 from ai_core.agents.agent_memory_interface import AgentMemoryInterface
-from ai_core.agents.editing_orchestrator_agent import EditingOrchestratorAgent
+# Session 206: EditingOrchestratorAgent was merged into ImageAgent in Phase 1
+from agents.image_agent import ImageAgent as EditingOrchestratorAgent
 
 
 class IterationAgent:
