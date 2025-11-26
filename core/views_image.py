@@ -2582,6 +2582,148 @@ def control_structure(request):
         }, status=500)
 
 
+@csrf_exempt
+@api_view(['POST'])
+def control_unified(request):
+    """
+    Session 199: Unified control endpoint for all Stability AI control types.
+    Supports: sketch, structure, style
+
+    Expected request: Form data with:
+    - 'image': control image file
+    - 'prompt': text description of desired result
+    - 'control_type': 'sketch' | 'structure' | 'style'
+    - 'control_strength': float 0-1 (default 0.7)
+    - 'project_id': optional project ID for association
+    - 'source_image_id': optional source image ID
+
+    Returns: {success: true, image_url: '...', image_id: '...', sequential_number: N}
+    """
+    try:
+        if 'image' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No control image provided'
+            }, status=400)
+
+        image_file = request.FILES['image']
+        prompt = request.POST.get('prompt', '').strip()
+        control_type = request.POST.get('control_type', 'structure').strip().lower()
+        control_strength = float(request.POST.get('control_strength', 0.7))
+        project_id = request.POST.get('project_id')
+        source_image_id = request.POST.get('source_image_id')
+
+        if not prompt:
+            return JsonResponse({
+                'success': False,
+                'error': 'Prompt is required'
+            }, status=400)
+
+        # Validate control type
+        valid_types = ['sketch', 'structure', 'style']
+        if control_type not in valid_types:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid control type: {control_type}. Must be one of: {", ".join(valid_types)}'
+            }, status=400)
+
+        # Get API key
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+
+        if not stability_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'Stability AI API key not configured'
+            }, status=500)
+
+        logger.info(f"🎛️ Control {control_type} request - prompt: {prompt}, strength: {control_strength}, project: {project_id}")
+
+        # Select the appropriate API endpoint
+        url = f"https://api.stability.ai/v2beta/stable-image/control/{control_type}"
+
+        files = {
+            'image': (image_file.name, image_file.read(), image_file.content_type or 'image/png')
+        }
+
+        data = {
+            'prompt': prompt,
+            'control_strength': control_strength,
+            'output_format': 'png'
+        }
+
+        headers = {
+            'Authorization': f'Bearer {stability_key}',
+            'Accept': 'image/*'
+        }
+
+        logger.info(f"📤 Calling Stability AI {control_type} control endpoint...")
+        response = requests.post(url, headers=headers, files=files, data=data, timeout=60)
+        logger.info(f"📥 Response status: {response.status_code}, size: {len(response.content)} bytes")
+
+        if response.status_code == 200:
+            # Save with proper user folder structure
+            filename = f'{control_type}_control_{uuid.uuid4().hex[:8]}.png'
+            filepath = os.path.join('generated_images', request.user.username, filename)
+            saved_path = default_storage.save(filepath, ContentFile(response.content))
+            image_url = default_storage.url(saved_path)
+
+            logger.info(f"✅ Control {control_type} complete - saved to {saved_path}")
+
+            # Get project and source image for proper association
+            from content.models import ImageHistory, CreativeProject
+            project = None
+            source_image = None
+
+            if project_id:
+                try:
+                    project = CreativeProject.objects.get(id=project_id, user=request.user)
+                except CreativeProject.DoesNotExist:
+                    pass
+
+            if source_image_id:
+                try:
+                    source_image = ImageHistory.objects.get(id=source_image_id, user=request.user)
+                    if not project and source_image.project:
+                        project = source_image.project
+                except ImageHistory.DoesNotExist:
+                    pass
+
+            # Create ImageHistory record with project association
+            new_image = ImageHistory.objects.create(
+                user=request.user,
+                prompt=f"Control {control_type}: {prompt} (from #{source_image.get_sequential_number() if source_image else 'unknown'})",
+                file_path=saved_path,
+                filename=filename,
+                model_used=f'stability-control-{control_type}',
+                image_type=f'{control_type}_control',
+                project=project,
+                session=source_image.session if source_image else None
+            )
+
+            logger.info(f"✅ Created ImageHistory: {new_image.id}, project: {project.id if project else 'none'}")
+
+            return JsonResponse({
+                'success': True,
+                'image_url': image_url,
+                'image_id': str(new_image.id),
+                'sequential_number': new_image.get_sequential_number()
+            })
+        else:
+            error_msg = response.text
+            logger.error(f"❌ Stability AI {control_type} control error: {error_msg}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Stability AI error: {error_msg}'
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Control unified error: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # ========================================
 # WORKFLOW EXECUTION (Session 41: Real API Integration)
 # ========================================

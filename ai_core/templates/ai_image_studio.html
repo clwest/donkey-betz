@@ -23120,11 +23120,16 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 <div class="mb-3">
                                     <label class="form-label text-light">Control Type</label>
                                     <select id="controlnetType-${project.id}" class="form-select bg-dark text-light border-secondary">
-                                        <option value="canny">Canny Edge Detection</option>
-                                        <option value="depth">Depth Map</option>
-                                        <option value="pose">Pose Estimation</option>
-                                        <option value="sketch">Sketch/Line Art</option>
+                                        <option value="sketch">Sketch/Line Art - Follow edges and contours</option>
+                                        <option value="structure">Structure - Maintain composition and layout</option>
+                                        <option value="style">Style Transfer - Apply artistic style</option>
                                     </select>
+                                    <small class="text-muted">Session 199: Updated to Stability AI supported control types</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-light">Control Strength</label>
+                                    <input type="range" class="form-range" id="controlnetStrength-${project.id}" min="0" max="1" step="0.1" value="0.7">
+                                    <small class="text-muted">How closely to follow the control image (0.7 = balanced)</small>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label text-light">Generation Prompt</label>
@@ -30057,10 +30062,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             document.getElementById(`recolorProgress-${projectId}`).style.display = 'none';
         }
 
-        /** Execute ControlNet */
+        /**
+         * Execute ControlNet - Session 199: Direct API call like Erase/Inpaint
+         * Calls /api/stability/control/ with image, control_type, and prompt
+         */
         async function executeControlnet(projectId) {
             const imageId = getSelectedImageId('controlnet', projectId);
             const controlType = document.getElementById(`controlnetType-${projectId}`).value;
+            const controlStrength = document.getElementById(`controlnetStrength-${projectId}`)?.value || 0.7;
             const prompt = document.getElementById(`controlnetPrompt-${projectId}`).value.trim();
 
             if (!imageId || !prompt) {
@@ -30068,17 +30077,71 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return;
             }
 
-            document.getElementById(`controlnetProgress-${projectId}`).style.display = 'block';
+            const progressEl = document.getElementById(`controlnetProgress-${projectId}`);
+            const statusEl = document.getElementById(`controlnetStatus-${projectId}`);
+            progressEl.style.display = 'block';
+            if (statusEl) statusEl.textContent = `Generating with ${controlType} control...`;
 
-            // Session 197: Use UUID directly for reliable image resolution
-            const input = document.getElementById(`project-chat-input-${projectId}`);
-            if (input) {
-                input.value = `Generate image using ${controlType} control from image ${imageId}: ${prompt}`;
-                sendProjectMessage(projectId);
+            console.log('🎛️ ControlNet request:', { imageId, controlType, controlStrength, prompt, projectId });
+
+            try {
+                // Fetch the source image to get its blob
+                const response = await fetch(`/api/images/history/?project_id=${projectId}&limit=100`, {
+                    headers: {'X-CSRFToken': getCsrfToken()}
+                });
+                const data = await response.json();
+
+                if (!data.success || !data.images) {
+                    throw new Error('Failed to fetch project images');
+                }
+
+                const sourceImage = data.images.find(img => img.id.toString() === imageId.toString());
+                if (!sourceImage || !sourceImage.url) {
+                    throw new Error('Source image not found');
+                }
+
+                console.log('🎛️ Source image URL:', sourceImage.url);
+
+                // Fetch the image as blob
+                const imgResponse = await fetch(sourceImage.url);
+                const imgBlob = await imgResponse.blob();
+                console.log('🎛️ Image blob size:', imgBlob.size);
+
+                // Call the unified control API
+                const formData = new FormData();
+                formData.append('image', imgBlob, 'control_image.png');
+                formData.append('prompt', prompt);
+                formData.append('control_type', controlType);
+                formData.append('control_strength', controlStrength);
+                formData.append('project_id', projectId);
+                formData.append('source_image_id', imageId);
+
+                console.log('🎛️ Calling /api/stability/control/...');
+                const apiResponse = await fetch('/api/stability/control/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: formData
+                });
+
+                const result = await apiResponse.json();
+                console.log('🎛️ ControlNet API response:', result);
+
+                progressEl.style.display = 'none';
+
+                if (result.success) {
+                    showToast('success', `Control ${controlType} image generated! (#${result.sequential_number || 'new'})`);
+                    bootstrap.Modal.getInstance(document.getElementById(`controlnetModal-${projectId}`)).hide();
+                    refreshProjectAssets(projectId);
+                } else {
+                    showToast('error', result.error || 'ControlNet generation failed');
+                }
+            } catch (error) {
+                console.error('ControlNet error:', error);
+                progressEl.style.display = 'none';
+                showToast('error', 'ControlNet operation failed: ' + error.message);
             }
-
-            bootstrap.Modal.getInstance(document.getElementById(`controlnetModal-${projectId}`)).hide();
-            document.getElementById(`controlnetProgress-${projectId}`).style.display = 'none';
         }
 
         /** Execute Text to Video */
