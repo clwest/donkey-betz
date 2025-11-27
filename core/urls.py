@@ -359,7 +359,19 @@ from core.views_analytics import (
     # Session 36: Analytics Dashboard
     AnalyticsDashboardView, analytics_api_data,
     # Phase 1: Learning Loop Integration
-    learning_stats, learning_insights
+    learning_stats, learning_insights,
+    # Session 217: Chart.js Analytics
+    get_chart_agent_trends, get_chart_agent_comparison, get_chart_agent_heatmap,
+    get_chart_workflow_trends, get_chart_workflow_success,
+    get_chart_knowledge_growth, get_chart_knowledge_domains,
+    get_chart_system_health, get_chart_dashboard
+)
+# Session 217B: Agent Training
+from core.views_agent_training import (
+    list_agents as training_list_agents, get_agent as training_get_agent,
+    update_agent as training_update_agent, list_capabilities,
+    add_capability, remove_capability, list_templates, create_from_template,
+    training_history, training_stats, training_dashboard
 )
 from core.views_personal_memories import (
     search_personal_memories_api, personal_memory_stats, delete_personal_memory
@@ -1066,6 +1078,30 @@ urlpatterns = [
     # Learning Loop Integration (Phase 1: Frontend Reality Fix)
     path('api/learning/stats/', learning_stats, name='learning-stats'),
     path('api/learning/insights/', learning_insights, name='learning-insights'),
+
+    # Session 217: Chart.js Analytics API
+    path('api/analytics/charts/agent-trends/', get_chart_agent_trends, name='chart-agent-trends'),
+    path('api/analytics/charts/agent-comparison/', get_chart_agent_comparison, name='chart-agent-comparison'),
+    path('api/analytics/charts/agent-heatmap/', get_chart_agent_heatmap, name='chart-agent-heatmap'),
+    path('api/analytics/charts/workflow-trends/', get_chart_workflow_trends, name='chart-workflow-trends'),
+    path('api/analytics/charts/workflow-success/', get_chart_workflow_success, name='chart-workflow-success'),
+    path('api/analytics/charts/knowledge-growth/', get_chart_knowledge_growth, name='chart-knowledge-growth'),
+    path('api/analytics/charts/knowledge-domains/', get_chart_knowledge_domains, name='chart-knowledge-domains'),
+    path('api/analytics/charts/system-health/', get_chart_system_health, name='chart-system-health'),
+    path('api/analytics/charts/dashboard/', get_chart_dashboard, name='chart-dashboard'),
+
+    # Session 217B: Agent Training API
+    path('api/training/agents/', training_list_agents, name='training-list-agents'),
+    path('api/training/agents/from-template/', create_from_template, name='training-create-from-template'),
+    path('api/training/agents/<str:agent_name>/', training_get_agent, name='training-get-agent'),
+    path('api/training/agents/<str:agent_name>/update/', training_update_agent, name='training-update-agent'),
+    path('api/training/agents/<str:agent_name>/capabilities/', add_capability, name='training-add-capability'),
+    path('api/training/agents/<str:agent_name>/capabilities/<str:capability_id>/', remove_capability, name='training-remove-capability'),
+    path('api/training/capabilities/', list_capabilities, name='training-list-capabilities'),
+    path('api/training/templates/', list_templates, name='training-list-templates'),
+    path('api/training/history/', training_history, name='training-history'),
+    path('api/training/stats/', training_stats, name='training-stats'),
+    path('api/training/dashboard/', training_dashboard, name='training-dashboard'),
 
     # Content Generation APIs (from ai-content-studio)
     path('api/v1/content/create/', create_content, name='content-create'),
