@@ -28,7 +28,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
     Provides consistent token validation across all API endpoints
     """
     
-    # Paths that don't require authentication
+    # Paths that don't require authentication (support session auth)
     PUBLIC_PATHS = [
         '/api/v1/health/',  # Health check endpoint
         '/api/v1/auth/login/',  # Login endpoint
@@ -41,6 +41,12 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/opportunities/',  # Session 223: Opportunity Engine - supports session auth
         '/api/teams/',  # Session 227: Team Power - supports session auth
         '/api/distribution/',  # Session 229: Smart Distribution - supports session auth
+        '/api/spider-dashboard/',  # Session 236: Spider Dashboard - supports session auth
+        '/api/spider-intelligence/',  # Session 236: Spider Intelligence feeds - supports session auth
+        '/api/learning-loop/',  # Session 232: Learning Loop - supports session auth
+        '/api/proactive/',  # Session 234: Proactive System - supports session auth
+        '/api/ab-testing/',  # Session 235: A/B Testing - supports session auth
+        '/api/goals/',  # Session 235: Goal Tracking - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

@@ -41963,7 +41963,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const response = await fetch(`/api/distribution/revenue/dashboard/?days=${days}`);
                 const data = await response.json();
 
-                if (data.success) {
+                if (data.success && data.dashboard) {
                     const stats = data.dashboard;
 
                     // Update stat cards
