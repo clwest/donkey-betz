@@ -373,6 +373,19 @@ from core.views_agent_training import (
     add_capability, remove_capability, list_templates, create_from_template,
     training_history, training_stats, training_dashboard
 )
+# Session 217C: Workflow Analytics API
+from core.views_workflow_analytics import (
+    get_execution_history as wf_execution_history,
+    get_execution_trends as wf_execution_trends,
+    get_success_failure_analysis as wf_success_failure,
+    get_performance_metrics as wf_performance_metrics,
+    get_performance_comparison as wf_performance_comparison,
+    compare_workflows as wf_compare_workflows,
+    get_step_performance as wf_step_performance,
+    get_execution_heatmap as wf_execution_heatmap,
+    get_analytics_summary as wf_analytics_summary,
+    get_analytics_dashboard as wf_analytics_dashboard,
+)
 from core.views_personal_memories import (
     search_personal_memories_api, personal_memory_stats, delete_personal_memory
 )
@@ -1102,6 +1115,18 @@ urlpatterns = [
     path('api/training/history/', training_history, name='training-history'),
     path('api/training/stats/', training_stats, name='training-stats'),
     path('api/training/dashboard/', training_dashboard, name='training-dashboard'),
+
+    # Session 217C: Workflow Analytics API
+    path('api/workflow-analytics/history/', wf_execution_history, name='wf-execution-history'),
+    path('api/workflow-analytics/trends/', wf_execution_trends, name='wf-execution-trends'),
+    path('api/workflow-analytics/success-failure/', wf_success_failure, name='wf-success-failure'),
+    path('api/workflow-analytics/performance/', wf_performance_metrics, name='wf-performance-metrics'),
+    path('api/workflow-analytics/performance-comparison/', wf_performance_comparison, name='wf-performance-comparison'),
+    path('api/workflow-analytics/compare/', wf_compare_workflows, name='wf-compare-workflows'),
+    path('api/workflow-analytics/steps/<int:workflow_id>/', wf_step_performance, name='wf-step-performance'),
+    path('api/workflow-analytics/heatmap/', wf_execution_heatmap, name='wf-execution-heatmap'),
+    path('api/workflow-analytics/summary/', wf_analytics_summary, name='wf-analytics-summary'),
+    path('api/workflow-analytics/dashboard/', wf_analytics_dashboard, name='wf-analytics-dashboard'),
 
     # Content Generation APIs (from ai-content-studio)
     path('api/v1/content/create/', create_content, name='content-create'),

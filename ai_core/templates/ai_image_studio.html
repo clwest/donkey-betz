@@ -7363,6 +7363,134 @@
                     </div>
                     <!-- END SESSION 217B: AGENT TRAINING -->
 
+                    <!-- SESSION 217C: WORKFLOW ANALYTICS -->
+                    <h5 class="text-warning mt-5 mb-4">📊 Workflow Analytics</h5>
+
+                    <!-- Workflow Analytics Summary -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(14, 165, 233, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #0ea5e9;">📈 Workflow Performance Summary</h6>
+                            <div>
+                                <select id="wf-analytics-period" class="form-select form-select-sm" style="width: auto; display: inline-block; background: #2a2a2a; color: #e0e0e0; border-color: #444;">
+                                    <option value="7">Last 7 Days</option>
+                                    <option value="30" selected>Last 30 Days</option>
+                                    <option value="90">Last 90 Days</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-info ms-2" onclick="loadWorkflowAnalytics()">🔄 Refresh</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="wf-analytics-summary">
+                                <div class="col-md-3">
+                                    <div class="text-center p-3" style="background: rgba(14, 165, 233, 0.1); border-radius: 8px;">
+                                        <div id="wf-total-executions" style="font-size: 2rem; color: #0ea5e9;">-</div>
+                                        <small class="text-muted">Total Executions</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+                                        <div id="wf-success-rate" style="font-size: 2rem; color: #22c55e;">-</div>
+                                        <small class="text-muted">Success Rate</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+                                        <div id="wf-avg-time" style="font-size: 2rem; color: #f59e0b;">-</div>
+                                        <small class="text-muted">Avg Time (s)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                                        <div id="wf-most-used" style="font-size: 1rem; color: #8b5cf6;">-</div>
+                                        <small class="text-muted">Most Used Workflow</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Workflow Analytics Charts -->
+                    <div class="row mb-4">
+                        <!-- Execution Trends Chart -->
+                        <div class="col-md-8">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(14, 165, 233, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #0ea5e9;">📊 Execution Trends</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="wf-execution-trends-chart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Status Distribution Chart -->
+                        <div class="col-md-4">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #8b5cf6;">🎯 Status Distribution</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="wf-status-distribution-chart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Comparison Chart -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #f59e0b;">⚡ Workflow Performance Comparison</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="wf-performance-comparison-chart" height="150"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Execution History -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #22c55e;">📜 Recent Executions</h6>
+                            <select id="wf-history-status-filter" class="form-select form-select-sm" style="width: auto; background: #2a2a2a; color: #e0e0e0; border-color: #444;" onchange="filterExecutionHistory()">
+                                <option value="">All Status</option>
+                                <option value="completed">Completed</option>
+                                <option value="failed">Failed</option>
+                                <option value="processing">Processing</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            <div id="wf-execution-history">
+                                <p class="text-muted text-center">Loading execution history...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Workflow Performance Metrics Table -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #ec4899;">📋 Workflow Metrics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-dark table-striped table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Workflow</th>
+                                            <th>Executions</th>
+                                            <th>Success Rate</th>
+                                            <th>Avg Time</th>
+                                            <th>Completed</th>
+                                            <th>Failed</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wf-metrics-table-body">
+                                        <tr><td colspan="6" class="text-center text-muted">Loading metrics...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SESSION 217C: WORKFLOW ANALYTICS -->
+
                 </div>
             </div>
             <!-- END AGENTS TAB -->
@@ -35311,6 +35439,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 217B: Load training dashboard
                 loadTrainingDashboard();
 
+                // Session 217C: Load workflow analytics
+                loadWorkflowAnalytics();
+
                 // Hide loading, show content
                 loadingEl.style.display = 'none';
                 containerEl.style.display = 'block';
@@ -36160,6 +36291,299 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // ============================================================
         // END SESSION 217B: AGENT TRAINING FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 217C: WORKFLOW ANALYTICS FUNCTIONS
+        // ============================================================
+
+        // Store chart instances for cleanup
+        let wfExecutionTrendsChart = null;
+        let wfStatusDistributionChart = null;
+        let wfPerformanceComparisonChart = null;
+        let wfAnalyticsData = null;
+
+        // Load Workflow Analytics Dashboard
+        async function loadWorkflowAnalytics() {
+            const days = document.getElementById('wf-analytics-period').value || 30;
+
+            try {
+                const response = await fetch(`/api/workflow-analytics/dashboard/?days=${days}`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+                wfAnalyticsData = data;
+
+                // Update summary
+                updateWorkflowSummary(data.summary);
+
+                // Render charts
+                renderWfExecutionTrendsChart(data.execution_trends);
+                renderWfStatusDistributionChart(data.success_failure);
+                renderWfPerformanceComparisonChart(data.performance_comparison);
+
+                // Render execution history
+                renderWfExecutionHistory(data.recent_executions);
+
+                // Render metrics table
+                renderWfMetricsTable(data.workflow_metrics);
+
+            } catch (error) {
+                console.error('Error loading workflow analytics:', error);
+            }
+        }
+
+        // Update Workflow Summary
+        function updateWorkflowSummary(summary) {
+            document.getElementById('wf-total-executions').textContent = summary.total_executions || 0;
+            document.getElementById('wf-success-rate').textContent = (summary.success_rate || 0) + '%';
+            document.getElementById('wf-avg-time').textContent = (summary.avg_execution_time || 0) + 's';
+            document.getElementById('wf-most-used').textContent = summary.most_used_workflow || 'No data';
+        }
+
+        // Render Execution Trends Chart
+        function renderWfExecutionTrendsChart(data) {
+            const ctx = document.getElementById('wf-execution-trends-chart');
+            if (!ctx) return;
+
+            if (wfExecutionTrendsChart) {
+                wfExecutionTrendsChart.destroy();
+            }
+
+            wfExecutionTrendsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#e0e0e0' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#aaa' },
+                            grid: { color: '#333' }
+                        },
+                        y: {
+                            ticks: { color: '#aaa' },
+                            grid: { color: '#333' },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render Status Distribution Chart
+        function renderWfStatusDistributionChart(data) {
+            const ctx = document.getElementById('wf-status-distribution-chart');
+            if (!ctx) return;
+
+            if (wfStatusDistributionChart) {
+                wfStatusDistributionChart.destroy();
+            }
+
+            const chartData = data.chart_data || {};
+
+            wfStatusDistributionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.labels || ['Completed', 'Failed', 'Processing', 'Pending'],
+                    datasets: chartData.datasets || [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#28a745', '#dc3545', '#ffc107', '#6c757d']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#e0e0e0', padding: 15 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render Performance Comparison Chart
+        function renderWfPerformanceComparisonChart(data) {
+            const ctx = document.getElementById('wf-performance-comparison-chart');
+            if (!ctx) return;
+
+            if (wfPerformanceComparisonChart) {
+                wfPerformanceComparisonChart.destroy();
+            }
+
+            wfPerformanceComparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#e0e0e0' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#aaa' },
+                            grid: { color: '#333' }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            ticks: { color: '#007bff' },
+                            grid: { color: '#333' },
+                            title: {
+                                display: true,
+                                text: 'Execution Time (s)',
+                                color: '#007bff'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            ticks: { color: '#28a745' },
+                            grid: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Success Rate (%)',
+                                color: '#28a745'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render Execution History
+        function renderWfExecutionHistory(history) {
+            const container = document.getElementById('wf-execution-history');
+            if (!container) return;
+
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No workflow executions found</p>';
+                return;
+            }
+
+            const statusColors = {
+                'completed': '#28a745',
+                'failed': '#dc3545',
+                'processing': '#ffc107',
+                'pending': '#6c757d'
+            };
+
+            const statusIcons = {
+                'completed': '✅',
+                'failed': '❌',
+                'processing': '⏳',
+                'pending': '⏸️'
+            };
+
+            let html = '<div class="list-group list-group-flush">';
+            history.forEach(ex => {
+                const statusColor = statusColors[ex.status] || '#6c757d';
+                const statusIcon = statusIcons[ex.status] || '❓';
+                const execTime = ex.execution_time ? `${ex.execution_time.toFixed(2)}s` : '-';
+                const createdAt = ex.created_at ? new Date(ex.created_at).toLocaleString() : '-';
+
+                html += `
+                    <div class="list-group-item" style="background: #2a2a2a; border-color: #444;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1" style="color: #e0e0e0;">${statusIcon} ${ex.workflow_name}</h6>
+                                <small class="text-muted">${createdAt}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge" style="background: ${statusColor};">${ex.status}</span>
+                                <small class="d-block text-muted mt-1">${execTime}</small>
+                            </div>
+                        </div>
+                        <div class="progress mt-2" style="height: 4px; background: #333;">
+                            <div class="progress-bar" style="width: ${ex.progress}%; background: ${statusColor};"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            container.innerHTML = html;
+        }
+
+        // Render Metrics Table
+        function renderWfMetricsTable(metrics) {
+            const tbody = document.getElementById('wf-metrics-table-body');
+            if (!tbody) return;
+
+            if (!metrics || metrics.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No workflow metrics available</td></tr>';
+                return;
+            }
+
+            let html = '';
+            metrics.forEach(m => {
+                const successColor = m.success_rate >= 80 ? '#28a745' : m.success_rate >= 50 ? '#ffc107' : '#dc3545';
+
+                html += `
+                    <tr>
+                        <td style="color: #e0e0e0;">${m.workflow_name}</td>
+                        <td>${m.total_executions}</td>
+                        <td style="color: ${successColor};">${m.success_rate}%</td>
+                        <td>${m.avg_execution_time}s</td>
+                        <td style="color: #28a745;">${m.completed_count}</td>
+                        <td style="color: #dc3545;">${m.failed_count}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Filter Execution History
+        async function filterExecutionHistory() {
+            const status = document.getElementById('wf-history-status-filter').value;
+            const days = document.getElementById('wf-analytics-period').value || 30;
+
+            try {
+                const url = status
+                    ? `/api/workflow-analytics/history/?days=${days}&status=${status}&limit=20`
+                    : `/api/workflow-analytics/history/?days=${days}&limit=20`;
+
+                const response = await fetch(url, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                renderWfExecutionHistory(data.history);
+
+            } catch (error) {
+                console.error('Error filtering execution history:', error);
+            }
+        }
+
+        // Period change handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const periodSelect = document.getElementById('wf-analytics-period');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', loadWorkflowAnalytics);
+            }
+        });
+
+        // ============================================================
+        // END SESSION 217C: WORKFLOW ANALYTICS FUNCTIONS
         // ============================================================
 
         // Session 100: Load Leadership Stats
