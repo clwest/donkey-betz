@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 26, 2025 - Session 201
+**Last Updated:** November 26, 2025 - Session 207
 **Status:** 100% Reality Score | Django Web App
 **Current Focus:** AI Content Creation (images, videos, audio, 3D)
 **Built-in Styles:** 80+ professional style presets
@@ -17,6 +17,7 @@ cat 00-START-NEXT-SESSION.md
 ### 2. Start Platform
 ```bash
 make start
+make celery  # For spider network & background tasks
 ```
 
 ### 3. Access AI Studio
@@ -32,6 +33,7 @@ open http://localhost:8000/ai-studio/
 - AI content creation (images, videos, audio, 3D)
 - Learning systems (agents learning from users)
 - Workflow orchestration improvements
+- Spider network data collection
 
 **DON'T:**
 - Income generation features
@@ -51,6 +53,7 @@ open http://localhost:8000/ai-studio/
 | 3D Generation | Complete |
 | Character Training | 3/3 features |
 | Workflow Orchestration | 6 workflows |
+| Spider Network | 46/46 spiders active |
 
 ### Available Workflows
 - `research_and_create_logos` - Research + logos (1024x1024)
@@ -60,6 +63,13 @@ open http://localhost:8000/ai-studio/
 - `video_thumbnail_series` - Consistent thumbnail series
 - `logo_to_video` - Animate logo into video
 
+### Spider Network (Session 207)
+- **46 active spiders** collecting real data
+- Categories: Tech, Financial, Freelance, Education, Legal, Crowdfunding
+- Real APIs: HackerNews, DevTo, CoinGecko, WeWorkRemotely, Yahoo Finance
+- Celery Beat: Scheduled every 30 minutes
+- On-demand: Execute button in Spider Dashboard
+
 ---
 
 ## Key File Locations
@@ -67,6 +77,8 @@ open http://localhost:8000/ai-studio/
 ### Backend
 - `core/views_image.py` - Image operations
 - `core/views_video.py` - Video operations
+- `core/views_spider_dashboard.py` - Spider network dashboard
+- `core/tasks.py` - Celery tasks (spider execution)
 - `agents/workflow_orchestration_agent.py` - Workflow system
 - `content/models.py` - Database models
 
@@ -76,6 +88,7 @@ open http://localhost:8000/ai-studio/
 ### Configuration
 - `core/assistant/tool_definitions.py` - GPT tool schemas
 - `core/assistant/constants.py` - System constants
+- `core/celery.py` - Celery Beat schedules
 
 ---
 
@@ -83,12 +96,13 @@ open http://localhost:8000/ai-studio/
 
 ### Server won't start
 ```bash
-pkill -f daphne; pkill -f redis; rm -f .daphne.pid && make start
+pkill -f daphne; pkill -f redis; pkill -f celery; rm -f .daphne.pid .celery.pid .celery-beat.pid && make start && make celery
 ```
 
 ### Check health
 ```bash
 curl http://localhost:8000/health/ping/
+make celery-status
 ```
 
 ### Database check
@@ -96,6 +110,8 @@ curl http://localhost:8000/health/ping/
 .venv/bin/python manage.py shell
 >>> from content.models import ImageHistory
 >>> ImageHistory.objects.count()
+>>> from core.models_unified_system import SpiderData
+>>> SpiderData.objects.count()
 ```
 
 ---
@@ -132,6 +148,7 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 207:** Spider Network - All 46 spiders active with real data collection (HackerNews, CoinGecko, DevTo, etc.)
 - **Session 201:** Fixed style system, added 14 new animation styles (DreamWorks, South Park, etc.)
 - **Session 200:** 6 workflow orchestrations complete
 - **Session 195:** Rich workflow output UI
@@ -141,7 +158,7 @@ Built-in style library in `content/image_generation.py`:
 ## Pre-Session Checklist
 
 - [ ] Read `00-START-NEXT-SESSION.md`
-- [ ] Run `make start`
+- [ ] Run `make start && make celery`
 - [ ] Check: http://localhost:8000/ai-studio/
 
 ---

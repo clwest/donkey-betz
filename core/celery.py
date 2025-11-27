@@ -149,6 +149,14 @@ app.conf.beat_schedule = {
             'expires': 25,  # Expire after 25 seconds if not executed (just before next run)
         }
     },
+    # Session 207: Spider Network Execution
+    'run-spider-network': {
+        'task': 'core.tasks.run_spider_network',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # Expire after 30 minutes
+        }
+    },
 }
 
 # Spider-specific task routing configuration

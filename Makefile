@@ -9,6 +9,10 @@ START_TIMEOUT ?= 30
 LOG ?= server.log
 PIDFILE ?= .daphne.pid
 REDIS_PIDFILE ?= .redis.pid
+CELERY_PIDFILE ?= .celery.pid
+CELERY_BEAT_PIDFILE ?= .celery-beat.pid
+CELERY_LOG ?= celery.log
+CELERY_BEAT_LOG ?= celery-beat.log
 FLUTTER_PIDFILE ?= .flutter.pid
 FLUTTER_LOG ?= flutter.log
 FLUTTER_DEVICE ?= 5F3829A4-2139-4667-9648-410F6A629AE0
@@ -19,7 +23,7 @@ MOBILE_DIR ?= mobile
 # Export common env for child processes if you want (safe; read-only for checks)
 export HOST PORT
 
-.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all
+.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all celery celery-stop celery-status
 
 # ---------- Core service lifecycle ----------
 start: ## Start Redis (if needed) and Daphne (background). Wait for health endpoint.
@@ -153,6 +157,64 @@ dev-health: ## Health checks: Redis + Daphne health endpoint + Django LLM endpoi
 # ---------- Run specific helpers ----------
 runworker: ## Run a channels runworker (foreground)
 	$(DJANGO_MANAGE) runworker
+
+# ---------- Celery helpers (Session 207) ----------
+celery: ## Start Celery worker + beat (background) for spider scheduling
+	@echo "==> Starting Celery services..."
+	@# Start Celery worker if not running (use solo pool on macOS to avoid fork/segfault issues)
+	@if pgrep -f "celery.*worker" >/dev/null 2>&1; then \
+		echo "-> Celery worker already running"; \
+	else \
+		echo "-> Starting Celery worker (background, solo pool for macOS)..."; \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
+		sleep 1; \
+	fi
+	@# Start Celery beat if not running
+	@if pgrep -f "celery.*beat" >/dev/null 2>&1; then \
+		echo "-> Celery beat already running"; \
+	else \
+		echo "-> Starting Celery beat (background)..."; \
+		nohup .venv/bin/celery -A core beat --loglevel=info > $(CELERY_BEAT_LOG) 2>&1 & echo $$! > $(CELERY_BEAT_PIDFILE); \
+		sleep 1; \
+	fi
+	@echo "✓ Celery services started."
+	@echo "  - Worker log: $(CELERY_LOG)"
+	@echo "  - Beat log: $(CELERY_BEAT_LOG)"
+
+celery-stop: ## Stop Celery worker and beat
+	@echo "==> Stopping Celery services..."
+	@if [ -f $(CELERY_PIDFILE) ]; then \
+		PID=$$(cat $(CELERY_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Celery worker (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(CELERY_PIDFILE); \
+	else \
+		pkill -f "celery.*worker" 2>/dev/null || true; \
+	fi
+	@if [ -f $(CELERY_BEAT_PIDFILE) ]; then \
+		PID=$$(cat $(CELERY_BEAT_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Celery beat (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(CELERY_BEAT_PIDFILE); \
+	else \
+		pkill -f "celery.*beat" 2>/dev/null || true; \
+	fi
+	@echo "✓ Celery services stopped."
+
+celery-status: ## Check Celery worker and beat status
+	@echo "==> Celery status"
+	@if pgrep -f "celery.*worker" >/dev/null 2>&1; then echo "✓ Celery worker running"; else echo "✗ Celery worker not running"; fi
+	@if pgrep -f "celery.*beat" >/dev/null 2>&1; then echo "✓ Celery beat running"; else echo "✗ Celery beat not running"; fi
+	@echo "Celery processes:"
+	@ps aux | grep -E "celery" | grep -v grep || echo "  No Celery processes found"
+
+celery-logs: ## Tail Celery logs
+	@echo "==> Tailing Celery logs (ctrl-c to stop)"
+	@tail -f $(CELERY_LOG) $(CELERY_BEAT_LOG)
 
 # ---------- Selfpatch helpers (LLM-driven patches) ----------
 # These retained as wrappers but do NOT assume ollama is present.
