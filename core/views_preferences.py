@@ -23,8 +23,9 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -673,6 +674,365 @@ def apply_style_suggestion(request):
 
     except Exception as e:
         logger.error(f"Error applying style suggestion: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =============================================================================
+# SESSION 210: IMPLICIT LEARNING & RECOMMENDATIONS API
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def track_behavior(request):
+    """
+    Track user behavior for implicit learning.
+
+    Request body:
+        {
+            'signal_type': 'download' | 'share' | 'delete' | 'favorite' | 'view',
+            'content_id': 'uuid-or-string',
+            'style': 'optional-style-name',
+            'model': 'optional-model-name',
+            'metadata': {}  # optional additional data
+        }
+    """
+    try:
+        from core.services import get_learning_service
+
+        signal_type = request.data.get('signal_type')
+        content_id = request.data.get('content_id')
+        style = request.data.get('style')
+        model = request.data.get('model')
+        metadata = request.data.get('metadata', {})
+
+        if not signal_type:
+            return Response({
+                'success': False,
+                'error': 'signal_type is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        valid_signals = ['download', 'share', 'delete', 'favorite', 'view', 'regenerate', 'style_use']
+        if signal_type not in valid_signals:
+            return Response({
+                'success': False,
+                'error': f'Invalid signal_type. Valid: {valid_signals}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        service = get_learning_service()
+        user_id = request.user.id
+
+        # Route to appropriate tracking method
+        if signal_type == 'download':
+            service.track_download(user_id, content_id, style, model)
+        elif signal_type == 'share':
+            platform = metadata.get('platform')
+            service.track_share(user_id, content_id, style, model, platform)
+        elif signal_type == 'delete':
+            service.track_delete(user_id, content_id, style, model)
+        elif signal_type == 'favorite':
+            service.track_favorite(user_id, content_id, style, model)
+        elif signal_type == 'view':
+            seconds = metadata.get('seconds', 5)
+            service.track_view_time(user_id, content_id, seconds, style, model)
+        elif signal_type == 'regenerate':
+            new_content_id = metadata.get('new_content_id', '')
+            service.track_regenerate(user_id, content_id, new_content_id, style, model)
+        elif signal_type == 'style_use':
+            context = metadata.get('context')
+            service.track_style_selection(user_id, style, context)
+
+        return Response({
+            'success': True,
+            'signal_type': signal_type,
+            'content_id': content_id,
+            'message': f'Tracked {signal_type} signal'
+        })
+
+    except Exception as e:
+        logger.error(f"Error tracking behavior: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_implicit_preferences(request):
+    """
+    Get user's implicit preference profile from behavioral signals.
+
+    Query params:
+        days: Look-back period in days (default: 90)
+    """
+    try:
+        from core.services import get_learning_service
+
+        days = int(request.query_params.get('days', 90))
+        service = get_learning_service()
+
+        preferences = service.calculate_preference_scores(request.user.id, days)
+        behavior_summary = service.get_behavior_summary(request.user.id, days=30)
+
+        return Response({
+            'success': True,
+            'preferences': preferences,
+            'behavior_summary': behavior_summary
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting implicit preferences: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@authentication_classes([])  # No authentication required for anonymous access
+@permission_classes([AllowAny])
+def get_style_recommendations(request):
+    """
+    Get personalized style recommendations.
+
+    Works for both authenticated and anonymous users:
+    - Authenticated: Personalized recommendations based on behavior
+    - Anonymous: Fallback popular/trending recommendations
+
+    Query params:
+        limit: Number of recommendations (default: 10)
+        include_trending: Include trending styles (default: true)
+        include_temporal: Include time-appropriate styles (default: true)
+    """
+    try:
+        from core.services import get_recommendation_engine
+
+        limit = int(request.query_params.get('limit', 10))
+        include_trending = request.query_params.get('include_trending', 'true').lower() == 'true'
+        include_temporal = request.query_params.get('include_temporal', 'true').lower() == 'true'
+
+        engine = get_recommendation_engine()
+
+        # Get user ID if authenticated, otherwise use 0 for anonymous
+        user_id = request.user.id if request.user.is_authenticated else 0
+
+        recommendations = engine.get_style_recommendations(
+            user_id=user_id,
+            limit=limit,
+            include_trending=include_trending,
+            include_temporal=include_temporal
+        )
+
+        return Response({
+            'success': True,
+            'recommendations': [r.to_dict() for r in recommendations],
+            'count': len(recommendations),
+            'personalized': request.user.is_authenticated
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting style recommendations: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_similar_styles(request, style: str):
+    """
+    Get styles similar to a given style.
+
+    "Because you liked {style}, you might also like..."
+
+    Query params:
+        limit: Number of recommendations (default: 5)
+    """
+    try:
+        from core.services import get_recommendation_engine
+
+        limit = int(request.query_params.get('limit', 5))
+        engine = get_recommendation_engine()
+
+        recommendations = engine.get_similar_style_recommendations(
+            user_id=request.user.id,
+            base_style=style,
+            limit=limit
+        )
+
+        return Response({
+            'success': True,
+            'base_style': style,
+            'recommendations': [r.to_dict() for r in recommendations],
+            'count': len(recommendations)
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting similar styles: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_discovery_styles(request):
+    """
+    Get discovery recommendations - styles the user hasn't tried but might like.
+
+    Query params:
+        limit: Number of recommendations (default: 5)
+    """
+    try:
+        from core.services import get_recommendation_engine
+
+        limit = int(request.query_params.get('limit', 5))
+        engine = get_recommendation_engine()
+
+        recommendations = engine.get_discovery_recommendations(
+            user_id=request.user.id,
+            limit=limit
+        )
+
+        return Response({
+            'success': True,
+            'recommendations': [r.to_dict() for r in recommendations],
+            'count': len(recommendations),
+            'title': 'Discover New Styles'
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting discovery styles: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =============================================================================
+# SESSION 210: STYLE EVOLUTION TRACKING
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_style_evolution(request):
+    """
+    Get user's style preference evolution over time.
+
+    Shows how preferences have changed and identifies trends.
+
+    Query params:
+        days: Look-back period (default: 30)
+        domain: Content domain - image, video, audio, 3d (default: image)
+    """
+    try:
+        from core.services import get_learning_service
+
+        days = int(request.query_params.get('days', 30))
+        domain = request.query_params.get('domain', 'image')
+
+        service = get_learning_service()
+        evolution = service.get_style_evolution_history(
+            user_id=request.user.id,
+            days=days,
+            domain=domain
+        )
+
+        return Response({
+            'success': True,
+            'evolution': evolution
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting style evolution: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def record_evolution_snapshot(request):
+    """
+    Manually trigger a style evolution snapshot for the current user.
+
+    Normally this runs daily via Celery, but this endpoint allows
+    manual triggering for testing or when needed.
+
+    Request body:
+        {
+            'domain': 'image'  # optional, default: 'image'
+        }
+    """
+    try:
+        from core.services import get_learning_service
+
+        domain = request.data.get('domain', 'image')
+
+        service = get_learning_service()
+        result = service.record_daily_evolution(
+            user_id=request.user.id,
+            domain=domain
+        )
+
+        if result:
+            return Response({
+                'success': True,
+                'snapshot': result,
+                'message': 'Evolution snapshot recorded'
+            })
+        else:
+            return Response({
+                'success': False,
+                'message': 'No style data to record (try using some styles first)'
+            })
+
+    except Exception as e:
+        logger.error(f"Error recording evolution snapshot: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_style_shifts(request):
+    """
+    Detect significant shifts in user's style preferences.
+
+    Returns shifts like:
+    - New favorite styles
+    - Declining interest in previously favored styles
+    - Rapidly growing interest in new styles
+
+    Query params:
+        domain: Content domain (default: image)
+    """
+    try:
+        from core.services import get_learning_service
+
+        domain = request.query_params.get('domain', 'image')
+
+        service = get_learning_service()
+        shifts = service.detect_style_shifts(
+            user_id=request.user.id,
+            domain=domain
+        )
+
+        return Response({
+            'success': True,
+            'shifts': shifts
+        })
+
+    except Exception as e:
+        logger.error(f"Error detecting style shifts: {e}", exc_info=True)
         return Response({
             'success': False,
             'error': str(e)

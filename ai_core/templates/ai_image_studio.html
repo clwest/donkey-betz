@@ -1807,6 +1807,13 @@
                                     <option value="south-park">South Park</option>
                                 </optgroup>
                             </select>
+                            <!-- Session 210: Style Recommendations -->
+                            <div id="styleRecommendationsContainer" class="mt-2" style="min-height: 32px;">
+                                <div class="text-muted small text-center py-1">
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    Loading recommendations...
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Quality Selector -->
@@ -6556,6 +6563,85 @@
                         </div>
                     </div>
 
+                    <!-- SESSION 210: Implicit Learning & Recommendations Section -->
+                    <div class="row mb-4">
+                        <!-- Style Recommendations Card -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #10b981;">✨ Style Recommendations</h5>
+                                    <button class="btn btn-sm btn-outline-success" onclick="loadImplicitRecommendations()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted small mb-3">Personalized style suggestions based on your behavior</p>
+                                    <div id="implicit-recommendations-list" style="max-height: 250px; overflow-y: auto;">
+                                        <div class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                                            <p class="text-muted small mt-2">Loading recommendations...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Style Evolution Card -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(99, 102, 241, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #6366f1;">📈 Style Evolution</h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadStyleEvolution()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted small mb-3">How your style preferences have changed over time</p>
+                                    <div id="style-evolution-content" style="max-height: 250px; overflow-y: auto;">
+                                        <div class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                            <p class="text-muted small mt-2">Loading evolution data...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Behavior Summary Card -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(244, 114, 182, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #f472b6;">📊 Behavior Insights</h5>
+                            <button class="btn btn-sm btn-outline-pink" style="border-color: #f472b6; color: #f472b6;" onclick="loadBehaviorInsights()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="behavior-insights-row">
+                                <div class="col-md-3 text-center">
+                                    <h3 class="mb-0" id="behavior-downloads" style="color: #10b981;">0</h3>
+                                    <small class="text-muted">Downloads</small>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <h3 class="mb-0" id="behavior-shares" style="color: #06b6d4;">0</h3>
+                                    <small class="text-muted">Shares</small>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <h3 class="mb-0" id="behavior-generations" style="color: #8b5cf6;">0</h3>
+                                    <small class="text-muted">Generations</small>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <h3 class="mb-0" id="behavior-satisfaction" style="color: #fbbf24;">--%</h3>
+                                    <small class="text-muted">Satisfaction</small>
+                                </div>
+                            </div>
+                            <div class="mt-3" id="top-styles-section" style="display: none;">
+                                <p class="mb-2 text-muted small">Your Top Styles:</p>
+                                <div id="top-styles-badges"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Preference History Section -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid #333;">
@@ -9428,6 +9514,15 @@
                 window.URL.revokeObjectURL(url);
 
                 console.log('✅ Asset downloaded successfully:', filename);
+
+                // Session 210: Track download behavior for implicit learning
+                try {
+                    const currentStyle = document.getElementById('style')?.value || null;
+                    const currentQuality = document.getElementById('quality')?.value || null;
+                    trackBehavior('download', imageId, currentStyle, currentQuality, { asset_type: assetType });
+                } catch (trackError) {
+                    console.warn('Failed to track download:', trackError);
+                }
 
                 // Show success message - Session 172: Type-specific messages
                 const toast = document.createElement('div');
@@ -33597,6 +33692,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         document.getElementById('preferences-tab')?.addEventListener('shown.bs.tab', function() {
             console.log('🧠 Preferences tab activated - loading preferences...');
             loadPreferences();
+            // Session 210: Load implicit learning features
+            loadSession210Features();
         });
 
         // Session 206: Load All Preferences
@@ -33794,6 +33891,178 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.error('Error loading preference history:', error);
                 container.innerHTML = '<p class="text-danger text-center">Error loading history</p>';
             }
+        }
+
+        // Session 210: Load Implicit Recommendations
+        async function loadImplicitRecommendations() {
+            const container = document.getElementById('implicit-recommendations-list');
+            try {
+                const response = await authenticatedFetch('/api/preferences/recommendations/?limit=8');
+                if (!response.ok) throw new Error('Failed to load recommendations');
+
+                const data = await response.json();
+
+                if (data.success && data.recommendations && data.recommendations.length > 0) {
+                    let html = '';
+                    data.recommendations.forEach(rec => {
+                        const sourceColors = {
+                            'personal': '#10b981',
+                            'collaborative': '#8b5cf6',
+                            'temporal': '#f59e0b',
+                            'trending': '#ec4899',
+                            'complementary': '#06b6d4'
+                        };
+                        const color = sourceColors[rec.source] || '#6b7280';
+
+                        html += `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2"
+                                 style="background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid ${color}; cursor: pointer;"
+                                 onclick="applyRecommendedStyle('${rec.style}')"
+                                 title="Click to apply this style">
+                                <div>
+                                    <span class="text-light fw-bold">${rec.style}</span>
+                                    <br>
+                                    <small class="text-muted">${rec.reason}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge" style="background: ${color};">${rec.source}</span>
+                                    <br>
+                                    <small class="text-muted">${Math.round(rec.score * 100)}%</small>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center py-3">Start creating content to get personalized recommendations!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+                container.innerHTML = '<p class="text-danger text-center">Error loading recommendations</p>';
+            }
+        }
+
+        // Session 210: Load Style Evolution
+        async function loadStyleEvolution() {
+            const container = document.getElementById('style-evolution-content');
+            try {
+                const response = await authenticatedFetch('/api/preferences/evolution/?days=30');
+                if (!response.ok) throw new Error('Failed to load evolution');
+
+                const data = await response.json();
+
+                if (data.success && data.evolution) {
+                    const evolution = data.evolution;
+
+                    if (evolution.record_count > 0) {
+                        let html = '';
+
+                        // Show trends
+                        if (evolution.emerging_styles && evolution.emerging_styles.length > 0) {
+                            html += `<div class="mb-3"><span class="text-success">📈 Rising:</span> `;
+                            evolution.emerging_styles.forEach(style => {
+                                html += `<span class="badge bg-success me-1">${style}</span>`;
+                            });
+                            html += '</div>';
+                        }
+
+                        if (evolution.declining_styles && evolution.declining_styles.length > 0) {
+                            html += `<div class="mb-3"><span class="text-warning">📉 Declining:</span> `;
+                            evolution.declining_styles.forEach(style => {
+                                html += `<span class="badge bg-warning text-dark me-1">${style}</span>`;
+                            });
+                            html += '</div>';
+                        }
+
+                        // Recent history
+                        if (evolution.history && evolution.history.length > 0) {
+                            html += '<div class="mt-3"><small class="text-muted">Recent snapshots:</small></div>';
+                            evolution.history.slice(-5).reverse().forEach(record => {
+                                html += `
+                                    <div class="d-flex justify-content-between p-2 mb-1" style="background: rgba(255,255,255,0.03); border-radius: 4px;">
+                                        <small class="text-muted">${record.date}</small>
+                                        <small class="text-light">${record.top_styles.slice(0, 3).join(', ')}</small>
+                                    </div>
+                                `;
+                            });
+                        }
+
+                        container.innerHTML = html || '<p class="text-muted text-center">No significant changes detected yet.</p>';
+                    } else {
+                        container.innerHTML = '<p class="text-muted text-center py-3">No evolution data yet. Keep creating to see how your preferences change!</p>';
+                    }
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center py-3">Evolution tracking will appear as you use the platform.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading style evolution:', error);
+                container.innerHTML = '<p class="text-danger text-center">Error loading evolution data</p>';
+            }
+        }
+
+        // Session 210: Load Behavior Insights
+        async function loadBehaviorInsights() {
+            try {
+                const response = await authenticatedFetch('/api/preferences/implicit/?days=30');
+                if (!response.ok) throw new Error('Failed to load behavior insights');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const summary = data.behavior_summary || {};
+                    const prefs = data.preferences || {};
+
+                    // Update stats
+                    document.getElementById('behavior-downloads').textContent = summary.total_downloads || 0;
+                    document.getElementById('behavior-shares').textContent = summary.total_shares || 0;
+                    document.getElementById('behavior-generations').textContent = summary.total_generations || 0;
+
+                    const satisfaction = summary.satisfaction_rate;
+                    if (satisfaction !== undefined) {
+                        document.getElementById('behavior-satisfaction').textContent = Math.round(satisfaction * 100) + '%';
+                    }
+
+                    // Show top styles
+                    if (prefs.top_styles && prefs.top_styles.length > 0) {
+                        document.getElementById('top-styles-section').style.display = 'block';
+                        let badgesHtml = '';
+                        prefs.top_styles.forEach((style, idx) => {
+                            const colors = ['#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4'];
+                            badgesHtml += `<span class="badge me-2 mb-1" style="background: ${colors[idx % colors.length]};">${style}</span>`;
+                        });
+                        document.getElementById('top-styles-badges').innerHTML = badgesHtml;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading behavior insights:', error);
+            }
+        }
+
+        // Session 210: Apply recommended style to the style dropdown
+        function applyRecommendedStyle(styleName) {
+            const styleSelect = document.getElementById('style');
+            if (styleSelect) {
+                // Try to find matching option
+                for (let option of styleSelect.options) {
+                    if (option.value.toLowerCase() === styleName.toLowerCase() ||
+                        option.text.toLowerCase().includes(styleName.toLowerCase())) {
+                        styleSelect.value = option.value;
+                        // Trigger change event
+                        styleSelect.dispatchEvent(new Event('change'));
+                        showNotification(`Applied style: ${styleName}`, 'success');
+                        return;
+                    }
+                }
+                // If not found, show in prompt hint
+                showNotification(`Try adding "${styleName}" to your prompt!`, 'info');
+            }
+        }
+
+        // Session 210: Load all Session 210 features when Preferences tab opens
+        function loadSession210Features() {
+            loadImplicitRecommendations();
+            loadStyleEvolution();
+            loadBehaviorInsights();
         }
 
         // Session 206: Update Single Preference
@@ -38543,6 +38812,178 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // END SESSION 115: DAVINCI RESOLVE VIDEO EDITING
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION 210: IMPLICIT LEARNING & STYLE RECOMMENDATIONS
+        // ====================================================================
+
+        /**
+         * Track user behavior for implicit learning.
+         * Sends behavior signals to the backend to improve recommendations.
+         */
+        async function trackBehavior(signalType, contentId, style = null, model = null, metadata = {}) {
+            try {
+                const response = await authenticatedFetch('/api/preferences/track/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        signal_type: signalType,
+                        content_id: contentId,
+                        style: style,
+                        model: model,
+                        metadata: metadata
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    console.log(`📊 Tracked ${signalType} for content ${contentId}`);
+                }
+                return data;
+            } catch (error) {
+                console.warn('Failed to track behavior:', error);
+                return { success: false };
+            }
+        }
+
+        /**
+         * Get personalized style recommendations.
+         */
+        async function getStyleRecommendations(limit = 5) {
+            try {
+                const response = await authenticatedFetch(`/api/preferences/recommendations/?limit=${limit}`);
+                const data = await response.json();
+                if (data.success) {
+                    return data.recommendations;
+                }
+                return [];
+            } catch (error) {
+                console.warn('Failed to get recommendations:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Get styles similar to a given style.
+         */
+        async function getSimilarStyles(style, limit = 5) {
+            try {
+                const response = await authenticatedFetch(`/api/preferences/recommendations/similar/${style}/?limit=${limit}`);
+                const data = await response.json();
+                if (data.success) {
+                    return data.recommendations;
+                }
+                return [];
+            } catch (error) {
+                console.warn('Failed to get similar styles:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Get discovery recommendations (styles user hasn't tried).
+         */
+        async function getDiscoveryStyles(limit = 5) {
+            try {
+                const response = await authenticatedFetch(`/api/preferences/recommendations/discover/?limit=${limit}`);
+                const data = await response.json();
+                if (data.success) {
+                    return data.recommendations;
+                }
+                return [];
+            } catch (error) {
+                console.warn('Failed to get discovery styles:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Display style recommendations in the UI.
+         */
+        async function displayStyleRecommendations() {
+            const container = document.getElementById('styleRecommendationsContainer');
+            if (!container) return;
+
+            try {
+                const recommendations = await getStyleRecommendations(5);
+
+                if (recommendations.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-muted small text-center py-2">
+                            <i>Generate some images to get personalized recommendations!</i>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="d-flex flex-wrap gap-2">';
+                for (const rec of recommendations) {
+                    const confidenceColor = rec.score > 0.7 ? 'success' : rec.score > 0.4 ? 'warning' : 'secondary';
+                    html += `
+                        <button class="btn btn-outline-${confidenceColor} btn-sm recommendation-chip"
+                                onclick="applyRecommendedStyle('${rec.style}')"
+                                title="${rec.reason}">
+                            ${rec.style}
+                            <span class="badge bg-${confidenceColor} ms-1">${Math.round(rec.score * 100)}%</span>
+                        </button>
+                    `;
+                }
+                html += '</div>';
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error displaying recommendations:', error);
+            }
+        }
+
+        /**
+         * Apply a recommended style to the style selector.
+         */
+        function applyRecommendedStyle(styleName) {
+            const styleSelect = document.getElementById('style');
+            if (!styleSelect) return;
+
+            // Find and select the matching option
+            for (const option of styleSelect.options) {
+                if (option.value.toLowerCase() === styleName.toLowerCase() ||
+                    option.text.toLowerCase().includes(styleName.toLowerCase())) {
+                    styleSelect.value = option.value;
+
+                    // Track style selection
+                    trackBehavior('style_use', '', styleName, null, { context: 'recommendation_click' });
+
+                    // Show feedback
+                    showStatus(`✨ Applied style: ${option.text}`, 'success');
+                    return;
+                }
+            }
+
+            // If not found in dropdown, show message
+            showStatus(`Style "${styleName}" suggestion - try adding to your prompt!`, 'info');
+        }
+
+        /**
+         * Track style selection when user changes the dropdown.
+         */
+        function initStyleTracking() {
+            const styleSelect = document.getElementById('style');
+            if (styleSelect) {
+                styleSelect.addEventListener('change', function() {
+                    if (this.value) {
+                        trackBehavior('style_use', '', this.value, null, { context: 'manual_selection' });
+                    }
+                });
+            }
+        }
+
+        // Initialize style tracking on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initStyleTracking();
+            // Load recommendations after a short delay
+            setTimeout(displayStyleRecommendations, 1000);
+        });
+
+        // END SESSION 210: IMPLICIT LEARNING & STYLE RECOMMENDATIONS
         // ====================================================================
     </script>
 
