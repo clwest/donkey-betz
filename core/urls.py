@@ -131,6 +131,19 @@ from core.views_agent_collaboration import (
     get_agent_activity as collab_agent_activity
 )
 
+# Session 219 Phase C: Import agent learning views
+from core.views_agent_learning import (
+    record_interaction as learning_record,
+    get_preferences as learning_preferences,
+    get_adaptive_context as learning_context,
+    get_learning_stats as learning_stats,
+    apply_preferences as learning_apply,
+    clear_preferences as learning_clear,
+    get_preferences_summary as learning_summary,
+    share_learning as learning_share,
+    get_all_preferences as learning_all
+)
+
 # Session 206: Import preferences dashboard views
 # Session 210: Added implicit learning & recommendations
 # Session 211: Added A/B testing
@@ -1549,6 +1562,17 @@ urlpatterns = [
     path('api/agent-collab/knowledge/query/', collab_query_knowledge, name='collab-query-knowledge'),
     path('api/agent-collab/stats/', collab_stats, name='collab-stats'),
     path('api/agent-collab/activity/<str:agent_name>/', collab_agent_activity, name='collab-agent-activity'),
+
+    # Session 219 Phase C: Agent Learning API
+    path('api/agent-learning/interaction/', learning_record, name='learning-record'),
+    path('api/agent-learning/preferences/<str:agent_name>/', learning_preferences, name='learning-preferences'),
+    path('api/agent-learning/context/<str:agent_name>/', learning_context, name='learning-context'),
+    path('api/agent-learning/stats/', learning_stats, name='learning-stats'),
+    path('api/agent-learning/apply/', learning_apply, name='learning-apply'),
+    path('api/agent-learning/clear/', learning_clear, name='learning-clear'),
+    path('api/agent-learning/summary/<str:agent_name>/', learning_summary, name='learning-summary'),
+    path('api/agent-learning/share/<str:agent_name>/', learning_share, name='learning-share'),
+    path('api/agent-learning/all-preferences/', learning_all, name='learning-all'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
