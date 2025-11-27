@@ -40,6 +40,19 @@ from .specialized.justia_spider import JustiaSpider
 from .specialized.findlaw_spider import FindLawSpider
 from .specialized.lii_spider import LegalInformationInstituteSpider
 
+# Session 218: NEWS spiders
+from .specialized.techcrunch_spider import TechCrunchSpider
+from .specialized.axios_spider import AxiosSpider
+from .specialized.verge_spider import TheVergeSpider
+
+# Session 218: INNOVATION spiders
+from .specialized.mit_tech_review_spider import MITTechReviewSpider
+from .specialized.wired_spider import WiredSpider
+
+# Session 218: DESIGN spiders
+from .specialized.dribbble_spider import DribbbleSpider
+from .specialized.behance_spider import BehanceSpider
+
 # Import financial API spiders (CRITICAL FIX: These were built but not registered!)
 from .specialized.coingecko_spider import CoinGeckoSpider
 from .specialized.yahoo_finance_spider import YahooFinanceSpider
@@ -141,11 +154,10 @@ class SpiderRegistry:
         })
 
         # Register placeholder spiders for remaining freelance platforms
+        # Note: dribbble and behance moved to active DESIGN category in Session 218
         freelance_platforms = [
             ('weworkremotely', 'weworkremotely.com'),
             ('angellist', 'angel.co/jobs'),
-            ('dribbble', 'dribbble.com/jobs'),
-            ('behance', 'behance.net/jobboard')
         ]
 
         for platform, target in freelance_platforms:
@@ -343,6 +355,60 @@ class SpiderRegistry:
             'priority': 2,
             'rate_limit': 1.0,
             'targets': ['law.cornell.edu/supct', 'law.cornell.edu/uscode']
+        })
+
+        # === SESSION 218: NEWS SPIDERS (3) ===
+        self.register_spider('techcrunch', TechCrunchSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['techcrunch.com/feed/']
+        })
+
+        self.register_spider('axios', AxiosSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['api.axios.com/feed/']
+        })
+
+        self.register_spider('theverge', TheVergeSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['theverge.com/rss/']
+        })
+
+        # === SESSION 218: INNOVATION SPIDERS (2) ===
+        self.register_spider('mit_tech_review', MITTechReviewSpider, {
+            'category': 'innovation',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['technologyreview.com/feed/']
+        })
+
+        self.register_spider('wired', WiredSpider, {
+            'category': 'innovation',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['wired.com/feed/rss']
+        })
+
+        # === SESSION 218: DESIGN SPIDERS (2) ===
+        # Activate Dribbble (was placeholder)
+        self.register_spider('dribbble', DribbbleSpider, {
+            'category': 'design',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['dribbble.com/shots/']
+        })
+
+        # Activate Behance (was placeholder)
+        self.register_spider('behance', BehanceSpider, {
+            'category': 'design',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['behance.net/feeds/projects']
         })
 
         # Register social_sentiment for enhanced NCAA coverage
