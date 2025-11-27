@@ -8647,8 +8647,18 @@
                             </div>
                         </div>
 
-                        <!-- Sidebar: Roles & Messages -->
+                        <!-- Sidebar: Templates, Roles & Messages -->
                         <div class="col-lg-4">
+                            <!-- Workflow Templates (Session 228) -->
+                            <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <h6 class="mb-0" style="color: #fbbf24;">📋 Workflow Templates</h6>
+                                </div>
+                                <div class="card-body p-2" id="templatesListContainer" style="max-height: 250px; overflow-y: auto;">
+                                    <div class="text-center py-3 text-muted">Loading templates...</div>
+                                </div>
+                            </div>
+
                             <!-- Agent Roles -->
                             <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
                                 <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
@@ -39536,6 +39546,297 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 });
             }
         });
+
+        // ============================================================
+        // Session 228: Workflow Engine UI Functions
+        // ============================================================
+
+        let templatesCache = [];
+        let activeWorkflowsCache = [];
+
+        // Load workflow templates
+        async function loadWorkflowTemplates() {
+            const container = document.getElementById('templatesListContainer');
+            if (!container) return;
+
+            try {
+                const response = await fetch('/api/teams/workflows/templates/');
+                const data = await response.json();
+
+                if (data.success && data.templates) {
+                    templatesCache = data.templates;
+                    renderTemplatesList(data.templates);
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="text-center text-danger py-2">Error loading templates</div>';
+            }
+        }
+
+        // Render templates list
+        function renderTemplatesList(templates) {
+            const container = document.getElementById('templatesListContainer');
+
+            const templateIcons = {
+                'logo_creation': '🎨',
+                'content_writing': '✍️',
+                'brand_package': '📦',
+                'creative_content': '🎭',
+                'social_media_campaign': '📱',
+            };
+
+            container.innerHTML = templates.map(t => `
+                <div class="d-flex align-items-center p-2 mb-2 rounded" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.2); cursor: pointer;" onclick="showStartWorkflowModal('${t.id}')">
+                    <span class="me-2" style="font-size: 20px;">${templateIcons[t.id] || '📋'}</span>
+                    <div class="flex-grow-1">
+                        <div class="small" style="color: #fcd34d;">${t.name}</div>
+                        <div class="text-muted" style="font-size: 10px;">${t.steps_count} steps</div>
+                    </div>
+                    <span class="badge bg-warning text-dark" style="font-size: 9px;">▶</span>
+                </div>
+            `).join('');
+        }
+
+        // Show start workflow modal
+        function showStartWorkflowModal(templateId) {
+            const template = templatesCache.find(t => t.id === templateId);
+            if (!template) return;
+
+            const teamOptions = teamsCache.map(t =>
+                `<option value="${t.id}">${t.name}</option>`
+            ).join('');
+
+            const modalHtml = `
+                <div class="modal fade" id="startWorkflowModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1e293b; color: #e2e8f0;">
+                            <div class="modal-header" style="border-color: rgba(251, 191, 36, 0.3); background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1));">
+                                <h5 class="modal-title" style="color: #fbbf24;">⚡ Start Workflow: ${template.name}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted small mb-3">${template.description}</p>
+                                <div class="mb-3">
+                                    <label class="form-label">Workflow Name</label>
+                                    <input type="text" class="form-control" id="workflowName" value="${template.name}" style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Select Team</label>
+                                    <select class="form-select" id="workflowTeam" style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                        ${teamOptions}
+                                    </select>
+                                </div>
+                                <div class="alert alert-info small mb-0">
+                                    <strong>Steps (${template.steps_count}):</strong><br>
+                                    <span class="text-muted">Roles needed: ${template.roles_needed.join(', ')}</span>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-color: rgba(71, 85, 105, 0.5);">
+                                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button class="btn btn-warning" onclick="runWorkflowFromModal('${templateId}')">
+                                    🚀 Run Workflow
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existingModal = document.getElementById('startWorkflowModal');
+            if (existingModal) existingModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('startWorkflowModal'));
+            modal.show();
+        }
+
+        // Run workflow from modal
+        async function runWorkflowFromModal(templateId) {
+            const name = document.getElementById('workflowName').value.trim();
+            const teamId = document.getElementById('workflowTeam').value;
+
+            if (!name || !teamId) {
+                showToast('Please fill in all fields', 'warning');
+                return;
+            }
+
+            showToast('Creating workflow...', 'info');
+
+            try {
+                // Create workflow
+                const createRes = await fetch('/api/teams/workflows/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ team_id: teamId, name: name, workflow_template: templateId })
+                });
+                const createData = await createRes.json();
+
+                if (!createData.success) {
+                    showToast(`Error: ${createData.error || 'Failed to create'}`, 'error');
+                    return;
+                }
+
+                showToast('Running workflow...', 'info');
+
+                // Run the workflow
+                const runRes = await fetch(`/api/teams/workflows/${createData.workflow.id}/run/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }
+                });
+                const runData = await runRes.json();
+
+                bootstrap.Modal.getInstance(document.getElementById('startWorkflowModal')).hide();
+
+                if (runData.success) {
+                    showCelebrationToast('Workflow Complete!', `"${name}" finished with ${runData.executed_steps.length} steps completed!`, 'first-revenue');
+                    loadActiveWorkflows();
+                    loadTeamsData();
+                } else {
+                    showToast(`Workflow error: ${runData.error || 'Unknown'}`, 'warning');
+                }
+
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Load active workflows
+        async function loadActiveWorkflows() {
+            const container = document.getElementById('workflowsListContainer');
+            if (!container) return;
+
+            try {
+                const response = await fetch('/api/teams/workflows/active/');
+                const data = await response.json();
+
+                if (data.success && data.workflows) {
+                    activeWorkflowsCache = data.workflows;
+                    renderActiveWorkflows(data.workflows);
+                    document.getElementById('workflowsListCount').textContent = `${data.workflows.length} running`;
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="text-center text-danger py-2">Error loading workflows</div>';
+            }
+        }
+
+        // Render active workflows
+        function renderActiveWorkflows(workflows) {
+            const container = document.getElementById('workflowsListContainer');
+
+            if (!workflows || workflows.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-2">🚀 No active workflows</p>
+                        <small>Start a workflow from templates to see progress here</small>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = workflows.map(wf => `
+                <div class="card mb-2" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.2);">
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong style="color: #fcd34d;">${wf.name}</strong>
+                                <div class="text-muted small">${wf.team_name}</div>
+                            </div>
+                            <span class="badge ${wf.status === 'completed' ? 'bg-success' : wf.status === 'active' ? 'bg-warning text-dark' : 'bg-secondary'}">
+                                ${wf.status}
+                            </span>
+                        </div>
+                        <div class="progress mb-2" style="height: 6px;">
+                            <div class="progress-bar bg-warning" style="width: ${wf.progress}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">${wf.current_step}/${wf.total_steps} steps</small>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewWorkflowDetails('${wf.workflow_id}')" style="font-size: 10px; padding: 2px 8px;">
+                                Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // View workflow details
+        async function viewWorkflowDetails(workflowId) {
+            try {
+                const response = await fetch(`/api/teams/workflows/${workflowId}/status/`);
+                const data = await response.json();
+
+                if (data.success && data.workflow) {
+                    const wf = data.workflow;
+
+                    const stepsHtml = wf.steps.map(s => `
+                        <div class="d-flex align-items-center p-2 mb-1 rounded" style="background: rgba(71, 85, 105, 0.3);">
+                            <span class="me-2">${s.status === 'completed' ? '✅' : s.status === 'in_progress' ? '🔄' : '⏳'}</span>
+                            <div class="flex-grow-1">
+                                <div class="small" style="color: #e2e8f0;">${s.name}</div>
+                                <div class="text-muted" style="font-size: 10px;">
+                                    ${s.assigned_agent || 'Not assigned'} | ${s.action}
+                                </div>
+                            </div>
+                            <span class="badge ${s.status === 'completed' ? 'bg-success' : 'bg-secondary'}" style="font-size: 9px;">${s.status}</span>
+                        </div>
+                    `).join('');
+
+                    const modalHtml = `
+                        <div class="modal fade" id="workflowDetailsModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content" style="background: #1e293b; color: #e2e8f0;">
+                                    <div class="modal-header" style="border-color: rgba(251, 191, 36, 0.3);">
+                                        <h5 class="modal-title" style="color: #fbbf24;">⚡ ${wf.name}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row mb-3">
+                                            <div class="col-4 text-center">
+                                                <h3 class="mb-0" style="color: #fbbf24;">${wf.progress}%</h3>
+                                                <small class="text-muted">Progress</small>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <h3 class="mb-0" style="color: #22c55e;">${wf.steps.filter(s => s.status === 'completed').length}</h3>
+                                                <small class="text-muted">Completed</small>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <h3 class="mb-0" style="color: #a78bfa;">${wf.total_steps}</h3>
+                                                <small class="text-muted">Total Steps</small>
+                                            </div>
+                                        </div>
+                                        <hr style="border-color: rgba(71, 85, 105, 0.5);">
+                                        <h6 style="color: #a78bfa;">Workflow Steps</h6>
+                                        ${stepsHtml}
+                                    </div>
+                                    <div class="modal-footer" style="border-color: rgba(71, 85, 105, 0.5);">
+                                        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    const existingModal = document.getElementById('workflowDetailsModal');
+                    if (existingModal) existingModal.remove();
+
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    const modal = new bootstrap.Modal(document.getElementById('workflowDetailsModal'));
+                    modal.show();
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update loadTeamsData to also load templates and workflows
+        const originalLoadTeamsData = loadTeamsData;
+        loadTeamsData = async function() {
+            await originalLoadTeamsData();
+            loadWorkflowTemplates();
+            loadActiveWorkflows();
+        };
+
+        // END Session 228: Workflow Engine UI
+        // ============================================================
 
         // Load teams in the Agents tab visualization
         async function loadAgentTabTeams() {

@@ -241,6 +241,13 @@ from core.views_team_collaboration import (
     start_team_workflow,
     complete_workflow_step,
     team_stats,
+    # Session 228: Workflow Engine API
+    list_workflow_templates as team_workflow_templates,
+    execute_workflow,
+    execute_workflow_step,
+    workflow_status,
+    run_full_workflow,
+    list_active_workflows,
 )
 
 # Session 213: Import workflow API views
@@ -806,6 +813,14 @@ urlpatterns = [
     path('api/teams/workflows/<uuid:workflow_id>/', get_team_workflow, name='teams-workflows-detail'),
     path('api/teams/workflows/<uuid:workflow_id>/start/', start_team_workflow, name='teams-workflows-start'),
     path('api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/complete/', complete_workflow_step, name='teams-workflows-step-complete'),
+
+    # Session 228: Workflow Engine API
+    path('api/teams/workflows/templates/', team_workflow_templates, name='teams-workflows-templates'),
+    path('api/teams/workflows/active/', list_active_workflows, name='teams-workflows-active'),
+    path('api/teams/workflows/<uuid:workflow_id>/execute/', execute_workflow, name='teams-workflows-execute'),
+    path('api/teams/workflows/<uuid:workflow_id>/run/', run_full_workflow, name='teams-workflows-run'),
+    path('api/teams/workflows/<uuid:workflow_id>/status/', workflow_status, name='teams-workflows-status'),
+    path('api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/execute/', execute_workflow_step, name='teams-workflows-step-execute'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
