@@ -1447,6 +1447,13 @@
                     📊 Analytics
                 </button>
             </li>
+
+            <!-- Session 223: Opportunities Tab (Phase 1 - Creative Intelligence Empire) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="opportunities-tab" data-bs-toggle="tab" data-bs-target="#opportunities" type="button" role="tab" title="Discover and Act on Opportunities">
+                    🎯 Opportunities
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -8223,6 +8230,239 @@
                 </div>
             </div>
             <!-- END ANALYTICS TAB -->
+
+            <!-- Session 223: Opportunities Tab (Phase 1 - Creative Intelligence Empire) -->
+            <div class="tab-pane fade" id="opportunities" role="tabpanel">
+                <h3 class="mb-4">🎯 Opportunity Engine</h3>
+                <p class="text-muted mb-4">Discover high-scoring opportunities from spider intelligence. Transform trends into content. Make money.</p>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="opp-total-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Opportunities</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="opp-high-value">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">High Value (70+)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="opp-avg-score">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Avg Score</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="opp-urgent">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Time-Sensitive</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 224: Revenue Reality Stats -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="revenue-total">$0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Revenue</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="revenue-net">$0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Net Revenue</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="revenue-accuracy">--%</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Prediction Accuracy</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="revenue-transactions">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Transactions</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <select id="opp-filter-category" class="form-select" style="background: rgba(255,255,255,0.05); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                            <option value="">All Categories</option>
+                            <option value="digital_product">Digital Product</option>
+                            <option value="freelance">Freelance</option>
+                            <option value="content">Content Creation</option>
+                            <option value="template">Templates</option>
+                            <option value="course">Courses</option>
+                            <option value="software">Software</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="opp-filter-source" class="form-select" style="background: rgba(255,255,255,0.05); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                            <option value="">All Sources</option>
+                            <option value="trend">Trending Topic</option>
+                            <option value="job">Job/Gig</option>
+                            <option value="product">Product Demand</option>
+                            <option value="news">News Event</option>
+                            <option value="tech">Tech Trend</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" id="opp-min-score" class="form-control" placeholder="Min Score (0-100)" min="0" max="100" style="background: rgba(255,255,255,0.05); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button class="btn btn-outline-success flex-fill" onclick="loadOpportunities()">
+                            🔄 Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="scoreNewOpportunities()">
+                            ⚡ Score New
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Analyze Custom Trend -->
+                <div class="card mb-4" style="background: rgba(255,255,255,0.03); border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="card-body">
+                        <h5 class="text-success mb-3">🔍 Analyze a Trend</h5>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" id="opp-analyze-topic" class="form-control" placeholder="Enter a trend topic to analyze (e.g., 'AI video editing tools')" style="background: rgba(255,255,255,0.05); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-success w-100" onclick="analyzeTrend()">
+                                    🎯 Analyze & Score
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opportunities List -->
+                <div class="card" style="background: rgba(255,255,255,0.03); border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                        <h5 class="mb-0 text-success">📋 Top Opportunities</h5>
+                        <span class="badge bg-success" id="opp-list-count">0 opportunities</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="opportunities-list" style="max-height: 500px; overflow-y: auto;">
+                            <div class="text-center py-5 text-muted">
+                                <div class="spinner-border text-success mb-3" role="status" style="display: none;" id="opp-loading"></div>
+                                <p>Click "Refresh" or "Score New" to load opportunities</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opportunity Detail Modal -->
+                <div class="modal fade" id="opportunityModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a2e; border: 2px solid rgba(16, 185, 129, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                                <h5 class="modal-title text-success" id="opp-modal-title">Opportunity Details</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="opp-modal-body">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(16, 185, 129, 0.3);">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-info" onclick="showLogRevenueModal()">
+                                    💰 Log Revenue
+                                </button>
+                                <button type="button" class="btn btn-success" id="opp-modal-act-btn" onclick="actOnOpportunity()">
+                                    🚀 Start Creating
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 224: Log Revenue Modal -->
+                <div class="modal fade" id="logRevenueModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1a1a2e; border: 2px solid rgba(6, 182, 212, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                                <h5 class="modal-title text-info">💰 Log Revenue</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="logRevenueForm">
+                                    <input type="hidden" id="revenue-opp-id">
+                                    <div class="mb-3">
+                                        <label class="form-label text-light">Amount ($)</label>
+                                        <input type="number" step="0.01" class="form-control" id="revenue-amount" required style="background: rgba(255,255,255,0.05); border-color: rgba(6, 182, 212, 0.3); color: white;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-light">Platform</label>
+                                        <select class="form-select" id="revenue-platform" style="background: rgba(255,255,255,0.05); border-color: rgba(6, 182, 212, 0.3); color: white;">
+                                            <option value="gumroad">Gumroad</option>
+                                            <option value="etsy">Etsy</option>
+                                            <option value="fiverr">Fiverr</option>
+                                            <option value="upwork">Upwork</option>
+                                            <option value="creative_market">Creative Market</option>
+                                            <option value="adobe_stock">Adobe Stock</option>
+                                            <option value="shutterstock">Shutterstock</option>
+                                            <option value="direct">Direct Sale</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-light">Platform Fee ($)</label>
+                                        <input type="number" step="0.01" class="form-control" id="revenue-fee" value="0" style="background: rgba(255,255,255,0.05); border-color: rgba(6, 182, 212, 0.3); color: white;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-light">Content Type</label>
+                                        <select class="form-select" id="revenue-content-type" style="background: rgba(255,255,255,0.05); border-color: rgba(6, 182, 212, 0.3); color: white;">
+                                            <option value="image">Image</option>
+                                            <option value="video">Video</option>
+                                            <option value="template">Template</option>
+                                            <option value="course">Course</option>
+                                            <option value="ebook">E-Book</option>
+                                            <option value="service">Service</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-light">Notes (optional)</label>
+                                        <textarea class="form-control" id="revenue-notes" rows="2" placeholder="Description of the sale..." style="background: rgba(255,255,255,0.05); border-color: rgba(6, 182, 212, 0.3); color: white;"></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(6, 182, 212, 0.3);">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-info" onclick="submitRevenue()">
+                                    💰 Log Revenue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END OPPORTUNITIES TAB -->
 
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
@@ -38144,6 +38384,522 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // ============================================================
         // END SESSION 221 PHASE F: ADVANCED ANALYTICS FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 223: OPPORTUNITY ENGINE FUNCTIONS
+        // Phase 1 - Creative Intelligence Empire
+        // ============================================================
+
+        // Current opportunity state
+        let currentOpportunityId = null;
+
+        // Load opportunities from API
+        async function loadOpportunities() {
+            const listEl = document.getElementById('opportunities-list');
+            const loadingEl = document.getElementById('opp-loading');
+
+            if (loadingEl) loadingEl.style.display = 'block';
+
+            try {
+                // Build query params
+                const params = new URLSearchParams();
+                const category = document.getElementById('opp-filter-category')?.value;
+                const source = document.getElementById('opp-filter-source')?.value;
+                const minScore = document.getElementById('opp-min-score')?.value;
+
+                if (category) params.append('category', category);
+                if (source) params.append('source_type', source);
+                if (minScore) params.append('min_score', minScore);
+                params.append('page_size', '20');
+
+                const response = await fetch(`/api/opportunities/?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderOpportunities(data.opportunities);
+                    updateOpportunityStats();
+                } else {
+                    listEl.innerHTML = `<div class="alert alert-danger m-3">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading opportunities:', error);
+                listEl.innerHTML = `<div class="alert alert-danger m-3">Failed to load opportunities: ${error.message}</div>`;
+            } finally {
+                if (loadingEl) loadingEl.style.display = 'none';
+            }
+        }
+
+        // Render opportunities list
+        function renderOpportunities(opportunities) {
+            const listEl = document.getElementById('opportunities-list');
+            const countEl = document.getElementById('opp-list-count');
+
+            if (!opportunities || opportunities.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <p>No opportunities found. Try adjusting filters or score new data.</p>
+                    </div>`;
+                if (countEl) countEl.textContent = '0 opportunities';
+                return;
+            }
+
+            if (countEl) countEl.textContent = `${opportunities.length} opportunities`;
+
+            listEl.innerHTML = opportunities.map(opp => `
+                <div class="opportunity-item p-3 border-bottom" style="border-color: rgba(16, 185, 129, 0.2) !important; cursor: pointer;" onclick="viewOpportunityDetail('${opp.id}')">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 text-light">${escapeHtml(opp.title || 'Untitled')}</h6>
+                            <p class="text-muted small mb-2">${escapeHtml((opp.description || '').substring(0, 120))}...</p>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">${opp.category || 'uncategorized'}</span>
+                                <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">${opp.source_type || 'unknown'}</span>
+                                ${opp.urgency_level === 'critical' ? '<span class="badge bg-danger">URGENT</span>' : ''}
+                                ${opp.urgency_level === 'high' ? '<span class="badge bg-warning text-dark">High Priority</span>' : ''}
+                            </div>
+                            ${opp.suggested_content_types?.length ? `
+                                <div class="mt-2">
+                                    <small class="text-muted">Suggested: </small>
+                                    ${opp.suggested_content_types.slice(0, 3).map(ct => `<span class="badge bg-secondary me-1">${ct}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="text-end ms-3" style="min-width: 80px;">
+                            <div class="mb-2">
+                                <span class="badge ${getScoreBadgeClass(opp.scores?.overall_score)}" style="font-size: 1.1em; padding: 8px 12px;">
+                                    ${opp.scores?.overall_score || 0}
+                                </span>
+                            </div>
+                            <small class="text-muted d-block">Score</small>
+                            ${opp.estimated_revenue ? `<small class="text-success d-block">~$${parseFloat(opp.estimated_revenue).toFixed(0)}</small>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get badge class based on score
+        function getScoreBadgeClass(score) {
+            if (score >= 80) return 'bg-success';
+            if (score >= 60) return 'bg-warning text-dark';
+            if (score >= 40) return 'bg-info';
+            return 'bg-secondary';
+        }
+
+        // View opportunity detail
+        async function viewOpportunityDetail(oppId) {
+            currentOpportunityId = oppId;
+            const modalEl = document.getElementById('opportunityModal');
+            const titleEl = document.getElementById('opp-modal-title');
+            const bodyEl = document.getElementById('opp-modal-body');
+
+            bodyEl.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-success" role="status"></div></div>';
+
+            try {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                const response = await fetch(`/api/opportunities/${oppId}/`);
+                const data = await response.json();
+
+                if (data.success && data.opportunity) {
+                    const opp = data.opportunity;
+                    titleEl.textContent = opp.title || 'Opportunity Details';
+
+                    bodyEl.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <p class="text-light">${escapeHtml(opp.description || 'No description')}</p>
+
+                                <h6 class="text-success mt-4">Score Breakdown</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="p-2 rounded" style="background: rgba(16, 185, 129, 0.1);">
+                                            <small class="text-muted">Profit Potential</small>
+                                            <div class="progress mt-1" style="height: 20px;">
+                                                <div class="progress-bar bg-success" style="width: ${opp.scores?.profit_potential || 0}%;">
+                                                    ${opp.scores?.profit_potential || 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 rounded" style="background: rgba(239, 68, 68, 0.1);">
+                                            <small class="text-muted">Competition</small>
+                                            <div class="progress mt-1" style="height: 20px;">
+                                                <div class="progress-bar bg-danger" style="width: ${opp.scores?.competition_level || 0}%;">
+                                                    ${opp.scores?.competition_level || 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 rounded" style="background: rgba(245, 158, 11, 0.1);">
+                                            <small class="text-muted">Effort Required</small>
+                                            <div class="progress mt-1" style="height: 20px;">
+                                                <div class="progress-bar bg-warning" style="width: ${opp.scores?.effort_required || 0}%;">
+                                                    ${opp.scores?.effort_required || 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 rounded" style="background: rgba(139, 92, 246, 0.1);">
+                                            <small class="text-muted">Time Sensitivity</small>
+                                            <div class="progress mt-1" style="height: 20px;">
+                                                <div class="progress-bar bg-primary" style="width: ${opp.scores?.time_sensitivity || 0}%;">
+                                                    ${opp.scores?.time_sensitivity || 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                ${opp.score_details ? `
+                                    <h6 class="text-success mt-4">Reasoning</h6>
+                                    <div class="small text-muted">
+                                        ${opp.score_details.profit_reasoning ? `<p><strong>Profit:</strong> ${escapeHtml(opp.score_details.profit_reasoning)}</p>` : ''}
+                                        ${opp.score_details.competition_reasoning ? `<p><strong>Competition:</strong> ${escapeHtml(opp.score_details.competition_reasoning)}</p>` : ''}
+                                    </div>
+                                ` : ''}
+
+                                ${opp.keywords?.length ? `
+                                    <h6 class="text-success mt-4">Keywords</h6>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        ${opp.keywords.slice(0, 10).map(kw => `<span class="badge bg-secondary">${escapeHtml(kw)}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+                                    <div class="card-body text-center">
+                                        <h2 class="text-success mb-0">${opp.scores?.overall_score || 0}</h2>
+                                        <small class="text-muted">Overall Score</small>
+
+                                        <hr style="border-color: rgba(16, 185, 129, 0.3);">
+
+                                        <div class="mb-2">
+                                            <small class="text-muted d-block">Est. Revenue</small>
+                                            <strong class="text-success">$${(parseFloat(opp.estimated_revenue) || 0).toFixed(2)}</strong>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted d-block">Est. Cost</small>
+                                            <strong class="text-warning">$${(parseFloat(opp.estimated_cost) || 0).toFixed(2)}</strong>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block">ROI</small>
+                                            <strong class="text-info">${(parseFloat(opp.estimated_roi) || 0).toFixed(0)}%</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                ${opp.suggested_workflows?.length ? `
+                                    <div class="mt-3">
+                                        <h6 class="text-success">Suggested Workflows</h6>
+                                        ${opp.suggested_workflows.map(wf => `
+                                            <button class="btn btn-outline-success btn-sm w-100 mb-2" onclick="executeWorkflow('${wf}')">
+                                                ▶️ ${wf.replace(/_/g, ' ')}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+
+                                ${opp.suggested_content_types?.length ? `
+                                    <div class="mt-3">
+                                        <h6 class="text-success">Content Types</h6>
+                                        <div class="d-flex gap-1 flex-wrap">
+                                            ${opp.suggested_content_types.map(ct => `<span class="badge bg-success">${ct}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    bodyEl.innerHTML = `<div class="alert alert-danger">Failed to load opportunity: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading opportunity detail:', error);
+                bodyEl.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Score new opportunities from spider data
+        async function scoreNewOpportunities() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Scoring...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/opportunities/score/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hours: 24, limit: 50 })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Scored ${data.scored_count} opportunities!`, 'success');
+                    loadOpportunities();
+                } else {
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Analyze a custom trend
+        async function analyzeTrend() {
+            const topic = document.getElementById('opp-analyze-topic')?.value;
+            if (!topic) {
+                showToast('Please enter a trend topic to analyze', 'warning');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyzing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/opportunities/analyze/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic })
+                });
+                const data = await response.json();
+
+                if (data.success && data.opportunity_id) {
+                    showToast(`Analyzed! Score: ${data.scores.overall_score}`, 'success');
+                    document.getElementById('opp-analyze-topic').value = '';
+                    viewOpportunityDetail(data.opportunity_id);
+                    loadOpportunities();
+                } else {
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Act on an opportunity
+        async function actOnOpportunity() {
+            if (!currentOpportunityId) return;
+
+            const btn = document.getElementById('opp-modal-act-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Starting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/opportunities/${currentOpportunityId}/act/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Started working on opportunity!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('opportunityModal'))?.hide();
+                    loadOpportunities();
+
+                    // If there's a suggested workflow, offer to execute it
+                    if (data.suggested_workflow) {
+                        if (confirm(`Would you like to execute the "${data.suggested_workflow}" workflow?`)) {
+                            executeWorkflow(data.suggested_workflow);
+                        }
+                    }
+                } else {
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Update opportunity stats
+        async function updateOpportunityStats() {
+            try {
+                const response = await fetch('/api/opportunities/stats/');
+                const data = await response.json();
+
+                if (data.success && data.stats) {
+                    document.getElementById('opp-total-count').textContent = data.stats.total || 0;
+                    document.getElementById('opp-high-value').textContent = data.stats.high_value || 0;
+                    document.getElementById('opp-avg-score').textContent = Math.round(data.stats.average_scores?.overall || 0);
+
+                    // Calculate urgent count from status breakdown
+                    const urgentStatuses = ['new', 'active'];
+                    let urgent = 0;
+                    if (data.stats.by_status) {
+                        for (const status of urgentStatuses) {
+                            urgent += data.stats.by_status[status] || 0;
+                        }
+                    }
+                    document.getElementById('opp-urgent').textContent = urgent;
+                }
+            } catch (error) {
+                console.error('Error loading opportunity stats:', error);
+            }
+        }
+
+        // Execute a workflow (integrate with existing workflow system)
+        function executeWorkflow(workflowName) {
+            showToast(`Starting workflow: ${workflowName}`, 'info');
+            // Integrate with existing workflow execution system
+            if (typeof window.executeBuiltinWorkflow === 'function') {
+                window.executeBuiltinWorkflow(workflowName);
+            } else {
+                // Fallback: switch to Projects tab and show workflow
+                const projectsTab = document.getElementById('projects-tab');
+                if (projectsTab) projectsTab.click();
+                showToast(`Please execute "${workflowName}" from the Projects tab`, 'info');
+            }
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize opportunities tab when shown
+        document.getElementById('opportunities-tab')?.addEventListener('shown.bs.tab', function() {
+            loadOpportunities();
+            loadRevenueStats();
+        });
+
+        // ============================================================
+        // SESSION 224: REVENUE REALITY FUNCTIONS
+        // Phase 2 - Creative Intelligence Empire
+        // ============================================================
+
+        // Load revenue stats from API
+        async function loadRevenueStats() {
+            try {
+                const response = await fetch('/api/opportunities/revenue/stats/?days=30');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update revenue stat cards
+                    const totalEl = document.getElementById('revenue-total');
+                    const netEl = document.getElementById('revenue-net');
+                    const accuracyEl = document.getElementById('revenue-accuracy');
+                    const transactionsEl = document.getElementById('revenue-transactions');
+
+                    if (totalEl) totalEl.textContent = `$${(data.stats?.total_revenue || 0).toFixed(2)}`;
+                    if (netEl) netEl.textContent = `$${(data.stats?.total_net_revenue || 0).toFixed(2)}`;
+                    if (transactionsEl) transactionsEl.textContent = data.stats?.transaction_count || 0;
+
+                    // Prediction accuracy
+                    const avgAccuracy = data.prediction_accuracy?.average_accuracy;
+                    if (accuracyEl) {
+                        if (avgAccuracy && avgAccuracy > 0) {
+                            accuracyEl.textContent = `${avgAccuracy.toFixed(0)}%`;
+                        } else {
+                            accuracyEl.textContent = '--%';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading revenue stats:', error);
+            }
+        }
+
+        // Show log revenue modal
+        function showLogRevenueModal() {
+            if (!currentOpportunityId) {
+                showToast('Please select an opportunity first', 'warning');
+                return;
+            }
+
+            // Set the opportunity ID in the form
+            document.getElementById('revenue-opp-id').value = currentOpportunityId;
+
+            // Reset form fields
+            document.getElementById('revenue-amount').value = '';
+            document.getElementById('revenue-fee').value = '0';
+            document.getElementById('revenue-notes').value = '';
+
+            // Hide opportunity modal and show revenue modal
+            const oppModal = bootstrap.Modal.getInstance(document.getElementById('opportunityModal'));
+            if (oppModal) oppModal.hide();
+
+            const revenueModal = new bootstrap.Modal(document.getElementById('logRevenueModal'));
+            revenueModal.show();
+        }
+
+        // Submit revenue entry
+        async function submitRevenue() {
+            const oppId = document.getElementById('revenue-opp-id').value;
+            const amount = parseFloat(document.getElementById('revenue-amount').value);
+            const platform = document.getElementById('revenue-platform').value;
+            const fee = parseFloat(document.getElementById('revenue-fee').value) || 0;
+            const contentType = document.getElementById('revenue-content-type').value;
+            const notes = document.getElementById('revenue-notes').value;
+
+            if (!oppId || !amount || amount <= 0) {
+                showToast('Please enter a valid amount', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/opportunities/${oppId}/revenue/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        platform: platform,
+                        platform_fee: fee,
+                        content_type: contentType,
+                        notes: notes
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Revenue logged! Net: $${data.revenue?.net_amount?.toFixed(2) || amount.toFixed(2)}`, 'success');
+
+                    // Close modal
+                    const revenueModal = bootstrap.Modal.getInstance(document.getElementById('logRevenueModal'));
+                    if (revenueModal) revenueModal.hide();
+
+                    // Reload revenue stats
+                    loadRevenueStats();
+                } else {
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error logging revenue:', error);
+                showToast(`Failed to log revenue: ${error.message}`, 'error');
+            }
+        }
+
+        // ============================================================
+        // END SESSION 224: REVENUE REALITY FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // END SESSION 223: OPPORTUNITY ENGINE FUNCTIONS
         // ============================================================
 
         // ============================================================

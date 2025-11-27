@@ -207,6 +207,24 @@ from core.views_preferences import (
     track_ab_conversion,
 )
 
+# Session 223: Import Opportunity Engine views (Phase 1 - Creative Intelligence Empire)
+from core.views_opportunity import (
+    opportunity_list,
+    opportunity_detail,
+    opportunity_score,
+    opportunity_act,
+    opportunity_top,
+    opportunity_rescore,
+    opportunity_analyze,
+    opportunity_stats,
+    # Session 224: Revenue Reality endpoints
+    opportunity_log_revenue,
+    opportunity_revenue_list,
+    revenue_stats,
+    opportunity_link_content,
+    opportunity_content_list,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -737,6 +755,23 @@ urlpatterns = [
 
     # Auto-fix endpoint for agent debugging
     path('api/projects/auto-fix/', auto_fix_code, name='auto-fix-code'),
+
+    # Session 223: Opportunity Engine API (Phase 1 - Creative Intelligence Empire)
+    path('api/opportunities/', opportunity_list, name='opportunity-list'),
+    path('api/opportunities/top/', opportunity_top, name='opportunity-top'),
+    path('api/opportunities/stats/', opportunity_stats, name='opportunity-stats'),
+    path('api/opportunities/score/', opportunity_score, name='opportunity-score'),
+    path('api/opportunities/analyze/', opportunity_analyze, name='opportunity-analyze'),
+    path('api/opportunities/<uuid:opportunity_id>/', opportunity_detail, name='opportunity-detail'),
+    path('api/opportunities/<uuid:opportunity_id>/act/', opportunity_act, name='opportunity-act'),
+    path('api/opportunities/<uuid:opportunity_id>/rescore/', opportunity_rescore, name='opportunity-rescore'),
+
+    # Session 224: Revenue Reality API (Phase 2 - Creative Intelligence Empire)
+    path('api/opportunities/revenue/stats/', revenue_stats, name='revenue-stats'),
+    path('api/opportunities/<uuid:opportunity_id>/revenue/', opportunity_log_revenue, name='opportunity-log-revenue'),
+    path('api/opportunities/<uuid:opportunity_id>/revenue/list/', opportunity_revenue_list, name='opportunity-revenue-list'),
+    path('api/opportunities/<uuid:opportunity_id>/content/', opportunity_link_content, name='opportunity-link-content'),
+    path('api/opportunities/<uuid:opportunity_id>/content/list/', opportunity_content_list, name='opportunity-content-list'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),

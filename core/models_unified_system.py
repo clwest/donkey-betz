@@ -459,9 +459,737 @@ class Opportunity(models.Model):
             # If no revenue record exists, create one
             self.mark_as_accepted(actual_amount)
 
+    # =========================================================================
+    # Session 223: Creative Intelligence Empire - Opportunity Scoring Fields
+    # =========================================================================
+
+    # Source linkage to spider data
+    spider_data = models.ForeignKey(
+        'SpiderData',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scored_opportunities',
+        help_text="Link to spider-collected data that generated this opportunity"
+    )
+
+    # Source type categorization
+    SOURCE_TYPE_CHOICES = [
+        ('trend', 'Trending Topic'),
+        ('job', 'Job/Gig Opportunity'),
+        ('product', 'Product Demand'),
+        ('news', 'News Event'),
+        ('competition', 'Competitor Gap'),
+        ('seasonal', 'Seasonal Demand'),
+        ('viral', 'Viral Content'),
+        ('tech', 'Technology Trend'),
+    ]
+    source_type = models.CharField(
+        max_length=20,
+        choices=SOURCE_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        help_text="What kind of data generated this opportunity"
+    )
+
+    # Category for content creation
+    CATEGORY_CHOICES = [
+        ('digital_product', 'Digital Product'),
+        ('freelance', 'Freelance Service'),
+        ('content', 'Content Creation'),
+        ('template', 'Template/Asset'),
+        ('course', 'Course/Education'),
+        ('software', 'Software/Tool'),
+        ('consulting', 'Consulting'),
+        ('affiliate', 'Affiliate Marketing'),
+    ]
+    category = models.CharField(
+        max_length=30,
+        choices=CATEGORY_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Category for content creation opportunity"
+    )
+
+    # Scoring fields (1-100) - THE CORE OF THE OPPORTUNITY ENGINE
+    profit_potential = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text="Estimated profit potential (1-100)"
+    )
+    competition_level = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text="Competition level - higher means MORE competition (1-100)"
+    )
+    effort_required = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text="Effort required - higher means MORE effort (1-100)"
+    )
+    time_sensitivity = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text="Time sensitivity - higher means MORE urgent (1-100)"
+    )
+    overall_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text="Overall opportunity score (calculated from other scores)"
+    )
+
+    # Content suggestions for capitalizing on opportunity
+    suggested_content_types = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of content types: ['logo', 'thumbnail', 'video']"
+    )
+    suggested_workflows = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of recommended workflows to execute"
+    )
+
+    # Financial estimates
+    estimated_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Estimated cost to create content for this opportunity"
+    )
+
+    # Supporting data
+    keywords = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Related keywords/tags"
+    )
+    market_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Market research data"
+    )
+    competitor_info = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Competitor analysis"
+    )
+
+    # Advisor consultation
+    advisor_recommendations = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Recommendations from advisors consulted about this opportunity"
+    )
+
+    # Additional timestamps
+    scored_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this opportunity was scored"
+    )
+    acted_on_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When user started acting on this opportunity"
+    )
+
+    @property
+    def is_scored(self):
+        """Check if this opportunity has been scored."""
+        return all([
+            self.profit_potential is not None,
+            self.competition_level is not None,
+            self.effort_required is not None,
+            self.time_sensitivity is not None,
+            self.overall_score is not None
+        ])
+
+    @property
+    def estimated_roi(self):
+        """Calculate estimated ROI."""
+        if self.estimated_cost and self.estimated_cost > 0:
+            return ((self.potential_revenue - self.estimated_cost) / self.estimated_cost) * 100
+        return 0
+
+    @property
+    def urgency_level(self):
+        """Categorize urgency based on time sensitivity."""
+        if not self.time_sensitivity:
+            return 'unknown'
+        if self.time_sensitivity >= 80:
+            return 'critical'
+        elif self.time_sensitivity >= 60:
+            return 'high'
+        elif self.time_sensitivity >= 40:
+            return 'medium'
+        else:
+            return 'low'
+
+    def calculate_overall_score(self):
+        """
+        Calculate the overall score based on individual factors.
+
+        Formula:
+        - Profit potential contributes positively (weight: 0.35)
+        - Low competition contributes positively (invert: 100 - competition)
+        - Low effort contributes positively (invert: 100 - effort) (weight: 0.20)
+        - Time sensitivity adds urgency bonus (weight: 0.10)
+        """
+        if not all([self.profit_potential, self.competition_level,
+                    self.effort_required, self.time_sensitivity]):
+            return None
+
+        # Invert competition and effort (lower is better for overall score)
+        competition_score = 100 - self.competition_level
+        effort_score = 100 - self.effort_required
+
+        # Weighted combination
+        score = (
+            self.profit_potential * 0.35 +
+            competition_score * 0.35 +
+            effort_score * 0.20 +
+            self.time_sensitivity * 0.10
+        )
+
+        return min(100, max(1, int(score)))
+
+    def score_opportunity(self, save=True):
+        """Calculate and save the overall score."""
+        from django.utils import timezone
+        self.overall_score = self.calculate_overall_score()
+        if self.overall_score:
+            self.scored_at = timezone.now()
+            if save:
+                self.save()
+        return self.overall_score
+
     class Meta:
         app_label = 'core'
         ordering = ['-match_score', '-created_at']
+
+
+# =============================================================================
+# Session 223: Opportunity Scoring Support Models
+# =============================================================================
+
+class OpportunityScore(models.Model):
+    """
+    Detailed scoring breakdown and reasoning for an opportunity.
+
+    This provides transparency into how an opportunity was scored
+    and allows for score refinement over time.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    opportunity = models.OneToOneField(
+        Opportunity,
+        on_delete=models.CASCADE,
+        related_name='score_details'
+    )
+
+    # Scoring breakdown with reasoning
+    profit_reasoning = models.TextField(
+        blank=True,
+        help_text="Explanation for profit potential score"
+    )
+    competition_reasoning = models.TextField(
+        blank=True,
+        help_text="Explanation for competition level score"
+    )
+    effort_reasoning = models.TextField(
+        blank=True,
+        help_text="Explanation for effort required score"
+    )
+    timing_reasoning = models.TextField(
+        blank=True,
+        help_text="Explanation for time sensitivity score"
+    )
+
+    # Confidence in scoring
+    confidence_level = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        default=70,
+        help_text="Confidence in the accuracy of this scoring (1-100)"
+    )
+
+    # Data sources used for scoring
+    data_sources = models.JSONField(
+        default=list,
+        help_text="List of data sources used to calculate scores"
+    )
+
+    # Advisor input
+    advisors_consulted = models.JSONField(
+        default=list,
+        help_text="List of advisors who provided input"
+    )
+
+    # Scoring metadata
+    scoring_model_version = models.CharField(
+        max_length=20,
+        default='v1.0',
+        help_text="Version of the scoring algorithm used"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+
+    def __str__(self):
+        return f"Score Details for: {self.opportunity.title}"
+
+
+class OpportunityAction(models.Model):
+    """
+    Track actions taken on opportunities.
+
+    This enables the learning loop by recording what was done
+    and eventually tracking the outcomes.
+    """
+
+    ACTION_TYPE_CHOICES = [
+        ('viewed', 'Viewed'),
+        ('analyzed', 'Analyzed'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('started', 'Started Creating'),
+        ('content_created', 'Content Created'),
+        ('published', 'Published'),
+        ('revenue_logged', 'Revenue Logged'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    opportunity = models.ForeignKey(
+        Opportunity,
+        on_delete=models.CASCADE,
+        related_name='actions'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+
+    action_type = models.CharField(max_length=30, choices=ACTION_TYPE_CHOICES)
+
+    # What was created/done
+    content_ids = models.JSONField(
+        default=list,
+        help_text="IDs of content created for this opportunity"
+    )
+    workflow_used = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Which workflow was used"
+    )
+
+    # Outcome tracking (for learning loop)
+    outcome = models.JSONField(
+        default=dict,
+        help_text="Outcome data: revenue, engagement, etc."
+    )
+
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.action_type} on {self.opportunity.title}"
+
+
+class OpportunityRevenue(models.Model):
+    """
+    Session 224: Track actual revenue generated from opportunities.
+
+    This closes the loop between discovered opportunities and real income,
+    enabling the learning system to improve predictions over time.
+    """
+
+    REVENUE_STATUS_CHOICES = [
+        ('pending', 'Pending Payment'),
+        ('received', 'Received'),
+        ('partial', 'Partial Payment'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+    ]
+
+    CONTENT_TYPE_CHOICES = [
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('audio', 'Audio'),
+        ('3d_model', '3D Model'),
+        ('template', 'Template'),
+        ('bundle', 'Bundle'),
+        ('service', 'Service/Freelance'),
+        ('other', 'Other'),
+    ]
+
+    PLATFORM_CHOICES = [
+        ('direct', 'Direct Sale'),
+        ('etsy', 'Etsy'),
+        ('gumroad', 'Gumroad'),
+        ('creative_market', 'Creative Market'),
+        ('shutterstock', 'Shutterstock'),
+        ('adobe_stock', 'Adobe Stock'),
+        ('envato', 'Envato Elements'),
+        ('fiverr', 'Fiverr'),
+        ('upwork', 'Upwork'),
+        ('freelancer', 'Freelancer'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    opportunity = models.ForeignKey(
+        Opportunity,
+        on_delete=models.CASCADE,
+        related_name='revenues'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+
+    # Revenue details
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Total revenue amount"
+    )
+    currency = models.CharField(max_length=3, default='USD')
+    platform_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Platform/marketplace fee"
+    )
+    net_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Amount after fees"
+    )
+
+    # Revenue classification
+    status = models.CharField(
+        max_length=20,
+        choices=REVENUE_STATUS_CHOICES,
+        default='received'
+    )
+    content_type = models.CharField(
+        max_length=20,
+        choices=CONTENT_TYPE_CHOICES,
+        default='image'
+    )
+    platform = models.CharField(
+        max_length=30,
+        choices=PLATFORM_CHOICES,
+        default='direct'
+    )
+
+    # Content linkage (what content generated this revenue?)
+    image_history = models.ForeignKey(
+        'content.ImageHistory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunity_revenues'
+    )
+    video_history = models.ForeignKey(
+        'content.VideoHistory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunity_revenues'
+    )
+    content_ids = models.JSONField(
+        default=list,
+        help_text="Additional content IDs associated with this revenue"
+    )
+
+    # Prediction accuracy tracking
+    estimated_revenue = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="What was predicted vs actual"
+    )
+    prediction_accuracy = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Accuracy percentage: actual/estimated * 100"
+    )
+
+    # Metadata
+    description = models.TextField(
+        blank=True,
+        help_text="Description of the sale/revenue"
+    )
+    sale_date = models.DateTimeField(
+        help_text="When the sale occurred"
+    )
+    payment_received_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When payment was actually received"
+    )
+    external_reference = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="External order ID or reference"
+    )
+
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-sale_date']
+        indexes = [
+            models.Index(fields=['opportunity', 'status']),
+            models.Index(fields=['user', 'sale_date']),
+            models.Index(fields=['platform', 'status']),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate net amount if not set
+        if self.net_amount is None:
+            self.net_amount = self.amount - self.platform_fee
+
+        # Calculate prediction accuracy if we have an estimate
+        if self.estimated_revenue and self.estimated_revenue > 0:
+            self.prediction_accuracy = float(self.amount / self.estimated_revenue * 100)
+        elif self.opportunity.potential_revenue and self.opportunity.potential_revenue > 0:
+            # Use opportunity's predicted revenue as fallback
+            self.estimated_revenue = self.opportunity.potential_revenue
+            self.prediction_accuracy = float(self.amount / self.opportunity.potential_revenue * 100)
+
+        super().save(*args, **kwargs)
+
+        # Update opportunity status to 'earning' when revenue is logged
+        if self.opportunity.status not in ['earning', 'closed']:
+            self.opportunity.status = 'earning'
+            self.opportunity.save(update_fields=['status'])
+
+    def __str__(self):
+        return f"${self.amount} from {self.opportunity.title}"
+
+    @property
+    def prediction_error(self):
+        """Calculate the prediction error (actual - estimated)"""
+        if self.estimated_revenue:
+            return float(self.amount - self.estimated_revenue)
+        return None
+
+    @property
+    def is_better_than_predicted(self):
+        """Did we do better than predicted?"""
+        if self.estimated_revenue:
+            return self.amount > self.estimated_revenue
+        return None
+
+
+class OpportunityContent(models.Model):
+    """
+    Session 224: Link content created from opportunities.
+
+    Tracks which content was created as a result of pursuing an opportunity,
+    enabling revenue attribution when that content generates income.
+    """
+
+    CONTENT_TYPE_CHOICES = [
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('audio', 'Audio'),
+        ('3d_model', '3D Model'),
+        ('template', 'Template'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    opportunity = models.ForeignKey(
+        Opportunity,
+        on_delete=models.CASCADE,
+        related_name='created_content'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+
+    content_type = models.CharField(max_length=20, choices=CONTENT_TYPE_CHOICES)
+
+    # Direct links to content models
+    image_history = models.ForeignKey(
+        'content.ImageHistory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunity_created'
+    )
+    video_history = models.ForeignKey(
+        'content.VideoHistory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunity_created'
+    )
+
+    # Workflow tracking
+    workflow_used = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Which workflow created this content"
+    )
+    workflow_execution_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="ID of the workflow execution"
+    )
+
+    # Cost tracking
+    production_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Cost to create this content (API costs, etc.)"
+    )
+
+    # Status
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_platforms = models.JSONField(
+        default=list,
+        help_text="Where this content was published"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.content_type} for {self.opportunity.title}"
+
+    @property
+    def total_revenue(self):
+        """Calculate total revenue generated by this content"""
+        if self.content_type == 'image' and self.image_history:
+            return sum(r.amount for r in self.image_history.opportunity_revenues.all())
+        elif self.content_type == 'video' and self.video_history:
+            return sum(r.amount for r in self.video_history.opportunity_revenues.all())
+        return 0
+
+    @property
+    def roi(self):
+        """Calculate ROI for this content"""
+        if self.production_cost and self.production_cost > 0:
+            return float((self.total_revenue - self.production_cost) / self.production_cost * 100)
+        return None
+
+
+class OpportunityPredictionAccuracy(models.Model):
+    """
+    Session 224: Aggregate prediction accuracy tracking.
+
+    Stores historical accuracy data for the learning loop to improve predictions.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="User-specific accuracy (null for system-wide)"
+    )
+
+    # Time period
+    period_start = models.DateField()
+    period_end = models.DateField()
+    period_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly'),
+            ('monthly', 'Monthly'),
+        ]
+    )
+
+    # Accuracy metrics
+    total_opportunities = models.IntegerField(default=0)
+    opportunities_with_revenue = models.IntegerField(default=0)
+    conversion_rate = models.FloatField(
+        default=0,
+        help_text="% of opportunities that generated revenue"
+    )
+
+    # Revenue predictions
+    total_predicted_revenue = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0
+    )
+    total_actual_revenue = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0
+    )
+    revenue_accuracy = models.FloatField(
+        default=0,
+        help_text="Actual/Predicted * 100"
+    )
+    mean_absolute_error = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Average absolute difference between predicted and actual"
+    )
+
+    # By category breakdown
+    accuracy_by_category = models.JSONField(
+        default=dict,
+        help_text="Accuracy broken down by opportunity category"
+    )
+    accuracy_by_source = models.JSONField(
+        default=dict,
+        help_text="Accuracy broken down by source type"
+    )
+
+    # Scoring accuracy
+    avg_predicted_score = models.FloatField(default=0)
+    avg_actual_performance = models.FloatField(
+        default=0,
+        help_text="Normalized actual performance score"
+    )
+    score_correlation = models.FloatField(
+        default=0,
+        help_text="Correlation between predicted scores and actual outcomes"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-period_start']
+        unique_together = ['user', 'period_start', 'period_type']
+
+    def __str__(self):
+        user_str = f"User {self.user_id}" if self.user else "System-wide"
+        return f"{user_str} Accuracy {self.period_start} to {self.period_end}"
 
 
 class Application(models.Model):
