@@ -3,12 +3,20 @@
 # Session 210: Implicit Learning & Recommendation Engine
 # Session 211: A/B Testing Framework
 # Session 212: Workflow Builder Service
+# Session 214: Agent Collaboration Service
 
 from .spider_intelligence import SpiderIntelligenceService
 from .implicit_learning import ImplicitLearningService, get_learning_service
 from .recommendation_engine import RecommendationEngine, get_recommendation_engine
 from .ab_testing import ABTestingService, get_ab_testing_service
 from .workflow_builder import WorkflowBuilderService, get_workflow_builder
+from .agent_collaboration import (
+    AgentCollaborationService,
+    get_collaboration_service,
+    CollaborationType,
+    MessageType,
+    CollaborationStatus,
+)
 
 __all__ = [
     'SpiderIntelligenceService',
@@ -20,4 +28,9 @@ __all__ = [
     'get_ab_testing_service',
     'WorkflowBuilderService',
     'get_workflow_builder',
+    'AgentCollaborationService',
+    'get_collaboration_service',
+    'CollaborationType',
+    'MessageType',
+    'CollaborationStatus',
 ]

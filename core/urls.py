@@ -152,6 +152,27 @@ from core.views_workflow import (
     import_shared_workflow,
     public_workflows,
 )
+
+# Session 214: Import collaboration API views
+from core.views_collaboration import (
+    request_collaboration,
+    get_collaboration,
+    respond_to_collaboration,
+    collaboration_history,
+    send_message,
+    get_messages,
+    mark_message_processed,
+    share_knowledge,
+    search_knowledge,
+    learn_knowledge,
+    rate_knowledge,
+    get_agent_performance,
+    get_top_performers,
+    get_collaboration_stats,
+    find_collaborator,
+    delegate_task,
+    request_consultation,
+)
 from core.views_spider_data import (
     get_spider_items,
     get_spider_summary,
@@ -677,6 +698,28 @@ urlpatterns = [
     path('api/workflows/<str:workflow_id>/schedule/', workflow_schedule, name='workflow-schedule'),
     path('api/workflows/<str:workflow_id>/share/', workflow_share, name='workflow-share'),
     path('api/workflows/<str:workflow_id>/unshare/', workflow_unshare, name='workflow-unshare'),
+
+    # Session 214: Agent Collaboration API
+    path('api/collaboration/request/', request_collaboration, name='collaboration-request'),
+    path('api/collaboration/history/', collaboration_history, name='collaboration-history'),
+    path('api/collaboration/stats/', get_collaboration_stats, name='collaboration-stats'),
+    path('api/collaboration/find-collaborator/', find_collaborator, name='collaboration-find'),
+    path('api/collaboration/delegate/', delegate_task, name='collaboration-delegate'),
+    path('api/collaboration/consult/', request_consultation, name='collaboration-consult'),
+    path('api/collaboration/<str:collaboration_id>/', get_collaboration, name='collaboration-detail'),
+    path('api/collaboration/<str:collaboration_id>/respond/', respond_to_collaboration, name='collaboration-respond'),
+    # Messages
+    path('api/collaboration/messages/send/', send_message, name='collaboration-message-send'),
+    path('api/collaboration/messages/', get_messages, name='collaboration-messages'),
+    path('api/collaboration/messages/<str:message_id>/processed/', mark_message_processed, name='collaboration-message-processed'),
+    # Knowledge
+    path('api/collaboration/knowledge/share/', share_knowledge, name='collaboration-knowledge-share'),
+    path('api/collaboration/knowledge/', search_knowledge, name='collaboration-knowledge'),
+    path('api/collaboration/knowledge/<str:knowledge_id>/learn/', learn_knowledge, name='collaboration-knowledge-learn'),
+    path('api/collaboration/knowledge/<str:knowledge_id>/rate/', rate_knowledge, name='collaboration-knowledge-rate'),
+    # Performance
+    path('api/collaboration/performance/', get_agent_performance, name='collaboration-performance'),
+    path('api/collaboration/top-performers/', get_top_performers, name='collaboration-top-performers'),
 
     # Domain preferences (catch-all - must be LAST in preferences routes)
     path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),

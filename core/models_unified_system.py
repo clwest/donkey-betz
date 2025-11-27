@@ -2220,3 +2220,190 @@ class ScheduledWorkflow(models.Model):
 
     def __str__(self):
         return f"Schedule: {self.custom_workflow.name} ({self.cron_expression})"
+
+
+# =============================================================================
+# SESSION 214: AGENT COLLABORATION MODELS
+# =============================================================================
+
+class CollaborationSession(models.Model):
+    """
+    Track agent collaboration sessions.
+
+    Session 214: Enhanced collaboration tracking with detailed workflow support.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Requester
+    requester_agent = models.CharField(max_length=200)
+
+    # Collaboration details
+    collaboration_type = models.CharField(max_length=50)  # delegation, consultation, parallel, etc.
+    task_description = models.TextField()
+    input_data = models.JSONField(default=dict)
+
+    # Participating agents
+    participating_agents = models.JSONField(default=list)
+
+    # Status and results
+    status = models.CharField(max_length=50, default='pending')
+    output_data = models.JSONField(default=dict, blank=True)
+    quality_score = models.FloatField(default=0.0)
+
+    # Timing
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    execution_time_ms = models.FloatField(default=0.0)
+
+    # Context
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='collaboration_sessions',
+        null=True, blank=True
+    )
+    workflow_execution_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-started_at']
+        verbose_name = 'Collaboration Session'
+        verbose_name_plural = 'Collaboration Sessions'
+
+    def __str__(self):
+        return f"{self.requester_agent} collaboration ({self.collaboration_type})"
+
+
+class InterAgentMessage(models.Model):
+    """
+    Store inter-agent messages for communication tracking.
+
+    Session 214: Enables asynchronous agent-to-agent communication.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Message routing
+    sender_agent = models.CharField(max_length=200)
+    receiver_agent = models.CharField(max_length=200)
+    message_type = models.CharField(max_length=50)  # request, response, notification, etc.
+
+    # Content
+    content = models.JSONField(default=dict)
+    context = models.JSONField(default=dict)
+
+    # Metadata
+    priority = models.IntegerField(default=5)  # 1-10, 10 is highest
+    correlation_id = models.UUIDField(null=True, blank=True)  # Links related messages
+    response_to = models.UUIDField(null=True, blank=True)  # ID of message this responds to
+
+    # Status
+    is_read = models.BooleanField(default=False)
+    is_processed = models.BooleanField(default=False)
+
+    # Timing
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = 'Inter-Agent Message'
+        verbose_name_plural = 'Inter-Agent Messages'
+
+    def __str__(self):
+        return f"{self.sender_agent} -> {self.receiver_agent} ({self.message_type})"
+
+
+class SharedKnowledge(models.Model):
+    """
+    Shared knowledge base for agent learning and knowledge transfer.
+
+    Session 214: Enables agents to share and learn from each other's insights.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Knowledge source
+    source_agent = models.CharField(max_length=200)
+
+    # Knowledge content
+    knowledge_type = models.CharField(max_length=50)  # technique, pattern, insight, skill
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    knowledge_content = models.JSONField(default=dict)
+
+    # Metadata
+    domain = models.CharField(max_length=100)  # image, video, audio, research, etc.
+    tags = models.JSONField(default=list)
+
+    # Usage tracking
+    applied_count = models.IntegerField(default=0)
+    effectiveness_score = models.FloatField(default=0.0)
+
+    # Agents that have learned this
+    learned_by_agents = models.JSONField(default=list)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-effectiveness_score', '-applied_count']
+        verbose_name = 'Shared Knowledge'
+        verbose_name_plural = 'Shared Knowledge'
+
+    def __str__(self):
+        return f"{self.title} by {self.source_agent} ({self.knowledge_type})"
+
+
+class AgentPerformanceMetric(models.Model):
+    """
+    Track agent performance metrics over time.
+
+    Session 214: Comprehensive performance tracking for agent optimization.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent_name = models.CharField(max_length=200, unique=True)
+
+    # Execution metrics
+    total_executions = models.IntegerField(default=0)
+    successful_executions = models.IntegerField(default=0)
+    failed_executions = models.IntegerField(default=0)
+
+    # Collaboration metrics
+    total_collaborations = models.IntegerField(default=0)
+    successful_collaborations = models.IntegerField(default=0)
+    delegations_made = models.IntegerField(default=0)
+    delegations_received = models.IntegerField(default=0)
+    consultations_given = models.IntegerField(default=0)
+    consultations_received = models.IntegerField(default=0)
+
+    # Performance metrics
+    avg_response_time_ms = models.FloatField(default=0.0)
+    quality_score = models.FloatField(default=0.0)
+
+    # Knowledge metrics
+    knowledge_contributions = models.IntegerField(default=0)
+    knowledge_consumed = models.IntegerField(default=0)
+
+    # Specialization scores (domain -> score)
+    specialization_scores = models.JSONField(default=dict)
+
+    # Activity tracking
+    last_execution = models.DateTimeField(null=True, blank=True)
+    last_collaboration = models.DateTimeField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-quality_score', '-total_executions']
+        verbose_name = 'Agent Performance Metric'
+        verbose_name_plural = 'Agent Performance Metrics'
+
+    def __str__(self):
+        success_rate = self.successful_executions / self.total_executions if self.total_executions > 0 else 0
+        return f"{self.agent_name} ({success_rate:.1%} success)"
