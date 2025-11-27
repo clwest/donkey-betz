@@ -354,6 +354,25 @@ from core.views_proactive import (
     automation_logs,
 )
 
+# Session 235: Import A/B Testing Framework views (Phase 6)
+from core.views_ab_testing import (
+    ab_testing_dashboard,
+    list_tests,
+    create_test,
+    test_detail,
+    start_test,
+    pause_test,
+    complete_test,
+    test_results,
+    add_variant,
+    variant_detail,
+    record_event,
+    list_goals,
+    create_goal,
+    goal_detail,
+    update_goal_progress,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -1027,6 +1046,25 @@ urlpatterns = [
     path('api/proactive/automations/<uuid:automation_id>/execute/', execute_automation, name='proactive-automation-execute'),
     path('api/proactive/automations/<uuid:automation_id>/toggle/', toggle_automation, name='proactive-automation-toggle'),
     path('api/proactive/automations/<uuid:automation_id>/logs/', automation_logs, name='proactive-automation-logs'),
+
+    # Session 235: A/B Testing Framework APIs (Phase 6)
+    path('api/ab-testing/dashboard/', ab_testing_dashboard, name='ab-testing-dashboard'),
+    path('api/ab-testing/tests/', list_tests, name='ab-testing-tests'),
+    path('api/ab-testing/tests/create/', create_test, name='ab-testing-create'),
+    path('api/ab-testing/tests/<uuid:test_id>/', test_detail, name='ab-testing-detail'),
+    path('api/ab-testing/tests/<uuid:test_id>/start/', start_test, name='ab-testing-start'),
+    path('api/ab-testing/tests/<uuid:test_id>/pause/', pause_test, name='ab-testing-pause'),
+    path('api/ab-testing/tests/<uuid:test_id>/complete/', complete_test, name='ab-testing-complete'),
+    path('api/ab-testing/tests/<uuid:test_id>/results/', test_results, name='ab-testing-results'),
+    path('api/ab-testing/tests/<uuid:test_id>/variants/', add_variant, name='ab-testing-add-variant'),
+    path('api/ab-testing/variants/<uuid:variant_id>/', variant_detail, name='ab-testing-variant-detail'),
+    path('api/ab-testing/variants/<uuid:variant_id>/event/', record_event, name='ab-testing-record-event'),
+
+    # Goals API
+    path('api/goals/', list_goals, name='goals-list'),
+    path('api/goals/create/', create_goal, name='goals-create'),
+    path('api/goals/<uuid:goal_id>/', goal_detail, name='goals-detail'),
+    path('api/goals/<uuid:goal_id>/progress/', update_goal_progress, name='goals-update-progress'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),

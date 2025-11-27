@@ -1511,6 +1511,34 @@
                     🚀 Distribute
                 </button>
             </li>
+
+            <!-- Session 235: Notification Bell -->
+            <li class="nav-item ms-auto" role="presentation">
+                <div class="dropdown">
+                    <button class="btn position-relative" type="button" id="notificationBellDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; border: none; color: #f9a8d4; padding: 8px 12px;" title="Notifications">
+                        <i class="fas fa-bell" style="font-size: 1.2rem;"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none; font-size: 0.65rem;">
+                            0
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationBellDropdown" style="width: 350px; max-height: 400px; overflow-y: auto; background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(236, 72, 153, 0.4);">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center" style="color: #ec4899;">
+                            <span><i class="fas fa-bell me-2"></i>Notifications</span>
+                            <button class="btn btn-sm btn-link p-0" onclick="markAllNotificationsRead()" style="color: #f9a8d4; font-size: 0.75rem; text-decoration: none;">Mark all read</button>
+                        </li>
+                        <li><hr class="dropdown-divider" style="border-color: rgba(236, 72, 153, 0.3);"></li>
+                        <div id="notificationDropdownList">
+                            <li class="px-3 py-4 text-center text-muted">
+                                <small>No new notifications</small>
+                            </li>
+                        </div>
+                        <li><hr class="dropdown-divider" style="border-color: rgba(236, 72, 153, 0.3);"></li>
+                        <li class="text-center py-2">
+                            <a href="#" onclick="document.getElementById('distribution-tab').click(); setTimeout(() => document.querySelector('#proactiveNotificationsContainer').scrollIntoView({behavior: 'smooth'}), 300); return false;" class="dropdown-item" style="color: #ec4899;">View all notifications</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -9410,6 +9438,326 @@
                 </div>
             </div>
             <!-- END Distribution Tab -->
+
+            <!-- Session 235: Create Alert Modal -->
+            <div class="modal fade" id="createAlertModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content" style="background: #1a1a2e; border: 2px solid #ef4444;">
+                        <div class="modal-header" style="border-bottom: 1px solid #ef4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(236, 72, 153, 0.2));">
+                            <h5 class="modal-title" style="color: #ef4444;">
+                                <i class="fas fa-bell me-2"></i>Create New Alert
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="createAlertForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="color: #f87171;">Alert Name *</label>
+                                        <input type="text" class="form-control" id="alertName" required
+                                               placeholder="e.g., Daily Revenue Goal"
+                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="color: #f87171;">Alert Type *</label>
+                                        <select class="form-select" id="alertType" required
+                                                style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                            <option value="threshold">Threshold - Trigger when metric crosses value</option>
+                                            <option value="trend">Trend - Trigger on trend changes</option>
+                                            <option value="anomaly">Anomaly - Detect unusual patterns</option>
+                                            <option value="opportunity">Opportunity - Alert on new opportunities</option>
+                                            <option value="deadline">Deadline - Reminder alerts</option>
+                                            <option value="goal">Goal - Progress toward goals</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" style="color: #f87171;">Description</label>
+                                    <textarea class="form-control" id="alertDescription" rows="2"
+                                              placeholder="Optional description of when this alert should trigger..."
+                                              style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;"></textarea>
+                                </div>
+
+                                <div class="card mb-3" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                                    <div class="card-header" style="background: rgba(239, 68, 68, 0.15); border-bottom: 1px solid rgba(239, 68, 68, 0.2);">
+                                        <h6 class="mb-0" style="color: #ef4444;">Condition Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fca5a5;">Metric *</label>
+                                                <select class="form-select" id="alertMetric" required
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                                    <option value="daily_revenue">Daily Revenue ($)</option>
+                                                    <option value="weekly_revenue">Weekly Revenue ($)</option>
+                                                    <option value="monthly_revenue">Monthly Revenue ($)</option>
+                                                    <option value="total_sales">Total Sales</option>
+                                                    <option value="total_downloads">Total Downloads</option>
+                                                    <option value="total_views">Total Views</option>
+                                                    <option value="conversion_rate">Conversion Rate (%)</option>
+                                                    <option value="average_price">Average Price ($)</option>
+                                                    <option value="pending_opportunities">Pending Opportunities</option>
+                                                    <option value="active_distributions">Active Distributions</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fca5a5;">Condition *</label>
+                                                <select class="form-select" id="alertCondition" required
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                                    <option value="above">Above threshold</option>
+                                                    <option value="below">Below threshold</option>
+                                                    <option value="equals">Equals value</option>
+                                                    <option value="increases_by">Increases by %</option>
+                                                    <option value="decreases_by">Decreases by %</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fca5a5;">Threshold Value *</label>
+                                                <input type="number" class="form-control" id="alertThreshold" required
+                                                       placeholder="e.g., 100"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-3" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                    <div class="card-header" style="background: rgba(236, 72, 153, 0.15); border-bottom: 1px solid rgba(236, 72, 153, 0.2);">
+                                        <h6 class="mb-0" style="color: #ec4899;">Notification Channels</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="channelInApp" checked>
+                                                    <label class="form-check-label" for="channelInApp" style="color: #f9a8d4;">
+                                                        <i class="fas fa-bell me-1"></i>In-App
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="channelEmail">
+                                                    <label class="form-check-label" for="channelEmail" style="color: #f9a8d4;">
+                                                        <i class="fas fa-envelope me-1"></i>Email
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="channelPush">
+                                                    <label class="form-check-label" for="channelPush" style="color: #f9a8d4;">
+                                                        <i class="fas fa-mobile-alt me-1"></i>Push
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="channelSms">
+                                                    <label class="form-check-label" for="channelSms" style="color: #f9a8d4;">
+                                                        <i class="fas fa-sms me-1"></i>SMS
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="color: #f87171;">Priority</label>
+                                        <select class="form-select" id="alertPriority"
+                                                style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                            <option value="low">Low</option>
+                                            <option value="medium" selected>Medium</option>
+                                            <option value="high">High</option>
+                                            <option value="critical">Critical</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="color: #f87171;">Cooldown (hours)</label>
+                                        <input type="number" class="form-control" id="alertCooldown" value="1" min="0"
+                                               placeholder="Hours between notifications"
+                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3); color: white;">
+                                        <small class="text-muted">Minimum time between repeat alerts</small>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid rgba(239, 68, 68, 0.3);">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn" onclick="saveAlert()" style="background: linear-gradient(135deg, #ef4444, #ec4899); border: none; color: white;">
+                                <i class="fas fa-save me-2"></i>Create Alert
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Create Alert Modal -->
+
+            <!-- Session 235: Create Automation Modal -->
+            <div class="modal fade" id="createAutomationModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content" style="background: #1a1a2e; border: 2px solid #6366f1;">
+                        <div class="modal-header" style="border-bottom: 1px solid #6366f1; background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));">
+                            <h5 class="modal-title" style="color: #6366f1;">
+                                <i class="fas fa-robot me-2"></i>Create New Automation
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="createAutomationForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="color: #818cf8;">Automation Name *</label>
+                                        <input type="text" class="form-control" id="automationName" required
+                                               placeholder="e.g., Auto-adjust low performing prices"
+                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="color: #818cf8;">Action Type *</label>
+                                        <select class="form-select" id="automationType" required onchange="updateAutomationFields()"
+                                                style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                            <option value="price_adjust">Price Adjustment - Auto-adjust pricing</option>
+                                            <option value="distribute">Auto-Distribute - Distribute content</option>
+                                            <option value="notify">Send Notification - Alert users</option>
+                                            <option value="tag_update">Update Tags - Optimize tags</option>
+                                            <option value="schedule_upload">Schedule Upload - Time uploads</option>
+                                            <option value="apply_promotion">Apply Promotion - Run promotions</option>
+                                            <option value="generate_report">Generate Report - Create reports</option>
+                                            <option value="optimize_listing">Optimize Listing - Improve listings</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" style="color: #818cf8;">Description</label>
+                                    <textarea class="form-control" id="automationDescription" rows="2"
+                                              placeholder="Describe what this automation does..."
+                                              style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;"></textarea>
+                                </div>
+
+                                <div class="card mb-3" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+                                    <div class="card-header" style="background: rgba(99, 102, 241, 0.15); border-bottom: 1px solid rgba(99, 102, 241, 0.2);">
+                                        <h6 class="mb-0" style="color: #6366f1;">Trigger Configuration</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #a5b4fc;">Trigger Type *</label>
+                                                <select class="form-select" id="automationTrigger" required onchange="updateTriggerFields()"
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                                    <option value="schedule">Scheduled - Run at specific times</option>
+                                                    <option value="event">Event-Based - Triggered by events</option>
+                                                    <option value="condition">Condition - When condition is met</option>
+                                                    <option value="manual">Manual - Run on demand</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3" id="scheduleField">
+                                                <label class="form-label" style="color: #a5b4fc;">Schedule</label>
+                                                <select class="form-select" id="automationSchedule"
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                                    <option value="hourly">Every Hour</option>
+                                                    <option value="daily" selected>Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly">Monthly</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row" id="conditionFields" style="display: none;">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #a5b4fc;">Metric</label>
+                                                <select class="form-select" id="automationConditionMetric"
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                                    <option value="sales_count">Sales Count</option>
+                                                    <option value="revenue">Revenue</option>
+                                                    <option value="views">Views</option>
+                                                    <option value="conversion_rate">Conversion Rate</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #a5b4fc;">Condition</label>
+                                                <select class="form-select" id="automationConditionType"
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                                    <option value="below">Below</option>
+                                                    <option value="above">Above</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #a5b4fc;">Value</label>
+                                                <input type="number" class="form-control" id="automationConditionValue"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-3" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);" id="actionConfigCard">
+                                    <div class="card-header" style="background: rgba(139, 92, 246, 0.15); border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                                        <h6 class="mb-0" style="color: #8b5cf6;">Action Configuration</h6>
+                                    </div>
+                                    <div class="card-body" id="actionConfigBody">
+                                        <div id="priceAdjustConfig">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label" style="color: #c4b5fd;">Adjustment Type</label>
+                                                    <select class="form-select" id="priceAdjustType"
+                                                            style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                                        <option value="percentage">Percentage Change</option>
+                                                        <option value="fixed">Fixed Amount</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label" style="color: #c4b5fd;">Adjustment Value</label>
+                                                    <input type="number" class="form-control" id="priceAdjustValue" value="10"
+                                                           placeholder="e.g., 10 for 10% or $10"
+                                                           style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-3" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
+                                    <div class="card-header" style="background: rgba(234, 179, 8, 0.15); border-bottom: 1px solid rgba(234, 179, 8, 0.2);">
+                                        <h6 class="mb-0" style="color: #eab308;">Safety Limits</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fde047;">Max Executions per Day</label>
+                                                <input type="number" class="form-control" id="maxExecutions" value="10" min="1"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(234, 179, 8, 0.3); color: white;">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fde047;">Cooldown (minutes)</label>
+                                                <input type="number" class="form-control" id="automationCooldown" value="60" min="0"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(234, 179, 8, 0.3); color: white;">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <div class="form-check mt-4">
+                                                    <input class="form-check-input" type="checkbox" id="requireApproval">
+                                                    <label class="form-check-label" for="requireApproval" style="color: #fde047;">
+                                                        Require Approval
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid rgba(99, 102, 241, 0.3);">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn" onclick="saveAutomation()" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: white;">
+                                <i class="fas fa-save me-2"></i>Create Automation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Create Automation Modal -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -42528,6 +42876,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     document.getElementById('proactiveSuggestionsCount').textContent = data.suggestions?.count || 0;
                     document.getElementById('proactiveAutomationsCount').textContent = data.automations?.count || 0;
 
+                    // Session 235: Update notification bell
+                    updateNotificationBell(data.notifications?.unread_count || 0, data.notifications?.items || []);
+
                     // Render notifications
                     renderProactiveNotifications(data.notifications?.items || []);
 
@@ -42546,6 +42897,70 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.error('Error loading proactive dashboard:', error);
             }
         }
+
+        // Session 235: Update notification bell badge and dropdown
+        function updateNotificationBell(unreadCount, notifications) {
+            const badge = document.getElementById('notificationBadge');
+            const dropdown = document.getElementById('notificationDropdownList');
+
+            // Update badge
+            if (unreadCount > 0) {
+                badge.style.display = 'block';
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            } else {
+                badge.style.display = 'none';
+            }
+
+            // Update dropdown list
+            if (!notifications || notifications.length === 0) {
+                dropdown.innerHTML = `
+                    <li class="px-3 py-4 text-center text-muted">
+                        <small>No new notifications</small>
+                    </li>
+                `;
+                return;
+            }
+
+            const priorityColors = {
+                'urgent': '#ef4444',
+                'high': '#f97316',
+                'medium': '#eab308',
+                'low': '#10b981'
+            };
+
+            dropdown.innerHTML = notifications.slice(0, 5).map(n => `
+                <li>
+                    <a class="dropdown-item py-2" href="#" onclick="markNotificationRead('${n.id}'); return false;" style="color: #e2e8f0; background: transparent;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div style="color: ${priorityColors[n.priority] || '#94a3b8'}; font-size: 0.85rem; font-weight: 500;">
+                                    ${n.title}
+                                </div>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    ${n.message?.substring(0, 60) || ''}...
+                                </small>
+                            </div>
+                            <span class="badge ms-2" style="background: ${priorityColors[n.priority] || '#64748b'}; font-size: 0.6rem;">
+                                ${n.priority}
+                            </span>
+                        </div>
+                    </a>
+                </li>
+            `).join('');
+        }
+
+        // Session 235: Periodic notification check
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/proactive/notifications/?limit=5');
+                const data = await response.json();
+                if (data.success) {
+                    updateNotificationBell(data.unread_count || 0, data.notifications || []);
+                }
+            } catch (e) {
+                // Silent fail for background check
+            }
+        }, 60000); // Check every minute
 
         // Render Notifications
         function renderProactiveNotifications(notifications) {
@@ -42876,6 +43291,260 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.error('Error toggling automation:', error);
             }
         }
+
+        // ============================================================
+        // Session 235: Alert & Automation Modal Functions
+        // ============================================================
+
+        // Save Alert
+        async function saveAlert() {
+            const form = document.getElementById('createAlertForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Collect notification channels
+            const channels = [];
+            if (document.getElementById('channelInApp').checked) channels.push('in_app');
+            if (document.getElementById('channelEmail').checked) channels.push('email');
+            if (document.getElementById('channelPush').checked) channels.push('push');
+            if (document.getElementById('channelSms').checked) channels.push('sms');
+
+            const alertData = {
+                name: document.getElementById('alertName').value,
+                alert_type: document.getElementById('alertType').value,
+                description: document.getElementById('alertDescription').value,
+                metric_name: document.getElementById('alertMetric').value,
+                condition: document.getElementById('alertCondition').value,
+                threshold_value: parseFloat(document.getElementById('alertThreshold').value),
+                notification_channels: channels,
+                priority: document.getElementById('alertPriority').value,
+                cooldown_minutes: parseInt(document.getElementById('alertCooldown').value) * 60
+            };
+
+            try {
+                const response = await fetch('/api/proactive/alerts/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(alertData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Alert created successfully!', 'success');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createAlertModal'));
+                    modal.hide();
+                    // Reset form
+                    form.reset();
+                    document.getElementById('channelInApp').checked = true;
+                    // Refresh dashboard
+                    loadProactiveDashboard();
+                } else {
+                    showToast(data.error?.message || 'Failed to create alert', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating alert:', error);
+                showToast('Failed to create alert', 'error');
+            }
+        }
+
+        // Save Automation
+        async function saveAutomation() {
+            const form = document.getElementById('createAutomationForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Build trigger config
+            const triggerType = document.getElementById('automationTrigger').value;
+            let triggerConfig = {};
+
+            if (triggerType === 'schedule') {
+                triggerConfig.schedule = document.getElementById('automationSchedule').value;
+            } else if (triggerType === 'condition') {
+                triggerConfig.metric = document.getElementById('automationConditionMetric').value;
+                triggerConfig.condition = document.getElementById('automationConditionType').value;
+                triggerConfig.value = parseFloat(document.getElementById('automationConditionValue').value);
+            }
+
+            // Build action config
+            const actionType = document.getElementById('automationType').value;
+            let actionConfig = {};
+
+            if (actionType === 'price_adjust') {
+                actionConfig.adjustment_type = document.getElementById('priceAdjustType').value;
+                actionConfig.adjustment_value = parseFloat(document.getElementById('priceAdjustValue').value);
+            }
+
+            const automationData = {
+                name: document.getElementById('automationName').value,
+                action_type: actionType,
+                description: document.getElementById('automationDescription').value,
+                trigger_type: triggerType,
+                trigger_config: triggerConfig,
+                action_config: actionConfig,
+                max_executions_per_day: parseInt(document.getElementById('maxExecutions').value),
+                cooldown_minutes: parseInt(document.getElementById('automationCooldown').value),
+                requires_approval: document.getElementById('requireApproval').checked
+            };
+
+            try {
+                const response = await fetch('/api/proactive/automations/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(automationData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Automation created successfully!', 'success');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createAutomationModal'));
+                    modal.hide();
+                    // Reset form
+                    form.reset();
+                    // Refresh dashboard
+                    loadProactiveDashboard();
+                } else {
+                    showToast(data.error?.message || 'Failed to create automation', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating automation:', error);
+                showToast('Failed to create automation', 'error');
+            }
+        }
+
+        // Update automation fields based on action type
+        function updateAutomationFields() {
+            const actionType = document.getElementById('automationType').value;
+            const configBody = document.getElementById('actionConfigBody');
+
+            // Define action-specific configurations
+            const configs = {
+                price_adjust: `
+                    <div id="priceAdjustConfig">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="color: #c4b5fd;">Adjustment Type</label>
+                                <select class="form-select" id="priceAdjustType"
+                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                    <option value="percentage">Percentage Change</option>
+                                    <option value="fixed">Fixed Amount</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="color: #c4b5fd;">Adjustment Value</label>
+                                <input type="number" class="form-control" id="priceAdjustValue" value="10"
+                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                            </div>
+                        </div>
+                    </div>
+                `,
+                distribute: `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #c4b5fd;">Platform</label>
+                            <select class="form-select" id="distributePlatform"
+                                    style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                <option value="all">All Platforms</option>
+                                <option value="stock">Stock Sites</option>
+                                <option value="marketplace">Marketplaces</option>
+                                <option value="print">Print on Demand</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #c4b5fd;">Content Type</label>
+                            <select class="form-select" id="distributeContentType"
+                                    style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                <option value="all">All Content</option>
+                                <option value="images">Images</option>
+                                <option value="videos">Videos</option>
+                            </select>
+                        </div>
+                    </div>
+                `,
+                notify: `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #c4b5fd;">Notification Title</label>
+                            <input type="text" class="form-control" id="notifyTitle" placeholder="Alert title"
+                                   style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #c4b5fd;">Channel</label>
+                            <select class="form-select" id="notifyChannel"
+                                    style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                <option value="in_app">In-App</option>
+                                <option value="email">Email</option>
+                                <option value="push">Push</option>
+                            </select>
+                        </div>
+                    </div>
+                `,
+                generate_report: `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #c4b5fd;">Report Type</label>
+                            <select class="form-select" id="reportType"
+                                    style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                <option value="revenue">Revenue Report</option>
+                                <option value="performance">Performance Report</option>
+                                <option value="distribution">Distribution Report</option>
+                                <option value="summary">Summary Report</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #c4b5fd;">Period</label>
+                            <select class="form-select" id="reportPeriod"
+                                    style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); color: white;">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                `
+            };
+
+            // Default config for other types
+            const defaultConfig = `
+                <div class="text-center text-muted py-3">
+                    <small>No additional configuration required for this action type</small>
+                </div>
+            `;
+
+            configBody.innerHTML = configs[actionType] || defaultConfig;
+        }
+
+        // Update trigger fields based on trigger type
+        function updateTriggerFields() {
+            const triggerType = document.getElementById('automationTrigger').value;
+            const scheduleField = document.getElementById('scheduleField');
+            const conditionFields = document.getElementById('conditionFields');
+
+            if (triggerType === 'schedule') {
+                scheduleField.style.display = 'block';
+                conditionFields.style.display = 'none';
+            } else if (triggerType === 'condition') {
+                scheduleField.style.display = 'none';
+                conditionFields.style.display = 'flex';
+            } else {
+                scheduleField.style.display = 'none';
+                conditionFields.style.display = 'none';
+            }
+        }
+
+        // END Session 235: Alert & Automation Modal Functions
+        // ============================================================
 
         // END Session 234: Proactive System JavaScript Functions
         // ============================================================

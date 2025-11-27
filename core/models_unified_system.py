@@ -5536,3 +5536,401 @@ class UserNotificationPreference(models.Model):
                 return False
 
         return True
+
+
+# ==============================================================================
+# Session 235: A/B Testing Framework Models (Phase 6 - Proactive System)
+# ==============================================================================
+
+class ABTest(models.Model):
+    """
+    A/B Test configuration for testing different strategies.
+    Tests pricing, titles, tags, timing, and other content variations.
+    """
+    TEST_TYPES = [
+        ('pricing', 'Pricing Test'),
+        ('title', 'Title Test'),
+        ('tags', 'Tags Test'),
+        ('description', 'Description Test'),
+        ('timing', 'Timing Test'),
+        ('platform', 'Platform Test'),
+        ('bundle', 'Bundle Test'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('running', 'Running'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ab_tests',
+        null=True,
+        blank=True
+    )
+
+    # Test Configuration
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    test_type = models.CharField(max_length=50, choices=TEST_TYPES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Hypothesis
+    hypothesis = models.TextField(blank=True, help_text="What you expect to happen")
+
+    # Test Parameters
+    primary_metric = models.CharField(
+        max_length=50,
+        default='conversion_rate',
+        help_text="Main metric to measure success"
+    )
+    secondary_metrics = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Additional metrics to track"
+    )
+    confidence_level = models.FloatField(
+        default=0.95,
+        help_text="Statistical confidence level (0.90-0.99)"
+    )
+    minimum_sample_size = models.IntegerField(
+        default=100,
+        help_text="Minimum samples per variant before concluding"
+    )
+
+    # Targeting
+    content_filter = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Filter which content participates"
+    )
+    platform_filter = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Limit to specific platforms"
+    )
+
+    # Timeline
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    max_duration_days = models.IntegerField(default=30)
+
+    # Results
+    winner_variant = models.ForeignKey(
+        'ABTestVariant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='won_tests'
+    )
+    conclusion = models.TextField(blank=True)
+    statistical_significance = models.FloatField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['test_type', 'status']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.test_type})"
+
+    def start_test(self):
+        """Start the A/B test."""
+        if self.status != 'draft':
+            return False
+        self.status = 'running'
+        self.start_date = timezone.now()
+        self.save()
+        return True
+
+    def pause_test(self):
+        """Pause the A/B test."""
+        if self.status != 'running':
+            return False
+        self.status = 'paused'
+        self.save()
+        return True
+
+    def complete_test(self, winner_id=None, conclusion=''):
+        """Complete the A/B test with results."""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.conclusion = conclusion
+        if winner_id:
+            self.winner_variant_id = winner_id
+        self.save()
+        return True
+
+    def get_results(self):
+        """Get test results with statistics."""
+        variants = self.variants.all()
+        results = {
+            'test_id': str(self.id),
+            'name': self.name,
+            'status': self.status,
+            'variants': [],
+            'winner': None,
+            'is_significant': False,
+        }
+
+        for variant in variants:
+            stats = variant.get_statistics()
+            results['variants'].append({
+                'id': str(variant.id),
+                'name': variant.name,
+                'is_control': variant.is_control,
+                **stats
+            })
+
+        # Simple winner determination (could be enhanced with statistical tests)
+        if results['variants']:
+            best_variant = max(
+                results['variants'],
+                key=lambda v: v.get('conversion_rate', 0)
+            )
+            if best_variant.get('sample_size', 0) >= self.minimum_sample_size:
+                results['winner'] = best_variant['id']
+                results['is_significant'] = True
+
+        return results
+
+
+class ABTestVariant(models.Model):
+    """
+    Individual variant within an A/B test.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    test = models.ForeignKey(
+        ABTest,
+        on_delete=models.CASCADE,
+        related_name='variants'
+    )
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_control = models.BooleanField(default=False)
+
+    # Variant Configuration
+    config = models.JSONField(
+        default=dict,
+        help_text="Variant-specific settings (price, title, etc.)"
+    )
+
+    # Traffic Allocation
+    traffic_percentage = models.IntegerField(
+        default=50,
+        help_text="Percentage of traffic to this variant"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_control', 'name']
+
+    def __str__(self):
+        control_str = " (Control)" if self.is_control else ""
+        return f"{self.name}{control_str}"
+
+    def get_statistics(self):
+        """Get variant statistics."""
+        events = self.events.all()
+        impressions = events.filter(event_type='impression').count()
+        conversions = events.filter(event_type='conversion').count()
+        revenue = events.filter(
+            event_type='conversion'
+        ).aggregate(total=models.Sum('revenue'))['total'] or 0
+
+        return {
+            'sample_size': impressions,
+            'impressions': impressions,
+            'conversions': conversions,
+            'conversion_rate': (conversions / impressions * 100) if impressions > 0 else 0,
+            'revenue': float(revenue),
+            'revenue_per_impression': (float(revenue) / impressions) if impressions > 0 else 0,
+        }
+
+
+class ABTestEvent(models.Model):
+    """
+    Individual event in an A/B test (impression, click, conversion).
+    """
+    EVENT_TYPES = [
+        ('impression', 'Impression'),
+        ('click', 'Click'),
+        ('conversion', 'Conversion'),
+        ('revenue', 'Revenue'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    variant = models.ForeignKey(
+        ABTestVariant,
+        on_delete=models.CASCADE,
+        related_name='events'
+    )
+
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
+
+    # Context
+    content_id = models.CharField(max_length=255, blank=True)
+    platform = models.CharField(max_length=100, blank=True)
+    session_id = models.CharField(max_length=255, blank=True)
+
+    # Revenue (for conversion events)
+    revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True)
+
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['variant', 'event_type']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} for {self.variant.name}"
+
+
+class UserGoal(models.Model):
+    """
+    User-defined goals for tracking progress.
+    """
+    GOAL_TYPES = [
+        ('revenue', 'Revenue Goal'),
+        ('sales', 'Sales Count'),
+        ('downloads', 'Download Count'),
+        ('views', 'View Count'),
+        ('distribution', 'Distribution Count'),
+        ('content', 'Content Created'),
+        ('conversion', 'Conversion Rate'),
+        ('custom', 'Custom Metric'),
+    ]
+
+    PERIOD_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('yearly', 'Yearly'),
+        ('one_time', 'One Time'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='goals',
+        null=True,
+        blank=True
+    )
+
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    goal_type = models.CharField(max_length=50, choices=GOAL_TYPES)
+    period = models.CharField(max_length=20, choices=PERIOD_CHOICES, default='monthly')
+
+    # Target
+    target_value = models.DecimalField(max_digits=12, decimal_places=2)
+    current_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Custom metric (if goal_type is 'custom')
+    custom_metric = models.CharField(max_length=100, blank=True)
+
+    # Progress
+    is_achieved = models.BooleanField(default=False)
+    achieved_at = models.DateTimeField(null=True, blank=True)
+
+    # Timeline
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+
+    # Settings
+    is_active = models.BooleanField(default=True)
+    notify_at_milestones = models.BooleanField(default=True)
+    milestone_percentages = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Percentages to notify at (e.g., [25, 50, 75, 100])"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['goal_type', 'is_achieved']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.goal_type})"
+
+    @property
+    def progress_percentage(self):
+        """Calculate progress as percentage."""
+        if self.target_value == 0:
+            return 0
+        return min(100, float(self.current_value / self.target_value * 100))
+
+    def update_progress(self, new_value):
+        """Update goal progress."""
+        old_value = self.current_value
+        self.current_value = new_value
+
+        # Check for achievement
+        if not self.is_achieved and self.current_value >= self.target_value:
+            self.is_achieved = True
+            self.achieved_at = timezone.now()
+
+        self.save()
+
+        # Check milestones
+        if self.notify_at_milestones and self.milestone_percentages:
+            old_pct = float(old_value / self.target_value * 100) if self.target_value > 0 else 0
+            new_pct = self.progress_percentage
+
+            for milestone in self.milestone_percentages:
+                if old_pct < milestone <= new_pct:
+                    self._notify_milestone(milestone)
+
+        return {
+            'progress': self.progress_percentage,
+            'is_achieved': self.is_achieved,
+        }
+
+    def _notify_milestone(self, milestone):
+        """Create notification for milestone reached."""
+        try:
+            from .proactive_engine import NotificationManager
+            manager = NotificationManager()
+            manager.send_notification(
+                user=self.user,
+                notification_type='goal',
+                title=f"Goal Progress: {milestone}%!",
+                message=f"You've reached {milestone}% of your goal: {self.name}",
+                priority='medium' if milestone < 100 else 'high',
+                related_model='UserGoal',
+                related_id=str(self.id)
+            )
+        except Exception:
+            pass  # Don't fail if notification fails
