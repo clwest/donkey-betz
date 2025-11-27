@@ -46,32 +46,114 @@ class SpiderAgentConnector:
         self.initialized = False
         self._background_tasks = []
 
-        # Routing table: spider types -> interested agents
+        # Routing table: spider categories -> interested agents
+        # Session 219: Updated for AI Content Creation platform
         self.routing_table = {
-            'sports_betting': [
-                'sports_analytics_agent',
-                'betting_optimizer_agent',
-                'odds_calculator_agent',
-                'revenue_optimizer_agent'
-            ],
-            'trading': [
-                'trading_bot_agent',
-                'market_analysis_agent',
-                'crypto_trader_agent',
-                'portfolio_manager_agent'
-            ],
-            'content': [
-                'content_creator_agent',
-                'viral_content_agent',
-                'seo_optimizer_agent',
-                'social_media_agent',
+            # Creative Assets (Envato, CreativeMarket, AdobeStock, Shutterstock, Canva)
+            'creative_assets': [
+                'image_generation_agent',
+                'design_assistant_agent',
+                'brand_identity_agent',
+                'template_curator_agent',
                 'content_studio_integration'
             ],
-            'opportunities': [
+
+            # AI Creative Tools (Midjourney, CivitAI, RunwayML, Replicate)
+            'ai_creative': [
+                'image_generation_agent',
+                'video_generation_agent',
+                'style_discovery_agent',
+                'prompt_engineering_agent',
+                'model_recommender_agent',
+                'content_studio_integration'
+            ],
+
+            # Digital Products (Etsy, LemonSqueezy, Sellfy, AppSumo, Gumroad)
+            'digital_products': [
+                'product_idea_agent',
+                'marketplace_analyst_agent',
+                'pricing_strategy_agent',
+                'template_builder_agent',
+                'content_strategy_agent'
+            ],
+
+            # Content Creation (ConvertKit, Notion, Figma)
+            'content_creation': [
+                'content_strategy_agent',
+                'design_system_agent',
+                'productivity_agent',
+                'newsletter_agent',
+                'template_curator_agent'
+            ],
+
+            # Tech/Innovation (HackerNews, DevTo, GitHub, ProductHunt)
+            'tech': [
+                'trend_analysis_agent',
+                'research_agent',
+                'tool_discovery_agent',
+                'innovation_scout_agent'
+            ],
+
+            # Innovation (arXiv, TechCrunch, VentureBeat)
+            'innovation': [
+                'trend_analysis_agent',
+                'research_agent',
+                'innovation_scout_agent',
+                'ai_news_agent'
+            ],
+
+            # News (General news sources)
+            'news': [
+                'trend_analysis_agent',
+                'content_strategy_agent',
+                'news_aggregator_agent'
+            ],
+
+            # Financial (CoinGecko, Yahoo Finance, SeekingAlpha)
+            'financial': [
+                'market_analysis_agent',
+                'trend_analysis_agent',
+                'financial_insights_agent'
+            ],
+
+            # Freelance (Upwork, Freelancer, Fiverr, etc.)
+            'freelance': [
                 'opportunity_scanner_agent',
-                'job_matcher_agent',
-                'income_builder_agent',
-                'revenue_generator_agent'
+                'skill_matcher_agent',
+                'pricing_strategy_agent'
+            ],
+
+            # Design (Dribbble, Behance, Awwwards)
+            'design': [
+                'design_assistant_agent',
+                'style_discovery_agent',
+                'trend_analysis_agent',
+                'inspiration_agent'
+            ],
+
+            # Remote Work (WeWorkRemotely, RemoteOK)
+            'remote_work': [
+                'opportunity_scanner_agent',
+                'job_matcher_agent'
+            ],
+
+            # Education (Coursera, Udemy, Skillshare)
+            'education': [
+                'skill_development_agent',
+                'learning_path_agent',
+                'content_strategy_agent'
+            ],
+
+            # Legal (USPTO, CourtListener)
+            'legal': [
+                'research_agent',
+                'patent_analyzer_agent'
+            ],
+
+            # Sports Betting (legacy support)
+            'sports_betting': [
+                'sports_analytics_agent',
+                'odds_calculator_agent'
             ]
         }
 

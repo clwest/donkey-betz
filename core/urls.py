@@ -103,6 +103,17 @@ from core.views_spider_intelligence import (
     daily_report
 )
 
+# Session 219: Import agent intelligence views (Phase A)
+from core.views_agent_intelligence import (
+    list_agents as ai_agents_list,
+    get_agent_feed as ai_agent_feed,
+    get_trends as ai_trends,
+    get_suggestions as ai_suggestions,
+    get_stats as ai_stats,
+    get_categories as ai_categories,
+    get_capabilities as ai_capabilities
+)
+
 # Session 206: Import preferences dashboard views
 # Session 210: Added implicit learning & recommendations
 # Session 211: Added A/B testing
@@ -1497,6 +1508,15 @@ urlpatterns = [
     path('api/spider-intelligence/summary/', data_summary, name='spider-intelligence-summary'),
     path('api/spider-intelligence/insights/', prompt_insights, name='spider-intelligence-insights'),
     path('api/spider-intelligence/report/', daily_report, name='spider-intelligence-report'),
+
+    # Session 219: Agent Intelligence API - Phase A Spider-Agent Integration
+    path('api/agent-intelligence/agents/', ai_agents_list, name='ai-agents-list'),
+    path('api/agent-intelligence/feed/<str:agent_name>/', ai_agent_feed, name='ai-agent-feed'),
+    path('api/agent-intelligence/trends/', ai_trends, name='ai-trends'),
+    path('api/agent-intelligence/suggestions/', ai_suggestions, name='ai-suggestions'),
+    path('api/agent-intelligence/stats/', ai_stats, name='ai-stats'),
+    path('api/agent-intelligence/categories/', ai_categories, name='ai-categories'),
+    path('api/agent-intelligence/capabilities/', ai_capabilities, name='ai-capabilities'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
