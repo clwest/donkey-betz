@@ -53,6 +53,29 @@ from .specialized.wired_spider import WiredSpider
 from .specialized.dribbble_spider import DribbbleSpider
 from .specialized.behance_spider import BehanceSpider
 
+# Session 218: Additional FREELANCE spiders
+from .specialized.weworkremotely_spider import WeWorkRemotelySpider
+from .specialized.angellist_spider import AngelListSpider
+
+# Session 218: EDUCATION spiders
+from .specialized.teachable_spider import TeachableSpider
+from .specialized.udemy_spider import UdemySpider
+from .specialized.skillshare_spider import SkillshareSpider
+
+# Session 218: Additional FINANCIAL spiders
+from .specialized.etherscan_spider import EtherscanSpider
+from .specialized.opensea_spider import OpenSeaSpider
+from .specialized.seekingalpha_spider import SeekingAlphaSpider
+from .specialized.bloomberg_spider import BloombergSpider
+from .specialized.reuters_spider import ReutersSpider
+
+# Session 218: TECH spiders
+from .specialized.hackernews_spider import HackerNewsSpider
+from .specialized.devto_spider import DevToSpider
+from .specialized.hashnode_spider import HashnodeSpider
+from .specialized.indiegogo_spider import IndiegogoSpider
+from .specialized.kickstarter_spider import KickstarterSpider
+
 # Import financial API spiders (CRITICAL FIX: These were built but not registered!)
 from .specialized.coingecko_spider import CoinGeckoSpider
 from .specialized.yahoo_finance_spider import YahooFinanceSpider
@@ -153,21 +176,20 @@ class SpiderRegistry:
             'targets': ['remoteok.io']
         })
 
-        # Register placeholder spiders for remaining freelance platforms
-        # Note: dribbble and behance moved to active DESIGN category in Session 218
-        freelance_platforms = [
-            ('weworkremotely', 'weworkremotely.com'),
-            ('angellist', 'angel.co/jobs'),
-        ]
+        # Session 218: Activate WeWorkRemotely and AngelList (were placeholders)
+        self.register_spider('weworkremotely', WeWorkRemotelySpider, {
+            'category': 'freelance',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['weworkremotely.com/categories/']
+        })
 
-        for platform, target in freelance_platforms:
-            self.register_spider(platform, BaseIntelligenceSpider, {
-                'category': 'freelance',
-                'priority': 3,
-                'rate_limit': 1.0,
-                'targets': [target],
-                'placeholder': True
-            })
+        self.register_spider('angellist', AngelListSpider, {
+            'category': 'freelance',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['angel.co/jobs']
+        })
 
         # === CONTENT MONETIZATION SPIDERS (8) ===
         self.register_spider('medium', MediumIntelligenceSpider, {
@@ -213,21 +235,27 @@ class SpiderRegistry:
             'targets': ['producthunt.com']
         })
 
-        # Register placeholder spiders for remaining education platforms
-        education_platforms = [
-            ('teachable', 'teachable.com'),
-            ('udemy', 'udemy.com'),
-            ('skillshare', 'skillshare.com')
-        ]
+        # Session 218: Activate Education spiders (were placeholders)
+        self.register_spider('teachable', TeachableSpider, {
+            'category': 'education',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['teachable.com']
+        })
 
-        for platform, target in education_platforms:
-            self.register_spider(platform, BaseIntelligenceSpider, {
-                'category': 'education',
-                'priority': 3,
-                'rate_limit': 1.0,
-                'targets': [target],
-                'placeholder': True
-            })
+        self.register_spider('udemy', UdemySpider, {
+            'category': 'education',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['udemy.com']
+        })
+
+        self.register_spider('skillshare', SkillshareSpider, {
+            'category': 'education',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['skillshare.com']
+        })
 
         # === FINANCIAL/CRYPTO SPIDERS ===
         # ✅ CRITICAL FIX: Register real CoinGecko and Yahoo Finance spiders
@@ -245,25 +273,41 @@ class SpiderRegistry:
             'targets': ['query1.finance.yahoo.com/v8', 'query2.finance.yahoo.com/v10']
         })
 
-        # NOTE: TradingView removed - replaced with Polygon API
-        # NOTE: SEC.gov temporarily disabled - will be re-enabled soon
-        financial_platforms = [
-            ('etherscan', 'etherscan.io/apis'),
-            ('opensea', 'opensea.io/activity'),
-            # ('tradingview', 'tradingview.com/markets'),  # DISABLED - replaced with Polygon
-            ('seekingalpha', 'seekingalpha.com'),
-            ('bloomberg_terminal', 'bloomberg.com/professional'),
-            ('reuters_eikon', 'reuters.com/en/eikon')
-        ]
+        # Session 218: Activate Financial spiders (were placeholders)
+        self.register_spider('etherscan', EtherscanSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['etherscan.io/apis']
+        })
 
-        for platform, target in financial_platforms:
-            self.register_spider(platform, BaseIntelligenceSpider, {
-                'category': 'financial',
-                'priority': 2,
-                'rate_limit': 1.0,
-                'targets': [target],
-                'placeholder': True
-            })
+        self.register_spider('opensea', OpenSeaSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['opensea.io/activity']
+        })
+
+        self.register_spider('seekingalpha', SeekingAlphaSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['seekingalpha.com']
+        })
+
+        self.register_spider('bloomberg_terminal', BloombergSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['bloomberg.com/professional']
+        })
+
+        self.register_spider('reuters_eikon', ReutersSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['reuters.com/en/eikon']
+        })
 
         # === AI/TECH OPPORTUNITY SPIDERS (10) ===
         # Register tech community spiders with concrete implementation
@@ -295,23 +339,41 @@ class SpiderRegistry:
             'targets': ['stackoverflow.com']
         })
 
-        # Register placeholder spiders for remaining tech platforms
-        tech_placeholder_platforms = [
-            ('hackernews', 'news.ycombinator.com'),
-            ('devto', 'dev.to/jobs'),
-            ('hashnode', 'hashnode.com/jobs'),
-            ('indiegogo', 'indiegogo.com'),
-            ('kickstarter', 'kickstarter.com')
-        ]
+        # Session 218: Activate Tech spiders (were placeholders)
+        self.register_spider('hackernews', HackerNewsSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['news.ycombinator.com']
+        })
 
-        for platform, target in tech_placeholder_platforms:
-            self.register_spider(platform, BaseIntelligenceSpider, {
-                'category': 'tech',
-                'priority': 3,
-                'rate_limit': 1.0,
-                'targets': [target],
-                'placeholder': True
-            })
+        self.register_spider('devto', DevToSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['dev.to']
+        })
+
+        self.register_spider('hashnode', HashnodeSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['hashnode.com']
+        })
+
+        self.register_spider('indiegogo', IndiegogoSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['indiegogo.com']
+        })
+
+        self.register_spider('kickstarter', KickstarterSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['kickstarter.com']
+        })
 
         # === SPORTS BETTING SPIDERS (5) ===
         self.register_spider('horse_racing', HorseRacingSpider, {
