@@ -1100,3 +1100,188 @@ def learning_insights(request):
             'recent_insights': [],
             'recommendations': []
         }, status=500)
+
+
+# =============================================================================
+# SESSION 217: CHART.JS ANALYTICS ENDPOINTS
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_agent_trends(request):
+    """
+    GET /api/analytics/charts/agent-trends/
+
+    Get agent performance trends for Chart.js visualization.
+
+    Query params:
+        days: Number of days (default 7)
+        agent_name: Optional specific agent
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    days = int(request.GET.get('days', 7))
+    agent_name = request.GET.get('agent_name')
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_agent_performance_trends(days, agent_name)
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_agent_comparison(request):
+    """
+    GET /api/analytics/charts/agent-comparison/
+
+    Get comparison data across top agents for Chart.js.
+
+    Query params:
+        top_n: Number of agents to compare (default 10)
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    top_n = int(request.GET.get('top_n', 10))
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_agent_comparison(top_n)
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_agent_heatmap(request):
+    """
+    GET /api/analytics/charts/agent-heatmap/
+
+    Get activity heatmap data.
+
+    Query params:
+        days: Number of days (default 7)
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    days = int(request.GET.get('days', 7))
+
+    service = get_analytics_service(request.user)
+    heatmap_data = service.get_agent_activity_heatmap(days)
+
+    return Response(heatmap_data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_workflow_trends(request):
+    """
+    GET /api/analytics/charts/workflow-trends/
+
+    Get workflow execution trends for Chart.js.
+
+    Query params:
+        days: Number of days (default 7)
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    days = int(request.GET.get('days', 7))
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_workflow_execution_trends(days)
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_workflow_success(request):
+    """
+    GET /api/analytics/charts/workflow-success/
+
+    Get success rates by workflow template for Chart.js.
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_workflow_success_rates()
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_knowledge_growth(request):
+    """
+    GET /api/analytics/charts/knowledge-growth/
+
+    Get knowledge base growth for Chart.js.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    days = int(request.GET.get('days', 30))
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_knowledge_growth(days)
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_knowledge_domains(request):
+    """
+    GET /api/analytics/charts/knowledge-domains/
+
+    Get knowledge distribution by domain for Chart.js pie chart.
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_knowledge_by_domain()
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_system_health(request):
+    """
+    GET /api/analytics/charts/system-health/
+
+    Get system health trends for Chart.js.
+
+    Query params:
+        days: Number of days (default 7)
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    days = int(request.GET.get('days', 7))
+
+    service = get_analytics_service(request.user)
+    chart_data = service.get_system_health_trends(days)
+
+    return Response(chart_data.to_dict())
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_dashboard(request):
+    """
+    GET /api/analytics/charts/dashboard/
+
+    Get all chart data in one call for dashboard efficiency.
+
+    Query params:
+        days: Number of days (default 7)
+    """
+    from core.services.analytics_service import get_analytics_service
+
+    days = int(request.GET.get('days', 7))
+
+    service = get_analytics_service(request.user)
+    all_data = service.get_all_charts(days)
+
+    return Response(all_data)

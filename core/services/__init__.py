@@ -5,6 +5,7 @@
 # Session 212: Workflow Builder Service
 # Session 214: Agent Collaboration Service
 # Session 215: Collective Intelligence Service
+# Session 217: Analytics Service & Agent Training
 
 from .spider_intelligence import SpiderIntelligenceService
 from .implicit_learning import ImplicitLearningService, get_learning_service
@@ -21,6 +22,14 @@ from .agent_collaboration import (
 from .collective_intelligence import (
     CollectiveIntelligenceService,
     get_collective_intelligence_service,
+)
+from .analytics_service import (
+    AnalyticsService,
+    get_analytics_service,
+)
+from .agent_training import (
+    AgentTrainingService,
+    get_agent_training_service,
 )
 
 __all__ = [
@@ -40,4 +49,8 @@ __all__ = [
     'CollaborationStatus',
     'CollectiveIntelligenceService',
     'get_collective_intelligence_service',
+    'AnalyticsService',
+    'get_analytics_service',
+    'AgentTrainingService',
+    'get_agent_training_service',
 ]

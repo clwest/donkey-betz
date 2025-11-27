@@ -7133,6 +7133,236 @@
                         </div>
                     </div>
 
+                    <!-- SESSION 217: ANALYTICS CHARTS SECTION -->
+                    <hr style="border-color: #333; margin: 2rem 0;">
+                    <h4 class="mb-4" style="color: #8b5cf6;">📊 Performance Analytics</h4>
+                    <p class="text-muted mb-4">Track agent performance, workflow success, and system health over time.</p>
+
+                    <!-- Time Period Selector -->
+                    <div class="mb-4">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" onclick="updateAnalyticsPeriod(7)" id="period-7">7 Days</button>
+                            <button type="button" class="btn btn-outline-primary" onclick="updateAnalyticsPeriod(14)" id="period-14">14 Days</button>
+                            <button type="button" class="btn btn-outline-primary" onclick="updateAnalyticsPeriod(30)" id="period-30">30 Days</button>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Charts Row 1 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(75, 192, 192, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #4bc0c0;">📈 Agent Performance Trends</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="agentTrendsChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(153, 102, 255, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #9966ff;">📊 Workflow Execution Trends</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="workflowTrendsChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Charts Row 2 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(54, 162, 235, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #36a2eb;">🏆 Agent Comparison</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="agentComparisonChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(255, 99, 132, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #ff6384;">✅ Workflow Success Rates</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="workflowSuccessChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Charts Row 3 -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(255, 206, 86, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #ffce56;">📚 Knowledge by Domain</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="knowledgeDomainsChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(75, 192, 192, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #4bc0c0;">📈 Knowledge Growth</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="knowledgeGrowthChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #22c55e;">💚 System Health</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="systemHealthChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Summary -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #8b5cf6;">📋 Analytics Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="analytics-summary-row">
+                                <div class="col-md-3 text-center">
+                                    <h3 id="summary-collaborations">-</h3>
+                                    <small class="text-muted">Collaborations</small>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <h3 id="summary-success-rate">-</h3>
+                                    <small class="text-muted">Success Rate</small>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <h3 id="summary-knowledge">-</h3>
+                                    <small class="text-muted">New Knowledge</small>
+                                </div>
+                                <div class="col-md-3 text-center">
+                                    <h3 id="summary-trend" style="color: #22c55e;">-</h3>
+                                    <small class="text-muted">Trend</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SESSION 217: ANALYTICS CHARTS -->
+
+                    <!-- SESSION 217B: AGENT TRAINING SECTION -->
+                    <hr style="border-color: #333; margin: 2rem 0;">
+                    <h4 class="mb-4" style="color: #22c55e;">🎓 Agent Training & Configuration</h4>
+                    <p class="text-muted mb-4">Manage agent capabilities, create new agents from templates, and configure your AI team.</p>
+
+                    <!-- Training Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="training-total-agents">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Agents</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="training-active-agents">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Active (7d)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="training-templates">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Templates</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="training-capabilities">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Capabilities</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agent Templates & Create -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #22c55e;">📋 Agent Templates</h6>
+                                </div>
+                                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                    <div id="agent-templates-list">
+                                        <p class="text-muted text-center">Loading templates...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #8b5cf6;">⚡ Quick Create Agent</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Select Template</label>
+                                        <select id="create-agent-template" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                            <option value="">Choose a template...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Custom Name (Optional)</label>
+                                        <input type="text" id="create-agent-name" class="form-control" placeholder="my_custom_agent" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                    <button class="btn btn-success w-100" onclick="createAgentFromTemplate()">
+                                        ✨ Create Agent
+                                    </button>
+                                    <div id="create-agent-result" class="mt-3" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agent List -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #8b5cf6;">🤖 All Agents</h6>
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadTrainingDashboard()">🔄 Refresh</button>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            <div id="all-agents-list">
+                                <p class="text-muted text-center">Loading agents...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Available Capabilities -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid #333;">
+                            <h6 class="mb-0" style="color: #f59e0b;">🛠️ Available Capabilities</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="capabilities-grid">
+                                <p class="text-muted text-center col-12">Loading capabilities...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SESSION 217B: AGENT TRAINING -->
+
                 </div>
             </div>
             <!-- END AGENTS TAB -->
@@ -7346,6 +7576,9 @@
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Session 217: Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Google Model Viewer for 3D Models -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -35072,6 +35305,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadCollaborationNetwork()
                 ]);
 
+                // Session 217: Load analytics charts
+                loadAnalyticsCharts();
+
+                // Session 217B: Load training dashboard
+                loadTrainingDashboard();
+
                 // Hide loading, show content
                 loadingEl.style.display = 'none';
                 containerEl.style.display = 'block';
@@ -35461,6 +35700,466 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // ============================================================
         // END SESSION 216: AGENT INTELLIGENCE DASHBOARD FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 217: ANALYTICS CHARTS FUNCTIONS
+        // ============================================================
+
+        // Chart instances (for cleanup)
+        let analyticsCharts = {
+            agentTrends: null,
+            workflowTrends: null,
+            agentComparison: null,
+            workflowSuccess: null,
+            knowledgeDomains: null,
+            knowledgeGrowth: null,
+            systemHealth: null
+        };
+
+        // Current analytics period
+        let analyticsPeriodDays = 7;
+
+        // Update analytics time period
+        function updateAnalyticsPeriod(days) {
+            analyticsPeriodDays = days;
+
+            // Update button states
+            document.querySelectorAll('[id^="period-"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`period-${days}`).classList.add('active');
+
+            // Reload charts
+            loadAnalyticsCharts();
+        }
+
+        // Load all analytics charts
+        async function loadAnalyticsCharts() {
+            try {
+                const response = await fetch(`/api/analytics/charts/dashboard/?days=${analyticsPeriodDays}`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                // Render all charts
+                renderAgentTrendsChart(data.agent_trends);
+                renderWorkflowTrendsChart(data.workflow_trends);
+                renderAgentComparisonChart(data.agent_comparison);
+                renderWorkflowSuccessChart(data.workflow_success);
+                renderKnowledgeDomainsChart(data.knowledge_domains);
+                renderKnowledgeGrowthChart(data.knowledge_growth);
+                renderSystemHealthChart(data.system_health);
+
+                // Update summary
+                updateAnalyticsSummary(data.summary);
+
+            } catch (error) {
+                console.error('Error loading analytics charts:', error);
+            }
+        }
+
+        // Render Agent Trends Chart
+        function renderAgentTrendsChart(data) {
+            const ctx = document.getElementById('agentTrendsChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.agentTrends) {
+                analyticsCharts.agentTrends.destroy();
+            }
+
+            analyticsCharts.agentTrends = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#fff' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#999' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        // Render Workflow Trends Chart
+        function renderWorkflowTrendsChart(data) {
+            const ctx = document.getElementById('workflowTrendsChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.workflowTrends) {
+                analyticsCharts.workflowTrends.destroy();
+            }
+
+            analyticsCharts.workflowTrends = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#fff' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#999' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        // Render Agent Comparison Chart
+        function renderAgentComparisonChart(data) {
+            const ctx = document.getElementById('agentComparisonChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.agentComparison) {
+                analyticsCharts.agentComparison.destroy();
+            }
+
+            analyticsCharts.agentComparison = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#fff' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#999' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        // Render Workflow Success Chart
+        function renderWorkflowSuccessChart(data) {
+            const ctx = document.getElementById('workflowSuccessChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.workflowSuccess) {
+                analyticsCharts.workflowSuccess.destroy();
+            }
+
+            analyticsCharts.workflowSuccess = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: '#333' }, max: 100 },
+                        y: { ticks: { color: '#999' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        // Render Knowledge Domains Chart (Pie)
+        function renderKnowledgeDomainsChart(data) {
+            const ctx = document.getElementById('knowledgeDomainsChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.knowledgeDomains) {
+                analyticsCharts.knowledgeDomains.destroy();
+            }
+
+            analyticsCharts.knowledgeDomains = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: '#fff', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render Knowledge Growth Chart
+        function renderKnowledgeGrowthChart(data) {
+            const ctx = document.getElementById('knowledgeGrowthChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.knowledgeGrowth) {
+                analyticsCharts.knowledgeGrowth.destroy();
+            }
+
+            analyticsCharts.knowledgeGrowth = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#fff', font: { size: 10 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#999' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        // Render System Health Chart
+        function renderSystemHealthChart(data) {
+            const ctx = document.getElementById('systemHealthChart');
+            if (!ctx) return;
+
+            if (analyticsCharts.systemHealth) {
+                analyticsCharts.systemHealth.destroy();
+            }
+
+            analyticsCharts.systemHealth = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: data.datasets || []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#999' }, grid: { color: '#333' }, min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Update Analytics Summary
+        function updateAnalyticsSummary(summary) {
+            if (!summary) return;
+
+            const collabs = summary.collaborations || {};
+            document.getElementById('summary-collaborations').textContent = collabs.total || 0;
+            document.getElementById('summary-success-rate').textContent = (collabs.success_rate || 0) + '%';
+
+            const knowledge = summary.knowledge || {};
+            document.getElementById('summary-knowledge').textContent = knowledge.new_items || 0;
+
+            const trendEl = document.getElementById('summary-trend');
+            const trend = collabs.trend_direction || 'stable';
+            const trendPct = collabs.trend_percentage || 0;
+
+            if (trend === 'up') {
+                trendEl.style.color = '#22c55e';
+                trendEl.textContent = `↑ ${Math.abs(trendPct).toFixed(1)}%`;
+            } else if (trend === 'down') {
+                trendEl.style.color = '#ef4444';
+                trendEl.textContent = `↓ ${Math.abs(trendPct).toFixed(1)}%`;
+            } else {
+                trendEl.style.color = '#f59e0b';
+                trendEl.textContent = '→ Stable';
+            }
+        }
+
+        // ============================================================
+        // END SESSION 217: ANALYTICS CHARTS FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 217B: AGENT TRAINING FUNCTIONS
+        // ============================================================
+
+        // Load Training Dashboard
+        async function loadTrainingDashboard() {
+            try {
+                const response = await fetch('/api/training/dashboard/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                // Update stats
+                document.getElementById('training-total-agents').textContent = data.stats?.total_agents || 0;
+                document.getElementById('training-active-agents').textContent = data.stats?.active_agents || 0;
+                document.getElementById('training-templates').textContent = data.stats?.available_templates || 0;
+                document.getElementById('training-capabilities').textContent = data.stats?.available_capabilities || 0;
+
+                // Render templates list
+                renderTemplatesList(data.templates || []);
+
+                // Render agents list
+                renderAgentsList(data.agents || []);
+
+                // Render capabilities grid
+                renderCapabilitiesGrid(data.capabilities || []);
+
+                // Populate template dropdown
+                populateTemplateDropdown(data.templates || []);
+
+            } catch (error) {
+                console.error('Error loading training dashboard:', error);
+            }
+        }
+
+        // Render Templates List
+        function renderTemplatesList(templates) {
+            const container = document.getElementById('agent-templates-list');
+            if (!templates.length) {
+                container.innerHTML = '<p class="text-muted text-center">No templates available</p>';
+                return;
+            }
+
+            container.innerHTML = templates.map(t => `
+                <div class="d-flex align-items-center justify-content-between mb-3 p-2" style="background: #2a2a2a; border-radius: 8px;">
+                    <div>
+                        <strong style="color: #22c55e;">${t.display_name}</strong>
+                        <div class="small text-muted">${t.description}</div>
+                        <div class="small mt-1">
+                            ${t.capabilities.map(c => `<span class="badge bg-secondary me-1">${c}</span>`).join('')}
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-success" onclick="useTemplate('${t.id}')">Use</button>
+                </div>
+            `).join('');
+        }
+
+        // Render Agents List
+        function renderAgentsList(agents) {
+            const container = document.getElementById('all-agents-list');
+            if (!agents.length) {
+                container.innerHTML = '<p class="text-muted text-center">No agents found</p>';
+                return;
+            }
+
+            container.innerHTML = agents.map(a => `
+                <div class="d-flex align-items-center justify-content-between mb-2 p-2" style="background: #2a2a2a; border-radius: 8px; border-left: 3px solid ${a.is_active ? '#22c55e' : '#666'};">
+                    <div style="flex: 1;">
+                        <strong style="color: ${a.is_active ? '#fff' : '#888'};">${a.display_name}</strong>
+                        ${a.is_template ? '<span class="badge bg-warning ms-2">Template</span>' : ''}
+                        <div class="small text-muted">
+                            Executions: ${a.total_executions || 0} | Success: ${a.successful_executions || 0} | Quality: ${(a.quality_score * 100).toFixed(0)}%
+                        </div>
+                        <div class="small mt-1">
+                            ${(a.capabilities || []).slice(0, 3).map(c => `<span class="badge bg-primary me-1" style="font-size: 10px;">${c}</span>`).join('')}
+                            ${(a.capabilities || []).length > 3 ? `<span class="badge bg-secondary">+${a.capabilities.length - 3}</span>` : ''}
+                        </div>
+                    </div>
+                    <div>
+                        ${a.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Capabilities Grid
+        function renderCapabilitiesGrid(capabilities) {
+            const container = document.getElementById('capabilities-grid');
+            if (!capabilities.length) {
+                container.innerHTML = '<p class="text-muted text-center col-12">No capabilities available</p>';
+                return;
+            }
+
+            container.innerHTML = capabilities.map(c => `
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="p-3 h-100" style="background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
+                        <h6 style="color: #f59e0b; margin-bottom: 8px;">${c.name}</h6>
+                        <p class="small text-muted mb-2">${c.description}</p>
+                        <div>
+                            ${c.domains.map(d => `<span class="badge bg-dark me-1" style="font-size: 10px;">${d}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Populate Template Dropdown
+        function populateTemplateDropdown(templates) {
+            const select = document.getElementById('create-agent-template');
+            select.innerHTML = '<option value="">Choose a template...</option>' +
+                templates.map(t => `<option value="${t.id}">${t.display_name}</option>`).join('');
+        }
+
+        // Use Template (populate dropdown)
+        function useTemplate(templateId) {
+            document.getElementById('create-agent-template').value = templateId;
+            document.getElementById('create-agent-name').focus();
+        }
+
+        // Create Agent from Template
+        async function createAgentFromTemplate() {
+            const templateId = document.getElementById('create-agent-template').value;
+            const customName = document.getElementById('create-agent-name').value.trim();
+            const resultDiv = document.getElementById('create-agent-result');
+
+            if (!templateId) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please select a template</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                resultDiv.innerHTML = '<div class="alert alert-info">Creating agent...</div>';
+                resultDiv.style.display = 'block';
+
+                const response = await fetch('/api/training/agents/from-template/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        template_id: templateId,
+                        custom_name: customName || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">✅ ${data.message}</div>`;
+                    // Clear form
+                    document.getElementById('create-agent-template').value = '';
+                    document.getElementById('create-agent-name').value = '';
+                    // Reload agents list
+                    loadTrainingDashboard();
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error}</div>`;
+                }
+            } catch (error) {
+                console.error('Error creating agent:', error);
+                resultDiv.innerHTML = '<div class="alert alert-danger">❌ Failed to create agent</div>';
+            }
+        }
+
+        // ============================================================
+        // END SESSION 217B: AGENT TRAINING FUNCTIONS
         // ============================================================
 
         // Session 100: Load Leadership Stats
