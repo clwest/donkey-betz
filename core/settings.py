@@ -907,6 +907,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.check_workflow_schedules',
         'schedule': 60.0,  # Every minute
     },
+    # Session 221: Run spider network every 30 minutes
+    'run-spider-network': {
+        'task': 'core.tasks.run_spider_network',
+        'schedule': 1800.0,  # Every 30 minutes (1800 seconds)
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)

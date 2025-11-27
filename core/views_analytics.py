@@ -1285,3 +1285,505 @@ def get_chart_dashboard(request):
     all_data = service.get_all_charts(days)
 
     return Response(all_data)
+
+
+# =============================================================================
+# SESSION 221: PHASE F - ADVANCED ANALYTICS SERVICE
+# =============================================================================
+
+from django.db.models.functions import TruncHour, TruncDay, TruncWeek
+
+# Import new analytics models
+try:
+    from .models_unified_system import (
+        UsageMetric, PerformanceLog, CostTracking,
+        AnalyticsDashboard, AnalyticsAlert
+    )
+    ANALYTICS_MODELS_AVAILABLE = True
+except ImportError:
+    ANALYTICS_MODELS_AVAILABLE = False
+    logger.warning("Session 221 analytics models not yet available")
+
+
+class AdvancedAnalyticsService:
+    """
+    Session 221 Phase F: Central service for collecting and aggregating analytics.
+    """
+
+    @staticmethod
+    def track_usage(user, category, metric_type, feature_name, **kwargs):
+        """Track a usage metric."""
+        if not ANALYTICS_MODELS_AVAILABLE:
+            return None
+        try:
+            metric = UsageMetric.objects.create(
+                user=user,
+                category=category,
+                metric_type=metric_type,
+                feature_name=feature_name,
+                count=kwargs.get('count', 1),
+                value=kwargs.get('value', 0),
+                metadata=kwargs.get('metadata', {}),
+                provider=kwargs.get('provider', ''),
+                endpoint=kwargs.get('endpoint', ''),
+                duration_ms=kwargs.get('duration_ms'),
+            )
+            return metric
+        except Exception as e:
+            logger.error(f"Failed to track usage: {e}")
+            return None
+
+    @staticmethod
+    def track_performance(component_type, component_name, response_time_ms, **kwargs):
+        """Track a performance metric."""
+        if not ANALYTICS_MODELS_AVAILABLE:
+            return None
+        try:
+            log = PerformanceLog.objects.create(
+                component_type=component_type,
+                component_name=component_name,
+                response_time_ms=response_time_ms,
+                status_code=kwargs.get('status_code'),
+                success=kwargs.get('success', True),
+                error_message=kwargs.get('error_message', ''),
+                error_type=kwargs.get('error_type', ''),
+                memory_mb=kwargs.get('memory_mb'),
+                cpu_percent=kwargs.get('cpu_percent'),
+                endpoint=kwargs.get('endpoint', ''),
+                method=kwargs.get('method', ''),
+                user=kwargs.get('user'),
+            )
+            return log
+        except Exception as e:
+            logger.error(f"Failed to track performance: {e}")
+            return None
+
+    @staticmethod
+    def track_cost(user, provider, service, operation, **kwargs):
+        """Track an API cost."""
+        if not ANALYTICS_MODELS_AVAILABLE:
+            return None
+        try:
+            cost = CostTracking.objects.create(
+                user=user,
+                provider=provider,
+                service=service,
+                operation=operation,
+                credits_used=kwargs.get('credits_used', 0),
+                estimated_cost_usd=kwargs.get('estimated_cost_usd', 0),
+                input_tokens=kwargs.get('input_tokens', 0),
+                output_tokens=kwargs.get('output_tokens', 0),
+                resolution=kwargs.get('resolution', ''),
+                duration_seconds=kwargs.get('duration_seconds'),
+                request_id=kwargs.get('request_id', ''),
+                metadata=kwargs.get('metadata', {}),
+            )
+            return cost
+        except Exception as e:
+            logger.error(f"Failed to track cost: {e}")
+            return None
+
+    @staticmethod
+    def get_time_range(range_key):
+        """Get start time based on range key."""
+        now = timezone.now()
+        ranges = {
+            '1h': timedelta(hours=1),
+            '24h': timedelta(hours=24),
+            '7d': timedelta(days=7),
+            '30d': timedelta(days=30),
+            '90d': timedelta(days=90),
+        }
+        delta = ranges.get(range_key, timedelta(hours=24))
+        return now - delta
+
+
+# Create singleton instance
+advanced_analytics_service = AdvancedAnalyticsService()
+
+
+@api_view(['GET'])
+def analytics_overview_v2(request):
+    """
+    Session 221 Phase F: Get analytics overview for the current user.
+    Returns summary stats for all metric categories.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    time_range = request.GET.get('range', '24h')
+    start_time = AdvancedAnalyticsService.get_time_range(time_range)
+
+    user_filter = Q(user=request.user) if request.user.is_authenticated else Q()
+
+    # Usage summary by category
+    usage_by_category = UsageMetric.objects.filter(
+        user_filter,
+        timestamp__gte=start_time
+    ).values('category').annotate(
+        count=Sum('count'),
+        total_value=Sum('value')
+    ).order_by('-count')
+
+    # Performance summary
+    performance_summary = PerformanceLog.objects.filter(
+        timestamp__gte=start_time
+    ).aggregate(
+        avg_response_time=Avg('response_time_ms'),
+        total_requests=Count('id'),
+        error_count=Count('id', filter=Q(success=False)),
+    )
+
+    # Cost summary
+    cost_filter = Q(user=request.user) if request.user.is_authenticated else Q()
+    cost_summary = CostTracking.objects.filter(
+        cost_filter,
+        timestamp__gte=start_time
+    ).aggregate(
+        total_cost=Sum('estimated_cost_usd'),
+        total_tokens=Sum('total_tokens'),
+        total_credits=Sum('credits_used'),
+    )
+
+    # Top features
+    top_features = UsageMetric.objects.filter(
+        user_filter,
+        timestamp__gte=start_time
+    ).values('feature_name').annotate(
+        count=Sum('count')
+    ).order_by('-count')[:10]
+
+    return Response({
+        'time_range': time_range,
+        'usage_by_category': list(usage_by_category),
+        'performance': {
+            'avg_response_time_ms': performance_summary['avg_response_time'] or 0,
+            'total_requests': performance_summary['total_requests'] or 0,
+            'error_count': performance_summary['error_count'] or 0,
+            'success_rate': (
+                (1 - (performance_summary['error_count'] or 0) /
+                 max(performance_summary['total_requests'] or 1, 1)) * 100
+            ),
+        },
+        'costs': {
+            'total_usd': float(cost_summary['total_cost'] or 0),
+            'total_tokens': cost_summary['total_tokens'] or 0,
+            'total_credits': float(cost_summary['total_credits'] or 0),
+        },
+        'top_features': list(top_features),
+    })
+
+
+@api_view(['GET'])
+def usage_timeline_v2(request):
+    """
+    Session 221 Phase F: Get usage metrics over time for charting.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    time_range = request.GET.get('range', '24h')
+    category = request.GET.get('category', None)
+    granularity = request.GET.get('granularity', 'hour')
+
+    start_time = AdvancedAnalyticsService.get_time_range(time_range)
+    user_filter = Q(user=request.user) if request.user.is_authenticated else Q()
+
+    queryset = UsageMetric.objects.filter(user_filter, timestamp__gte=start_time)
+    if category:
+        queryset = queryset.filter(category=category)
+
+    if granularity == 'hour':
+        trunc_func = TruncHour('timestamp')
+    elif granularity == 'day':
+        trunc_func = TruncDay('timestamp')
+    else:
+        trunc_func = TruncWeek('timestamp')
+
+    timeline = queryset.annotate(
+        period=trunc_func
+    ).values('period').annotate(
+        count=Sum('count'),
+        value=Sum('value')
+    ).order_by('period')
+
+    return Response({
+        'time_range': time_range,
+        'granularity': granularity,
+        'data': list(timeline),
+    })
+
+
+@api_view(['GET'])
+def performance_timeline_v2(request):
+    """
+    Session 221 Phase F: Get performance metrics over time.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    time_range = request.GET.get('range', '24h')
+    component_type = request.GET.get('component_type', None)
+
+    start_time = AdvancedAnalyticsService.get_time_range(time_range)
+
+    queryset = PerformanceLog.objects.filter(timestamp__gte=start_time)
+    if component_type:
+        queryset = queryset.filter(component_type=component_type)
+
+    timeline = queryset.annotate(
+        period=TruncHour('timestamp')
+    ).values('period').annotate(
+        avg_response_time=Avg('response_time_ms'),
+        request_count=Count('id'),
+        error_count=Count('id', filter=Q(success=False)),
+    ).order_by('period')
+
+    return Response({
+        'time_range': time_range,
+        'data': list(timeline),
+    })
+
+
+@api_view(['GET'])
+def cost_breakdown_v2(request):
+    """
+    Session 221 Phase F: Get cost breakdown by provider and service.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    time_range = request.GET.get('range', '30d')
+    start_time = AdvancedAnalyticsService.get_time_range(time_range)
+
+    user_filter = Q(user=request.user) if request.user.is_authenticated else Q()
+
+    # By provider
+    by_provider = CostTracking.objects.filter(
+        user_filter,
+        timestamp__gte=start_time
+    ).values('provider').annotate(
+        total_cost=Sum('estimated_cost_usd'),
+        total_tokens=Sum('total_tokens'),
+        request_count=Count('id'),
+    ).order_by('-total_cost')
+
+    # By service
+    by_service = CostTracking.objects.filter(
+        user_filter,
+        timestamp__gte=start_time
+    ).values('provider', 'service').annotate(
+        total_cost=Sum('estimated_cost_usd'),
+        request_count=Count('id'),
+    ).order_by('-total_cost')[:20]
+
+    # Daily costs
+    daily_costs = CostTracking.objects.filter(
+        user_filter,
+        timestamp__gte=start_time
+    ).annotate(
+        day=TruncDay('timestamp')
+    ).values('day').annotate(
+        total_cost=Sum('estimated_cost_usd'),
+    ).order_by('day')
+
+    # Current month total
+    current_month = timezone.now().strftime('%Y-%m')
+    monthly_total = CostTracking.objects.filter(
+        user_filter,
+        billing_period=current_month
+    ).aggregate(total=Sum('estimated_cost_usd'))
+
+    return Response({
+        'time_range': time_range,
+        'by_provider': [
+            {**item, 'total_cost': float(item['total_cost'] or 0)}
+            for item in by_provider
+        ],
+        'by_service': [
+            {**item, 'total_cost': float(item['total_cost'] or 0)}
+            for item in by_service
+        ],
+        'daily_costs': [
+            {'day': item['day'], 'total_cost': float(item['total_cost'] or 0)}
+            for item in daily_costs
+        ],
+        'current_month_total': float(monthly_total['total'] or 0),
+    })
+
+
+@api_view(['GET', 'POST'])
+def analytics_dashboards_v2(request):
+    """
+    Session 221 Phase F: List or create analytics dashboards.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    if not request.user.is_authenticated:
+        return Response({'error': 'Authentication required'}, status=401)
+
+    if request.method == 'GET':
+        dashboards = AnalyticsDashboard.objects.filter(user=request.user)
+        return Response({
+            'dashboards': [
+                {
+                    'id': str(d.id),
+                    'name': d.name,
+                    'description': d.description,
+                    'is_default': d.is_default,
+                    'default_time_range': d.default_time_range,
+                    'auto_refresh': d.auto_refresh,
+                    'refresh_interval_seconds': d.refresh_interval_seconds,
+                    'widgets': d.widgets,
+                    'created_at': d.created_at.isoformat(),
+                    'updated_at': d.updated_at.isoformat(),
+                }
+                for d in dashboards
+            ]
+        })
+
+    elif request.method == 'POST':
+        data = request.data
+        dashboard = AnalyticsDashboard.objects.create(
+            user=request.user,
+            name=data.get('name', 'My Dashboard'),
+            description=data.get('description', ''),
+            is_default=data.get('is_default', False),
+            layout=data.get('layout', {}),
+            widgets=data.get('widgets', []),
+            default_time_range=data.get('default_time_range', '24h'),
+            auto_refresh=data.get('auto_refresh', True),
+            refresh_interval_seconds=data.get('refresh_interval_seconds', 60),
+        )
+
+        if dashboard.is_default:
+            AnalyticsDashboard.objects.filter(
+                user=request.user
+            ).exclude(id=dashboard.id).update(is_default=False)
+
+        return Response({
+            'id': str(dashboard.id),
+            'name': dashboard.name,
+            'created': True,
+        }, status=201)
+
+
+@api_view(['GET', 'POST'])
+def analytics_alerts_v2(request):
+    """
+    Session 221 Phase F: List or create analytics alerts.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    if not request.user.is_authenticated:
+        return Response({'error': 'Authentication required'}, status=401)
+
+    if request.method == 'GET':
+        alerts = AnalyticsAlert.objects.filter(user=request.user)
+        return Response({
+            'alerts': [
+                {
+                    'id': str(a.id),
+                    'name': a.name,
+                    'description': a.description,
+                    'is_active': a.is_active,
+                    'metric_type': a.metric_type,
+                    'operator': a.operator,
+                    'threshold_value': float(a.threshold_value),
+                    'notify_email': a.notify_email,
+                    'notify_websocket': a.notify_websocket,
+                    'cooldown_minutes': a.cooldown_minutes,
+                    'last_triggered': a.last_triggered.isoformat() if a.last_triggered else None,
+                    'trigger_count': a.trigger_count,
+                }
+                for a in alerts
+            ]
+        })
+
+    elif request.method == 'POST':
+        data = request.data
+        alert = AnalyticsAlert.objects.create(
+            user=request.user,
+            name=data.get('name', 'My Alert'),
+            description=data.get('description', ''),
+            is_active=data.get('is_active', True),
+            metric_type=data.get('metric_type', 'cost_daily'),
+            operator=data.get('operator', 'gt'),
+            threshold_value=Decimal(str(data.get('threshold_value', 0))),
+            notify_email=data.get('notify_email', False),
+            notify_websocket=data.get('notify_websocket', True),
+            cooldown_minutes=data.get('cooldown_minutes', 60),
+        )
+        return Response({
+            'id': str(alert.id),
+            'name': alert.name,
+            'created': True,
+        }, status=201)
+
+
+@api_view(['GET'])
+def realtime_stats_v2(request):
+    """
+    Session 221 Phase F: Get real-time stats for dashboard widgets.
+    Lightweight endpoint for frequent polling.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    now = timezone.now()
+    last_minute = now - timedelta(minutes=1)
+    last_hour = now - timedelta(hours=1)
+
+    recent_usage = UsageMetric.objects.filter(timestamp__gte=last_minute).count()
+    active_categories = UsageMetric.objects.filter(
+        timestamp__gte=last_hour
+    ).values('category').distinct().count()
+    recent_errors = PerformanceLog.objects.filter(
+        timestamp__gte=last_hour, success=False
+    ).count()
+    avg_response = PerformanceLog.objects.filter(
+        timestamp__gte=last_hour
+    ).aggregate(avg=Avg('response_time_ms'))
+
+    return Response({
+        'timestamp': now.isoformat(),
+        'requests_per_minute': recent_usage,
+        'active_categories': active_categories,
+        'errors_last_hour': recent_errors,
+        'avg_response_time_ms': avg_response['avg'] or 0,
+    })
+
+
+@api_view(['POST'])
+def track_event_v2(request):
+    """
+    Session 221 Phase F: Track a custom event from the frontend.
+    """
+    if not ANALYTICS_MODELS_AVAILABLE:
+        return Response({'error': 'Analytics models not available'}, status=503)
+
+    data = request.data
+    user = request.user if request.user.is_authenticated else None
+
+    category = data.get('category', 'api')
+    metric_type = data.get('metric_type', 'custom')
+    feature_name = data.get('feature_name', 'unknown')
+
+    metric = advanced_analytics_service.track_usage(
+        user=user,
+        category=category,
+        metric_type=metric_type,
+        feature_name=feature_name,
+        count=data.get('count', 1),
+        value=data.get('value', 0),
+        metadata=data.get('metadata', {}),
+        provider=data.get('provider', ''),
+        duration_ms=data.get('duration_ms'),
+    )
+
+    return Response({
+        'tracked': metric is not None,
+        'metric_id': str(metric.id) if metric else None,
+    })

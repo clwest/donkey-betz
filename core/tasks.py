@@ -434,15 +434,17 @@ def process_spider_data_automatic():
 @shared_task
 def run_spider_network():
     """
-    Session 207: Run all active spiders and collect real data.
+    Session 207/221: Run all active spiders and collect REAL data.
     Runs every 30 minutes via Celery Beat.
+
+    Session 221 Enhancement: Uses real_data_collector for actual web scraping.
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
+    from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
     from core.models_unified_system import SpiderData
     from django.utils import timezone
-    import asyncio
 
-    logger.info("🕷️ Starting spider network execution...")
+    logger.info("🕷️ Starting spider network execution with REAL data collection...")
 
     registry = SpiderRegistry()
     all_spiders = registry.list_spiders()
@@ -450,64 +452,80 @@ def run_spider_network():
     results = {
         'spiders_run': 0,
         'data_collected': 0,
+        'items_collected': 0,
         'errors': 0,
         'spider_results': []
     }
 
     for spider_name, spider_config in all_spiders.items():
         try:
-            spider_class = registry.get_spider_class(spider_name)
-            if not spider_class:
-                continue
-
             logger.info(f"🕷️ Running spider: {spider_name}")
 
-            # Initialize spider with minimal config
-            spider = spider_class(
-                spider_id=spider_name,
-                targets=[],
-                subscribers=[],
-                redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
-            )
-
-            # Try to run the spider's scrape method
-            try:
-                if hasattr(spider, 'scrape'):
-                    data = asyncio.run(spider.scrape())
-                elif hasattr(spider, 'collect_data'):
-                    data = asyncio.run(spider.collect_data())
-                elif hasattr(spider, 'run'):
-                    data = spider.run()
+            # Session 221: Use real data collector for spiders with configured URLs
+            if spider_name in SPIDER_TARGET_URLS:
+                # Fetch REAL data from the web
+                data = collect_spider_data_sync(spider_name)
+                item_count = data.get('item_count', 0)
+                logger.info(f"✅ Spider {spider_name}: collected {item_count} REAL items")
+            else:
+                # Fallback for spiders without configured URLs
+                spider_class = registry.get_spider_class(spider_name)
+                if spider_class:
+                    try:
+                        spider = spider_class(
+                            spider_id=spider_name,
+                            targets=[],
+                            subscribers=[],
+                            redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
+                        )
+                        # Try spider methods
+                        if hasattr(spider, 'scrape'):
+                            import asyncio
+                            data = asyncio.run(spider.scrape())
+                        elif hasattr(spider, 'collect_data'):
+                            import asyncio
+                            data = asyncio.run(spider.collect_data())
+                        else:
+                            data = {
+                                'source': spider_name,
+                                'category': spider_config.get('category', 'general'),
+                                'items': [],
+                                'message': f'Spider {spider_name} ready (no real URLs configured)',
+                                'timestamp': timezone.now().isoformat()
+                            }
+                    except Exception as spider_error:
+                        logger.warning(f"Spider {spider_name} method failed: {spider_error}")
+                        data = {
+                            'source': spider_name,
+                            'items': [],
+                            'error': str(spider_error),
+                            'timestamp': timezone.now().isoformat()
+                        }
                 else:
-                    # Create sample data for spiders without scrape method
                     data = {
                         'source': spider_name,
-                        'category': spider_config.get('category', 'general'),
                         'items': [],
                         'timestamp': timezone.now().isoformat()
                     }
-            except Exception as scrape_error:
-                logger.warning(f"Spider {spider_name} scrape failed: {scrape_error}")
-                data = {
-                    'source': spider_name,
-                    'error': str(scrape_error),
-                    'timestamp': timezone.now().isoformat()
-                }
+                item_count = len(data.get('items', []))
 
             # Save to SpiderData
+            config = spider_config.get('config', {})
             spider_data = SpiderData.objects.create(
                 spider_name=spider_name,
-                data_type=spider_config.get('category', 'general'),
+                data_type=config.get('category', spider_config.get('category', 'general')),
                 raw_data=data if isinstance(data, dict) else {'data': str(data)},
-                source_url=spider_config.get('targets', ['unknown'])[0] if spider_config.get('targets') else 'internal',
-                relevance_score=50
+                source_url=SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal',
+                relevance_score=70 if item_count > 0 else 30
             )
 
             results['spiders_run'] += 1
             results['data_collected'] += 1
+            results['items_collected'] += item_count
             results['spider_results'].append({
                 'spider': spider_name,
                 'success': True,
+                'item_count': item_count,
                 'data_id': str(spider_data.id)
             })
 
@@ -520,7 +538,7 @@ def run_spider_network():
                 'error': str(e)
             })
 
-    logger.info(f"✅ Spider network complete: {results['spiders_run']} run, {results['data_collected']} collected, {results['errors']} errors")
+    logger.info(f"✅ Spider network complete: {results['spiders_run']} run, {results['items_collected']} items collected, {results['errors']} errors")
     return results
 
 

@@ -436,7 +436,11 @@ from core.views_analytics import (
     get_chart_agent_trends, get_chart_agent_comparison, get_chart_agent_heatmap,
     get_chart_workflow_trends, get_chart_workflow_success,
     get_chart_knowledge_growth, get_chart_knowledge_domains,
-    get_chart_system_health, get_chart_dashboard
+    get_chart_system_health, get_chart_dashboard,
+    # Session 221: Advanced Analytics Phase F
+    analytics_overview_v2, usage_timeline_v2, performance_timeline_v2,
+    cost_breakdown_v2, analytics_dashboards_v2, analytics_alerts_v2,
+    realtime_stats_v2, track_event_v2
 )
 # Session 217B: Agent Training
 from core.views_agent_training import (
@@ -1174,6 +1178,16 @@ urlpatterns = [
     path('api/analytics/charts/knowledge-domains/', get_chart_knowledge_domains, name='chart-knowledge-domains'),
     path('api/analytics/charts/system-health/', get_chart_system_health, name='chart-system-health'),
     path('api/analytics/charts/dashboard/', get_chart_dashboard, name='chart-dashboard'),
+
+    # Session 221: Advanced Analytics Phase F
+    path('api/analytics/v2/overview/', analytics_overview_v2, name='analytics-overview-v2'),
+    path('api/analytics/v2/usage-timeline/', usage_timeline_v2, name='usage-timeline-v2'),
+    path('api/analytics/v2/performance-timeline/', performance_timeline_v2, name='performance-timeline-v2'),
+    path('api/analytics/v2/cost-breakdown/', cost_breakdown_v2, name='cost-breakdown-v2'),
+    path('api/analytics/v2/dashboards/', analytics_dashboards_v2, name='analytics-dashboards-v2'),
+    path('api/analytics/v2/alerts/', analytics_alerts_v2, name='analytics-alerts-v2'),
+    path('api/analytics/v2/realtime/', realtime_stats_v2, name='realtime-stats-v2'),
+    path('api/analytics/v2/track/', track_event_v2, name='track-event-v2'),
 
     # Session 217B: Agent Training API
     path('api/training/agents/', training_list_agents, name='training-list-agents'),

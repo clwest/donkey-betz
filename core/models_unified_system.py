@@ -2895,3 +2895,324 @@ class ProjectComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.user} on {self.project.name}"
+
+
+# =============================================================================
+# Session 221 Phase F: Advanced Analytics Models
+# =============================================================================
+
+class UsageMetric(models.Model):
+    """
+    Track usage metrics for all platform features.
+
+    Session 221 Phase F: Analytics foundation for understanding platform usage.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='usage_metrics', null=True, blank=True
+    )
+
+    # Metric identification
+    METRIC_CATEGORIES = [
+        ('image', 'Image Generation'),
+        ('video', 'Video Generation'),
+        ('audio', 'Audio Generation'),
+        ('3d', '3D Generation'),
+        ('workflow', 'Workflow Execution'),
+        ('agent', 'Agent Execution'),
+        ('spider', 'Spider Data'),
+        ('collaboration', 'Collaboration'),
+        ('api', 'API Call'),
+    ]
+    category = models.CharField(max_length=20, choices=METRIC_CATEGORIES)
+    metric_type = models.CharField(max_length=50)  # e.g., 'generate', 'edit', 'export'
+    feature_name = models.CharField(max_length=100)  # e.g., 'ultra_generation', 'runway_video'
+
+    # Metric values
+    count = models.IntegerField(default=1)
+    value = models.DecimalField(max_digits=15, decimal_places=4, default=0)  # For storing amounts
+
+    # Context
+    metadata = models.JSONField(default=dict)  # Additional context
+
+    # API provider tracking
+    provider = models.CharField(max_length=50, blank=True)  # 'stability', 'runway', 'elevenlabs'
+    endpoint = models.CharField(max_length=200, blank=True)
+
+    # Time tracking
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    duration_ms = models.IntegerField(null=True, blank=True)  # Processing time
+
+    # Aggregation helpers
+    hour = models.IntegerField(default=0)  # 0-23
+    day_of_week = models.IntegerField(default=0)  # 0-6 (Monday=0)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Usage Metric'
+        verbose_name_plural = 'Usage Metrics'
+        indexes = [
+            models.Index(fields=['category', 'timestamp']),
+            models.Index(fields=['user', 'timestamp']),
+            models.Index(fields=['feature_name', 'timestamp']),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Auto-populate time fields
+        if self.timestamp:
+            self.hour = self.timestamp.hour
+            self.day_of_week = self.timestamp.weekday()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.category}:{self.metric_type} at {self.timestamp}"
+
+
+class PerformanceLog(models.Model):
+    """
+    Track performance metrics for system operations.
+
+    Session 221 Phase F: Monitor system health and performance.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Component identification
+    COMPONENT_TYPES = [
+        ('api', 'API Endpoint'),
+        ('websocket', 'WebSocket'),
+        ('database', 'Database'),
+        ('cache', 'Cache'),
+        ('external', 'External API'),
+        ('worker', 'Background Worker'),
+        ('ml', 'ML Model'),
+    ]
+    component_type = models.CharField(max_length=20, choices=COMPONENT_TYPES)
+    component_name = models.CharField(max_length=100)
+
+    # Performance data
+    response_time_ms = models.IntegerField()  # Milliseconds
+    status_code = models.IntegerField(null=True, blank=True)
+    success = models.BooleanField(default=True)
+
+    # Error tracking
+    error_message = models.TextField(blank=True)
+    error_type = models.CharField(max_length=100, blank=True)
+
+    # Resource usage
+    memory_mb = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cpu_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    # Context
+    endpoint = models.CharField(max_length=200, blank=True)
+    method = models.CharField(max_length=10, blank=True)  # GET, POST, etc.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='performance_logs'
+    )
+
+    # Timestamp
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Performance Log'
+        verbose_name_plural = 'Performance Logs'
+        indexes = [
+            models.Index(fields=['component_type', 'timestamp']),
+            models.Index(fields=['success', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.component_type}:{self.component_name} - {self.response_time_ms}ms"
+
+
+class CostTracking(models.Model):
+    """
+    Track API costs and token usage across all providers.
+
+    Session 221 Phase F: Enable cost monitoring and budget management.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='cost_records', null=True, blank=True
+    )
+
+    # Provider and service
+    PROVIDERS = [
+        ('stability', 'Stability AI'),
+        ('runway', 'Runway ML'),
+        ('elevenlabs', 'ElevenLabs'),
+        ('openai', 'OpenAI'),
+        ('anthropic', 'Anthropic'),
+        ('replicate', 'Replicate'),
+        ('other', 'Other'),
+    ]
+    provider = models.CharField(max_length=20, choices=PROVIDERS)
+    service = models.CharField(max_length=100)  # e.g., 'ultra_generation', 'gen3_turbo'
+    operation = models.CharField(max_length=100)  # e.g., 'generate', 'upscale', 'tts'
+
+    # Cost data
+    credits_used = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    estimated_cost_usd = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+
+    # Token tracking (for LLM APIs)
+    input_tokens = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0)
+    total_tokens = models.IntegerField(default=0)
+
+    # Resource tracking (for generation APIs)
+    resolution = models.CharField(max_length=20, blank=True)  # e.g., '1024x1024'
+    duration_seconds = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Billing period
+    billing_period = models.CharField(max_length=7, blank=True)  # YYYY-MM format
+
+    # Context
+    request_id = models.CharField(max_length=100, blank=True)
+    metadata = models.JSONField(default=dict)
+
+    # Timestamp
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Cost Tracking'
+        verbose_name_plural = 'Cost Tracking Records'
+        indexes = [
+            models.Index(fields=['provider', 'timestamp']),
+            models.Index(fields=['user', 'billing_period']),
+            models.Index(fields=['service', 'timestamp']),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Auto-populate billing period
+        if self.timestamp and not self.billing_period:
+            self.billing_period = self.timestamp.strftime('%Y-%m')
+        # Calculate total tokens
+        if self.input_tokens or self.output_tokens:
+            self.total_tokens = self.input_tokens + self.output_tokens
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.provider}:{self.service} - ${self.estimated_cost_usd}"
+
+
+class AnalyticsDashboard(models.Model):
+    """
+    User-customizable analytics dashboard configuration.
+
+    Session 221 Phase F: Allow users to create custom dashboards.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='analytics_dashboards'
+    )
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_default = models.BooleanField(default=False)
+
+    # Dashboard layout
+    layout = models.JSONField(default=dict)  # Grid positions and sizes
+
+    # Widgets configuration
+    widgets = models.JSONField(default=list)  # List of widget configs
+
+    # Time range defaults
+    DEFAULT_RANGES = [
+        ('1h', 'Last Hour'),
+        ('24h', 'Last 24 Hours'),
+        ('7d', 'Last 7 Days'),
+        ('30d', 'Last 30 Days'),
+        ('90d', 'Last 90 Days'),
+        ('custom', 'Custom Range'),
+    ]
+    default_time_range = models.CharField(max_length=10, choices=DEFAULT_RANGES, default='24h')
+
+    # Refresh settings
+    auto_refresh = models.BooleanField(default=True)
+    refresh_interval_seconds = models.IntegerField(default=60)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Analytics Dashboard'
+        verbose_name_plural = 'Analytics Dashboards'
+        unique_together = [('user', 'name')]
+
+    def __str__(self):
+        return f"{self.user}'s Dashboard: {self.name}"
+
+
+class AnalyticsAlert(models.Model):
+    """
+    Configurable alerts based on analytics thresholds.
+
+    Session 221 Phase F: Notify users of important metric changes.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='analytics_alerts'
+    )
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    # Alert conditions
+    METRIC_TYPES = [
+        ('cost_daily', 'Daily Cost'),
+        ('cost_monthly', 'Monthly Cost'),
+        ('api_errors', 'API Errors'),
+        ('response_time', 'Response Time'),
+        ('usage_count', 'Usage Count'),
+        ('credits_remaining', 'Credits Remaining'),
+    ]
+    metric_type = models.CharField(max_length=30, choices=METRIC_TYPES)
+
+    OPERATORS = [
+        ('gt', 'Greater Than'),
+        ('lt', 'Less Than'),
+        ('eq', 'Equal To'),
+        ('gte', 'Greater Than or Equal'),
+        ('lte', 'Less Than or Equal'),
+    ]
+    operator = models.CharField(max_length=5, choices=OPERATORS)
+    threshold_value = models.DecimalField(max_digits=15, decimal_places=4)
+
+    # Notification settings
+    notify_email = models.BooleanField(default=False)
+    notify_websocket = models.BooleanField(default=True)
+    cooldown_minutes = models.IntegerField(default=60)  # Minimum time between alerts
+
+    # Tracking
+    last_triggered = models.DateTimeField(null=True, blank=True)
+    trigger_count = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Analytics Alert'
+        verbose_name_plural = 'Analytics Alerts'
+
+    def can_trigger(self):
+        """Check if alert can be triggered based on cooldown"""
+        if not self.last_triggered:
+            return True
+        elapsed = (timezone.now() - self.last_triggered).total_seconds() / 60
+        return elapsed >= self.cooldown_minutes
+
+    def __str__(self):
+        return f"Alert: {self.name} ({self.metric_type} {self.operator} {self.threshold_value})"

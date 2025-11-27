@@ -1440,6 +1440,13 @@
                     👥 Collaborate
                 </button>
             </li>
+
+            <!-- Session 221 Phase F: Advanced Analytics Tab -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab" title="Analytics & Performance Monitoring">
+                    📊 Analytics
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -8052,6 +8059,170 @@
                 </div>
             </div>
             <!-- END COLLABORATION TAB -->
+
+            <!-- Session 221 Phase F: Advanced Analytics Tab -->
+            <div class="tab-pane fade" id="analytics" role="tabpanel">
+                <h3 class="mb-4">📊 Advanced Analytics</h3>
+                <p class="text-muted mb-4">Track usage, costs, performance metrics, and configure alerts across all platform features.</p>
+
+                <!-- Time Range Selector -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <select id="analytics-time-range" class="form-select" style="background: rgba(255,255,255,0.05); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                            <option value="1h">Last Hour</option>
+                            <option value="24h" selected>Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" id="analytics-auto-refresh" checked>
+                            <label class="form-check-label text-light" for="analytics-auto-refresh">Auto-refresh (60s)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-primary" onclick="loadAnalyticsDashboard()">
+                            🔄 Refresh Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Analytics Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="analytics-total-usage">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Usage</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="analytics-total-cost">$0.00</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Cost</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="analytics-avg-response">0ms</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Avg Response</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="analytics-error-rate">0%</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Error Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Main Charts Area -->
+                    <div class="col-md-8">
+                        <!-- Usage by Category Chart -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                <h5 class="mb-0" style="color: #c4b5fd;">📈 Usage by Category</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="analytics-usage-chart" style="height: 250px; display: flex; align-items: flex-end; gap: 10px; justify-content: space-around;">
+                                    <!-- Chart bars rendered by JS -->
+                                    <div class="text-center text-muted">Loading usage data...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cost Breakdown Chart -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(251, 191, 36, 0.3);">
+                            <div class="card-header" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                <h5 class="mb-0" style="color: #fbbf24;">💰 Cost by Provider</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="analytics-cost-chart" style="min-height: 200px;">
+                                    <!-- Cost breakdown rendered by JS -->
+                                    <div class="text-center text-muted">Loading cost data...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Performance Timeline -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
+                            <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                <h5 class="mb-0" style="color: #86efac;">⚡ Performance Timeline</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="analytics-performance-chart" style="height: 200px;">
+                                    <!-- Performance chart rendered by JS -->
+                                    <div class="text-center text-muted">Loading performance data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="col-md-4">
+                        <!-- Top Features -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(59, 130, 246, 0.3);">
+                            <div class="card-header" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid rgba(59, 130, 246, 0.3);">
+                                <h6 class="mb-0" style="color: #60a5fa;">🏆 Top Features</h6>
+                            </div>
+                            <div class="card-body" id="analytics-top-features" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted small">Loading top features...</p>
+                            </div>
+                        </div>
+
+                        <!-- Active Alerts -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(239, 68, 68, 0.3);">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                                <h6 class="mb-0" style="color: #f87171;">🔔 Alerts</h6>
+                                <button class="btn btn-sm btn-outline-danger" onclick="showCreateAlertModal()">+ New</button>
+                            </div>
+                            <div class="card-body" id="analytics-alerts-list" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted small">No active alerts</p>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="card" style="background: #1a1a1a; border: 1px solid rgba(236, 72, 153, 0.3);">
+                            <div class="card-header" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                                <h6 class="mb-0" style="color: #f472b6;">📊 Quick Stats</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Images Generated</span>
+                                    <span class="text-light" id="analytics-stat-images">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Videos Created</span>
+                                    <span class="text-light" id="analytics-stat-videos">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Audio Files</span>
+                                    <span class="text-light" id="analytics-stat-audio">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Workflows Run</span>
+                                    <span class="text-light" id="analytics-stat-workflows">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Agent Tasks</span>
+                                    <span class="text-light" id="analytics-stat-agents">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END ANALYTICS TAB -->
 
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
@@ -37626,6 +37797,353 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // ============================================================
         // END SESSION 220: REAL-TIME COLLABORATION FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 221 PHASE F: ADVANCED ANALYTICS FUNCTIONS
+        // ============================================================
+
+        // Analytics state
+        let analyticsRefreshInterval = null;
+        let analyticsWebSocket = null;
+
+        // Provider colors for charts
+        const providerColors = {
+            stability: '#8b5cf6',
+            runway: '#ec4899',
+            elevenlabs: '#f59e0b',
+            openai: '#22c55e',
+            anthropic: '#3b82f6',
+            replicate: '#ef4444',
+            other: '#6b7280'
+        };
+
+        // Category colors for charts
+        const categoryColors = {
+            image: '#8b5cf6',
+            video: '#ec4899',
+            audio: '#f59e0b',
+            '3d': '#22c55e',
+            workflow: '#3b82f6',
+            agent: '#ef4444',
+            spider: '#06b6d4',
+            collaboration: '#84cc16',
+            api: '#6b7280'
+        };
+
+        // Load analytics dashboard
+        async function loadAnalyticsDashboard() {
+            const timeRange = document.getElementById('analytics-time-range')?.value || '24h';
+
+            try {
+                const response = await fetch(`/api/analytics/v2/overview/?time_range=${timeRange}`);
+                if (!response.ok) throw new Error('Failed to load analytics');
+
+                const data = await response.json();
+
+                // Update stats cards
+                document.getElementById('analytics-total-usage').textContent = data.total_usage || 0;
+                document.getElementById('analytics-total-cost').textContent = `$${(data.total_cost || 0).toFixed(2)}`;
+                document.getElementById('analytics-avg-response').textContent = `${Math.round(data.avg_response_time || 0)}ms`;
+                document.getElementById('analytics-error-rate').textContent = `${(data.error_rate || 0).toFixed(1)}%`;
+
+                // Update quick stats
+                if (data.category_breakdown) {
+                    document.getElementById('analytics-stat-images').textContent = data.category_breakdown.image || 0;
+                    document.getElementById('analytics-stat-videos').textContent = data.category_breakdown.video || 0;
+                    document.getElementById('analytics-stat-audio').textContent = data.category_breakdown.audio || 0;
+                    document.getElementById('analytics-stat-workflows').textContent = data.category_breakdown.workflow || 0;
+                    document.getElementById('analytics-stat-agents').textContent = data.category_breakdown.agent || 0;
+                }
+
+                // Render charts
+                renderUsageChart(data.category_breakdown || {});
+                renderCostChart(data.cost_by_provider || {});
+                renderTopFeatures(data.top_features || []);
+
+                // Load performance timeline
+                loadPerformanceTimeline(timeRange);
+
+                // Load alerts
+                loadAnalyticsAlerts();
+
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                showToast('error', 'Failed to load analytics data');
+            }
+        }
+
+        // Render usage by category chart (simple bar chart)
+        function renderUsageChart(categoryData) {
+            const container = document.getElementById('analytics-usage-chart');
+            if (!container) return;
+
+            const categories = Object.entries(categoryData);
+            if (categories.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">No usage data yet</div>';
+                return;
+            }
+
+            const maxValue = Math.max(...categories.map(([, v]) => v), 1);
+
+            container.innerHTML = categories.map(([category, count]) => {
+                const height = Math.max((count / maxValue) * 200, 10);
+                const color = categoryColors[category] || '#6b7280';
+                return `
+                    <div class="d-flex flex-column align-items-center" style="flex: 1; max-width: 80px;">
+                        <div style="width: 40px; height: ${height}px; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.3s;"></div>
+                        <small class="text-muted mt-1" style="font-size: 10px;">${category}</small>
+                        <small style="color: ${color}; font-weight: 600;">${count}</small>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render cost by provider chart
+        function renderCostChart(costData) {
+            const container = document.getElementById('analytics-cost-chart');
+            if (!container) return;
+
+            const providers = Object.entries(costData);
+            if (providers.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">No cost data yet</div>';
+                return;
+            }
+
+            const totalCost = providers.reduce((sum, [, cost]) => sum + cost, 0);
+
+            container.innerHTML = providers.map(([provider, cost]) => {
+                const percentage = totalCost > 0 ? (cost / totalCost) * 100 : 0;
+                const color = providerColors[provider] || '#6b7280';
+                return `
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small style="color: ${color}; text-transform: capitalize;">${provider}</small>
+                            <small class="text-light">$${cost.toFixed(2)} (${percentage.toFixed(1)}%)</small>
+                        </div>
+                        <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                            <div style="width: ${percentage}%; height: 100%; background: ${color}; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render top features list
+        function renderTopFeatures(features) {
+            const container = document.getElementById('analytics-top-features');
+            if (!container) return;
+
+            if (features.length === 0) {
+                container.innerHTML = '<p class="text-muted small">No feature data yet</p>';
+                return;
+            }
+
+            container.innerHTML = features.slice(0, 10).map((feature, index) => `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center">
+                        <span class="badge me-2" style="background: rgba(59, 130, 246, 0.3); color: #60a5fa;">${index + 1}</span>
+                        <small class="text-light">${feature.feature_name}</small>
+                    </div>
+                    <small class="text-muted">${feature.total_count} uses</small>
+                </div>
+            `).join('');
+        }
+
+        // Load performance timeline
+        async function loadPerformanceTimeline(timeRange) {
+            const container = document.getElementById('analytics-performance-chart');
+            if (!container) return;
+
+            try {
+                const response = await fetch(`/api/analytics/v2/performance-timeline/?time_range=${timeRange}`);
+                if (!response.ok) throw new Error('Failed to load performance data');
+
+                const data = await response.json();
+                const timeline = data.timeline || [];
+
+                if (timeline.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted">No performance data yet</div>';
+                    return;
+                }
+
+                const maxResponseTime = Math.max(...timeline.map(t => t.avg_response_time || 0), 1);
+
+                // Simple line chart representation
+                container.innerHTML = `
+                    <div style="display: flex; align-items: flex-end; height: 180px; gap: 2px;">
+                        ${timeline.map(point => {
+                            const height = ((point.avg_response_time || 0) / maxResponseTime) * 160;
+                            const color = point.success_rate >= 95 ? '#22c55e' : point.success_rate >= 80 ? '#f59e0b' : '#ef4444';
+                            return `<div style="flex: 1; height: ${Math.max(height, 5)}px; background: ${color}; border-radius: 2px;" title="${point.period}: ${Math.round(point.avg_response_time)}ms, ${point.success_rate?.toFixed(1) || 100}% success"></div>`;
+                        }).join('')}
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Older</small>
+                        <small class="text-muted">Response Time (ms) - Color = Success Rate</small>
+                        <small class="text-muted">Newer</small>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading performance timeline:', error);
+                container.innerHTML = '<div class="text-center text-muted">Error loading performance data</div>';
+            }
+        }
+
+        // Load analytics alerts
+        async function loadAnalyticsAlerts() {
+            const container = document.getElementById('analytics-alerts-list');
+            if (!container) return;
+
+            try {
+                const response = await fetch('/api/analytics/v2/alerts/');
+                if (!response.ok) throw new Error('Failed to load alerts');
+
+                const data = await response.json();
+                const alerts = data.alerts || [];
+
+                if (alerts.length === 0) {
+                    container.innerHTML = '<p class="text-muted small">No active alerts. Click "+ New" to create one.</p>';
+                    return;
+                }
+
+                container.innerHTML = alerts.map(alert => `
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: rgba(255,255,255,0.05);">
+                        <div>
+                            <small class="text-light d-block">${alert.name}</small>
+                            <small class="text-muted">${alert.metric_type} ${alert.operator} ${alert.threshold_value}</small>
+                        </div>
+                        <span class="badge ${alert.is_active ? 'bg-success' : 'bg-secondary'}">${alert.is_active ? 'Active' : 'Paused'}</span>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+                container.innerHTML = '<p class="text-muted small">Error loading alerts</p>';
+            }
+        }
+
+        // Show create alert modal
+        function showCreateAlertModal() {
+            const name = prompt('Alert name:', 'Daily Cost Alert');
+            if (!name) return;
+
+            const metricType = prompt('Metric type (cost_daily, cost_monthly, api_errors, response_time, usage_count):', 'cost_daily');
+            if (!metricType) return;
+
+            const threshold = prompt('Threshold value:', '10');
+            if (!threshold) return;
+
+            createAnalyticsAlert({
+                name: name,
+                metric_type: metricType,
+                operator: 'gt',
+                threshold_value: parseFloat(threshold)
+            });
+        }
+
+        // Create analytics alert
+        async function createAnalyticsAlert(alertData) {
+            try {
+                const response = await fetch('/api/analytics/v2/alerts/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(alertData)
+                });
+
+                if (response.ok) {
+                    showToast('success', 'Alert created successfully!');
+                    loadAnalyticsAlerts();
+                } else {
+                    const err = await response.json();
+                    showToast('error', err.error || 'Failed to create alert');
+                }
+            } catch (error) {
+                console.error('Error creating alert:', error);
+                showToast('error', 'Error creating alert');
+            }
+        }
+
+        // Start analytics auto-refresh
+        function startAnalyticsAutoRefresh() {
+            const checkbox = document.getElementById('analytics-auto-refresh');
+            if (checkbox && checkbox.checked) {
+                analyticsRefreshInterval = setInterval(loadAnalyticsDashboard, 60000);
+            }
+        }
+
+        // Stop analytics auto-refresh
+        function stopAnalyticsAutoRefresh() {
+            if (analyticsRefreshInterval) {
+                clearInterval(analyticsRefreshInterval);
+                analyticsRefreshInterval = null;
+            }
+        }
+
+        // Connect to analytics WebSocket for real-time updates
+        function connectAnalyticsWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/analytics/`;
+
+            if (analyticsWebSocket) {
+                analyticsWebSocket.close();
+            }
+
+            analyticsWebSocket = new WebSocket(wsUrl);
+
+            analyticsWebSocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'metrics_update') {
+                    // Update real-time stats
+                    if (data.stats) {
+                        document.getElementById('analytics-total-usage').textContent = data.stats.total_usage || 0;
+                        document.getElementById('analytics-total-cost').textContent = `$${(data.stats.total_cost || 0).toFixed(2)}`;
+                    }
+                }
+            };
+
+            analyticsWebSocket.onerror = function(error) {
+                console.log('Analytics WebSocket not available (optional feature)');
+            };
+        }
+
+        // Initialize analytics tab when shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const analyticsTab = document.getElementById('analytics-tab');
+            if (analyticsTab) {
+                analyticsTab.addEventListener('shown.bs.tab', function() {
+                    loadAnalyticsDashboard();
+                    startAnalyticsAutoRefresh();
+                });
+
+                analyticsTab.addEventListener('hidden.bs.tab', function() {
+                    stopAnalyticsAutoRefresh();
+                });
+            }
+
+            // Time range change handler
+            const timeRangeSelect = document.getElementById('analytics-time-range');
+            if (timeRangeSelect) {
+                timeRangeSelect.addEventListener('change', loadAnalyticsDashboard);
+            }
+
+            // Auto-refresh toggle handler
+            const autoRefreshCheckbox = document.getElementById('analytics-auto-refresh');
+            if (autoRefreshCheckbox) {
+                autoRefreshCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        startAnalyticsAutoRefresh();
+                    } else {
+                        stopAnalyticsAutoRefresh();
+                    }
+                });
+            }
+        });
+
+        // ============================================================
+        // END SESSION 221 PHASE F: ADVANCED ANALYTICS FUNCTIONS
         // ============================================================
 
         // ============================================================
