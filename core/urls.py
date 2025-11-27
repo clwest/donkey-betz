@@ -250,6 +250,24 @@ from core.views_team_collaboration import (
     list_active_workflows,
 )
 
+# Session 229: Import Smart Distribution views (Phase 4)
+from core.views_distribution import (
+    list_platforms,
+    create_platform,
+    get_platform,
+    list_user_accounts,
+    connect_platform,
+    list_distributions,
+    create_distribution,
+    submit_distribution,
+    publish_distribution,
+    record_sale,
+    get_recommendations,
+    distribution_stats,
+    platform_analytics,
+    seed_platforms_api,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -821,6 +839,22 @@ urlpatterns = [
     path('api/teams/workflows/<uuid:workflow_id>/run/', run_full_workflow, name='teams-workflows-run'),
     path('api/teams/workflows/<uuid:workflow_id>/status/', workflow_status, name='teams-workflows-status'),
     path('api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/execute/', execute_workflow_step, name='teams-workflows-step-execute'),
+
+    # Session 229: Smart Distribution API (Phase 4)
+    path('api/distribution/platforms/', list_platforms, name='distribution-platforms'),
+    path('api/distribution/platforms/create/', create_platform, name='distribution-platforms-create'),
+    path('api/distribution/platforms/<uuid:platform_id>/', get_platform, name='distribution-platform-detail'),
+    path('api/distribution/accounts/', list_user_accounts, name='distribution-accounts'),
+    path('api/distribution/accounts/connect/', connect_platform, name='distribution-accounts-connect'),
+    path('api/distribution/content/', list_distributions, name='distribution-content'),
+    path('api/distribution/content/create/', create_distribution, name='distribution-content-create'),
+    path('api/distribution/content/<uuid:distribution_id>/submit/', submit_distribution, name='distribution-content-submit'),
+    path('api/distribution/content/<uuid:distribution_id>/publish/', publish_distribution, name='distribution-content-publish'),
+    path('api/distribution/content/<uuid:distribution_id>/sale/', record_sale, name='distribution-content-sale'),
+    path('api/distribution/recommendations/', get_recommendations, name='distribution-recommendations'),
+    path('api/distribution/stats/', distribution_stats, name='distribution-stats'),
+    path('api/distribution/analytics/<uuid:platform_id>/', platform_analytics, name='distribution-analytics'),
+    path('api/distribution/seed/', seed_platforms_api, name='distribution-seed'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),

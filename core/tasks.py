@@ -1598,3 +1598,193 @@ def check_workflow_schedules():
             'status': 'failed',
             'error': str(e)
         }
+
+
+# =============================================================================
+# Session 223: Opportunity Engine Tasks (Phase 1 - Creative Intelligence Empire)
+# =============================================================================
+
+@shared_task
+def score_opportunities_from_spider_data(hours: int = 24, limit: int = 100):
+    """
+    Score spider data and create opportunities.
+
+    This task runs on a schedule to transform raw spider data
+    into scored, actionable opportunities.
+
+    Args:
+        hours: Look back period in hours (default: 24)
+        limit: Maximum items to process (default: 100)
+
+    Returns:
+        Dict with scoring statistics
+    """
+    logger.info(f"🎯 [OPPORTUNITY ENGINE] Starting opportunity scoring - last {hours}h, limit: {limit}")
+
+    try:
+        from agents.opportunity_scoring_agent import OpportunityScoringAgent
+
+        agent = OpportunityScoringAgent()
+        results = agent.score_spider_data(hours=hours, limit=limit)
+
+        # Count successful scores
+        successful = [r for r in results if r.success]
+        high_value = [r for r in successful if r.overall_score >= 70]
+
+        stats = {
+            'status': 'completed',
+            'total_processed': len(results),
+            'successful': len(successful),
+            'high_value_opportunities': len(high_value),
+            'average_score': sum(r.overall_score for r in successful) / len(successful) if successful else 0,
+        }
+
+        logger.info(f"🎯 [OPPORTUNITY ENGINE] Completed - {len(successful)} opportunities scored, {len(high_value)} high-value")
+        return stats
+
+    except Exception as e:
+        logger.error(f"❌ [OPPORTUNITY ENGINE] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def expire_old_opportunities():
+    """
+    Mark old opportunities as expired.
+
+    Opportunities that haven't been acted upon within their
+    time sensitivity window should be marked as expired.
+    """
+    logger.info("🎯 [OPPORTUNITY ENGINE] Checking for expired opportunities...")
+
+    try:
+        from core.models_unified_system import Opportunity
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+
+        # Find opportunities that have explicit expiration dates
+        expired_by_date = Opportunity.objects.filter(
+            expires_at__lt=now,
+            status__in=['new', 'active', 'reviewing', 'approved']
+        )
+
+        # Find opportunities older than 7 days with high time sensitivity
+        week_ago = now - timedelta(days=7)
+        expired_by_timing = Opportunity.objects.filter(
+            created_at__lt=week_ago,
+            time_sensitivity__gte=80,
+            status__in=['new', 'active', 'reviewing', 'approved']
+        )
+
+        # Find opportunities older than 30 days that haven't been acted upon
+        month_ago = now - timedelta(days=30)
+        expired_by_age = Opportunity.objects.filter(
+            created_at__lt=month_ago,
+            acted_on_at__isnull=True,
+            status__in=['new', 'active', 'reviewing', 'approved']
+        )
+
+        # Combine and update
+        expired_count = 0
+
+        for queryset in [expired_by_date, expired_by_timing, expired_by_age]:
+            count = queryset.update(status='expired')
+            expired_count += count
+
+        logger.info(f"🎯 [OPPORTUNITY ENGINE] Marked {expired_count} opportunities as expired")
+
+        return {
+            'status': 'completed',
+            'expired_count': expired_count
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [OPPORTUNITY ENGINE] Expire task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def generate_opportunity_report():
+    """
+    Generate a daily opportunity report.
+
+    This creates a summary of:
+    - New opportunities discovered
+    - Top-scoring opportunities
+    - Opportunities acted upon
+    - Revenue from completed opportunities
+    """
+    logger.info("🎯 [OPPORTUNITY ENGINE] Generating daily opportunity report...")
+
+    try:
+        from core.models_unified_system import Opportunity, OpportunityAction
+        from django.utils import timezone
+        from django.db.models import Count, Avg, Sum
+        from datetime import timedelta
+
+        now = timezone.now()
+        yesterday = now - timedelta(days=1)
+
+        # Get statistics
+        new_today = Opportunity.objects.filter(created_at__gte=yesterday).count()
+        total_active = Opportunity.objects.filter(status__in=['new', 'active', 'reviewing', 'approved']).count()
+        acted_today = Opportunity.objects.filter(acted_on_at__gte=yesterday).count()
+
+        # Get top opportunities
+        top_opportunities = list(
+            Opportunity.objects.filter(
+                status__in=['new', 'active'],
+                overall_score__gte=70
+            ).order_by('-overall_score')[:5].values('id', 'title', 'overall_score', 'category')
+        )
+
+        # Get category breakdown
+        by_category = dict(
+            Opportunity.objects.filter(
+                status__in=['new', 'active', 'reviewing', 'approved'],
+                category__isnull=False
+            ).values('category').annotate(count=Count('id')).values_list('category', 'count')
+        )
+
+        # Get average scores
+        avg_scores = Opportunity.objects.filter(
+            overall_score__isnull=False
+        ).aggregate(
+            avg_overall=Avg('overall_score'),
+            avg_profit=Avg('profit_potential'),
+        )
+
+        report = {
+            'status': 'completed',
+            'generated_at': now.isoformat(),
+            'period': 'daily',
+            'summary': {
+                'new_opportunities': new_today,
+                'total_active': total_active,
+                'acted_upon_today': acted_today,
+            },
+            'top_opportunities': top_opportunities,
+            'by_category': by_category,
+            'average_scores': {
+                'overall': round(avg_scores['avg_overall'] or 0, 1),
+                'profit_potential': round(avg_scores['avg_profit'] or 0, 1),
+            }
+        }
+
+        logger.info(f"🎯 [OPPORTUNITY ENGINE] Report generated - {new_today} new, {total_active} active")
+        return report
+
+    except Exception as e:
+        logger.error(f"❌ [OPPORTUNITY ENGINE] Report generation failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }

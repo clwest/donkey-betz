@@ -165,6 +165,29 @@ app.conf.beat_schedule = {
             'expires': 3600,  # Expire after 1 hour
         }
     },
+    # Session 223: Opportunity Engine (Phase 1 - Creative Intelligence Empire)
+    'score-opportunities-hourly': {
+        'task': 'core.tasks.score_opportunities_from_spider_data',
+        'schedule': crontab(minute=15),  # Every hour at :15
+        'args': (24, 100),  # hours=24, limit=100
+        'options': {
+            'expires': 3300,  # 55 minutes
+        }
+    },
+    'expire-old-opportunities': {
+        'task': 'core.tasks.expire_old_opportunities',
+        'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'generate-opportunity-report': {
+        'task': 'core.tasks.generate_opportunity_report',
+        'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

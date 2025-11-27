@@ -4267,3 +4267,287 @@ class TeamWorkflowStep(models.Model):
 
     def __str__(self):
         return f"Step {self.step_number}: {self.step_name} ({self.status})"
+
+
+# =============================================================================
+# SESSION 229: PHASE 4 - SMART DISTRIBUTION
+# =============================================================================
+
+class DistributionPlatform(models.Model):
+    """
+    Platforms where content can be distributed/sold.
+    """
+    PLATFORM_TYPES = [
+        ('marketplace', 'Marketplace'),        # Etsy, Creative Market, etc.
+        ('social', 'Social Media'),            # Instagram, TikTok, etc.
+        ('stock', 'Stock Content'),            # Shutterstock, Adobe Stock, etc.
+        ('print_on_demand', 'Print on Demand'),  # Redbubble, Printful, etc.
+        ('nft', 'NFT Marketplace'),            # OpenSea, Foundation, etc.
+        ('direct', 'Direct Sales'),            # Your own website
+        ('freelance', 'Freelance Platform'),   # Fiverr, Upwork, etc.
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    platform_type = models.CharField(max_length=50, choices=PLATFORM_TYPES)
+    description = models.TextField(blank=True)
+    website_url = models.URLField(blank=True)
+    logo_url = models.URLField(blank=True)
+
+    # Platform capabilities
+    supported_content_types = models.JSONField(default=list)  # ['image', 'video', 'audio', '3d']
+    supported_formats = models.JSONField(default=list)  # ['png', 'jpg', 'mp4', 'svg']
+    max_file_size_mb = models.IntegerField(default=100)
+
+    # Revenue model
+    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    has_subscription = models.BooleanField(default=False)
+    subscription_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    payment_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Integration
+    api_available = models.BooleanField(default=False)
+    api_documentation_url = models.URLField(blank=True)
+    requires_approval = models.BooleanField(default=False)
+
+    # Metadata
+    popularity_score = models.IntegerField(default=50)  # 0-100
+    avg_earnings_per_item = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    competition_level = models.CharField(max_length=20, choices=[
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('very_high', 'Very High'),
+    ], default='medium')
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Distribution Platform'
+        verbose_name_plural = 'Distribution Platforms'
+        ordering = ['-popularity_score', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.platform_type})"
+
+
+class UserPlatformAccount(models.Model):
+    """
+    User's account on a distribution platform.
+    """
+    ACCOUNT_STATUS = [
+        ('pending', 'Pending Verification'),
+        ('active', 'Active'),
+        ('suspended', 'Suspended'),
+        ('inactive', 'Inactive'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='platform_accounts')
+    platform = models.ForeignKey(DistributionPlatform, on_delete=models.CASCADE, related_name='user_accounts')
+
+    # Account details
+    account_username = models.CharField(max_length=200, blank=True)
+    account_url = models.URLField(blank=True)
+    account_status = models.CharField(max_length=20, choices=ACCOUNT_STATUS, default='pending')
+
+    # Credentials (encrypted in production)
+    api_key = models.CharField(max_length=500, blank=True)
+    api_secret = models.CharField(max_length=500, blank=True)
+    access_token = models.TextField(blank=True)
+    refresh_token = models.TextField(blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Performance metrics
+    total_items_listed = models.IntegerField(default=0)
+    total_sales = models.IntegerField(default=0)
+    total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    avg_item_rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    follower_count = models.IntegerField(default=0)
+
+    # Settings
+    auto_upload_enabled = models.BooleanField(default=False)
+    notification_settings = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'User Platform Account'
+        verbose_name_plural = 'User Platform Accounts'
+        unique_together = ['user', 'platform']
+
+    def __str__(self):
+        return f"{self.user.username} on {self.platform.name}"
+
+
+class ContentDistribution(models.Model):
+    """
+    Record of content distributed to a platform.
+    """
+    DISTRIBUTION_STATUS = [
+        ('draft', 'Draft'),
+        ('pending', 'Pending Upload'),
+        ('uploading', 'Uploading'),
+        ('processing', 'Processing'),
+        ('live', 'Live'),
+        ('rejected', 'Rejected'),
+        ('removed', 'Removed'),
+        ('sold_out', 'Sold Out'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='distributions')
+    platform_account = models.ForeignKey(UserPlatformAccount, on_delete=models.CASCADE, related_name='distributions')
+
+    # Content reference
+    content_type = models.CharField(max_length=50)  # image, video, audio, 3d
+    image_history = models.ForeignKey('content.ImageHistory', on_delete=models.SET_NULL, null=True, blank=True, related_name='distributions')
+    video_history = models.ForeignKey('content.VideoHistory', on_delete=models.SET_NULL, null=True, blank=True, related_name='distributions')
+    opportunity = models.ForeignKey(Opportunity, on_delete=models.SET_NULL, null=True, blank=True, related_name='distributions')
+
+    # Listing details
+    title = models.CharField(max_length=500)
+    description = models.TextField(blank=True)
+    tags = models.JSONField(default=list)
+    categories = models.JSONField(default=list)
+
+    # Pricing
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=10, default='USD')
+    license_type = models.CharField(max_length=50, blank=True)  # commercial, editorial, etc.
+
+    # Platform-specific data
+    platform_listing_id = models.CharField(max_length=200, blank=True)
+    platform_listing_url = models.URLField(blank=True)
+    platform_metadata = models.JSONField(default=dict)
+
+    # Status
+    status = models.CharField(max_length=20, choices=DISTRIBUTION_STATUS, default='draft')
+    rejection_reason = models.TextField(blank=True)
+
+    # Performance
+    views = models.IntegerField(default=0)
+    likes = models.IntegerField(default=0)
+    downloads = models.IntegerField(default=0)
+    sales = models.IntegerField(default=0)
+    revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Timestamps
+    listed_at = models.DateTimeField(null=True, blank=True)
+    last_sale_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Content Distribution'
+        verbose_name_plural = 'Content Distributions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} on {self.platform_account.platform.name}"
+
+
+class DistributionRecommendation(models.Model):
+    """
+    AI-generated recommendations for where to distribute content.
+    """
+    RECOMMENDATION_TYPES = [
+        ('platform', 'Platform Recommendation'),
+        ('pricing', 'Pricing Recommendation'),
+        ('timing', 'Timing Recommendation'),
+        ('tags', 'Tags/Keywords Recommendation'),
+        ('optimization', 'Optimization Recommendation'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='distribution_recommendations')
+
+    # Content reference
+    content_type = models.CharField(max_length=50)
+    image_history = models.ForeignKey('content.ImageHistory', on_delete=models.SET_NULL, null=True, blank=True, related_name='recommendations')
+    video_history = models.ForeignKey('content.VideoHistory', on_delete=models.SET_NULL, null=True, blank=True, related_name='recommendations')
+    opportunity = models.ForeignKey(Opportunity, on_delete=models.SET_NULL, null=True, blank=True, related_name='distribution_recommendations')
+
+    # Recommendation details
+    recommendation_type = models.CharField(max_length=50, choices=RECOMMENDATION_TYPES)
+    platform = models.ForeignKey(DistributionPlatform, on_delete=models.SET_NULL, null=True, blank=True)
+    confidence_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # 0-100
+
+    # Recommendation content
+    title = models.CharField(max_length=200)
+    reasoning = models.TextField()
+    suggested_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    suggested_tags = models.JSONField(default=list)
+    suggested_title = models.CharField(max_length=500, blank=True)
+    suggested_description = models.TextField(blank=True)
+
+    # Estimated outcomes
+    estimated_views = models.IntegerField(null=True, blank=True)
+    estimated_sales = models.IntegerField(null=True, blank=True)
+    estimated_revenue = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # User action
+    is_applied = models.BooleanField(default=False)
+    applied_at = models.DateTimeField(null=True, blank=True)
+    is_dismissed = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Distribution Recommendation'
+        verbose_name_plural = 'Distribution Recommendations'
+        ordering = ['-confidence_score', '-created_at']
+
+    def __str__(self):
+        return f"{self.recommendation_type}: {self.title}"
+
+
+class DistributionAnalytics(models.Model):
+    """
+    Aggregated analytics for distribution performance.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='distribution_analytics')
+    platform = models.ForeignKey(DistributionPlatform, on_delete=models.CASCADE, null=True, blank=True)
+
+    # Time period
+    date = models.DateField()
+    period_type = models.CharField(max_length=20, choices=[
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ], default='daily')
+
+    # Metrics
+    total_views = models.IntegerField(default=0)
+    total_downloads = models.IntegerField(default=0)
+    total_sales = models.IntegerField(default=0)
+    total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    new_listings = models.IntegerField(default=0)
+    conversion_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # sales/views
+
+    # Top performers
+    top_content_ids = models.JSONField(default=list)  # List of content IDs
+    top_tags = models.JSONField(default=list)
+    best_performing_category = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Distribution Analytics'
+        verbose_name_plural = 'Distribution Analytics'
+        unique_together = ['user', 'platform', 'date', 'period_type']
+        ordering = ['-date']
+
+    def __str__(self):
+        platform_name = self.platform.name if self.platform else 'All Platforms'
+        return f"{self.user.username} - {platform_name} - {self.date}"
