@@ -268,6 +268,49 @@ from core.views_distribution import (
     seed_platforms_api,
 )
 
+# Session 230: Import Platform Integration views (OAuth, APIs)
+from core.views_platform_integrations import (
+    oauth_connect,
+    oauth_callback,
+    refresh_token,
+    list_platform_integrations,
+    disconnect_platform,
+    # Etsy
+    etsy_get_shop,
+    etsy_create_listing,
+    # Shutterstock
+    shutterstock_get_portfolio,
+    shutterstock_submit_content,
+    # Gumroad
+    gumroad_get_products,
+    gumroad_create_product,
+    # Revenue sync
+    sync_platform_revenue,
+)
+
+# Session 230: Import Auto-Distribution views
+from core.views_auto_distribution import (
+    create_auto_distribution,
+    batch_distribute,
+    list_scheduled_distributions,
+    reschedule_distribution,
+    cancel_scheduled_distribution,
+    auto_distribution_settings,
+    distribution_templates,
+    apply_distribution_template,
+)
+
+# Session 230: Import Revenue Analytics views
+from core.views_revenue_analytics import (
+    revenue_dashboard,
+    platform_revenue_detail,
+    compare_platforms,
+    calculate_roi,
+    revenue_forecast,
+    revenue_goals,
+    export_revenue_data,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -855,6 +898,44 @@ urlpatterns = [
     path('api/distribution/stats/', distribution_stats, name='distribution-stats'),
     path('api/distribution/analytics/<uuid:platform_id>/', platform_analytics, name='distribution-analytics'),
     path('api/distribution/seed/', seed_platforms_api, name='distribution-seed'),
+
+    # Session 230: Platform Integration APIs (OAuth, Uploads)
+    path('api/distribution/integrations/', list_platform_integrations, name='distribution-integrations'),
+    # OAuth flows
+    path('api/distribution/oauth/<str:platform>/connect/', oauth_connect, name='oauth-connect'),
+    path('api/distribution/oauth/<str:platform>/callback/', oauth_callback, name='oauth-callback'),
+    path('api/distribution/oauth/<str:platform>/refresh/', refresh_token, name='oauth-refresh'),
+    path('api/distribution/oauth/<str:platform>/disconnect/', disconnect_platform, name='oauth-disconnect'),
+    # Etsy API
+    path('api/distribution/etsy/shop/', etsy_get_shop, name='etsy-shop'),
+    path('api/distribution/etsy/listings/create/', etsy_create_listing, name='etsy-create-listing'),
+    # Shutterstock API
+    path('api/distribution/shutterstock/portfolio/', shutterstock_get_portfolio, name='shutterstock-portfolio'),
+    path('api/distribution/shutterstock/submit/', shutterstock_submit_content, name='shutterstock-submit'),
+    # Gumroad API
+    path('api/distribution/gumroad/products/', gumroad_get_products, name='gumroad-products'),
+    path('api/distribution/gumroad/products/create/', gumroad_create_product, name='gumroad-create-product'),
+    # Revenue sync
+    path('api/distribution/<str:platform>/sync-revenue/', sync_platform_revenue, name='sync-platform-revenue'),
+
+    # Session 230: Auto-Distribution APIs
+    path('api/distribution/auto/create/', create_auto_distribution, name='auto-distribution-create'),
+    path('api/distribution/auto/settings/', auto_distribution_settings, name='auto-distribution-settings'),
+    path('api/distribution/batch/', batch_distribute, name='batch-distribute'),
+    path('api/distribution/scheduled/', list_scheduled_distributions, name='scheduled-distributions'),
+    path('api/distribution/<uuid:distribution_id>/reschedule/', reschedule_distribution, name='reschedule-distribution'),
+    path('api/distribution/<uuid:distribution_id>/cancel/', cancel_scheduled_distribution, name='cancel-distribution'),
+    path('api/distribution/templates/', distribution_templates, name='distribution-templates'),
+    path('api/distribution/templates/apply/', apply_distribution_template, name='apply-distribution-template'),
+
+    # Session 230: Revenue Analytics APIs
+    path('api/distribution/revenue/dashboard/', revenue_dashboard, name='revenue-dashboard'),
+    path('api/distribution/revenue/platform/<str:platform_name>/', platform_revenue_detail, name='platform-revenue-detail'),
+    path('api/distribution/revenue/compare/', compare_platforms, name='compare-platforms'),
+    path('api/distribution/revenue/roi/', calculate_roi, name='calculate-roi'),
+    path('api/distribution/revenue/forecast/', revenue_forecast, name='revenue-forecast'),
+    path('api/distribution/revenue/goals/', revenue_goals, name='revenue-goals'),
+    path('api/distribution/revenue/export/', export_revenue_data, name='export-revenue-data'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
