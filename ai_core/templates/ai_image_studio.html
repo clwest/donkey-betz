@@ -1426,6 +1426,13 @@
                     🔮 Trending
                 </button>
             </li>
+
+            <!-- Session 219 Phase D: Workflow Marketplace Tab -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="marketplace-tab" data-bs-toggle="tab" data-bs-target="#marketplace" type="button" role="tab" title="Community Workflow Marketplace">
+                    🏪 Marketplace
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -7691,6 +7698,169 @@
             </div>
             <!-- END TRENDING TAB -->
 
+            <!-- SESSION 219 PHASE D: WORKFLOW MARKETPLACE TAB -->
+            <div class="tab-pane fade" id="marketplace" role="tabpanel">
+                <h3 class="mb-4">🏪 Workflow Marketplace</h3>
+                <p class="text-muted mb-4">Discover, share, and install powerful AI workflows created by the community.</p>
+
+                <!-- Marketplace Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="marketplace-total-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Workflows</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="marketplace-downloads-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Downloads</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="marketplace-installed-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Installed</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="marketplace-published-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Published</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters and Search -->
+                <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(139, 92, 246, 0.3);">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <input type="text" id="marketplace-search" class="form-control" placeholder="Search workflows..."
+                                       style="background: rgba(255,255,255,0.05); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="marketplace-category" class="form-select" style="background: rgba(255,255,255,0.05); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                                    <option value="">All Categories</option>
+                                    <option value="image_generation">Image Generation</option>
+                                    <option value="video_creation">Video Creation</option>
+                                    <option value="audio_production">Audio Production</option>
+                                    <option value="brand_identity">Brand Identity</option>
+                                    <option value="social_media">Social Media</option>
+                                    <option value="ecommerce">E-Commerce</option>
+                                    <option value="research">Research & Analysis</option>
+                                    <option value="productivity">Productivity</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="marketplace-sort" class="form-select" style="background: rgba(255,255,255,0.05); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                                    <option value="downloads">Most Downloaded</option>
+                                    <option value="rating">Highest Rated</option>
+                                    <option value="newest">Newest</option>
+                                    <option value="trending">Trending</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-outline-primary" onclick="loadMarketplaceWorkflows()">
+                                    🔍 Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="marketplace-loading" class="text-center py-5">
+                    <div class="spinner-border" style="color: #8b5cf6;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading marketplace...</p>
+                </div>
+
+                <!-- Main Content -->
+                <div id="marketplace-container" style="display: none;">
+                    <div class="row">
+                        <!-- Workflow Grid -->
+                        <div class="col-md-9">
+                            <!-- Featured Section -->
+                            <div class="mb-4" id="marketplace-featured-section">
+                                <h5 style="color: #fbbf24;"><span style="font-size: 1.2em;">⭐</span> Featured Workflows</h5>
+                                <div class="row" id="marketplace-featured-list">
+                                    <!-- Featured workflows will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- All Workflows -->
+                            <h5 style="color: #c4b5fd;"><span style="font-size: 1.2em;">📦</span> All Workflows</h5>
+                            <div class="row" id="marketplace-workflows-list">
+                                <!-- Workflows will be loaded here -->
+                            </div>
+
+                            <!-- Pagination -->
+                            <nav id="marketplace-pagination" class="mt-4" style="display: none;">
+                                <ul class="pagination justify-content-center">
+                                </ul>
+                            </nav>
+                        </div>
+
+                        <!-- Sidebar -->
+                        <div class="col-md-3">
+                            <!-- My Workflows Card -->
+                            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                    <h6 class="mb-0" style="color: #22c55e;">📤 My Published</h6>
+                                </div>
+                                <div class="card-body" id="marketplace-my-published">
+                                    <p class="text-muted small">Your published workflows will appear here.</p>
+                                </div>
+                                <div class="card-footer" style="background: rgba(34, 197, 94, 0.05); border-top: 1px solid rgba(34, 197, 94, 0.2);">
+                                    <button class="btn btn-sm btn-success w-100" onclick="showPublishModal()">
+                                        📤 Publish Workflow
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Installed Workflows Card -->
+                            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-header" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <h6 class="mb-0" style="color: #fbbf24;">📥 Installed</h6>
+                                </div>
+                                <div class="card-body" id="marketplace-my-installed" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-muted small">Installed workflows will appear here.</p>
+                                </div>
+                            </div>
+
+                            <!-- Categories Card -->
+                            <div class="card" style="background: #1a1a1a; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                    <h6 class="mb-0" style="color: #c4b5fd;">🏷️ Categories</h6>
+                                </div>
+                                <div class="card-body" id="marketplace-categories-list">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge cursor-pointer" onclick="filterByCategory('image_generation')" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; cursor: pointer;">🎨 Images</span>
+                                        <span class="badge cursor-pointer" onclick="filterByCategory('video_creation')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; cursor: pointer;">🎬 Video</span>
+                                        <span class="badge cursor-pointer" onclick="filterByCategory('audio_production')" style="background: rgba(34, 197, 94, 0.2); color: #86efac; cursor: pointer;">🎵 Audio</span>
+                                        <span class="badge cursor-pointer" onclick="filterByCategory('brand_identity')" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d; cursor: pointer;">🎯 Brand</span>
+                                        <span class="badge cursor-pointer" onclick="filterByCategory('social_media')" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; cursor: pointer;">📱 Social</span>
+                                        <span class="badge cursor-pointer" onclick="filterByCategory('ecommerce')" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9; cursor: pointer;">🛒 E-Com</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END MARKETPLACE TAB -->
+
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
             <!-- REASON: Pivoted to project-based workflow approach          -->
@@ -10351,6 +10521,342 @@
 
         window.loadTrendingTab = loadTrendingTab;
         window.useTrendingPrompt = useTrendingPrompt;
+        // ============================================================
+
+        // ============================================================
+        // SESSION 219 PHASE D: WORKFLOW MARKETPLACE FUNCTIONS
+        // ============================================================
+        let marketplaceCurrentPage = 1;
+        let marketplacePageSize = 12;
+
+        async function loadMarketplaceTab() {
+            console.log('🏪 Loading Marketplace tab...');
+            document.getElementById('marketplace-loading').style.display = 'block';
+            document.getElementById('marketplace-container').style.display = 'none';
+
+            try {
+                // Load stats, featured, workflows, and user data in parallel
+                const [statsRes, featuredRes, workflowsRes, myPublishedRes, myInstalledRes] = await Promise.all([
+                    fetch('/api/marketplace/stats/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/marketplace/workflows/featured/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/marketplace/workflows/?page=1&page_size=12', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/marketplace/my-published/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/marketplace/my-installed/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                ]);
+
+                // Update stats
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('marketplace-total-count').textContent = stats.total_workflows || 0;
+                    document.getElementById('marketplace-downloads-count').textContent = stats.total_downloads || 0;
+                }
+
+                // Update featured
+                if (featuredRes.ok) {
+                    const featured = await featuredRes.json();
+                    renderFeaturedWorkflows(featured.workflows || []);
+                }
+
+                // Update main workflows list
+                if (workflowsRes.ok) {
+                    const workflows = await workflowsRes.json();
+                    renderMarketplaceWorkflows(workflows.workflows || []);
+                    renderMarketplacePagination(workflows.pagination || {});
+                }
+
+                // Update my published
+                if (myPublishedRes.ok) {
+                    const published = await myPublishedRes.json();
+                    renderMyPublished(published.workflows || []);
+                    document.getElementById('marketplace-published-count').textContent = (published.workflows || []).length;
+                }
+
+                // Update my installed
+                if (myInstalledRes.ok) {
+                    const installed = await myInstalledRes.json();
+                    renderMyInstalled(installed.installations || []);
+                    document.getElementById('marketplace-installed-count').textContent = (installed.installations || []).length;
+                }
+
+                document.getElementById('marketplace-loading').style.display = 'none';
+                document.getElementById('marketplace-container').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading marketplace:', error);
+                document.getElementById('marketplace-loading').innerHTML = `
+                    <p class="text-danger">Error loading marketplace. Please try again.</p>
+                    <button class="btn btn-outline-primary" onclick="loadMarketplaceTab()">Retry</button>
+                `;
+            }
+        }
+
+        async function loadMarketplaceWorkflows() {
+            const search = document.getElementById('marketplace-search').value;
+            const category = document.getElementById('marketplace-category').value;
+            const sort = document.getElementById('marketplace-sort').value;
+
+            let url = `/api/marketplace/workflows/?page=${marketplaceCurrentPage}&page_size=${marketplacePageSize}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (category) url += `&category=${encodeURIComponent(category)}`;
+            if (sort) url += `&sort=${sort}`;
+
+            try {
+                const response = await fetch(url, { headers: { 'X-CSRFToken': getCsrfToken() } });
+                if (response.ok) {
+                    const data = await response.json();
+                    renderMarketplaceWorkflows(data.workflows || []);
+                    renderMarketplacePagination(data.pagination || {});
+                }
+            } catch (error) {
+                console.error('Error searching workflows:', error);
+            }
+        }
+
+        function renderFeaturedWorkflows(workflows) {
+            const container = document.getElementById('marketplace-featured-list');
+            if (!workflows.length) {
+                document.getElementById('marketplace-featured-section').style.display = 'none';
+                return;
+            }
+            document.getElementById('marketplace-featured-section').style.display = 'block';
+            container.innerHTML = workflows.map(w => renderWorkflowCard(w, true)).join('');
+        }
+
+        function renderMarketplaceWorkflows(workflows) {
+            const container = document.getElementById('marketplace-workflows-list');
+            if (!workflows.length) {
+                container.innerHTML = '<div class="col-12"><p class="text-muted text-center py-4">No workflows found. Be the first to publish one!</p></div>';
+                return;
+            }
+            container.innerHTML = workflows.map(w => renderWorkflowCard(w, false)).join('');
+        }
+
+        function renderWorkflowCard(workflow, featured) {
+            const categoryColors = {
+                'image_generation': '#8b5cf6',
+                'video_creation': '#ec4899',
+                'audio_production': '#22c55e',
+                'brand_identity': '#f59e0b',
+                'social_media': '#3b82f6',
+                'ecommerce': '#06b6d4',
+                'research': '#6366f1',
+                'productivity': '#14b8a6',
+                'other': '#6b7280'
+            };
+            const color = categoryColors[workflow.category] || '#6b7280';
+            const stars = '★'.repeat(Math.round(workflow.average_rating || 0)) + '☆'.repeat(5 - Math.round(workflow.average_rating || 0));
+
+            return `
+                <div class="col-md-${featured ? '4' : '4'} mb-3">
+                    <div class="card h-100" style="background: #1a1a1a; border: ${featured ? '2px' : '1px'} solid ${featured ? '#fbbf24' : 'rgba(139, 92, 246, 0.3)'}; transition: transform 0.2s, box-shadow 0.2s;"
+                         onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(139, 92, 246, 0.3)';"
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                        ${workflow.preview_image ? `<img src="${workflow.preview_image}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="${workflow.title}">` : ''}
+                        <div class="card-body">
+                            ${featured ? '<span class="badge bg-warning text-dark mb-2">⭐ Featured</span>' : ''}
+                            <h6 class="card-title mb-1" style="color: white;">${workflow.title}</h6>
+                            <p class="card-text small text-muted" style="height: 40px; overflow: hidden;">${workflow.short_description || workflow.description?.substring(0, 80) || ''}</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge" style="background: ${color}20; color: ${color};">${workflow.category_display || workflow.category}</span>
+                                <small style="color: #fbbf24;">${stars}</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center text-muted small">
+                                <span>📥 ${workflow.download_count || 0}</span>
+                                <span>👁️ ${workflow.view_count || 0}</span>
+                            </div>
+                        </div>
+                        <div class="card-footer" style="background: rgba(139, 92, 246, 0.1); border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="viewWorkflowDetails('${workflow.id}')">
+                                    👁️ View
+                                </button>
+                                <button class="btn btn-sm btn-success flex-grow-1" onclick="installWorkflow('${workflow.id}')">
+                                    📥 Install
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMarketplacePagination(pagination) {
+            const nav = document.getElementById('marketplace-pagination');
+            if (!pagination.total_pages || pagination.total_pages <= 1) {
+                nav.style.display = 'none';
+                return;
+            }
+            nav.style.display = 'block';
+            const ul = nav.querySelector('ul');
+            ul.innerHTML = '';
+
+            // Previous button
+            ul.innerHTML += `<li class="page-item ${pagination.page <= 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="goToMarketplacePage(${pagination.page - 1}); return false;">Previous</a>
+            </li>`;
+
+            // Page numbers
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                ul.innerHTML += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="goToMarketplacePage(${i}); return false;">${i}</a>
+                </li>`;
+            }
+
+            // Next button
+            ul.innerHTML += `<li class="page-item ${pagination.page >= pagination.total_pages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="goToMarketplacePage(${pagination.page + 1}); return false;">Next</a>
+            </li>`;
+        }
+
+        function goToMarketplacePage(page) {
+            marketplaceCurrentPage = page;
+            loadMarketplaceWorkflows();
+        }
+
+        function renderMyPublished(workflows) {
+            const container = document.getElementById('marketplace-my-published');
+            if (!workflows.length) {
+                container.innerHTML = '<p class="text-muted small">No workflows published yet.</p>';
+                return;
+            }
+            container.innerHTML = workflows.map(w => `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px;">
+                    <span class="small" style="color: #86efac;">${w.title}</span>
+                    <span class="badge bg-success">📥 ${w.download_count || 0}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderMyInstalled(installations) {
+            const container = document.getElementById('marketplace-my-installed');
+            if (!installations.length) {
+                container.innerHTML = '<p class="text-muted small">No workflows installed yet.</p>';
+                return;
+            }
+            container.innerHTML = installations.map(i => `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 6px;">
+                    <span class="small" style="color: #fcd34d;">${i.workflow_title || 'Workflow'}</span>
+                    <span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;">×${i.times_executed || 0}</span>
+                </div>
+            `).join('');
+        }
+
+        async function viewWorkflowDetails(workflowId) {
+            try {
+                const response = await fetch(`/api/marketplace/workflows/${workflowId}/`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                if (response.ok) {
+                    const workflow = await response.json();
+                    showWorkflowDetailsModal(workflow);
+                }
+            } catch (error) {
+                console.error('Error loading workflow details:', error);
+                showToast('Error loading workflow details', 'error');
+            }
+        }
+
+        function showWorkflowDetailsModal(workflow) {
+            const stars = '★'.repeat(Math.round(workflow.average_rating || 0)) + '☆'.repeat(5 - Math.round(workflow.average_rating || 0));
+            const modalHtml = `
+                <div class="modal fade" id="workflowDetailModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid rgba(139, 92, 246, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                <h5 class="modal-title" style="color: #c4b5fd;">${workflow.title}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                ${workflow.preview_image ? `<img src="${workflow.preview_image}" class="img-fluid mb-3" style="max-height: 200px; object-fit: cover; width: 100%; border-radius: 8px;">` : ''}
+                                <p style="color: #e0e0e0;">${workflow.description}</p>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Category:</small>
+                                        <p style="color: white;">${workflow.category_display || workflow.category}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Rating:</small>
+                                        <p style="color: #fbbf24;">${stars} (${workflow.review_count || 0} reviews)</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 text-center">
+                                        <div style="background: rgba(139, 92, 246, 0.2); padding: 10px; border-radius: 8px;">
+                                            <h4 style="color: #c4b5fd; margin: 0;">${workflow.download_count || 0}</h4>
+                                            <small class="text-muted">Downloads</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div style="background: rgba(34, 197, 94, 0.2); padding: 10px; border-radius: 8px;">
+                                            <h4 style="color: #86efac; margin: 0;">${workflow.view_count || 0}</h4>
+                                            <small class="text-muted">Views</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px;">
+                                            <h4 style="color: #fcd34d; margin: 0;">${workflow.steps?.length || workflow.step_count || 0}</h4>
+                                            <small class="text-muted">Steps</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${workflow.tags?.length ? `<div class="mb-3"><small class="text-muted">Tags:</small><div class="d-flex flex-wrap gap-2 mt-1">${workflow.tags.map(t => `<span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">${t}</span>`).join('')}</div></div>` : ''}
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(139, 92, 246, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-success" onclick="installWorkflow('${workflow.id}'); bootstrap.Modal.getInstance(document.getElementById('workflowDetailModal')).hide();">
+                                    📥 Install Workflow
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            document.getElementById('workflowDetailModal')?.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            new bootstrap.Modal(document.getElementById('workflowDetailModal')).show();
+        }
+
+        async function installWorkflow(workflowId) {
+            try {
+                const response = await fetch(`/api/marketplace/workflows/${workflowId}/install/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Workflow installed successfully! Check your My Workflows.', 'success');
+                    loadMarketplaceTab(); // Refresh to show updated counts
+                } else {
+                    showToast(data.error || 'Failed to install workflow', 'error');
+                }
+            } catch (error) {
+                console.error('Error installing workflow:', error);
+                showToast('Error installing workflow', 'error');
+            }
+        }
+
+        function showPublishModal() {
+            // Redirect to workflows page with publish mode, or show inline modal
+            showToast('Coming soon: Publish your workflows directly from My Workflows!', 'info');
+        }
+
+        function filterByCategory(category) {
+            document.getElementById('marketplace-category').value = category;
+            loadMarketplaceWorkflows();
+        }
+
+        // Expose marketplace functions globally
+        window.loadMarketplaceTab = loadMarketplaceTab;
+        window.loadMarketplaceWorkflows = loadMarketplaceWorkflows;
+        window.viewWorkflowDetails = viewWorkflowDetails;
+        window.installWorkflow = installWorkflow;
+        window.showPublishModal = showPublishModal;
+        window.filterByCategory = filterByCategory;
+        window.goToMarketplacePage = goToMarketplacePage;
         // ============================================================
 
         // Load insights when page loads and after ratings
@@ -36448,6 +36954,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (trendingTab) {
                 trendingTab.addEventListener('shown.bs.tab', function() {
                     loadTrendingTab();
+                });
+            }
+
+            // Session 219 Phase D: Initialize Marketplace Tab on Tab Show
+            const marketplaceTab = document.getElementById('marketplace-tab');
+            if (marketplaceTab) {
+                marketplaceTab.addEventListener('shown.bs.tab', function() {
+                    loadMarketplaceTab();
                 });
             }
         });
