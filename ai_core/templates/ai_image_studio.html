@@ -1497,6 +1497,13 @@
                     🎯 Opportunities
                 </button>
             </li>
+
+            <!-- Session 227: Teams Tab (Phase 3 - Team Power) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" title="Multi-Agent Team Collaboration">
+                    👥 Teams
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -7295,6 +7302,27 @@
                         </div>
                     </div>
 
+                    <!-- Session 227: Team Power Visualization -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a78bfa;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(167, 139, 250, 0.2); border-bottom: 1px solid #a78bfa;">
+                            <h5 class="mb-0" style="color: #a78bfa;">👥 Team Power - Active Teams</h5>
+                            <button class="btn btn-sm btn-outline-light" onclick="loadAgentTabTeams()">🔄 Refresh</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="agentTabTeamsContainer">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span class="ms-2 text-muted">Loading teams...</span>
+                                </div>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button class="btn btn-primary" onclick="document.getElementById('teams-tab').click();">
+                                    👥 Go to Teams Tab
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- SESSION 217: ANALYTICS CHARTS SECTION -->
                     <hr style="border-color: #333; margin: 2rem 0;">
                     <h4 class="mb-4" style="color: #8b5cf6;">📊 Performance Analytics</h4>
@@ -8530,6 +8558,125 @@
                 </div>
             </div>
             <!-- END OPPORTUNITIES TAB -->
+
+            <!-- ============================================================ -->
+            <!-- Session 227: TEAMS TAB - Phase 3 Team Power                   -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="teams" role="tabpanel" aria-labelledby="teams-tab">
+                <div class="container-fluid p-4">
+                    <!-- Teams Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4 class="mb-1" style="color: #a78bfa;">👥 Multi-Agent Team Collaboration</h4>
+                            <p class="text-muted mb-0">Orchestrate teams of specialized AI agents working together</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-info" onclick="loadTeamsData()">
+                                🔄 Refresh
+                            </button>
+                            <button class="btn btn-primary" onclick="showCreateTeamModal()">
+                                ➕ Create Team
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Team Stats Cards -->
+                    <div class="row mb-4" id="teamStatsRow">
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(167, 139, 250, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #a78bfa;" id="totalTeamsCount">0</h3>
+                                    <small class="text-muted">Active Teams</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #22c55e;" id="totalAgentsCount">0</h3>
+                                    <small class="text-muted">Team Members</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1)); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #fbbf24;" id="activeWorkflowsCount">0</h3>
+                                    <small class="text-muted">Active Workflows</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(219, 39, 119, 0.1)); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #ec4899;" id="totalMessagesCount">0</h3>
+                                    <small class="text-muted">Agent Messages</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Teams List -->
+                        <div class="col-lg-8">
+                            <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(167, 139, 250, 0.1); border-bottom: 1px solid rgba(167, 139, 250, 0.3);">
+                                    <h5 class="mb-0" style="color: #a78bfa;">🏢 Your Teams</h5>
+                                    <span class="badge bg-primary" id="teamsListCount">0 teams</span>
+                                </div>
+                                <div class="card-body" id="teamsListContainer" style="max-height: 500px; overflow-y: auto;">
+                                    <div class="text-center py-5 text-muted" id="teamsLoading">
+                                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                                        <p>Loading teams...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Active Workflows -->
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <h5 class="mb-0" style="color: #fbbf24;">⚡ Active Workflows</h5>
+                                    <span class="badge bg-warning text-dark" id="workflowsListCount">0 running</span>
+                                </div>
+                                <div class="card-body" id="workflowsListContainer" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="text-center py-4 text-muted" id="noWorkflows">
+                                        <p class="mb-2">🚀 No active workflows</p>
+                                        <small>Start a team workflow to see progress here</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar: Roles & Messages -->
+                        <div class="col-lg-4">
+                            <!-- Agent Roles -->
+                            <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                    <h6 class="mb-0" style="color: #22c55e;">🎭 Agent Roles</h6>
+                                </div>
+                                <div class="card-body p-2" id="rolesListContainer" style="max-height: 200px; overflow-y: auto;">
+                                    <div class="text-center py-3 text-muted">Loading roles...</div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Messages -->
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                                    <h6 class="mb-0" style="color: #ec4899;">💬 Agent Messages</h6>
+                                    <button class="btn btn-sm btn-outline-pink" onclick="showMessagesModal()" style="font-size: 11px;">View All</button>
+                                </div>
+                                <div class="card-body p-2" id="recentMessagesContainer" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="text-center py-3 text-muted">
+                                        <p class="mb-1">📭 No messages yet</p>
+                                        <small>Agent conversations will appear here</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END TEAMS TAB -->
 
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
@@ -38995,6 +39142,467 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 activeOpportunityForContent = null;
             }
         }
+
+        // ============================================================
+        // Session 227: Team Power JavaScript Functions
+        // ============================================================
+
+        let teamsCache = [];
+        let rolesCache = [];
+
+        // Load all teams data when tab opens
+        async function loadTeamsData() {
+            try {
+                // Load teams, roles, and stats in parallel
+                const [teamsRes, rolesRes, statsRes] = await Promise.all([
+                    fetch('/api/teams/'),
+                    fetch('/api/teams/roles/'),
+                    fetch('/api/teams/stats/')
+                ]);
+
+                const teamsData = await teamsRes.json();
+                const rolesData = await rolesRes.json();
+                const statsData = await statsRes.json();
+
+                // Update stats cards
+                if (statsData.success && statsData.stats) {
+                    document.getElementById('totalTeamsCount').textContent = statsData.stats.teams_count || 0;
+                    document.getElementById('totalAgentsCount').textContent = statsData.stats.total_memberships || 0;
+                    document.getElementById('activeWorkflowsCount').textContent = statsData.stats.active_workflows || 0;
+                    document.getElementById('totalMessagesCount').textContent = statsData.stats.total_messages || 0;
+                }
+
+                // Cache and render teams
+                if (teamsData.success) {
+                    teamsCache = teamsData.teams || [];
+                    renderTeamsList(teamsCache);
+                    document.getElementById('teamsListCount').textContent = `${teamsCache.length} teams`;
+                }
+
+                // Cache and render roles
+                if (rolesData.success) {
+                    rolesCache = rolesData.roles || [];
+                    renderRolesList(rolesCache);
+                }
+
+            } catch (error) {
+                console.error('Error loading teams data:', error);
+                document.getElementById('teamsListContainer').innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <p>Error loading teams: ${error.message}</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadTeamsData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Render teams list
+        function renderTeamsList(teams) {
+            const container = document.getElementById('teamsListContainer');
+
+            if (!teams || teams.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <p class="mb-2">👥 No teams yet</p>
+                        <p class="small">Create your first team to start multi-agent collaboration</p>
+                        <button class="btn btn-primary" onclick="showCreateTeamModal()">➕ Create Team</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const teamTypeEmoji = {
+                'creative': '🎨',
+                'research': '🔬',
+                'marketing': '📢',
+                'content': '✍️',
+                'custom': '⚙️'
+            };
+
+            container.innerHTML = teams.map(team => `
+                <div class="card mb-3" style="background: rgba(71, 85, 105, 0.3); border: 1px solid rgba(167, 139, 250, 0.2);">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1" style="color: #e2e8f0;">
+                                    ${teamTypeEmoji[team.team_type] || '👥'} ${team.name}
+                                </h6>
+                                <span class="badge bg-primary me-1">${team.team_type}</span>
+                                ${team.lead_agent ? `<span class="badge bg-success">Lead: ${team.lead_agent.name || 'Unknown'}</span>` : ''}
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info" onclick="viewTeamDetails('${team.id}')" title="View Details">
+                                    👁
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="startTeamWorkflow('${team.id}')" title="Start Workflow">
+                                    ⚡
+                                </button>
+                            </div>
+                        </div>
+
+                        ${team.description ? `<p class="small text-muted mb-2">${team.description}</p>` : ''}
+
+                        <!-- Team Members -->
+                        <div class="d-flex flex-wrap gap-1">
+                            ${(team.members || []).slice(0, 5).map(member => `
+                                <span class="badge" style="background: rgba(167, 139, 250, 0.2); color: #a78bfa; font-size: 10px;">
+                                    ${getRoleEmoji(member.role_type)} ${member.agent_name}
+                                </span>
+                            `).join('')}
+                            ${(team.members || []).length > 5 ? `
+                                <span class="badge bg-secondary" style="font-size: 10px;">+${team.members.length - 5} more</span>
+                            ` : ''}
+                        </div>
+
+                        <div class="mt-2 d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                ${team.members_count || 0} members • ${team.workflows_count || 0} workflows
+                            </small>
+                            <small class="text-muted">
+                                Created ${formatTimeAgo(team.created_at)}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render roles list
+        function renderRolesList(roles) {
+            const container = document.getElementById('rolesListContainer');
+
+            if (!roles || roles.length === 0) {
+                container.innerHTML = '<div class="text-center py-3 text-muted">No roles defined</div>';
+                return;
+            }
+
+            container.innerHTML = roles.map(role => `
+                <div class="d-flex align-items-center p-2 mb-1 rounded" style="background: rgba(34, 197, 94, 0.1);">
+                    <span class="me-2">${getRoleEmoji(role.role_type)}</span>
+                    <div class="flex-grow-1">
+                        <div class="small" style="color: #d1fae5;">${role.name}</div>
+                        <div class="text-muted" style="font-size: 10px;">${role.role_type}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get emoji for role type
+        function getRoleEmoji(roleType) {
+            const emojis = {
+                'designer': '🎨',
+                'researcher': '🔬',
+                'reviewer': '📝',
+                'writer': '✍️',
+                'analyst': '📊',
+                'strategist': '🎯',
+                'optimizer': '⚡',
+                'communicator': '💬'
+            };
+            return emojis[roleType] || '👤';
+        }
+
+        // Format time ago (utility)
+        function formatTimeAgo(dateStr) {
+            if (!dateStr) return 'recently';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // View team details
+        async function viewTeamDetails(teamId) {
+            try {
+                const response = await fetch(`/api/teams/${teamId}/`);
+                const data = await response.json();
+
+                if (data.success && data.team) {
+                    const team = data.team;
+
+                    // Create modal content
+                    const modalHtml = `
+                        <div class="modal fade" id="teamDetailsModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content" style="background: #1e293b; color: #e2e8f0;">
+                                    <div class="modal-header" style="border-color: rgba(167, 139, 250, 0.3); background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(139, 92, 246, 0.1));">
+                                        <h5 class="modal-title" style="color: #a78bfa;">
+                                            👥 ${team.name}
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="text-muted">${team.description || 'No description'}</p>
+
+                                        <h6 class="mt-4 mb-3" style="color: #a78bfa;">Team Members (${team.members?.length || 0})</h6>
+                                        <div class="row">
+                                            ${(team.members || []).map(m => `
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="card" style="background: rgba(71, 85, 105, 0.3);">
+                                                        <div class="card-body p-2">
+                                                            <div class="d-flex align-items-center">
+                                                                <span class="me-2" style="font-size: 24px;">${getRoleEmoji(m.role_type)}</span>
+                                                                <div>
+                                                                    <div style="color: #e2e8f0;">${m.agent_name}</div>
+                                                                    <small class="text-muted">${m.role_name || m.role_type || 'No role'}</small>
+                                                                    ${m.is_lead ? '<span class="badge bg-success ms-2">Lead</span>' : ''}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer" style="border-color: rgba(71, 85, 105, 0.5);">
+                                        <button class="btn btn-outline-primary" onclick="startTeamWorkflow('${teamId}')">
+                                            ⚡ Start Workflow
+                                        </button>
+                                        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Remove existing modal if any
+                    const existingModal = document.getElementById('teamDetailsModal');
+                    if (existingModal) existingModal.remove();
+
+                    // Add and show modal
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    const modal = new bootstrap.Modal(document.getElementById('teamDetailsModal'));
+                    modal.show();
+                }
+            } catch (error) {
+                showToast(`Error loading team: ${error.message}`, 'error');
+            }
+        }
+
+        // Show create team modal
+        function showCreateTeamModal() {
+            const modalHtml = `
+                <div class="modal fade" id="createTeamModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1e293b; color: #e2e8f0;">
+                            <div class="modal-header" style="border-color: rgba(167, 139, 250, 0.3); background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(139, 92, 246, 0.1));">
+                                <h5 class="modal-title" style="color: #a78bfa;">➕ Create New Team</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Team Name</label>
+                                    <input type="text" class="form-control" id="newTeamName" placeholder="Enter team name..." style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Team Type</label>
+                                    <select class="form-select" id="newTeamType" style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                        <option value="creative">🎨 Creative Team</option>
+                                        <option value="research">🔬 Research Team</option>
+                                        <option value="marketing">📢 Marketing Team</option>
+                                        <option value="content">✍️ Content Production</option>
+                                        <option value="custom">⚙️ Custom Team</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control" id="newTeamDescription" rows="2" placeholder="Describe the team's purpose..." style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-color: rgba(71, 85, 105, 0.5);">
+                                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button class="btn btn-primary" onclick="createTeam()">Create Team</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('createTeamModal');
+            if (existingModal) existingModal.remove();
+
+            // Add and show modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('createTeamModal'));
+            modal.show();
+        }
+
+        // Create team
+        async function createTeam() {
+            const name = document.getElementById('newTeamName').value.trim();
+            const teamType = document.getElementById('newTeamType').value;
+            const description = document.getElementById('newTeamDescription').value.trim();
+
+            if (!name) {
+                showToast('Please enter a team name', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/teams/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        team_type: teamType,
+                        description: description
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Team "${name}" created! 🎉`, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createTeamModal')).hide();
+                    loadTeamsData();
+                } else {
+                    showToast(`Error: ${data.error || 'Failed to create team'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error creating team: ${error.message}`, 'error');
+            }
+        }
+
+        // Start team workflow
+        async function startTeamWorkflow(teamId) {
+            const team = teamsCache.find(t => t.id === teamId);
+            const teamName = team ? team.name : 'Team';
+
+            const workflowName = prompt(`Start workflow for ${teamName}:\n\nEnter workflow name:`);
+            if (!workflowName) return;
+
+            try {
+                const response = await fetch('/api/teams/workflows/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        team_id: teamId,
+                        name: workflowName,
+                        workflow_template: 'creative_content',
+                        description: `Workflow created from Teams tab`
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Workflow "${workflowName}" created! ⚡`, 'success');
+
+                    // Start the workflow
+                    const startResponse = await fetch(`/api/teams/workflows/${data.workflow.id}/start/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    });
+
+                    const startData = await startResponse.json();
+                    if (startData.success) {
+                        showToast('Workflow started! 🚀', 'success');
+                    }
+
+                    loadTeamsData();
+                } else {
+                    showToast(`Error: ${data.error || 'Failed to create workflow'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Show messages modal
+        function showMessagesModal() {
+            showToast('Message center coming soon! 💬', 'info');
+        }
+
+        // Listen for Teams tab activation
+        document.addEventListener('DOMContentLoaded', function() {
+            const teamsTab = document.getElementById('teams-tab');
+            if (teamsTab) {
+                teamsTab.addEventListener('shown.bs.tab', function() {
+                    loadTeamsData();
+                });
+            }
+        });
+
+        // Load teams in the Agents tab visualization
+        async function loadAgentTabTeams() {
+            const container = document.getElementById('agentTabTeamsContainer');
+            if (!container) return;
+
+            try {
+                const response = await fetch('/api/teams/');
+                const data = await response.json();
+
+                if (data.success && data.teams && data.teams.length > 0) {
+                    container.innerHTML = data.teams.slice(0, 3).map(team => `
+                        <div class="d-flex align-items-center p-2 mb-2 rounded" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.2);">
+                            <div class="me-3" style="font-size: 28px;">
+                                ${team.team_type === 'creative' ? '🎨' : team.team_type === 'research' ? '🔬' : team.team_type === 'marketing' ? '📢' : '👥'}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color: #e2e8f0;">${team.name}</div>
+                                <div class="d-flex gap-1 mt-1">
+                                    ${(team.members || []).slice(0, 4).map(m => `
+                                        <span class="badge" style="background: rgba(139, 92, 246, 0.3); font-size: 9px;">
+                                            ${getRoleEmoji(m.role_type || 'unknown')} ${m.agent_name?.split(' ')[0] || 'Agent'}
+                                        </span>
+                                    `).join('')}
+                                    ${team.members?.length > 4 ? `<span class="badge bg-secondary" style="font-size: 9px;">+${team.members.length - 4}</span>` : ''}
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-warning" onclick="startTeamWorkflow('${team.id}')" title="Start Workflow">
+                                    ⚡
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    if (data.teams.length > 3) {
+                        container.innerHTML += `
+                            <div class="text-center text-muted small">
+                                +${data.teams.length - 3} more teams in Teams tab
+                            </div>
+                        `;
+                    }
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-2">
+                            <p class="mb-1">No teams yet</p>
+                            <small>Create your first team to enable multi-agent collaboration</small>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="text-center text-danger py-2">Error loading teams</div>`;
+            }
+        }
+
+        // Auto-load teams when Agents tab activates
+        document.addEventListener('DOMContentLoaded', function() {
+            const agentsTab = document.getElementById('agents-tab');
+            if (agentsTab) {
+                agentsTab.addEventListener('shown.bs.tab', function() {
+                    loadAgentTabTeams();
+                });
+            }
+        });
+
+        // END Session 227: Team Power JavaScript
+        // ============================================================
 
         // Update opportunity stats
         async function updateOpportunityStats() {
