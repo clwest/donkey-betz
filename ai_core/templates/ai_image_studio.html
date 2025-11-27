@@ -9064,6 +9064,9 @@
                                         <button class="btn btn-sm me-2" onclick="loadLearningDashboard()" style="background: rgba(139, 92, 246, 0.3); border: 1px solid rgba(139, 92, 246, 0.5); color: white;">
                                             🔄 Refresh
                                         </button>
+                                        <button class="btn btn-sm me-2" onclick="triggerPatternDiscovery()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;">
+                                            🔍 Discover Patterns
+                                        </button>
                                         <button class="btn btn-sm" onclick="generateNewInsights()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white;">
                                             ✨ Generate Insights
                                         </button>
@@ -41304,9 +41307,31 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             </div>
                             <div class="modal-footer" style="border-top: 1px solid rgba(139, 92, 246, 0.3);">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" onclick="scoreContentBeforeDistribute()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; margin-right: 8px;">
+                                    🧠 Score Content
+                                </button>
                                 <button type="button" class="btn" onclick="executeAutoDistribute()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white;">
                                     🚀 Start Distribution
                                 </button>
+                            </div>
+                            <!-- Score Results Container (hidden by default) -->
+                            <div id="scoreResultsContainer" style="display: none; margin: 0 16px 16px; padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
+                                <h6 style="color: #10b981; margin-bottom: 12px;">🧠 Content Score Results</h6>
+                                <div class="row">
+                                    <div class="col-4 text-center">
+                                        <h3 id="overallScoreDisplay" style="color: #10b981;">0</h3>
+                                        <small class="text-muted">Overall Score</small>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <h3 id="expectedRevenueDisplay" style="color: #3b82f6;">$0</h3>
+                                        <small class="text-muted">Expected Revenue</small>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <h3 id="confidenceDisplay" style="color: #f97316;">0%</h3>
+                                        <small class="text-muted">Confidence</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3" id="scoreRecommendations"></div>
                             </div>
                         </div>
                     </div>
@@ -42231,6 +42256,122 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 });
             }
         });
+
+        // Score Content Before Distribution (Session 233)
+        async function scoreContentBeforeDistribute() {
+            const title = document.getElementById('autoDistTitle').value;
+            const description = document.getElementById('autoDistDescription').value;
+            const contentType = document.getElementById('autoDistType').value;
+            const tags = document.getElementById('autoDistTags').value.split(',').map(t => t.trim()).filter(t => t);
+
+            // Get selected platforms
+            const platforms = [];
+            if (document.getElementById('platAll').checked) {
+                platforms.push('etsy', 'gumroad', 'shutterstock', 'redbubble', 'society6');
+            } else {
+                ['platEtsy', 'platGumroad', 'platShutterstock', 'platRedbubble', 'platSociety6'].forEach(id => {
+                    const cb = document.getElementById(id);
+                    if (cb && cb.checked) platforms.push(cb.value);
+                });
+            }
+
+            // Get price (from first platform pricing input)
+            const priceInputs = document.querySelectorAll('#autoDistributeModal input[type="number"]');
+            let price = 19.99;
+            priceInputs.forEach(input => {
+                if (input.value && parseFloat(input.value) > 0) {
+                    price = parseFloat(input.value);
+                }
+            });
+
+            if (!title) {
+                showToast('Please enter a title first', 'warning');
+                return;
+            }
+
+            showToast('🧠 Scoring content...', 'info');
+
+            try {
+                const response = await fetch('/api/learning/predict/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content_type: contentType,
+                        title: title,
+                        description: description,
+                        tags: tags,
+                        platforms: platforms.length > 0 ? platforms : ['etsy', 'gumroad'],
+                        price: price
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show results
+                    document.getElementById('scoreResultsContainer').style.display = 'block';
+                    document.getElementById('overallScoreDisplay').textContent = Math.round(data.overall_score || 0);
+                    document.getElementById('expectedRevenueDisplay').textContent = '$' + (data.expected_total_revenue || 0).toFixed(2);
+                    document.getElementById('confidenceDisplay').textContent = Math.round((data.prediction_confidence || 0) * 100) + '%';
+
+                    // Show recommendations
+                    const recsContainer = document.getElementById('scoreRecommendations');
+                    if (data.recommendations && data.recommendations.length > 0) {
+                        recsContainer.innerHTML = data.recommendations.map(rec => `
+                            <div class="alert alert-${rec.priority === 'high' ? 'warning' : 'info'} py-2 mb-2" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                                <small>💡 ${rec.message}</small>
+                            </div>
+                        `).join('');
+                    } else {
+                        recsContainer.innerHTML = '<small class="text-success">✅ Content looks good! No specific recommendations.</small>';
+                    }
+
+                    // Show recommended price if different
+                    if (data.recommended_price_range) {
+                        const optimalPrice = data.recommended_price_range.optimal;
+                        if (Math.abs(optimalPrice - price) > 5) {
+                            showToast(`💰 Suggested price: $${optimalPrice.toFixed(2)}`, 'info');
+                        }
+                    }
+
+                    showToast(`Score: ${Math.round(data.overall_score || 0)}/100`, 'success');
+                } else {
+                    showToast(data.error?.message || 'Failed to score content', 'error');
+                }
+            } catch (error) {
+                console.error('Error scoring content:', error);
+                showToast('Error scoring content', 'error');
+            }
+        }
+
+        // Trigger Pattern Discovery (Session 233)
+        async function triggerPatternDiscovery() {
+            showToast('🧠 Starting pattern discovery...', 'info');
+            try {
+                const response = await fetch('/api/learning/patterns/analyze/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ days: 90 })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Discovered ${data.patterns_found || 0} patterns!`, 'success');
+                    loadLearningDashboard();
+                } else {
+                    showToast(data.error?.message || 'Pattern discovery failed', 'error');
+                }
+            } catch (error) {
+                console.error('Error discovering patterns:', error);
+                showToast('Error discovering patterns', 'error');
+            }
+        }
 
         // END Session 232: Learning Loop JavaScript Functions
         // ============================================================

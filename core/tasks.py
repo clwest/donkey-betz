@@ -2140,3 +2140,257 @@ def update_distribution_analytics():
     except Exception as e:
         logger.error(f"📊 [DISTRIBUTION] Analytics update failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# ============================================================
+# Session 233: Learning Loop Celery Tasks
+# ============================================================
+
+@shared_task
+def discover_success_patterns(user_id=None, days=90):
+    """
+    Discover success patterns from distribution data.
+    Run daily or on-demand to update pattern database.
+    """
+    logger.info(f"🧠 [LEARNING] Starting pattern discovery for user_id={user_id}, days={days}")
+
+    try:
+        from django.contrib.auth import get_user_model
+        from core.learning_engine import PatternDiscoveryEngine
+
+        User = get_user_model()
+        users_processed = 0
+        patterns_found = 0
+
+        if user_id:
+            # Process specific user
+            try:
+                user = User.objects.get(id=user_id)
+                engine = PatternDiscoveryEngine(user=user)
+                patterns = engine.discover_patterns(days=days)
+                saved = engine.save_patterns(patterns)
+                patterns_found += saved
+                users_processed = 1
+                logger.info(f"🧠 [LEARNING] Found {saved} patterns for user {user.username}")
+            except User.DoesNotExist:
+                logger.warning(f"🧠 [LEARNING] User {user_id} not found")
+        else:
+            # Process all users with distributions
+            from core.models_unified_system import ContentDistribution
+            user_ids = ContentDistribution.objects.values_list('user_id', flat=True).distinct()
+
+            for uid in user_ids:
+                try:
+                    user = User.objects.get(id=uid)
+                    engine = PatternDiscoveryEngine(user=user)
+                    patterns = engine.discover_patterns(days=days)
+                    saved = engine.save_patterns(patterns)
+                    patterns_found += saved
+                    users_processed += 1
+                except Exception as e:
+                    logger.error(f"🧠 [LEARNING] Error processing user {uid}: {e}")
+
+        logger.info(f"🧠 [LEARNING] Pattern discovery complete: {users_processed} users, {patterns_found} patterns")
+
+        return {
+            'status': 'completed',
+            'users_processed': users_processed,
+            'patterns_found': patterns_found,
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [LEARNING] Pattern discovery failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def generate_user_insights(user_id=None, max_insights=10):
+    """
+    Generate AI insights for users based on their learning data.
+    """
+    logger.info(f"💡 [LEARNING] Generating insights for user_id={user_id}")
+
+    try:
+        from django.contrib.auth import get_user_model
+        from core.learning_engine import InsightGenerator
+
+        User = get_user_model()
+        users_processed = 0
+        insights_generated = 0
+
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                generator = InsightGenerator(user=user)
+                insights = generator.generate_insights(max_insights=max_insights)
+                saved = generator.save_insights(insights)
+                insights_generated += saved
+                users_processed = 1
+                logger.info(f"💡 [LEARNING] Generated {saved} insights for {user.username}")
+            except User.DoesNotExist:
+                logger.warning(f"💡 [LEARNING] User {user_id} not found")
+        else:
+            # Process users with recent activity
+            from core.models_unified_system import ContentDistribution
+            from django.utils import timezone
+            from datetime import timedelta
+
+            recent = timezone.now() - timedelta(days=7)
+            user_ids = ContentDistribution.objects.filter(
+                created_at__gte=recent
+            ).values_list('user_id', flat=True).distinct()
+
+            for uid in user_ids:
+                try:
+                    user = User.objects.get(id=uid)
+                    generator = InsightGenerator(user=user)
+                    insights = generator.generate_insights(max_insights=max_insights)
+                    saved = generator.save_insights(insights)
+                    insights_generated += saved
+                    users_processed += 1
+                except Exception as e:
+                    logger.error(f"💡 [LEARNING] Error generating insights for user {uid}: {e}")
+
+        logger.info(f"💡 [LEARNING] Insight generation complete: {users_processed} users, {insights_generated} insights")
+
+        return {
+            'status': 'completed',
+            'users_processed': users_processed,
+            'insights_generated': insights_generated,
+        }
+
+    except Exception as e:
+        logger.exception(f"💡 [LEARNING] Insight generation failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def update_learning_profiles():
+    """
+    Update user learning profiles with aggregated data.
+    """
+    logger.info("📊 [LEARNING] Updating learning profiles...")
+
+    try:
+        from django.contrib.auth import get_user_model
+        from core.models_unified_system import (
+            UserLearningProfile, ContentDistribution, DistributionAnalytics,
+            SuccessPattern
+        )
+        from django.db.models import Sum, Count, Avg
+
+        User = get_user_model()
+        profiles_updated = 0
+
+        # Get users with distributions
+        user_ids = ContentDistribution.objects.values_list('user_id', flat=True).distinct()
+
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                profile, _ = UserLearningProfile.objects.get_or_create(user=user)
+
+                # Update distribution stats
+                dist_stats = ContentDistribution.objects.filter(user=user).aggregate(
+                    total=Count('id'),
+                    platforms_used=Count('platform', distinct=True),
+                )
+
+                # Update analytics stats
+                analytics_stats = DistributionAnalytics.objects.filter(
+                    distribution__user=user
+                ).aggregate(
+                    total_revenue=Sum('revenue_generated'),
+                    total_sales=Sum('sales'),
+                    total_views=Sum('views'),
+                )
+
+                # Update pattern stats
+                pattern_count = SuccessPattern.objects.filter(user=user, is_active=True).count()
+                avg_confidence = SuccessPattern.objects.filter(
+                    user=user, is_active=True
+                ).aggregate(avg=Avg('confidence_score'))['avg'] or 0
+
+                # Update profile
+                profile.total_distributions = dist_stats['total'] or 0
+                profile.total_platforms = dist_stats['platforms_used'] or 0
+                profile.total_revenue = analytics_stats['total_revenue'] or 0
+                profile.total_sales = analytics_stats['total_sales'] or 0
+                profile.patterns_discovered = pattern_count
+                profile.avg_pattern_confidence = avg_confidence
+                profile.save()
+
+                profiles_updated += 1
+
+            except Exception as e:
+                logger.error(f"📊 [LEARNING] Error updating profile for user {user_id}: {e}")
+
+        logger.info(f"📊 [LEARNING] Learning profiles updated: {profiles_updated}")
+        return {'status': 'completed', 'profiles_updated': profiles_updated}
+
+    except Exception as e:
+        logger.exception(f"📊 [LEARNING] Profile update failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def run_daily_learning_pipeline():
+    """
+    Run the complete daily learning pipeline.
+    Called by Celery Beat scheduler.
+    """
+    logger.info("🚀 [LEARNING] Starting daily learning pipeline...")
+
+    try:
+        results = {
+            'patterns': None,
+            'insights': None,
+            'profiles': None,
+        }
+
+        # Step 1: Discover patterns
+        logger.info("🚀 [LEARNING] Step 1: Discovering patterns...")
+        results['patterns'] = discover_success_patterns.delay().get(timeout=300)
+
+        # Step 2: Generate insights
+        logger.info("🚀 [LEARNING] Step 2: Generating insights...")
+        results['insights'] = generate_user_insights.delay().get(timeout=300)
+
+        # Step 3: Update profiles
+        logger.info("🚀 [LEARNING] Step 3: Updating profiles...")
+        results['profiles'] = update_learning_profiles.delay().get(timeout=300)
+
+        logger.info(f"🚀 [LEARNING] Daily pipeline complete: {results}")
+        return {'status': 'completed', 'results': results}
+
+    except Exception as e:
+        logger.exception(f"🚀 [LEARNING] Daily pipeline failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=3)
+def record_learning_event(self, event_type, user_id, data):
+    """
+    Record a learning event for real-time pattern updates.
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        from core.learning_engine import RealTimeLearner
+
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        learner = RealTimeLearner(user=user)
+
+        if event_type == 'distribution':
+            learner.record_distribution(data)
+        elif event_type == 'sale':
+            learner.record_sale(data)
+        elif event_type == 'view':
+            learner.record_view(data)
+
+        logger.debug(f"📝 [LEARNING] Recorded {event_type} event for user {user_id}")
+        return {'status': 'recorded', 'event_type': event_type}
+
+    except Exception as e:
+        logger.error(f"📝 [LEARNING] Failed to record event: {e}")
+        raise self.retry(exc=e, countdown=30)
