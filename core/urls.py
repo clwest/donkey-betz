@@ -144,6 +144,22 @@ from core.views_agent_learning import (
     get_all_preferences as learning_all
 )
 
+# Session 219 Phase D: Import marketplace views
+from core.views_marketplace import (
+    browse_workflows as marketplace_browse,
+    featured_workflows as marketplace_featured,
+    trending_workflows as marketplace_trending,
+    workflow_details as marketplace_details,
+    install_workflow as marketplace_install,
+    publish_workflow as marketplace_publish,
+    add_review as marketplace_add_review,
+    get_reviews as marketplace_get_reviews,
+    my_published_workflows as marketplace_my_published,
+    my_installed_workflows as marketplace_my_installed,
+    marketplace_stats,
+    get_categories as marketplace_categories,
+)
+
 # Session 206: Import preferences dashboard views
 # Session 210: Added implicit learning & recommendations
 # Session 211: Added A/B testing
@@ -1573,6 +1589,20 @@ urlpatterns = [
     path('api/agent-learning/summary/<str:agent_name>/', learning_summary, name='learning-summary'),
     path('api/agent-learning/share/<str:agent_name>/', learning_share, name='learning-share'),
     path('api/agent-learning/all-preferences/', learning_all, name='learning-all'),
+
+    # Session 219 Phase D: Workflow Marketplace API
+    path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),
+    path('api/marketplace/workflows/featured/', marketplace_featured, name='marketplace-featured'),
+    path('api/marketplace/workflows/trending/', marketplace_trending, name='marketplace-trending'),
+    path('api/marketplace/workflows/<str:workflow_id>/', marketplace_details, name='marketplace-details'),
+    path('api/marketplace/workflows/<str:workflow_id>/install/', marketplace_install, name='marketplace-install'),
+    path('api/marketplace/workflows/<str:workflow_id>/reviews/', marketplace_get_reviews, name='marketplace-get-reviews'),
+    path('api/marketplace/publish/', marketplace_publish, name='marketplace-publish'),
+    path('api/marketplace/reviews/', marketplace_add_review, name='marketplace-add-review'),
+    path('api/marketplace/my-published/', marketplace_my_published, name='marketplace-my-published'),
+    path('api/marketplace/my-installed/', marketplace_my_installed, name='marketplace-my-installed'),
+    path('api/marketplace/stats/', marketplace_stats, name='marketplace-stats'),
+    path('api/marketplace/categories/', marketplace_categories, name='marketplace-categories'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),

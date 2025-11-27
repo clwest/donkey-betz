@@ -2407,3 +2407,199 @@ class AgentPerformanceMetric(models.Model):
     def __str__(self):
         success_rate = self.successful_executions / self.total_executions if self.total_executions > 0 else 0
         return f"{self.agent_name} ({success_rate:.1%} success)"
+
+
+# =============================================================================
+# SESSION 219 PHASE D: WORKFLOW MARKETPLACE MODELS
+# =============================================================================
+
+class PublishedWorkflow(models.Model):
+    """
+    Published workflow in the marketplace.
+
+    Session 219 Phase D: Wraps CustomWorkflow for community sharing.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The actual workflow
+    workflow = models.OneToOneField(
+        CustomWorkflow, on_delete=models.CASCADE,
+        related_name='publication'
+    )
+
+    # Author info
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='published_workflows'
+    )
+
+    # Marketplace metadata
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    short_description = models.CharField(max_length=300, blank=True)
+
+    # Categorization
+    CATEGORY_CHOICES = [
+        ('image_generation', 'Image Generation'),
+        ('video_creation', 'Video Creation'),
+        ('audio_production', 'Audio Production'),
+        ('brand_identity', 'Brand Identity'),
+        ('social_media', 'Social Media'),
+        ('ecommerce', 'E-Commerce'),
+        ('research', 'Research & Analysis'),
+        ('productivity', 'Productivity'),
+        ('other', 'Other'),
+    ]
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other')
+    tags = models.JSONField(default=list)
+
+    # Media
+    preview_image = models.URLField(blank=True)
+    preview_images = models.JSONField(default=list)  # List of preview URLs
+
+    # Stats
+    download_count = models.IntegerField(default=0)
+    view_count = models.IntegerField(default=0)
+
+    # Rating cache (updated when reviews change)
+    average_rating = models.FloatField(default=0.0)
+    review_count = models.IntegerField(default=0)
+
+    # Status
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('removed', 'Removed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='approved')
+    is_featured = models.BooleanField(default=False)
+
+    # Pricing (future: monetization)
+    is_free = models.BooleanField(default=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    # Timestamps
+    published_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Published Workflow'
+        verbose_name_plural = 'Published Workflows'
+        ordering = ['-is_featured', '-download_count', '-published_at']
+
+    def __str__(self):
+        return f"{self.title} by {self.author}"
+
+    def update_rating_cache(self):
+        """Update cached rating stats from reviews."""
+        from django.db.models import Avg, Count
+        stats = self.reviews.aggregate(avg=Avg('rating'), count=Count('id'))
+        self.average_rating = stats['avg'] or 0.0
+        self.review_count = stats['count'] or 0
+        self.save(update_fields=['average_rating', 'review_count'])
+
+    def increment_download(self):
+        """Increment download count."""
+        self.download_count += 1
+        self.save(update_fields=['download_count'])
+        # Also update the underlying workflow
+        if self.workflow:
+            self.workflow.use_count += 1
+            self.workflow.save(update_fields=['use_count'])
+
+    def increment_view(self):
+        """Increment view count."""
+        self.view_count += 1
+        self.save(update_fields=['view_count'])
+
+
+class WorkflowReview(models.Model):
+    """
+    User review of a published workflow.
+
+    Session 219 Phase D: Ratings and reviews for marketplace.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # References
+    published_workflow = models.ForeignKey(
+        PublishedWorkflow, on_delete=models.CASCADE,
+        related_name='reviews'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='workflow_reviews'
+    )
+
+    # Rating
+    rating = models.IntegerField()  # 1-5
+    review_text = models.TextField(blank=True)
+
+    # Helpful votes
+    helpful_count = models.IntegerField(default=0)
+    not_helpful_count = models.IntegerField(default=0)
+
+    # Status
+    is_verified_purchase = models.BooleanField(default=False)  # User actually used it
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Workflow Review'
+        verbose_name_plural = 'Workflow Reviews'
+        ordering = ['-helpful_count', '-created_at']
+        unique_together = [('published_workflow', 'user')]
+
+    def __str__(self):
+        return f"{self.rating}⭐ by {self.user} on {self.published_workflow.title}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update parent's rating cache
+        self.published_workflow.update_rating_cache()
+
+
+class WorkflowInstallation(models.Model):
+    """
+    Track user installations of published workflows.
+
+    Session 219 Phase D: Know who installed what for analytics.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # References
+    published_workflow = models.ForeignKey(
+        PublishedWorkflow, on_delete=models.CASCADE,
+        related_name='installations'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='installed_workflows'
+    )
+
+    # The cloned workflow
+    installed_workflow = models.ForeignKey(
+        CustomWorkflow, on_delete=models.SET_NULL,
+        null=True, related_name='installation_source'
+    )
+
+    # Usage stats
+    times_executed = models.IntegerField(default=0)
+    last_executed = models.DateTimeField(null=True, blank=True)
+
+    # Timestamps
+    installed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Workflow Installation'
+        verbose_name_plural = 'Workflow Installations'
+        unique_together = [('published_workflow', 'user')]
+
+    def __str__(self):
+        return f"{self.user} installed {self.published_workflow.title}"
