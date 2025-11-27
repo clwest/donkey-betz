@@ -4551,3 +4551,391 @@ class DistributionAnalytics(models.Model):
     def __str__(self):
         platform_name = self.platform.name if self.platform else 'All Platforms'
         return f"{self.user.username} - {platform_name} - {self.date}"
+
+
+# ============================================================
+# Session 232: Phase 5 - Learning Loop Models
+# ============================================================
+
+class SuccessPattern(models.Model):
+    """
+    Tracks patterns that lead to successful sales/revenue.
+    The system learns what works and suggests similar approaches.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='success_patterns')
+
+    # Pattern identification
+    pattern_type = models.CharField(max_length=50, choices=[
+        ('content_style', 'Content Style'),
+        ('pricing_strategy', 'Pricing Strategy'),
+        ('timing', 'Upload Timing'),
+        ('platform_match', 'Platform Match'),
+        ('tag_combination', 'Tag Combination'),
+        ('description_format', 'Description Format'),
+        ('category_niche', 'Category Niche'),
+    ])
+    pattern_name = models.CharField(max_length=200)
+    pattern_description = models.TextField(blank=True)
+
+    # Pattern data
+    pattern_attributes = models.JSONField(default=dict)  # Specific attributes that make this pattern
+    # Example: {"style": "cyberpunk", "colors": ["neon", "dark"], "aspect_ratio": "16:9"}
+
+    # Success metrics
+    success_count = models.IntegerField(default=0)  # Number of times this pattern succeeded
+    failure_count = models.IntegerField(default=0)  # Number of times it failed
+    success_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # 0-100%
+    avg_revenue_per_success = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_revenue_attributed = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Pattern strength
+    confidence_score = models.DecimalField(max_digits=5, decimal_places=2, default=50)  # 0-100
+    sample_size = models.IntegerField(default=0)  # How many data points
+    statistical_significance = models.BooleanField(default=False)  # p < 0.05
+
+    # Best platforms for this pattern
+    best_platforms = models.JSONField(default=list)  # ["etsy", "gumroad"]
+
+    # Time-based insights
+    best_upload_times = models.JSONField(default=list)  # ["tuesday_10am", "friday_2pm"]
+    best_seasons = models.JSONField(default=list)  # ["christmas", "summer"]
+
+    # Related content
+    example_content_ids = models.JSONField(default=list)  # UUIDs of successful content
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_global = models.BooleanField(default=False)  # If True, applies to all users
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_validated = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Success Pattern'
+        verbose_name_plural = 'Success Patterns'
+        ordering = ['-success_rate', '-confidence_score']
+
+    def __str__(self):
+        return f"{self.pattern_type}: {self.pattern_name} ({self.success_rate}%)"
+
+    def update_metrics(self, was_successful: bool, revenue: float = 0):
+        """Update pattern metrics after a new data point."""
+        if was_successful:
+            self.success_count += 1
+            self.total_revenue_attributed += Decimal(str(revenue))
+        else:
+            self.failure_count += 1
+
+        self.sample_size = self.success_count + self.failure_count
+        if self.sample_size > 0:
+            self.success_rate = (self.success_count / self.sample_size) * 100
+            if self.success_count > 0:
+                self.avg_revenue_per_success = self.total_revenue_attributed / self.success_count
+
+        # Update confidence based on sample size
+        if self.sample_size >= 30:
+            self.statistical_significance = True
+            self.confidence_score = min(95, 50 + (self.sample_size * 0.5))
+        else:
+            self.confidence_score = min(50, self.sample_size * 2)
+
+        self.save()
+
+
+class ContentPerformancePrediction(models.Model):
+    """
+    ML-based predictions for content performance before distribution.
+    Helps users understand potential success before uploading.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='performance_predictions')
+
+    # Content being predicted
+    content_type = models.CharField(max_length=50)  # image, video, audio
+    content_id = models.UUIDField(null=True, blank=True)  # Reference to actual content
+    content_hash = models.CharField(max_length=64, blank=True)  # For dedup
+
+    # Content attributes analyzed
+    analyzed_attributes = models.JSONField(default=dict)
+    # {"style": "cyberpunk", "colors": [...], "complexity": 7, "uniqueness": 8}
+
+    # Predictions per platform
+    platform_predictions = models.JSONField(default=dict)
+    # {
+    #   "etsy": {"success_probability": 0.75, "expected_revenue": 45.00, "confidence": 0.8},
+    #   "gumroad": {"success_probability": 0.60, "expected_revenue": 15.00, "confidence": 0.7}
+    # }
+
+    # Overall predictions
+    overall_success_probability = models.DecimalField(max_digits=5, decimal_places=4, default=0)  # 0-1
+    expected_total_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_time_to_first_sale = models.IntegerField(default=0)  # Hours
+    prediction_confidence = models.DecimalField(max_digits=5, decimal_places=4, default=0)  # 0-1
+
+    # Recommended actions
+    recommended_platforms = models.JSONField(default=list)  # Ordered by potential
+    recommended_price_range = models.JSONField(default=dict)  # {"min": 10, "max": 50, "optimal": 29.99}
+    recommended_tags = models.JSONField(default=list)
+    recommended_upload_time = models.DateTimeField(null=True, blank=True)
+
+    # Matching patterns
+    matching_success_patterns = models.JSONField(default=list)  # Pattern IDs that match
+
+    # Actual outcomes (filled after distribution)
+    actual_success = models.BooleanField(null=True, blank=True)
+    actual_revenue = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    prediction_accuracy = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True)
+
+    # Model info
+    model_version = models.CharField(max_length=50, default='v1.0')
+    prediction_timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Content Performance Prediction'
+        verbose_name_plural = 'Content Performance Predictions'
+        ordering = ['-prediction_timestamp']
+
+    def __str__(self):
+        return f"Prediction for {self.content_type}: {self.overall_success_probability*100:.1f}% success"
+
+
+class PricingOptimization(models.Model):
+    """
+    Dynamic pricing suggestions based on market data and user history.
+    Learns optimal pricing strategies over time.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pricing_optimizations')
+
+    # Scope
+    platform = models.ForeignKey(DistributionPlatform, on_delete=models.CASCADE, null=True, blank=True)
+    content_category = models.CharField(max_length=100, blank=True)  # "ai_art", "digital_download"
+    content_style = models.CharField(max_length=100, blank=True)  # "cyberpunk", "minimalist"
+
+    # Current market data
+    market_avg_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    market_median_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    market_price_range = models.JSONField(default=dict)  # {"min": 5, "max": 500, "p25": 15, "p75": 75}
+    competitor_prices = models.JSONField(default=list)  # Sample of competitor prices
+
+    # User's historical performance
+    user_avg_sale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    user_best_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Price with best conversion
+    user_price_elasticity = models.DecimalField(max_digits=5, decimal_places=4, default=0)  # How price affects sales
+
+    # Optimal pricing
+    optimal_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    optimal_price_confidence = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    price_range_suggestion = models.JSONField(default=dict)  # {"low": 15, "mid": 25, "high": 45}
+
+    # Price testing results
+    tested_prices = models.JSONField(default=list)  # [{"price": 25, "conversions": 10, "revenue": 250}]
+    best_tested_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Seasonal adjustments
+    seasonal_multipliers = models.JSONField(default=dict)
+    # {"christmas": 1.25, "summer": 0.9, "black_friday": 1.5}
+
+    # Insights
+    pricing_insights = models.JSONField(default=list)
+    # ["Your prices are 15% below market average", "Consider raising prices on weekends"]
+
+    # A/B test reference
+    current_ab_test_id = models.UUIDField(null=True, blank=True)
+
+    last_updated = models.DateTimeField(auto_now=True)
+    data_freshness_days = models.IntegerField(default=0)  # Days since last market data update
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Pricing Optimization'
+        verbose_name_plural = 'Pricing Optimizations'
+        ordering = ['-last_updated']
+
+    def __str__(self):
+        platform_name = self.platform.name if self.platform else 'All'
+        return f"Pricing for {platform_name}/{self.content_category}: ${self.optimal_price}"
+
+
+class DistributionInsight(models.Model):
+    """
+    AI-generated insights from distribution learning patterns.
+    Proactive suggestions based on analyzed data.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='distribution_insights')
+
+    # Insight classification
+    insight_type = models.CharField(max_length=50, choices=[
+        ('opportunity', 'New Opportunity'),
+        ('improvement', 'Improvement Suggestion'),
+        ('warning', 'Warning/Alert'),
+        ('milestone', 'Achievement/Milestone'),
+        ('trend', 'Trend Detected'),
+        ('prediction', 'Future Prediction'),
+        ('comparison', 'Performance Comparison'),
+    ])
+    priority = models.CharField(max_length=20, choices=[
+        ('critical', 'Critical'),
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+    ], default='medium')
+
+    # Content
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    detailed_analysis = models.TextField(blank=True)
+
+    # Data backing the insight
+    supporting_data = models.JSONField(default=dict)
+    # {"pattern_id": "...", "metrics": {...}, "comparison": {...}}
+
+    # Actionable recommendations
+    recommended_actions = models.JSONField(default=list)
+    # [{"action": "Raise price on Etsy", "expected_impact": "+15% revenue"}]
+
+    # Impact estimation
+    potential_revenue_impact = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    confidence_level = models.DecimalField(max_digits=5, decimal_places=2, default=50)
+
+    # User interaction
+    is_read = models.BooleanField(default=False)
+    is_dismissed = models.BooleanField(default=False)
+    is_acted_upon = models.BooleanField(default=False)
+    user_feedback = models.CharField(max_length=20, choices=[
+        ('helpful', 'Helpful'),
+        ('not_helpful', 'Not Helpful'),
+        ('incorrect', 'Incorrect'),
+    ], null=True, blank=True)
+
+    # Validity
+    valid_from = models.DateTimeField(auto_now_add=True)
+    valid_until = models.DateTimeField(null=True, blank=True)  # When insight becomes stale
+    is_still_relevant = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Distribution Insight'
+        verbose_name_plural = 'Distribution Insights'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.insight_type}] {self.title}"
+
+
+class UserLearningProfile(models.Model):
+    """
+    Aggregated learning profile for each user.
+    Stores preferences, patterns, and AI assistant state.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='learning_profile')
+
+    # Content preferences learned
+    preferred_styles = models.JSONField(default=list)  # ["cyberpunk", "minimalist"]
+    preferred_platforms = models.JSONField(default=list)  # ["etsy", "gumroad"]
+    preferred_content_types = models.JSONField(default=list)  # ["image", "digital_download"]
+    preferred_price_ranges = models.JSONField(default=dict)  # {"low": 10, "high": 50}
+
+    # Work patterns
+    typical_upload_times = models.JSONField(default=list)  # ["weekday_morning", "weekend_afternoon"]
+    productivity_patterns = models.JSONField(default=dict)  # {"best_day": "tuesday", "best_hour": 10}
+    avg_content_per_week = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    # Success profile
+    overall_success_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    strongest_categories = models.JSONField(default=list)  # Categories with best performance
+    weakest_categories = models.JSONField(default=list)  # Categories needing improvement
+    total_successful_distributions = models.IntegerField(default=0)
+    total_lifetime_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Learning state
+    patterns_discovered = models.IntegerField(default=0)
+    insights_generated = models.IntegerField(default=0)
+    insights_acted_upon = models.IntegerField(default=0)
+    prediction_accuracy_avg = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    # Personalization settings
+    notification_preferences = models.JSONField(default=dict)
+    # {"daily_insights": True, "price_alerts": True, "trend_updates": False}
+
+    # Goals
+    revenue_goals = models.JSONField(default=dict)
+    # {"monthly": 1000, "yearly": 12000, "next_milestone": 5000}
+
+    # AI assistant memory
+    conversation_context = models.JSONField(default=dict)
+    recent_interactions = models.JSONField(default=list)  # Last N interactions for context
+
+    last_activity = models.DateTimeField(auto_now=True)
+    profile_completeness = models.IntegerField(default=0)  # 0-100%
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'User Learning Profile'
+        verbose_name_plural = 'User Learning Profiles'
+
+    def __str__(self):
+        return f"Learning Profile: {self.user.username}"
+
+
+class PerformanceComparison(models.Model):
+    """
+    Benchmarks user performance against market/peers.
+    Helps understand where they stand and how to improve.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='performance_comparisons')
+
+    # Comparison scope
+    comparison_type = models.CharField(max_length=50, choices=[
+        ('platform', 'Platform-wide'),
+        ('category', 'Category'),
+        ('style', 'Style'),
+        ('price_tier', 'Price Tier'),
+        ('experience_level', 'Experience Level'),
+    ])
+    scope_value = models.CharField(max_length=100)  # e.g., "etsy", "ai_art", "cyberpunk"
+
+    # User metrics
+    user_metrics = models.JSONField(default=dict)
+    # {"revenue": 500, "conversion_rate": 3.5, "avg_price": 25, "items_sold": 20}
+
+    # Benchmark metrics
+    benchmark_metrics = models.JSONField(default=dict)
+    # {"revenue": {"p25": 200, "p50": 450, "p75": 900, "p90": 2000}}
+
+    # Percentile rankings
+    percentile_rankings = models.JSONField(default=dict)
+    # {"revenue": 55, "conversion_rate": 70, "items_sold": 45}
+
+    # Insights
+    strengths = models.JSONField(default=list)  # ["Above average pricing", "Good conversion"]
+    weaknesses = models.JSONField(default=list)  # ["Below average volume"]
+    improvement_opportunities = models.JSONField(default=list)
+
+    # Trend
+    trend_vs_last_period = models.JSONField(default=dict)
+    # {"revenue": "+15%", "ranking_change": "+5 percentile"}
+
+    period_start = models.DateField()
+    period_end = models.DateField()
+    sample_size = models.IntegerField(default=0)  # Number of users in comparison
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Performance Comparison'
+        verbose_name_plural = 'Performance Comparisons'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} vs {self.comparison_type}:{self.scope_value}"
