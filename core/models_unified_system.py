@@ -2603,3 +2603,295 @@ class WorkflowInstallation(models.Model):
 
     def __str__(self):
         return f"{self.user} installed {self.published_workflow.title}"
+
+
+# =============================================================================
+# SESSION 220: REAL-TIME COLLABORATION MODELS
+# =============================================================================
+
+class SharedProject(models.Model):
+    """
+    Collaborative project workspace for multi-user real-time editing.
+
+    Session 220 Phase E: Enable multiple users to work on the same
+    creative project simultaneously with real-time sync.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Project details
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    thumbnail = models.URLField(blank=True)
+
+    # Ownership
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='owned_projects'
+    )
+
+    # Project content (JSON structure of all content items)
+    content = models.JSONField(default=dict)
+
+    # Project settings/configuration
+    project_settings = models.JSONField(default=dict)
+
+    # Visibility
+    VISIBILITY_CHOICES = [
+        ('private', 'Private'),
+        ('team', 'Team Only'),
+        ('public', 'Public'),
+    ]
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='private')
+
+    # Project status
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('archived', 'Archived'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+
+    # Version tracking
+    version = models.IntegerField(default=1)
+    last_edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='last_edited_projects'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Shared Project'
+        verbose_name_plural = 'Shared Projects'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.name} by {self.owner}"
+
+    def increment_version(self):
+        """Bump version number after content change"""
+        self.version += 1
+        self.save(update_fields=['version', 'updated_at'])
+
+
+class ProjectCollaborator(models.Model):
+    """
+    Collaborator access to a shared project.
+
+    Session 220 Phase E: Manage who can access and edit projects.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        SharedProject, on_delete=models.CASCADE,
+        related_name='collaborators'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='project_collaborations'
+    )
+
+    # Permissions
+    ROLE_CHOICES = [
+        ('viewer', 'Viewer'),
+        ('editor', 'Editor'),
+        ('admin', 'Admin'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='editor')
+
+    # Invitation status
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Invited by
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, related_name='sent_invitations'
+    )
+
+    # Timestamps
+    invited_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Project Collaborator'
+        verbose_name_plural = 'Project Collaborators'
+        unique_together = [('project', 'user')]
+
+    def __str__(self):
+        return f"{self.user} ({self.role}) on {self.project.name}"
+
+    def can_edit(self):
+        return self.role in ['editor', 'admin'] and self.status == 'accepted'
+
+    def can_manage(self):
+        return self.role == 'admin' and self.status == 'accepted'
+
+
+class ProjectActivity(models.Model):
+    """
+    Activity log for shared projects.
+
+    Session 220 Phase E: Track all changes for audit and undo.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        SharedProject, on_delete=models.CASCADE,
+        related_name='activities'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='project_activities'
+    )
+
+    # Activity type
+    ACTION_CHOICES = [
+        ('created', 'Created Project'),
+        ('edited', 'Edited Content'),
+        ('added_content', 'Added Content'),
+        ('removed_content', 'Removed Content'),
+        ('invited', 'Invited Collaborator'),
+        ('joined', 'Joined Project'),
+        ('left', 'Left Project'),
+        ('settings_changed', 'Changed Settings'),
+        ('commented', 'Added Comment'),
+    ]
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+
+    # Activity details
+    details = models.JSONField(default=dict)
+
+    # For undo capability
+    previous_state = models.JSONField(null=True, blank=True)
+
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Project Activity'
+        verbose_name_plural = 'Project Activities'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user} {self.action} on {self.project.name}"
+
+
+class ProjectPresence(models.Model):
+    """
+    Track who is currently viewing/editing a project.
+
+    Session 220 Phase E: Real-time presence for collaboration UI.
+    This model is frequently updated via WebSocket.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        SharedProject, on_delete=models.CASCADE,
+        related_name='presences'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='project_presences'
+    )
+
+    # Connection info
+    channel_name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+
+    # Cursor/selection state (for showing what others are working on)
+    cursor_position = models.JSONField(default=dict)  # {x, y} or element_id
+    selection = models.JSONField(default=dict)  # Current selection state
+
+    # Activity status
+    STATUS_CHOICES = [
+        ('viewing', 'Viewing'),
+        ('editing', 'Editing'),
+        ('idle', 'Idle'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='viewing')
+
+    # User color (for UI differentiation)
+    color = models.CharField(max_length=7, default='#3B82F6')  # Hex color
+
+    # Timestamps
+    connected_at = models.DateTimeField(auto_now_add=True)
+    last_activity = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Project Presence'
+        verbose_name_plural = 'Project Presences'
+        unique_together = [('project', 'user', 'channel_name')]
+
+    def __str__(self):
+        return f"{self.user} ({self.status}) in {self.project.name}"
+
+    @classmethod
+    def cleanup_stale(cls, minutes=5):
+        """Remove presence records older than X minutes"""
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(minutes=minutes)
+        return cls.objects.filter(last_activity__lt=cutoff).delete()
+
+
+class ProjectComment(models.Model):
+    """
+    Comments on project content for collaboration.
+
+    Session 220 Phase E: Allow discussion within projects.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        SharedProject, on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='project_comments'
+    )
+
+    # Comment content
+    text = models.TextField()
+
+    # Position reference (where in the project this comment is attached)
+    target_type = models.CharField(max_length=50, blank=True)  # 'content_item', 'canvas', etc.
+    target_id = models.CharField(max_length=100, blank=True)  # ID of the target element
+
+    # Threading
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='replies'
+    )
+
+    # Status
+    is_resolved = models.BooleanField(default=False)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='resolved_comments'
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Project Comment'
+        verbose_name_plural = 'Project Comments'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.user} on {self.project.name}"
