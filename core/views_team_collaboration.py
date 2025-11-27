@@ -905,3 +905,208 @@ def seed_default_roles():
             created_count += 1
 
     return created_count
+
+
+# =============================================================================
+# SESSION 228: WORKFLOW ENGINE API
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_workflow_templates(request):
+    """
+    GET /api/teams/workflows/templates/
+    List all available workflow templates.
+    """
+    try:
+        from core.team_workflow_engine import workflow_engine
+
+        templates = workflow_engine.list_templates()
+
+        return JsonResponse({
+            'success': True,
+            'templates': templates,
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing templates: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def execute_workflow(request, workflow_id):
+    """
+    POST /api/teams/workflows/<workflow_id>/execute/
+    Execute a workflow using the workflow engine.
+    Initializes from template and starts execution.
+    """
+    try:
+        from core.models_unified_system import TeamWorkflow
+        from core.team_workflow_engine import workflow_engine
+
+        workflow = TeamWorkflow.objects.get(id=workflow_id)
+
+        # Initialize workflow from template
+        workflow_engine.initialize_workflow(workflow)
+
+        # Start the workflow
+        result = workflow_engine.start_workflow(workflow)
+
+        return JsonResponse({
+            'success': result.get('success', False),
+            'message': result.get('message', ''),
+            'workflow': workflow_engine.get_workflow_status(workflow),
+        })
+
+    except TeamWorkflow.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Workflow not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error executing workflow: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def execute_workflow_step(request, workflow_id, step_id):
+    """
+    POST /api/teams/workflows/<workflow_id>/steps/<step_id>/execute/
+    Execute a specific workflow step.
+    """
+    try:
+        from core.models_unified_system import TeamWorkflow, TeamWorkflowStep
+        from core.team_workflow_engine import workflow_engine
+
+        workflow = TeamWorkflow.objects.get(id=workflow_id)
+        step = TeamWorkflowStep.objects.get(id=step_id, workflow=workflow)
+
+        data = json.loads(request.body) if request.body else {}
+
+        result = workflow_engine.execute_step(step, data)
+
+        return JsonResponse({
+            'success': result.get('success', False),
+            'result': result.get('result'),
+            'error': result.get('error'),
+            'workflow': workflow_engine.get_workflow_status(workflow),
+        })
+
+    except TeamWorkflow.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Workflow not found'}, status=404)
+    except TeamWorkflowStep.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Step not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error executing step: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def workflow_status(request, workflow_id):
+    """
+    GET /api/teams/workflows/<workflow_id>/status/
+    Get detailed workflow status with step progress.
+    """
+    try:
+        from core.models_unified_system import TeamWorkflow
+        from core.team_workflow_engine import workflow_engine
+
+        workflow = TeamWorkflow.objects.select_related('team').get(id=workflow_id)
+
+        return JsonResponse({
+            'success': True,
+            'workflow': workflow_engine.get_workflow_status(workflow),
+        })
+
+    except TeamWorkflow.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Workflow not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting workflow status: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def run_full_workflow(request, workflow_id):
+    """
+    POST /api/teams/workflows/<workflow_id>/run/
+    Execute entire workflow automatically (all steps).
+    This runs all steps sequentially for demo/testing purposes.
+    """
+    try:
+        from core.models_unified_system import TeamWorkflow
+        from core.team_workflow_engine import workflow_engine
+
+        workflow = TeamWorkflow.objects.get(id=workflow_id)
+
+        # Initialize if needed
+        if not workflow.step_executions.exists():
+            workflow_engine.initialize_workflow(workflow)
+
+        # Start the workflow
+        start_result = workflow_engine.start_workflow(workflow)
+        if not start_result.get('success'):
+            return JsonResponse(start_result, status=400)
+
+        # Execute all steps automatically
+        executed_steps = []
+        for step in workflow.step_executions.order_by('step_number'):
+            # Skip if already completed
+            if step.status == 'completed':
+                continue
+
+            # Execute step
+            result = workflow_engine.execute_step(step)
+            executed_steps.append({
+                'step_name': step.step_name,
+                'status': step.status,
+                'success': result.get('success'),
+            })
+
+            # Stop if step failed
+            if not result.get('success'):
+                break
+
+        # Get final status
+        workflow.refresh_from_db()
+
+        return JsonResponse({
+            'success': workflow.status == 'completed',
+            'message': f'Workflow {"completed" if workflow.status == "completed" else "in progress"}',
+            'executed_steps': executed_steps,
+            'workflow': workflow_engine.get_workflow_status(workflow),
+        })
+
+    except TeamWorkflow.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Workflow not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error running workflow: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_active_workflows(request):
+    """
+    GET /api/teams/workflows/active/
+    List all currently active workflows.
+    """
+    try:
+        from core.models_unified_system import TeamWorkflow
+        from core.team_workflow_engine import workflow_engine
+
+        workflows = TeamWorkflow.objects.filter(
+            status__in=['active', 'draft']
+        ).select_related('team').order_by('-created_at')[:20]
+
+        return JsonResponse({
+            'success': True,
+            'workflows': [
+                workflow_engine.get_workflow_status(wf) for wf in workflows
+            ],
+            'total': workflows.count(),
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing active workflows: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
