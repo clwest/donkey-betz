@@ -216,7 +216,7 @@ class AgentTrainingService:
                 'specialization_scores': metric.specialization_scores or {},
                 'capabilities': list(metric.specialization_scores.keys()) if metric.specialization_scores else [],
                 'is_active': True,
-                'last_activity': metric.last_activity.isoformat() if metric.last_activity else None
+                'last_activity': metric.last_execution.isoformat() if metric.last_execution else None
             })
 
         # Add template agents if not in database
@@ -253,7 +253,7 @@ class AgentTrainingService:
                 'successful_executions': metric.successful_executions,
                 'quality_score': float(metric.quality_score),
                 'is_active': True,
-                'last_activity': metric.last_activity.isoformat() if metric.last_activity else None,
+                'last_activity': metric.last_execution.isoformat() if metric.last_execution else None,
                 'created_at': metric.created_at.isoformat() if hasattr(metric, 'created_at') else None
             }
         except AgentPerformanceMetric.DoesNotExist:
@@ -495,7 +495,7 @@ class AgentTrainingService:
 
         total_agents = AgentPerformanceMetric.objects.count()
         active_agents = AgentPerformanceMetric.objects.filter(
-            last_activity__gte=timezone.now() - timedelta(days=7)
+            last_execution__gte=timezone.now() - timedelta(days=7)
         ).count()
 
         total_knowledge = SharedKnowledge.objects.count()
