@@ -357,23 +357,38 @@ def list_invitations(request):
     """List pending invitations for the current user"""
     from core.models_unified_system import ProjectCollaborator
 
-    invitations = ProjectCollaborator.objects.filter(
-        user=request.user,
-        status='pending'
-    ).select_related('project', 'invited_by')
+    try:
+        invitations = ProjectCollaborator.objects.filter(
+            user=request.user,
+            status='pending'
+        ).select_related('project', 'invited_by')
 
-    return JsonResponse({
-        'success': True,
-        'invitations': [{
-            'id': str(inv.id),
-            'project_id': str(inv.project_id),
-            'project_name': inv.project.name,
-            'invited_by': inv.invited_by.username if inv.invited_by else 'Unknown',
-            'role': inv.role,
-            'invited_at': inv.invited_at.isoformat()
-        } for inv in invitations],
-        'count': invitations.count()
-    })
+        invitation_list = []
+        for inv in invitations:
+            try:
+                invitation_list.append({
+                    'id': str(inv.id),
+                    'project_id': str(inv.project_id),
+                    'project_name': inv.project.name if inv.project else 'Unknown Project',
+                    'invited_by': inv.invited_by.username if inv.invited_by else 'Unknown',
+                    'role': inv.role,
+                    'invited_at': inv.invited_at.isoformat() if inv.invited_at else None
+                })
+            except Exception as e:
+                logger.warning(f"Error serializing invitation {inv.id}: {e}")
+                continue
+
+        return JsonResponse({
+            'success': True,
+            'invitations': invitation_list,
+            'count': len(invitation_list)
+        })
+    except Exception as e:
+        logger.error(f"Error listing invitations: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @require_http_methods(["POST"])

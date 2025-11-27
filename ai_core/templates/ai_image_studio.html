@@ -36069,8 +36069,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const statsData = await statsRes.json();
                 const prefsData = await prefsRes.json();
 
-                // Update stats
-                if (statsData.success) {
+                // Update stats - Session 222: Add null check for stats object
+                if (statsData.success && statsData.stats) {
                     const stats = statsData.stats;
                     document.getElementById('agent-total-interactions').textContent = stats.total_interactions || 0;
                     document.getElementById('agent-total-preferences').textContent = stats.total_preferences || 0;
