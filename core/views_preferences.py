@@ -1037,3 +1037,302 @@ def get_style_shifts(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =============================================================================
+# SESSION 211: A/B TESTING API ENDPOINTS
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_experiments(request):
+    """
+    List all A/B experiments.
+
+    Query params:
+        status: Filter by status (draft, running, paused, completed, cancelled)
+        domain: Filter by domain
+    """
+    try:
+        from core.models_unified_system import ABExperiment
+
+        qs = ABExperiment.objects.all()
+
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        domain_filter = request.query_params.get('domain')
+        if domain_filter:
+            qs = qs.filter(domain=domain_filter)
+
+        experiments = []
+        for exp in qs[:50]:
+            experiments.append({
+                'id': str(exp.id),
+                'name': exp.name,
+                'description': exp.description,
+                'experiment_type': exp.experiment_type,
+                'domain': exp.domain,
+                'status': exp.status,
+                'traffic_percentage': exp.traffic_percentage,
+                'start_date': str(exp.start_date) if exp.start_date else None,
+                'end_date': str(exp.end_date) if exp.end_date else None,
+                'created_at': str(exp.created_at),
+            })
+
+        return Response({
+            'success': True,
+            'experiments': experiments,
+            'count': len(experiments),
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing experiments: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_experiment(request):
+    """
+    Create a new A/B experiment.
+
+    Request body:
+        {
+            'name': 'Experiment Name',
+            'description': 'What this tests',
+            'experiment_type': 'recommendation',  # recommendation, ui, feature, algorithm
+            'domain': 'style_recommendations',
+            'traffic_percentage': 100,
+            'variants': [
+                {'name': 'control', 'is_control': true, 'weight': 50, 'config': {}},
+                {'name': 'variant_a', 'is_control': false, 'weight': 50, 'config': {}}
+            ]
+        }
+    """
+    try:
+        from core.services import get_ab_testing_service
+
+        service = get_ab_testing_service()
+        result = service.create_experiment(
+            name=request.data.get('name', 'Unnamed Experiment'),
+            description=request.data.get('description', ''),
+            experiment_type=request.data.get('experiment_type', 'recommendation'),
+            domain=request.data.get('domain', 'style_recommendations'),
+            traffic_percentage=request.data.get('traffic_percentage', 100),
+            variants=request.data.get('variants'),
+            config=request.data.get('config'),
+            created_by_id=request.user.id,
+        )
+
+        return Response({
+            'success': True,
+            'experiment': result,
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        logger.error(f"Error creating experiment: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_experiment(request, experiment_id):
+    """Start an experiment (set status to 'running')."""
+    try:
+        from core.services import get_ab_testing_service
+
+        service = get_ab_testing_service()
+        result = service.start_experiment(experiment_id)
+
+        return Response({
+            'success': True,
+            'experiment': result,
+        })
+
+    except ValueError as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error starting experiment: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def stop_experiment(request, experiment_id):
+    """
+    Stop an experiment.
+
+    Request body:
+        {
+            'status': 'completed'  # completed, paused, cancelled
+        }
+    """
+    try:
+        from core.services import get_ab_testing_service
+
+        service = get_ab_testing_service()
+        result = service.stop_experiment(
+            experiment_id,
+            status=request.data.get('status', 'completed')
+        )
+
+        return Response({
+            'success': True,
+            'experiment': result,
+        })
+
+    except ValueError as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error stopping experiment: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_experiment_results(request, experiment_id):
+    """
+    Get comprehensive results for an experiment.
+
+    Includes per-variant stats and statistical significance.
+    """
+    try:
+        from core.services import get_ab_testing_service
+
+        service = get_ab_testing_service()
+        results = service.get_experiment_results(experiment_id)
+
+        return Response({
+            'success': True,
+            'results': results,
+        })
+
+    except ValueError as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error getting experiment results: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def get_my_variant(request, experiment_id):
+    """
+    Get the variant assignment for the current user.
+
+    Works for both authenticated and anonymous users.
+    """
+    try:
+        from core.services import get_ab_testing_service
+
+        service = get_ab_testing_service()
+
+        # Get user ID or session ID
+        user_id = request.user.id if request.user.is_authenticated else None
+        session_id = request.session.session_key if not user_id else None
+
+        variant = service.get_variant_for_user(
+            experiment_id=experiment_id,
+            user_id=user_id,
+            session_id=session_id,
+        )
+
+        if variant:
+            # Mark exposure
+            service.mark_exposure(experiment_id, user_id, session_id)
+
+            return Response({
+                'success': True,
+                'variant': {
+                    'experiment_id': variant.experiment_id,
+                    'experiment_name': variant.experiment_name,
+                    'variant_id': variant.variant_id,
+                    'variant_name': variant.variant_name,
+                    'config': variant.config,
+                    'is_control': variant.is_control,
+                }
+            })
+        else:
+            return Response({
+                'success': True,
+                'variant': None,
+                'message': 'Not enrolled in this experiment'
+            })
+
+    except Exception as e:
+        logger.error(f"Error getting variant: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def track_ab_conversion(request, experiment_id):
+    """
+    Track a conversion for an A/B experiment.
+
+    Request body:
+        {
+            'conversion_type': 'apply',  # click, apply, download, share, etc.
+            'value': 1.0,  # optional
+            'metadata': {}  # optional
+        }
+    """
+    try:
+        from core.services import get_ab_testing_service
+
+        service = get_ab_testing_service()
+
+        user_id = request.user.id if request.user.is_authenticated else None
+        session_id = request.session.session_key if not user_id else None
+
+        success = service.track_conversion(
+            experiment_id=experiment_id,
+            conversion_type=request.data.get('conversion_type', 'click'),
+            user_id=user_id,
+            session_id=session_id,
+            value=request.data.get('value', 1.0),
+            metadata=request.data.get('metadata'),
+        )
+
+        return Response({
+            'success': success,
+            'message': 'Conversion recorded' if success else 'No assignment found'
+        })
+
+    except Exception as e:
+        logger.error(f"Error tracking conversion: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1726,3 +1726,250 @@ class StyleTrend(models.Model):
             total_usage=Sum('usage_count'),
             total_downloads=Sum('download_count')
         ).order_by('-total_usage')[:limit])
+
+
+# =============================================================================
+# SESSION 211: A/B TESTING FRAMEWORK
+# =============================================================================
+
+class ABExperiment(models.Model):
+    """
+    Define an A/B test experiment.
+
+    Experiments can test different recommendation strategies, UI variations,
+    or any feature where we want to measure user engagement.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+
+    # Experiment type
+    EXPERIMENT_TYPES = [
+        ('recommendation', 'Recommendation Strategy'),
+        ('ui', 'UI Variation'),
+        ('feature', 'Feature Toggle'),
+        ('algorithm', 'Algorithm Comparison'),
+    ]
+    experiment_type = models.CharField(max_length=50, choices=EXPERIMENT_TYPES, default='recommendation')
+
+    # Domain (what area of the app)
+    domain = models.CharField(max_length=50, default='style_recommendations')
+
+    # Status
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('running', 'Running'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Traffic allocation (percentage of users to include)
+    traffic_percentage = models.IntegerField(default=100)  # 0-100
+
+    # Timing
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+
+    # Success metric
+    primary_metric = models.CharField(max_length=100, default='conversion_rate')
+    # conversion_rate, click_rate, engagement_time, satisfaction_score
+
+    # Configuration
+    config = models.JSONField(default=dict, blank=True)
+    # {"min_sample_size": 100, "confidence_level": 0.95}
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by_id = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = 'A/B Experiment'
+        verbose_name_plural = 'A/B Experiments'
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+    @property
+    def is_active(self):
+        """Check if experiment is currently active."""
+        from django.utils import timezone
+        now = timezone.now()
+
+        if self.status != 'running':
+            return False
+
+        if self.start_date and now < self.start_date:
+            return False
+
+        if self.end_date and now > self.end_date:
+            return False
+
+        return True
+
+
+class ABVariant(models.Model):
+    """
+    A variant within an A/B experiment.
+
+    Each experiment has at least 2 variants (control + treatment).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    experiment = models.ForeignKey(ABExperiment, on_delete=models.CASCADE, related_name='variants')
+
+    name = models.CharField(max_length=100)  # 'control', 'variant_a', 'variant_b'
+    description = models.TextField(blank=True)
+
+    is_control = models.BooleanField(default=False)
+
+    # Traffic weight within this experiment (relative to other variants)
+    weight = models.IntegerField(default=50)  # Default 50/50 split
+
+    # Variant configuration (what's different about this variant)
+    config = models.JSONField(default=dict)
+    # For recommendations: {"strategy": "temporal_first", "boost_trending": true}
+    # For UI: {"button_color": "green", "show_explanations": true}
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['is_control', 'name']
+        verbose_name = 'A/B Variant'
+        verbose_name_plural = 'A/B Variants'
+
+    def __str__(self):
+        control = " (control)" if self.is_control else ""
+        return f"{self.experiment.name} - {self.name}{control}"
+
+
+class ABAssignment(models.Model):
+    """
+    Track which variant a user is assigned to.
+
+    Users are consistently assigned to the same variant for the duration
+    of an experiment (sticky assignment).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    experiment = models.ForeignKey(ABExperiment, on_delete=models.CASCADE, related_name='assignments')
+    variant = models.ForeignKey(ABVariant, on_delete=models.CASCADE, related_name='assignments')
+
+    user_id = models.IntegerField(db_index=True)
+    # Or for anonymous users:
+    session_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    # Track if user has seen the variant (exposure)
+    exposed = models.BooleanField(default=False)
+    exposed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = [
+            ['experiment', 'user_id'],
+            ['experiment', 'session_id'],
+        ]
+        verbose_name = 'A/B Assignment'
+        verbose_name_plural = 'A/B Assignments'
+
+    def __str__(self):
+        user = f"User {self.user_id}" if self.user_id else f"Session {self.session_id}"
+        return f"{user} -> {self.variant.name}"
+
+
+class ABConversion(models.Model):
+    """
+    Track conversions (successful outcomes) for A/B tests.
+
+    A conversion is when a user takes the desired action
+    (e.g., applies a recommended style, downloads content).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    assignment = models.ForeignKey(ABAssignment, on_delete=models.CASCADE, related_name='conversions')
+
+    # What action triggered the conversion
+    CONVERSION_TYPES = [
+        ('click', 'Clicked Recommendation'),
+        ('apply', 'Applied Style'),
+        ('download', 'Downloaded Content'),
+        ('share', 'Shared Content'),
+        ('purchase', 'Made Purchase'),
+        ('signup', 'Signed Up'),
+        ('engagement', 'Engaged with Feature'),
+    ]
+    conversion_type = models.CharField(max_length=50, choices=CONVERSION_TYPES)
+
+    # Value of the conversion (for revenue tracking)
+    value = models.FloatField(default=1.0)
+
+    # Additional metadata
+    metadata = models.JSONField(default=dict, blank=True)
+    # {"style_applied": "cyberpunk", "time_to_convert": 5.2}
+
+    converted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-converted_at']
+        verbose_name = 'A/B Conversion'
+        verbose_name_plural = 'A/B Conversions'
+
+    def __str__(self):
+        return f"{self.assignment} - {self.conversion_type}"
+
+
+class ABExperimentResult(models.Model):
+    """
+    Cached/computed results for an experiment.
+
+    Updated periodically to avoid recalculating on every request.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    experiment = models.OneToOneField(ABExperiment, on_delete=models.CASCADE, related_name='results')
+
+    # Per-variant statistics (JSON)
+    variant_stats = models.JSONField(default=dict)
+    # {
+    #     "variant_id": {
+    #         "assignments": 150,
+    #         "exposures": 140,
+    #         "conversions": 35,
+    #         "conversion_rate": 0.25,
+    #         "total_value": 35.0,
+    #         "avg_value": 1.0
+    #     }
+    # }
+
+    # Statistical significance
+    is_significant = models.BooleanField(default=False)
+    confidence_level = models.FloatField(default=0.0)  # 0.0 to 1.0
+    p_value = models.FloatField(null=True, blank=True)
+
+    # Winner (if significant)
+    winning_variant = models.ForeignKey(
+        ABVariant, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='won_experiments'
+    )
+    lift_percentage = models.FloatField(null=True, blank=True)  # % improvement over control
+
+    # Timing
+    computed_at = models.DateTimeField(auto_now=True)
+    sample_size = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'A/B Experiment Result'
+        verbose_name_plural = 'A/B Experiment Results'
+
+    def __str__(self):
+        status = "Significant" if self.is_significant else "Not Significant"
+        return f"{self.experiment.name} Results ({status})"
