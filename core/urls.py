@@ -225,6 +225,24 @@ from core.views_opportunity import (
     opportunity_content_list,
 )
 
+# Session 227: Import Team Power views (Phase 3 - Multi-Agent Collaboration)
+from core.views_team_collaboration import (
+    list_teams,
+    create_team,
+    get_team,
+    add_team_member,
+    list_agent_roles,
+    create_agent_role,
+    send_agent_message,
+    get_agent_messages,
+    get_message_thread,
+    create_team_workflow,
+    get_team_workflow,
+    start_team_workflow,
+    complete_workflow_step,
+    team_stats,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -772,6 +790,22 @@ urlpatterns = [
     path('api/opportunities/<uuid:opportunity_id>/revenue/list/', opportunity_revenue_list, name='opportunity-revenue-list'),
     path('api/opportunities/<uuid:opportunity_id>/content/', opportunity_link_content, name='opportunity-link-content'),
     path('api/opportunities/<uuid:opportunity_id>/content/list/', opportunity_content_list, name='opportunity-content-list'),
+
+    # Session 227: Team Power API (Phase 3 - Multi-Agent Collaboration)
+    path('api/teams/', list_teams, name='teams-list'),
+    path('api/teams/create/', create_team, name='teams-create'),
+    path('api/teams/stats/', team_stats, name='teams-stats'),
+    path('api/teams/roles/', list_agent_roles, name='teams-roles-list'),
+    path('api/teams/roles/create/', create_agent_role, name='teams-roles-create'),
+    path('api/teams/<uuid:team_id>/', get_team, name='teams-detail'),
+    path('api/teams/<uuid:team_id>/members/', add_team_member, name='teams-add-member'),
+    path('api/teams/messages/', send_agent_message, name='teams-messages-send'),
+    path('api/teams/messages/<uuid:agent_id>/', get_agent_messages, name='teams-messages-agent'),
+    path('api/teams/messages/thread/<uuid:thread_id>/', get_message_thread, name='teams-messages-thread'),
+    path('api/teams/workflows/', create_team_workflow, name='teams-workflows-create'),
+    path('api/teams/workflows/<uuid:workflow_id>/', get_team_workflow, name='teams-workflows-detail'),
+    path('api/teams/workflows/<uuid:workflow_id>/start/', start_team_workflow, name='teams-workflows-start'),
+    path('api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/complete/', complete_workflow_step, name='teams-workflows-step-complete'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
