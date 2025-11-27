@@ -34126,7 +34126,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             await loadSpiderNetwork();
         }
 
-        // Session 206: Execute Spider
+        // Session 206: Execute Spider (with alert for single spider execution)
         async function executeSpider(spiderId, spiderName) {
             try {
                 const response = await fetch('/api/spider-dashboard/execute/', {
@@ -34140,15 +34140,32 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 const data = await response.json();
                 if (data.status === 'success') {
-                    alert(`Spider "${spiderName}" started!`);
+                    showToast(`✅ Spider "${spiderName}" completed!`, 'success');
                     await loadSpiderNetwork();
                 } else {
-                    alert('Failed to start spider: ' + data.message);
+                    showToast(`❌ Spider "${spiderName}" failed: ${data.message}`, 'error');
                 }
             } catch (error) {
                 console.error('Error executing spider:', error);
-                alert('Failed to execute spider: ' + error.message);
+                showToast(`❌ Spider "${spiderName}" error: ${error.message}`, 'error');
             }
+        }
+
+        // Session 209: Silent spider execution (no alerts, for batch runs)
+        async function executeSpiderSilent(spiderId, spiderName) {
+            const response = await fetch('/api/spider-dashboard/execute/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ spider_id: spiderId, spider_name: spiderName })
+            });
+            const data = await response.json();
+            if (data.status !== 'success') {
+                throw new Error(data.message || 'Unknown error');
+            }
+            return data;
         }
 
         // Session 206: Activate Dormant Spider
@@ -34157,47 +34174,72 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             await executeSpider(spiderId, spiderName);
         }
 
-        // Session 206: Run All Active Spiders (Session 209: Increased limit to 20)
+        // Session 209: Run ALL Active Spiders in batches (no individual toasts)
         async function runAllActiveSpiders() {
-            const maxSpiders = 20;  // Increased from 5 to 20
-
-            if (!confirm(`Run all active spiders (up to ${maxSpiders})? This may take a minute.`)) return;
+            const batchSize = 10;  // Run 10 at a time in parallel
 
             try {
-                // Get all active spiders and run them
+                // Get all active spiders
                 const response = await fetch('/api/spider-dashboard/network/', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
                 });
                 const data = await response.json();
 
                 const activeSpiders = (data.spiders || []).filter(s => s.status === 'Active');
-                const spidersToRun = activeSpiders.slice(0, maxSpiders);
+                const totalSpiders = activeSpiders.length;
 
-                // Show progress toast
-                showToast(`🕷️ Running ${spidersToRun.length} spiders...`, 'info');
+                if (totalSpiders === 0) {
+                    showToast('⚠️ No active spiders to run', 'warning');
+                    return;
+                }
+
+                if (!confirm(`Run all ${totalSpiders} active spiders in batches of ${batchSize}?`)) return;
 
                 let completed = 0;
                 let failed = 0;
+                let batchNum = 0;
+                const totalBatches = Math.ceil(totalSpiders / batchSize);
 
-                for (const spider of spidersToRun) {
-                    try {
-                        await executeSpider(spider.id, spider.name);
-                        completed++;
-                    } catch (e) {
-                        console.error(`Spider ${spider.name} failed:`, e);
-                        failed++;
+                // Process in batches
+                for (let i = 0; i < activeSpiders.length; i += batchSize) {
+                    batchNum++;
+                    const batch = activeSpiders.slice(i, i + batchSize);
+
+                    // Show batch progress
+                    showToast(`🕷️ Running batch ${batchNum}/${totalBatches} (${batch.length} spiders)...`, 'info');
+
+                    // Run batch in parallel
+                    const results = await Promise.allSettled(
+                        batch.map(spider => executeSpiderSilent(spider.id, spider.name))
+                    );
+
+                    // Count results
+                    results.forEach((result, idx) => {
+                        if (result.status === 'fulfilled') {
+                            completed++;
+                        } else {
+                            failed++;
+                            console.error(`Spider ${batch[idx].name} failed:`, result.reason);
+                        }
+                    });
+
+                    // Small delay between batches to avoid overwhelming the server
+                    if (i + batchSize < activeSpiders.length) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
                 }
 
-                // Show completion toast
+                // Final summary toast
                 if (failed === 0) {
-                    showToast(`✅ All ${completed} spiders completed!`, 'success');
+                    showToast(`✅ All ${completed} spiders completed successfully!`, 'success');
                 } else {
                     showToast(`⚠️ ${completed} succeeded, ${failed} failed`, 'warning');
                 }
 
+                // Refresh data
                 await loadSpiderNetwork();
-                await loadSpiderIntelligence();  // Refresh intelligence data too
+                await loadSpiderIntelligence();
+
             } catch (error) {
                 console.error('Error running all spiders:', error);
                 showToast('❌ Failed to run spiders: ' + error.message, 'error');
