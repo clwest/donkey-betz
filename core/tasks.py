@@ -1249,3 +1249,83 @@ def poll_pending_3d_models():
         'status': 'completed',
         **stats
     }
+
+
+@shared_task
+def record_all_user_style_evolution():
+    """
+    Daily task to record style evolution snapshots for all active users.
+
+    Session 210: Runs at 12:30 AM daily to capture each user's style distribution.
+    This enables trend analysis and shift detection over time.
+    """
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.services import get_learning_service
+
+    User = get_user_model()
+    service = get_learning_service()
+
+    logger.info("📊 [STYLE EVOLUTION] Starting daily style evolution snapshot...")
+
+    # Get users who have been active in the last 30 days
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+
+    try:
+        # Get users with recent behavior signals
+        from core.models_unified_system import UserBehaviorSignal
+        active_user_ids = UserBehaviorSignal.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).values_list('user_id', flat=True).distinct()
+
+        active_user_ids = list(set(active_user_ids))
+        logger.info(f"📊 [STYLE EVOLUTION] Found {len(active_user_ids)} active users")
+
+        stats = {
+            'users_processed': 0,
+            'snapshots_created': 0,
+            'already_exists': 0,
+            'no_data': 0,
+            'errors': 0,
+        }
+
+        for user_id in active_user_ids:
+            try:
+                # Record evolution for each content domain
+                for domain in ['image', 'video', 'audio']:
+                    result = service.record_daily_evolution(user_id, domain)
+
+                    if result:
+                        if result.get('already_exists'):
+                            stats['already_exists'] += 1
+                        else:
+                            stats['snapshots_created'] += 1
+                    else:
+                        stats['no_data'] += 1
+
+                stats['users_processed'] += 1
+
+            except Exception as e:
+                logger.error(f"❌ [STYLE EVOLUTION] Error processing user {user_id}: {e}")
+                stats['errors'] += 1
+
+        logger.info(
+            f"📊 [STYLE EVOLUTION] Complete: "
+            f"{stats['users_processed']} users, "
+            f"{stats['snapshots_created']} new snapshots, "
+            f"{stats['already_exists']} already existed, "
+            f"{stats['errors']} errors"
+        )
+
+        return {
+            'status': 'completed',
+            **stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [STYLE EVOLUTION] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }

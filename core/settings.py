@@ -480,7 +480,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Denver'  # MST/MDT - Session 210: Local timezone for temporal recommendations
 USE_I18N = True
 USE_TZ = True
 

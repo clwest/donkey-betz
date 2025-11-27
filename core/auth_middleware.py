@@ -37,6 +37,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/auth/reset-password/',  # Password reset confirmation
         '/api/v1/intelligence/real-income-builder/',  # Income Builder endpoint - session auth
         '/api/v1/style-memory/',  # Style Memory - Session 169: Learning from user interactions
+        '/api/preferences/recommendations/',  # Session 210: Style recommendations (works for anon too)
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

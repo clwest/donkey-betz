@@ -104,6 +104,7 @@ from core.views_spider_intelligence import (
 )
 
 # Session 206: Import preferences dashboard views
+# Session 210: Added implicit learning & recommendations
 from core.views_preferences import (
     get_all_preferences,
     domain_preferences,
@@ -113,6 +114,16 @@ from core.views_preferences import (
     preference_stats,
     smart_style_suggestions,
     apply_style_suggestion,
+    # Session 210: Implicit Learning & Recommendations
+    track_behavior,
+    get_implicit_preferences,
+    get_style_recommendations,
+    get_similar_styles,
+    get_discovery_styles,
+    # Session 210: Style Evolution Tracking
+    get_style_evolution,
+    record_evolution_snapshot,
+    get_style_shifts,
 )
 from core.views_spider_data import (
     get_spider_items,
@@ -602,6 +613,20 @@ urlpatterns = [
     path('api/preferences/learn/', learn_from_project, name='preferences-learn'),
     path('api/preferences/suggestions/', smart_style_suggestions, name='preferences-suggestions'),
     path('api/preferences/apply-suggestion/', apply_style_suggestion, name='preferences-apply-suggestion'),
+
+    # Session 210: Implicit Learning & Recommendations API
+    # NOTE: These must come BEFORE the <str:domain> catch-all pattern!
+    path('api/preferences/track/', track_behavior, name='preferences-track-behavior'),
+    path('api/preferences/implicit/', get_implicit_preferences, name='preferences-implicit'),
+    path('api/preferences/recommendations/', get_style_recommendations, name='preferences-recommendations'),
+    path('api/preferences/recommendations/similar/<str:style>/', get_similar_styles, name='preferences-similar-styles'),
+    path('api/preferences/recommendations/discover/', get_discovery_styles, name='preferences-discover-styles'),
+    # Session 210: Style Evolution Tracking
+    path('api/preferences/evolution/', get_style_evolution, name='preferences-evolution'),
+    path('api/preferences/evolution/snapshot/', record_evolution_snapshot, name='preferences-evolution-snapshot'),
+    path('api/preferences/evolution/shifts/', get_style_shifts, name='preferences-evolution-shifts'),
+
+    # Domain preferences (catch-all - must be LAST in preferences routes)
     path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),
 
     # Intelligence endpoints (temporary fix)

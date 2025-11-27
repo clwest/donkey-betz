@@ -157,6 +157,14 @@ app.conf.beat_schedule = {
             'expires': 1800,  # Expire after 30 minutes
         }
     },
+    # Session 210: Style Evolution Tracking
+    'record-style-evolution': {
+        'task': 'core.tasks.record_all_user_style_evolution',
+        'schedule': crontab(hour=0, minute=30),  # Daily at 12:30 AM
+        'options': {
+            'expires': 3600,  # Expire after 1 hour
+        }
+    },
 }
 
 # Spider-specific task routing configuration

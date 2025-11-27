@@ -1423,3 +1423,306 @@ class TrendSnapshot(models.Model):
         ).order_by('score_change')[:limit].values(
             'topic', 'score', 'score_change', 'mention_count', 'sources'
         ))
+
+
+# =============================================================================
+# Session 210: Implicit Learning Models
+# =============================================================================
+
+class UserBehaviorSignal(models.Model):
+    """
+    Track individual user behavior signals for implicit learning.
+
+    Each signal represents a user action (download, share, delete, etc.)
+    that indicates their preference toward certain styles/models.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # User and content
+    user_id = models.IntegerField(db_index=True)
+    content_id = models.CharField(max_length=100, db_index=True, blank=True, default='')
+
+    # Signal type and weight
+    signal_type = models.CharField(max_length=50, db_index=True)
+    # Types: 'generation', 'download', 'share', 'delete', 'view_long', 'view_short',
+    #        'regenerate', 'style_use', 'favorite'
+
+    weight = models.FloatField(default=0.0)
+    # Weight indicates signal strength: positive = liked, negative = disliked
+    # share=1.0, download=0.7, favorite=0.8, view_long=0.4, delete=-0.5, etc.
+
+    # Metadata (style, model, prompt keywords, etc.)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user_id', 'signal_type']),
+            models.Index(fields=['user_id', 'created_at']),
+        ]
+        verbose_name = 'User Behavior Signal'
+        verbose_name_plural = 'User Behavior Signals'
+
+    def __str__(self):
+        return f"User {self.user_id} - {self.signal_type} ({self.weight:+.2f})"
+
+
+class UserPreferenceProfile(models.Model):
+    """
+    Aggregated user preference profile built from behavior signals.
+
+    This is updated incrementally as new signals come in, providing
+    a quick lookup of user preferences without recalculating.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user_id = models.IntegerField(unique=True, db_index=True)
+
+    # Aggregated scores
+    style_scores = models.JSONField(default=dict)  # {"cyberpunk": 5.2, "anime": 3.1, ...}
+    model_scores = models.JSONField(default=dict)  # {"stable-diffusion": 4.0, "dall-e": 2.5}
+
+    # Quick access fields
+    top_styles = models.JSONField(default=list)  # Top 5 styles
+    top_models = models.JSONField(default=list)  # Top 3 models
+
+    # Stats
+    total_signals = models.IntegerField(default=0)
+    total_generations = models.IntegerField(default=0)
+    total_downloads = models.IntegerField(default=0)
+    total_shares = models.IntegerField(default=0)
+
+    # Confidence in preferences (0-1)
+    confidence = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'User Preference Profile'
+        verbose_name_plural = 'User Preference Profiles'
+
+    def __str__(self):
+        return f"Preferences for User {self.user_id} ({self.total_signals} signals)"
+
+    def get_top_style(self) -> str:
+        """Get user's favorite style."""
+        if self.top_styles:
+            return self.top_styles[0]
+        if self.style_scores:
+            return max(self.style_scores.items(), key=lambda x: x[1])[0]
+        return None
+
+    def recalculate_top_styles(self):
+        """Recalculate top styles from scores."""
+        if self.style_scores:
+            sorted_styles = sorted(
+                self.style_scores.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+            self.top_styles = [s[0] for s in sorted_styles[:5]]
+
+    def recalculate_top_models(self):
+        """Recalculate top models from scores."""
+        if self.model_scores:
+            sorted_models = sorted(
+                self.model_scores.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+            self.top_models = [m[0] for m in sorted_models[:3]]
+
+
+class StyleEvolution(models.Model):
+    """
+    Track how user's style preferences evolve over time.
+
+    Daily snapshots of style distribution allow us to see
+    how preferences change and identify trends.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user_id = models.IntegerField(db_index=True)
+    date = models.DateField(db_index=True)
+    domain = models.CharField(max_length=50, default='image')  # image, video, audio, 3d
+
+    # Style distribution for this day
+    style_distribution = models.JSONField(default=dict)
+    # {"cyberpunk": 0.35, "anime": 0.25, "watercolor": 0.15, ...}
+
+    # Top styles for quick access
+    top_styles = models.JSONField(default=list)  # ["cyberpunk", "anime", "watercolor"]
+
+    # Metrics
+    total_generations = models.IntegerField(default=0)
+    total_downloads = models.IntegerField(default=0)
+    satisfaction_rate = models.FloatField(default=0.0)  # Downloads / Generations
+
+    # Confidence in this snapshot (based on data volume)
+    confidence = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['user_id', 'date', 'domain']
+        ordering = ['-date']
+        verbose_name = 'Style Evolution'
+        verbose_name_plural = 'Style Evolutions'
+
+    def __str__(self):
+        return f"User {self.user_id} - {self.date} ({self.domain})"
+
+    @classmethod
+    def capture_daily_snapshot(cls, user_id: int, domain: str = 'image'):
+        """Capture a daily snapshot of user's style preferences."""
+        from django.utils import timezone
+        from django.db.models import Count, Sum
+
+        today = timezone.now().date()
+
+        # Get today's signals for this user
+        signals = UserBehaviorSignal.objects.filter(
+            user_id=user_id,
+            created_at__date=today
+        )
+
+        # Calculate style distribution
+        style_counts = {}
+        total_weight = 0
+
+        for signal in signals:
+            style = (signal.metadata or {}).get('style')
+            if style and signal.weight > 0:
+                style_counts[style] = style_counts.get(style, 0) + signal.weight
+                total_weight += signal.weight
+
+        # Normalize to distribution
+        style_distribution = {}
+        if total_weight > 0:
+            style_distribution = {
+                k: v / total_weight
+                for k, v in style_counts.items()
+            }
+
+        # Get top styles
+        top_styles = sorted(
+            style_distribution.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:5]
+        top_style_names = [s[0] for s in top_styles]
+
+        # Calculate metrics
+        total_generations = signals.filter(signal_type='generation').count()
+        total_downloads = signals.filter(signal_type='download').count()
+        satisfaction = total_downloads / max(1, total_generations)
+
+        # Create or update snapshot
+        snapshot, created = cls.objects.update_or_create(
+            user_id=user_id,
+            date=today,
+            domain=domain,
+            defaults={
+                'style_distribution': style_distribution,
+                'top_styles': top_style_names,
+                'total_generations': total_generations,
+                'total_downloads': total_downloads,
+                'satisfaction_rate': satisfaction,
+                'confidence': min(1.0, total_generations / 10),
+            }
+        )
+
+        return snapshot
+
+    @classmethod
+    def get_evolution_timeline(cls, user_id: int, days: int = 30, domain: str = 'image'):
+        """Get user's style evolution over time."""
+        from django.utils import timezone
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        return list(cls.objects.filter(
+            user_id=user_id,
+            domain=domain,
+            date__gte=since
+        ).order_by('date').values(
+            'date', 'style_distribution', 'top_styles',
+            'total_generations', 'satisfaction_rate'
+        ))
+
+
+class StyleTrend(models.Model):
+    """
+    Track global style trends across all users.
+
+    This helps identify what's popular and can inform recommendations.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    style_name = models.CharField(max_length=100, db_index=True)
+    date = models.DateField(db_index=True)
+    domain = models.CharField(max_length=50, default='image')
+
+    # Usage metrics
+    usage_count = models.IntegerField(default=0)  # Total uses
+    unique_users = models.IntegerField(default=0)  # Unique users
+    download_count = models.IntegerField(default=0)  # Downloads
+
+    # Quality metrics
+    avg_satisfaction = models.FloatField(default=0.0)  # Avg download rate
+
+    # Trend indicators
+    previous_usage = models.IntegerField(default=0)
+    growth_rate = models.FloatField(default=0.0)  # Percentage growth from yesterday
+    is_trending = models.BooleanField(default=False)  # Fast growth
+    is_declining = models.BooleanField(default=False)  # Losing popularity
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['style_name', 'date', 'domain']
+        ordering = ['-date', '-usage_count']
+        verbose_name = 'Style Trend'
+        verbose_name_plural = 'Style Trends'
+
+    def __str__(self):
+        status = "📈" if self.is_trending else ("📉" if self.is_declining else "")
+        return f"{self.style_name} - {self.date} ({self.usage_count} uses) {status}"
+
+    @classmethod
+    def get_trending_styles(cls, days: int = 7, limit: int = 10, domain: str = 'image'):
+        """Get currently trending styles."""
+        from django.utils import timezone
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        return list(cls.objects.filter(
+            date__gte=since,
+            domain=domain,
+            is_trending=True
+        ).order_by('-growth_rate')[:limit].values(
+            'style_name', 'usage_count', 'growth_rate', 'avg_satisfaction'
+        ))
+
+    @classmethod
+    def get_popular_styles(cls, days: int = 7, limit: int = 10, domain: str = 'image'):
+        """Get most popular styles by usage."""
+        from django.utils import timezone
+        from django.db.models import Sum
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        return list(cls.objects.filter(
+            date__gte=since,
+            domain=domain
+        ).values('style_name').annotate(
+            total_usage=Sum('usage_count'),
+            total_downloads=Sum('download_count')
+        ).order_by('-total_usage')[:limit])
