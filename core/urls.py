@@ -111,7 +111,9 @@ from core.views_agent_intelligence import (
     get_suggestions as ai_suggestions,
     get_stats as ai_stats,
     get_categories as ai_categories,
-    get_capabilities as ai_capabilities
+    get_capabilities as ai_capabilities,
+    get_bridge_status as ai_bridge_status,
+    inject_test_data as ai_inject_test
 )
 
 # Session 206: Import preferences dashboard views
@@ -1517,6 +1519,8 @@ urlpatterns = [
     path('api/agent-intelligence/stats/', ai_stats, name='ai-stats'),
     path('api/agent-intelligence/categories/', ai_categories, name='ai-categories'),
     path('api/agent-intelligence/capabilities/', ai_capabilities, name='ai-capabilities'),
+    path('api/agent-intelligence/bridge/', ai_bridge_status, name='ai-bridge-status'),
+    path('api/agent-intelligence/test/', ai_inject_test, name='ai-inject-test'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
