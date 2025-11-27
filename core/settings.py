@@ -896,6 +896,17 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'content.tasks.cleanup_stale_trainings',
         'schedule': 3600.0,  # Every hour
     },
+    # Session 213: Workflow Scheduling Tasks
+    # Sync workflow schedules with Celery Beat every 5 minutes
+    'sync-workflow-schedules': {
+        'task': 'core.tasks.sync_workflow_schedules',
+        'schedule': 300.0,  # Every 5 minutes
+    },
+    # Check for due workflow executions every minute (fallback)
+    'check-workflow-schedules': {
+        'task': 'core.tasks.check_workflow_schedules',
+        'schedule': 60.0,  # Every minute
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)

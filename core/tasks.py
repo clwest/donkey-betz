@@ -1329,3 +1329,254 @@ def record_all_user_style_evolution():
             'status': 'failed',
             'error': str(e)
         }
+
+
+# =============================================================================
+# SESSION 213: SCHEDULED WORKFLOW EXECUTION
+# =============================================================================
+
+@shared_task(bind=True, max_retries=3)
+def execute_scheduled_workflow(self, schedule_id: str):
+    """
+    Execute a scheduled workflow.
+
+    Session 213: This task is triggered by Celery Beat based on cron schedules.
+    It runs the workflow with the configured default topic and parameters.
+
+    Args:
+        schedule_id: UUID of the ScheduledWorkflow to execute
+    """
+    from core.models_unified_system import ScheduledWorkflow, WorkflowExecution
+    from core.services.workflow_builder import get_workflow_builder
+    from django.utils import timezone
+
+    logger.info(f"🔄 [WORKFLOW SCHEDULER] Executing scheduled workflow: {schedule_id}")
+
+    try:
+        # Get the schedule
+        schedule = ScheduledWorkflow.objects.select_related(
+            'custom_workflow', 'custom_workflow__created_by'
+        ).get(id=schedule_id, is_active=True)
+
+        workflow = schedule.custom_workflow
+        user = workflow.created_by
+
+        logger.info(f"🔄 [WORKFLOW SCHEDULER] Running workflow '{workflow.name}' for user {user.username}")
+
+        # Get the workflow builder for this user
+        builder = get_workflow_builder(user)
+
+        # Execute the workflow with default parameters
+        result = builder.execute_workflow(
+            workflow_id=str(workflow.id),
+            topic=schedule.default_topic,
+            parameters=schedule.default_parameters or {},
+            async_execution=False  # Run synchronously in the task
+        )
+
+        # Update schedule timestamps
+        schedule.last_run_at = timezone.now()
+        schedule.run_count += 1
+
+        # Calculate next run time based on cron expression
+        try:
+            from croniter import croniter
+            cron = croniter(schedule.cron_expression, timezone.now())
+            schedule.next_run_at = cron.get_next(timezone.datetime)
+        except Exception as cron_error:
+            logger.warning(f"Could not calculate next run time: {cron_error}")
+
+        schedule.save()
+
+        logger.info(
+            f"✅ [WORKFLOW SCHEDULER] Workflow '{workflow.name}' completed successfully. "
+            f"Run #{schedule.run_count}"
+        )
+
+        return {
+            'status': 'completed',
+            'workflow_id': str(workflow.id),
+            'workflow_name': workflow.name,
+            'execution_id': result.get('execution_id'),
+            'run_count': schedule.run_count,
+            'next_run_at': schedule.next_run_at.isoformat() if schedule.next_run_at else None
+        }
+
+    except ScheduledWorkflow.DoesNotExist:
+        logger.error(f"❌ [WORKFLOW SCHEDULER] Schedule {schedule_id} not found or inactive")
+        return {
+            'status': 'failed',
+            'error': 'Schedule not found or inactive'
+        }
+
+    except Exception as exc:
+        logger.error(f"❌ [WORKFLOW SCHEDULER] Workflow execution failed: {exc}")
+
+        # Update schedule with error
+        try:
+            schedule = ScheduledWorkflow.objects.get(id=schedule_id)
+            schedule.last_run_at = timezone.now()
+            schedule.save()
+        except Exception:
+            pass
+
+        # Retry with exponential backoff
+        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+
+
+@shared_task
+def sync_workflow_schedules():
+    """
+    Sync workflow schedules with Celery Beat periodic tasks.
+
+    Session 213: This task runs every 5 minutes to ensure Celery Beat
+    has the latest workflow schedules registered as periodic tasks.
+
+    It creates/updates PeriodicTask entries for each active ScheduledWorkflow.
+    """
+    from core.models_unified_system import ScheduledWorkflow
+    from django_celery_beat.models import PeriodicTask, CrontabSchedule
+    from django.utils import timezone
+    import json
+
+    logger.info("🔄 [WORKFLOW SYNC] Syncing workflow schedules with Celery Beat...")
+
+    stats = {
+        'created': 0,
+        'updated': 0,
+        'disabled': 0,
+        'errors': 0
+    }
+
+    try:
+        # Get all scheduled workflows
+        active_schedules = ScheduledWorkflow.objects.filter(is_active=True).select_related('custom_workflow')
+
+        for schedule in active_schedules:
+            try:
+                # Parse cron expression (minute hour day_of_month month day_of_week)
+                cron_parts = schedule.cron_expression.split()
+                if len(cron_parts) != 5:
+                    logger.warning(f"Invalid cron expression for {schedule.id}: {schedule.cron_expression}")
+                    stats['errors'] += 1
+                    continue
+
+                minute, hour, day_of_month, month, day_of_week = cron_parts
+
+                # Get or create crontab schedule
+                crontab, _ = CrontabSchedule.objects.get_or_create(
+                    minute=minute,
+                    hour=hour,
+                    day_of_week=day_of_week,
+                    day_of_month=day_of_month,
+                    month_of_year=month,
+                    timezone=schedule.timezone
+                )
+
+                # Task name for identification
+                task_name = f"workflow_schedule_{schedule.id}"
+
+                # Get or create the periodic task
+                periodic_task, created = PeriodicTask.objects.update_or_create(
+                    name=task_name,
+                    defaults={
+                        'task': 'core.tasks.execute_scheduled_workflow',
+                        'crontab': crontab,
+                        'args': json.dumps([str(schedule.id)]),
+                        'enabled': schedule.is_active,
+                        'description': f"Scheduled workflow: {schedule.custom_workflow.name}"
+                    }
+                )
+
+                if created:
+                    stats['created'] += 1
+                    logger.info(f"✅ Created periodic task for workflow: {schedule.custom_workflow.name}")
+                else:
+                    stats['updated'] += 1
+
+            except Exception as e:
+                logger.error(f"❌ Error syncing schedule {schedule.id}: {e}")
+                stats['errors'] += 1
+
+        # Disable periodic tasks for inactive/deleted schedules
+        active_schedule_ids = set(str(s.id) for s in active_schedules)
+
+        for periodic_task in PeriodicTask.objects.filter(name__startswith='workflow_schedule_'):
+            schedule_id = periodic_task.name.replace('workflow_schedule_', '')
+
+            if schedule_id not in active_schedule_ids and periodic_task.enabled:
+                periodic_task.enabled = False
+                periodic_task.save()
+                stats['disabled'] += 1
+                logger.info(f"🔴 Disabled periodic task: {periodic_task.name}")
+
+        logger.info(
+            f"🔄 [WORKFLOW SYNC] Complete: "
+            f"{stats['created']} created, {stats['updated']} updated, "
+            f"{stats['disabled']} disabled, {stats['errors']} errors"
+        )
+
+        return {
+            'status': 'completed',
+            **stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [WORKFLOW SYNC] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def check_workflow_schedules():
+    """
+    Check and execute any workflows that are due to run.
+
+    Session 213: This is a fallback task that runs every minute to catch
+    any scheduled workflows that might have been missed by Celery Beat.
+
+    This is useful for workflows that were scheduled while Celery Beat
+    was not running, or for immediate execution after schedule creation.
+    """
+    from core.models_unified_system import ScheduledWorkflow
+    from django.utils import timezone
+
+    logger.info("🔍 [WORKFLOW CHECK] Checking for due workflow schedules...")
+
+    now = timezone.now()
+
+    try:
+        # Find schedules that should have run but haven't
+        due_schedules = ScheduledWorkflow.objects.filter(
+            is_active=True,
+            next_run_at__lte=now
+        ).select_related('custom_workflow')
+
+        if not due_schedules.exists():
+            logger.info("🔍 [WORKFLOW CHECK] No workflows due to run")
+            return {'status': 'idle', 'executed': 0}
+
+        executed = 0
+
+        for schedule in due_schedules:
+            logger.info(f"🚀 [WORKFLOW CHECK] Executing due workflow: {schedule.custom_workflow.name}")
+
+            # Queue the execution task
+            execute_scheduled_workflow.delay(str(schedule.id))
+            executed += 1
+
+        logger.info(f"🔍 [WORKFLOW CHECK] Queued {executed} workflows for execution")
+
+        return {
+            'status': 'completed',
+            'executed': executed
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [WORKFLOW CHECK] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
