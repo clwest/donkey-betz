@@ -1146,3 +1146,280 @@ class UserAgentLearning(UnifiedBaseModel):
                 })
 
         return sorted(similar_users, key=lambda x: x['similarity'], reverse=True)
+
+
+# =============================================================================
+# Session 209: Spider Analytics Models
+# =============================================================================
+
+class SpiderAnalytics(models.Model):
+    """
+    Track spider performance and data quality metrics.
+
+    This model stores daily aggregated statistics for each spider,
+    enabling performance monitoring and optimization.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Spider identification
+    spider_name = models.CharField(max_length=100, db_index=True)
+    date = models.DateField(db_index=True)
+
+    # Collection metrics
+    items_collected = models.IntegerField(default=0)
+    unique_topics = models.IntegerField(default=0)
+    unique_sources = models.IntegerField(default=0)
+
+    # Quality metrics
+    avg_relevance_score = models.FloatField(default=0.0)
+    data_freshness_hours = models.FloatField(default=0.0)  # Avg age of data
+
+    # Performance metrics
+    execution_time_seconds = models.FloatField(default=0.0)
+    errors = models.IntegerField(default=0)
+    success_rate = models.FloatField(default=1.0)  # 0.0 to 1.0
+
+    # Storage metrics
+    raw_data_size_kb = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['spider_name', 'date']
+        ordering = ['-date', 'spider_name']
+        verbose_name = 'Spider Analytics'
+        verbose_name_plural = 'Spider Analytics'
+
+    def __str__(self):
+        return f"{self.spider_name} - {self.date}"
+
+    @classmethod
+    def record_execution(
+        cls,
+        spider_name: str,
+        items_collected: int,
+        execution_time: float,
+        errors: int = 0,
+        topics: list = None,
+        sources: list = None
+    ):
+        """
+        Record a spider execution for analytics.
+
+        Args:
+            spider_name: Name of the spider
+            items_collected: Number of items collected
+            execution_time: Execution time in seconds
+            errors: Number of errors encountered
+            topics: List of extracted topics
+            sources: List of data sources
+        """
+        from django.utils import timezone
+        today = timezone.now().date()
+
+        analytics, created = cls.objects.get_or_create(
+            spider_name=spider_name,
+            date=today,
+            defaults={
+                'items_collected': items_collected,
+                'execution_time_seconds': execution_time,
+                'errors': errors,
+                'unique_topics': len(topics) if topics else 0,
+                'unique_sources': len(sources) if sources else 0,
+                'success_rate': 1.0 if errors == 0 else 0.5,
+            }
+        )
+
+        if not created:
+            # Update existing record
+            analytics.items_collected += items_collected
+            analytics.execution_time_seconds += execution_time
+            analytics.errors += errors
+            if topics:
+                analytics.unique_topics += len(topics)
+            if sources:
+                analytics.unique_sources += len(sources)
+            analytics.success_rate = 1 - (analytics.errors / max(1, analytics.items_collected + analytics.errors))
+            analytics.save()
+
+        return analytics
+
+    @classmethod
+    def get_spider_performance(cls, spider_name: str, days: int = 7) -> dict:
+        """Get performance summary for a spider over the given period."""
+        from django.utils import timezone
+        from django.db.models import Sum, Avg
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        stats = cls.objects.filter(
+            spider_name=spider_name,
+            date__gte=since
+        ).aggregate(
+            total_items=Sum('items_collected'),
+            total_errors=Sum('errors'),
+            avg_execution_time=Avg('execution_time_seconds'),
+            avg_success_rate=Avg('success_rate'),
+            total_topics=Sum('unique_topics'),
+        )
+
+        return {
+            'spider_name': spider_name,
+            'period_days': days,
+            'total_items': stats['total_items'] or 0,
+            'total_errors': stats['total_errors'] or 0,
+            'avg_execution_time': stats['avg_execution_time'] or 0,
+            'avg_success_rate': stats['avg_success_rate'] or 0,
+            'total_topics': stats['total_topics'] or 0,
+        }
+
+
+class TrendSnapshot(models.Model):
+    """
+    Store trending topic snapshots over time.
+
+    This enables historical trend analysis and tracking
+    how topics rise and fall in popularity.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Topic identification
+    topic = models.CharField(max_length=200, db_index=True)
+    category = models.CharField(max_length=50, db_index=True, blank=True, default='')
+
+    # Trend metrics
+    score = models.FloatField(default=0.0)  # Calculated trend score
+    mention_count = models.IntegerField(default=1)
+    source_count = models.IntegerField(default=1)
+
+    # Sources tracking
+    sources = models.JSONField(default=list)  # List of spider names
+
+    # Time tracking
+    first_seen = models.DateTimeField()
+    last_seen = models.DateTimeField()
+    snapshot_date = models.DateField(db_index=True)
+
+    # Velocity (change tracking)
+    previous_score = models.FloatField(default=0.0)
+    score_change = models.FloatField(default=0.0)  # Positive = rising, negative = falling
+    is_emerging = models.BooleanField(default=False)  # New/fast-growing topic
+    is_declining = models.BooleanField(default=False)  # Losing momentum
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['topic', 'snapshot_date']
+        ordering = ['-snapshot_date', '-score']
+        verbose_name = 'Trend Snapshot'
+        verbose_name_plural = 'Trend Snapshots'
+
+    def __str__(self):
+        return f"{self.topic} ({self.snapshot_date}) - Score: {self.score:.2f}"
+
+    @classmethod
+    def capture_snapshot(cls, trends: list, category: str = '') -> list:
+        """
+        Capture a snapshot of current trends.
+
+        Args:
+            trends: List of trend dicts from SpiderIntelligenceService
+            category: Optional category filter
+
+        Returns:
+            List of created/updated TrendSnapshot objects
+        """
+        from django.utils import timezone
+        now = timezone.now()
+        today = now.date()
+
+        snapshots = []
+        for trend in trends:
+            topic = trend.get('topic', '')
+            if not topic:
+                continue
+
+            # Get or create snapshot for today
+            snapshot, created = cls.objects.get_or_create(
+                topic=topic,
+                snapshot_date=today,
+                defaults={
+                    'category': category,
+                    'score': trend.get('score', 0),
+                    'mention_count': trend.get('mentions', 1),
+                    'source_count': trend.get('source_count', 1),
+                    'sources': trend.get('sources', []),
+                    'first_seen': now,
+                    'last_seen': now,
+                }
+            )
+
+            if not created:
+                # Update existing
+                snapshot.previous_score = snapshot.score
+                snapshot.score = trend.get('score', snapshot.score)
+                snapshot.mention_count = trend.get('mentions', snapshot.mention_count)
+                snapshot.source_count = trend.get('source_count', snapshot.source_count)
+                snapshot.sources = trend.get('sources', snapshot.sources)
+                snapshot.last_seen = now
+
+                # Calculate change
+                if snapshot.previous_score > 0:
+                    snapshot.score_change = (snapshot.score - snapshot.previous_score) / snapshot.previous_score
+                else:
+                    snapshot.score_change = 1.0 if snapshot.score > 0 else 0
+
+                # Mark emerging/declining
+                snapshot.is_emerging = snapshot.score_change > 0.2  # 20% growth
+                snapshot.is_declining = snapshot.score_change < -0.2  # 20% decline
+
+                snapshot.save()
+
+            snapshots.append(snapshot)
+
+        return snapshots
+
+    @classmethod
+    def get_trend_history(cls, topic: str, days: int = 30) -> list:
+        """Get historical trend data for a topic."""
+        from django.utils import timezone
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        return list(cls.objects.filter(
+            topic=topic,
+            snapshot_date__gte=since
+        ).order_by('snapshot_date').values(
+            'snapshot_date', 'score', 'mention_count', 'source_count'
+        ))
+
+    @classmethod
+    def get_emerging_trends(cls, days: int = 7, limit: int = 10) -> list:
+        """Get topics that are emerging (fast-growing)."""
+        from django.utils import timezone
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        return list(cls.objects.filter(
+            snapshot_date__gte=since,
+            is_emerging=True
+        ).order_by('-score_change')[:limit].values(
+            'topic', 'score', 'score_change', 'mention_count', 'sources'
+        ))
+
+    @classmethod
+    def get_declining_trends(cls, days: int = 7, limit: int = 10) -> list:
+        """Get topics that are declining (losing momentum)."""
+        from django.utils import timezone
+
+        since = timezone.now().date() - timezone.timedelta(days=days)
+
+        return list(cls.objects.filter(
+            snapshot_date__gte=since,
+            is_declining=True
+        ).order_by('score_change')[:limit].values(
+            'topic', 'score', 'score_change', 'mention_count', 'sources'
+        ))
