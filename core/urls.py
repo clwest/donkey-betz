@@ -134,6 +134,24 @@ from core.views_preferences import (
     get_my_variant,
     track_ab_conversion,
 )
+
+# Session 213: Import workflow API views
+from core.views_workflow import (
+    workflows_list_create,
+    workflow_detail,
+    workflow_execute,
+    workflow_duplicate,
+    builtin_workflows,
+    available_agents,
+    execution_list,
+    execution_detail,
+    workflow_schedule,
+    workflow_share,
+    workflow_unshare,
+    shared_workflow,
+    import_shared_workflow,
+    public_workflows,
+)
 from core.views_spider_data import (
     get_spider_items,
     get_spider_summary,
@@ -643,6 +661,22 @@ urlpatterns = [
     path('api/experiments/<str:experiment_id>/results/', get_experiment_results, name='experiments-results'),
     path('api/experiments/<str:experiment_id>/variant/', get_my_variant, name='experiments-variant'),
     path('api/experiments/<str:experiment_id>/convert/', track_ab_conversion, name='experiments-convert'),
+
+    # Session 213: Workflow Management API
+    path('api/workflows/', workflows_list_create, name='workflows-list-create'),
+    path('api/workflows/builtin/', builtin_workflows, name='workflows-builtin'),
+    path('api/workflows/agents/', available_agents, name='workflows-agents'),
+    path('api/workflows/executions/', execution_list, name='workflow-executions'),
+    path('api/workflows/executions/<str:execution_id>/', execution_detail, name='workflow-execution-detail'),
+    path('api/workflows/public/', public_workflows, name='workflows-public'),
+    path('api/workflows/shared/<str:slug>/', shared_workflow, name='workflow-shared'),
+    path('api/workflows/shared/<str:slug>/import/', import_shared_workflow, name='workflow-import'),
+    path('api/workflows/<str:workflow_id>/', workflow_detail, name='workflow-detail'),
+    path('api/workflows/<str:workflow_id>/execute/', workflow_execute, name='workflow-execute'),
+    path('api/workflows/<str:workflow_id>/duplicate/', workflow_duplicate, name='workflow-duplicate'),
+    path('api/workflows/<str:workflow_id>/schedule/', workflow_schedule, name='workflow-schedule'),
+    path('api/workflows/<str:workflow_id>/share/', workflow_share, name='workflow-share'),
+    path('api/workflows/<str:workflow_id>/unshare/', workflow_unshare, name='workflow-unshare'),
 
     # Domain preferences (catch-all - must be LAST in preferences routes)
     path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),
