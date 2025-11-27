@@ -6705,7 +6705,7 @@
                     </div>
 
                     <!-- Data Collection Trends -->
-                    <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
                         <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid #333;">
                             <h5 class="mb-0" style="color: #06b6d4;">📊 Data Collection Trends (7 Days)</h5>
                         </div>
@@ -6717,6 +6717,126 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- SESSION 208: SPIDER INTELLIGENCE SECTION -->
+                    <div class="mt-4">
+                        <h4 class="mb-3" style="color: #f97316;">🧠 Spider Intelligence</h4>
+                        <p class="text-muted mb-4">Real-time insights from your spider network - trends, market data, and searchable intelligence.</p>
+
+                        <!-- Intelligence Search Bar -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                            <div class="card-body">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #444; color: #f97316;">
+                                        🔍
+                                    </span>
+                                    <input type="text" id="intelligence-search-input" class="form-control"
+                                           placeholder="Search spider intelligence (e.g., 'bitcoin', 'remote jobs', 'AI trends')"
+                                           style="background: #2a2a2a; border: 1px solid #444; color: white;"
+                                           onkeypress="if(event.key==='Enter') searchSpiderIntelligence()">
+                                    <button class="btn btn-outline-warning" onclick="searchSpiderIntelligence()">
+                                        Search
+                                    </button>
+                                </div>
+                                <div id="intelligence-search-results" class="mt-3" style="display: none;">
+                                    <!-- Search results will appear here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Intelligence Cards Row -->
+                        <div class="row mb-4">
+                            <!-- Trending Topics Card -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid #333;">
+                                        <h5 class="mb-0" style="color: #f97316;">🔥 Trending Topics</h5>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="loadTrendingTopics()">
+                                            🔄
+                                        </button>
+                                    </div>
+                                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                        <div id="trending-topics-list">
+                                            <p class="text-muted text-center">Loading trends...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Market Insights Card -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                                        <h5 class="mb-0" style="color: #22c55e;">💰 Market Snapshot</h5>
+                                        <button class="btn btn-sm btn-outline-success" onclick="loadMarketInsights()">
+                                            🔄
+                                        </button>
+                                    </div>
+                                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                        <div id="market-insights-list">
+                                            <p class="text-muted text-center">Loading market data...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <!-- Tech Trends Card -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                        <h5 class="mb-0" style="color: #8b5cf6;">💻 Tech Pulse</h5>
+                                        <button class="btn btn-sm btn-outline-info" onclick="loadTechTrends()">
+                                            🔄
+                                        </button>
+                                    </div>
+                                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                        <div id="tech-trends-list">
+                                            <p class="text-muted text-center">Loading tech trends...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Job Market Card -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid #333;">
+                                        <h5 class="mb-0" style="color: #06b6d4;">💼 Remote Jobs</h5>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="loadJobMarket()">
+                                            🔄
+                                        </button>
+                                    </div>
+                                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                        <div id="job-market-list">
+                                            <p class="text-muted text-center">Loading job market...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Daily Report Button -->
+                        <div class="text-center mb-4">
+                            <button class="btn btn-lg btn-outline-warning" onclick="generateDailyReport()" style="padding: 12px 40px;">
+                                📋 Generate Daily Intelligence Report
+                            </button>
+                        </div>
+
+                        <!-- Daily Report Container (hidden until generated) -->
+                        <div id="daily-report-container" style="display: none;">
+                            <div class="card" style="background: #1a1a1a; border: 2px solid #f97316;">
+                                <div class="card-header" style="background: rgba(249, 115, 22, 0.2); border-bottom: 1px solid #f97316;">
+                                    <h5 class="mb-0" style="color: #f97316;">📋 Daily Intelligence Report</h5>
+                                </div>
+                                <div class="card-body" id="daily-report-content">
+                                    <!-- Report content will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END SESSION 208: SPIDER INTELLIGENCE SECTION -->
 
                 </div>
             </div>
@@ -33792,6 +33912,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         document.getElementById('spiders-tab')?.addEventListener('shown.bs.tab', function() {
             console.log('🕷️ Spiders tab activated - loading network status...');
             loadSpiderNetwork();
+            loadSpiderIntelligence();  // Session 208: Load intelligence dashboard
         });
 
         // Session 206: Load Spider Network Data
@@ -34066,6 +34187,306 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             console.log(`Filtering spiders by category: ${category}`);
             // Could implement filtering UI here in future
         }
+
+        // ============================================================
+        // SESSION 208: SPIDER INTELLIGENCE FUNCTIONS
+        // ============================================================
+
+        // Load all intelligence data when spider tab is shown
+        async function loadSpiderIntelligence() {
+            console.log('🧠 Loading Spider Intelligence...');
+            await Promise.all([
+                loadTrendingTopics(),
+                loadMarketInsights(),
+                loadTechTrends(),
+                loadJobMarket()
+            ]);
+        }
+
+        // Load Trending Topics
+        async function loadTrendingTopics() {
+            const container = document.getElementById('trending-topics-list');
+            try {
+                const response = await fetch('/api/spider-intelligence/trends/?limit=10', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success' && data.trends.length > 0) {
+                    container.innerHTML = data.trends.map(trend => `
+                        <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(249, 115, 22, 0.1); border-radius: 8px;">
+                            <div>
+                                <span class="text-warning me-2">🔥</span>
+                                <span class="text-light">${trend.topic}</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge" style="background: #f97316;">${trend.mentions} mentions</span>
+                                <small class="text-muted d-block">${trend.sources.join(', ')}</small>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center">No trending topics found</p>';
+                }
+            } catch (error) {
+                console.error('Error loading trending topics:', error);
+                container.innerHTML = '<p class="text-danger text-center">Failed to load trends</p>';
+            }
+        }
+
+        // Load Market Insights
+        async function loadMarketInsights() {
+            const container = document.getElementById('market-insights-list');
+            try {
+                const response = await fetch('/api/spider-intelligence/market/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success' && data.insights.crypto.length > 0) {
+                    container.innerHTML = data.insights.crypto.map(crypto => {
+                        const changeColor = (crypto.change_24h || 0) >= 0 ? '#22c55e' : '#ef4444';
+                        const changeIcon = (crypto.change_24h || 0) >= 0 ? '📈' : '📉';
+                        return `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+                                <div>
+                                    <span class="text-success me-2">${changeIcon}</span>
+                                    <span class="text-light fw-bold">${crypto.symbol}</span>
+                                    <small class="text-muted ms-2">${crypto.name}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-light fw-bold">$${Number(crypto.price).toLocaleString()}</span>
+                                    <small class="d-block" style="color: ${changeColor};">
+                                        ${crypto.change_24h ? (crypto.change_24h >= 0 ? '+' : '') + crypto.change_24h.toFixed(2) + '%' : 'N/A'}
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center">No market data available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading market insights:', error);
+                container.innerHTML = '<p class="text-danger text-center">Failed to load market data</p>';
+            }
+        }
+
+        // Load Tech Trends
+        async function loadTechTrends() {
+            const container = document.getElementById('tech-trends-list');
+            try {
+                const response = await fetch('/api/spider-intelligence/tech/?limit=10', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    let html = '';
+
+                    // Show discussions
+                    if (data.trends.discussions && data.trends.discussions.length > 0) {
+                        html += data.trends.discussions.slice(0, 5).map(disc => `
+                            <div class="p-2 mb-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                                <div class="d-flex justify-content-between">
+                                    <a href="${disc.url}" target="_blank" class="text-light text-decoration-none" style="flex: 1;">
+                                        ${disc.title.substring(0, 60)}${disc.title.length > 60 ? '...' : ''}
+                                    </a>
+                                    ${disc.score ? `<span class="badge bg-secondary ms-2">${disc.score} pts</span>` : ''}
+                                </div>
+                                <small class="text-muted">${disc.source}</small>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Show topics
+                    if (data.trends.topics && data.trends.topics.length > 0) {
+                        html += '<div class="mt-3"><small class="text-muted">Hot Topics:</small></div>';
+                        html += '<div class="d-flex flex-wrap gap-1 mt-2">';
+                        html += data.trends.topics.slice(0, 10).map(topic =>
+                            `<span class="badge" style="background: rgba(139, 92, 246, 0.3);">${topic.topic}</span>`
+                        ).join('');
+                        html += '</div>';
+                    }
+
+                    container.innerHTML = html || '<p class="text-muted text-center">No tech trends found</p>';
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center">No tech trends available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading tech trends:', error);
+                container.innerHTML = '<p class="text-danger text-center">Failed to load tech trends</p>';
+            }
+        }
+
+        // Load Job Market
+        async function loadJobMarket() {
+            const container = document.getElementById('job-market-list');
+            try {
+                const response = await fetch('/api/spider-intelligence/jobs/?limit=10', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success' && data.job_market.jobs.length > 0) {
+                    let html = `<div class="mb-2"><small class="text-muted">Found ${data.job_market.total_found} remote jobs</small></div>`;
+
+                    html += data.job_market.jobs.slice(0, 5).map(job => `
+                        <div class="p-2 mb-2" style="background: rgba(6, 182, 212, 0.1); border-radius: 8px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <a href="${job.url}" target="_blank" class="text-light text-decoration-none fw-bold">
+                                        ${job.title}
+                                    </a>
+                                    <small class="text-muted d-block">${job.company} • ${job.location}</small>
+                                </div>
+                                <span class="badge" style="background: rgba(6, 182, 212, 0.3);">${job.source}</span>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center">No jobs found</p>';
+                }
+            } catch (error) {
+                console.error('Error loading job market:', error);
+                container.innerHTML = '<p class="text-danger text-center">Failed to load jobs</p>';
+            }
+        }
+
+        // Search Spider Intelligence
+        async function searchSpiderIntelligence() {
+            const query = document.getElementById('intelligence-search-input').value.trim();
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            const resultsContainer = document.getElementById('intelligence-search-results');
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Searching...</p>';
+
+            try {
+                const response = await fetch(`/api/spider-intelligence/search/?q=${encodeURIComponent(query)}&limit=20`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success' && data.results.length > 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="mb-2">
+                            <span class="text-light">Found ${data.count} results for "${query}"</span>
+                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="document.getElementById('intelligence-search-results').style.display='none'">✕ Close</button>
+                        </div>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${data.results.map(result => `
+                                <div class="p-2 mb-2" style="background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid #f97316;">
+                                    <div class="d-flex justify-content-between">
+                                        <a href="${result.url}" target="_blank" class="text-light text-decoration-none fw-bold">
+                                            ${result.title}
+                                        </a>
+                                        <span class="badge" style="background: rgba(249, 115, 22, 0.3);">${result.source}</span>
+                                    </div>
+                                    ${result.description ? `<small class="text-muted d-block mt-1">${result.description}</small>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = `
+                        <p class="text-muted text-center">No results found for "${query}"</p>
+                        <button class="btn btn-sm btn-outline-secondary d-block mx-auto" onclick="document.getElementById('intelligence-search-results').style.display='none'">Close</button>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error searching intelligence:', error);
+                resultsContainer.innerHTML = '<p class="text-danger text-center">Search failed</p>';
+            }
+        }
+
+        // Generate Daily Report
+        async function generateDailyReport() {
+            const container = document.getElementById('daily-report-container');
+            const content = document.getElementById('daily-report-content');
+
+            container.style.display = 'block';
+            content.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Generating report...</p>';
+
+            try {
+                const response = await fetch('/api/spider-intelligence/report/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const report = data.report;
+                    content.innerHTML = `
+                        <div class="mb-4">
+                            <small class="text-muted">Generated: ${new Date(report.generated_at).toLocaleString()}</small>
+                            <h6 class="text-warning mt-2">📊 Highlights</h6>
+                            <div class="row">
+                                <div class="col-4 text-center">
+                                    <h3 class="text-light mb-0">${report.highlights.total_data_points}</h3>
+                                    <small class="text-muted">Data Points</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <h3 class="text-light mb-0">${report.highlights.active_spiders}</h3>
+                                    <small class="text-muted">Active Spiders</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <h3 class="text-light mb-0">${report.highlights.top_trend ? report.highlights.top_trend.mentions : 0}</h3>
+                                    <small class="text-muted">Top Trend Mentions</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="text-warning">🔥 ${report.sections.trending_topics.title}</h6>
+                            ${report.sections.trending_topics.items.slice(0, 5).map(t =>
+                                `<span class="badge me-1 mb-1" style="background: rgba(249, 115, 22, 0.3);">${t.topic} (${t.mentions})</span>`
+                            ).join('')}
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="text-success">💰 ${report.sections.market_snapshot.title}</h6>
+                            <p class="text-light mb-2">${report.sections.market_snapshot.summary || 'Market data available'}</p>
+                            ${report.sections.market_snapshot.crypto.slice(0, 3).map(c =>
+                                `<span class="badge me-1 mb-1" style="background: rgba(34, 197, 94, 0.3);">${c.symbol}: $${Number(c.price).toLocaleString()}</span>`
+                            ).join('')}
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="text-info">💻 ${report.sections.tech_pulse.title}</h6>
+                            ${report.sections.tech_pulse.hot_topics.slice(0, 8).map(t =>
+                                `<span class="badge me-1 mb-1" style="background: rgba(139, 92, 246, 0.3);">${t.topic}</span>`
+                            ).join('')}
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="text-primary">💼 ${report.sections.job_market.title}</h6>
+                            <p class="text-light">${report.sections.job_market.total_jobs} remote jobs found</p>
+                            ${report.sections.job_market.top_categories.slice(0, 5).map(c =>
+                                `<span class="badge me-1 mb-1" style="background: rgba(6, 182, 212, 0.3);">${c.category}: ${c.count}</span>`
+                            ).join('')}
+                        </div>
+
+                        <div class="text-center">
+                            <button class="btn btn-outline-secondary" onclick="document.getElementById('daily-report-container').style.display='none'">Close Report</button>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = '<p class="text-danger text-center">Failed to generate report</p>';
+                }
+            } catch (error) {
+                console.error('Error generating report:', error);
+                content.innerHTML = '<p class="text-danger text-center">Failed to generate report</p>';
+            }
+        }
+
+        // ============================================================
+        // END SESSION 208: SPIDER INTELLIGENCE FUNCTIONS
+        // ============================================================
 
         // Session 100: Load Leadership Stats
         async function loadLeadershipStats() {
