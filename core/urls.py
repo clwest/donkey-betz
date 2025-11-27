@@ -706,6 +706,8 @@ from core.views_image import (
     add_workflow_to_project, remove_workflow_from_project,
     # Session 61: Phase C.2.1 - Portfolio View API
     get_portfolio,
+    # Session 237: Portfolio Delete APIs
+    delete_portfolio_item, bulk_delete_portfolio_items, check_portfolio_broken_links,
     # Session 100: Part 11 - Leadership Dashboard API
     list_executive_meetings, get_meeting_details
 )
@@ -1760,6 +1762,10 @@ urlpatterns = [
 
     # Portfolio View (Session 61: Phase C.2.1)
     path('api/portfolio/', get_portfolio, name='portfolio'),
+    # Session 237: Portfolio Delete APIs
+    path('api/portfolio/<str:item_type>/<uuid:item_id>/delete/', delete_portfolio_item, name='delete-portfolio-item'),
+    path('api/portfolio/bulk-delete/', bulk_delete_portfolio_items, name='bulk-delete-portfolio'),
+    path('api/portfolio/check-broken/', check_portfolio_broken_links, name='check-broken-portfolio'),
 
     # Image-to-Image Control (Session 38: Feature 11)
     path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),
