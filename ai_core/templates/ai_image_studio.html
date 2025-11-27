@@ -1419,6 +1419,13 @@
                     🤝 Agents
                 </button>
             </li>
+
+            <!-- Session 219: Trending Intelligence Tab -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trending-tab" data-bs-toggle="tab" data-bs-target="#trending" type="button" role="tab" title="Trending Intelligence from 67 Spiders">
+                    🔮 Trending
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -7535,6 +7542,111 @@
             </div>
             <!-- END AGENTS TAB -->
 
+            <!-- SESSION 219: TRENDING INTELLIGENCE TAB -->
+            <div class="tab-pane fade" id="trending" role="tabpanel">
+                <h3 class="mb-4">🔮 Trending Intelligence</h3>
+                <p class="text-muted mb-4">Real-time intelligence from 67 spiders feeding 14 AI Content agents. Discover trending styles, topics, and opportunities.</p>
+
+                <!-- Stats Cards Row -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="trending-trends-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Active Trends</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0">67</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Active Spiders</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="trending-agents-count">14</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Content Agents</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                            <div class="card-body">
+                                <h2 class="mb-0" id="trending-suggestions-count">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Suggestions</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="trending-loading" class="text-center py-5">
+                    <div class="spinner-border" style="color: #ec4899;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading trending intelligence...</p>
+                </div>
+
+                <!-- Content Container (hidden until loaded) -->
+                <div id="trending-container" style="display: none;">
+                    <div class="row">
+                        <!-- Trending Topics Column -->
+                        <div class="col-md-8">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid rgba(236, 72, 153, 0.3);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                                    <h5 class="mb-0" style="color: #ec4899;">📈 Trending Now</h5>
+                                    <button class="btn btn-sm" onclick="loadTrendingTab()" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                    <div id="trending-list">
+                                        <!-- Trends will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suggestions & Categories Column -->
+                        <div class="col-md-4">
+                            <!-- AI Suggestions Card -->
+                            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-header" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <h5 class="mb-0" style="color: #fbbf24;">💡 AI Suggestions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="trending-suggestions-list">
+                                        <!-- Suggestions will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Categories Card -->
+                            <div class="card" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                    <h5 class="mb-0" style="color: #22c55e;">🏷️ Active Categories</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="trending-categories" class="d-flex flex-wrap gap-2">
+                                        <span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4;">🎨 AI Creative</span>
+                                        <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">✨ Design</span>
+                                        <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #86efac;">💰 Products</span>
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd;">💻 Tech</span>
+                                        <span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d;">🚀 Innovation</span>
+                                        <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9;">📰 News</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END TRENDING TAB -->
+
             <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
             <!-- ============================================================ -->
             <!-- REASON: Pivoted to project-based workflow approach          -->
@@ -10085,6 +10197,116 @@
         // Expose to window for onclick handlers
         window.toggleIntelligenceFeed = toggleIntelligenceFeed;
         window.useIntelligenceSuggestion = useIntelligenceSuggestion;
+
+        // Session 219: Load Trending Tab Content
+        async function loadTrendingTab() {
+            const loading = document.getElementById('trending-loading');
+            const container = document.getElementById('trending-container');
+            const trendsList = document.getElementById('trending-list');
+            const suggestionsList = document.getElementById('trending-suggestions-list');
+
+            if (loading) loading.style.display = 'block';
+            if (container) container.style.display = 'none';
+
+            try {
+                const [trendsRes, suggestionsRes, statsRes] = await Promise.all([
+                    fetch('/api/agent-intelligence/trends/?limit=20', {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    }),
+                    fetch('/api/agent-intelligence/suggestions/?limit=10', {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    }),
+                    fetch('/api/agent-intelligence/stats/', {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    })
+                ]);
+
+                if (!trendsRes.ok) throw new Error('Failed to load trends');
+
+                const trends = await trendsRes.json();
+                const suggestions = suggestionsRes.ok ? await suggestionsRes.json() : { suggestions: [] };
+                const stats = statsRes.ok ? await statsRes.json() : { stats: {} };
+
+                // Update stats
+                document.getElementById('trending-trends-count').textContent = trends.count || 0;
+                document.getElementById('trending-suggestions-count').textContent = suggestions.count || 0;
+                if (stats.stats) {
+                    document.getElementById('trending-agents-count').textContent = stats.stats.active_agents || 14;
+                }
+
+                // Render trends
+                if (trends.trends && trends.trends.length > 0) {
+                    trendsList.innerHTML = trends.trends.map((trend, idx) => {
+                        const data = trend.data || {};
+                        const title = data.title || trend.spider_name || 'Trend';
+                        const description = data.description || '';
+                        const source = trend.spider_name || 'spider';
+                        const category = trend.spider_category || 'general';
+                        const icon = getCategoryIcon(category);
+                        const score = Math.round((trend.quality_score || 0.7) * 100);
+
+                        return `
+                            <div class="d-flex align-items-start gap-3 p-3 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 4px solid #ec4899;">
+                                <div style="font-size: 28px;">${icon}</div>
+                                <div style="flex: 1;">
+                                    <h6 style="color: #fbcfe8; margin-bottom: 4px;">${title}</h6>
+                                    <p style="color: #9ca3af; font-size: 12px; margin-bottom: 6px;">${description.substring(0, 150)}${description.length > 150 ? '...' : ''}</p>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; font-size: 10px;">${category}</span>
+                                        <span style="color: #6b7280; font-size: 10px;">via ${source}</span>
+                                        <span style="color: #22c55e; font-size: 10px;">⚡ ${score}%</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm" onclick="useTrendingPrompt('${title.replace(/'/g, "\\'")}', '${description.replace(/'/g, "\\'").substring(0, 100)}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
+                                    Use
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    trendsList.innerHTML = `
+                        <div class="text-center py-5">
+                            <span style="font-size: 48px;">🕸️</span>
+                            <p style="color: #9ca3af; margin-top: 16px;">Spiders are crawling for intelligence...</p>
+                            <small style="color: #6b7280;">Check back soon for trending content!</small>
+                        </div>
+                    `;
+                }
+
+                // Render suggestions
+                if (suggestions.suggestions && suggestions.suggestions.length > 0) {
+                    suggestionsList.innerHTML = suggestions.suggestions.map(s => `
+                        <div class="p-3 mb-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; cursor: pointer;" onclick="useTrendingPrompt('${(s.title || '').replace(/'/g, "\\'")}', '${(s.suggestion || '').replace(/'/g, "\\'").substring(0, 100)}')">
+                            <div style="color: #fcd34d; font-size: 12px; font-weight: 600;">${s.title || 'Suggestion'}</div>
+                            <div style="color: #fde68a; font-size: 11px; margin-top: 4px;">${(s.suggestion || '').substring(0, 80)}...</div>
+                        </div>
+                    `).join('');
+                } else {
+                    suggestionsList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">No suggestions yet. Spiders are gathering intelligence!</p>';
+                }
+
+                // Show content
+                if (loading) loading.style.display = 'none';
+                if (container) container.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading trending tab:', error);
+                if (loading) loading.innerHTML = '<p style="color: #f87171;">Error loading trends. Please try again.</p>';
+            }
+        }
+
+        function useTrendingPrompt(title, description) {
+            const chatInput = document.getElementById('asstUserInput');
+            if (chatInput) {
+                const prompt = description ? `${title}: ${description}` : title;
+                chatInput.value = prompt;
+                chatInput.focus();
+                showToast('Trend applied to prompt!', 'success');
+            }
+        }
+
+        window.loadTrendingTab = loadTrendingTab;
+        window.useTrendingPrompt = useTrendingPrompt;
         // ============================================================
 
         // Load insights when page loads and after ratings
@@ -36002,6 +36224,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (agentsTab) {
                 agentsTab.addEventListener('shown.bs.tab', function() {
                     loadAgentDashboard();
+                });
+            }
+
+            // Session 219: Initialize Trending Tab on Tab Show
+            const trendingTab = document.getElementById('trending-tab');
+            if (trendingTab) {
+                trendingTab.addEventListener('shown.bs.tab', function() {
+                    loadTrendingTab();
                 });
             }
         });
