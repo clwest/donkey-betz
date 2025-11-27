@@ -34946,7 +34946,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 container.innerHTML = trends.map(trend => {
                     const height = Math.max(10, (trend.count / maxCount) * 150);
-                    const day = new Date(trend.date).toLocaleDateString('en-US', { weekday: 'short' });
+                    // Session 218: Fix timezone issue - parse date parts directly to avoid UTC shift
+                    // When parsing "2025-11-27" as Date, JS treats it as midnight UTC
+                    // In MST (UTC-7), that shows as Nov 26, which is wrong
+                    const [year, month, dayNum] = trend.date.split('-').map(Number);
+                    const day = new Date(year, month - 1, dayNum).toLocaleDateString('en-US', { weekday: 'short' });
                     return `
                         <div class="text-center" style="flex: 1;">
                             <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); width: 30px; height: ${height}px; margin: 0 auto; border-radius: 4px 4px 0 0;"></div>
