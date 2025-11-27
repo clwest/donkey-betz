@@ -12857,60 +12857,51 @@
         }
 
         async function loadIntelligenceFeed() {
+            // Session 237: Fixed to use correct /api/spider-intelligence/ endpoints
             try {
-                // Fetch trends and suggestions in parallel
-                const [trendsRes, suggestionsRes, statsRes] = await Promise.all([
-                    fetch('/api/agent-intelligence/trends/?limit=10', {
-                        headers: { 'X-CSRFToken': getCsrfToken() }
-                    }),
-                    fetch('/api/agent-intelligence/suggestions/?limit=5', {
-                        headers: { 'X-CSRFToken': getCsrfToken() }
-                    }),
-                    fetch('/api/agent-intelligence/stats/', {
-                        headers: { 'X-CSRFToken': getCsrfToken() }
-                    })
-                ]);
+                // Fetch trends from spider-intelligence API
+                // Note: insights endpoint requires a prompt, so we only call it when user provides one
+                const trendsRes = await fetch('/api/spider-intelligence/trends/?limit=10', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
 
                 const loading = document.getElementById('intelligenceLoading');
                 const dataDiv = document.getElementById('intelligenceFeedData');
 
-                if (!trendsRes.ok || !suggestionsRes.ok) {
+                if (!trendsRes.ok) {
                     console.log('Intelligence feed not available');
                     loading.innerHTML = '<small style="color: #f9a8d4;">No trends yet. Spiders are gathering intelligence...</small>';
                     return;
                 }
 
-                const trends = await trendsRes.json();
-                const suggestions = await suggestionsRes.json();
-                const stats = statsRes.ok ? await statsRes.json() : { stats: {} };
+                const trendsData = await trendsRes.json();
 
                 // Hide loading, show data
                 loading.style.display = 'none';
                 dataDiv.style.display = 'block';
 
-                // Update stats
-                document.getElementById('intTrendsCount').textContent = trends.count || 0;
-                if (stats.stats) {
-                    document.getElementById('intAgentsActive').textContent = stats.stats.active_agents || 14;
-                }
+                // Update stats - use actual trend count
+                const trendsCount = trendsData.trends ? trendsData.trends.length : 0;
+                document.getElementById('intTrendsCount').textContent = trendsCount;
+                document.getElementById('intAgentsActive').textContent = 14; // 14 AI Content agents
 
-                // Render trends
+                // Render trends from spider-intelligence API
                 const trendsContainer = document.getElementById('intelligenceTrends');
-                if (trends.trends && trends.trends.length > 0) {
-                    trendsContainer.innerHTML = trends.trends.map(trend => {
-                        const data = trend.data || {};
-                        const title = data.title || trend.spider_name || 'Trend';
-                        const source = trend.spider_name || 'spider';
-                        const category = trend.spider_category || 'general';
-                        const icon = getCategoryIcon(category);
+                if (trendsData.status === 'success' && trendsData.trends && trendsData.trends.length > 0) {
+                    trendsContainer.innerHTML = trendsData.trends.map(trend => {
+                        const topic = trend.topic || 'Trend';
+                        const mentions = trend.mentions || 0;
+                        const sources = trend.sources || [];
+                        const icon = getTrendIcon(topic);
                         return `
-                            <div style="padding: 8px; margin-bottom: 6px; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #ec4899;">
+                            <div style="padding: 8px; margin-bottom: 6px; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #ec4899; cursor: pointer;" onclick="useTrendingPrompt('${topic}', 'Create content about ${topic}')">
                                 <div style="display: flex; align-items: center; gap: 6px;">
                                     <span style="font-size: 14px;">${icon}</span>
-                                    <span style="font-size: 11px; color: #fbcfe8; font-weight: 500;">${title.substring(0, 50)}${title.length > 50 ? '...' : ''}</span>
+                                    <span style="font-size: 11px; color: #fbcfe8; font-weight: 500; text-transform: capitalize;">${topic}</span>
+                                    <span style="font-size: 10px; color: #22c55e; margin-left: auto;">${mentions} mentions</span>
                                 </div>
                                 <div style="font-size: 9px; color: #f9a8d4; opacity: 0.7; margin-top: 3px;">
-                                    via ${source} • ${category}
+                                    via ${sources.slice(0, 2).join(', ')}${sources.length > 2 ? ` +${sources.length - 2} more` : ''}
                                 </div>
                             </div>
                         `;
@@ -12919,14 +12910,20 @@
                     trendsContainer.innerHTML = '<div style="text-align: center; padding: 15px;"><span style="font-size: 24px;">🕸️</span><br><small style="color: #f9a8d4;">Spiders are crawling for trends...</small></div>';
                 }
 
-                // Render suggestions
+                // Render suggestion from insights
                 const suggestionsDiv = document.getElementById('intelligenceSuggestions');
                 const promptDiv = document.getElementById('suggestionPrompt');
-                if (suggestions.suggestions && suggestions.suggestions.length > 0) {
-                    const suggestion = suggestions.suggestions[0];
+                if (insightsData.status === 'success' && insightsData.insights && insightsData.insights.length > 0) {
+                    const insight = insightsData.insights[0];
                     suggestionsDiv.style.display = 'block';
-                    promptDiv.textContent = suggestion.suggestion || suggestion.title || 'Check out this trending style!';
-                    promptDiv.dataset.fullPrompt = suggestion.suggestion || suggestion.title || '';
+                    promptDiv.textContent = insight.suggestion || insight.insight || insight.topic || 'Check out this trending style!';
+                    promptDiv.dataset.fullPrompt = insight.suggestion || insight.insight || insight.topic || '';
+                } else if (trendsData.trends && trendsData.trends.length > 0) {
+                    // Use top trend as suggestion if no insights
+                    const topTrend = trendsData.trends[0];
+                    suggestionsDiv.style.display = 'block';
+                    promptDiv.textContent = `Create something about "${topTrend.topic}" - trending with ${topTrend.mentions} mentions!`;
+                    promptDiv.dataset.fullPrompt = `Create content about ${topTrend.topic}`;
                 } else {
                     suggestionsDiv.style.display = 'none';
                 }
@@ -12975,6 +12972,7 @@
 
         // Session 219: Load Trending Tab Content
         async function loadTrendingTab() {
+            // Session 237: Fixed to use correct /api/spider-intelligence/ endpoints
             const loading = document.getElementById('trending-loading');
             const container = document.getElementById('trending-container');
             const trendsList = document.getElementById('trending-list');
@@ -12984,55 +12982,53 @@
             if (container) container.style.display = 'none';
 
             try {
-                const [trendsRes, suggestionsRes, statsRes] = await Promise.all([
-                    fetch('/api/agent-intelligence/trends/?limit=20', {
+                // Session 237: Use spider-intelligence endpoints (publicly accessible)
+                // Note: insights endpoint requires a prompt, so we only fetch trends and tech
+                const [trendsRes, techRes] = await Promise.all([
+                    fetch('/api/spider-intelligence/trends/?limit=20', {
                         headers: { 'X-CSRFToken': getCsrfToken() }
                     }),
-                    fetch('/api/agent-intelligence/suggestions/?limit=10', {
-                        headers: { 'X-CSRFToken': getCsrfToken() }
-                    }),
-                    fetch('/api/agent-intelligence/stats/', {
+                    fetch('/api/spider-intelligence/tech/?limit=10', {
                         headers: { 'X-CSRFToken': getCsrfToken() }
                     })
                 ]);
 
                 if (!trendsRes.ok) throw new Error('Failed to load trends');
 
-                const trends = await trendsRes.json();
-                const suggestions = suggestionsRes.ok ? await suggestionsRes.json() : { suggestions: [] };
-                const stats = statsRes.ok ? await statsRes.json() : { stats: {} };
+                const trendsData = await trendsRes.json();
+                const techData = techRes.ok ? await techRes.json() : { status: 'error', articles: [] };
 
-                // Update stats
-                document.getElementById('trending-trends-count').textContent = trends.count || 0;
-                document.getElementById('trending-suggestions-count').textContent = suggestions.count || 0;
-                if (stats.stats) {
-                    document.getElementById('trending-agents-count').textContent = stats.stats.active_agents || 14;
-                }
+                // Update stats - use actual counts from responses
+                const trendsCount = trendsData.trends ? trendsData.trends.length : 0;
+                const techCount = techData.trends?.discussions?.length || 0;
+                document.getElementById('trending-trends-count').textContent = trendsCount;
+                document.getElementById('trending-suggestions-count').textContent = techCount;
+                document.getElementById('trending-agents-count').textContent = 14; // 14 AI Content agents
 
-                // Render trends
-                if (trends.trends && trends.trends.length > 0) {
-                    trendsList.innerHTML = trends.trends.map((trend, idx) => {
-                        const data = trend.data || {};
-                        const title = data.title || trend.spider_name || 'Trend';
-                        const description = data.description || '';
-                        const source = trend.spider_name || 'spider';
-                        const category = trend.spider_category || 'general';
-                        const icon = getCategoryIcon(category);
-                        const score = Math.round((trend.quality_score || 0.7) * 100);
+                // Render trends from spider-intelligence API
+                if (trendsData.status === 'success' && trendsData.trends && trendsData.trends.length > 0) {
+                    trendsList.innerHTML = trendsData.trends.map((trend, idx) => {
+                        const topic = trend.topic || 'Trend';
+                        const mentions = trend.mentions || 0;
+                        const sources = trend.sources || [];
+                        const score = Math.round(trend.score || 0);
+                        const icon = getTrendIcon(topic);
 
                         return `
                             <div class="d-flex align-items-start gap-3 p-3 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 4px solid #ec4899;">
                                 <div style="font-size: 28px;">${icon}</div>
                                 <div style="flex: 1;">
-                                    <h6 style="color: #fbcfe8; margin-bottom: 4px;">${title}</h6>
-                                    <p style="color: #9ca3af; font-size: 12px; margin-bottom: 6px;">${description.substring(0, 150)}${description.length > 150 ? '...' : ''}</p>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; font-size: 10px;">${category}</span>
-                                        <span style="color: #6b7280; font-size: 10px;">via ${source}</span>
-                                        <span style="color: #22c55e; font-size: 10px;">⚡ ${score}%</span>
+                                    <h6 style="color: #fbcfe8; margin-bottom: 4px; text-transform: capitalize;">${topic}</h6>
+                                    <p style="color: #9ca3af; font-size: 12px; margin-bottom: 6px;">
+                                        ${mentions} mentions across ${sources.length} source${sources.length !== 1 ? 's' : ''}
+                                    </p>
+                                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                                        ${sources.slice(0, 3).map(s => `<span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; font-size: 10px;">${s}</span>`).join('')}
+                                        ${sources.length > 3 ? `<span style="color: #6b7280; font-size: 10px;">+${sources.length - 3} more</span>` : ''}
+                                        <span style="color: #22c55e; font-size: 10px; margin-left: auto;">⚡ ${score} score</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-sm" onclick="useTrendingPrompt('${title.replace(/'/g, "\\'")}', '${description.replace(/'/g, "\\'").substring(0, 100)}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
+                                <button class="btn btn-sm" onclick="useTrendingPrompt('${topic}', 'Create content about ${topic}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
                                     Use
                                 </button>
                             </div>
@@ -13048,16 +13044,26 @@
                     `;
                 }
 
-                // Render suggestions
-                if (suggestions.suggestions && suggestions.suggestions.length > 0) {
-                    suggestionsList.innerHTML = suggestions.suggestions.map(s => `
-                        <div class="p-3 mb-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; cursor: pointer;" onclick="useTrendingPrompt('${(s.title || '').replace(/'/g, "\\'")}', '${(s.suggestion || '').replace(/'/g, "\\'").substring(0, 100)}')">
-                            <div style="color: #fcd34d; font-size: 12px; font-weight: 600;">${s.title || 'Suggestion'}</div>
-                            <div style="color: #fde68a; font-size: 11px; margin-top: 4px;">${(s.suggestion || '').substring(0, 80)}...</div>
+                // Render suggestions from insights API
+                if (insightsData.status === 'success' && insightsData.insights && insightsData.insights.length > 0) {
+                    suggestionsList.innerHTML = insightsData.insights.map(insight => `
+                        <div class="p-3 mb-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; cursor: pointer;" onclick="useTrendingPrompt('${(insight.topic || '').replace(/'/g, "\\'")}', '${(insight.suggestion || insight.insight || '').replace(/'/g, "\\'").substring(0, 100)}')">
+                            <div style="color: #fcd34d; font-size: 12px; font-weight: 600;">${insight.topic || 'Insight'}</div>
+                            <div style="color: #fde68a; font-size: 11px; margin-top: 4px;">${(insight.suggestion || insight.insight || '').substring(0, 80)}...</div>
                         </div>
                     `).join('');
                 } else {
-                    suggestionsList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">No suggestions yet. Spiders are gathering intelligence!</p>';
+                    // Show tech trends as suggestions if no insights
+                    if (techData.status === 'success' && techData.articles && techData.articles.length > 0) {
+                        suggestionsList.innerHTML = techData.articles.slice(0, 5).map(article => `
+                            <div class="p-3 mb-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; cursor: pointer;" onclick="useTrendingPrompt('${(article.title || '').replace(/'/g, "\\'")}', '')">
+                                <div style="color: #fcd34d; font-size: 12px; font-weight: 600;">${article.title || 'Tech News'}</div>
+                                <div style="color: #fde68a; font-size: 11px; margin-top: 4px;">From ${article.source || 'spider network'}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        suggestionsList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">Spiders are gathering intelligence! Check back soon.</p>';
+                    }
                 }
 
                 // Show content
@@ -13068,6 +13074,22 @@
                 console.error('Error loading trending tab:', error);
                 if (loading) loading.innerHTML = '<p style="color: #f87171;">Error loading trends. Please try again.</p>';
             }
+        }
+
+        // Session 237: Helper to get icon for trend topic
+        function getTrendIcon(topic) {
+            const topicLower = (topic || '').toLowerCase();
+            if (topicLower.includes('ai') || topicLower.includes('artificial')) return '🤖';
+            if (topicLower.includes('tech') || topicLower.includes('technology')) return '💻';
+            if (topicLower.includes('crypto') || topicLower.includes('bitcoin')) return '₿';
+            if (topicLower.includes('shopping') || topicLower.includes('retail')) return '🛒';
+            if (topicLower.includes('design') || topicLower.includes('creative')) return '🎨';
+            if (topicLower.includes('business') || topicLower.includes('startup')) return '📈';
+            if (topicLower.includes('news') || topicLower.includes('media')) return '📰';
+            if (topicLower.includes('job') || topicLower.includes('career')) return '💼';
+            if (topicLower.includes('video') || topicLower.includes('youtube')) return '🎬';
+            if (topicLower.includes('music') || topicLower.includes('audio')) return '🎵';
+            return '🔥';
         }
 
         function useTrendingPrompt(title, description) {

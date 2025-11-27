@@ -8,10 +8,20 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponsePermanentRedirect
 from rest_framework.routers import DefaultRouter
+
+
+# Session 237: Redirect handler for legacy broken URLs
+def legacy_portfolio_image_redirect(request, path):
+    """
+    Redirect legacy /api/portfolio/generated_images/... URLs to /media/generated_images/...
+    These broken URLs were cached in browsers from old versions.
+    """
+    return HttpResponsePermanentRedirect(f'/media/generated_images/{path}')
  
 # Session 31: Removed views_unified_v2 import - consolidated to root routes
 # from core import views_unified_v2
@@ -1766,6 +1776,8 @@ urlpatterns = [
     path('api/portfolio/<str:item_type>/<uuid:item_id>/delete/', delete_portfolio_item, name='delete-portfolio-item'),
     path('api/portfolio/bulk-delete/', bulk_delete_portfolio_items, name='bulk-delete-portfolio'),
     path('api/portfolio/check-broken/', check_portfolio_broken_links, name='check-broken-portfolio'),
+    # Session 237: Redirect legacy broken URLs (cached in browsers from old versions)
+    re_path(r'^api/portfolio/generated_images/(?P<path>.+)$', legacy_portfolio_image_redirect, name='legacy-portfolio-redirect'),
 
     # Image-to-Image Control (Session 38: Feature 11)
     path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),

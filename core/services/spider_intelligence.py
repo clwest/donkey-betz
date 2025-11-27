@@ -51,9 +51,53 @@ class SpiderIntelligenceService:
         from core.models_unified_system import SpiderData
         self.SpiderData = SpiderData
 
+    # Session 237: Common stopwords to filter out from trending topics
+    STOPWORDS = {
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+        'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
+        'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+        'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
+        'it', 'its', 'this', 'that', 'these', 'those', 'i', 'you', 'he',
+        'she', 'we', 'they', 'what', 'which', 'who', 'when', 'where', 'why',
+        'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
+        'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
+        'than', 'too', 'very', 'just', 'also', 'now', 'new', 'first', 'last',
+        'long', 'great', 'little', 'own', 'other', 'old', 'right', 'big',
+        'high', 'different', 'small', 'large', 'next', 'early', 'young',
+        'important', 'public', 'bad', 'good', 'best', 'top', 'get', 'got',
+        'your', 'our', 'my', 'up', 'out', 'about', 'into', 'over', 'after',
+        'beneath', 'under', 'above', 'between', 'through', 'during', 'before',
+        'here', 'there', 'am', 'being', 'if', 'then', 'else', 'while',
+        # Common but non-specific web/tech words
+        'http', 'https', 'www', 'com', 'org', 'net', 'html', 'click', 'read',
+        'watch', 'see', 'know', 'like', 'make', 'way', 'look', 'come', 'think',
+        'use', 'find', 'give', 'tell', 'work', 'call', 'try', 'ask', 'feel',
+        'seem', 'leave', 'put', 'keep', 'let', 'begin', 'show', 'hear', 'play',
+        'run', 'move', 'live', 'believe', 'hold', 'bring', 'happen', 'write',
+        # Generic content words
+        'today', 'year', 'years', 'day', 'days', 'time', 'week', 'month',
+        'people', 'world', 'life', 'thing', 'things', 'part', 'place', 'case',
+        'point', 'government', 'company', 'system', 'number', 'hand', 'course',
+        'fact', 'group', 'problem', 'home', 'side', 'kind', 'head', 'area',
+        'lot', 'end', 'money', 'word', 'business', 'issue', 'night', 'state',
+        # News-specific generic words
+        'news', 'report', 'says', 'said', 'officials', 'according', 'sources',
+        'update', 'latest', 'breaking', 'live', 'watch', 'video', 'photo',
+        'deals', 'deal', 'sale', 'sales', 'shopping', 'buy', 'price', 'prices',
+        'gear', 'guide', 'review', 'reviews', 'list', 'best', 'coupon', 'coupons',
+        'discount', 'discounts', 'offer', 'offers', 'promo', 'save', 'savings',
+        'gift', 'gifts', 'holiday', 'holidays', 'black', 'friday', 'cyber', 'monday'
+    }
+
     def get_trending_topics(self, category: str = None, hours: int = 24, limit: int = 10) -> list:
         """
-        Get trending topics from spider data.
+        Session 237: Improved trending topic extraction.
+
+        Get trending topics from spider data with smarter extraction:
+        1. Prioritize tags/keywords from articles (most reliable)
+        2. Extract meaningful phrases from titles (not single words)
+        3. Filter out common stopwords aggressively
+        4. Show actual headlines for context
 
         Args:
             category: Filter by category (tech, financial, jobs, etc.)
@@ -73,9 +117,15 @@ class SpiderIntelligenceService:
             if spider_names:
                 queryset = queryset.filter(spider_name__in=spider_names)
 
-        # Extract topics from raw_data
-        topic_counts = Counter()
-        topic_sources = defaultdict(set)
+        # Separate tracking for tags vs extracted keywords
+        tag_counts = Counter()  # Tags are highest quality
+        tag_sources = defaultdict(set)
+
+        keyword_counts = Counter()  # Extracted keywords
+        keyword_sources = defaultdict(set)
+
+        # Also collect top headlines per source for context
+        headlines_by_source = defaultdict(list)
 
         for entry in queryset:
             if not entry.raw_data:
@@ -83,45 +133,118 @@ class SpiderIntelligenceService:
 
             items = entry.raw_data.get('items', [])
             for item in items:
-                # Extract title/name as topic
-                title = item.get('title') or item.get('name') or item.get('topic', '')
-                if title:
-                    # Clean and normalize
-                    topic = self._normalize_topic(title)
-                    if len(topic) > 3:  # Skip very short topics
-                        topic_counts[topic] += 1
-                        topic_sources[topic].add(entry.spider_name)
+                title = item.get('title') or item.get('name') or ''
 
-                # Also extract tags if present
-                # Session 222: Handle tags as either list or comma-separated string
+                # Collect headlines
+                if title and not title.startswith('Spider') and len(title) > 10:
+                    headlines_by_source[entry.spider_name].append(title)
+
+                # Priority 1: Extract tags (most reliable indicator of topic)
                 tags = item.get('tags', [])
                 if isinstance(tags, str):
-                    # Split comma-separated string into list
                     tags = [t.strip() for t in tags.split(',') if t.strip()]
                 elif not isinstance(tags, list):
                     tags = []
 
                 for tag in tags:
-                    if tag and len(tag) > 1:  # Skip single characters
-                        topic_counts[tag.lower()] += 1
-                        topic_sources[tag.lower()].add(entry.spider_name)
+                    tag_clean = tag.lower().strip()
+                    if tag_clean and len(tag_clean) > 1 and tag_clean not in self.STOPWORDS:
+                        tag_counts[tag_clean] += 1
+                        tag_sources[tag_clean].add(entry.spider_name)
 
-        # Calculate trending score (frequency * source diversity)
+                # Priority 2: Extract meaningful keywords from titles
+                if title:
+                    keywords = self._extract_meaningful_keywords(title)
+                    for kw in keywords:
+                        keyword_counts[kw] += 1
+                        keyword_sources[kw].add(entry.spider_name)
+
+        # Build trending list - prioritize tags, then keywords
         trending = []
-        for topic, count in topic_counts.most_common(limit * 2):
-            source_count = len(topic_sources[topic])
-            score = count * (1 + 0.5 * source_count)  # Boost for multi-source topics
+        seen_topics = set()
+
+        # First add high-quality tags
+        for tag, count in tag_counts.most_common(limit * 3):
+            if tag in seen_topics:
+                continue
+            source_count = len(tag_sources[tag])
+            # Tags get a quality boost
+            score = count * (1.5 + 0.5 * source_count)
             trending.append({
-                'topic': topic,
+                'topic': tag,
                 'mentions': count,
-                'sources': list(topic_sources[topic]),
+                'sources': list(tag_sources[tag]),
                 'source_count': source_count,
-                'score': round(score, 2)
+                'score': round(score, 2),
+                'type': 'tag'  # Indicates this came from article tags
             })
+            seen_topics.add(tag)
+
+        # Then add extracted keywords (lower priority)
+        for kw, count in keyword_counts.most_common(limit * 3):
+            if kw in seen_topics:
+                continue
+            source_count = len(keyword_sources[kw])
+            # Keywords get base score
+            score = count * (1 + 0.3 * source_count)
+            # Only add if significant
+            if count >= 2 or source_count >= 2:
+                trending.append({
+                    'topic': kw,
+                    'mentions': count,
+                    'sources': list(keyword_sources[kw]),
+                    'source_count': source_count,
+                    'score': round(score, 2),
+                    'type': 'keyword'
+                })
+                seen_topics.add(kw)
 
         # Sort by score and limit
         trending.sort(key=lambda x: x['score'], reverse=True)
         return trending[:limit]
+
+    def _extract_meaningful_keywords(self, title: str) -> list:
+        """
+        Session 237: Extract meaningful keywords from a title.
+        Focuses on tech terms, proper nouns, and multi-word phrases.
+        """
+        keywords = []
+
+        # Tech/business terms to always capture
+        tech_terms = {
+            'ai', 'ml', 'api', 'sdk', 'llm', 'gpt', 'claude', 'openai', 'anthropic',
+            'python', 'javascript', 'typescript', 'rust', 'golang', 'java', 'kotlin',
+            'react', 'vue', 'angular', 'svelte', 'nextjs', 'nodejs', 'django', 'fastapi',
+            'docker', 'kubernetes', 'k8s', 'aws', 'gcp', 'azure', 'cloud',
+            'startup', 'saas', 'fintech', 'crypto', 'bitcoin', 'ethereum', 'blockchain',
+            'devops', 'devsecops', 'cicd', 'agile', 'scrum',
+            'frontend', 'backend', 'fullstack', 'microservices', 'serverless',
+            'database', 'postgres', 'mysql', 'mongodb', 'redis', 'graphql',
+            'linux', 'windows', 'macos', 'ios', 'android',
+            'security', 'cybersecurity', 'privacy', 'encryption',
+            'remote', 'hybrid', 'onsite', 'freelance', 'contractor',
+            'senior', 'junior', 'lead', 'staff', 'principal', 'architect',
+            'engineer', 'developer', 'designer', 'manager', 'director'
+        }
+
+        # Clean and tokenize
+        title_lower = title.lower()
+        words = re.findall(r'\b[a-z][a-z0-9+#.-]*\b', title_lower)
+
+        # Extract tech terms
+        for word in words:
+            if word in tech_terms:
+                keywords.append(word)
+
+        # Extract capitalized phrases (likely proper nouns/names)
+        # Match sequences like "Sand Battery", "Black Friday", company names
+        proper_nouns = re.findall(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b', title)
+        for noun in proper_nouns:
+            noun_lower = noun.lower()
+            if noun_lower not in self.STOPWORDS and len(noun_lower) > 3:
+                keywords.append(noun_lower)
+
+        return keywords
 
     def get_market_insights(self) -> dict:
         """

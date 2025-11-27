@@ -47,6 +47,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/proactive/',  # Session 234: Proactive System - supports session auth
         '/api/ab-testing/',  # Session 235: A/B Testing - supports session auth
         '/api/goals/',  # Session 235: Goal Tracking - supports session auth
+        '/api/portfolio/generated_images/',  # Session 237: Legacy URL redirect (no auth needed)
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
