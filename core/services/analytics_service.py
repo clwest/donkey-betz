@@ -101,7 +101,7 @@ class AnalyticsService:
 
         # Get daily collaboration counts
         sessions = CollaborationSession.objects.filter(
-            created_at__gte=start_date
+            started_at__gte=start_date
         )
 
         if agent_name:
@@ -111,7 +111,7 @@ class AnalyticsService:
             )
 
         daily_data = sessions.annotate(
-            date=TruncDate('created_at')
+            date=TruncDate('started_at')
         ).values('date').annotate(
             total=Count('id'),
             completed=Count('id', filter=Q(status='completed')),
@@ -227,9 +227,9 @@ class AnalyticsService:
         start_date = end_date - timedelta(days=days)
 
         sessions = CollaborationSession.objects.filter(
-            created_at__gte=start_date
+            started_at__gte=start_date
         ).annotate(
-            hour=TruncHour('created_at')
+            hour=TruncHour('started_at')
         ).values('hour').annotate(
             count=Count('id')
         )
@@ -330,13 +330,13 @@ class AnalyticsService:
 
     def get_workflow_success_rates(self) -> ChartData:
         """
-        Get success rates by workflow template.
+        Get success rates by workflow.
         """
-        from content.models import WorkflowExecution, WorkflowTemplate
+        from content.models import WorkflowExecution, ContentWorkflow
 
         try:
-            # Get stats per workflow template
-            templates = WorkflowTemplate.objects.annotate(
+            # Get stats per workflow
+            workflows = ContentWorkflow.objects.annotate(
                 total_executions=Count('executions'),
                 successful=Count('executions', filter=Q(executions__status='completed')),
                 failed=Count('executions', filter=Q(executions__status='failed'))
@@ -346,9 +346,9 @@ class AnalyticsService:
             success_rates = []
             colors = []
 
-            for t in templates:
-                labels.append(t.name[:20])
-                rate = (t.successful / t.total_executions * 100) if t.total_executions > 0 else 0
+            for wf in workflows:
+                labels.append(wf.name[:20])
+                rate = (wf.successful / wf.total_executions * 100) if wf.total_executions > 0 else 0
                 success_rates.append(round(rate, 1))
                 # Color based on success rate
                 if rate >= 80:
@@ -534,7 +534,7 @@ class AnalyticsService:
 
             # Get daily stats
             collabs = CollaborationSession.objects.filter(
-                created_at__date=current_date
+                started_at__date=current_date
             )
             total_collabs = collabs.count()
             successful_collabs = collabs.filter(status='completed').count()
@@ -585,15 +585,15 @@ class AnalyticsService:
 
         # Current period stats
         current_collabs = CollaborationSession.objects.filter(
-            created_at__gte=start_date
+            started_at__gte=start_date
         )
         current_total = current_collabs.count()
         current_success = current_collabs.filter(status='completed').count()
 
         # Previous period stats
         prev_collabs = CollaborationSession.objects.filter(
-            created_at__gte=prev_start,
-            created_at__lt=start_date
+            started_at__gte=prev_start,
+            started_at__lt=start_date
         )
         prev_total = prev_collabs.count()
 
@@ -612,12 +612,12 @@ class AnalyticsService:
 
         # Message stats
         current_messages = InterAgentMessage.objects.filter(
-            timestamp__gte=start_date
+            created_at__gte=start_date
         ).count()
 
         # Active agents
         active_agents = AgentPerformanceMetric.objects.filter(
-            last_activity__gte=start_date
+            last_execution__gte=start_date
         ).count()
 
         return {
