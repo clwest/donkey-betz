@@ -188,6 +188,35 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+    # Session 233: Learning Loop Tasks (Phase 5 - Creative Intelligence Empire)
+    'daily-learning-pipeline': {
+        'task': 'core.tasks.run_daily_learning_pipeline',
+        'schedule': crontab(hour=5, minute=0),  # Daily at 5 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
+    'discover-success-patterns': {
+        'task': 'core.tasks.discover_success_patterns',
+        'schedule': crontab(hour='*/6', minute=30),  # Every 6 hours at :30
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
+    'generate-user-insights': {
+        'task': 'core.tasks.generate_user_insights',
+        'schedule': crontab(hour='*/4', minute=45),  # Every 4 hours at :45
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
+    'update-learning-profiles': {
+        'task': 'core.tasks.update_learning_profiles',
+        'schedule': crontab(hour=6, minute=0),  # Daily at 6 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

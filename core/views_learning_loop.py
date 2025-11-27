@@ -268,6 +268,7 @@ def predict_performance(request):
     """
     POST /api/learning/predict/
     Predict performance for content before distribution.
+    Uses ContentScoringEngine from learning_engine.py
     """
     if not request.user.is_authenticated:
         return api_error("Authentication required", status_code=401)
@@ -281,114 +282,109 @@ def predict_performance(request):
     content_id = data.get('content_id')
     attributes = data.get('attributes', {})
     target_platforms = data.get('platforms', [])
+    tags = data.get('tags', attributes.get('tags', []))
+    price = data.get('price', attributes.get('price', 19.99))
+    title = data.get('title', '')
+    description = data.get('description', '')
 
-    # Get user's success patterns
-    patterns = SuccessPattern.objects.filter(
-        Q(user=request.user) | Q(is_global=True),
-        is_active=True,
-        confidence_score__gte=40
+    # Use the ML-based ContentScoringEngine
+    from .learning_engine import ContentScoringEngine
+
+    engine = ContentScoringEngine(user=request.user)
+    scores = engine.score_content(
+        content_type=content_type,
+        platforms=target_platforms or ['etsy', 'gumroad', 'shutterstock'],
+        tags=tags if isinstance(tags, list) else [t.strip() for t in str(tags).split(',')],
+        price=float(price),
+        title=title,
+        description=description,
     )
 
-    # Calculate matching patterns
-    matching_patterns = []
-    for pattern in patterns:
-        match_score = 0
-        if pattern.pattern_type == 'content_style' and attributes.get('style'):
-            if pattern.pattern_attributes.get('style') == attributes.get('style'):
-                match_score = float(pattern.success_rate) / 100
-
-        if match_score > 0:
-            matching_patterns.append({
-                'pattern_id': str(pattern.id),
-                'pattern_name': pattern.pattern_name,
-                'match_score': match_score,
-                'success_rate': float(pattern.success_rate),
-            })
-
-    # Base prediction on historical data
-    user_distributions = ContentDistribution.objects.filter(
-        user=request.user,
-        status='completed'
-    )
-
-    base_success_rate = 0.5  # Default 50%
-    if user_distributions.exists():
-        successful = user_distributions.filter(revenue_generated__gt=0).count()
-        total = user_distributions.count()
-        if total > 0:
-            base_success_rate = successful / total
-
-    # Adjust based on matching patterns
-    pattern_boost = sum(p['match_score'] * 0.1 for p in matching_patterns)
-    overall_probability = min(0.95, base_success_rate + pattern_boost)
-
-    # Platform-specific predictions
+    # Use scores from the ML engine
+    overall_probability = scores['overall'] / 100  # Convert to decimal
     platform_predictions = {}
-    for platform_name in target_platforms or ['etsy', 'gumroad', 'shutterstock']:
-        platform_base = overall_probability
-        # Adjust based on platform-specific patterns
-        for pattern in patterns:
-            if pattern.pattern_type == 'platform_match':
-                if platform_name in str(pattern.pattern_attributes.get('platform', '')).lower():
-                    platform_base = min(0.95, platform_base + 0.1)
 
-        avg_revenue = 25.00  # Default
-        platform_dist = user_distributions.filter(platform__name__icontains=platform_name)
-        if platform_dist.exists():
-            avg_rev = platform_dist.aggregate(avg=Avg('revenue_generated'))['avg']
-            if avg_rev:
-                avg_revenue = float(avg_rev)
-
+    for platform_name, platform_scores in scores['platform_fit'].items():
         platform_predictions[platform_name] = {
-            'success_probability': round(platform_base, 4),
-            'expected_revenue': round(avg_revenue * platform_base, 2),
-            'confidence': round(0.5 + len(matching_patterns) * 0.1, 4),
+            'success_probability': round(platform_scores['score'] / 100, 4),
+            'expected_revenue': round(platform_scores.get('avg_revenue', 25) * (platform_scores['score'] / 100), 2),
+            'confidence': round(platform_scores['confidence'] / 100, 4),
         }
 
-    # Recommended price range
-    successful_prices = user_distributions.filter(
-        revenue_generated__gt=0
-    ).values_list('price_listed', flat=True)
+    # Get pricing optimization for recommended price
+    from .learning_engine import PricingEngine
+    pricing_engine = PricingEngine(user=request.user)
 
-    if successful_prices:
-        prices = [float(p) for p in successful_prices if p]
-        if prices:
-            avg_price = sum(prices) / len(prices)
-            recommended_price = {
-                'min': round(min(prices), 2),
-                'max': round(max(prices), 2),
-                'optimal': round(avg_price, 2),
-            }
-        else:
-            recommended_price = {'min': 10, 'max': 50, 'optimal': 25}
-    else:
-        recommended_price = {'min': 10, 'max': 50, 'optimal': 25}
+    # Get optimal price for primary platform
+    primary_platform = (target_platforms or ['etsy'])[0]
+    pricing_result = pricing_engine.get_optimal_price(
+        content_type=content_type,
+        platform=primary_platform,
+        current_price=float(price) if price else None
+    )
+
+    recommended_price = {
+        'min': pricing_result['min_price'],
+        'max': pricing_result['max_price'],
+        'optimal': pricing_result['optimal_price'],
+    }
+
+    # Build matching patterns list from recommendations
+    matching_patterns = []
+    for rec in scores.get('recommendations', []):
+        matching_patterns.append({
+            'pattern_type': rec['type'],
+            'message': rec['message'],
+            'priority': rec['priority'],
+        })
+
+    # Sort platforms by score for recommendations
+    sorted_platforms = sorted(
+        scores['platform_fit'].items(),
+        key=lambda x: x[1]['score'],
+        reverse=True
+    )
+    recommended_platforms = [p[0] for p in sorted_platforms]
+
+    # Calculate expected total revenue
+    expected_total_revenue = sum(p['expected_revenue'] for p in platform_predictions.values())
+
+    # Average confidence across platforms
+    avg_confidence = sum(p['confidence'] for p in platform_predictions.values()) / max(len(platform_predictions), 1)
 
     # Create prediction record
     prediction = ContentPerformancePrediction.objects.create(
         user=request.user,
         content_type=content_type,
         content_id=uuid.UUID(content_id) if content_id else None,
-        analyzed_attributes=attributes,
+        analyzed_attributes={**attributes, 'tags': tags, 'price': price, 'title': title},
         platform_predictions=platform_predictions,
         overall_success_probability=Decimal(str(overall_probability)),
-        expected_total_revenue=Decimal(str(sum(p['expected_revenue'] for p in platform_predictions.values()))),
-        prediction_confidence=Decimal(str(0.5 + len(matching_patterns) * 0.1)),
-        recommended_platforms=list(platform_predictions.keys()),
+        expected_total_revenue=Decimal(str(expected_total_revenue)),
+        prediction_confidence=Decimal(str(avg_confidence)),
+        recommended_platforms=recommended_platforms,
         recommended_price_range=recommended_price,
-        recommended_tags=attributes.get('tags', []),
-        matching_success_patterns=[p['pattern_id'] for p in matching_patterns],
+        recommended_tags=tags if isinstance(tags, list) else [t.strip() for t in str(tags).split(',')],
+        matching_success_patterns=[],
     )
 
     return api_success({
         'prediction_id': str(prediction.id),
+        'overall_score': round(scores['overall'], 1),
         'overall_success_probability': round(overall_probability, 4),
-        'expected_total_revenue': round(float(prediction.expected_total_revenue), 2),
-        'prediction_confidence': round(float(prediction.prediction_confidence), 4),
+        'expected_total_revenue': round(expected_total_revenue, 2),
+        'prediction_confidence': round(avg_confidence, 4),
+        'score_breakdown': {
+            'content_type': round(scores['content_type_score'], 1),
+            'price': round(scores['price_score'], 1),
+            'tags': round(scores['tag_score'], 1),
+            'timing': round(scores['timing_score'], 1),
+        },
         'platform_predictions': platform_predictions,
         'recommended_price_range': recommended_price,
-        'matching_patterns': matching_patterns,
-        'recommended_platforms': prediction.recommended_platforms,
+        'pricing_rationale': pricing_result.get('rationale', ''),
+        'recommendations': scores.get('recommendations', []),
+        'recommended_platforms': recommended_platforms,
     })
 
 
@@ -434,103 +430,57 @@ def list_predictions(request):
 def get_pricing_optimization(request):
     """
     GET /api/learning/pricing/
-    Get pricing optimization recommendations.
+    Get pricing optimization recommendations using PricingEngine.
     """
     if not request.user.is_authenticated:
         return api_error("Authentication required", status_code=401)
 
-    platform = request.GET.get('platform')
-    category = request.GET.get('category', 'all')
+    platform = request.GET.get('platform', 'etsy')
+    content_type = request.GET.get('content_type', 'image')
+    current_price = request.GET.get('current_price')
 
-    # Get or create pricing optimization for user
-    query = {'user': request.user, 'content_category': category}
-    if platform:
-        try:
-            platform_obj = DistributionPlatform.objects.get(name__icontains=platform)
-            query['platform'] = platform_obj
-        except DistributionPlatform.DoesNotExist:
-            pass
+    # Use the ML-based PricingEngine
+    from .learning_engine import PricingEngine
 
-    pricing, created = PricingOptimization.objects.get_or_create(
-        **query,
+    engine = PricingEngine(user=request.user)
+    result = engine.get_optimal_price(
+        content_type=content_type,
+        platform=platform,
+        current_price=float(current_price) if current_price else None
+    )
+
+    # Also save to PricingOptimization model for tracking
+    try:
+        platform_obj = DistributionPlatform.objects.filter(name__icontains=platform).first()
+    except:
+        platform_obj = None
+
+    pricing, created = PricingOptimization.objects.update_or_create(
+        user=request.user,
+        content_category=content_type,
+        platform=platform_obj,
         defaults={
-            'market_avg_price': Decimal('25.00'),
-            'market_median_price': Decimal('19.99'),
-            'optimal_price': Decimal('24.99'),
+            'optimal_price': Decimal(str(result['optimal_price'])),
+            'optimal_price_confidence': Decimal(str(result['confidence'])),
+            'price_range_suggestion': {
+                'min': result['min_price'],
+                'max': result['max_price'],
+                'optimal': result['optimal_price'],
+            },
         }
     )
 
-    # Update with user's historical data
-    distributions = ContentDistribution.objects.filter(
-        user=request.user,
-        status='completed',
-        revenue_generated__gt=0
-    )
-
-    if platform:
-        distributions = distributions.filter(platform__name__icontains=platform)
-
-    if distributions.exists():
-        avg_price = distributions.aggregate(avg=Avg('price_listed'))['avg']
-        if avg_price:
-            pricing.user_avg_sale_price = avg_price
-
-        # Find best price (highest conversion)
-        price_performance = {}
-        for dist in distributions:
-            price = float(dist.price_listed or 0)
-            price_bucket = round(price / 5) * 5  # Round to nearest $5
-            if price_bucket not in price_performance:
-                price_performance[price_bucket] = {'count': 0, 'revenue': 0}
-            price_performance[price_bucket]['count'] += 1
-            price_performance[price_bucket]['revenue'] += float(dist.revenue_generated or 0)
-
-        if price_performance:
-            best_bucket = max(price_performance.items(), key=lambda x: x[1]['revenue'])
-            pricing.user_best_price = Decimal(str(best_bucket[0]))
-
-            # Update optimal price based on best performer
-            pricing.optimal_price = pricing.user_best_price
-            pricing.optimal_price_confidence = min(95, 50 + len(price_performance) * 5)
-
-        pricing.tested_prices = [
-            {'price': k, 'conversions': v['count'], 'revenue': v['revenue']}
-            for k, v in sorted(price_performance.items())
-        ]
-        pricing.save()
-
-    # Generate insights
-    insights = []
-    if pricing.user_avg_sale_price and pricing.market_avg_price:
-        diff_pct = ((float(pricing.user_avg_sale_price) - float(pricing.market_avg_price))
-                    / float(pricing.market_avg_price) * 100)
-        if diff_pct < -10:
-            insights.append(f"Your prices are {abs(diff_pct):.0f}% below market average. Consider raising prices.")
-        elif diff_pct > 20:
-            insights.append(f"Your prices are {diff_pct:.0f}% above market average. Great positioning!")
-
-    if pricing.user_best_price:
-        insights.append(f"Your best-performing price point is ${pricing.user_best_price:.2f}")
-
     return api_success({
-        'pricing': {
-            'optimal_price': float(pricing.optimal_price),
-            'confidence': float(pricing.optimal_price_confidence),
-            'price_range': pricing.price_range_suggestion or {
-                'low': float(pricing.optimal_price * Decimal('0.7')),
-                'mid': float(pricing.optimal_price),
-                'high': float(pricing.optimal_price * Decimal('1.5')),
-            },
-            'market_avg': float(pricing.market_avg_price),
-            'user_avg': float(pricing.user_avg_sale_price),
-            'user_best': float(pricing.user_best_price) if pricing.user_best_price else None,
-            'tested_prices': pricing.tested_prices,
-            'seasonal_multipliers': pricing.seasonal_multipliers,
-            'insights': insights,
+        'optimization': {
+            'optimal_price': result['optimal_price'],
+            'min_price': result['min_price'],
+            'max_price': result['max_price'],
+            'confidence': result['confidence'],
+            'market_position': result.get('market_position', 'average'),
+            'rationale': result['rationale'],
         },
-        'platform': platform or 'all',
-        'category': category,
-        'last_updated': pricing.last_updated.isoformat(),
+        'platform': platform,
+        'content_type': content_type,
     })
 
 
