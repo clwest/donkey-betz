@@ -9335,6 +9335,156 @@
                     </div>
                     <!-- END Proactive System Section -->
 
+                    <!-- Session 236: A/B Testing Section (Phase 6) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(16, 185, 129, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2)); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <h5 class="mb-0" style="color: #10b981;">
+                                        <span class="badge me-2" style="background: linear-gradient(135deg, #10b981, #06b6d4); font-size: 0.7rem;">Phase 6</span>
+                                        A/B Testing
+                                    </h5>
+                                    <div>
+                                        <button class="btn btn-sm me-2" onclick="loadABTestingDashboard()" style="background: linear-gradient(135deg, #10b981, #06b6d4); border: none; color: white;">
+                                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                                        </button>
+                                        <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#createABTestModal" style="background: linear-gradient(135deg, #06b6d4, #0891b2); border: none; color: white;">
+                                            <i class="fas fa-plus me-1"></i>New Test
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- A/B Testing Stats -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #10b981;" id="abTestsRunningCount">0</h3>
+                                                    <small class="text-muted">Running Tests</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #06b6d4;" id="abTestsCompletedCount">0</h3>
+                                                    <small class="text-muted">Completed</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #22c55e;" id="abTestsTotalEventsCount">0</h3>
+                                                    <small class="text-muted">Total Events</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #3b82f6;" id="abTestsAvgLiftCount">0%</h3>
+                                                    <small class="text-muted">Avg. Lift</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- A/B Tests List -->
+                                    <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1);">
+                                            <h6 class="mb-0" style="color: #10b981;"><i class="fas fa-flask me-2"></i>Active Tests</h6>
+                                            <span class="badge bg-success" id="abTestsListCount">0 tests</span>
+                                        </div>
+                                        <div class="card-body p-0" id="abTestsContainer" style="max-height: 350px; overflow-y: auto;">
+                                            <div class="text-center py-4 text-muted" id="noABTests">
+                                                <i class="fas fa-flask fa-3x mb-3" style="color: rgba(16, 185, 129, 0.3);"></i>
+                                                <p class="mb-2">No A/B tests yet</p>
+                                                <small>Create your first test to optimize your content performance</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END A/B Testing Section -->
+
+                    <!-- Session 236: Goal Tracking Section (Phase 6) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(251, 191, 36, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <h5 class="mb-0" style="color: #fbbf24;">
+                                        <span class="badge me-2" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); font-size: 0.7rem;">Phase 6</span>
+                                        Goal Tracking
+                                    </h5>
+                                    <div>
+                                        <button class="btn btn-sm me-2" onclick="loadGoalsDashboard()" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; color: white;">
+                                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                                        </button>
+                                        <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#createGoalModal" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white;">
+                                            <i class="fas fa-plus me-1"></i>New Goal
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Goals Stats -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #fbbf24;" id="goalsActiveCount">0</h3>
+                                                    <small class="text-muted">Active Goals</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #22c55e;" id="goalsCompletedCount">0</h3>
+                                                    <small class="text-muted">Completed</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #3b82f6;" id="goalsAvgProgressCount">0%</h3>
+                                                    <small class="text-muted">Avg. Progress</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3);">
+                                                <div class="card-body text-center py-3">
+                                                    <h3 class="mb-1" style="color: #a855f7;" id="goalsMilestonesCount">0</h3>
+                                                    <small class="text-muted">Milestones Hit</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Goals List -->
+                                    <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1);">
+                                            <h6 class="mb-0" style="color: #fbbf24;"><i class="fas fa-bullseye me-2"></i>Your Goals</h6>
+                                            <span class="badge bg-warning text-dark" id="goalsListCount">0 goals</span>
+                                        </div>
+                                        <div class="card-body p-2" id="goalsContainer" style="max-height: 350px; overflow-y: auto;">
+                                            <div class="text-center py-4 text-muted" id="noGoals">
+                                                <i class="fas fa-bullseye fa-3x mb-3" style="color: rgba(251, 191, 36, 0.3);"></i>
+                                                <p class="mb-2">No goals set yet</p>
+                                                <small>Set your first goal to track your progress</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END Goal Tracking Section -->
+
                     <div class="row">
                         <!-- Platforms List -->
                         <div class="col-lg-8">
@@ -9758,6 +9908,408 @@
                 </div>
             </div>
             <!-- END Create Automation Modal -->
+
+            <!-- Session 236: Create A/B Test Modal -->
+            <div class="modal fade" id="createABTestModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content" style="background: #1a1a2e; border: 2px solid #10b981;">
+                        <div class="modal-header" style="border-bottom: 1px solid #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2));">
+                            <h5 class="modal-title" style="color: #10b981;">
+                                <i class="fas fa-flask me-2"></i>Create A/B Test
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="createABTestForm">
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <label class="form-label" style="color: #34d399;">Test Name *</label>
+                                        <input type="text" class="form-control" id="abTestName" required
+                                               placeholder="e.g., Premium Pricing Test"
+                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); color: white;">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label" style="color: #34d399;">Test Type *</label>
+                                        <select class="form-select" id="abTestType" required
+                                                style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); color: white;">
+                                            <option value="pricing">Pricing Test</option>
+                                            <option value="title">Title Test</option>
+                                            <option value="tags">Tags Test</option>
+                                            <option value="description">Description Test</option>
+                                            <option value="timing">Timing Test</option>
+                                            <option value="platform">Platform Test</option>
+                                            <option value="bundle">Bundle Test</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" style="color: #34d399;">Hypothesis *</label>
+                                    <textarea class="form-control" id="abTestHypothesis" rows="2" required
+                                              placeholder="What do you expect to happen? e.g., Higher prices will reduce volume but increase profit"
+                                              style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); color: white;"></textarea>
+                                </div>
+
+                                <!-- Variants Section -->
+                                <div class="card mb-3" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.15); border-bottom: 1px solid rgba(16, 185, 129, 0.2);">
+                                        <h6 class="mb-0" style="color: #10b981;">Test Variants</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="addABTestVariant()">
+                                            <i class="fas fa-plus me-1"></i>Add Variant
+                                        </button>
+                                    </div>
+                                    <div class="card-body" id="abTestVariantsContainer">
+                                        <!-- Control Variant -->
+                                        <div class="variant-item mb-3 p-3" style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="badge bg-success">Control (A)</span>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-2">
+                                                    <input type="text" class="form-control form-control-sm" id="variantAName" value="Control"
+                                                           placeholder="Variant name"
+                                                           style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); color: white;">
+                                                </div>
+                                                <div class="col-md-3 mb-2">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" class="form-control" id="variantATraffic" value="50" min="1" max="99"
+                                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); color: white;">
+                                                        <span class="input-group-text" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 mb-2">
+                                                    <input type="text" class="form-control form-control-sm" id="variantAValue" placeholder="Value"
+                                                           style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); color: white;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Treatment Variant -->
+                                        <div class="variant-item mb-3 p-3" style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.2);">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="badge" style="background: #06b6d4;">Treatment (B)</span>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-2">
+                                                    <input type="text" class="form-control form-control-sm" id="variantBName" value="Treatment"
+                                                           placeholder="Variant name"
+                                                           style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                                </div>
+                                                <div class="col-md-3 mb-2">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" class="form-control" id="variantBTraffic" value="50" min="1" max="99"
+                                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                                        <span class="input-group-text" style="background: rgba(6, 182, 212, 0.2); border: 1px solid rgba(6, 182, 212, 0.3); color: #06b6d4;">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 mb-2">
+                                                    <input type="text" class="form-control form-control-sm" id="variantBValue" placeholder="Value"
+                                                           style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="additionalVariants"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Success Metrics -->
+                                <div class="card mb-3" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);">
+                                    <div class="card-header" style="background: rgba(6, 182, 212, 0.15); border-bottom: 1px solid rgba(6, 182, 212, 0.2);">
+                                        <h6 class="mb-0" style="color: #06b6d4;">Success Metrics</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #67e8f9;">Primary Metric *</label>
+                                                <select class="form-select" id="abTestPrimaryMetric" required
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                                    <option value="conversion_rate">Conversion Rate</option>
+                                                    <option value="revenue">Revenue per User</option>
+                                                    <option value="clicks">Click-Through Rate</option>
+                                                    <option value="engagement">Engagement Score</option>
+                                                    <option value="profit">Profit Margin</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #67e8f9;">Minimum Sample Size</label>
+                                                <input type="number" class="form-control" id="abTestMinSample" value="100" min="10"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                                <small class="text-muted">Events per variant before results</small>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #67e8f9;">Confidence Level</label>
+                                                <select class="form-select" id="abTestConfidence"
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                                    <option value="90">90%</option>
+                                                    <option value="95" selected>95%</option>
+                                                    <option value="99">99%</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #67e8f9;">Test Duration (days)</label>
+                                                <input type="number" class="form-control" id="abTestDuration" value="14" min="1"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Targeting (Optional) -->
+                                <div class="card" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                    <div class="card-header" style="background: rgba(59, 130, 246, 0.15); border-bottom: 1px solid rgba(59, 130, 246, 0.2);">
+                                        <h6 class="mb-0" style="color: #3b82f6;">Targeting (Optional)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #93c5fd;">Content Types</label>
+                                                <select class="form-select" id="abTestContentTypes" multiple
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(59, 130, 246, 0.3); color: white; height: 100px;">
+                                                    <option value="image">Images</option>
+                                                    <option value="video">Videos</option>
+                                                    <option value="audio">Audio</option>
+                                                    <option value="3d">3D Models</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #93c5fd;">Platforms</label>
+                                                <select class="form-select" id="abTestPlatforms" multiple
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(59, 130, 246, 0.3); color: white; height: 100px;">
+                                                    <option value="shutterstock">Shutterstock</option>
+                                                    <option value="adobe_stock">Adobe Stock</option>
+                                                    <option value="etsy">Etsy</option>
+                                                    <option value="redbubble">Redbubble</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid rgba(16, 185, 129, 0.3);">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn" onclick="saveABTest()" style="background: linear-gradient(135deg, #10b981, #06b6d4); border: none; color: white;">
+                                <i class="fas fa-flask me-2"></i>Create Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Create A/B Test Modal -->
+
+            <!-- Session 236: Create Goal Modal -->
+            <div class="modal fade" id="createGoalModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content" style="background: #1a1a2e; border: 2px solid #fbbf24;">
+                        <div class="modal-header" style="border-bottom: 1px solid #fbbf24; background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));">
+                            <h5 class="modal-title" style="color: #fbbf24;">
+                                <i class="fas fa-bullseye me-2"></i>Create New Goal
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="createGoalForm">
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <label class="form-label" style="color: #fcd34d;">Goal Name *</label>
+                                        <input type="text" class="form-control" id="goalName" required
+                                               placeholder="e.g., November Revenue Goal"
+                                               style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label" style="color: #fcd34d;">Goal Type *</label>
+                                        <select class="form-select" id="goalType" required onchange="updateGoalFields()"
+                                                style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                            <option value="revenue">Revenue ($)</option>
+                                            <option value="sales">Sales Count</option>
+                                            <option value="downloads">Downloads</option>
+                                            <option value="views">Views</option>
+                                            <option value="distribution">Distributions</option>
+                                            <option value="content">Content Created</option>
+                                            <option value="conversion">Conversion Rate (%)</option>
+                                            <option value="custom">Custom Metric</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" style="color: #fcd34d;">Description</label>
+                                    <textarea class="form-control" id="goalDescription" rows="2"
+                                              placeholder="Why is this goal important? What will you achieve?"
+                                              style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;"></textarea>
+                                </div>
+
+                                <!-- Target Settings -->
+                                <div class="card mb-3" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <div class="card-header" style="background: rgba(251, 191, 36, 0.15); border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
+                                        <h6 class="mb-0" style="color: #fbbf24;">Target Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fde047;">Target Value *</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text" id="goalTargetPrefix" style="background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24;">$</span>
+                                                    <input type="number" class="form-control" id="goalTargetValue" required min="1"
+                                                           placeholder="1000"
+                                                           style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fde047;">Current Progress</label>
+                                                <input type="number" class="form-control" id="goalCurrentValue" value="0" min="0"
+                                                       placeholder="Starting value"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label" style="color: #fde047;">Period</label>
+                                                <select class="form-select" id="goalPeriod"
+                                                        style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                                    <option value="daily">Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly" selected>Monthly</option>
+                                                    <option value="quarterly">Quarterly</option>
+                                                    <option value="yearly">Yearly</option>
+                                                    <option value="custom">Custom</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #fde047;">Start Date</label>
+                                                <input type="date" class="form-control" id="goalStartDate"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label" style="color: #fde047;">End Date (Optional)</label>
+                                                <input type="date" class="form-control" id="goalEndDate"
+                                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Milestones -->
+                                <div class="card mb-3" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3);">
+                                    <div class="card-header" style="background: rgba(168, 85, 247, 0.15); border-bottom: 1px solid rgba(168, 85, 247, 0.2);">
+                                        <h6 class="mb-0" style="color: #a855f7;"><i class="fas fa-flag-checkered me-2"></i>Milestones</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="small text-muted mb-3">Get notified when you reach these percentages of your goal</p>
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="milestone25" checked>
+                                                    <label class="form-check-label" for="milestone25" style="color: #c4b5fd;">
+                                                        25% Complete
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="milestone50" checked>
+                                                    <label class="form-check-label" for="milestone50" style="color: #c4b5fd;">
+                                                        50% Complete
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="milestone75" checked>
+                                                    <label class="form-check-label" for="milestone75" style="color: #c4b5fd;">
+                                                        75% Complete
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="milestone100" checked>
+                                                    <label class="form-check-label" for="milestone100" style="color: #c4b5fd;">
+                                                        100% Complete
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Notifications -->
+                                <div class="card" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                    <div class="card-header" style="background: rgba(34, 197, 94, 0.15); border-bottom: 1px solid rgba(34, 197, 94, 0.2);">
+                                        <h6 class="mb-0" style="color: #22c55e;"><i class="fas fa-bell me-2"></i>Notifications</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="goalNotifyMilestones" checked>
+                                                    <label class="form-check-label" for="goalNotifyMilestones" style="color: #86efac;">
+                                                        Milestone notifications
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="goalNotifyProgress" checked>
+                                                    <label class="form-check-label" for="goalNotifyProgress" style="color: #86efac;">
+                                                        Daily progress updates
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="goalNotifyDeadline">
+                                                    <label class="form-check-label" for="goalNotifyDeadline" style="color: #86efac;">
+                                                        Deadline reminders
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid rgba(251, 191, 36, 0.3);">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn" onclick="saveGoal()" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; color: #1a1a2e; font-weight: 600;">
+                                <i class="fas fa-bullseye me-2"></i>Create Goal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Create Goal Modal -->
+
+            <!-- Session 236: A/B Test Results Modal -->
+            <div class="modal fade" id="abTestResultsModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content" style="background: #1a1a2e; border: 2px solid #10b981;">
+                        <div class="modal-header" style="border-bottom: 1px solid #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2));">
+                            <h5 class="modal-title" style="color: #10b981;">
+                                <i class="fas fa-chart-bar me-2"></i>A/B Test Results
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="abTestResultsBody">
+                            <div class="text-center py-5 text-muted">
+                                <div class="spinner-border text-success mb-3" role="status"></div>
+                                <p>Loading test results...</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid rgba(16, 185, 129, 0.3);">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-warning" id="btnPauseTest" onclick="pauseCurrentTest()" style="display: none;">
+                                <i class="fas fa-pause me-2"></i>Pause Test
+                            </button>
+                            <button type="button" class="btn btn-success" id="btnDeclareWinner" onclick="declareWinner()" style="display: none;">
+                                <i class="fas fa-trophy me-2"></i>Declare Winner
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END A/B Test Results Modal -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -43547,6 +44099,552 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // ============================================================
 
         // END Session 234: Proactive System JavaScript Functions
+        // ============================================================
+
+        // ============================================================
+        // Session 236: A/B Testing & Goal Tracking JavaScript Functions
+        // ============================================================
+
+        let currentTestId = null;
+        let additionalVariantCount = 0;
+
+        // Load A/B Testing Dashboard
+        async function loadABTestingDashboard() {
+            try {
+                const response = await fetch('/api/ab-testing/dashboard/');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update stats
+                    document.getElementById('abTestsRunningCount').textContent = data.dashboard.running_tests || 0;
+                    document.getElementById('abTestsCompletedCount').textContent = data.dashboard.completed_tests || 0;
+                    document.getElementById('abTestsTotalEventsCount').textContent = data.dashboard.total_events || 0;
+                    document.getElementById('abTestsAvgLiftCount').textContent = (data.dashboard.average_lift || 0).toFixed(1) + '%';
+
+                    // Update tests list
+                    const container = document.getElementById('abTestsContainer');
+                    const noTests = document.getElementById('noABTests');
+                    const tests = data.dashboard.recent_tests || [];
+
+                    if (tests.length > 0) {
+                        noTests.style.display = 'none';
+                        container.innerHTML = tests.map(test => `
+                            <div class="list-group-item d-flex justify-content-between align-items-center"
+                                 style="background: transparent; border-color: rgba(71, 85, 105, 0.3); cursor: pointer;"
+                                 onclick="viewTestResults('${test.id}')">
+                                <div>
+                                    <h6 class="mb-1" style="color: #10b981;">${test.name}</h6>
+                                    <small class="text-muted">
+                                        <span class="badge ${getStatusBadgeClass(test.status)} me-2">${test.status}</span>
+                                        ${test.test_type} • ${test.variants_count || 2} variants
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <div style="color: #06b6d4; font-weight: 600;">${test.total_events || 0} events</div>
+                                    <small class="text-muted">${formatDate(test.created_at)}</small>
+                                </div>
+                            </div>
+                        `).join('');
+                        document.getElementById('abTestsListCount').textContent = `${tests.length} tests`;
+                    } else {
+                        noTests.style.display = 'block';
+                        container.innerHTML = '';
+                        document.getElementById('abTestsListCount').textContent = '0 tests';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading A/B testing dashboard:', error);
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'draft': 'bg-secondary',
+                'running': 'bg-success',
+                'paused': 'bg-warning text-dark',
+                'completed': 'bg-info',
+                'cancelled': 'bg-danger'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        // Add additional A/B test variant
+        function addABTestVariant() {
+            additionalVariantCount++;
+            const letter = String.fromCharCode(67 + additionalVariantCount - 1); // C, D, E...
+            const container = document.getElementById('additionalVariants');
+
+            const variantHtml = `
+                <div class="variant-item mb-3 p-3" id="variant${letter}Container" style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge" style="background: #a855f7;">Variant ${letter}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariant('${letter}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <input type="text" class="form-control form-control-sm variant-name" value="Variant ${letter}"
+                                   placeholder="Variant name"
+                                   style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(168, 85, 247, 0.3); color: white;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control variant-traffic" value="25" min="1" max="99"
+                                       style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(168, 85, 247, 0.3); color: white;">
+                                <span class="input-group-text" style="background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); color: #a855f7;">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <input type="text" class="form-control form-control-sm variant-value" placeholder="Value"
+                                   style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(168, 85, 247, 0.3); color: white;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', variantHtml);
+        }
+
+        function removeVariant(letter) {
+            const container = document.getElementById(`variant${letter}Container`);
+            if (container) container.remove();
+        }
+
+        // Save A/B Test
+        async function saveABTest() {
+            const name = document.getElementById('abTestName').value;
+            const testType = document.getElementById('abTestType').value;
+            const hypothesis = document.getElementById('abTestHypothesis').value;
+
+            if (!name || !hypothesis) {
+                showToast('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            // Collect variants
+            const variants = [
+                {
+                    name: document.getElementById('variantAName').value || 'Control',
+                    is_control: true,
+                    traffic_percentage: parseInt(document.getElementById('variantATraffic').value) || 50,
+                    config: { value: document.getElementById('variantAValue').value }
+                },
+                {
+                    name: document.getElementById('variantBName').value || 'Treatment',
+                    is_control: false,
+                    traffic_percentage: parseInt(document.getElementById('variantBTraffic').value) || 50,
+                    config: { value: document.getElementById('variantBValue').value }
+                }
+            ];
+
+            // Add additional variants
+            const additionalVariants = document.querySelectorAll('#additionalVariants .variant-item');
+            additionalVariants.forEach(item => {
+                variants.push({
+                    name: item.querySelector('.variant-name').value,
+                    is_control: false,
+                    traffic_percentage: parseInt(item.querySelector('.variant-traffic').value) || 25,
+                    config: { value: item.querySelector('.variant-value').value }
+                });
+            });
+
+            // Collect targeting
+            const contentTypes = Array.from(document.getElementById('abTestContentTypes').selectedOptions).map(o => o.value);
+            const platforms = Array.from(document.getElementById('abTestPlatforms').selectedOptions).map(o => o.value);
+
+            const testData = {
+                name: name,
+                test_type: testType,
+                hypothesis: hypothesis,
+                variants: variants,
+                primary_metric: document.getElementById('abTestPrimaryMetric').value,
+                success_metrics: {
+                    primary: document.getElementById('abTestPrimaryMetric').value,
+                    minimum_sample: parseInt(document.getElementById('abTestMinSample').value) || 100,
+                    confidence_level: parseInt(document.getElementById('abTestConfidence').value) || 95
+                },
+                targeting: {
+                    content_types: contentTypes,
+                    platforms: platforms
+                }
+            };
+
+            try {
+                const response = await fetch('/api/ab-testing/tests/create/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('A/B Test created successfully!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createABTestModal')).hide();
+                    document.getElementById('createABTestForm').reset();
+                    loadABTestingDashboard();
+                } else {
+                    showToast(data.error || 'Failed to create test', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating A/B test:', error);
+                showToast('Error creating test', 'error');
+            }
+        }
+
+        // View Test Results
+        async function viewTestResults(testId) {
+            currentTestId = testId;
+            const modal = new bootstrap.Modal(document.getElementById('abTestResultsModal'));
+            modal.show();
+
+            try {
+                const response = await fetch(`/api/ab-testing/tests/${testId}/results/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderTestResults(data.results);
+                } else {
+                    document.getElementById('abTestResultsBody').innerHTML = `
+                        <div class="text-center py-5 text-danger">
+                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                            <p>Failed to load test results</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading test results:', error);
+            }
+        }
+
+        function renderTestResults(results) {
+            const body = document.getElementById('abTestResultsBody');
+            const test = results.test;
+            const variants = results.variants || [];
+
+            // Show/hide action buttons based on status
+            const pauseBtn = document.getElementById('btnPauseTest');
+            const declareBtn = document.getElementById('btnDeclareWinner');
+            pauseBtn.style.display = test.status === 'running' ? 'inline-block' : 'none';
+            declareBtn.style.display = test.status === 'running' ? 'inline-block' : 'none';
+
+            body.innerHTML = `
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4 style="color: #10b981;">${test.name}</h4>
+                            <p class="text-muted mb-0">${test.hypothesis || ''}</p>
+                        </div>
+                        <span class="badge ${getStatusBadgeClass(test.status)} fs-6">${test.status}</span>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                <div class="card-body text-center py-2">
+                                    <div style="color: #10b981; font-size: 1.5rem; font-weight: 600;">${results.total_events || 0}</div>
+                                    <small class="text-muted">Total Events</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);">
+                                <div class="card-body text-center py-2">
+                                    <div style="color: #06b6d4; font-size: 1.5rem; font-weight: 600;">${results.total_conversions || 0}</div>
+                                    <small class="text-muted">Conversions</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="card-body text-center py-2">
+                                    <div style="color: #22c55e; font-size: 1.5rem; font-weight: 600;">$${(results.total_revenue || 0).toFixed(2)}</div>
+                                    <small class="text-muted">Revenue</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-body text-center py-2">
+                                    <div style="color: #fbbf24; font-size: 1.5rem; font-weight: 600;">${results.confidence_reached ? 'Yes' : 'No'}</div>
+                                    <small class="text-muted">Statistical Confidence</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 style="color: #06b6d4;" class="mb-3"><i class="fas fa-chart-bar me-2"></i>Variant Performance</h5>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr style="border-color: rgba(16, 185, 129, 0.3);">
+                                <th>Variant</th>
+                                <th class="text-center">Impressions</th>
+                                <th class="text-center">Clicks</th>
+                                <th class="text-center">Conversions</th>
+                                <th class="text-center">Conv. Rate</th>
+                                <th class="text-center">Revenue</th>
+                                <th class="text-center">Lift</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${variants.map((v, i) => {
+                                const isWinner = results.winner_variant_id === v.id;
+                                const isControl = v.is_control;
+                                return `
+                                    <tr style="border-color: rgba(71, 85, 105, 0.3); ${isWinner ? 'background: rgba(34, 197, 94, 0.1);' : ''}">
+                                        <td>
+                                            <span class="badge ${isControl ? 'bg-success' : 'bg-info'} me-2">${isControl ? 'Control' : 'Treatment'}</span>
+                                            ${v.name}
+                                            ${isWinner ? '<i class="fas fa-trophy text-warning ms-2"></i>' : ''}
+                                        </td>
+                                        <td class="text-center">${v.stats?.impressions || 0}</td>
+                                        <td class="text-center">${v.stats?.clicks || 0}</td>
+                                        <td class="text-center">${v.stats?.conversions || 0}</td>
+                                        <td class="text-center" style="color: #10b981;">${(v.stats?.conversion_rate || 0).toFixed(2)}%</td>
+                                        <td class="text-center" style="color: #22c55e;">$${(v.stats?.revenue || 0).toFixed(2)}</td>
+                                        <td class="text-center" style="color: ${(v.stats?.lift || 0) >= 0 ? '#10b981' : '#ef4444'};">
+                                            ${(v.stats?.lift || 0) >= 0 ? '+' : ''}${(v.stats?.lift || 0).toFixed(1)}%
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                ${results.recommendation ? `
+                    <div class="alert mt-3" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                        <h6 style="color: #fbbf24;"><i class="fas fa-lightbulb me-2"></i>Recommendation</h6>
+                        <p class="mb-0" style="color: #fde047;">${results.recommendation}</p>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        async function pauseCurrentTest() {
+            if (!currentTestId) return;
+            try {
+                const response = await fetch(`/api/ab-testing/tests/${currentTestId}/pause/`, { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Test paused', 'success');
+                    viewTestResults(currentTestId);
+                    loadABTestingDashboard();
+                }
+            } catch (error) {
+                showToast('Error pausing test', 'error');
+            }
+        }
+
+        async function declareWinner() {
+            if (!currentTestId) return;
+            // For now, auto-select the best performing variant
+            try {
+                const response = await fetch(`/api/ab-testing/tests/${currentTestId}/complete/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Winner declared! Test completed.', 'success');
+                    viewTestResults(currentTestId);
+                    loadABTestingDashboard();
+                }
+            } catch (error) {
+                showToast('Error completing test', 'error');
+            }
+        }
+
+        // ============================================================
+        // Goal Tracking Functions
+        // ============================================================
+
+        // Load Goals Dashboard
+        async function loadGoalsDashboard() {
+            try {
+                const response = await fetch('/api/goals/');
+                const data = await response.json();
+
+                if (data.success) {
+                    const goals = data.goals || [];
+                    const activeGoals = goals.filter(g => g.status === 'active');
+                    const completedGoals = goals.filter(g => g.status === 'completed');
+
+                    // Calculate stats
+                    document.getElementById('goalsActiveCount').textContent = activeGoals.length;
+                    document.getElementById('goalsCompletedCount').textContent = completedGoals.length;
+
+                    // Calculate average progress
+                    const avgProgress = activeGoals.length > 0
+                        ? activeGoals.reduce((sum, g) => sum + (g.progress_percentage || 0), 0) / activeGoals.length
+                        : 0;
+                    document.getElementById('goalsAvgProgressCount').textContent = avgProgress.toFixed(0) + '%';
+
+                    // Count milestones
+                    const totalMilestones = goals.reduce((sum, g) => sum + (g.milestones_achieved?.length || 0), 0);
+                    document.getElementById('goalsMilestonesCount').textContent = totalMilestones;
+
+                    // Render goals list
+                    const container = document.getElementById('goalsContainer');
+                    const noGoals = document.getElementById('noGoals');
+
+                    if (goals.length > 0) {
+                        noGoals.style.display = 'none';
+                        container.innerHTML = goals.map(goal => renderGoalCard(goal)).join('');
+                        document.getElementById('goalsListCount').textContent = `${goals.length} goals`;
+                    } else {
+                        noGoals.style.display = 'block';
+                        container.innerHTML = '';
+                        document.getElementById('goalsListCount').textContent = '0 goals';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading goals dashboard:', error);
+            }
+        }
+
+        function renderGoalCard(goal) {
+            const progress = goal.progress_percentage || 0;
+            const progressColor = progress >= 100 ? '#22c55e' : progress >= 75 ? '#fbbf24' : progress >= 50 ? '#06b6d4' : '#ef4444';
+            const statusBadge = goal.status === 'completed' ? 'bg-success' : goal.status === 'active' ? 'bg-primary' : 'bg-secondary';
+
+            return `
+                <div class="card mb-2" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(251, 191, 36, 0.2);">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1" style="color: #fbbf24;">${goal.name}</h6>
+                                <small class="text-muted">${goal.goal_type} • ${goal.period || 'custom'}</small>
+                            </div>
+                            <span class="badge ${statusBadge}">${goal.status}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span style="color: #fde047; font-weight: 600;">
+                                ${formatGoalValue(goal.current_value, goal.goal_type)} / ${formatGoalValue(goal.target_value, goal.goal_type)}
+                            </span>
+                            <span style="color: ${progressColor}; font-weight: 600;">${progress.toFixed(0)}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px; background: rgba(71, 85, 105, 0.3);">
+                            <div class="progress-bar" role="progressbar" style="width: ${Math.min(progress, 100)}%; background: ${progressColor};"
+                                 aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        ${goal.milestones_achieved && goal.milestones_achieved.length > 0 ? `
+                            <div class="mt-2">
+                                ${goal.milestones_achieved.map(m => `
+                                    <span class="badge me-1" style="background: rgba(168, 85, 247, 0.2); color: #a855f7;">
+                                        <i class="fas fa-flag-checkered me-1"></i>${m}%
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatGoalValue(value, type) {
+            if (!value) return '0';
+            if (type === 'revenue') return '$' + parseFloat(value).toFixed(2);
+            if (type === 'conversion') return parseFloat(value).toFixed(1) + '%';
+            return parseInt(value).toLocaleString();
+        }
+
+        // Update goal prefix based on type
+        function updateGoalFields() {
+            const type = document.getElementById('goalType').value;
+            const prefix = document.getElementById('goalTargetPrefix');
+
+            if (type === 'revenue') {
+                prefix.textContent = '$';
+            } else if (type === 'conversion') {
+                prefix.textContent = '%';
+            } else {
+                prefix.textContent = '#';
+            }
+        }
+
+        // Save Goal
+        async function saveGoal() {
+            const name = document.getElementById('goalName').value;
+            const goalType = document.getElementById('goalType').value;
+            const targetValue = document.getElementById('goalTargetValue').value;
+
+            if (!name || !targetValue) {
+                showToast('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            // Collect milestones
+            const milestones = [];
+            if (document.getElementById('milestone25').checked) milestones.push(25);
+            if (document.getElementById('milestone50').checked) milestones.push(50);
+            if (document.getElementById('milestone75').checked) milestones.push(75);
+            if (document.getElementById('milestone100').checked) milestones.push(100);
+
+            const goalData = {
+                name: name,
+                goal_type: goalType,
+                description: document.getElementById('goalDescription').value,
+                target_value: parseFloat(targetValue),
+                current_value: parseFloat(document.getElementById('goalCurrentValue').value) || 0,
+                period: document.getElementById('goalPeriod').value,
+                start_date: document.getElementById('goalStartDate').value || null,
+                end_date: document.getElementById('goalEndDate').value || null,
+                milestone_percentages: milestones,
+                notify_milestones: document.getElementById('goalNotifyMilestones').checked,
+                notify_progress: document.getElementById('goalNotifyProgress').checked,
+                notify_deadline: document.getElementById('goalNotifyDeadline').checked
+            };
+
+            try {
+                const response = await fetch('/api/goals/create/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(goalData)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Goal created successfully!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createGoalModal')).hide();
+                    document.getElementById('createGoalForm').reset();
+                    loadGoalsDashboard();
+                } else {
+                    showToast(data.error || 'Failed to create goal', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating goal:', error);
+                showToast('Error creating goal', 'error');
+            }
+        }
+
+        // Initialize Session 236 features on Distribution tab
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default start date for goals
+            const startDateInput = document.getElementById('goalStartDate');
+            if (startDateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                startDateInput.value = today;
+            }
+        });
+
+        // Load A/B Testing and Goals when Distribution tab is shown
+        const distributeTab = document.getElementById('distribute-tab');
+        if (distributeTab) {
+            distributeTab.addEventListener('shown.bs.tab', function() {
+                loadABTestingDashboard();
+                loadGoalsDashboard();
+            });
+        }
+
+        // END Session 236: A/B Testing & Goal Tracking JavaScript Functions
         // ============================================================
 
         // Update opportunity stats
