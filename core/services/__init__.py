@@ -6,6 +6,7 @@
 # Session 214: Agent Collaboration Service
 # Session 215: Collective Intelligence Service
 # Session 217: Analytics Service & Agent Training
+# Session 217C: Workflow Analytics Service
 
 from .spider_intelligence import SpiderIntelligenceService
 from .implicit_learning import ImplicitLearningService, get_learning_service
@@ -31,6 +32,10 @@ from .agent_training import (
     AgentTrainingService,
     get_agent_training_service,
 )
+from .workflow_analytics import (
+    WorkflowAnalyticsService,
+    get_workflow_analytics_service,
+)
 
 __all__ = [
     'SpiderIntelligenceService',
@@ -53,4 +58,6 @@ __all__ = [
     'get_analytics_service',
     'AgentTrainingService',
     'get_agent_training_service',
+    'WorkflowAnalyticsService',
+    'get_workflow_analytics_service',
 ]
