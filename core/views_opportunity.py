@@ -666,6 +666,23 @@ def opportunity_log_revenue(request, opportunity_id):
 
         revenue.save()
 
+        # Session 226: Calculate celebration flags
+        # Check if this is the first revenue for this opportunity
+        revenue_count = opportunity.revenues.count()
+        is_first_revenue = revenue_count == 1
+
+        # Calculate total revenue for this opportunity
+        total_revenue = opportunity.revenues.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        estimated_revenue = opportunity.potential_revenue or Decimal('0')
+
+        # Check if total now exceeds the estimate
+        exceeds_estimate = total_revenue > estimated_revenue and estimated_revenue > 0
+
+        # Calculate how much it exceeds by (percentage)
+        exceed_percentage = 0
+        if exceeds_estimate and estimated_revenue > 0:
+            exceed_percentage = round(((total_revenue - estimated_revenue) / estimated_revenue) * 100, 1)
+
         # Create action record
         if user:
             OpportunityAction.objects.create(
@@ -692,6 +709,14 @@ def opportunity_log_revenue(request, opportunity_id):
                 'content_type': revenue.content_type,
                 'prediction_accuracy': revenue.prediction_accuracy,
                 'is_better_than_predicted': revenue.is_better_than_predicted,
+            },
+            # Session 226: Celebration data
+            'celebration': {
+                'is_first_revenue': is_first_revenue,
+                'exceeds_estimate': exceeds_estimate,
+                'exceed_percentage': exceed_percentage,
+                'total_revenue': float(total_revenue),
+                'estimated_revenue': float(estimated_revenue),
             }
         })
 
