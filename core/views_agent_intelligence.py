@@ -419,6 +419,95 @@ def get_capabilities(request):
         }, status=500)
 
 
+@require_http_methods(["GET"])
+@login_required
+def get_bridge_status(request):
+    """
+    Get the spider intelligence bridge status.
+
+    GET /api/agent-intelligence/bridge/
+
+    Response:
+    {
+        "success": true,
+        "bridge": {
+            "is_running": true,
+            "messages_received": 100,
+            "messages_routed": 95,
+            ...
+        }
+    }
+    """
+    try:
+        from core.services.spider_intelligence_bridge import get_spider_bridge
+
+        bridge = get_spider_bridge()
+        stats = bridge.get_stats()
+
+        return JsonResponse({
+            'success': True,
+            'bridge': stats
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting bridge status: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def inject_test_data(request):
+    """
+    Inject test intelligence data for development/testing.
+
+    POST /api/agent-intelligence/test/
+
+    Body:
+    {
+        "spider_name": "midjourney_trends",
+        "category": "ai_creative",
+        "data": {
+            "title": "Test trend",
+            "description": "Test description"
+        }
+    }
+
+    Response:
+    {
+        "success": true,
+        "message": "Injected test data"
+    }
+    """
+    try:
+        import json
+        body = json.loads(request.body)
+
+        spider_name = body.get('spider_name', 'test_spider')
+        category = body.get('category', 'ai_creative')
+        data = body.get('data', {
+            'title': 'Test Intelligence Data',
+            'description': 'Injected via API for testing'
+        })
+
+        from core.services.spider_intelligence_bridge import inject_test_intelligence
+        inject_test_intelligence(spider_name, category, data)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Injected test data from {spider_name} ({category})'
+        })
+
+    except Exception as e:
+        logger.error(f"Error injecting test data: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_intelligence import (
@@ -428,7 +517,9 @@ from core.views_agent_intelligence import (
     get_suggestions,
     get_stats,
     get_categories,
-    get_capabilities
+    get_capabilities,
+    get_bridge_status,
+    inject_test_data
 )
 
 urlpatterns += [
@@ -439,5 +530,7 @@ urlpatterns += [
     path('api/agent-intelligence/stats/', get_stats, name='ai_stats'),
     path('api/agent-intelligence/categories/', get_categories, name='ai_categories'),
     path('api/agent-intelligence/capabilities/', get_capabilities, name='ai_capabilities'),
+    path('api/agent-intelligence/bridge/', get_bridge_status, name='ai_bridge_status'),
+    path('api/agent-intelligence/test/', inject_test_data, name='ai_inject_test'),
 ]
 """
