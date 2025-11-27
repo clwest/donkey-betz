@@ -11535,6 +11535,257 @@ def get_portfolio(request):
         }, status=500)
 
 
+# Session 237: Portfolio Delete Functionality
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_portfolio_item(request, item_type, item_id):
+    """
+    DELETE /api/portfolio/<item_type>/<item_id>/delete/
+
+    Delete a single portfolio item (image, video, or 3d_model)
+    Only the owner can delete their content.
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory
+
+        logger.info(f"🗑️ Deleting {item_type} {item_id} for user {request.user.username}")
+
+        if item_type == 'image':
+            try:
+                item = ImageHistory.objects.get(id=item_id, user=request.user)
+                item.delete()
+                logger.info(f"✅ Deleted image {item_id}")
+            except ImageHistory.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Image not found or not owned by you'
+                }, status=404)
+
+        elif item_type == 'video':
+            try:
+                item = VideoHistory.objects.get(id=item_id, user=request.user)
+                item.delete()
+                logger.info(f"✅ Deleted video {item_id}")
+            except VideoHistory.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Video not found or not owned by you'
+                }, status=404)
+
+        elif item_type == '3d_model':
+            try:
+                from content.models import MinifigAsset
+                item = MinifigAsset.objects.get(id=item_id, user=request.user)
+                item.delete()
+                logger.info(f"✅ Deleted 3D model {item_id}")
+            except:
+                return Response({
+                    'success': False,
+                    'error': '3D model not found or not owned by you'
+                }, status=404)
+        else:
+            return Response({
+                'success': False,
+                'error': f'Unknown item type: {item_type}'
+            }, status=400)
+
+        return Response({
+            'success': True,
+            'message': f'{item_type.capitalize()} deleted successfully'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error deleting portfolio item: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_delete_portfolio_items(request):
+    """
+    POST /api/portfolio/bulk-delete/
+
+    Delete multiple portfolio items at once.
+    Request body: { "items": [{"id": "uuid", "type": "image"}, ...] }
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory
+
+        items = request.data.get('items', [])
+
+        if not items:
+            return Response({
+                'success': False,
+                'error': 'No items provided'
+            }, status=400)
+
+        logger.info(f"🗑️ Bulk deleting {len(items)} items for user {request.user.username}")
+
+        deleted_count = 0
+        errors = []
+
+        for item in items:
+            item_id = item.get('id')
+            item_type = item.get('type')
+
+            if not item_id or not item_type:
+                errors.append(f"Missing id or type for item: {item}")
+                continue
+
+            try:
+                if item_type == 'image':
+                    ImageHistory.objects.get(id=item_id, user=request.user).delete()
+                    deleted_count += 1
+                elif item_type == 'video':
+                    VideoHistory.objects.get(id=item_id, user=request.user).delete()
+                    deleted_count += 1
+                elif item_type == '3d_model':
+                    from content.models import MinifigAsset
+                    MinifigAsset.objects.get(id=item_id, user=request.user).delete()
+                    deleted_count += 1
+                else:
+                    errors.append(f"Unknown type: {item_type}")
+            except Exception as e:
+                errors.append(f"Failed to delete {item_type} {item_id}: {str(e)}")
+
+        logger.info(f"✅ Bulk delete complete: {deleted_count} deleted, {len(errors)} errors")
+
+        return Response({
+            'success': True,
+            'deleted_count': deleted_count,
+            'errors': errors if errors else None,
+            'message': f'Successfully deleted {deleted_count} items'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error in bulk delete: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_portfolio_broken_links(request):
+    """
+    GET /api/portfolio/check-broken/
+
+    Check for portfolio items with broken/expired links.
+    Returns list of items that can't be loaded.
+    """
+    try:
+        import requests
+        from content.models import ImageHistory, VideoHistory
+
+        logger.info(f"🔍 Checking broken links for user {request.user.username}")
+
+        broken_items = []
+        checked_count = 0
+
+        # Check images
+        images = ImageHistory.objects.filter(user=request.user)
+        for img in images:
+            checked_count += 1
+            url = img.get_full_url()
+
+            # Skip data URIs (always valid)
+            if url and url.startswith('data:'):
+                continue
+
+            # Skip local files that exist
+            if url and url.startswith('/media/'):
+                continue
+
+            # Check remote URLs
+            if url and url.startswith(('http://', 'https://')):
+                try:
+                    response = requests.head(url, timeout=5, allow_redirects=True)
+                    if response.status_code >= 400:
+                        broken_items.append({
+                            'id': str(img.id),
+                            'type': 'image',
+                            'url': url,
+                            'prompt': img.prompt[:100] if img.prompt else 'No description',
+                            'created_at': img.created_at.isoformat(),
+                            'status_code': response.status_code
+                        })
+                except requests.RequestException as e:
+                    broken_items.append({
+                        'id': str(img.id),
+                        'type': 'image',
+                        'url': url,
+                        'prompt': img.prompt[:100] if img.prompt else 'No description',
+                        'created_at': img.created_at.isoformat(),
+                        'error': str(e)
+                    })
+            elif not url:
+                broken_items.append({
+                    'id': str(img.id),
+                    'type': 'image',
+                    'url': None,
+                    'prompt': img.prompt[:100] if img.prompt else 'No description',
+                    'created_at': img.created_at.isoformat(),
+                    'error': 'No URL'
+                })
+
+        # Check videos
+        videos = VideoHistory.objects.filter(user=request.user)
+        for vid in videos:
+            checked_count += 1
+            url = vid.video_url
+
+            if url and url.startswith(('http://', 'https://')):
+                try:
+                    response = requests.head(url, timeout=5, allow_redirects=True)
+                    if response.status_code >= 400:
+                        broken_items.append({
+                            'id': str(vid.id),
+                            'type': 'video',
+                            'url': url,
+                            'prompt': vid.prompt[:100] if vid.prompt else 'No description',
+                            'created_at': vid.created_at.isoformat(),
+                            'status_code': response.status_code
+                        })
+                except requests.RequestException as e:
+                    broken_items.append({
+                        'id': str(vid.id),
+                        'type': 'video',
+                        'url': url,
+                        'prompt': vid.prompt[:100] if vid.prompt else 'No description',
+                        'created_at': vid.created_at.isoformat(),
+                        'error': str(e)
+                    })
+            elif not url:
+                broken_items.append({
+                    'id': str(vid.id),
+                    'type': 'video',
+                    'url': None,
+                    'prompt': vid.prompt[:100] if vid.prompt else 'No description',
+                    'created_at': vid.created_at.isoformat(),
+                    'error': 'No URL'
+                })
+
+        logger.info(f"✅ Checked {checked_count} items, found {len(broken_items)} broken")
+
+        return Response({
+            'success': True,
+            'checked_count': checked_count,
+            'broken_count': len(broken_items),
+            'broken_items': broken_items
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error checking broken links: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def execute_workflow_for_project(request):

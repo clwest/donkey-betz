@@ -6306,11 +6306,44 @@
                     </div>
                 </div>
 
-                <!-- Export Section (Session 62: Phase C.2.2) -->
-                <div class="mb-4 text-end">
-                    <button id="export-portfolio-btn" class="btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-                        📥 Export Portfolio
-                    </button>
+                <!-- Export & Cleanup Section (Session 62: Phase C.2.2 + Session 237: Delete Functionality) -->
+                <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <!-- Left side: Selection controls -->
+                    <div class="d-flex gap-2 align-items-center">
+                        <button id="toggle-select-mode-btn" class="btn btn-outline-secondary" onclick="togglePortfolioSelectMode()">
+                            ☑️ Select Mode
+                        </button>
+                        <span id="selection-count" class="badge bg-primary" style="display: none;">0 selected</span>
+                        <button id="delete-selected-btn" class="btn btn-danger" style="display: none;" onclick="deleteSelectedPortfolioItems()">
+                            🗑️ Delete Selected
+                        </button>
+                        <button id="cancel-select-btn" class="btn btn-outline-secondary" style="display: none;" onclick="cancelPortfolioSelectMode()">
+                            ✖ Cancel
+                        </button>
+                    </div>
+                    <!-- Right side: Tools -->
+                    <div class="d-flex gap-2">
+                        <button id="find-broken-btn" class="btn btn-outline-warning" onclick="findBrokenPortfolioItems()">
+                            🔍 Find Expired Links
+                        </button>
+                        <button id="export-portfolio-btn" class="btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                            📥 Export Portfolio
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Broken Items Alert (Session 237) -->
+                <div id="broken-items-alert" class="alert alert-warning" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>⚠️ Found <span id="broken-count">0</span> items with expired/broken links</strong>
+                            <p class="mb-0 small">These items have links that no longer work (likely Stability AI temp URLs that have expired).</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-warning" onclick="selectAllBrokenItems()">Select All Broken</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="hideBrokenAlert()">Dismiss</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Portfolio Gallery -->
@@ -37548,11 +37581,29 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     thumbnail = `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎵</span></div>`;
                 }
 
+                // Session 237: Check if item is in broken list
+                const isBroken = portfolioSystem.brokenItems && portfolioSystem.brokenItems.some(b => b.id === item.id);
+                const brokenBadge = isBroken ? '<span class="badge bg-danger position-absolute" style="top: 8px; right: 8px; z-index: 10;">⚠️ Expired</span>' : '';
+
                 html += `
-                    <div class="col-md-3">
-                        <div class="card h-100" style="cursor: pointer;" onclick="viewPortfolioItem('${item.id}', '${item.type}')">
-                            ${thumbnail}
-                            <div class="card-body p-2">
+                    <div class="col-md-3 portfolio-item-card" data-item-id="${item.id}" data-item-type="${item.type}">
+                        <div class="card h-100 position-relative ${isBroken ? 'border-danger' : ''}" style="cursor: pointer;">
+                            <!-- Session 237: Selection checkbox (hidden by default) -->
+                            <div class="portfolio-select-checkbox position-absolute" style="top: 8px; left: 8px; z-index: 20; display: none;">
+                                <input type="checkbox" class="form-check-input portfolio-checkbox" style="width: 24px; height: 24px; cursor: pointer;"
+                                       onclick="event.stopPropagation(); togglePortfolioItemSelection('${item.id}', '${item.type}')">
+                            </div>
+                            ${brokenBadge}
+                            <!-- Session 237: Delete button (shown on hover) -->
+                            <button class="btn btn-sm btn-danger position-absolute portfolio-delete-btn"
+                                    style="top: 8px; right: 8px; z-index: 15; opacity: 0; transition: opacity 0.2s;"
+                                    onclick="event.stopPropagation(); confirmDeletePortfolioItem('${item.id}', '${item.type}')">
+                                🗑️
+                            </button>
+                            <div onclick="viewPortfolioItem('${item.id}', '${item.type}')">
+                                ${thumbnail}
+                            </div>
+                            <div class="card-body p-2" onclick="viewPortfolioItem('${item.id}', '${item.type}')">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <small class="text-muted">${typeIcon} ${item.type}</small>
                                     <span style="font-size: 1.2rem;" onclick="event.stopPropagation(); togglePortfolioFavorite('${item.id}', '${item.type}')">${favoriteIcon}</span>
@@ -37569,6 +37620,226 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             });
 
             gallery.innerHTML = html;
+
+            // Session 237: Add hover effect to show delete buttons
+            document.querySelectorAll('.portfolio-item-card .card').forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    const deleteBtn = card.querySelector('.portfolio-delete-btn');
+                    if (deleteBtn && !portfolioSystem.selectMode) {
+                        deleteBtn.style.opacity = '1';
+                    }
+                });
+                card.addEventListener('mouseleave', () => {
+                    const deleteBtn = card.querySelector('.portfolio-delete-btn');
+                    if (deleteBtn) {
+                        deleteBtn.style.opacity = '0';
+                    }
+                });
+            });
+        }
+
+        // Session 237: Portfolio Delete Functions
+        // Initialize selection state
+        portfolioSystem.selectedItems = [];
+        portfolioSystem.selectMode = false;
+        portfolioSystem.brokenItems = [];
+
+        // Toggle select mode for bulk operations
+        function togglePortfolioSelectMode() {
+            portfolioSystem.selectMode = !portfolioSystem.selectMode;
+            portfolioSystem.selectedItems = [];
+
+            const toggleBtn = document.getElementById('toggle-select-mode-btn');
+            const selectionCount = document.getElementById('selection-count');
+            const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+            const cancelBtn = document.getElementById('cancel-select-btn');
+            const checkboxes = document.querySelectorAll('.portfolio-select-checkbox');
+            const deleteBtns = document.querySelectorAll('.portfolio-delete-btn');
+
+            if (portfolioSystem.selectMode) {
+                toggleBtn.style.display = 'none';
+                selectionCount.style.display = 'inline';
+                deleteSelectedBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
+                checkboxes.forEach(cb => cb.style.display = 'block');
+                deleteBtns.forEach(btn => btn.style.display = 'none');
+            } else {
+                cancelPortfolioSelectMode();
+            }
+        }
+
+        // Cancel selection mode
+        function cancelPortfolioSelectMode() {
+            portfolioSystem.selectMode = false;
+            portfolioSystem.selectedItems = [];
+
+            document.getElementById('toggle-select-mode-btn').style.display = 'inline-block';
+            document.getElementById('selection-count').style.display = 'none';
+            document.getElementById('delete-selected-btn').style.display = 'none';
+            document.getElementById('cancel-select-btn').style.display = 'none';
+
+            document.querySelectorAll('.portfolio-select-checkbox').forEach(cb => {
+                cb.style.display = 'none';
+                cb.querySelector('input').checked = false;
+            });
+            document.querySelectorAll('.portfolio-delete-btn').forEach(btn => btn.style.display = 'block');
+
+            updateSelectionCount();
+        }
+
+        // Toggle individual item selection
+        function togglePortfolioItemSelection(itemId, itemType) {
+            const index = portfolioSystem.selectedItems.findIndex(i => i.id === itemId);
+
+            if (index > -1) {
+                portfolioSystem.selectedItems.splice(index, 1);
+            } else {
+                portfolioSystem.selectedItems.push({ id: itemId, type: itemType });
+            }
+
+            updateSelectionCount();
+        }
+
+        // Update selection count display
+        function updateSelectionCount() {
+            const count = portfolioSystem.selectedItems.length;
+            document.getElementById('selection-count').textContent = `${count} selected`;
+            document.getElementById('delete-selected-btn').disabled = count === 0;
+        }
+
+        // Confirm and delete single portfolio item
+        async function confirmDeletePortfolioItem(itemId, itemType) {
+            const item = portfolioSystem.items.find(i => i.id === itemId);
+            const prompt = item ? (item.prompt || 'No description').substring(0, 50) : 'this item';
+
+            if (!confirm(`Are you sure you want to delete this ${itemType}?\n\n"${prompt}..."\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/portfolio/${itemType}/${itemId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted successfully`, 'success');
+                    loadPortfolio(); // Refresh the gallery
+                } else {
+                    showNotification('Failed to delete: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showNotification('Error deleting item: ' + error.message, 'danger');
+            }
+        }
+
+        // Delete all selected items
+        async function deleteSelectedPortfolioItems() {
+            const count = portfolioSystem.selectedItems.length;
+
+            if (count === 0) {
+                showNotification('No items selected', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete ${count} item(s)?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/portfolio/bulk-delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ items: portfolioSystem.selectedItems })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Successfully deleted ${data.deleted_count} item(s)`, 'success');
+                    cancelPortfolioSelectMode();
+                    loadPortfolio(); // Refresh the gallery
+                } else {
+                    showNotification('Failed to delete: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Bulk delete error:', error);
+                showNotification('Error deleting items: ' + error.message, 'danger');
+            }
+        }
+
+        // Find broken/expired links
+        async function findBrokenPortfolioItems() {
+            const btn = document.getElementById('find-broken-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '🔄 Checking...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/portfolio/check-broken/', {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    portfolioSystem.brokenItems = data.broken_items || [];
+
+                    if (data.broken_count > 0) {
+                        document.getElementById('broken-count').textContent = data.broken_count;
+                        document.getElementById('broken-items-alert').style.display = 'block';
+                        showNotification(`Found ${data.broken_count} items with expired/broken links`, 'warning');
+                        renderPortfolioGallery(); // Re-render to show broken badges
+                    } else {
+                        showNotification('All items have valid links! ✨', 'success');
+                    }
+                } else {
+                    showNotification('Error checking links: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Check broken error:', error);
+                showNotification('Error checking links: ' + error.message, 'danger');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Select all broken items
+        function selectAllBrokenItems() {
+            if (!portfolioSystem.selectMode) {
+                togglePortfolioSelectMode();
+            }
+
+            portfolioSystem.selectedItems = portfolioSystem.brokenItems.map(item => ({
+                id: item.id,
+                type: item.type
+            }));
+
+            // Check the corresponding checkboxes
+            document.querySelectorAll('.portfolio-checkbox').forEach(cb => {
+                const card = cb.closest('.portfolio-item-card');
+                const itemId = card.dataset.itemId;
+                cb.checked = portfolioSystem.brokenItems.some(b => b.id === itemId);
+            });
+
+            updateSelectionCount();
+            showNotification(`Selected ${portfolioSystem.brokenItems.length} broken items`, 'info');
+        }
+
+        // Hide broken items alert
+        function hideBrokenAlert() {
+            document.getElementById('broken-items-alert').style.display = 'none';
         }
 
         // View portfolio item in modal
