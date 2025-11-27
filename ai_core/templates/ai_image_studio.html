@@ -8760,6 +8760,298 @@
                         </div>
                     </div>
 
+                    <!-- ============================================================ -->
+                    <!-- Session 231: OAuth Platform Connection Cards                 -->
+                    <!-- ============================================================ -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(139, 92, 246, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                    <h5 class="mb-0" style="color: #a78bfa;">🔐 Platform Integrations (OAuth)</h5>
+                                    <button class="btn btn-sm btn-outline-info" onclick="refreshOAuthStatus()">
+                                        🔄 Refresh Status
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row" id="oauthPlatformsGrid">
+                                        <!-- Etsy -->
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(234, 88, 12, 0.3);">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f56400, #ff6d00); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                                            🏪
+                                                        </div>
+                                                        <div class="ms-3">
+                                                            <h6 class="mb-0" style="color: #f97316;">Etsy</h6>
+                                                            <small class="text-muted">Handmade Marketplace</small>
+                                                        </div>
+                                                        <div class="ms-auto">
+                                                            <span class="badge" id="etsyStatus" style="background: rgba(148, 163, 184, 0.3); color: #94a3b8;">Not Connected</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="small text-muted mb-3">
+                                                        Sell AI art prints, digital downloads, and custom products.
+                                                    </div>
+                                                    <div id="etsyAccountInfo" style="display: none;" class="mb-3">
+                                                        <div class="d-flex justify-content-between small" style="color: #94a3b8;">
+                                                            <span>Shop:</span>
+                                                            <span id="etsyShopName" style="color: #22c55e;">-</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between small" style="color: #94a3b8;">
+                                                            <span>Listings:</span>
+                                                            <span id="etsyListingCount">0</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm flex-grow-1" id="etsyConnectBtn" onclick="connectOAuthPlatform('etsy')" style="background: linear-gradient(135deg, #f56400, #ff6d00); border: none; color: white;">
+                                                            🔗 Connect with Etsy
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" id="etsyDisconnectBtn" onclick="disconnectOAuthPlatform('etsy')" style="display: none;">
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Shutterstock -->
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(239, 68, 68, 0.3);">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #ee2222, #ff4444); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                                            📸
+                                                        </div>
+                                                        <div class="ms-3">
+                                                            <h6 class="mb-0" style="color: #ef4444;">Shutterstock</h6>
+                                                            <small class="text-muted">Stock Content</small>
+                                                        </div>
+                                                        <div class="ms-auto">
+                                                            <span class="badge" id="shutterstockStatus" style="background: rgba(148, 163, 184, 0.3); color: #94a3b8;">Not Connected</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="small text-muted mb-3">
+                                                        Sell stock photos, vectors, and illustrations worldwide.
+                                                    </div>
+                                                    <div id="shutterstockAccountInfo" style="display: none;" class="mb-3">
+                                                        <div class="d-flex justify-content-between small" style="color: #94a3b8;">
+                                                            <span>Contributor:</span>
+                                                            <span id="shutterstockContributor" style="color: #22c55e;">-</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between small" style="color: #94a3b8;">
+                                                            <span>Portfolio:</span>
+                                                            <span id="shutterstockPortfolioCount">0 items</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm flex-grow-1" id="shutterstockConnectBtn" onclick="connectOAuthPlatform('shutterstock')" style="background: linear-gradient(135deg, #ee2222, #ff4444); border: none; color: white;">
+                                                            🔗 Connect with Shutterstock
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" id="shutterstockDisconnectBtn" onclick="disconnectOAuthPlatform('shutterstock')" style="display: none;">
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gumroad -->
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #ff90e8, #ec4899); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                                            🛍️
+                                                        </div>
+                                                        <div class="ms-3">
+                                                            <h6 class="mb-0" style="color: #ec4899;">Gumroad</h6>
+                                                            <small class="text-muted">Digital Products</small>
+                                                        </div>
+                                                        <div class="ms-auto">
+                                                            <span class="badge" id="gumroadStatus" style="background: rgba(148, 163, 184, 0.3); color: #94a3b8;">Not Connected</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="small text-muted mb-3">
+                                                        Sell digital downloads, courses, and memberships directly.
+                                                    </div>
+                                                    <div id="gumroadAccountInfo" style="display: none;" class="mb-3">
+                                                        <div class="d-flex justify-content-between small" style="color: #94a3b8;">
+                                                            <span>Creator:</span>
+                                                            <span id="gumroadCreatorName" style="color: #22c55e;">-</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between small" style="color: #94a3b8;">
+                                                            <span>Products:</span>
+                                                            <span id="gumroadProductCount">0</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm flex-grow-1" id="gumroadConnectBtn" onclick="connectOAuthPlatform('gumroad')" style="background: linear-gradient(135deg, #ff90e8, #ec4899); border: none; color: white;">
+                                                            🔗 Connect with Gumroad
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" id="gumroadDisconnectBtn" onclick="disconnectOAuthPlatform('gumroad')" style="display: none;">
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END OAuth Platform Connection Cards -->
+
+                    <!-- ============================================================ -->
+                    <!-- Session 231: Revenue Dashboard with Charts                   -->
+                    <!-- ============================================================ -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(16, 185, 129, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <h5 class="mb-0" style="color: #10b981;">💰 Revenue Dashboard</h5>
+                                    <div class="d-flex gap-2">
+                                        <select class="form-select form-select-sm" id="revenuePeriodSelect" onchange="loadRevenueDashboard()" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: white; width: auto;">
+                                            <option value="7">Last 7 days</option>
+                                            <option value="30" selected>Last 30 days</option>
+                                            <option value="90">Last 90 days</option>
+                                            <option value="365">This Year</option>
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-success" onclick="exportRevenueData()">
+                                            📊 Export
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Revenue Stats Row -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-3">
+                                            <div class="p-3 rounded" style="background: rgba(16, 185, 129, 0.15); border-left: 4px solid #10b981;">
+                                                <div class="small text-muted">Total Revenue</div>
+                                                <div class="h4 mb-0" style="color: #10b981;" id="dashboardTotalRevenue">$0.00</div>
+                                                <div class="small" id="revenueTrend" style="color: #22c55e;">-</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3 rounded" style="background: rgba(59, 130, 246, 0.15); border-left: 4px solid #3b82f6;">
+                                                <div class="small text-muted">Net Earnings</div>
+                                                <div class="h4 mb-0" style="color: #3b82f6;" id="dashboardNetRevenue">$0.00</div>
+                                                <div class="small text-muted" id="platformFees">After fees</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3 rounded" style="background: rgba(251, 191, 36, 0.15); border-left: 4px solid #fbbf24;">
+                                                <div class="small text-muted">Items Sold</div>
+                                                <div class="h4 mb-0" style="color: #fbbf24;" id="dashboardItemsSold">0</div>
+                                                <div class="small text-muted" id="avgItemPrice">Avg: $0.00</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3 rounded" style="background: rgba(139, 92, 246, 0.15); border-left: 4px solid #8b5cf6;">
+                                                <div class="small text-muted">Conversion Rate</div>
+                                                <div class="h4 mb-0" style="color: #8b5cf6;" id="dashboardConversionRate">0%</div>
+                                                <div class="small text-muted" id="viewsCount">0 views</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Charts Row -->
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.03);">
+                                                <h6 class="mb-3" style="color: #94a3b8;">Revenue Over Time</h6>
+                                                <canvas id="revenueTimeChart" height="200"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.03);">
+                                                <h6 class="mb-3" style="color: #94a3b8;">Revenue by Platform</h6>
+                                                <canvas id="revenuePlatformChart" height="200"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Revenue Goals -->
+                                    <div class="row mt-4">
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.03);">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h6 class="mb-0" style="color: #94a3b8;">Monthly Goal</h6>
+                                                    <button class="btn btn-sm btn-link p-0" onclick="setRevenueGoal('monthly')" style="color: #fbbf24;">Set Goal</button>
+                                                </div>
+                                                <div class="progress mb-2" style="height: 20px; background: rgba(255, 255, 255, 0.1);">
+                                                    <div class="progress-bar" id="monthlyGoalProgress" role="progressbar" style="width: 0%; background: linear-gradient(135deg, #fbbf24, #f59e0b);"></div>
+                                                </div>
+                                                <div class="d-flex justify-content-between small">
+                                                    <span id="monthlyGoalCurrent" style="color: #10b981;">$0</span>
+                                                    <span id="monthlyGoalTarget" style="color: #94a3b8;">Goal: $0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.03);">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h6 class="mb-0" style="color: #94a3b8;">Yearly Goal</h6>
+                                                    <button class="btn btn-sm btn-link p-0" onclick="setRevenueGoal('yearly')" style="color: #fbbf24;">Set Goal</button>
+                                                </div>
+                                                <div class="progress mb-2" style="height: 20px; background: rgba(255, 255, 255, 0.1);">
+                                                    <div class="progress-bar" id="yearlyGoalProgress" role="progressbar" style="width: 0%; background: linear-gradient(135deg, #10b981, #059669);"></div>
+                                                </div>
+                                                <div class="d-flex justify-content-between small">
+                                                    <span id="yearlyGoalCurrent" style="color: #10b981;">$0</span>
+                                                    <span id="yearlyGoalTarget" style="color: #94a3b8;">Goal: $0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Revenue Forecast -->
+                                    <div class="row mt-4">
+                                        <div class="col-12">
+                                            <div class="p-3 rounded" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1" style="color: #3b82f6;">📈 AI Revenue Forecast</h6>
+                                                        <small class="text-muted">Based on your historical performance</small>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <div id="forecastNextMonth" class="h5 mb-0" style="color: #3b82f6;">$0</div>
+                                                        <small class="text-muted">Projected next month</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END Revenue Dashboard -->
+
+                    <!-- ============================================================ -->
+                    <!-- Session 231: Quick Actions Bar                               -->
+                    <!-- ============================================================ -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                                <button class="btn btn-lg" onclick="showAutoDistributeModal()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white; padding: 12px 24px;">
+                                    🚀 Auto-Distribute Content
+                                </button>
+                                <button class="btn btn-lg" onclick="showBatchUploadModal()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; color: white; padding: 12px 24px;">
+                                    📦 Batch Upload
+                                </button>
+                                <button class="btn btn-lg" onclick="showScheduleModal()" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; color: white; padding: 12px 24px;">
+                                    📅 Schedule Distribution
+                                </button>
+                                <button class="btn btn-lg" onclick="showTemplatesModal()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 12px 24px;">
+                                    📋 Distribution Templates
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END Quick Actions Bar -->
+
                     <div class="row">
                         <!-- Platforms List -->
                         <div class="col-lg-8">
@@ -40372,11 +40664,1100 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (distributionTab) {
                 distributionTab.addEventListener('shown.bs.tab', function() {
                     loadDistributionData();
+                    refreshOAuthStatus();
+                    loadRevenueDashboard();
                 });
             }
         });
 
         // END Session 229: Distribution JavaScript
+        // ============================================================
+
+        // ============================================================
+        // Session 231: Frontend Enhancement JavaScript Functions
+        // OAuth, Revenue Dashboard, Auto-Distribute, Batch Upload
+        // ============================================================
+
+        // Chart instances
+        let revenueTimeChartInstance = null;
+        let revenuePlatformChartInstance = null;
+
+        // Connect to OAuth platform
+        async function connectOAuthPlatform(platform) {
+            try {
+                const response = await fetch(`/api/distribution/oauth/${platform}/connect/`);
+                const data = await response.json();
+
+                if (data.success && data.auth_url) {
+                    // Open OAuth flow in new window
+                    const authWindow = window.open(
+                        data.auth_url,
+                        `${platform}_oauth`,
+                        'width=600,height=700,scrollbars=yes'
+                    );
+
+                    // Store state for verification
+                    sessionStorage.setItem(`${platform}_oauth_state`, data.state);
+
+                    // Poll for completion
+                    const pollInterval = setInterval(async () => {
+                        if (authWindow.closed) {
+                            clearInterval(pollInterval);
+                            // Check if connection was successful
+                            await refreshOAuthStatus();
+                        }
+                    }, 1000);
+
+                    showToast(`${platform} OAuth`, 'OAuth window opened. Complete authorization to connect.', 'info');
+                } else {
+                    showToast('Connection Error', data.error || 'Failed to start OAuth flow', 'error');
+                }
+            } catch (error) {
+                console.error('OAuth connect error:', error);
+                showToast('Connection Error', 'Failed to connect to platform', 'error');
+            }
+        }
+
+        // Disconnect from OAuth platform
+        async function disconnectOAuthPlatform(platform) {
+            if (!confirm(`Disconnect from ${platform}? This will revoke access.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/distribution/oauth/${platform}/disconnect/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Disconnected', `Successfully disconnected from ${platform}`, 'success');
+                    await refreshOAuthStatus();
+                } else {
+                    showToast('Error', data.error || 'Failed to disconnect', 'error');
+                }
+            } catch (error) {
+                console.error('Disconnect error:', error);
+                showToast('Error', 'Failed to disconnect from platform', 'error');
+            }
+        }
+
+        // Refresh OAuth status for all platforms
+        async function refreshOAuthStatus() {
+            try {
+                const response = await fetch('/api/distribution/integrations/');
+                const data = await response.json();
+
+                if (data.success && data.integrations) {
+                    // Update each platform status
+                    for (const [platform, info] of Object.entries(data.integrations)) {
+                        const statusEl = document.getElementById(`${platform}Status`);
+                        const accountInfoEl = document.getElementById(`${platform}AccountInfo`);
+                        const connectBtn = document.getElementById(`${platform}ConnectBtn`);
+                        const disconnectBtn = document.getElementById(`${platform}DisconnectBtn`);
+
+                        if (statusEl) {
+                            if (info.connected) {
+                                statusEl.textContent = 'Connected';
+                                statusEl.style.background = 'rgba(34, 197, 94, 0.3)';
+                                statusEl.style.color = '#22c55e';
+
+                                if (accountInfoEl) accountInfoEl.style.display = 'block';
+                                if (connectBtn) {
+                                    connectBtn.textContent = '✓ Connected';
+                                    connectBtn.disabled = true;
+                                    connectBtn.style.opacity = '0.7';
+                                }
+                                if (disconnectBtn) disconnectBtn.style.display = 'block';
+
+                                // Update account-specific info
+                                if (platform === 'etsy' && info.shop_name) {
+                                    const shopName = document.getElementById('etsyShopName');
+                                    if (shopName) shopName.textContent = info.shop_name;
+                                }
+                            } else {
+                                statusEl.textContent = 'Not Connected';
+                                statusEl.style.background = 'rgba(148, 163, 184, 0.3)';
+                                statusEl.style.color = '#94a3b8';
+
+                                if (accountInfoEl) accountInfoEl.style.display = 'none';
+                                if (connectBtn) {
+                                    connectBtn.textContent = `🔗 Connect with ${info.name}`;
+                                    connectBtn.disabled = false;
+                                    connectBtn.style.opacity = '1';
+                                }
+                                if (disconnectBtn) disconnectBtn.style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing OAuth status:', error);
+            }
+        }
+
+        // Load Revenue Dashboard data
+        async function loadRevenueDashboard() {
+            const days = document.getElementById('revenuePeriodSelect')?.value || 30;
+
+            try {
+                const response = await fetch(`/api/distribution/revenue/dashboard/?days=${days}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.dashboard;
+
+                    // Update stat cards
+                    document.getElementById('dashboardTotalRevenue').textContent = `$${(stats.total_revenue || 0).toFixed(2)}`;
+                    document.getElementById('dashboardNetRevenue').textContent = `$${(stats.net_revenue || 0).toFixed(2)}`;
+                    document.getElementById('dashboardItemsSold').textContent = stats.items_sold || 0;
+                    document.getElementById('dashboardConversionRate').textContent = `${(stats.conversion_rate || 0).toFixed(1)}%`;
+
+                    // Update trend
+                    const trendEl = document.getElementById('revenueTrend');
+                    if (stats.trend) {
+                        const trendIcon = stats.trend > 0 ? '↑' : stats.trend < 0 ? '↓' : '→';
+                        const trendColor = stats.trend > 0 ? '#22c55e' : stats.trend < 0 ? '#ef4444' : '#94a3b8';
+                        trendEl.innerHTML = `<span style="color: ${trendColor}">${trendIcon} ${Math.abs(stats.trend).toFixed(1)}% vs last period</span>`;
+                    }
+
+                    // Update additional stats
+                    if (stats.avg_item_price) {
+                        document.getElementById('avgItemPrice').textContent = `Avg: $${stats.avg_item_price.toFixed(2)}`;
+                    }
+                    if (stats.total_views) {
+                        document.getElementById('viewsCount').textContent = `${stats.total_views} views`;
+                    }
+                    if (stats.platform_fees) {
+                        document.getElementById('platformFees').textContent = `Fees: $${stats.platform_fees.toFixed(2)}`;
+                    }
+
+                    // Update charts
+                    if (stats.daily_revenue) {
+                        renderRevenueTimeChart(stats.daily_revenue);
+                    }
+                    if (stats.by_platform) {
+                        renderRevenuePlatformChart(stats.by_platform);
+                    }
+
+                    // Load goals
+                    await loadRevenueGoals();
+
+                    // Load forecast
+                    await loadRevenueForecast();
+                }
+            } catch (error) {
+                console.error('Error loading revenue dashboard:', error);
+            }
+        }
+
+        // Render revenue over time chart
+        function renderRevenueTimeChart(dailyData) {
+            const ctx = document.getElementById('revenueTimeChart')?.getContext('2d');
+            if (!ctx) return;
+
+            // Destroy existing chart
+            if (revenueTimeChartInstance) {
+                revenueTimeChartInstance.destroy();
+            }
+
+            const labels = dailyData.map(d => d.date);
+            const values = dailyData.map(d => d.revenue);
+
+            revenueTimeChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenue',
+                        data: values,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#10b981',
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: value => `$${value}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render revenue by platform chart
+        function renderRevenuePlatformChart(platformData) {
+            const ctx = document.getElementById('revenuePlatformChart')?.getContext('2d');
+            if (!ctx) return;
+
+            // Destroy existing chart
+            if (revenuePlatformChartInstance) {
+                revenuePlatformChartInstance.destroy();
+            }
+
+            const labels = Object.keys(platformData);
+            const values = Object.values(platformData);
+            const colors = [
+                '#f97316', '#22c55e', '#3b82f6', '#ec4899',
+                '#fbbf24', '#8b5cf6', '#06b6d4', '#ef4444'
+            ];
+
+            revenuePlatformChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 10 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load revenue goals
+        async function loadRevenueGoals() {
+            try {
+                const response = await fetch('/api/distribution/revenue/goals/');
+                const data = await response.json();
+
+                if (data.success && data.goals) {
+                    const goals = data.goals;
+
+                    // Monthly goal
+                    if (goals.monthly) {
+                        const progress = Math.min((goals.monthly.current / goals.monthly.target) * 100, 100);
+                        document.getElementById('monthlyGoalProgress').style.width = `${progress}%`;
+                        document.getElementById('monthlyGoalCurrent').textContent = `$${goals.monthly.current.toFixed(2)}`;
+                        document.getElementById('monthlyGoalTarget').textContent = `Goal: $${goals.monthly.target.toFixed(2)}`;
+                    }
+
+                    // Yearly goal
+                    if (goals.yearly) {
+                        const progress = Math.min((goals.yearly.current / goals.yearly.target) * 100, 100);
+                        document.getElementById('yearlyGoalProgress').style.width = `${progress}%`;
+                        document.getElementById('yearlyGoalCurrent').textContent = `$${goals.yearly.current.toFixed(2)}`;
+                        document.getElementById('yearlyGoalTarget').textContent = `Goal: $${goals.yearly.target.toFixed(2)}`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading revenue goals:', error);
+            }
+        }
+
+        // Load revenue forecast
+        async function loadRevenueForecast() {
+            try {
+                const response = await fetch('/api/distribution/revenue/forecast/');
+                const data = await response.json();
+
+                if (data.success && data.forecast) {
+                    document.getElementById('forecastNextMonth').textContent =
+                        `$${(data.forecast.next_month || 0).toFixed(2)}`;
+                }
+            } catch (error) {
+                console.error('Error loading forecast:', error);
+            }
+        }
+
+        // Set revenue goal
+        function setRevenueGoal(type) {
+            const currentGoal = type === 'monthly' ?
+                document.getElementById('monthlyGoalTarget').textContent.replace('Goal: $', '') :
+                document.getElementById('yearlyGoalTarget').textContent.replace('Goal: $', '');
+
+            const newGoal = prompt(`Set ${type} revenue goal:`, currentGoal);
+            if (newGoal && !isNaN(parseFloat(newGoal))) {
+                saveRevenueGoal(type, parseFloat(newGoal));
+            }
+        }
+
+        // Save revenue goal to API
+        async function saveRevenueGoal(type, amount) {
+            try {
+                const body = {};
+                body[`${type}_goal`] = amount;
+
+                const response = await fetch('/api/distribution/revenue/goals/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Goal Updated', `${type} goal set to $${amount}`, 'success');
+                    loadRevenueGoals();
+                }
+            } catch (error) {
+                console.error('Error saving goal:', error);
+            }
+        }
+
+        // Export revenue data
+        async function exportRevenueData() {
+            try {
+                const days = document.getElementById('revenuePeriodSelect')?.value || 30;
+                const response = await fetch(`/api/distribution/revenue/export/?days=${days}&format=csv`);
+                const data = await response.json();
+
+                if (data.success && data.download_url) {
+                    window.open(data.download_url, '_blank');
+                } else {
+                    // If no actual file, show the data
+                    showToast('Export', 'Revenue data prepared for export', 'info');
+                }
+            } catch (error) {
+                console.error('Error exporting:', error);
+                showToast('Export Error', 'Failed to export revenue data', 'error');
+            }
+        }
+
+        // Show Auto-Distribute Modal
+        function showAutoDistributeModal() {
+            const modalHtml = `
+                <div class="modal fade" id="autoDistributeModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content" style="background: #1e293b; border: 2px solid rgba(139, 92, 246, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                <h5 class="modal-title" style="color: #a78bfa;">🚀 Auto-Distribute Content</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Content Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label" style="color: #a78bfa;">Select Content</label>
+                                    <select class="form-select" id="autoDistContent" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                                        <option value="">Choose from your gallery...</option>
+                                        <option value="recent">Most Recent Creation</option>
+                                        <option value="select">Select from History</option>
+                                    </select>
+                                </div>
+
+                                <!-- Title & Description -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Title</label>
+                                        <input type="text" class="form-control" id="autoDistTitle" placeholder="Product title" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Content Type</label>
+                                        <select class="form-select" id="autoDistType" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                                            <option value="image">Image / Art</option>
+                                            <option value="digital_download">Digital Download</option>
+                                            <option value="print">Print / Poster</option>
+                                            <option value="template">Template / Asset</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control" id="autoDistDescription" rows="3" placeholder="Product description..." style="background: rgba(255, 255, 255, 0.1); border-color: rgba(139, 92, 246, 0.3); color: white;"></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Tags (comma-separated)</label>
+                                    <input type="text" class="form-control" id="autoDistTags" placeholder="ai-art, digital, abstract" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(139, 92, 246, 0.3); color: white;">
+                                </div>
+
+                                <!-- Platform Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label" style="color: #a78bfa;">Select Platforms</label>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platEtsy" value="etsy">
+                                                <label class="form-check-label" for="platEtsy">🏪 Etsy</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platGumroad" value="gumroad">
+                                                <label class="form-check-label" for="platGumroad">🛍️ Gumroad</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platShutterstock" value="shutterstock">
+                                                <label class="form-check-label" for="platShutterstock">📸 Shutterstock</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mt-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platRedbubble" value="redbubble">
+                                                <label class="form-check-label" for="platRedbubble">🎨 Redbubble</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mt-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platSociety6" value="society6">
+                                                <label class="form-check-label" for="platSociety6">🖼️ Society6</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mt-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platAll" value="all" onchange="toggleAllPlatforms(this)">
+                                                <label class="form-check-label" for="platAll"><strong>Select All</strong></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pricing -->
+                                <div class="mb-4 p-3 rounded" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <label class="form-label" style="color: #10b981;">💰 Pricing</label>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="small text-muted">Etsy Price</label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #94a3b8;">$</span>
+                                                <input type="number" class="form-control" id="priceEtsy" value="29.99" step="0.01" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="small text-muted">Gumroad Price</label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #94a3b8;">$</span>
+                                                <input type="number" class="form-control" id="priceGumroad" value="9.99" step="0.01" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="small text-muted">Other Platforms</label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #94a3b8;">$</span>
+                                                <input type="number" class="form-control" id="priceOther" value="19.99" step="0.01" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(16, 185, 129, 0.3); color: white;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Schedule -->
+                                <div class="mb-3">
+                                    <label class="form-label" style="color: #fbbf24;">📅 Schedule</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <select class="form-select" id="autoDistSchedule" onchange="toggleScheduleOptions()" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(251, 191, 36, 0.3); color: white;">
+                                                <option value="immediate">Distribute Immediately</option>
+                                                <option value="scheduled">Schedule for Later</option>
+                                                <option value="optimal">Optimal Time (AI)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6" id="scheduleDateContainer" style="display: none;">
+                                            <input type="datetime-local" class="form-control" id="autoDistDateTime" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(251, 191, 36, 0.3); color: white;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(139, 92, 246, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" onclick="executeAutoDistribute()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white;">
+                                    🚀 Start Distribution
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal
+            const existing = document.getElementById('autoDistributeModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('autoDistributeModal'));
+            modal.show();
+        }
+
+        // Toggle all platforms checkbox
+        function toggleAllPlatforms(checkbox) {
+            const checkboxes = document.querySelectorAll('#autoDistributeModal .form-check-input:not(#platAll)');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        }
+
+        // Toggle schedule date picker
+        function toggleScheduleOptions() {
+            const schedule = document.getElementById('autoDistSchedule').value;
+            const dateContainer = document.getElementById('scheduleDateContainer');
+            dateContainer.style.display = schedule === 'scheduled' ? 'block' : 'none';
+        }
+
+        // Execute auto-distribution
+        async function executeAutoDistribute() {
+            const title = document.getElementById('autoDistTitle').value;
+            const description = document.getElementById('autoDistDescription').value;
+            const contentType = document.getElementById('autoDistType').value;
+            const tags = document.getElementById('autoDistTags').value.split(',').map(t => t.trim()).filter(t => t);
+
+            // Get selected platforms
+            const platforms = [];
+            if (document.getElementById('platAll').checked) {
+                platforms.push('all');
+            } else {
+                ['platEtsy', 'platGumroad', 'platShutterstock', 'platRedbubble', 'platSociety6'].forEach(id => {
+                    const cb = document.getElementById(id);
+                    if (cb && cb.checked) platforms.push(cb.value);
+                });
+            }
+
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+            if (platforms.length === 0) {
+                alert('Please select at least one platform');
+                return;
+            }
+
+            // Get pricing
+            const pricing = {
+                etsy: parseFloat(document.getElementById('priceEtsy').value) || 29.99,
+                gumroad: parseFloat(document.getElementById('priceGumroad').value) || 9.99,
+                default: parseFloat(document.getElementById('priceOther').value) || 19.99
+            };
+
+            // Get schedule
+            const scheduleType = document.getElementById('autoDistSchedule').value;
+            const schedule = { type: scheduleType };
+            if (scheduleType === 'scheduled') {
+                schedule.datetime = document.getElementById('autoDistDateTime').value;
+            }
+
+            try {
+                const response = await fetch('/api/distribution/auto/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content_type: contentType,
+                        title: title,
+                        description: description,
+                        tags: tags,
+                        platforms: platforms,
+                        pricing: pricing,
+                        schedule: schedule
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('autoDistributeModal')).hide();
+                    showToast('Distribution Started!', `Content queued for ${data.platforms_count || platforms.length} platforms`, 'success');
+                    loadDistributionData();
+                } else {
+                    showToast('Error', data.error || 'Failed to start distribution', 'error');
+                }
+            } catch (error) {
+                console.error('Auto-distribute error:', error);
+                showToast('Error', 'Failed to start distribution', 'error');
+            }
+        }
+
+        // Show Batch Upload Modal
+        function showBatchUploadModal() {
+            const modalHtml = `
+                <div class="modal fade" id="batchUploadModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content" style="background: #1e293b; border: 2px solid rgba(59, 130, 246, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(59, 130, 246, 0.3);">
+                                <h5 class="modal-title" style="color: #3b82f6;">📦 Batch Upload</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- File Selection -->
+                                <div class="mb-4 p-4 text-center rounded" id="batchDropZone" style="border: 2px dashed rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.1);">
+                                    <div style="font-size: 48px;">📁</div>
+                                    <p class="mb-2" style="color: #3b82f6;">Drag & drop files here or click to browse</p>
+                                    <small class="text-muted">Supports images, videos, audio (max 50 files)</small>
+                                    <input type="file" id="batchFileInput" multiple accept="image/*,video/*,audio/*" style="display: none;" onchange="handleBatchFiles(this.files)">
+                                </div>
+
+                                <!-- Selected Files List -->
+                                <div class="mb-4" id="batchFilesList" style="display: none;">
+                                    <h6 style="color: #94a3b8;">Selected Files</h6>
+                                    <div id="batchFilesContainer" style="max-height: 200px; overflow-y: auto;"></div>
+                                </div>
+
+                                <!-- Batch Settings -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Target Platform</label>
+                                        <select class="form-select" id="batchPlatform" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(59, 130, 246, 0.3); color: white;">
+                                            <option value="etsy">Etsy</option>
+                                            <option value="gumroad">Gumroad</option>
+                                            <option value="shutterstock">Shutterstock</option>
+                                            <option value="all">All Connected Platforms</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Base Price</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #94a3b8;">$</span>
+                                            <input type="number" class="form-control" id="batchPrice" value="19.99" step="0.01" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(59, 130, 246, 0.3); color: white;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Default Tags</label>
+                                    <input type="text" class="form-control" id="batchTags" placeholder="ai-generated, digital-art" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(59, 130, 246, 0.3); color: white;">
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="batchStaggered" checked>
+                                    <label class="form-check-label" for="batchStaggered">
+                                        Stagger uploads (1 minute intervals)
+                                    </label>
+                                </div>
+
+                                <!-- Upload Progress -->
+                                <div id="batchProgressContainer" style="display: none;">
+                                    <h6 style="color: #94a3b8;">Upload Progress</h6>
+                                    <div class="progress mb-2" style="height: 25px; background: rgba(255, 255, 255, 0.1);">
+                                        <div class="progress-bar" id="batchProgressBar" role="progressbar" style="width: 0%; background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                                            <span id="batchProgressText">0%</span>
+                                        </div>
+                                    </div>
+                                    <div id="batchStatusText" class="small text-muted"></div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(59, 130, 246, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" id="batchUploadBtn" onclick="executeBatchUpload()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; color: white;">
+                                    📤 Upload All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existing = document.getElementById('batchUploadModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('batchUploadModal'));
+            modal.show();
+
+            // Setup drag and drop
+            const dropZone = document.getElementById('batchDropZone');
+            dropZone.addEventListener('click', () => document.getElementById('batchFileInput').click());
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#3b82f6'; });
+            dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(59, 130, 246, 0.5)'; });
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                dropZone.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                handleBatchFiles(e.dataTransfer.files);
+            });
+        }
+
+        // Batch files storage
+        let batchFilesArray = [];
+
+        // Handle batch file selection
+        function handleBatchFiles(files) {
+            batchFilesArray = Array.from(files).slice(0, 50); // Max 50 files
+
+            if (batchFilesArray.length === 0) return;
+
+            const container = document.getElementById('batchFilesContainer');
+            const list = document.getElementById('batchFilesList');
+
+            container.innerHTML = batchFilesArray.map((file, index) => `
+                <div class="d-flex justify-content-between align-items-center py-2 px-3 mb-2 rounded" style="background: rgba(255, 255, 255, 0.05);">
+                    <div>
+                        <span>${file.name}</span>
+                        <small class="text-muted ms-2">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeBatchFile(${index})">✕</button>
+                </div>
+            `).join('');
+
+            list.style.display = 'block';
+        }
+
+        // Remove file from batch
+        function removeBatchFile(index) {
+            batchFilesArray.splice(index, 1);
+            handleBatchFiles(batchFilesArray);
+            if (batchFilesArray.length === 0) {
+                document.getElementById('batchFilesList').style.display = 'none';
+            }
+        }
+
+        // Execute batch upload
+        async function executeBatchUpload() {
+            if (batchFilesArray.length === 0) {
+                alert('Please select files to upload');
+                return;
+            }
+
+            const platform = document.getElementById('batchPlatform').value;
+            const price = parseFloat(document.getElementById('batchPrice').value);
+            const tags = document.getElementById('batchTags').value.split(',').map(t => t.trim()).filter(t => t);
+            const staggered = document.getElementById('batchStaggered').checked;
+
+            // Show progress
+            document.getElementById('batchProgressContainer').style.display = 'block';
+            document.getElementById('batchUploadBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/distribution/batch/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        items: batchFilesArray.map(f => ({
+                            title: f.name.replace(/\.[^/.]+$/, ''),
+                            content_type: f.type.startsWith('image/') ? 'image' :
+                                          f.type.startsWith('video/') ? 'video' : 'audio'
+                        })),
+                        platform: platform,
+                        pricing: { default: price },
+                        tags: tags,
+                        staggered: staggered
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('batchProgressBar').style.width = '100%';
+                    document.getElementById('batchProgressText').textContent = '100%';
+                    document.getElementById('batchStatusText').textContent = `${batchFilesArray.length} items queued for distribution`;
+
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('batchUploadModal')).hide();
+                        showToast('Batch Upload Complete', `${batchFilesArray.length} items queued`, 'success');
+                        loadDistributionData();
+                    }, 1500);
+                } else {
+                    showToast('Error', data.error || 'Batch upload failed', 'error');
+                }
+            } catch (error) {
+                console.error('Batch upload error:', error);
+                showToast('Error', 'Batch upload failed', 'error');
+            }
+
+            document.getElementById('batchUploadBtn').disabled = false;
+        }
+
+        // Show Schedule Distribution Modal
+        function showScheduleModal() {
+            const modalHtml = `
+                <div class="modal fade" id="scheduleModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: #1e293b; border: 2px solid rgba(251, 191, 36, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                <h5 class="modal-title" style="color: #fbbf24;">📅 Schedule Distribution</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Content</label>
+                                    <select class="form-select" id="scheduleContent" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(251, 191, 36, 0.3); color: white;">
+                                        <option value="">Choose content...</option>
+                                        <option value="recent">Most Recent Creation</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Platform</label>
+                                    <select class="form-select" id="schedulePlatform" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(251, 191, 36, 0.3); color: white;">
+                                        <option value="etsy">Etsy</option>
+                                        <option value="gumroad">Gumroad</option>
+                                        <option value="shutterstock">Shutterstock</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Schedule Date & Time</label>
+                                    <input type="datetime-local" class="form-control" id="scheduleDateTime" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(251, 191, 36, 0.3); color: white;">
+                                </div>
+
+                                <!-- Scheduled Items List -->
+                                <div class="mt-4">
+                                    <h6 style="color: #94a3b8;">Upcoming Scheduled Distributions</h6>
+                                    <div id="scheduledItemsList" style="max-height: 200px; overflow-y: auto;">
+                                        <div class="text-center py-3 text-muted">
+                                            <small>No scheduled distributions</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(251, 191, 36, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn" onclick="saveSchedule()" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; color: #1e293b;">
+                                    📅 Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existing = document.getElementById('scheduleModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+            modal.show();
+
+            // Load scheduled items
+            loadScheduledDistributions();
+        }
+
+        // Load scheduled distributions
+        async function loadScheduledDistributions() {
+            try {
+                const response = await fetch('/api/distribution/scheduled/');
+                const data = await response.json();
+
+                const container = document.getElementById('scheduledItemsList');
+                if (data.success && data.scheduled && data.scheduled.length > 0) {
+                    container.innerHTML = data.scheduled.map(item => `
+                        <div class="d-flex justify-content-between align-items-center py-2 px-3 mb-2 rounded" style="background: rgba(255, 255, 255, 0.05);">
+                            <div>
+                                <span>${item.title}</span>
+                                <br>
+                                <small class="text-muted">${item.platform} • ${new Date(item.scheduled_time).toLocaleString()}</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="cancelScheduled('${item.id}')">Cancel</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading scheduled:', error);
+            }
+        }
+
+        // Save schedule
+        async function saveSchedule() {
+            const content = document.getElementById('scheduleContent').value;
+            const platform = document.getElementById('schedulePlatform').value;
+            const dateTime = document.getElementById('scheduleDateTime').value;
+
+            if (!dateTime) {
+                alert('Please select a date and time');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/distribution/auto/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content_type: 'image',
+                        title: 'Scheduled Distribution',
+                        platforms: [platform],
+                        schedule: {
+                            type: 'scheduled',
+                            datetime: dateTime
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Scheduled!', `Distribution scheduled for ${new Date(dateTime).toLocaleString()}`, 'success');
+                    loadScheduledDistributions();
+                }
+            } catch (error) {
+                console.error('Schedule error:', error);
+            }
+        }
+
+        // Cancel scheduled distribution
+        async function cancelScheduled(id) {
+            if (!confirm('Cancel this scheduled distribution?')) return;
+
+            try {
+                const response = await fetch(`/api/distribution/${id}/cancel/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Cancelled', 'Scheduled distribution cancelled', 'info');
+                    loadScheduledDistributions();
+                }
+            } catch (error) {
+                console.error('Cancel error:', error);
+            }
+        }
+
+        // Show Templates Modal
+        function showTemplatesModal() {
+            const modalHtml = `
+                <div class="modal fade" id="templatesModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content" style="background: #1e293b; border: 2px solid rgba(16, 185, 129, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                                <h5 class="modal-title" style="color: #10b981;">📋 Distribution Templates</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row" id="templatesGrid">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-success"></div>
+                                        <p class="mt-2">Loading templates...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(16, 185, 129, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existing = document.getElementById('templatesModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('templatesModal'));
+            modal.show();
+
+            // Load templates
+            loadDistributionTemplates();
+        }
+
+        // Load distribution templates
+        async function loadDistributionTemplates() {
+            try {
+                const response = await fetch('/api/distribution/templates/');
+                const data = await response.json();
+
+                const grid = document.getElementById('templatesGrid');
+                if (data.success && data.templates) {
+                    const templateIcons = {
+                        'ai_art_print': '🖼️',
+                        'digital_download': '💾',
+                        'stock_content': '📸',
+                        'nft_collection': '🎨',
+                        'freelance_portfolio': '💼'
+                    };
+
+                    grid.innerHTML = Object.entries(data.templates).map(([key, template]) => `
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span style="font-size: 32px;">${templateIcons[key] || '📋'}</span>
+                                        <div class="ms-3">
+                                            <h6 class="mb-0" style="color: #10b981;">${template.name}</h6>
+                                            <small class="text-muted">${template.platforms.join(', ')}</small>
+                                        </div>
+                                    </div>
+                                    <p class="small text-muted mb-3">${template.description || 'Optimized distribution settings for this content type.'}</p>
+                                    <div class="mb-3">
+                                        <small style="color: #94a3b8;">Suggested Pricing:</small>
+                                        <div class="d-flex flex-wrap gap-2 mt-1">
+                                            ${Object.entries(template.suggested_pricing || {}).map(([plat, price]) =>
+                                                `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">${plat}: $${price}</span>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-success w-100" onclick="applyTemplate('${key}')">
+                                        Apply Template
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading templates:', error);
+            }
+        }
+
+        // Apply distribution template
+        async function applyTemplate(templateKey) {
+            try {
+                const response = await fetch('/api/distribution/templates/apply/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ template: templateKey })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('templatesModal')).hide();
+                    showToast('Template Applied', `${data.template.name} settings applied`, 'success');
+
+                    // Open auto-distribute modal with template settings pre-filled
+                    showAutoDistributeModal();
+
+                    // Pre-fill form after modal is shown
+                    setTimeout(() => {
+                        if (data.template.platforms) {
+                            data.template.platforms.forEach(p => {
+                                const cb = document.getElementById(`plat${p.charAt(0).toUpperCase() + p.slice(1)}`);
+                                if (cb) cb.checked = true;
+                            });
+                        }
+                        if (data.template.suggested_pricing) {
+                            const pricing = data.template.suggested_pricing;
+                            if (pricing.etsy) document.getElementById('priceEtsy').value = pricing.etsy;
+                            if (pricing.gumroad) document.getElementById('priceGumroad').value = pricing.gumroad;
+                        }
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Error applying template:', error);
+            }
+        }
+
+        // END Session 231: Frontend Enhancement JavaScript
         // ============================================================
 
         // Update opportunity stats
