@@ -6696,6 +6696,50 @@
                         </div>
                     </div>
 
+                    <!-- Session 219: Agent Learning Section -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #a855f7;">🤖 Agent Learning</h5>
+                            <button class="btn btn-sm btn-outline-purple" style="border-color: #a855f7; color: #a855f7;" onclick="loadAgentLearning()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">Your AI agents learn from every interaction to personalize their behavior</p>
+
+                            <!-- Agent Learning Stats -->
+                            <div class="row mb-3" id="agent-learning-stats">
+                                <div class="col-4 text-center">
+                                    <h3 class="mb-0" id="agent-total-interactions" style="color: #a855f7;">0</h3>
+                                    <small class="text-muted">Interactions</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <h3 class="mb-0" id="agent-total-preferences" style="color: #22d3ee;">0</h3>
+                                    <small class="text-muted">Preferences</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <h3 class="mb-0" id="agent-total-agents" style="color: #34d399;">0</h3>
+                                    <small class="text-muted">Agents Active</small>
+                                </div>
+                            </div>
+
+                            <!-- Agent Preferences List -->
+                            <div id="agent-learning-list" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" style="color: #a855f7;" role="status"></div>
+                                    <p class="text-muted small mt-2">Loading agent learning data...</p>
+                                </div>
+                            </div>
+
+                            <!-- Share Learning Button -->
+                            <div class="mt-3 text-center">
+                                <button class="btn btn-sm btn-outline-success" onclick="shareAllAgentLearning()">
+                                    🔗 Share Learning Across Agents
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Preference History Section -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid #333;">
@@ -35141,6 +35185,178 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 alert('Failed to learn from project: ' + error.message);
             }
         }
+
+        // Session 219: Load Agent Learning Data
+        async function loadAgentLearning() {
+            const listEl = document.getElementById('agent-learning-list');
+
+            try {
+                // Load stats and all preferences in parallel
+                const [statsRes, prefsRes] = await Promise.all([
+                    fetch('/api/agent-learning/stats/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
+                    fetch('/api/agent-learning/all-preferences/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                ]);
+
+                const statsData = await statsRes.json();
+                const prefsData = await prefsRes.json();
+
+                // Update stats
+                if (statsData.success) {
+                    const stats = statsData.stats;
+                    document.getElementById('agent-total-interactions').textContent = stats.total_interactions || 0;
+                    document.getElementById('agent-total-preferences').textContent = stats.total_preferences || 0;
+                    document.getElementById('agent-total-agents').textContent = stats.agents_with_preferences || 0;
+                }
+
+                // Build preferences list
+                if (prefsData.success && Object.keys(prefsData.agents || {}).length > 0) {
+                    let html = '';
+                    const agentEmojis = {
+                        'image_generation_agent': '🎨',
+                        'video_generation_agent': '🎬',
+                        'audio_generation_agent': '🎵',
+                        'style_discovery_agent': '✨',
+                        'trend_analysis_agent': '📊',
+                        'content_strategy_agent': '📝',
+                        'design_assistant_agent': '🎯',
+                        'prompt_engineering_agent': '💡'
+                    };
+
+                    for (const [agentName, summary] of Object.entries(prefsData.agents)) {
+                        const emoji = agentEmojis[agentName] || '🤖';
+                        const displayName = agentName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(' Agent', '');
+                        const prefs = summary.preferences || {};
+                        const prefCount = Object.values(prefs).flat().length;
+
+                        if (prefCount > 0) {
+                            html += `
+                                <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(168, 85, 247, 0.1); border-radius: 8px; border-left: 3px solid #a855f7;">
+                                    <div>
+                                        <span class="me-2">${emoji}</span>
+                                        <strong class="text-light">${displayName}</strong>
+                                        <span class="badge bg-secondary ms-2">${prefCount} preferences</span>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-xs btn-outline-info me-1" onclick="showAgentContext('${agentName}')" title="View adaptive context">
+                                            👁️
+                                        </button>
+                                        <button class="btn btn-xs btn-outline-success" onclick="shareAgentLearning('${agentName}')" title="Share learning">
+                                            🔗
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Show top preferences for this agent
+                            for (const [category, prefList] of Object.entries(prefs)) {
+                                if (prefList.length > 0) {
+                                    const topPref = prefList[0];
+                                    html += `
+                                        <div class="ms-4 mb-2 small">
+                                            <span class="text-muted">${category}:</span>
+                                            <span class="text-info">${topPref.value}</span>
+                                            <span class="text-success ms-1">(${Math.round(topPref.confidence * 100)}% confidence)</span>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        }
+                    }
+
+                    if (html) {
+                        listEl.innerHTML = html;
+                    } else {
+                        listEl.innerHTML = '<p class="text-muted text-center py-3">No agent preferences learned yet. Start creating to teach your AI agents!</p>';
+                    }
+                } else {
+                    listEl.innerHTML = '<p class="text-muted text-center py-3">No agent preferences learned yet. Start creating to teach your AI agents!</p>';
+                }
+
+            } catch (error) {
+                console.error('Error loading agent learning:', error);
+                listEl.innerHTML = `<p class="text-danger text-center">Error loading agent learning data: ${error.message}</p>`;
+            }
+        }
+
+        // Session 219: Show Agent Adaptive Context
+        async function showAgentContext(agentName) {
+            try {
+                const response = await fetch(`/api/agent-learning/context/${agentName}/`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.success && data.context) {
+                    const displayName = agentName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                    alert(`Adaptive Context for ${displayName}:\n\n${data.context}`);
+                } else {
+                    alert(`No adaptive context learned yet for this agent.`);
+                }
+            } catch (error) {
+                console.error('Error loading agent context:', error);
+                alert('Error loading context: ' + error.message);
+            }
+        }
+
+        // Session 219: Share Agent Learning to Collaboration Hub
+        async function shareAgentLearning(agentName) {
+            try {
+                const response = await fetch(`/api/agent-learning/share/${agentName}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    const displayName = agentName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                    showNotification(`Shared ${displayName} learning with other agents!`, 'success');
+                } else {
+                    showNotification('Error sharing: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error sharing agent learning:', error);
+                showNotification('Error sharing: ' + error.message, 'error');
+            }
+        }
+
+        // Session 219: Share All Agent Learning
+        async function shareAllAgentLearning() {
+            try {
+                // Get all agents with preferences
+                const response = await fetch('/api/agent-learning/all-preferences/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.success && data.agents) {
+                    const agents = Object.keys(data.agents);
+                    let sharedCount = 0;
+
+                    for (const agentName of agents) {
+                        try {
+                            await fetch(`/api/agent-learning/share/${agentName}/`, {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': getCsrfToken() }
+                            });
+                            sharedCount++;
+                        } catch (e) {
+                            console.error(`Error sharing ${agentName}:`, e);
+                        }
+                    }
+
+                    showNotification(`Shared learning from ${sharedCount} agents with collaboration hub!`, 'success');
+                }
+            } catch (error) {
+                console.error('Error sharing all agent learning:', error);
+                showNotification('Error sharing: ' + error.message, 'error');
+            }
+        }
+
+        // Session 219: Load agent learning when preferences tab opens
+        document.getElementById('preferences-tab')?.addEventListener('shown.bs.tab', function() {
+            console.log('🧠 Preferences tab activated - loading agent learning...');
+            loadAgentLearning();
+        });
 
         // Session 206: Spider Status Dashboard
         document.getElementById('spiders-tab')?.addEventListener('shown.bs.tab', function() {
