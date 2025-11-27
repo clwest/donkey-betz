@@ -3944,3 +3944,326 @@ class AnalyticsAlert(models.Model):
 
     def __str__(self):
         return f"Alert: {self.name} ({self.metric_type} {self.operator} {self.threshold_value})"
+
+
+# =============================================================================
+# SESSION 227: PHASE 3 - TEAM POWER (Multi-Agent Collaboration)
+# =============================================================================
+
+class AgentRole(models.Model):
+    """
+    Session 227: Define specialized roles for agents in collaborative workflows.
+    Each role has specific capabilities and tool access.
+    """
+    ROLE_TYPES = [
+        ('designer', 'Designer - Creates visual content'),
+        ('researcher', 'Researcher - Gathers information'),
+        ('reviewer', 'Reviewer - Reviews and critiques work'),
+        ('writer', 'Writer - Creates written content'),
+        ('analyst', 'Analyst - Analyzes data and trends'),
+        ('strategist', 'Strategist - Plans and coordinates'),
+        ('optimizer', 'Optimizer - Improves and refines'),
+        ('communicator', 'Communicator - Handles messaging'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    role_type = models.CharField(max_length=50, choices=ROLE_TYPES)
+    description = models.TextField(blank=True)
+
+    # Capabilities - what this role can do
+    capabilities = models.JSONField(default=list, help_text='List of capability strings')
+    # e.g., ['image_generation', 'style_transfer', 'logo_design']
+
+    # Tools - which tools this role has access to
+    available_tools = models.JSONField(default=list, help_text='List of tool names this role can use')
+    # e.g., ['stability_ai', 'runway_ml', 'elevenlabs']
+
+    # Constraints - limits on what this role can do
+    constraints = models.JSONField(default=dict, help_text='Role-specific constraints')
+    # e.g., {'max_images_per_task': 10, 'requires_approval': False}
+
+    # System prompt additions for this role
+    role_prompt = models.TextField(blank=True, help_text='Additional system prompt for this role')
+
+    # Priority (higher = more important in team decisions)
+    priority = models.IntegerField(default=5)  # 1-10
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Agent Role'
+        verbose_name_plural = 'Agent Roles'
+        ordering = ['-priority', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.role_type})"
+
+
+class AgentTeam(models.Model):
+    """
+    Session 227: A team of agents working together on tasks.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+
+    # Team composition
+    agents = models.ManyToManyField('Agent', through='AgentTeamMembership', related_name='teams')
+
+    # Team lead (optional - coordinates the team)
+    lead_agent = models.ForeignKey('Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='led_teams')
+
+    # Team type
+    TEAM_TYPES = [
+        ('creative', 'Creative Team'),
+        ('research', 'Research Team'),
+        ('marketing', 'Marketing Team'),
+        ('content', 'Content Production Team'),
+        ('custom', 'Custom Team'),
+    ]
+    team_type = models.CharField(max_length=50, choices=TEAM_TYPES, default='custom')
+
+    # Team settings
+    settings = models.JSONField(default=dict)
+    # e.g., {'auto_assign': True, 'max_concurrent_tasks': 5}
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Agent Team'
+        verbose_name_plural = 'Agent Teams'
+
+    def __str__(self):
+        return f"{self.name} ({self.team_type})"
+
+
+class AgentTeamMembership(models.Model):
+    """
+    Session 227: Membership of an agent in a team with specific role.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    team = models.ForeignKey(AgentTeam, on_delete=models.CASCADE, related_name='memberships')
+    agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='team_memberships')
+    role = models.ForeignKey(AgentRole, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Membership settings
+    is_lead = models.BooleanField(default=False)
+    can_delegate = models.BooleanField(default=False)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['team', 'agent']
+        verbose_name = 'Agent Team Membership'
+        verbose_name_plural = 'Agent Team Memberships'
+
+    def __str__(self):
+        return f"{self.agent.name} in {self.team.name}"
+
+
+class AgentMessage(models.Model):
+    """
+    Session 227: Inter-agent communication messages.
+    Allows agents to communicate and coordinate with each other.
+    """
+    MESSAGE_TYPES = [
+        ('request', 'Task Request'),
+        ('response', 'Task Response'),
+        ('feedback', 'Feedback'),
+        ('handoff', 'Task Handoff'),
+        ('notification', 'Notification'),
+        ('question', 'Question'),
+        ('answer', 'Answer'),
+        ('status', 'Status Update'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Sender and receiver
+    sender_agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='sent_messages')
+    receiver_agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='received_messages')
+
+    # Message content
+    message_type = models.CharField(max_length=50, choices=MESSAGE_TYPES)
+    subject = models.CharField(max_length=255)
+    content = models.TextField()
+
+    # Attachments (references to content)
+    attachments = models.JSONField(default=list)
+    # e.g., [{'type': 'image', 'id': 'uuid'}, {'type': 'document', 'url': '...'}]
+
+    # Threading
+    parent_message = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='replies')
+    thread_id = models.UUIDField(default=uuid.uuid4)  # Groups related messages
+
+    # Context
+    task_context = models.JSONField(default=dict)
+    # e.g., {'workflow_id': 'uuid', 'opportunity_id': 'uuid'}
+
+    # Status
+    STATUS_CHOICES = [
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('read', 'Read'),
+        ('processed', 'Processed'),
+        ('failed', 'Failed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sent')
+
+    # Priority
+    priority = models.IntegerField(default=5)  # 1-10, higher = more urgent
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Agent Message'
+        verbose_name_plural = 'Agent Messages'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['thread_id']),
+            models.Index(fields=['sender_agent', 'created_at']),
+            models.Index(fields=['receiver_agent', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender_agent.name} -> {self.receiver_agent.name}: {self.subject[:50]}"
+
+
+class TeamWorkflow(models.Model):
+    """
+    Session 227: Collaborative workflows involving multiple agents.
+    """
+    WORKFLOW_STATUSES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+
+    # Team executing this workflow
+    team = models.ForeignKey(AgentTeam, on_delete=models.CASCADE, related_name='workflows')
+
+    # Related opportunity (optional)
+    opportunity = models.ForeignKey(Opportunity, on_delete=models.SET_NULL, null=True, blank=True, related_name='team_workflows')
+
+    # Workflow definition
+    workflow_template = models.CharField(max_length=100, blank=True)  # e.g., 'research_and_create_logos'
+    steps = models.JSONField(default=list)
+    # e.g., [
+    #   {'step': 1, 'agent_role': 'researcher', 'action': 'research_trends', 'status': 'completed'},
+    #   {'step': 2, 'agent_role': 'designer', 'action': 'create_concepts', 'status': 'in_progress'},
+    #   {'step': 3, 'agent_role': 'reviewer', 'action': 'review_designs', 'status': 'pending'},
+    # ]
+
+    # Current state
+    status = models.CharField(max_length=20, choices=WORKFLOW_STATUSES, default='draft')
+    current_step = models.IntegerField(default=0)
+    current_agent = models.ForeignKey('Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_workflows')
+
+    # Progress tracking
+    progress = models.IntegerField(default=0)  # 0-100%
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Results
+    results = models.JSONField(default=dict)
+    # e.g., {'images_created': 5, 'research_findings': {...}, 'review_score': 8.5}
+
+    # Errors and issues
+    errors = models.JSONField(default=list)
+
+    # Metadata
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Team Workflow'
+        verbose_name_plural = 'Team Workflows'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.status}) - {self.team.name}"
+
+    def advance_step(self):
+        """Move to the next step in the workflow"""
+        if self.current_step < len(self.steps) - 1:
+            self.current_step += 1
+            self.progress = int((self.current_step / len(self.steps)) * 100)
+            self.save()
+            return True
+        return False
+
+
+class TeamWorkflowStep(models.Model):
+    """
+    Session 227: Individual step execution in a team workflow.
+    """
+    STEP_STATUSES = [
+        ('pending', 'Pending'),
+        ('assigned', 'Assigned'),
+        ('in_progress', 'In Progress'),
+        ('review', 'In Review'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('skipped', 'Skipped'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workflow = models.ForeignKey(TeamWorkflow, on_delete=models.CASCADE, related_name='step_executions')
+
+    # Step definition
+    step_number = models.IntegerField()
+    step_name = models.CharField(max_length=100)
+    action = models.CharField(max_length=100)
+
+    # Assignment
+    assigned_agent = models.ForeignKey('Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_steps')
+    required_role = models.ForeignKey(AgentRole, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Execution
+    status = models.CharField(max_length=20, choices=STEP_STATUSES, default='pending')
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Input/Output
+    input_data = models.JSONField(default=dict)
+    output_data = models.JSONField(default=dict)
+
+    # Feedback from reviewers
+    review_score = models.FloatField(null=True, blank=True)  # 0-10
+    review_feedback = models.TextField(blank=True)
+    reviewer_agent = models.ForeignKey('Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_steps')
+
+    # Dependencies
+    depends_on = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='required_by')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Team Workflow Step'
+        verbose_name_plural = 'Team Workflow Steps'
+        ordering = ['workflow', 'step_number']
+
+    def __str__(self):
+        return f"Step {self.step_number}: {self.step_name} ({self.status})"
