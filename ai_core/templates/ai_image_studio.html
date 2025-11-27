@@ -1215,9 +1215,52 @@
             background: transparent;
             padding: 0;
         }
+
+        /* Session 226: Celebration Toast Animations */
+        @keyframes celebrationPop {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes celebrationFade {
+            from {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(0) rotateZ(0deg);
+            }
+            100% {
+                transform: translateY(100vh) rotateZ(720deg);
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Session 226: Active Opportunity Banner -->
+    <div id="activeOpportunityBanner" class="alert alert-info mb-0 d-none" style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999; border-radius: 0; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+        <span>🎯 Creating content for: <strong id="activeOppTitle">Opportunity</strong></span>
+        <button type="button" class="btn btn-sm btn-light ms-3" onclick="clearActiveOpportunity(); document.getElementById('activeOpportunityBanner').classList.add('d-none');">
+            ✕ Clear
+        </button>
+    </div>
+
     <!-- Page Wrapper for Sidebar Layout -->
     <div class="page-wrapper" style="display: flex; min-height: 100vh;">
         <!-- Main Content Area -->
@@ -8790,6 +8833,82 @@
             showNotification(message, typeMap[type] || type, duration);
         }
 
+        // Session 226: Celebration Toast with special effects
+        function showCelebrationToast(title, message, type = 'default') {
+            // Remove any existing celebration toast
+            const existing = document.querySelector('.celebration-toast');
+            if (existing) existing.remove();
+
+            // Create celebration container
+            const container = document.createElement('div');
+            container.className = 'celebration-toast';
+            container.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10000;
+                padding: 30px 50px;
+                border-radius: 16px;
+                text-align: center;
+                animation: celebrationPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                max-width: 90%;
+            `;
+
+            // Type-specific styling
+            if (type === 'first-revenue') {
+                container.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                container.style.color = 'white';
+            } else if (type === 'exceeded') {
+                container.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                container.style.color = 'white';
+            } else {
+                container.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                container.style.color = 'white';
+            }
+
+            container.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 10px;">${type === 'first-revenue' ? '🎉🎊🎉' : '🚀💰🚀'}</div>
+                <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 10px;">${title}</h3>
+                <p style="font-size: 16px; opacity: 0.9; margin: 0;">${message}</p>
+            `;
+
+            document.body.appendChild(container);
+
+            // Add confetti effect
+            createConfetti(type === 'first-revenue' ? 50 : 30);
+
+            // Auto-remove after delay
+            setTimeout(() => {
+                container.style.animation = 'celebrationFade 0.3s ease-out forwards';
+                setTimeout(() => container.remove(), 300);
+            }, 4000);
+        }
+
+        // Session 226: Confetti effect for celebrations
+        function createConfetti(count = 30) {
+            const colors = ['#f0f', '#0ff', '#ff0', '#f00', '#0f0', '#00f', '#fff'];
+
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.cssText = `
+                    position: fixed;
+                    width: ${Math.random() * 10 + 5}px;
+                    height: ${Math.random() * 10 + 5}px;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    left: ${Math.random() * 100}vw;
+                    top: -20px;
+                    z-index: 10001;
+                    border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+                    animation: confettiFall ${Math.random() * 2 + 2}s linear forwards;
+                    opacity: ${Math.random() * 0.5 + 0.5};
+                `;
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
         // Authenticated Fetch Helper
         async function authenticatedFetch(url, options = {}) {
             const defaultHeaders = {
@@ -9483,6 +9602,16 @@
 
                     showStatus('✅ Image generated successfully!', 'success');
                     displayImages(data, originalPrompt, finalPrompt, wasEnhanced);
+
+                    // Session 226: Auto-link to opportunity if active
+                    if (activeOpportunityForContent && data.images && data.images.length > 0) {
+                        // Get the first image ID (could be object with id or just url)
+                        const firstImage = data.images[0];
+                        const imageId = typeof firstImage === 'object' ? firstImage.id : null;
+                        if (imageId) {
+                            linkContentToOpportunity('image', imageId);
+                        }
+                    }
 
                     // Refresh Gallery to show the newly generated image
                     loadGallery();
@@ -38779,6 +38908,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
+        // Session 226: Track active opportunity for auto-linking content
+        let activeOpportunityForContent = null;
+
         // Act on an opportunity
         async function actOnOpportunity() {
             if (!currentOpportunityId) return;
@@ -38797,7 +38929,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const data = await response.json();
 
                 if (data.success) {
-                    showToast('Started working on opportunity!', 'success');
+                    // Session 226: Store the active opportunity for auto-linking
+                    activeOpportunityForContent = currentOpportunityId;
+
+                    // Show the active opportunity banner
+                    const banner = document.getElementById('activeOpportunityBanner');
+                    const titleEl = document.getElementById('activeOppTitle');
+                    titleEl.textContent = data.opportunity?.title || 'Active Opportunity';
+                    banner.classList.remove('d-none');
+
+                    showToast('Started working on opportunity! Any content you create will be linked automatically.', 'success');
+
                     bootstrap.Modal.getInstance(document.getElementById('opportunityModal'))?.hide();
                     loadOpportunities();
 
@@ -38815,6 +38957,42 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        // Session 226: Auto-link content to active opportunity
+        async function linkContentToOpportunity(contentType, contentId) {
+            if (!activeOpportunityForContent) return null;
+
+            try {
+                const response = await fetch(`/api/opportunities/${activeOpportunityForContent}/content/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content_type: contentType,
+                        [contentType === 'image' ? 'image_history_id' : 'video_history_id']: contentId
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Content linked to opportunity! 🔗`, 'success');
+                    return data;
+                }
+            } catch (error) {
+                console.error('Error linking content to opportunity:', error);
+            }
+            return null;
+        }
+
+        // Session 226: Clear active opportunity
+        function clearActiveOpportunity() {
+            if (activeOpportunityForContent) {
+                showToast('Active opportunity cleared', 'info');
+                activeOpportunityForContent = null;
             }
         }
 
@@ -38965,13 +39143,25 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const data = await response.json();
 
                 if (data.success) {
-                    showToast(`Revenue logged! Net: $${data.revenue?.net_amount?.toFixed(2) || amount.toFixed(2)}`, 'success');
-
-                    // Close modal
+                    // Close modal first
                     const revenueModal = bootstrap.Modal.getInstance(document.getElementById('logRevenueModal'));
                     if (revenueModal) revenueModal.hide();
 
-                    // Reload revenue stats
+                    // Session 226: Celebration toasts!
+                    const celebration = data.celebration || {};
+
+                    if (celebration.is_first_revenue) {
+                        // First revenue celebration - special effect!
+                        showCelebrationToast('🎉 First Revenue!', `You earned your first revenue from this opportunity! $${data.revenue?.net_amount?.toFixed(2)} logged.`, 'first-revenue');
+                    } else if (celebration.exceeds_estimate) {
+                        // Exceeded estimate celebration!
+                        showCelebrationToast('🚀 Exceeded Estimate!', `You've earned ${celebration.exceed_percentage}% MORE than the predicted $${celebration.estimated_revenue?.toFixed(2)}! Total: $${celebration.total_revenue?.toFixed(2)}`, 'exceeded');
+                    } else {
+                        // Standard success toast
+                        showToast(`Revenue logged! Net: $${data.revenue?.net_amount?.toFixed(2) || amount.toFixed(2)}`, 'success');
+                    }
+
+                    // Reload revenue stats and charts
                     loadRevenueStats();
                 } else {
                     showToast(`Error: ${data.error}`, 'error');
