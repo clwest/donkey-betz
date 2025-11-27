@@ -8308,6 +8308,30 @@
                     </div>
                 </div>
 
+                <!-- Session 225: Revenue Charts -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card" style="background: rgba(255,255,255,0.03); border-color: rgba(6, 182, 212, 0.3);">
+                            <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                                <h6 class="mb-0 text-info">📈 Revenue Trend (7 Days)</h6>
+                            </div>
+                            <div class="card-body" style="height: 200px;">
+                                <canvas id="revenueTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card" style="background: rgba(255,255,255,0.03); border-color: rgba(6, 182, 212, 0.3);">
+                            <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                                <h6 class="mb-0 text-info">🏪 Revenue by Platform</h6>
+                            </div>
+                            <div class="card-body" style="height: 200px;">
+                                <canvas id="revenuePlatformChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Controls -->
                 <div class="row mb-4">
                     <div class="col-md-3">
@@ -38500,11 +38524,22 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const modal = new bootstrap.Modal(modalEl);
                 modal.show();
 
-                const response = await fetch(`/api/opportunities/${oppId}/`);
-                const data = await response.json();
+                // Fetch opportunity details AND revenue history in parallel
+                const [oppResponse, revenueResponse] = await Promise.all([
+                    fetch(`/api/opportunities/${oppId}/`),
+                    fetch(`/api/opportunities/${oppId}/revenue/list/`)
+                ]);
+
+                const data = await oppResponse.json();
+                const revenueData = await revenueResponse.json();
 
                 if (data.success && data.opportunity) {
                     const opp = data.opportunity;
+                    const revenues = revenueData.success ? revenueData.revenues : [];
+                    const totalActual = revenues.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+                    const totalNet = revenues.reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+                    const predictionAccuracy = opp.estimated_revenue > 0 ? ((totalActual / parseFloat(opp.estimated_revenue)) * 100).toFixed(0) : '--';
+
                     titleEl.textContent = opp.title || 'Opportunity Details';
 
                     bodyEl.innerHTML = `
@@ -38613,6 +38648,59 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                         </div>
                                     </div>
                                 ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Session 225: Revenue Reality Section -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card" style="background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.3);">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.15); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                                        <h6 class="mb-0 text-info">💰 Revenue Reality</h6>
+                                        <span class="badge ${totalActual > 0 ? 'bg-success' : 'bg-secondary'}">${revenues.length} transactions</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center mb-3">
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">Estimated</small>
+                                                <strong class="text-warning">$${(parseFloat(opp.estimated_revenue) || 0).toFixed(2)}</strong>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">Actual</small>
+                                                <strong class="text-success">$${totalActual.toFixed(2)}</strong>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">Accuracy</small>
+                                                <strong class="${parseFloat(predictionAccuracy) >= 100 ? 'text-success' : parseFloat(predictionAccuracy) >= 75 ? 'text-warning' : 'text-danger'}">${predictionAccuracy}%</strong>
+                                            </div>
+                                        </div>
+                                        ${revenues.length > 0 ? `
+                                            <h6 class="text-info small mb-2">Transaction History</h6>
+                                            <div style="max-height: 150px; overflow-y: auto;">
+                                                ${revenues.map(r => `
+                                                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: rgba(6, 182, 212, 0.2) !important;">
+                                                        <div>
+                                                            <span class="badge bg-secondary me-2">${r.platform || 'direct'}</span>
+                                                            <small class="text-muted">${r.content_type || 'content'}</small>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <strong class="text-success">$${parseFloat(r.amount || 0).toFixed(2)}</strong>
+                                                            <small class="text-muted d-block">${new Date(r.sale_date || r.created_at).toLocaleDateString()}</small>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                            <div class="mt-2 pt-2 border-top" style="border-color: rgba(6, 182, 212, 0.3) !important;">
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="text-muted">Net Total (after fees):</span>
+                                                    <strong class="text-success">$${totalNet.toFixed(2)}</strong>
+                                                </div>
+                                            </div>
+                                        ` : `
+                                            <p class="text-muted text-center mb-0">No revenue logged yet. Click "Log Revenue" to record sales.</p>
+                                        `}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -38896,6 +38984,128 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // ============================================================
         // END SESSION 224: REVENUE REALITY FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 225: REVENUE CHARTS FUNCTIONS
+        // ============================================================
+
+        // Chart instances for revenue
+        let revenueCharts = {
+            trend: null,
+            platform: null
+        };
+
+        // Initialize revenue charts
+        async function initRevenueCharts() {
+            try {
+                const response = await fetch('/api/opportunities/revenue/stats/?days=7');
+                const data = await response.json();
+
+                if (!data.success) return;
+
+                // Destroy existing charts if any
+                if (revenueCharts.trend) revenueCharts.trend.destroy();
+                if (revenueCharts.platform) revenueCharts.platform.destroy();
+
+                // Revenue Trend Chart (Line)
+                const trendCtx = document.getElementById('revenueTrendChart');
+                if (trendCtx) {
+                    // Generate last 7 days labels
+                    const labels = [];
+                    const revenues = [];
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - i);
+                        labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+                        revenues.push(0); // Will be populated with real data when available
+                    }
+
+                    // If we have by_date data, use it
+                    if (data.by_date && data.by_date.length > 0) {
+                        data.by_date.forEach(item => {
+                            const dateStr = new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' });
+                            const idx = labels.indexOf(dateStr);
+                            if (idx >= 0) revenues[idx] = item.total || 0;
+                        });
+                    }
+
+                    revenueCharts.trend = new Chart(trendCtx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Revenue',
+                                data: revenues,
+                                borderColor: '#06b6d4',
+                                backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { color: '#9ca3af', callback: v => '$' + v },
+                                    grid: { color: 'rgba(255,255,255,0.1)' }
+                                },
+                                x: {
+                                    ticks: { color: '#9ca3af' },
+                                    grid: { display: false }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Revenue by Platform Chart (Doughnut)
+                const platformCtx = document.getElementById('revenuePlatformChart');
+                if (platformCtx) {
+                    const platforms = data.by_platform || [];
+                    const platformLabels = platforms.length > 0 ? platforms.map(p => p.platform || 'direct') : ['No data'];
+                    const platformData = platforms.length > 0 ? platforms.map(p => p.total || 0) : [1];
+                    const platformColors = ['#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
+
+                    revenueCharts.platform = new Chart(platformCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: platformLabels,
+                            datasets: [{
+                                data: platformData,
+                                backgroundColor: platformColors.slice(0, platformLabels.length),
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { color: '#9ca3af', boxWidth: 12 }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error initializing revenue charts:', error);
+            }
+        }
+
+        // Update loadRevenueStats to also init charts
+        const originalLoadRevenueStats = loadRevenueStats;
+        loadRevenueStats = async function() {
+            await originalLoadRevenueStats();
+            await initRevenueCharts();
+        };
+
+        // ============================================================
+        // END SESSION 225: REVENUE CHARTS FUNCTIONS
         // ============================================================
 
         // ============================================================

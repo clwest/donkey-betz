@@ -846,6 +846,16 @@ def revenue_stats(request):
             .order_by('-total')[:5]
         )
 
+        # Session 225: Revenue by date for trend chart
+        from django.db.models.functions import TruncDate
+        by_date = list(
+            queryset.filter(status='received')
+            .annotate(date=TruncDate('sale_date'))
+            .values('date')
+            .annotate(total=Sum('amount'), count=Count('id'))
+            .order_by('date')
+        )
+
         return JsonResponse({
             'success': True,
             'period_days': days,
@@ -876,6 +886,15 @@ def revenue_stats(request):
                     'total_revenue': float(opp['total'])
                 }
                 for opp in top_opportunities
+            ],
+            # Session 225: Date breakdown for trend chart
+            'by_date': [
+                {
+                    'date': d['date'].isoformat() if d['date'] else None,
+                    'total': float(d['total']),
+                    'count': d['count']
+                }
+                for d in by_date
             ]
         })
 
