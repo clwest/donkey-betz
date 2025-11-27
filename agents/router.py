@@ -629,9 +629,9 @@ class AgentRouter:
         # Map specialist names to intents
         specialist_intents = {
             'research': Intent.RESEARCH_TOPIC,
-            'image': Intent.GENERATE_IMAGE,
+            'image': Intent.CREATE_IMAGE,
             'video': Intent.CREATE_VIDEO,
-            'audio': Intent.GENERATE_VOICE,
+            'audio': Intent.CREATE_SPEECH,
         }
 
         intent = specialist_intents.get(specialist.lower())

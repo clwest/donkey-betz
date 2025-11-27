@@ -33650,12 +33650,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             'rate_2': '⭐⭐', 'rate_1': '⭐'
                         }[item.interaction_type] || '📝';
 
+                        // Handle style_elements - check if array has content
+                        const styleInfo = (item.style_elements && item.style_elements.length > 0)
+                            ? `<small class="text-muted ms-2">${item.style_elements.slice(0, 3).join(', ')}${item.style_elements.length > 3 ? '...' : ''}</small>`
+                            : '';
+
                         html += `
                             <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
                                 <div>
                                     <span class="me-2">${typeEmoji}</span>
                                     <span class="text-light">${item.interaction_type}</span>
-                                    ${item.style_elements ? `<small class="text-muted ms-2">${JSON.stringify(item.style_elements).substring(0, 50)}...</small>` : ''}
+                                    ${styleInfo}
                                 </div>
                                 <small class="text-muted">${date}</small>
                             </div>
