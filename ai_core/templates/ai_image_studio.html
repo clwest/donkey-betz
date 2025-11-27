@@ -34157,9 +34157,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             await executeSpider(spiderId, spiderName);
         }
 
-        // Session 206: Run All Active Spiders
+        // Session 206: Run All Active Spiders (Session 209: Increased limit to 20)
         async function runAllActiveSpiders() {
-            if (!confirm('Run all active spiders? This may take some time.')) return;
+            const maxSpiders = 20;  // Increased from 5 to 20
+
+            if (!confirm(`Run all active spiders (up to ${maxSpiders})? This may take a minute.`)) return;
 
             try {
                 // Get all active spiders and run them
@@ -34169,16 +34171,36 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const data = await response.json();
 
                 const activeSpiders = (data.spiders || []).filter(s => s.status === 'Active');
+                const spidersToRun = activeSpiders.slice(0, maxSpiders);
 
-                for (const spider of activeSpiders.slice(0, 5)) { // Limit to 5 to avoid overload
-                    await executeSpider(spider.id, spider.name);
+                // Show progress toast
+                showToast(`🕷️ Running ${spidersToRun.length} spiders...`, 'info');
+
+                let completed = 0;
+                let failed = 0;
+
+                for (const spider of spidersToRun) {
+                    try {
+                        await executeSpider(spider.id, spider.name);
+                        completed++;
+                    } catch (e) {
+                        console.error(`Spider ${spider.name} failed:`, e);
+                        failed++;
+                    }
                 }
 
-                alert(`Started ${Math.min(5, activeSpiders.length)} spiders!`);
+                // Show completion toast
+                if (failed === 0) {
+                    showToast(`✅ All ${completed} spiders completed!`, 'success');
+                } else {
+                    showToast(`⚠️ ${completed} succeeded, ${failed} failed`, 'warning');
+                }
+
                 await loadSpiderNetwork();
+                await loadSpiderIntelligence();  // Refresh intelligence data too
             } catch (error) {
                 console.error('Error running all spiders:', error);
-                alert('Failed to run spiders: ' + error.message);
+                showToast('❌ Failed to run spiders: ' + error.message, 'error');
             }
         }
 
