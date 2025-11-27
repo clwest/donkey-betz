@@ -1572,6 +1572,46 @@
                             </div>
                         </div>
 
+                        <!-- SESSION 219: Intelligence Feed Card (Phase A) -->
+                        <div class="card mb-3" id="intelligenceFeedCard" style="background: rgba(236, 72, 153, 0.1); border: 2px solid rgba(236, 72, 153, 0.4);">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid rgba(236, 72, 153, 0.3); cursor: pointer;" onclick="toggleIntelligenceFeed()">
+                                <h6 class="mb-0" style="color: #f9a8d4;">🔮 Trending Intelligence</h6>
+                                <span id="intelligenceToggle" style="color: #f9a8d4;">▼</span>
+                            </div>
+                            <div class="card-body" id="intelligenceFeedBody">
+                                <div id="intelligenceLoading" style="text-align: center; padding: 10px;">
+                                    <div class="spinner-border spinner-border-sm" style="color: #ec4899;" role="status"></div>
+                                    <small style="color: #f9a8d4; margin-left: 8px;">Loading trends...</small>
+                                </div>
+                                <div id="intelligenceFeedData" style="display: none;">
+                                    <!-- Stats Row -->
+                                    <div class="d-flex gap-2 mb-3">
+                                        <div style="flex: 1; background: rgba(236, 72, 153, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
+                                            <div id="intTrendsCount" style="font-size: 18px; font-weight: 700; color: #fbcfe8;">0</div>
+                                            <small style="color: #f9a8d4; font-size: 9px;">Trends</small>
+                                        </div>
+                                        <div style="flex: 1; background: rgba(34, 197, 94, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
+                                            <div id="intSpidersActive" style="font-size: 18px; font-weight: 700; color: #bbf7d0;">67</div>
+                                            <small style="color: #86efac; font-size: 9px;">Spiders</small>
+                                        </div>
+                                        <div style="flex: 1; background: rgba(168, 85, 247, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
+                                            <div id="intAgentsActive" style="font-size: 18px; font-weight: 700; color: #e9d5ff;">14</div>
+                                            <small style="color: #c4b5fd; font-size: 9px;">Agents</small>
+                                        </div>
+                                    </div>
+                                    <!-- Trending Topics -->
+                                    <div id="intelligenceTrends" style="max-height: 200px; overflow-y: auto;">
+                                        <!-- Trends will be inserted here -->
+                                    </div>
+                                    <!-- Suggestions -->
+                                    <div id="intelligenceSuggestions" style="margin-top: 10px; display: none;">
+                                        <small style="color: #fcd34d; font-weight: 600;">💡 Try This:</small>
+                                        <div id="suggestionPrompt" style="font-size: 11px; color: #f9a8d4; margin-top: 4px; padding: 8px; background: rgba(251, 191, 36, 0.15); border-radius: 6px; border-left: 3px solid #ec4899; cursor: pointer;" onclick="useIntelligenceSuggestion(this)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Quick Actions Card -->
                         <div class="card" style="background: rgba(6, 182, 212, 0.1); border: 2px solid rgba(6, 182, 212, 0.4);">
                             <div class="card-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
@@ -9916,10 +9956,143 @@
             toggle.textContent = styleInsightsVisible ? '▼' : '▶';
         }
 
+        // ============================================================
+        // SESSION 219: Intelligence Feed Functions (Phase A)
+        // ============================================================
+        let intelligenceFeedVisible = true;
+
+        function toggleIntelligenceFeed() {
+            const body = document.getElementById('intelligenceFeedBody');
+            const toggle = document.getElementById('intelligenceToggle');
+            intelligenceFeedVisible = !intelligenceFeedVisible;
+            body.style.display = intelligenceFeedVisible ? 'block' : 'none';
+            toggle.textContent = intelligenceFeedVisible ? '▼' : '▶';
+        }
+
+        async function loadIntelligenceFeed() {
+            try {
+                // Fetch trends and suggestions in parallel
+                const [trendsRes, suggestionsRes, statsRes] = await Promise.all([
+                    fetch('/api/agent-intelligence/trends/?limit=10', {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    }),
+                    fetch('/api/agent-intelligence/suggestions/?limit=5', {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    }),
+                    fetch('/api/agent-intelligence/stats/', {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    })
+                ]);
+
+                const loading = document.getElementById('intelligenceLoading');
+                const dataDiv = document.getElementById('intelligenceFeedData');
+
+                if (!trendsRes.ok || !suggestionsRes.ok) {
+                    console.log('Intelligence feed not available');
+                    loading.innerHTML = '<small style="color: #f9a8d4;">No trends yet. Spiders are gathering intelligence...</small>';
+                    return;
+                }
+
+                const trends = await trendsRes.json();
+                const suggestions = await suggestionsRes.json();
+                const stats = statsRes.ok ? await statsRes.json() : { stats: {} };
+
+                // Hide loading, show data
+                loading.style.display = 'none';
+                dataDiv.style.display = 'block';
+
+                // Update stats
+                document.getElementById('intTrendsCount').textContent = trends.count || 0;
+                if (stats.stats) {
+                    document.getElementById('intAgentsActive').textContent = stats.stats.active_agents || 14;
+                }
+
+                // Render trends
+                const trendsContainer = document.getElementById('intelligenceTrends');
+                if (trends.trends && trends.trends.length > 0) {
+                    trendsContainer.innerHTML = trends.trends.map(trend => {
+                        const data = trend.data || {};
+                        const title = data.title || trend.spider_name || 'Trend';
+                        const source = trend.spider_name || 'spider';
+                        const category = trend.spider_category || 'general';
+                        const icon = getCategoryIcon(category);
+                        return `
+                            <div style="padding: 8px; margin-bottom: 6px; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #ec4899;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px;">${icon}</span>
+                                    <span style="font-size: 11px; color: #fbcfe8; font-weight: 500;">${title.substring(0, 50)}${title.length > 50 ? '...' : ''}</span>
+                                </div>
+                                <div style="font-size: 9px; color: #f9a8d4; opacity: 0.7; margin-top: 3px;">
+                                    via ${source} • ${category}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    trendsContainer.innerHTML = '<div style="text-align: center; padding: 15px;"><span style="font-size: 24px;">🕸️</span><br><small style="color: #f9a8d4;">Spiders are crawling for trends...</small></div>';
+                }
+
+                // Render suggestions
+                const suggestionsDiv = document.getElementById('intelligenceSuggestions');
+                const promptDiv = document.getElementById('suggestionPrompt');
+                if (suggestions.suggestions && suggestions.suggestions.length > 0) {
+                    const suggestion = suggestions.suggestions[0];
+                    suggestionsDiv.style.display = 'block';
+                    promptDiv.textContent = suggestion.suggestion || suggestion.title || 'Check out this trending style!';
+                    promptDiv.dataset.fullPrompt = suggestion.suggestion || suggestion.title || '';
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.log('Error loading intelligence feed:', error);
+                const loading = document.getElementById('intelligenceLoading');
+                loading.innerHTML = '<small style="color: #f9a8d4;">Connecting to spider network...</small>';
+            }
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'ai_creative': '🎨',
+                'creative_assets': '🖼️',
+                'design': '✨',
+                'digital_products': '💰',
+                'tech': '💻',
+                'innovation': '🚀',
+                'news': '📰',
+                'freelance': '💼',
+                'remote_work': '🏠',
+                'education': '📚',
+                'financial': '📈',
+                'content_creation': '📝'
+            };
+            return icons[category] || '🔮';
+        }
+
+        function useIntelligenceSuggestion(element) {
+            const prompt = element.dataset.fullPrompt || element.textContent;
+            if (prompt) {
+                // Find the main chat input and set the suggestion
+                const chatInput = document.getElementById('asstUserInput');
+                if (chatInput) {
+                    chatInput.value = prompt;
+                    chatInput.focus();
+                    showToast('Suggestion applied to prompt!', 'success');
+                }
+            }
+        }
+
+        // Expose to window for onclick handlers
+        window.toggleIntelligenceFeed = toggleIntelligenceFeed;
+        window.useIntelligenceSuggestion = useIntelligenceSuggestion;
+        // ============================================================
+
         // Load insights when page loads and after ratings
         document.addEventListener('DOMContentLoaded', function() {
             // Load insights after a short delay to let other things initialize
             setTimeout(loadStyleInsights, 2000);
+            // Load intelligence feed (Phase A)
+            setTimeout(loadIntelligenceFeed, 2500);
         });
 
         // Session 189: Expose loadStyleInsights to window for class wrapper
