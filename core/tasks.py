@@ -2394,3 +2394,250 @@ def record_learning_event(self, event_type, user_id, data):
     except Exception as e:
         logger.error(f"📝 [LEARNING] Failed to record event: {e}")
         raise self.retry(exc=e, countdown=30)
+
+
+# ============================================================
+# Session 234: Proactive System Celery Tasks (Phase 6)
+# ============================================================
+
+@shared_task
+def run_proactive_system_check(user_id=None):
+    """
+    Run a complete proactive system check.
+    Checks alerts, generates suggestions, and executes scheduled automations.
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        from core.proactive_engine import ProactiveSystem
+
+        User = get_user_model()
+
+        results = {
+            'users_processed': 0,
+            'alerts_triggered': 0,
+            'suggestions_generated': 0,
+            'actions_executed': 0,
+        }
+
+        if user_id:
+            users = User.objects.filter(id=user_id)
+        else:
+            users = User.objects.filter(is_active=True)
+
+        for user in users:
+            try:
+                proactive = ProactiveSystem(user)
+                check_result = proactive.run_proactive_check(user)
+
+                results['users_processed'] += 1
+                results['alerts_triggered'] += len(check_result.get('alerts_triggered', []))
+                results['suggestions_generated'] += len(check_result.get('suggestions_generated', []))
+                results['actions_executed'] += len(check_result.get('actions_executed', []))
+
+            except Exception as e:
+                logger.error(f"🔔 [PROACTIVE] Error for user {user.id}: {e}")
+
+        logger.info(f"🔔 [PROACTIVE] System check complete: {results}")
+        return results
+
+    except Exception as e:
+        logger.exception(f"🔔 [PROACTIVE] System check failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def check_all_alerts():
+    """
+    Check all active alerts for all users.
+    Triggers notifications for any alerts that meet their conditions.
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        from core.proactive_engine import AlertEngine
+
+        User = get_user_model()
+        engine = AlertEngine()
+
+        total_triggered = 0
+
+        for user in User.objects.filter(is_active=True):
+            try:
+                triggered = engine.check_all_alerts(user)
+                total_triggered += len(triggered)
+            except Exception as e:
+                logger.error(f"🔔 [ALERTS] Error checking alerts for user {user.id}: {e}")
+
+        logger.info(f"🔔 [ALERTS] Checked all alerts, triggered: {total_triggered}")
+        return {'status': 'success', 'alerts_triggered': total_triggered}
+
+    except Exception as e:
+        logger.exception(f"🔔 [ALERTS] Alert check failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def generate_smart_suggestions(user_id=None, max_suggestions=5):
+    """
+    Generate smart suggestions for users based on their data.
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        from core.proactive_engine import SuggestionEngine
+
+        User = get_user_model()
+
+        total_generated = 0
+
+        if user_id:
+            users = User.objects.filter(id=user_id)
+        else:
+            users = User.objects.filter(is_active=True)
+
+        for user in users:
+            try:
+                # Check pending suggestions count
+                from core.models_unified_system import SmartSuggestion
+                pending = SmartSuggestion.objects.filter(
+                    user=user,
+                    status='pending'
+                ).count()
+
+                if pending < 20:
+                    engine = SuggestionEngine(user)
+                    suggestions = engine.generate_suggestions(user, max_suggestions=max_suggestions)
+                    total_generated += len(suggestions)
+
+            except Exception as e:
+                logger.error(f"💡 [SUGGESTIONS] Error for user {user.id}: {e}")
+
+        logger.info(f"💡 [SUGGESTIONS] Generated {total_generated} suggestions")
+        return {'status': 'success', 'suggestions_generated': total_generated}
+
+    except Exception as e:
+        logger.exception(f"💡 [SUGGESTIONS] Generation failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def execute_scheduled_automations():
+    """
+    Execute all scheduled automated actions that are due.
+    """
+    try:
+        from core.proactive_engine import AutomationEngine
+        from core.models_unified_system import AutomatedAction
+
+        engine = AutomationEngine()
+        executed = engine.check_scheduled_actions()
+
+        logger.info(f"⚙️ [AUTOMATIONS] Executed {len(executed)} scheduled actions")
+        return {'status': 'success', 'actions_executed': len(executed), 'details': executed}
+
+    except Exception as e:
+        logger.exception(f"⚙️ [AUTOMATIONS] Scheduled execution failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def send_pending_notifications():
+    """
+    Send any pending scheduled notifications.
+    """
+    try:
+        from django.utils import timezone
+        from core.models_unified_system import ProactiveNotification
+        from core.proactive_engine import NotificationManager
+
+        now = timezone.now()
+
+        # Find pending notifications that are due
+        pending = ProactiveNotification.objects.filter(
+            delivery_status='pending',
+            scheduled_at__lte=now,
+            is_expired=False
+        )
+
+        sent_count = 0
+        for notification in pending:
+            try:
+                manager = NotificationManager(notification.user)
+                # Mark as delivered (actual delivery would integrate with email/push services)
+                notification.delivery_status = 'delivered'
+                notification.sent_at = now
+                notification.channels_sent = ['in_app']
+                notification.save()
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"📬 [NOTIFICATIONS] Failed to send notification {notification.id}: {e}")
+                notification.delivery_status = 'failed'
+                notification.save()
+
+        logger.info(f"📬 [NOTIFICATIONS] Sent {sent_count} pending notifications")
+        return {'status': 'success', 'notifications_sent': sent_count}
+
+    except Exception as e:
+        logger.exception(f"📬 [NOTIFICATIONS] Send pending failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def cleanup_old_notifications(days=30):
+    """
+    Clean up old read/dismissed notifications.
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_unified_system import ProactiveNotification
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        # Delete old read/dismissed notifications
+        deleted_count = ProactiveNotification.objects.filter(
+            created_at__lt=cutoff,
+            is_read=True,
+            is_dismissed=True
+        ).delete()[0]
+
+        # Mark expired notifications
+        expired_count = ProactiveNotification.objects.filter(
+            expires_at__lt=timezone.now(),
+            is_expired=False
+        ).update(is_expired=True)
+
+        logger.info(f"🧹 [CLEANUP] Deleted {deleted_count} old notifications, marked {expired_count} expired")
+        return {
+            'status': 'success',
+            'deleted': deleted_count,
+            'marked_expired': expired_count
+        }
+
+    except Exception as e:
+        logger.exception(f"🧹 [CLEANUP] Notification cleanup failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def expire_old_suggestions(days=14):
+    """
+    Mark old pending suggestions as expired.
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_unified_system import SmartSuggestion
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        expired_count = SmartSuggestion.objects.filter(
+            created_at__lt=cutoff,
+            status='pending',
+            is_still_relevant=True
+        ).update(status='expired', is_still_relevant=False)
+
+        logger.info(f"📋 [SUGGESTIONS] Expired {expired_count} old suggestions")
+        return {'status': 'success', 'expired_count': expired_count}
+
+    except Exception as e:
+        logger.exception(f"📋 [SUGGESTIONS] Expiration failed: {e}")
+        return {'status': 'failed', 'error': str(e)}

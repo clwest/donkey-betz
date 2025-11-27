@@ -217,6 +217,58 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+    # Session 234: Proactive System Tasks (Phase 6 - Creative Intelligence Empire)
+    'proactive-system-check': {
+        'task': 'core.tasks.run_proactive_system_check',
+        'schedule': crontab(hour='*/2', minute=15),  # Every 2 hours at :15
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
+    'check-all-alerts': {
+        'task': 'core.tasks.check_all_alerts',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
+    'generate-smart-suggestions': {
+        'task': 'core.tasks.generate_smart_suggestions',
+        'schedule': crontab(hour='*/8', minute=0),  # Every 8 hours
+        'options': {
+            'expires': 28800,  # 8 hours
+        }
+    },
+    'execute-scheduled-automations': {
+        'task': 'core.tasks.execute_scheduled_automations',
+        'schedule': crontab(minute=0),  # Every hour
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'send-pending-notifications': {
+        'task': 'core.tasks.send_pending_notifications',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,
+        }
+    },
+    'cleanup-old-notifications': {
+        'task': 'core.tasks.cleanup_old_notifications',
+        'schedule': crontab(hour=3, minute=30),  # Daily at 3:30 AM
+        'args': (30,),  # 30 days
+        'options': {
+            'expires': 7200,
+        }
+    },
+    'expire-old-suggestions': {
+        'task': 'core.tasks.expire_old_suggestions',
+        'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
+        'args': (14,),  # 14 days
+        'options': {
+            'expires': 3600,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

@@ -4939,3 +4939,600 @@ class PerformanceComparison(models.Model):
 
     def __str__(self):
         return f"{self.user.username} vs {self.comparison_type}:{self.scope_value}"
+
+
+# ============================================================
+# Session 234: Phase 6 - Proactive System Models
+# ============================================================
+
+class ProactiveAlert(models.Model):
+    """
+    Proactive alerts that trigger based on conditions/thresholds.
+    Monitors metrics and notifies users when action is needed.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='proactive_alerts')
+
+    # Alert definition
+    alert_type = models.CharField(max_length=50, choices=[
+        ('threshold', 'Threshold Alert'),
+        ('trend', 'Trend Alert'),
+        ('anomaly', 'Anomaly Detection'),
+        ('opportunity', 'Opportunity Alert'),
+        ('deadline', 'Deadline Reminder'),
+        ('goal', 'Goal Progress'),
+        ('competitor', 'Competitor Activity'),
+        ('market', 'Market Change'),
+    ])
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+
+    # Trigger conditions
+    metric_name = models.CharField(max_length=100)  # e.g., "daily_revenue", "conversion_rate"
+    condition = models.CharField(max_length=20, choices=[
+        ('above', 'Above'),
+        ('below', 'Below'),
+        ('equals', 'Equals'),
+        ('change_up', 'Increases By'),
+        ('change_down', 'Decreases By'),
+        ('anomaly', 'Anomaly Detected'),
+    ])
+    threshold_value = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    threshold_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    # Scope
+    platform = models.ForeignKey(DistributionPlatform, on_delete=models.CASCADE, null=True, blank=True)
+    content_type = models.CharField(max_length=50, blank=True)  # image, video, etc.
+    category = models.CharField(max_length=100, blank=True)
+
+    # Timing
+    check_frequency = models.CharField(max_length=20, choices=[
+        ('realtime', 'Real-time'),
+        ('hourly', 'Hourly'),
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+    ], default='daily')
+    cooldown_hours = models.IntegerField(default=24)  # Hours before re-triggering
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    last_triggered = models.DateTimeField(null=True, blank=True)
+    trigger_count = models.IntegerField(default=0)
+
+    # Actions when triggered
+    notification_channels = models.JSONField(default=list)  # ["email", "push", "sms", "in_app"]
+    auto_actions = models.JSONField(default=list)  # Actions to take automatically
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Proactive Alert'
+        verbose_name_plural = 'Proactive Alerts'
+        ordering = ['-is_active', '-trigger_count']
+
+    def __str__(self):
+        return f"[{self.alert_type}] {self.name}"
+
+    def should_trigger(self, current_value: float) -> bool:
+        """Check if alert should trigger based on current value."""
+        if not self.is_active:
+            return False
+
+        # Check cooldown
+        if self.last_triggered:
+            hours_since = (timezone.now() - self.last_triggered).total_seconds() / 3600
+            if hours_since < self.cooldown_hours:
+                return False
+
+        if self.threshold_value is None:
+            return False
+
+        threshold = float(self.threshold_value)
+        if self.condition == 'above':
+            return current_value > threshold
+        elif self.condition == 'below':
+            return current_value < threshold
+        elif self.condition == 'equals':
+            return abs(current_value - threshold) < 0.001
+        return False
+
+    def trigger(self):
+        """Mark alert as triggered."""
+        self.last_triggered = timezone.now()
+        self.trigger_count += 1
+        self.save()
+
+
+class ProactiveNotification(models.Model):
+    """
+    Notifications sent to users from the proactive system.
+    Tracks delivery and user engagement.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='proactive_notifications')
+
+    # Source
+    alert = models.ForeignKey(ProactiveAlert, on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
+    suggestion = models.ForeignKey('SmartSuggestion', on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
+
+    # Notification type
+    notification_type = models.CharField(max_length=50, choices=[
+        ('alert', 'Alert'),
+        ('suggestion', 'Suggestion'),
+        ('insight', 'Insight'),
+        ('reminder', 'Reminder'),
+        ('celebration', 'Celebration'),
+        ('warning', 'Warning'),
+        ('update', 'System Update'),
+    ])
+    priority = models.CharField(max_length=20, choices=[
+        ('urgent', 'Urgent'),
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+    ], default='medium')
+
+    # Content
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    rich_content = models.JSONField(default=dict)  # Charts, links, data
+    icon = models.CharField(max_length=50, default='bell')
+
+    # Call to action
+    action_url = models.CharField(max_length=500, blank=True)
+    action_label = models.CharField(max_length=100, blank=True)
+    quick_actions = models.JSONField(default=list)  # [{"label": "Apply", "action": "apply_suggestion"}]
+
+    # Delivery
+    channels_sent = models.JSONField(default=list)  # ["email", "push", "in_app"]
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    delivery_status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('failed', 'Failed'),
+    ], default='pending')
+
+    # User interaction
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    is_dismissed = models.BooleanField(default=False)
+    dismissed_at = models.DateTimeField(null=True, blank=True)
+    is_acted_upon = models.BooleanField(default=False)
+    acted_at = models.DateTimeField(null=True, blank=True)
+    action_result = models.JSONField(default=dict)
+
+    # Expiration
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_expired = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Proactive Notification'
+        verbose_name_plural = 'Proactive Notifications'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read', 'is_dismissed']),
+            models.Index(fields=['delivery_status', 'scheduled_at']),
+        ]
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title}"
+
+    def mark_read(self):
+        """Mark notification as read."""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+    def mark_acted(self, result: dict = None):
+        """Mark notification as acted upon."""
+        self.is_acted_upon = True
+        self.acted_at = timezone.now()
+        if result:
+            self.action_result = result
+        self.save()
+
+
+class SmartSuggestion(models.Model):
+    """
+    AI-generated suggestions for improving performance.
+    Proactively recommends actions based on learned patterns.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='smart_suggestions')
+
+    # Suggestion type
+    suggestion_type = models.CharField(max_length=50, choices=[
+        ('pricing', 'Pricing Adjustment'),
+        ('timing', 'Upload Timing'),
+        ('platform', 'Platform Recommendation'),
+        ('content', 'Content Improvement'),
+        ('tags', 'Tag Optimization'),
+        ('description', 'Description Enhancement'),
+        ('bundle', 'Bundle Suggestion'),
+        ('promotion', 'Promotion Opportunity'),
+        ('cross_sell', 'Cross-Sell Opportunity'),
+        ('expansion', 'Market Expansion'),
+    ])
+    category = models.CharField(max_length=50, choices=[
+        ('revenue', 'Increase Revenue'),
+        ('efficiency', 'Improve Efficiency'),
+        ('reach', 'Expand Reach'),
+        ('quality', 'Improve Quality'),
+        ('risk', 'Reduce Risk'),
+    ], default='revenue')
+
+    # Content
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    detailed_rationale = models.TextField(blank=True)
+
+    # Supporting data
+    supporting_patterns = models.JSONField(default=list)  # Pattern IDs that support this
+    supporting_data = models.JSONField(default=dict)  # Analytics data
+    similar_successes = models.JSONField(default=list)  # Examples that worked
+
+    # Actionable details
+    action_steps = models.JSONField(default=list)
+    # [{"step": 1, "action": "Update price to $25", "reason": "Based on conversion data"}]
+
+    # Current vs suggested
+    current_state = models.JSONField(default=dict)  # {"price": 15, "platform": "etsy"}
+    suggested_state = models.JSONField(default=dict)  # {"price": 25}
+
+    # Impact estimation
+    estimated_impact = models.JSONField(default=dict)
+    # {"revenue_change": "+25%", "conversion_change": "+10%", "time_saved": "2h"}
+    estimated_revenue_impact = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    confidence_score = models.DecimalField(max_digits=5, decimal_places=2, default=50)  # 0-100
+
+    # Priority
+    priority_score = models.IntegerField(default=50)  # 0-100, for sorting
+    effort_level = models.CharField(max_length=20, choices=[
+        ('low', 'Low (Quick Win)'),
+        ('medium', 'Medium'),
+        ('high', 'High (Requires Work)'),
+    ], default='medium')
+
+    # User interaction
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending Review'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('implemented', 'Implemented'),
+        ('expired', 'Expired'),
+    ], default='pending')
+    user_feedback = models.TextField(blank=True)
+    rejection_reason = models.CharField(max_length=100, blank=True)
+
+    # Outcome tracking (if implemented)
+    implemented_at = models.DateTimeField(null=True, blank=True)
+    outcome_tracked = models.BooleanField(default=False)
+    actual_impact = models.JSONField(default=dict)  # Actual measured impact
+
+    # Validity
+    valid_until = models.DateTimeField(null=True, blank=True)
+    is_still_relevant = models.BooleanField(default=True)
+
+    # Related content
+    related_content_ids = models.JSONField(default=list)  # Content this applies to
+    related_distribution_ids = models.JSONField(default=list)  # Distributions this applies to
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Smart Suggestion'
+        verbose_name_plural = 'Smart Suggestions'
+        ordering = ['-priority_score', '-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status', 'suggestion_type']),
+            models.Index(fields=['priority_score', 'confidence_score']),
+        ]
+
+    def __str__(self):
+        return f"[{self.suggestion_type}] {self.title}"
+
+    def accept(self):
+        """Accept the suggestion."""
+        self.status = 'accepted'
+        self.save()
+
+    def reject(self, reason: str = ''):
+        """Reject the suggestion."""
+        self.status = 'rejected'
+        self.rejection_reason = reason
+        self.save()
+
+    def mark_implemented(self):
+        """Mark as implemented."""
+        self.status = 'implemented'
+        self.implemented_at = timezone.now()
+        self.save()
+
+
+class AutomatedAction(models.Model):
+    """
+    Automated actions that run based on triggers.
+    Can be triggered by alerts, schedules, or patterns.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='automated_actions')
+
+    # Action definition
+    action_type = models.CharField(max_length=50, choices=[
+        ('price_adjust', 'Adjust Pricing'),
+        ('distribute', 'Auto-Distribute'),
+        ('notify', 'Send Notification'),
+        ('tag_update', 'Update Tags'),
+        ('schedule_upload', 'Schedule Upload'),
+        ('apply_promotion', 'Apply Promotion'),
+        ('generate_report', 'Generate Report'),
+        ('backup_data', 'Backup Data'),
+        ('optimize_listing', 'Optimize Listing'),
+    ])
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+
+    # Trigger configuration
+    trigger_type = models.CharField(max_length=50, choices=[
+        ('alert', 'On Alert'),
+        ('schedule', 'On Schedule'),
+        ('event', 'On Event'),
+        ('threshold', 'On Threshold'),
+        ('manual', 'Manual'),
+    ])
+    trigger_alert = models.ForeignKey(ProactiveAlert, on_delete=models.SET_NULL, null=True, blank=True, related_name='automated_actions')
+    trigger_schedule = models.CharField(max_length=100, blank=True)  # Cron expression
+    trigger_event = models.CharField(max_length=100, blank=True)  # Event name
+
+    # Action parameters
+    action_params = models.JSONField(default=dict)
+    # For price_adjust: {"change_type": "percent", "change_value": 10, "min_price": 5, "max_price": 100}
+    # For distribute: {"platforms": ["etsy", "gumroad"], "auto_price": true}
+
+    # Scope/conditions
+    conditions = models.JSONField(default=list)
+    # [{"field": "content_type", "operator": "equals", "value": "image"}]
+    platform_scope = models.JSONField(default=list)  # Platforms this applies to
+    content_type_scope = models.JSONField(default=list)  # Content types this applies to
+
+    # Safety limits
+    max_executions_per_day = models.IntegerField(default=10)
+    max_price_change_percent = models.DecimalField(max_digits=5, decimal_places=2, default=25)
+    requires_confirmation = models.BooleanField(default=False)
+    dry_run_first = models.BooleanField(default=True)
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_paused = models.BooleanField(default=False)
+    pause_reason = models.CharField(max_length=200, blank=True)
+
+    # Execution tracking
+    total_executions = models.IntegerField(default=0)
+    successful_executions = models.IntegerField(default=0)
+    failed_executions = models.IntegerField(default=0)
+    last_executed = models.DateTimeField(null=True, blank=True)
+    last_result = models.JSONField(default=dict)
+    executions_today = models.IntegerField(default=0)
+    executions_today_reset = models.DateField(null=True, blank=True)
+
+    # Impact tracking
+    total_revenue_impact = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    avg_impact_per_execution = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Automated Action'
+        verbose_name_plural = 'Automated Actions'
+        ordering = ['-is_active', '-total_executions']
+
+    def __str__(self):
+        return f"[{self.action_type}] {self.name}"
+
+    def can_execute(self) -> tuple:
+        """Check if action can execute. Returns (can_execute, reason)."""
+        if not self.is_active:
+            return False, "Action is not active"
+        if self.is_paused:
+            return False, f"Action is paused: {self.pause_reason}"
+
+        # Check daily limit
+        today = timezone.now().date()
+        if self.executions_today_reset != today:
+            self.executions_today = 0
+            self.executions_today_reset = today
+            self.save()
+
+        if self.executions_today >= self.max_executions_per_day:
+            return False, "Daily execution limit reached"
+
+        return True, "OK"
+
+    def execute(self, context: dict = None) -> dict:
+        """Execute the automated action."""
+        can_run, reason = self.can_execute()
+        if not can_run:
+            return {"success": False, "error": reason}
+
+        # Increment counters
+        self.total_executions += 1
+        self.executions_today += 1
+        self.last_executed = timezone.now()
+
+        # Action execution would be handled by the Proactive Engine
+        # This is just the model - actual execution logic is in proactive_engine.py
+
+        result = {
+            "success": True,
+            "action_type": self.action_type,
+            "params": self.action_params,
+            "context": context or {},
+            "executed_at": str(timezone.now()),
+        }
+
+        self.last_result = result
+        self.successful_executions += 1
+        self.save()
+
+        return result
+
+
+class AutomatedActionLog(models.Model):
+    """
+    Log of all automated action executions.
+    For auditing and debugging.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    action = models.ForeignKey(AutomatedAction, on_delete=models.CASCADE, related_name='execution_logs')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='action_logs')
+
+    # Execution details
+    trigger_type = models.CharField(max_length=50)
+    trigger_source = models.CharField(max_length=200, blank=True)  # Alert ID, event name, etc.
+
+    # Input/Output
+    input_params = models.JSONField(default=dict)
+    output_result = models.JSONField(default=dict)
+
+    # Status
+    status = models.CharField(max_length=20, choices=[
+        ('started', 'Started'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('rolled_back', 'Rolled Back'),
+    ])
+    error_message = models.TextField(blank=True)
+
+    # Impact
+    items_affected = models.IntegerField(default=0)
+    revenue_impact = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Timing
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.IntegerField(null=True, blank=True)
+
+    # Rollback info
+    can_rollback = models.BooleanField(default=False)
+    rollback_data = models.JSONField(default=dict)
+    was_rolled_back = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Automated Action Log'
+        verbose_name_plural = 'Automated Action Logs'
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['action', 'status', 'started_at']),
+            models.Index(fields=['user', 'started_at']),
+        ]
+
+    def __str__(self):
+        return f"Log: {self.action.name} - {self.status}"
+
+
+class UserNotificationPreference(models.Model):
+    """
+    User preferences for notifications and alerts.
+    Controls what notifications users receive and how.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notification_preferences')
+
+    # Channel preferences
+    email_enabled = models.BooleanField(default=True)
+    push_enabled = models.BooleanField(default=True)
+    sms_enabled = models.BooleanField(default=False)
+    in_app_enabled = models.BooleanField(default=True)
+
+    # Notification type preferences
+    alert_notifications = models.BooleanField(default=True)
+    suggestion_notifications = models.BooleanField(default=True)
+    insight_notifications = models.BooleanField(default=True)
+    celebration_notifications = models.BooleanField(default=True)
+    warning_notifications = models.BooleanField(default=True)
+
+    # Frequency preferences
+    digest_frequency = models.CharField(max_length=20, choices=[
+        ('realtime', 'Real-time'),
+        ('hourly', 'Hourly Digest'),
+        ('daily', 'Daily Digest'),
+        ('weekly', 'Weekly Digest'),
+    ], default='daily')
+
+    # Quiet hours
+    quiet_hours_enabled = models.BooleanField(default=False)
+    quiet_hours_start = models.TimeField(null=True, blank=True)  # e.g., 22:00
+    quiet_hours_end = models.TimeField(null=True, blank=True)  # e.g., 08:00
+    timezone = models.CharField(max_length=50, default='UTC')
+
+    # Priority thresholds
+    min_priority_email = models.CharField(max_length=20, default='medium')  # Only email for medium+ priority
+    min_priority_push = models.CharField(max_length=20, default='high')  # Only push for high+ priority
+
+    # Category preferences
+    enabled_categories = models.JSONField(default=list)
+    # ["revenue", "efficiency", "reach"] - empty means all
+
+    # Unsubscribe tracking
+    unsubscribed_types = models.JSONField(default=list)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'User Notification Preference'
+        verbose_name_plural = 'User Notification Preferences'
+
+    def __str__(self):
+        return f"Notification Preferences: {self.user.username}"
+
+    def should_send(self, notification_type: str, priority: str, channel: str) -> bool:
+        """Check if notification should be sent based on preferences."""
+        # Check channel
+        channel_map = {
+            'email': self.email_enabled,
+            'push': self.push_enabled,
+            'sms': self.sms_enabled,
+            'in_app': self.in_app_enabled,
+        }
+        if not channel_map.get(channel, False):
+            return False
+
+        # Check notification type
+        type_map = {
+            'alert': self.alert_notifications,
+            'suggestion': self.suggestion_notifications,
+            'insight': self.insight_notifications,
+            'celebration': self.celebration_notifications,
+            'warning': self.warning_notifications,
+        }
+        if not type_map.get(notification_type, True):
+            return False
+
+        # Check priority thresholds for specific channels
+        priority_order = ['low', 'medium', 'high', 'urgent']
+        if channel == 'email':
+            min_idx = priority_order.index(self.min_priority_email)
+            curr_idx = priority_order.index(priority) if priority in priority_order else 0
+            if curr_idx < min_idx:
+                return False
+        elif channel == 'push':
+            min_idx = priority_order.index(self.min_priority_push)
+            curr_idx = priority_order.index(priority) if priority in priority_order else 0
+            if curr_idx < min_idx:
+                return False
+
+        return True

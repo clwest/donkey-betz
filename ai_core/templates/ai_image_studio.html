@@ -9173,6 +9173,140 @@
                     </div>
                     <!-- END Learning Loop Section -->
 
+                    <!-- Session 234: Proactive System Section (Phase 6)                   -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(239, 68, 68, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(236, 72, 153, 0.2)); border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                                    <h5 class="mb-0" style="color: #ef4444;">
+                                        <span class="badge me-2" style="background: linear-gradient(135deg, #ef4444, #ec4899); font-size: 0.7rem;">Phase 6</span>
+                                        Proactive System
+                                    </h5>
+                                    <div>
+                                        <button class="btn btn-sm me-2" onclick="loadProactiveDashboard()" style="background: linear-gradient(135deg, #ef4444, #ec4899); border: none; color: white;">
+                                            Refresh
+                                        </button>
+                                        <button class="btn btn-sm" onclick="runProactiveCheck()" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; color: white;">
+                                            Run Check
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- Proactive Stats -->
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #ef4444;" id="proactiveAlertsCount">0</h3>
+                                                    <small class="text-muted">Active Alerts</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #ec4899;" id="proactiveNotificationsCount">0</h3>
+                                                    <small class="text-muted">Unread Notifications</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #8b5cf6;" id="proactiveSuggestionsCount">0</h3>
+                                                    <small class="text-muted">Smart Suggestions</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card h-100" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #6366f1;" id="proactiveAutomationsCount">0</h3>
+                                                    <small class="text-muted">Automations</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Notifications & Suggestions -->
+                                    <div class="row mt-4">
+                                        <!-- Notifications -->
+                                        <div class="col-md-6">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.3);">
+                                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1);">
+                                                    <h6 class="mb-0" style="color: #ec4899;">Notifications</h6>
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="markAllNotificationsRead()" style="font-size: 0.7rem;">
+                                                        Mark All Read
+                                                    </button>
+                                                </div>
+                                                <div class="card-body p-2" id="proactiveNotificationsContainer" style="max-height: 250px; overflow-y: auto;">
+                                                    <div class="text-center py-4 text-muted">
+                                                        <small>No new notifications</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Smart Suggestions -->
+                                        <div class="col-md-6">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.3);">
+                                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1);">
+                                                    <h6 class="mb-0" style="color: #8b5cf6;">Smart Suggestions</h6>
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="generateSmartSuggestions()" style="font-size: 0.7rem;">
+                                                        Generate
+                                                    </button>
+                                                </div>
+                                                <div class="card-body p-2" id="proactiveSuggestionsContainer" style="max-height: 250px; overflow-y: auto;">
+                                                    <div class="text-center py-4 text-muted">
+                                                        <small>Click "Generate" to get AI suggestions</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Alerts & Automations Row -->
+                                    <div class="row mt-4">
+                                        <!-- Active Alerts -->
+                                        <div class="col-md-6">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.3);">
+                                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(239, 68, 68, 0.1);">
+                                                    <h6 class="mb-0" style="color: #ef4444;">Active Alerts</h6>
+                                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#createAlertModal" style="font-size: 0.7rem;">
+                                                        + New Alert
+                                                    </button>
+                                                </div>
+                                                <div class="card-body p-2" id="proactiveAlertsContainer" style="max-height: 200px; overflow-y: auto;">
+                                                    <div class="text-center py-3 text-muted">
+                                                        <small>No alerts configured</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Automations -->
+                                        <div class="col-md-6">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.3);">
+                                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(99, 102, 241, 0.1);">
+                                                    <h6 class="mb-0" style="color: #6366f1;">Automations</h6>
+                                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#createAutomationModal" style="font-size: 0.7rem;">
+                                                        + New
+                                                    </button>
+                                                </div>
+                                                <div class="card-body p-2" id="proactiveAutomationsContainer" style="max-height: 200px; overflow-y: auto;">
+                                                    <div class="text-center py-3 text-muted">
+                                                        <small>No automations configured</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END Proactive System Section -->
+
                     <div class="row">
                         <!-- Platforms List -->
                         <div class="col-lg-8">
@@ -42253,6 +42387,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (distributeTab) {
                 distributeTab.addEventListener('shown.bs.tab', function() {
                     loadLearningDashboard();
+                    loadProactiveDashboard();  // Session 234: Load Proactive System
                 });
             }
         });
@@ -42374,6 +42509,375 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // END Session 232: Learning Loop JavaScript Functions
+        // ============================================================
+
+        // ============================================================
+        // Session 234: Proactive System JavaScript Functions (Phase 6)
+        // ============================================================
+
+        // Load Proactive Dashboard
+        async function loadProactiveDashboard() {
+            try {
+                const response = await fetch('/api/proactive/dashboard/');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update stats
+                    document.getElementById('proactiveAlertsCount').textContent = data.alerts?.count || 0;
+                    document.getElementById('proactiveNotificationsCount').textContent = data.notifications?.unread_count || 0;
+                    document.getElementById('proactiveSuggestionsCount').textContent = data.suggestions?.count || 0;
+                    document.getElementById('proactiveAutomationsCount').textContent = data.automations?.count || 0;
+
+                    // Render notifications
+                    renderProactiveNotifications(data.notifications?.items || []);
+
+                    // Render suggestions
+                    renderProactiveSuggestions(data.suggestions?.items || []);
+
+                    // Render alerts
+                    renderProactiveAlerts(data.alerts?.items || []);
+
+                    // Render automations
+                    renderProactiveAutomations(data.automations?.items || []);
+                } else {
+                    console.log('Proactive dashboard requires authentication');
+                }
+            } catch (error) {
+                console.error('Error loading proactive dashboard:', error);
+            }
+        }
+
+        // Render Notifications
+        function renderProactiveNotifications(notifications) {
+            const container = document.getElementById('proactiveNotificationsContainer');
+            if (!notifications || notifications.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <small>No new notifications</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const priorityColors = {
+                'urgent': '#ef4444',
+                'high': '#f97316',
+                'medium': '#eab308',
+                'low': '#10b981'
+            };
+
+            const typeIcons = {
+                'alert': '',
+                'suggestion': '',
+                'insight': '',
+                'reminder': '',
+                'celebration': '',
+                'warning': ''
+            };
+
+            container.innerHTML = notifications.map(n => `
+                <div class="list-group-item p-2 mb-1" style="background: transparent; border-color: rgba(71, 85, 105, 0.3); cursor: pointer;"
+                     onclick="markNotificationRead('${n.id}')">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small style="color: ${priorityColors[n.priority] || '#94a3b8'};">
+                                ${typeIcons[n.type] || ''} ${n.title}
+                            </small>
+                            <br>
+                            <small class="text-muted" style="font-size: 0.7rem;">${n.message?.substring(0, 80) || ''}...</small>
+                        </div>
+                        <span class="badge" style="background: ${priorityColors[n.priority] || '#64748b'}; font-size: 0.6rem;">
+                            ${n.priority}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Smart Suggestions
+        function renderProactiveSuggestions(suggestions) {
+            const container = document.getElementById('proactiveSuggestionsContainer');
+            if (!suggestions || suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <small>Click "Generate" to get AI suggestions</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const typeIcons = {
+                'pricing': '',
+                'timing': '',
+                'platform': '',
+                'content': '',
+                'tags': '',
+                'bundle': '',
+                'promotion': ''
+            };
+
+            container.innerHTML = suggestions.map(s => `
+                <div class="list-group-item p-2 mb-1" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <small style="color: #8b5cf6;">
+                                ${typeIcons[s.type] || ''} ${s.title}
+                            </small>
+                            <br>
+                            <small class="text-muted" style="font-size: 0.7rem;">${s.description?.substring(0, 80) || ''}...</small>
+                        </div>
+                        <div class="text-end ms-2">
+                            <span class="badge bg-success" style="font-size: 0.6rem;">+${s.impact ? '$' + Math.round(s.impact) : '?'}</span>
+                            <div class="mt-1">
+                                <button class="btn btn-sm btn-outline-success me-1" onclick="acceptSuggestion('${s.id}')" style="font-size: 0.6rem; padding: 1px 4px;">
+                                    Accept
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="rejectSuggestion('${s.id}')" style="font-size: 0.6rem; padding: 1px 4px;">
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Active Alerts
+        function renderProactiveAlerts(alerts) {
+            const container = document.getElementById('proactiveAlertsContainer');
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3 text-muted">
+                        <small>No alerts configured. Click "+ New Alert" to create one.</small>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = alerts.map(a => `
+                <div class="list-group-item p-2 mb-1" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small style="color: #ef4444;">${a.name}</small>
+                            <br>
+                            <small class="text-muted" style="font-size: 0.65rem;">
+                                ${a.metric} ${a.condition} ${a.threshold || '?'} | Triggered ${a.trigger_count || 0}x
+                            </small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" ${a.is_active !== false ? 'checked' : ''}
+                                   onchange="toggleAlert('${a.id}')" style="cursor: pointer;">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Automations
+        function renderProactiveAutomations(automations) {
+            const container = document.getElementById('proactiveAutomationsContainer');
+            if (!automations || automations.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3 text-muted">
+                        <small>No automations configured yet.</small>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = automations.map(a => `
+                <div class="list-group-item p-2 mb-1" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small style="color: #6366f1;">${a.name}</small>
+                            <br>
+                            <small class="text-muted" style="font-size: 0.65rem;">
+                                ${a.type} | ${a.executions || 0} runs | ${Math.round(a.success_rate || 0)}% success
+                            </small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" ${!a.is_paused ? 'checked' : ''}
+                                   onchange="toggleAutomation('${a.id}')" style="cursor: pointer;">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Run Proactive Check
+        async function runProactiveCheck() {
+            showToast('Running proactive check...', 'info');
+            try {
+                const response = await fetch('/api/proactive/check/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const results = data.results || {};
+                    showToast(`Check complete! Alerts: ${results.alerts_triggered?.length || 0}, Suggestions: ${results.suggestions_generated?.length || 0}`, 'success');
+                    loadProactiveDashboard();
+                } else {
+                    showToast('Proactive check failed', 'error');
+                }
+            } catch (error) {
+                console.error('Error running proactive check:', error);
+                showToast('Error running proactive check', 'error');
+            }
+        }
+
+        // Generate Smart Suggestions
+        async function generateSmartSuggestions() {
+            showToast('Generating AI suggestions...', 'info');
+            try {
+                const response = await fetch('/api/proactive/suggestions/generate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ max_suggestions: 10 })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Generated ${data.generated_count || 0} suggestions!`, 'success');
+                    loadProactiveDashboard();
+                } else {
+                    showToast('Failed to generate suggestions', 'error');
+                }
+            } catch (error) {
+                console.error('Error generating suggestions:', error);
+                showToast('Error generating suggestions', 'error');
+            }
+        }
+
+        // Mark Notification as Read
+        async function markNotificationRead(notificationId) {
+            try {
+                await fetch(`/api/proactive/notifications/${notificationId}/read/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                loadProactiveDashboard();
+            } catch (error) {
+                console.error('Error marking notification read:', error);
+            }
+        }
+
+        // Mark All Notifications Read
+        async function markAllNotificationsRead() {
+            try {
+                const response = await fetch('/api/proactive/notifications/read-all/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Marked ${data.updated_count || 0} notifications as read`, 'success');
+                    loadProactiveDashboard();
+                }
+            } catch (error) {
+                console.error('Error marking all read:', error);
+            }
+        }
+
+        // Accept Suggestion
+        async function acceptSuggestion(suggestionId) {
+            try {
+                const response = await fetch(`/api/proactive/suggestions/${suggestionId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ action: 'accept' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Suggestion accepted!', 'success');
+                    loadProactiveDashboard();
+                }
+            } catch (error) {
+                console.error('Error accepting suggestion:', error);
+            }
+        }
+
+        // Reject Suggestion
+        async function rejectSuggestion(suggestionId) {
+            try {
+                const response = await fetch(`/api/proactive/suggestions/${suggestionId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ action: 'reject' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Suggestion rejected', 'info');
+                    loadProactiveDashboard();
+                }
+            } catch (error) {
+                console.error('Error rejecting suggestion:', error);
+            }
+        }
+
+        // Toggle Alert
+        async function toggleAlert(alertId) {
+            try {
+                const response = await fetch(`/api/proactive/alerts/${alertId}/toggle/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Alert ${data.is_active ? 'activated' : 'deactivated'}`, 'success');
+                }
+            } catch (error) {
+                console.error('Error toggling alert:', error);
+            }
+        }
+
+        // Toggle Automation
+        async function toggleAutomation(automationId) {
+            try {
+                const response = await fetch(`/api/proactive/automations/${automationId}/toggle/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Automation updated`, 'success');
+                }
+            } catch (error) {
+                console.error('Error toggling automation:', error);
+            }
+        }
+
+        // END Session 234: Proactive System JavaScript Functions
         // ============================================================
 
         // Update opportunity stats
