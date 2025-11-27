@@ -1634,7 +1634,11 @@ urlpatterns = [
     path('api/marketplace/categories/', marketplace_categories, name='marketplace-categories'),
 
     # Session 220: Real-Time Project Collaboration API
+    # Note: More specific paths (invitations/) MUST come before catch-all (<str:project_id>/)
     path('api/projects/shared/', proj_collab_projects, name='proj-collab-projects'),
+    path('api/projects/shared/invitations/', proj_collab_invitations, name='proj-collab-invitations'),
+    path('api/projects/shared/invitations/<str:invitation_id>/accept/', proj_collab_accept, name='proj-collab-accept'),
+    path('api/projects/shared/invitations/<str:invitation_id>/decline/', proj_collab_decline, name='proj-collab-decline'),
     path('api/projects/shared/<str:project_id>/', proj_collab_detail, name='proj-collab-detail'),
     path('api/projects/shared/<str:project_id>/invite/', proj_collab_invite, name='proj-collab-invite'),
     path('api/projects/shared/<str:project_id>/collaborators/', proj_collab_collaborators, name='proj-collab-collaborators'),
@@ -1642,9 +1646,6 @@ urlpatterns = [
     path('api/projects/shared/<str:project_id>/activity/', proj_collab_activity, name='proj-collab-activity'),
     path('api/projects/shared/<str:project_id>/comments/', proj_collab_comments, name='proj-collab-comments'),
     path('api/projects/shared/<str:project_id>/presences/', proj_collab_presences, name='proj-collab-presences'),
-    path('api/projects/invitations/', proj_collab_invitations, name='proj-collab-invitations'),
-    path('api/projects/invitations/<str:invitation_id>/accept/', proj_collab_accept, name='proj-collab-accept'),
-    path('api/projects/invitations/<str:invitation_id>/decline/', proj_collab_decline, name='proj-collab-decline'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
