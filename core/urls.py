@@ -329,6 +329,31 @@ from core.views_learning_loop import (
     learning_dashboard,
 )
 
+# Session 234: Import proactive system views (Phase 6)
+from core.views_proactive import (
+    proactive_dashboard,
+    run_proactive_check,
+    list_alerts,
+    create_alert,
+    alert_detail,
+    toggle_alert,
+    check_alerts,
+    list_notifications,
+    mark_notification_read,
+    dismiss_notification,
+    mark_all_notifications_read,
+    notification_preferences,
+    list_suggestions,
+    generate_suggestions,
+    suggestion_detail,
+    list_automations,
+    create_automation,
+    automation_detail,
+    execute_automation,
+    toggle_automation,
+    automation_logs,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -970,6 +995,38 @@ urlpatterns = [
     path('api/learning/insights/<uuid:insight_id>/read/', mark_insight_read, name='learning-insight-read'),
     path('api/learning/insights/<uuid:insight_id>/dismiss/', dismiss_insight, name='learning-insight-dismiss'),
     path('api/learning/compare/', get_performance_comparison, name='learning-compare'),
+
+    # Session 234: Proactive System APIs (Phase 6)
+    # Dashboard & Overview
+    path('api/proactive/dashboard/', proactive_dashboard, name='proactive-dashboard'),
+    path('api/proactive/check/', run_proactive_check, name='proactive-check'),
+
+    # Alerts API
+    path('api/proactive/alerts/', list_alerts, name='proactive-alerts'),
+    path('api/proactive/alerts/create/', create_alert, name='proactive-alerts-create'),
+    path('api/proactive/alerts/<uuid:alert_id>/', alert_detail, name='proactive-alert-detail'),
+    path('api/proactive/alerts/<uuid:alert_id>/toggle/', toggle_alert, name='proactive-alert-toggle'),
+    path('api/proactive/alerts/check/', check_alerts, name='proactive-alerts-check'),
+
+    # Notifications API
+    path('api/proactive/notifications/', list_notifications, name='proactive-notifications'),
+    path('api/proactive/notifications/<uuid:notification_id>/read/', mark_notification_read, name='proactive-notification-read'),
+    path('api/proactive/notifications/<uuid:notification_id>/dismiss/', dismiss_notification, name='proactive-notification-dismiss'),
+    path('api/proactive/notifications/read-all/', mark_all_notifications_read, name='proactive-notifications-read-all'),
+    path('api/proactive/notifications/preferences/', notification_preferences, name='proactive-notification-preferences'),
+
+    # Suggestions API
+    path('api/proactive/suggestions/', list_suggestions, name='proactive-suggestions'),
+    path('api/proactive/suggestions/generate/', generate_suggestions, name='proactive-suggestions-generate'),
+    path('api/proactive/suggestions/<uuid:suggestion_id>/', suggestion_detail, name='proactive-suggestion-detail'),
+
+    # Automations API
+    path('api/proactive/automations/', list_automations, name='proactive-automations'),
+    path('api/proactive/automations/create/', create_automation, name='proactive-automations-create'),
+    path('api/proactive/automations/<uuid:automation_id>/', automation_detail, name='proactive-automation-detail'),
+    path('api/proactive/automations/<uuid:automation_id>/execute/', execute_automation, name='proactive-automation-execute'),
+    path('api/proactive/automations/<uuid:automation_id>/toggle/', toggle_automation, name='proactive-automation-toggle'),
+    path('api/proactive/automations/<uuid:automation_id>/logs/', automation_logs, name='proactive-automation-logs'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
