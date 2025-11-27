@@ -1788,3 +1788,355 @@ def generate_opportunity_report():
             'status': 'failed',
             'error': str(e)
         }
+
+
+# =============================================================================
+# Session 230: Smart Distribution Tasks
+# =============================================================================
+
+@shared_task(bind=True, max_retries=3)
+def process_distribution(self, distribution_id: str):
+    """
+    Process a content distribution to a platform.
+
+    This task handles the actual upload/submission process for each platform,
+    updating the distribution status as it progresses.
+    """
+    logger.info(f"🚀 [DISTRIBUTION] Processing distribution {distribution_id}")
+
+    try:
+        from core.models_unified_system import ContentDistribution, UserPlatformAccount
+        from django.utils import timezone
+
+        distribution = ContentDistribution.objects.select_related(
+            'platform_account__platform',
+            'image_history',
+            'video_history',
+            'user'
+        ).get(id=distribution_id)
+
+        # Check if already processed or cancelled
+        if distribution.status in ['live', 'removed', 'rejected']:
+            logger.info(f"🚀 [DISTRIBUTION] {distribution_id} already processed: {distribution.status}")
+            return {'status': 'skipped', 'reason': f'Already {distribution.status}'}
+
+        # Update to processing status
+        distribution.status = 'processing'
+        distribution.save()
+
+        platform_name = distribution.platform_account.platform.name.lower()
+
+        # Platform-specific processing
+        result = None
+
+        if 'etsy' in platform_name:
+            result = process_etsy_distribution(distribution)
+        elif 'gumroad' in platform_name:
+            result = process_gumroad_distribution(distribution)
+        elif 'shutterstock' in platform_name:
+            result = process_shutterstock_distribution(distribution)
+        else:
+            # Generic processing - just mark as pending review
+            result = {
+                'success': True,
+                'status': 'pending',
+                'message': f'Queued for {platform_name} - manual upload required'
+            }
+
+        if result.get('success'):
+            distribution.status = result.get('status', 'live')
+            distribution.platform_listing_id = result.get('listing_id', '')
+            distribution.platform_listing_url = result.get('url', '')
+            if distribution.status == 'live':
+                distribution.listed_at = timezone.now()
+
+            # Update platform metadata with result
+            metadata = distribution.platform_metadata or {}
+            metadata['process_result'] = result
+            metadata['processed_at'] = timezone.now().isoformat()
+            distribution.platform_metadata = metadata
+            distribution.save()
+
+            # Update account stats
+            account = distribution.platform_account
+            account.total_items_listed += 1
+            account.save()
+
+            logger.info(f"🚀 [DISTRIBUTION] Successfully processed {distribution_id} to {platform_name}")
+            return {
+                'status': 'success',
+                'distribution_id': distribution_id,
+                'platform': platform_name,
+                'listing_status': distribution.status
+            }
+        else:
+            # Failed
+            distribution.status = 'rejected'
+            distribution.rejection_reason = result.get('error', 'Unknown error')
+            distribution.save()
+
+            logger.error(f"🚀 [DISTRIBUTION] Failed to process {distribution_id}: {result.get('error')}")
+            return {
+                'status': 'failed',
+                'distribution_id': distribution_id,
+                'error': result.get('error')
+            }
+
+    except ContentDistribution.DoesNotExist:
+        logger.error(f"🚀 [DISTRIBUTION] Distribution {distribution_id} not found")
+        return {'status': 'failed', 'error': 'Distribution not found'}
+
+    except Exception as e:
+        logger.exception(f"🚀 [DISTRIBUTION] Error processing {distribution_id}: {e}")
+        # Retry on transient errors
+        raise self.retry(exc=e, countdown=60 * (self.request.retries + 1))
+
+
+def process_etsy_distribution(distribution):
+    """Process distribution to Etsy."""
+    account = distribution.platform_account
+
+    if not account.access_token:
+        return {'success': False, 'error': 'No Etsy access token. Please reconnect.'}
+
+    try:
+        import requests as http_requests
+        import os
+
+        client_id = os.environ.get('ETSY_CLIENT_ID', '')
+
+        headers = {
+            'Authorization': f'Bearer {account.access_token}',
+            'x-api-key': client_id,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+
+        # Get user's shop ID (from account metadata or fetch)
+        shop_id = account.notification_settings.get('shop_id')
+
+        if not shop_id:
+            # Fetch shop ID
+            shops_response = http_requests.get(
+                'https://openapi.etsy.com/v3/application/users/me/shops',
+                headers=headers
+            )
+            if shops_response.status_code == 200:
+                shops = shops_response.json().get('results', [])
+                if shops:
+                    shop_id = shops[0].get('shop_id')
+                    # Save for future use
+                    account.notification_settings['shop_id'] = shop_id
+                    account.save()
+
+        if not shop_id:
+            return {'success': False, 'error': 'No Etsy shop found for account'}
+
+        # Prepare listing data
+        listing_data = {
+            'title': distribution.title[:140],  # Etsy max 140 chars
+            'description': distribution.description or distribution.title,
+            'price': float(distribution.price or 29.99),
+            'quantity': 999,  # Digital goods
+            'who_made': 'i_did',
+            'when_made': '2020_2025',
+            'taxonomy_id': 1,  # Art category (simplified)
+            'is_digital': 'true',
+        }
+
+        if distribution.tags:
+            listing_data['tags'] = ','.join(distribution.tags[:13])
+
+        response = http_requests.post(
+            f'https://openapi.etsy.com/v3/application/shops/{shop_id}/listings',
+            headers=headers,
+            data=listing_data
+        )
+
+        if response.status_code in [200, 201]:
+            etsy_listing = response.json()
+            return {
+                'success': True,
+                'status': 'live' if etsy_listing.get('state') == 'active' else 'pending',
+                'listing_id': str(etsy_listing.get('listing_id', '')),
+                'url': etsy_listing.get('url', ''),
+            }
+        else:
+            return {
+                'success': False,
+                'error': f'Etsy API error: {response.status_code} - {response.text[:200]}'
+            }
+
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+def process_gumroad_distribution(distribution):
+    """Process distribution to Gumroad."""
+    account = distribution.platform_account
+
+    if not account.access_token:
+        return {'success': False, 'error': 'No Gumroad access token. Please reconnect.'}
+
+    try:
+        import requests as http_requests
+
+        product_data = {
+            'access_token': account.access_token,
+            'name': distribution.title,
+            'description': distribution.description or distribution.title,
+            'price': int(float(distribution.price or 9.99) * 100),  # Cents
+        }
+
+        response = http_requests.post(
+            'https://api.gumroad.com/v2/products',
+            data=product_data
+        )
+
+        if response.status_code in [200, 201]:
+            result = response.json()
+            product = result.get('product', {})
+            return {
+                'success': True,
+                'status': 'live' if product.get('published') else 'draft',
+                'listing_id': product.get('id', ''),
+                'url': product.get('short_url', ''),
+            }
+        else:
+            return {
+                'success': False,
+                'error': f'Gumroad API error: {response.status_code}'
+            }
+
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+def process_shutterstock_distribution(distribution):
+    """Process distribution to Shutterstock - marks for manual upload."""
+    # Shutterstock requires manual upload through their contributor portal
+    # We track the distribution but inform the user
+
+    return {
+        'success': True,
+        'status': 'pending',
+        'message': 'Shutterstock requires upload through contributor portal at submit.shutterstock.com',
+        'listing_id': '',
+        'url': 'https://submit.shutterstock.com/',
+    }
+
+
+@shared_task
+def sync_all_platform_revenue():
+    """
+    Sync revenue from all connected platforms for all users.
+    Run daily to keep revenue tracking up to date.
+    """
+    logger.info("💰 [DISTRIBUTION] Starting daily revenue sync for all platforms...")
+
+    try:
+        from core.models_unified_system import UserPlatformAccount
+        from django.utils import timezone
+
+        synced_count = 0
+        error_count = 0
+
+        # Get all active accounts with tokens
+        accounts = UserPlatformAccount.objects.filter(
+            account_status='active',
+            access_token__isnull=False
+        ).exclude(access_token='').select_related('platform', 'user')
+
+        for account in accounts:
+            try:
+                platform_name = account.platform.name.lower()
+
+                if 'gumroad' in platform_name:
+                    from core.views_platform_integrations import sync_gumroad_revenue
+                    sync_gumroad_revenue(account)
+                    synced_count += 1
+
+                elif 'etsy' in platform_name:
+                    from core.views_platform_integrations import sync_etsy_revenue
+                    sync_etsy_revenue(account)
+                    synced_count += 1
+
+            except Exception as e:
+                logger.error(f"💰 [DISTRIBUTION] Error syncing {account.platform.name} for {account.user.username}: {e}")
+                error_count += 1
+
+        logger.info(f"💰 [DISTRIBUTION] Revenue sync complete: {synced_count} synced, {error_count} errors")
+
+        return {
+            'status': 'completed',
+            'synced_accounts': synced_count,
+            'errors': error_count,
+        }
+
+    except Exception as e:
+        logger.error(f"💰 [DISTRIBUTION] Revenue sync failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def update_distribution_analytics():
+    """
+    Update distribution analytics aggregations daily.
+    """
+    logger.info("📊 [DISTRIBUTION] Updating distribution analytics...")
+
+    try:
+        from core.models_unified_system import (
+            ContentDistribution,
+            DistributionAnalytics,
+            UserPlatformAccount
+        )
+        from django.utils import timezone
+        from django.db.models import Sum, Count
+        from datetime import timedelta
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+
+        # Get all users with distributions
+        user_ids = ContentDistribution.objects.values_list('user_id', flat=True).distinct()
+
+        for user_id in user_ids:
+            # Aggregate by platform
+            platforms = UserPlatformAccount.objects.filter(user_id=user_id)
+
+            for platform_account in platforms:
+                distributions = ContentDistribution.objects.filter(
+                    user_id=user_id,
+                    platform_account=platform_account,
+                    created_at__date=yesterday
+                )
+
+                stats = distributions.aggregate(
+                    total_views=Sum('views'),
+                    total_downloads=Sum('downloads'),
+                    total_sales=Sum('sales'),
+                    total_revenue=Sum('revenue'),
+                    new_listings=Count('id'),
+                )
+
+                if stats['new_listings'] and stats['new_listings'] > 0:
+                    DistributionAnalytics.objects.update_or_create(
+                        user_id=user_id,
+                        platform=platform_account.platform,
+                        date=yesterday,
+                        period_type='daily',
+                        defaults={
+                            'total_views': stats['total_views'] or 0,
+                            'total_downloads': stats['total_downloads'] or 0,
+                            'total_sales': stats['total_sales'] or 0,
+                            'total_revenue': stats['total_revenue'] or 0,
+                            'new_listings': stats['new_listings'],
+                        }
+                    )
+
+        logger.info("📊 [DISTRIBUTION] Analytics updated successfully")
+        return {'status': 'completed', 'date': str(yesterday)}
+
+    except Exception as e:
+        logger.error(f"📊 [DISTRIBUTION] Analytics update failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
