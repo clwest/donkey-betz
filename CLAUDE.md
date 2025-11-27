@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 27, 2025 - Session 236
+**Last Updated:** November 27, 2025 - Session 238
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE
 **Current Focus:** AI Content Creation (images, videos, audio, 3D)
 **Built-in Styles:** 80+ professional style presets
@@ -177,6 +177,7 @@ Built-in style library in `content/image_generation.py`:
 ## Documentation
 
 - **Current Priorities:** `00-START-NEXT-SESSION.md`
+- **Prompting System:** `docs/architecture/PROMPTING_SYSTEM.md` (Session 238)
 - **Feature Docs:** `docs/features/`
 - **API Docs:** `docs/apis/`
 - **Session History:** `docs/sessions/`
@@ -186,12 +187,12 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 238:** Prompting System Documentation - Complete architecture flow documentation
+- **Session 237:** Spider Intelligence & Trending Topics - Fixed API endpoints, trending topics
 - **Session 236:** A/B Testing & Goal Tracking UI - Phase 6 Complete! Dashboard sections, creation modals, results visualization
 - **Session 235:** A/B Testing Framework - 4 models, 15 APIs, Alert/Automation modals, Notification Bell
 - **Session 234:** Proactive System Started - 6 models, 5 engine classes, 21 APIs, 7 Celery tasks
 - **Session 233:** ML Training Pipeline - Pattern Discovery, Content Scoring, Pricing engines
-- **Session 232:** Learning Loop Foundation - 6 models, 14 APIs, Success Pattern tracking
-- **Session 231:** Smart Distribution Frontend - Phase 4 Complete
 - **Session 230:** Smart Distribution Expansion - Platform analysis, recommendations
 - **Session 229:** Smart Distribution Started - Multi-platform distribution
 - **Session 228:** Team Power Complete - Advisor consultations, team analytics
