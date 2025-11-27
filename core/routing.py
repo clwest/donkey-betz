@@ -371,3 +371,14 @@ new_page_patterns = [
 ]
 
 websocket_urlpatterns.extend(new_page_patterns)
+
+# Session 220: Real-Time Collaboration WebSocket
+from .consumers_collaboration import CollaborationConsumer
+
+collaboration_patterns = [
+    # Project collaboration WebSocket - join with project_id
+    re_path(r'^ws/collaboration/(?P<project_id>[^/]+)/$', CollaborationConsumer.as_asgi()),
+    re_path(r'^ws/collab/(?P<project_id>[^/]+)/$', CollaborationConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(collaboration_patterns)

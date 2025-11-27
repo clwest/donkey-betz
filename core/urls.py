@@ -160,6 +160,21 @@ from core.views_marketplace import (
     get_categories as marketplace_categories,
 )
 
+# Session 220: Import project collaboration views
+from core.views_project_collaboration import (
+    list_create_projects as proj_collab_projects,
+    project_detail as proj_collab_detail,
+    invite_collaborator as proj_collab_invite,
+    list_invitations as proj_collab_invitations,
+    accept_invitation as proj_collab_accept,
+    decline_invitation as proj_collab_decline,
+    list_collaborators as proj_collab_collaborators,
+    remove_collaborator as proj_collab_remove,
+    get_activity as proj_collab_activity,
+    project_comments as proj_collab_comments,
+    get_presences as proj_collab_presences,
+)
+
 # Session 206: Import preferences dashboard views
 # Session 210: Added implicit learning & recommendations
 # Session 211: Added A/B testing
@@ -1603,6 +1618,19 @@ urlpatterns = [
     path('api/marketplace/my-installed/', marketplace_my_installed, name='marketplace-my-installed'),
     path('api/marketplace/stats/', marketplace_stats, name='marketplace-stats'),
     path('api/marketplace/categories/', marketplace_categories, name='marketplace-categories'),
+
+    # Session 220: Real-Time Project Collaboration API
+    path('api/projects/shared/', proj_collab_projects, name='proj-collab-projects'),
+    path('api/projects/shared/<str:project_id>/', proj_collab_detail, name='proj-collab-detail'),
+    path('api/projects/shared/<str:project_id>/invite/', proj_collab_invite, name='proj-collab-invite'),
+    path('api/projects/shared/<str:project_id>/collaborators/', proj_collab_collaborators, name='proj-collab-collaborators'),
+    path('api/projects/shared/<str:project_id>/collaborators/<str:user_id>/', proj_collab_remove, name='proj-collab-remove'),
+    path('api/projects/shared/<str:project_id>/activity/', proj_collab_activity, name='proj-collab-activity'),
+    path('api/projects/shared/<str:project_id>/comments/', proj_collab_comments, name='proj-collab-comments'),
+    path('api/projects/shared/<str:project_id>/presences/', proj_collab_presences, name='proj-collab-presences'),
+    path('api/projects/invitations/', proj_collab_invitations, name='proj-collab-invitations'),
+    path('api/projects/invitations/<str:invitation_id>/accept/', proj_collab_accept, name='proj-collab-accept'),
+    path('api/projects/invitations/<str:invitation_id>/decline/', proj_collab_decline, name='proj-collab-decline'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
