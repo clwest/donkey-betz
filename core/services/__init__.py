@@ -4,6 +4,7 @@
 # Session 211: A/B Testing Framework
 # Session 212: Workflow Builder Service
 # Session 214: Agent Collaboration Service
+# Session 215: Collective Intelligence Service
 
 from .spider_intelligence import SpiderIntelligenceService
 from .implicit_learning import ImplicitLearningService, get_learning_service
@@ -16,6 +17,10 @@ from .agent_collaboration import (
     CollaborationType,
     MessageType,
     CollaborationStatus,
+)
+from .collective_intelligence import (
+    CollectiveIntelligenceService,
+    get_collective_intelligence_service,
 )
 
 __all__ = [
@@ -33,4 +38,6 @@ __all__ = [
     'CollaborationType',
     'MessageType',
     'CollaborationStatus',
+    'CollectiveIntelligenceService',
+    'get_collective_intelligence_service',
 ]

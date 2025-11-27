@@ -173,6 +173,20 @@ from core.views_collaboration import (
     delegate_task,
     request_consultation,
 )
+
+# Session 215: Import collective intelligence API views
+from core.views_collective_intelligence import (
+    aggregate_insights,
+    generate_report,
+    get_knowledge_gaps,
+    get_agent_improvements,
+    get_collaboration_monitor,
+    get_collaboration_network,
+    orchestrate_task,
+    get_collective_stats,
+    get_dashboard_data,
+    get_agent_collective_profile,
+)
 from core.views_spider_data import (
     get_spider_items,
     get_spider_summary,
@@ -720,6 +734,18 @@ urlpatterns = [
     # Performance
     path('api/collaboration/performance/', get_agent_performance, name='collaboration-performance'),
     path('api/collaboration/top-performers/', get_top_performers, name='collaboration-top-performers'),
+
+    # Session 215: Collective Intelligence API
+    path('api/collective/insights/', aggregate_insights, name='collective-insights'),
+    path('api/collective/report/', generate_report, name='collective-report'),
+    path('api/collective/knowledge-gaps/', get_knowledge_gaps, name='collective-knowledge-gaps'),
+    path('api/collective/improvements/', get_agent_improvements, name='collective-improvements'),
+    path('api/collective/monitor/', get_collaboration_monitor, name='collective-monitor'),
+    path('api/collective/network/', get_collaboration_network, name='collective-network'),
+    path('api/collective/orchestrate/', orchestrate_task, name='collective-orchestrate'),
+    path('api/collective/stats/', get_collective_stats, name='collective-stats'),
+    path('api/collective/dashboard/', get_dashboard_data, name='collective-dashboard'),
+    path('api/collective/agents/<str:agent_name>/', get_agent_collective_profile, name='collective-agent-profile'),
 
     # Domain preferences (catch-all - must be LAST in preferences routes)
     path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),
