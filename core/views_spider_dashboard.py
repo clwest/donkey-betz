@@ -73,8 +73,20 @@ def spider_network_data(request):
         # Get actual data count for this spider
         data_collected = spider_data_counts.get(spider_name, 0)
 
-        # Determine status based on data collection
-        if data_collected > 0:
+        # Session 218: Check if spider is a real implementation (not a placeholder)
+        # A spider is "Active" if it's a real implementation, not a placeholder
+        # Check is_placeholder from spider_info (set by registry) or config
+        is_placeholder = spider_info.get('is_placeholder', config.get('placeholder', False))
+        spider_class_name = spider_info.get('class', '')
+        is_real_implementation = (
+            spider_class_name and
+            spider_class_name != 'BaseIntelligenceSpider' and
+            not is_placeholder
+        )
+
+        # Status: Active = real implementation ready to work
+        # Idle = placeholder waiting to be implemented
+        if is_real_implementation:
             status = 'Active'
             active_count += 1
         else:

@@ -80,6 +80,30 @@ from .specialized.kickstarter_spider import KickstarterSpider
 from .specialized.coingecko_spider import CoinGeckoSpider
 from .specialized.yahoo_finance_spider import YahooFinanceSpider
 
+# Session 218: CREATIVE ASSETS & STOCK spiders (5)
+from .specialized.envato_spider import EnvatoSpider
+from .specialized.creativemarket_spider import CreativeMarketSpider
+from .specialized.adobestock_spider import AdobeStockSpider
+from .specialized.shutterstock_spider import ShutterstockSpider
+from .specialized.canva_spider import CanvaSpider
+
+# Session 218: AI/CREATIVE TOOLS spiders (4)
+from .specialized.midjourney_spider import MidjourneySpider
+from .specialized.civitai_spider import CivitAISpider
+from .specialized.runwayml_spider import RunwayMLSpider
+from .specialized.replicate_spider import ReplicateSpider
+
+# Session 218: DIGITAL PRODUCT PLATFORMS spiders (4)
+from .specialized.etsy_spider import EtsySpider
+from .specialized.lemonsqueezy_spider import LemonSqueezySpider
+from .specialized.sellfy_spider import SellfySpider
+from .specialized.appsumo_spider import AppSumoSpider
+
+# Session 218: CONTENT CREATION spiders (3)
+from .specialized.convertkit_spider import ConvertKitSpider
+from .specialized.notion_spider import NotionSpider
+from .specialized.figma_spider import FigmaSpider
+
 # Import base spider for fallbacks
 from .base_spider import BaseIntelligenceSpider
 
@@ -473,8 +497,121 @@ class SpiderRegistry:
             'targets': ['behance.net/feeds/projects']
         })
 
-        # Register social_sentiment for enhanced NCAA coverage
-        # (Already registered above, but documented here for sports coverage)
+        # === SESSION 218: CREATIVE ASSETS & STOCK SPIDERS (5) ===
+        self.register_spider('envato', EnvatoSpider, {
+            'category': 'creative_assets',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['envato.com/blog/']
+        })
+
+        self.register_spider('creativemarket', CreativeMarketSpider, {
+            'category': 'creative_assets',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['creativemarket.com']
+        })
+
+        self.register_spider('adobestock', AdobeStockSpider, {
+            'category': 'creative_assets',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['stock.adobe.com']
+        })
+
+        self.register_spider('shutterstock', ShutterstockSpider, {
+            'category': 'creative_assets',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['shutterstock.com/blog/']
+        })
+
+        self.register_spider('canva', CanvaSpider, {
+            'category': 'creative_assets',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['canva.com/designschool/']
+        })
+
+        # === SESSION 218: AI/CREATIVE TOOLS SPIDERS (4) ===
+        self.register_spider('midjourney', MidjourneySpider, {
+            'category': 'ai_creative',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['midjourney.com']
+        })
+
+        self.register_spider('civitai', CivitAISpider, {
+            'category': 'ai_creative',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['civitai.com']
+        })
+
+        self.register_spider('runwayml', RunwayMLSpider, {
+            'category': 'ai_creative',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['runwayml.com/blog/']
+        })
+
+        self.register_spider('replicate', ReplicateSpider, {
+            'category': 'ai_creative',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['replicate.com']
+        })
+
+        # === SESSION 218: DIGITAL PRODUCT PLATFORMS SPIDERS (4) ===
+        self.register_spider('etsy', EtsySpider, {
+            'category': 'digital_products',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['etsy.com']
+        })
+
+        self.register_spider('lemonsqueezy', LemonSqueezySpider, {
+            'category': 'digital_products',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['lemonsqueezy.com']
+        })
+
+        self.register_spider('sellfy', SellfySpider, {
+            'category': 'digital_products',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['sellfy.com']
+        })
+
+        self.register_spider('appsumo', AppSumoSpider, {
+            'category': 'digital_products',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['appsumo.com']
+        })
+
+        # === SESSION 218: CONTENT CREATION SPIDERS (3) ===
+        self.register_spider('convertkit', ConvertKitSpider, {
+            'category': 'content_creation',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['convertkit.com/blog/']
+        })
+
+        self.register_spider('notion', NotionSpider, {
+            'category': 'content_creation',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['notion.so/blog/']
+        })
+
+        self.register_spider('figma', FigmaSpider, {
+            'category': 'content_creation',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['figma.com/blog/']
+        })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")
 
