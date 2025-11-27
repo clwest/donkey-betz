@@ -1504,6 +1504,13 @@
                     👥 Teams
                 </button>
             </li>
+
+            <!-- Session 229: Distribution Tab (Phase 4 - Smart Distribution) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="distribution-tab" data-bs-toggle="tab" data-bs-target="#distribution" type="button" role="tab" title="Smart Content Distribution">
+                    🚀 Distribute
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -8695,6 +8702,167 @@
             <!-- OLD PATH: Workflows tab with Quick Start Templates removed  -->
             <!-- This eliminates redundancy and creates ONE clear user path  -->
             <!-- ============================================================ -->
+
+            <!-- ============================================================ -->
+            <!-- Session 229: DISTRIBUTION TAB - Phase 4 Smart Distribution   -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="distribution" role="tabpanel" aria-labelledby="distribution-tab">
+                <div class="container-fluid p-4">
+                    <!-- Distribution Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4 class="mb-1" style="color: #f97316;">🚀 Smart Content Distribution</h4>
+                            <p class="text-muted mb-0">Sell your AI-generated content across multiple platforms</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-info" onclick="loadDistributionData()">
+                                🔄 Refresh
+                            </button>
+                            <button class="btn btn-primary" onclick="showConnectPlatformModal()">
+                                🔗 Connect Platform
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Distribution Stats Cards -->
+                    <div class="row mb-4" id="distributionStatsRow">
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.1)); border: 1px solid rgba(249, 115, 22, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #f97316;" id="totalPlatformsCount">0</h3>
+                                    <small class="text-muted">Available Platforms</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #22c55e;" id="totalDistributionsCount">0</h3>
+                                    <small class="text-muted">Total Distributions</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1)); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #fbbf24;" id="liveDistributionsCount">0</h3>
+                                    <small class="text-muted">Live Listings</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1)); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0" style="color: #10b981;" id="totalRevenueCount">$0</h3>
+                                    <small class="text-muted">Total Revenue</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Platforms List -->
+                        <div class="col-lg-8">
+                            <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                                    <h5 class="mb-0" style="color: #f97316;">🏪 Distribution Platforms</h5>
+                                    <span class="badge bg-primary" id="platformsListCount">0 platforms</span>
+                                </div>
+                                <div class="card-body" id="platformsListContainer" style="max-height: 500px; overflow-y: auto;">
+                                    <div class="text-center py-5 text-muted" id="platformsLoading">
+                                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                                        <p>Loading platforms...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Distributions -->
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                    <h5 class="mb-0" style="color: #22c55e;">📦 Recent Distributions</h5>
+                                    <span class="badge bg-success" id="distributionsListCount">0 items</span>
+                                </div>
+                                <div class="card-body" id="distributionsListContainer" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="text-center py-4 text-muted" id="noDistributions">
+                                        <p class="mb-2">📤 No distributions yet</p>
+                                        <small>Distribute content to platforms to see them here</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar: Platform Types & Recommendations -->
+                        <div class="col-lg-4">
+                            <!-- Platform Types -->
+                            <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                                    <h6 class="mb-0" style="color: #f97316;">📊 Platform Types</h6>
+                                </div>
+                                <div class="card-body p-2" id="platformTypesContainer" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="list-group list-group-flush" id="platformTypesList">
+                                        <div class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                                            <span>🛒 Marketplace</span>
+                                            <span class="badge bg-primary" id="marketplaceCount">0</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                                            <span>📱 Social Media</span>
+                                            <span class="badge bg-info" id="socialCount">0</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                                            <span>📸 Stock Content</span>
+                                            <span class="badge bg-success" id="stockCount">0</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                                            <span>🖨️ Print on Demand</span>
+                                            <span class="badge bg-warning text-dark" id="podCount">0</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                                            <span>🎨 NFT</span>
+                                            <span class="badge bg-secondary" id="nftCount">0</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                                            <span>💼 Freelance</span>
+                                            <span class="badge bg-dark" id="freelanceCount">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Connected Accounts -->
+                            <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header d-flex justify-content-between" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <h6 class="mb-0" style="color: #10b981;">🔗 Connected Accounts</h6>
+                                    <span class="badge bg-success" id="connectedAccountsCount">0</span>
+                                </div>
+                                <div class="card-body p-2" id="connectedAccountsContainer" style="max-height: 200px; overflow-y: auto;">
+                                    <div class="text-center py-3 text-muted">
+                                        <p class="small mb-2">No accounts connected</p>
+                                        <button class="btn btn-sm btn-outline-success" onclick="showConnectPlatformModal()">
+                                            Connect Your First Platform
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Recommendations -->
+                            <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                <div class="card-header" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <h6 class="mb-0" style="color: #fbbf24;">🤖 AI Recommendations</h6>
+                                </div>
+                                <div class="card-body p-3" id="recommendationsContainer">
+                                    <div class="text-center py-3 text-muted">
+                                        <p class="small mb-2">Select content to get AI-powered distribution recommendations</p>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="getDistributionRecommendations()">
+                                            Get Recommendations
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Distribution Tab -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -39903,6 +40071,312 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // END Session 227: Team Power JavaScript
+        // ============================================================
+
+        // ============================================================
+        // Session 229: Distribution JavaScript Functions
+        // ============================================================
+
+        // Load distribution data when tab opens
+        async function loadDistributionData() {
+            try {
+                // Load platforms and stats in parallel
+                const [platformsRes, statsRes] = await Promise.all([
+                    fetch('/api/distribution/platforms/'),
+                    fetch('/api/distribution/stats/')
+                ]);
+
+                const platformsData = await platformsRes.json();
+                const statsData = await statsRes.json();
+
+                if (platformsData.success) {
+                    renderPlatformsList(platformsData.platforms);
+                    updatePlatformTypeCounts(platformsData.platforms);
+                    document.getElementById('totalPlatformsCount').textContent = platformsData.count || 0;
+                    document.getElementById('platformsListCount').textContent = `${platformsData.count} platforms`;
+                }
+
+                if (statsData.success) {
+                    document.getElementById('totalDistributionsCount').textContent = statsData.stats.total_distributions || 0;
+                    document.getElementById('liveDistributionsCount').textContent = statsData.stats.live || 0;
+                    document.getElementById('totalRevenueCount').textContent = `$${(statsData.stats.total_revenue || 0).toFixed(2)}`;
+                    document.getElementById('connectedAccountsCount').textContent = statsData.connected_platforms || 0;
+
+                    // Render recent activity
+                    if (statsData.recent_activity && statsData.recent_activity.length > 0) {
+                        renderRecentDistributions(statsData.recent_activity);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error loading distribution data:', error);
+            }
+        }
+
+        // Render platforms list
+        function renderPlatformsList(platforms) {
+            const container = document.getElementById('platformsListContainer');
+            if (!platforms || platforms.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-2">No platforms available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const getPlatformIcon = (type) => {
+                const icons = {
+                    'marketplace': '🛒',
+                    'social': '📱',
+                    'stock': '📸',
+                    'print_on_demand': '🖨️',
+                    'nft': '🎨',
+                    'freelance': '💼',
+                    'direct': '🏠',
+                    'other': '📦'
+                };
+                return icons[type] || '📦';
+            };
+
+            const getCompetitionColor = (level) => {
+                const colors = {
+                    'low': '#22c55e',
+                    'medium': '#fbbf24',
+                    'high': '#f97316',
+                    'very_high': '#ef4444'
+                };
+                return colors[level] || '#94a3b8';
+            };
+
+            container.innerHTML = platforms.map(p => `
+                <div class="card mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(71, 85, 105, 0.3);">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex gap-3">
+                                <div style="font-size: 2rem;">${getPlatformIcon(p.platform_type)}</div>
+                                <div>
+                                    <h6 class="mb-1" style="color: #f97316;">${p.name}</h6>
+                                    <span class="badge" style="background: rgba(249, 115, 22, 0.2); color: #f97316;">${p.platform_type_display}</span>
+                                    <p class="small text-muted mb-0 mt-1">${p.description || ''}</p>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="small" style="color: #94a3b8;">
+                                    <span title="Commission">${p.commission_percent}% fee</span>
+                                </div>
+                                <div class="small" style="color: ${getCompetitionColor(p.competition_level)};">
+                                    ${p.competition_level} competition
+                                </div>
+                                ${p.api_available ? '<span class="badge bg-success badge-sm">API</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            ${p.supported_content_types.slice(0, 4).map(t =>
+                                `<span class="badge" style="background: rgba(71, 85, 105, 0.3); font-size: 10px;">${t}</span>`
+                            ).join('')}
+                            ${p.supported_content_types.length > 4 ? `<span class="badge" style="background: rgba(71, 85, 105, 0.3); font-size: 10px;">+${p.supported_content_types.length - 4}</span>` : ''}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">Popularity: ${p.popularity_score}/100</small>
+                            <button class="btn btn-sm btn-outline-primary" onclick="showConnectPlatformModal('${p.id}', '${p.name}')">
+                                Connect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update platform type counts
+        function updatePlatformTypeCounts(platforms) {
+            const counts = {
+                marketplace: 0,
+                social: 0,
+                stock: 0,
+                print_on_demand: 0,
+                nft: 0,
+                freelance: 0
+            };
+
+            platforms.forEach(p => {
+                if (counts.hasOwnProperty(p.platform_type)) {
+                    counts[p.platform_type]++;
+                }
+            });
+
+            document.getElementById('marketplaceCount').textContent = counts.marketplace;
+            document.getElementById('socialCount').textContent = counts.social;
+            document.getElementById('stockCount').textContent = counts.stock;
+            document.getElementById('podCount').textContent = counts.print_on_demand;
+            document.getElementById('nftCount').textContent = counts.nft;
+            document.getElementById('freelanceCount').textContent = counts.freelance;
+        }
+
+        // Render recent distributions
+        function renderRecentDistributions(distributions) {
+            const container = document.getElementById('distributionsListContainer');
+            if (!distributions || distributions.length === 0) {
+                return;
+            }
+
+            container.innerHTML = distributions.map(d => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: rgba(71, 85, 105, 0.3) !important;">
+                    <div>
+                        <span class="fw-medium">${d.title}</span>
+                        <br>
+                        <small class="text-muted">${d.platform} • ${d.status}</small>
+                    </div>
+                    <span class="badge ${d.status === 'live' ? 'bg-success' : 'bg-secondary'}">${d.status}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('distributionsListCount').textContent = `${distributions.length} items`;
+        }
+
+        // Show connect platform modal
+        function showConnectPlatformModal(platformId = null, platformName = null) {
+            const modalHtml = `
+                <div class="modal fade" id="connectPlatformModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: #1e293b; border: 2px solid rgba(249, 115, 22, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                                <h5 class="modal-title" style="color: #f97316;">🔗 Connect Platform ${platformName ? ` - ${platformName}` : ''}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Username/Account ID</label>
+                                    <input type="text" class="form-control" id="platformUsername" placeholder="Enter your username on this platform" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(249, 115, 22, 0.3); color: white;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Profile URL (optional)</label>
+                                    <input type="url" class="form-control" id="platformProfileUrl" placeholder="https://platform.com/your-profile" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(249, 115, 22, 0.3); color: white;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">API Key (optional)</label>
+                                    <input type="password" class="form-control" id="platformApiKey" placeholder="For automated uploads" style="background: rgba(255, 255, 255, 0.1); border-color: rgba(249, 115, 22, 0.3); color: white;">
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(249, 115, 22, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="connectPlatformAccount('${platformId || ''}')">
+                                    Connect Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('connectPlatformModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('connectPlatformModal'));
+            modal.show();
+        }
+
+        // Connect platform account
+        async function connectPlatformAccount(platformId) {
+            const username = document.getElementById('platformUsername').value;
+            const profileUrl = document.getElementById('platformProfileUrl').value;
+            const apiKey = document.getElementById('platformApiKey').value;
+
+            if (!username) {
+                alert('Please enter your username');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/distribution/accounts/connect/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        platform_id: platformId,
+                        username: username,
+                        account_url: profileUrl,
+                        api_key: apiKey
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('connectPlatformModal')).hide();
+                    showToast('Platform Connected!', `Successfully connected to ${data.account.platform}`, 'success');
+                    loadDistributionData();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to connect'));
+                }
+
+            } catch (error) {
+                console.error('Error connecting platform:', error);
+                alert('Error connecting to platform');
+            }
+        }
+
+        // Get AI distribution recommendations
+        async function getDistributionRecommendations() {
+            const container = document.getElementById('recommendationsContainer');
+            container.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-warning mb-2"></div>
+                    <p class="small mb-0">Analyzing best platforms...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/distribution/recommendations/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content_type: 'image',
+                        tags: ['ai-generated', 'digital-art']
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success && data.recommendations) {
+                    container.innerHTML = data.recommendations.slice(0, 3).map(rec => `
+                        <div class="mb-2 p-2 rounded" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-medium">${rec.platform.name}</span>
+                                <span class="badge bg-warning text-dark">${Math.round(rec.confidence_score * 100)}%</span>
+                            </div>
+                            <small class="text-muted">${rec.reasoning}</small>
+                            ${rec.suggested_price ? `<div class="small mt-1" style="color: #22c55e;">Suggested price: $${rec.suggested_price}</div>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `<p class="text-muted small text-center">No recommendations available</p>`;
+                }
+
+            } catch (error) {
+                console.error('Error getting recommendations:', error);
+                container.innerHTML = `<p class="text-danger small text-center">Error loading recommendations</p>`;
+            }
+        }
+
+        // Auto-load distribution data when tab opens
+        document.addEventListener('DOMContentLoaded', function() {
+            const distributionTab = document.getElementById('distribution-tab');
+            if (distributionTab) {
+                distributionTab.addEventListener('shown.bs.tab', function() {
+                    loadDistributionData();
+                });
+            }
+        });
+
+        // END Session 229: Distribution JavaScript
         // ============================================================
 
         // Update opportunity stats

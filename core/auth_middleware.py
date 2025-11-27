@@ -40,6 +40,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/preferences/recommendations/',  # Session 210: Style recommendations (works for anon too)
         '/api/opportunities/',  # Session 223: Opportunity Engine - supports session auth
         '/api/teams/',  # Session 227: Team Power - supports session auth
+        '/api/distribution/',  # Session 229: Smart Distribution - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
