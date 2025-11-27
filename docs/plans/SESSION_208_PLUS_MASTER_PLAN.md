@@ -599,14 +599,17 @@ class CollectiveIntelligence:
 - [x] 7 A/B testing API endpoints
 - [x] Integration of A/B testing with recommendation engine
 
-### Session 212: Phase C - Part 1
-- [ ] New workflow templates
-- [ ] Custom workflow builder backend
+### Session 212: Phase C - Part 1 ✅ COMPLETE
+- [x] 7 new workflow templates (social_media_kit, podcast_visual_package, ebook_cover_series, video_production_kit, course_thumbnail_series, pitch_deck_visuals, product_launch_kit)
+- [x] Custom workflow builder backend (models + service + execution)
+- [x] Image variation step handler for platform-specific variations
+- [x] Content-type-specific handling for all new workflows
 
 ### Session 213: Phase C - Part 2
-- [ ] Workflow scheduling with Celery
+- [ ] Workflow scheduling with Celery Beat
 - [ ] Visual workflow builder UI
 - [ ] Workflow sharing
+- [ ] API endpoints for custom workflow management
 
 ### Session 214: Phase D - Part 1
 - [ ] Collaboration patterns
@@ -680,3 +683,30 @@ class CollectiveIntelligence:
 - 7 API endpoints for A/B testing experiments
 - 8 API endpoints for learning/recommendations
 - A/B integration with recommendation engine (experiments can modify recommendation weights)
+
+### Phase C In Progress (Session 212)
+**Files Created:**
+- `core/services/workflow_builder.py` - WorkflowBuilderService for custom workflows
+- `core/migrations/0023_session_212_custom_workflows.py` - Custom workflow models
+
+**Models Added:**
+- `CustomWorkflow` - User-created workflow templates with sharing support
+- `CustomWorkflowStep` - Individual steps within custom workflows
+- `WorkflowExecution` - Track all workflow execution history
+- `ScheduledWorkflow` - Manage scheduled workflow runs
+
+**Workflows Added (7 new):**
+1. `social_media_kit` - Create cohesive social media content package
+2. `podcast_visual_package` - Create podcast episode visuals
+3. `ebook_cover_series` - Create ebook cover and promotional materials
+4. `video_production_kit` - Full video production asset package
+5. `course_thumbnail_series` - Consistent thumbnails for course modules
+6. `pitch_deck_visuals` - Create business pitch deck visuals
+7. `product_launch_kit` - Complete product launch visual package
+
+**Features Delivered:**
+- Custom workflow builder backend (create, update, delete, duplicate)
+- Custom workflow execution support
+- Workflow execution history tracking
+- Image variation step for platform-specific variations (Instagram, LinkedIn, Facebook, Twitter)
+- 14 total workflows available (7 original + 7 new)

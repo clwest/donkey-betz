@@ -1973,3 +1973,250 @@ class ABExperimentResult(models.Model):
     def __str__(self):
         status = "Significant" if self.is_significant else "Not Significant"
         return f"{self.experiment.name} Results ({status})"
+
+
+# =============================================================================
+# SESSION 212: CUSTOM WORKFLOW BUILDER MODELS
+# =============================================================================
+
+class CustomWorkflow(models.Model):
+    """
+    User-created custom workflow templates.
+
+    Session 212: Allows users to create, save, and share their own workflows.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Ownership
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='custom_workflows'
+    )
+
+    # Basic info
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200)  # URL-friendly name
+    description = models.TextField(blank=True)
+    content_type = models.CharField(max_length=50, default='custom')
+    category = models.CharField(max_length=50, default='custom')
+
+    # Sharing
+    is_public = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
+    use_count = models.IntegerField(default=0)
+
+    # Configuration
+    config = models.JSONField(default=dict, blank=True)  # Global workflow config
+
+    # Scheduling
+    is_scheduled = models.BooleanField(default=False)
+    schedule_cron = models.CharField(max_length=100, blank=True)  # Cron expression
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    next_run_at = models.DateTimeField(null=True, blank=True)
+
+    # Status
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('archived', 'Archived'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Custom Workflow'
+        verbose_name_plural = 'Custom Workflows'
+        ordering = ['-updated_at']
+        unique_together = [('created_by', 'slug')]
+
+    def __str__(self):
+        return f"{self.name} (by {self.created_by})"
+
+    def to_workflow_definition(self):
+        """Convert to the format expected by WorkflowOrchestrationAgent."""
+        return {
+            'description': self.description,
+            'content_type': self.content_type,
+            'steps': [step.to_step_definition() for step in self.steps.all().order_by('order')]
+        }
+
+
+class CustomWorkflowStep(models.Model):
+    """
+    Individual step within a custom workflow.
+
+    Session 212: Each step references an agent and defines parameters.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    workflow = models.ForeignKey(
+        CustomWorkflow, on_delete=models.CASCADE,
+        related_name='steps'
+    )
+
+    # Step definition
+    order = models.IntegerField()  # 1, 2, 3...
+    name = models.CharField(max_length=100)  # Human-readable step name
+    description = models.TextField(blank=True)
+
+    # Agent reference
+    AGENT_CHOICES = [
+        ('web_search', 'Web Search'),
+        ('coleadership_agent', 'Executive Team Review'),
+        ('image_generation_agent', 'Image Generation'),
+        ('video_generation_agent', 'Video Generation'),
+        ('audio_generation_agent', 'Audio Generation'),
+        ('image_selection', 'Image Selection'),
+        ('image_variation_agent', 'Image Variations'),
+        ('create_project_from_research', 'Create Project'),
+    ]
+    agent = models.CharField(max_length=50, choices=AGENT_CHOICES)
+
+    # Step configuration
+    config = models.JSONField(default=dict, blank=True)  # Step-specific config
+    # Example config: {"prompt_template": "...", "width": 1024, "height": 1024}
+
+    # Conditional execution
+    condition = models.JSONField(default=dict, blank=True)  # Run if condition met
+    # Example: {"previous_step_success": true, "has_images": true}
+
+    # Error handling
+    is_required = models.BooleanField(default=True)  # If false, workflow continues on failure
+    retry_count = models.IntegerField(default=0)  # Number of retries on failure
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Custom Workflow Step'
+        verbose_name_plural = 'Custom Workflow Steps'
+        ordering = ['workflow', 'order']
+        unique_together = [('workflow', 'order')]
+
+    def __str__(self):
+        return f"Step {self.order}: {self.name} ({self.agent})"
+
+    def to_step_definition(self):
+        """Convert to the format expected by WorkflowOrchestrationAgent."""
+        return {
+            'step': self.order,
+            'name': self.name,
+            'agent': self.agent,
+            'description': self.description,
+            'config': self.config,
+        }
+
+
+class WorkflowExecution(models.Model):
+    """
+    Track workflow execution history.
+
+    Session 212: Records each time a workflow (built-in or custom) is executed.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Execution info
+    workflow_type = models.CharField(max_length=50)  # 'builtin' or 'custom'
+    workflow_name = models.CharField(max_length=200)
+    custom_workflow = models.ForeignKey(
+        CustomWorkflow, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='executions'
+    )
+
+    # User who triggered
+    executed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, related_name='core_workflow_executions'
+    )
+
+    # Execution parameters
+    topic = models.CharField(max_length=500)
+    parameters = models.JSONField(default=dict)
+
+    # Results
+    STATUS_CHOICES = [
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+    step_results = models.JSONField(default=list)  # List of step outcomes
+    error_message = models.TextField(blank=True)
+
+    # Output references
+    project_id = models.UUIDField(null=True, blank=True)
+    image_ids = models.JSONField(default=list)
+    video_ids = models.JSONField(default=list)
+
+    # Timing
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Workflow Execution'
+        verbose_name_plural = 'Workflow Executions'
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f"{self.workflow_name} ({self.status}) - {self.topic[:50]}"
+
+    def complete(self, success: bool, error: str = None):
+        """Mark workflow as complete."""
+        self.status = 'completed' if success else 'failed'
+        self.error_message = error or ''
+        self.completed_at = timezone.now()
+        self.duration_seconds = (self.completed_at - self.started_at).total_seconds()
+        self.save()
+
+
+class ScheduledWorkflow(models.Model):
+    """
+    Track scheduled workflow runs.
+
+    Session 212: Manages scheduled workflow executions via Celery Beat.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Workflow reference
+    custom_workflow = models.OneToOneField(
+        CustomWorkflow, on_delete=models.CASCADE,
+        related_name='schedule'
+    )
+
+    # Schedule info
+    cron_expression = models.CharField(max_length=100)  # e.g., "0 9 * * 1" (9am every Monday)
+    timezone = models.CharField(max_length=50, default='America/Denver')
+
+    # Default parameters for scheduled runs
+    default_topic = models.CharField(max_length=500)
+    default_parameters = models.JSONField(default=dict)
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_run_status = models.CharField(max_length=20, blank=True)
+    next_run_at = models.DateTimeField(null=True, blank=True)
+    run_count = models.IntegerField(default=0)
+
+    # Celery task reference
+    celery_task_id = models.CharField(max_length=200, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Scheduled Workflow'
+        verbose_name_plural = 'Scheduled Workflows'
+
+    def __str__(self):
+        return f"Schedule: {self.custom_workflow.name} ({self.cron_expression})"

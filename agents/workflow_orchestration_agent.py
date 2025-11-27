@@ -275,6 +275,276 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     'description': 'Organize video into project'
                 }
             ]
+        },
+
+        # =========================================================================
+        # SESSION 212: NEW WORKFLOW TEMPLATES - Phase C
+        # =========================================================================
+
+        # Social Media Content Kit
+        'social_media_kit': {
+            'description': 'Create cohesive social media content package for multiple platforms',
+            'content_type': 'social_media',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research social media trends and platform best practices'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get creative direction for social content'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_hero_image',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate main hero image for campaign'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_variations',
+                    'agent': 'image_variation_agent',
+                    'description': 'Create platform-specific variations'
+                },
+                {
+                    'step': 5,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into social media kit project'
+                }
+            ]
+        },
+
+        # Podcast Visual Package
+        'podcast_visual_package': {
+            'description': 'Create visuals for a podcast episode including cover art and quote cards',
+            'content_type': 'podcast_visuals',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research podcast visual trends and episode topic'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get creative direction for podcast visuals'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_cover_art',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate podcast episode cover art'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_quote_cards',
+                    'agent': 'image_generation_agent',
+                    'description': 'Create shareable quote card designs'
+                },
+                {
+                    'step': 5,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into podcast visual project'
+                }
+            ]
+        },
+
+        # Ebook Cover Series
+        'ebook_cover_series': {
+            'description': 'Create ebook cover and promotional materials',
+            'content_type': 'ebook_cover',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research ebook cover trends in the genre'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get creative direction for book cover design'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_cover',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate ebook cover designs'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_mockups',
+                    'agent': 'image_generation_agent',
+                    'description': 'Create 3D book mockups and promotional images'
+                },
+                {
+                    'step': 5,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into ebook cover project'
+                }
+            ]
+        },
+
+        # Video Production Kit
+        'video_production_kit': {
+            'description': 'Full video production asset package including thumbnails, intros, and end screens',
+            'content_type': 'video_production',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research video production trends and channel style'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get creative direction for video assets'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_thumbnail',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate video thumbnail'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_end_screen',
+                    'agent': 'image_generation_agent',
+                    'description': 'Create end screen background'
+                },
+                {
+                    'step': 5,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into video production kit'
+                }
+            ]
+        },
+
+        # Course Thumbnail Series
+        'course_thumbnail_series': {
+            'description': 'Consistent thumbnails for online course modules',
+            'content_type': 'course_thumbnails',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research online course visual best practices'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get direction for course visual identity'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_module_thumbnails',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate thumbnails for course modules'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into course thumbnail project'
+                }
+            ]
+        },
+
+        # Pitch Deck Visuals
+        'pitch_deck_visuals': {
+            'description': 'Create visuals for a business pitch deck',
+            'content_type': 'pitch_deck',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research industry trends and competitor visuals'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get strategic direction for pitch visuals'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_hero_images',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate hero images for key slides'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_infographic_elements',
+                    'agent': 'image_generation_agent',
+                    'description': 'Create icons and infographic elements'
+                },
+                {
+                    'step': 5,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into pitch deck visual project'
+                }
+            ]
+        },
+
+        # Product Launch Kit
+        'product_launch_kit': {
+            'description': 'Complete product launch visual package',
+            'content_type': 'product_launch',
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research product launch trends and competitor analysis'
+                },
+                {
+                    'step': 2,
+                    'name': 'executive_review',
+                    'agent': 'coleadership_agent',
+                    'description': 'Get marketing and creative direction'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_product_hero',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate product hero image'
+                },
+                {
+                    'step': 4,
+                    'name': 'create_feature_graphics',
+                    'agent': 'image_generation_agent',
+                    'description': 'Create feature highlight graphics'
+                },
+                {
+                    'step': 5,
+                    'name': 'create_social_announcements',
+                    'agent': 'image_generation_agent',
+                    'description': 'Generate social media announcement graphics'
+                },
+                {
+                    'step': 6,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Organize into product launch kit'
+                }
+            ]
         }
     }
 
@@ -441,6 +711,10 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         elif agent_name == 'image_selection':
             return self._execute_image_selection_step(context)
 
+        # Session 212: New workflow step handlers
+        elif agent_name == 'image_variation_agent':
+            return self._execute_image_variation_step(context)
+
         else:
             return {
                 'success': False,
@@ -454,7 +728,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         style_prefs = context.get('style_preferences', '')
         content_type = context.get('content_type', 'logos')
 
-        # Session 199/200: Build content-type-specific search queries
+        # Session 199/200/212: Build content-type-specific search queries
         if content_type == 'youtube_thumbnails':
             query = f"{topic} YouTube thumbnail design {year} high CTR click through rate best practices bold text"
         elif content_type == 'brand_identity':
@@ -468,6 +742,21 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         elif content_type == 'general_images':
             # Session 201: General images - focus on artistic/illustration inspiration
             query = f"{topic} illustration artwork {year} artistic style creative design visual inspiration"
+        # Session 212: New content types
+        elif content_type == 'social_media':
+            query = f"{topic} social media content {year} Instagram Facebook LinkedIn visual marketing engagement"
+        elif content_type == 'podcast_visuals':
+            query = f"{topic} podcast cover art {year} episode artwork audiogram quote cards visual branding"
+        elif content_type == 'ebook_cover':
+            query = f"{topic} ebook cover design {year} book cover trends genre specific kindle amazon bestseller"
+        elif content_type == 'video_production':
+            query = f"{topic} video production assets {year} thumbnail end screen intro animation YouTube"
+        elif content_type == 'course_thumbnails':
+            query = f"{topic} online course thumbnails {year} Udemy Skillshare module design educational content"
+        elif content_type == 'pitch_deck':
+            query = f"{topic} pitch deck visuals {year} startup presentation investor deck infographics data visualization"
+        elif content_type == 'product_launch':
+            query = f"{topic} product launch visuals {year} marketing campaign announcement social media e-commerce"
         else:
             # Default: logos
             query = f"{topic} logo trends {year} minimalist bold contemporary"
@@ -555,6 +844,70 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 f"Focus on: artistic style, color palette, mood and atmosphere, composition, "
                 f"level of detail, and overall aesthetic. We need {count} creative, unique images."
             )
+        # Session 212: New content types
+        elif content_type == 'social_media':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} social media content, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: platform-specific requirements (Instagram square, LinkedIn horizontal), "
+                f"brand consistency, scroll-stopping visuals, engagement optimization. "
+                f"We need {count} social media images."
+            )
+        elif content_type == 'podcast_visuals':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} podcast episode, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: podcast cover art style, episode-specific imagery, "
+                f"quote card designs that are shareable, consistent visual branding. "
+                f"We need {count} podcast visual assets."
+            )
+        elif content_type == 'ebook_cover':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} ebook/book cover design, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: genre-appropriate imagery, marketability, thumbnail visibility, "
+                f"composition that works at small sizes, professional book design conventions. "
+                f"NOTE: AI cannot reliably generate text, so focus on imagery. We need {count} cover concepts."
+            )
+        elif content_type == 'video_production':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} video production, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: channel branding, thumbnail click-worthiness, "
+                f"end screen call-to-action design, consistent visual identity. "
+                f"We need {count} video production assets."
+            )
+        elif content_type == 'course_thumbnails':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} online course, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: educational credibility, module differentiation, "
+                f"consistent template design, professional appearance. "
+                f"We need {count} course module thumbnails."
+            )
+        elif content_type == 'pitch_deck':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} pitch deck visuals, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: professional/corporate aesthetic, data visualization support, "
+                f"clean backgrounds for text overlay, infographic elements, investor appeal. "
+                f"We need {count} pitch deck visual assets."
+            )
+        elif content_type == 'product_launch':
+            question = (
+                f"{ai_context}\n\n"
+                f"Based on the research about {topic} product launch, "
+                f"what creative direction should guide our AI image generation? "
+                f"Consider: product hero shots, feature highlights, "
+                f"social announcement graphics, marketing campaign cohesion. "
+                f"We need {count} product launch visuals."
+            )
         else:
             # Default: logos
             question = (
@@ -629,6 +982,35 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             prompt = f"artistic illustration of {topic}, creative, detailed, professional quality, vibrant composition"
             width, height = 1024, 1024
             style = "artistic, creative, professional illustration"
+        # Session 212: New content types for image generation
+        elif content_type == 'social_media':
+            prompt = f"social media content for {topic}, eye-catching, scroll-stopping, vibrant colors, engaging composition, professional marketing quality"
+            width, height = 1080, 1080  # Instagram square
+            style = "social media, marketing, engaging, professional"
+        elif content_type == 'podcast_visuals':
+            prompt = f"podcast cover art for {topic}, professional audio content visual, bold imagery, modern podcast aesthetic, shareable design"
+            width, height = 1400, 1400  # Podcast cover standard
+            style = "podcast, audio content, professional, modern"
+        elif content_type == 'ebook_cover':
+            prompt = f"ebook cover design for {topic}, professional book cover, genre-appropriate imagery, marketable design, thumbnail-readable composition, NO TEXT, NO WORDS, NO TITLE"
+            width, height = 1600, 2560  # Kindle cover ratio (1:1.6)
+            style = "book cover, professional publishing, marketable"
+        elif content_type == 'video_production':
+            prompt = f"video production asset for {topic}, YouTube style, professional channel branding, bold visuals, engaging composition"
+            width, height = 1920, 1080  # Full HD video
+            style = "video production, YouTube, professional channel"
+        elif content_type == 'course_thumbnails':
+            prompt = f"online course thumbnail for {topic}, educational content, professional appearance, module design, learner-engaging, credible academic look"
+            width, height = 1280, 720  # Course platform standard
+            style = "educational, course, professional, academic"
+        elif content_type == 'pitch_deck':
+            prompt = f"pitch deck visual for {topic}, professional business aesthetic, clean corporate design, investor-ready quality, data visualization support, NO TEXT"
+            width, height = 1920, 1080  # Presentation ratio
+            style = "corporate, pitch deck, professional, clean"
+        elif content_type == 'product_launch':
+            prompt = f"product launch visual for {topic}, marketing campaign quality, hero shot, feature highlight, announcement graphic, professional e-commerce"
+            width, height = 1200, 1200  # Square for versatility
+            style = "product launch, marketing, professional, e-commerce"
         else:
             # Default: logos - NO TEXT
             prompt = f"single professional {topic} logo mark, abstract symbol only, NO TEXT, NO WORDS, NO LETTERS, minimalist icon, bold geometric shapes, simple clean design"
@@ -820,6 +1202,71 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 'Create different length versions (3s, 5s, 10s)',
                 'Export as GIF for web use',
                 'Create intro/outro versions',
+            ]
+        # Session 212: New content types for project creation
+        elif content_type == 'social_media':
+            project_name = f"{clean_topic.strip()} Social Media Kit"
+            category = 'social-media/content-kit'
+            suggested_next_steps = [
+                'Create platform-specific size variations',
+                'Generate story/reel versions',
+                'A/B test different visuals',
+                'Schedule posts with content calendar',
+                'Create carousel variations',
+            ]
+        elif content_type == 'podcast_visuals':
+            project_name = f"{clean_topic.strip()} Podcast Visuals"
+            category = 'audio/podcast-assets'
+            suggested_next_steps = [
+                'Create audiogram templates',
+                'Generate episode-specific covers',
+                'Design shareable quote cards',
+                'Create series banner art',
+            ]
+        elif content_type == 'ebook_cover':
+            project_name = f"{clean_topic.strip()} Ebook Cover"
+            category = 'publishing/ebook'
+            suggested_next_steps = [
+                'Create 3D book mockups',
+                'Generate promotional banners',
+                'Design series covers if applicable',
+                'Create social media announcement graphics',
+            ]
+        elif content_type == 'video_production':
+            project_name = f"{clean_topic.strip()} Video Production Kit"
+            category = 'video/production-assets'
+            suggested_next_steps = [
+                'Create intro/outro animations',
+                'Generate end screen variations',
+                'Design lower third graphics',
+                'Create chapter marker images',
+            ]
+        elif content_type == 'course_thumbnails':
+            project_name = f"{clean_topic.strip()} Course Thumbnails"
+            category = 'education/course-assets'
+            suggested_next_steps = [
+                'Generate remaining module thumbnails',
+                'Create course promo graphics',
+                'Design certificate templates',
+                'Create lesson completion badges',
+            ]
+        elif content_type == 'pitch_deck':
+            project_name = f"{clean_topic.strip()} Pitch Deck Visuals"
+            category = 'business/pitch-deck'
+            suggested_next_steps = [
+                'Create data visualization graphics',
+                'Generate team photo backgrounds',
+                'Design icon sets for features',
+                'Create slide transition graphics',
+            ]
+        elif content_type == 'product_launch':
+            project_name = f"{clean_topic.strip()} Product Launch Kit"
+            category = 'marketing/product-launch'
+            suggested_next_steps = [
+                'Create countdown graphics',
+                'Generate email header images',
+                'Design press release visuals',
+                'Create landing page hero images',
             ]
         else:
             project_name = f"{clean_topic.strip()} Logo Designs"
@@ -1561,6 +2008,271 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 logger.error(f"Image selection failed: {e}")
 
         return {'success': False, 'error': 'No image available for animation. Please specify an image_id.'}
+
+    # =========================================================================
+    # SESSION 212: NEW STEP HANDLERS FOR WORKFLOW EXPANSION
+    # =========================================================================
+
+    def _execute_image_variation_step(self, context: Dict) -> Dict[str, Any]:
+        """
+        Execute image variation step to create platform-specific variations.
+
+        Session 212: Creates variations of the hero image for different platforms:
+        - Instagram Square (1080x1080)
+        - LinkedIn Banner (1200x627)
+        - Facebook Cover (820x312)
+        - Twitter Header (1500x500)
+        """
+        topic = context['topic']
+        content_type = context.get('content_type', 'social_media')
+        generated_image_ids = context.get('generated_image_ids', [])
+        creative_recs = context.get('creative_recommendations', '')
+
+        if not generated_image_ids:
+            logger.warning("⚠️ No hero image available for variations")
+            # Still return success - we'll generate new images instead
+            return self._execute_image_generation_step(context)
+
+        # Get the first generated image as the source
+        source_image_id = generated_image_ids[0]
+
+        logger.info(f"🔄 Creating variations from image {source_image_id}")
+
+        try:
+            from core.views_image import _execute_generate_image
+            from content.models import AISession, ImageHistory
+
+            # Get the source image to use its prompt as a base
+            try:
+                source_image = ImageHistory.objects.get(id=source_image_id)
+                base_prompt = source_image.prompt or f"{topic} social media content"
+            except ImageHistory.DoesNotExist:
+                base_prompt = f"{topic} social media content"
+
+            # Get or create session
+            session = None
+            if context.get('user'):
+                session = AISession.objects.filter(
+                    user=context['user'],
+                    is_active=True
+                ).order_by('-created_at').first()
+
+                if not session:
+                    session = AISession.objects.create(
+                        user=context['user'],
+                        title='Workflow Session',
+                        is_active=True
+                    )
+
+            # Platform variations to create
+            variations = [
+                {'name': 'LinkedIn', 'width': 1200, 'height': 627, 'prompt_suffix': 'professional business format'},
+                {'name': 'Facebook', 'width': 820, 'height': 312, 'prompt_suffix': 'facebook cover banner format'},
+                {'name': 'Twitter', 'width': 1500, 'height': 500, 'prompt_suffix': 'twitter header banner format'},
+            ]
+
+            created_ids = []
+            for variation in variations:
+                prompt = f"{base_prompt}, {variation['prompt_suffix']}"
+                if creative_recs:
+                    prompt += f", {creative_recs[:100]}"
+
+                parameters = {
+                    'prompt': prompt,
+                    'count': 1,
+                    'model': 'sdxl',
+                    'width': variation['width'],
+                    'height': variation['height'],
+                }
+
+                if context.get('project_id'):
+                    parameters['project_id'] = context['project_id']
+
+                result = _execute_generate_image(
+                    user=context['user'],
+                    parameters=parameters,
+                    session=session
+                )
+
+                if result.get('success'):
+                    if result.get('images'):
+                        created_ids.extend([img.get('image_id') for img in result['images'] if img.get('image_id')])
+                    elif result.get('image_id'):
+                        created_ids.append(result['image_id'])
+
+                logger.info(f"✅ Created {variation['name']} variation")
+
+            # Add new IDs to context
+            context['generated_image_ids'].extend(created_ids)
+
+            return {
+                'success': True,
+                'images': [{'image_id': img_id} for img_id in created_ids],
+                'variation_count': len(created_ids),
+                'message': f"Created {len(created_ids)} platform variations"
+            }
+
+        except Exception as e:
+            logger.error(f"Image variation failed: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # SESSION 212: CUSTOM WORKFLOW EXECUTION
+    # =========================================================================
+
+    def execute_custom_workflow(
+        self,
+        workflow_def: Dict[str, Any],
+        topic: str,
+        style: str = None,
+        count: int = 4
+    ) -> Dict[str, Any]:
+        """
+        Execute a custom workflow defined by the user.
+
+        Session 212: Allows execution of user-created workflows.
+
+        Args:
+            workflow_def: Workflow definition with 'description', 'content_type', 'steps'
+            topic: The subject/topic for the workflow
+            style: Optional style preset
+            count: Number of images to generate
+
+        Returns:
+            Dict with success status and results
+        """
+        logger.info(f"🔧 Executing custom workflow: {workflow_def.get('description', 'Custom Workflow')}")
+
+        # Build context
+        context = {
+            'topic': topic,
+            'year': datetime.now().year,
+            'user': self.user,
+            'style_preferences': style or '',
+            'count': count,
+            'content_type': workflow_def.get('content_type', 'custom'),
+            'generated_image_ids': [],
+            'generated_video_ids': [],
+        }
+
+        if self.project_id:
+            context['project_id'] = self.project_id
+
+        step_results = []
+        steps = workflow_def.get('steps', [])
+
+        for step_def in steps:
+            step_num = step_def.get('step', len(step_results) + 1)
+            step_name = step_def.get('name', f'Step {step_num}')
+
+            logger.info(f"📍 Custom workflow step {step_num}: {step_name}")
+
+            # Check conditions if specified
+            condition = step_def.get('condition', {})
+            if condition:
+                if condition.get('previous_step_success') and step_results:
+                    if not step_results[-1].get('success'):
+                        logger.info(f"⏭️ Skipping step {step_num} - previous step failed")
+                        continue
+
+                if condition.get('has_images') and not context.get('generated_image_ids'):
+                    logger.info(f"⏭️ Skipping step {step_num} - no images available")
+                    continue
+
+            # Apply step config to context
+            step_config = step_def.get('config', {})
+            if step_config:
+                context.update(step_config)
+
+            # Execute the step
+            try:
+                result = self._execute_step(step_def, context)
+                step_results.append({
+                    'step': step_num,
+                    'name': step_name,
+                    'agent': step_def.get('agent'),
+                    'success': result.get('success', False),
+                    'result': result
+                })
+
+                # Handle step failure
+                if not result.get('success'):
+                    is_required = step_def.get('is_required', True)
+                    if is_required:
+                        logger.error(f"❌ Required step failed: {step_name}")
+                        return self._compile_custom_result(
+                            workflow_def=workflow_def,
+                            step_results=step_results,
+                            context=context,
+                            success=False,
+                            error=f"Step '{step_name}' failed: {result.get('error', 'Unknown error')}"
+                        )
+                    else:
+                        logger.warning(f"⚠️ Optional step failed: {step_name}")
+
+                # Update context from result
+                self._update_context_from_result(context, step_def['agent'], result)
+
+            except Exception as e:
+                logger.error(f"❌ Step execution error: {e}")
+                is_required = step_def.get('is_required', True)
+                if is_required:
+                    return self._compile_custom_result(
+                        workflow_def=workflow_def,
+                        step_results=step_results,
+                        context=context,
+                        success=False,
+                        error=str(e)
+                    )
+
+        # Workflow completed successfully
+        return self._compile_custom_result(
+            workflow_def=workflow_def,
+            step_results=step_results,
+            context=context,
+            success=True
+        )
+
+    def _compile_custom_result(
+        self,
+        workflow_def: Dict,
+        step_results: List[Dict],
+        context: Dict,
+        success: bool,
+        error: str = None
+    ) -> Dict[str, Any]:
+        """Compile result for custom workflow execution."""
+        result = {
+            'success': success,
+            'workflow': 'custom',
+            'workflow_description': workflow_def.get('description', 'Custom Workflow'),
+            'content_type': workflow_def.get('content_type', 'custom'),
+            'steps': step_results,
+            'total_steps': len(workflow_def.get('steps', [])),
+            'completed_steps': len([s for s in step_results if s.get('success')]),
+        }
+
+        if error:
+            result['error'] = error
+
+        if context.get('generated_image_ids'):
+            result['image_ids'] = context['generated_image_ids']
+
+        if context.get('generated_video_ids'):
+            result['video_ids'] = context['generated_video_ids']
+
+        if context.get('project_created', {}).get('project_id'):
+            result['project_id'] = context['project_created']['project_id']
+            result['project_name'] = context['project_created'].get('project_name')
+
+        if success:
+            result['summary'] = (
+                f"Custom workflow completed. Created {len(context.get('generated_image_ids', []))} images."
+            )
+        else:
+            result['summary'] = f"Custom workflow failed: {error}"
+
+        return result
 
     def _compile_final_result(
         self,
