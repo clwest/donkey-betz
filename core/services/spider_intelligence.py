@@ -32,11 +32,15 @@ class SpiderIntelligenceService:
     """
 
     # Category mappings for spider classification
+    # Session 222: Updated to include real data collector spider names
     CATEGORY_MAPPINGS = {
-        'tech': ['hackernews', 'devto', 'github_trending', 'producthunt', 'huggingface', 'kaggle'],
+        'tech': ['hackernews', 'devto', 'github_trending', 'producthunt', 'huggingface', 'kaggle',
+                 'techcrunch', 'theverge', 'wired', 'mit_tech_review', 'axios', 'hashnode'],
         'financial': ['coingecko', 'yahoo_finance', 'etherscan', 'financial', 'seekingalpha'],
-        'jobs': ['weworkremotely', 'remote_jobs', 'github_jobs', 'stackoverflow_jobs', 'flexjobs', 'remoteok'],
-        'news': ['news_harvester', 'reuters', 'bbc', 'techcrunch'],
+        'jobs': ['weworkremotely', 'remote_jobs', 'github_jobs', 'stackoverflow_jobs', 'flexjobs',
+                 'remoteok', 'weworkremotely'],
+        'news': ['news_harvester', 'reuters', 'bbc', 'techcrunch', 'axios', 'theverge', 'wired',
+                 'mit_tech_review'],
         'social': ['reddit', 'twitter_trends', 'social_sentiment'],
         'creative': ['dribbble', 'behance', 'medium', 'substack'],
         'crypto': ['coingecko', 'etherscan', 'nft_tracker', 'defi_tracker'],
@@ -89,9 +93,16 @@ class SpiderIntelligenceService:
                         topic_sources[topic].add(entry.spider_name)
 
                 # Also extract tags if present
+                # Session 222: Handle tags as either list or comma-separated string
                 tags = item.get('tags', [])
+                if isinstance(tags, str):
+                    # Split comma-separated string into list
+                    tags = [t.strip() for t in tags.split(',') if t.strip()]
+                elif not isinstance(tags, list):
+                    tags = []
+
                 for tag in tags:
-                    if tag:
+                    if tag and len(tag) > 1:  # Skip single characters
                         topic_counts[tag.lower()] += 1
                         topic_sources[tag.lower()].add(entry.spider_name)
 
@@ -191,7 +202,7 @@ class SpiderIntelligenceService:
 
     def get_tech_trends(self, hours: int = 24, limit: int = 15) -> dict:
         """
-        Get technology trends from HackerNews, DevTo, GitHub, etc.
+        Get technology trends from HackerNews, DevTo, TechCrunch, etc.
 
         Returns:
             Dict with tech topics, discussions, and projects
@@ -204,7 +215,7 @@ class SpiderIntelligenceService:
         ).order_by('-created_at')
 
         trends = {
-            'discussions': [],  # HackerNews, DevTo articles
+            'discussions': [],  # Tech articles and discussions
             'projects': [],     # GitHub, ProductHunt
             'topics': [],       # Extracted topics
             'sources': {},
@@ -212,6 +223,7 @@ class SpiderIntelligenceService:
         }
 
         topic_counts = Counter()
+        seen_titles = set()  # Session 222: Deduplicate discussions
 
         for entry in tech_data:
             if not entry.raw_data:
@@ -227,20 +239,31 @@ class SpiderIntelligenceService:
 
             for item in items:
                 title = item.get('title', '')
-                url = item.get('url', '')
-                score = item.get('score', 0) or item.get('points', 0)
+                url = item.get('url', '') or item.get('link', '')
+                score = item.get('score', 0) or item.get('points', 0) or 0
 
                 if title:
-                    # Categorize by source
-                    if source in ['hackernews', 'devto']:
+                    # Session 222: Deduplicate by normalized title
+                    title_key = title.lower().strip()
+                    if title_key in seen_titles:
+                        continue
+                    seen_titles.add(title_key)
+
+                    # Session 222: Include more sources as discussions (tech news)
+                    discussion_sources = ['hackernews', 'devto', 'techcrunch', 'theverge',
+                                          'wired', 'mit_tech_review', 'axios', 'hashnode']
+                    project_sources = ['github_trending', 'producthunt']
+
+                    if source in discussion_sources:
                         trends['discussions'].append({
                             'title': title,
                             'url': url,
                             'score': score,
                             'source': source,
-                            'tags': item.get('tags', [])
+                            'tags': item.get('tags', []),
+                            'description': (item.get('description', '') or '')[:200]
                         })
-                    elif source in ['github_trending', 'producthunt']:
+                    elif source in project_sources:
                         trends['projects'].append({
                             'name': title,
                             'description': item.get('description', ''),
@@ -257,10 +280,10 @@ class SpiderIntelligenceService:
             if not trends['last_updated']:
                 trends['last_updated'] = entry.created_at.isoformat()
 
-        # Sort and limit discussions/projects
+        # Sort discussions by score (if available), then by recency
         trends['discussions'] = sorted(
             trends['discussions'],
-            key=lambda x: x.get('score', 0),
+            key=lambda x: (x.get('score', 0) or 0, x.get('title', '')),
             reverse=True
         )[:limit]
 
@@ -316,7 +339,14 @@ class SpiderIntelligenceService:
 
             for item in items:
                 title = item.get('title', '')
-                company = item.get('company', '')
+                company = item.get('company', '') or item.get('author', '')
+
+                # Session 222: Extract company from title if format is "Company: Job Title"
+                if not company and ': ' in title:
+                    parts = title.split(': ', 1)
+                    if len(parts) == 2 and len(parts[0]) < 50:  # Reasonable company name length
+                        company = parts[0]
+                        title = parts[1]
 
                 # Deduplicate by title + company
                 job_key = f"{title}:{company}".lower()
@@ -324,16 +354,32 @@ class SpiderIntelligenceService:
                     continue
                 seen_jobs.add(job_key)
 
+                # Get category from tags if available
+                tags = item.get('tags', [])
+                if isinstance(tags, str):
+                    tags = [t.strip() for t in tags.split(',') if t.strip()]
+                category = tags[0] if tags else item.get('category', 'Engineering')
+
+                # Extract salary info
+                salary = item.get('salary')
+                if not salary:
+                    salary_min = item.get('salary_min')
+                    salary_max = item.get('salary_max')
+                    if salary_min and salary_max:
+                        salary = f"${salary_min:,} - ${salary_max:,}"
+                    elif salary_min:
+                        salary = f"${salary_min:,}+"
+
                 if title:
                     summary['jobs'].append({
                         'title': title,
                         'company': company,
                         'location': item.get('location', 'Remote'),
-                        'url': item.get('url', ''),
-                        'salary': item.get('salary'),
-                        'category': item.get('category', 'Engineering'),
+                        'url': item.get('url', item.get('link', item.get('apply_url', ''))),
+                        'salary': salary,
+                        'category': category,
                         'source': source,
-                        'posted': item.get('posted', item.get('date'))
+                        'posted': item.get('posted', item.get('date', item.get('published')))
                     })
 
                     # Track categories and companies
