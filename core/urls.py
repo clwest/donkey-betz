@@ -91,6 +91,18 @@ from core.views_spider_dashboard import (
     execute_spider
 )
 
+# Session 208: Import spider intelligence views
+from core.views_spider_intelligence import (
+    trending_topics,
+    market_insights,
+    tech_trends,
+    job_market,
+    search_data,
+    data_summary,
+    prompt_insights,
+    daily_report
+)
+
 # Session 206: Import preferences dashboard views
 from core.views_preferences import (
     get_all_preferences,
@@ -1268,6 +1280,16 @@ urlpatterns = [
     path('api/spider-dashboard/activity/', spider_activity_feed, name='spider-dashboard-activity'),
     path('api/spider-dashboard/data/', spider_data_stats, name='spider-dashboard-stats'),
     path('api/spider-dashboard/execute/', execute_spider, name='spider-dashboard-execute'),
+
+    # Session 208: Spider Intelligence API - Agents query spider data
+    path('api/spider-intelligence/trends/', trending_topics, name='spider-intelligence-trends'),
+    path('api/spider-intelligence/market/', market_insights, name='spider-intelligence-market'),
+    path('api/spider-intelligence/tech/', tech_trends, name='spider-intelligence-tech'),
+    path('api/spider-intelligence/jobs/', job_market, name='spider-intelligence-jobs'),
+    path('api/spider-intelligence/search/', search_data, name='spider-intelligence-search'),
+    path('api/spider-intelligence/summary/', data_summary, name='spider-intelligence-summary'),
+    path('api/spider-intelligence/insights/', prompt_insights, name='spider-intelligence-insights'),
+    path('api/spider-intelligence/report/', daily_report, name='spider-intelligence-report'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
