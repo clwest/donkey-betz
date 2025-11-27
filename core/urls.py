@@ -116,6 +116,21 @@ from core.views_agent_intelligence import (
     inject_test_data as ai_inject_test
 )
 
+# Session 219 Phase B: Import agent collaboration views
+from core.views_agent_collaboration import (
+    send_message as collab_send_message,
+    get_messages as collab_get_messages,
+    initiate_collaboration as collab_initiate,
+    consult_expert as collab_consult,
+    request_consensus as collab_request_consensus,
+    submit_vote as collab_submit_vote,
+    get_consensus_status as collab_consensus_status,
+    share_knowledge as collab_share_knowledge,
+    query_knowledge as collab_query_knowledge,
+    get_collaboration_stats as collab_stats,
+    get_agent_activity as collab_agent_activity
+)
+
 # Session 206: Import preferences dashboard views
 # Session 210: Added implicit learning & recommendations
 # Session 211: Added A/B testing
@@ -1521,6 +1536,19 @@ urlpatterns = [
     path('api/agent-intelligence/capabilities/', ai_capabilities, name='ai-capabilities'),
     path('api/agent-intelligence/bridge/', ai_bridge_status, name='ai-bridge-status'),
     path('api/agent-intelligence/test/', ai_inject_test, name='ai-inject-test'),
+
+    # Session 219 Phase B: Agent Collaboration API
+    path('api/agent-collab/message/', collab_send_message, name='collab-send-message'),
+    path('api/agent-collab/messages/<str:agent_name>/', collab_get_messages, name='collab-get-messages'),
+    path('api/agent-collab/collaborate/', collab_initiate, name='collab-initiate'),
+    path('api/agent-collab/consult/', collab_consult, name='collab-consult'),
+    path('api/agent-collab/consensus/', collab_request_consensus, name='collab-request-consensus'),
+    path('api/agent-collab/vote/', collab_submit_vote, name='collab-submit-vote'),
+    path('api/agent-collab/consensus/<str:consensus_id>/', collab_consensus_status, name='collab-consensus-status'),
+    path('api/agent-collab/knowledge/', collab_share_knowledge, name='collab-share-knowledge'),
+    path('api/agent-collab/knowledge/query/', collab_query_knowledge, name='collab-query-knowledge'),
+    path('api/agent-collab/stats/', collab_stats, name='collab-stats'),
+    path('api/agent-collab/activity/<str:agent_name>/', collab_agent_activity, name='collab-agent-activity'),
 
     # Spider Data Viewer API - See what spiders actually collected
     path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
