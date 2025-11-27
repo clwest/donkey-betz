@@ -118,6 +118,19 @@ class ResearchAgent:
         self.user = user
         self.project_id = project_id
         self._spider_registry = None
+        self._intelligence_service = None
+
+    @property
+    def intelligence_service(self):
+        """Lazy load spider intelligence service - Session 208."""
+        if self._intelligence_service is None:
+            try:
+                from core.services.spider_intelligence import SpiderIntelligenceService
+                self._intelligence_service = SpiderIntelligenceService()
+            except ImportError:
+                logger.warning("SpiderIntelligenceService not available")
+                self._intelligence_service = None
+        return self._intelligence_service
 
     @property
     def spider_registry(self):
@@ -357,6 +370,8 @@ class ResearchAgent:
         """
         Search spider intelligence based on query.
 
+        Session 208: Now uses SpiderIntelligenceService for database queries.
+
         Args:
             query: Search query
             max_results: Maximum results to return
@@ -367,6 +382,112 @@ class ResearchAgent:
         results = []
         spiders_queried = []
 
+        # Session 208: Use SpiderIntelligenceService for real database queries
+        if self.intelligence_service:
+            try:
+                # Get insights relevant to the prompt
+                insights = self.intelligence_service.get_insights_for_prompt(query, limit=max_results)
+
+                # Add trending topics
+                if insights.get('relevant_trends'):
+                    for trend in insights['relevant_trends'][:5]:
+                        results.append({
+                            'title': trend.get('topic', ''),
+                            'type': 'trending_topic',
+                            'mentions': trend.get('count', 0),
+                            'source': 'spider_intelligence',
+                            'domain': 'trends'
+                        })
+                        spiders_queried.append('trending_analysis')
+
+                # Add market data if available
+                if insights.get('market_data'):
+                    market = insights['market_data']
+                    for crypto in market.get('crypto', [])[:3]:
+                        results.append({
+                            'title': f"{crypto.get('name', '')} ({crypto.get('symbol', '')})",
+                            'price': crypto.get('price'),
+                            'change_24h': crypto.get('change_24h'),
+                            'type': 'market_data',
+                            'source': 'spider_intelligence',
+                            'domain': 'financial'
+                        })
+                        spiders_queried.append('coingecko')
+
+                # Add related discussions
+                if insights.get('related_discussions'):
+                    for discussion in insights['related_discussions'][:5]:
+                        results.append({
+                            'title': discussion.get('title', ''),
+                            'url': discussion.get('url', ''),
+                            'score': discussion.get('score', 0),
+                            'type': 'discussion',
+                            'source': discussion.get('source', 'spider_intelligence'),
+                            'domain': 'tech'
+                        })
+                        spiders_queried.append(discussion.get('source', 'hackernews'))
+
+                # Add job market data if relevant
+                if insights.get('job_market'):
+                    jobs = insights['job_market']
+                    for job in jobs.get('sample_jobs', [])[:3]:
+                        results.append({
+                            'title': job.get('title', ''),
+                            'company': job.get('company', ''),
+                            'location': job.get('location', ''),
+                            'type': 'job_listing',
+                            'source': job.get('source', 'spider_intelligence'),
+                            'domain': 'jobs'
+                        })
+                        spiders_queried.append(job.get('source', 'weworkremotely'))
+
+                # Add related content from search
+                if insights.get('related_content'):
+                    for content in insights['related_content'][:5]:
+                        results.append({
+                            'title': content.get('title', ''),
+                            'description': content.get('description', ''),
+                            'url': content.get('url', ''),
+                            'type': 'related_content',
+                            'source': content.get('source', 'spider_intelligence'),
+                            'domain': content.get('category', 'general'),
+                            'relevance': content.get('relevance', 0)
+                        })
+                        spiders_queried.append(content.get('source', 'spider_search'))
+
+                logger.info(f"  SpiderIntelligenceService returned {len(results)} results")
+
+            except Exception as e:
+                logger.error(f"SpiderIntelligenceService error: {e}")
+                # Fall back to legacy method
+                results = self._search_spiders_legacy(query, max_results)
+
+        else:
+            # Fall back to legacy spider domain querying
+            results = self._search_spiders_legacy(query, max_results)
+
+        # Limit results
+        results = results[:max_results]
+
+        return {
+            'results': results,
+            'spiders_queried': list(set(spiders_queried)),
+            'domains_searched': list(set(r.get('domain', 'general') for r in results))
+        }
+
+    def _search_spiders_legacy(self, query: str, max_results: int = 10) -> List[Dict[str, Any]]:
+        """
+        Legacy spider search method (fallback).
+
+        Args:
+            query: Search query
+            max_results: Maximum results to return
+
+        Returns:
+            Spider intelligence results
+        """
+        results = []
+
         # Determine which spider domains are relevant
         relevant_domains = self._identify_relevant_domains(query)
 
@@ -374,23 +495,14 @@ class ResearchAgent:
             # Default to general purpose spiders
             relevant_domains = ['innovation', 'news', 'content']
 
-        logger.info(f"  Querying spider domains: {relevant_domains}")
+        logger.info(f"  Querying spider domains (legacy): {relevant_domains}")
 
         # Get spider data from relevant domains
         for domain in relevant_domains:
             domain_results = self._query_spider_domain(domain, query)
             results.extend(domain_results)
-            if domain in self.DOMAIN_SPIDERS:
-                spiders_queried.extend(self.DOMAIN_SPIDERS[domain])
 
-        # Sort by relevance and limit
-        results = results[:max_results]
-
-        return {
-            'results': results,
-            'spiders_queried': list(set(spiders_queried)),
-            'domains_searched': relevant_domains
-        }
+        return results[:max_results]
 
     def _identify_relevant_domains(self, query: str) -> List[str]:
         """
