@@ -3,6 +3,7 @@ Recommendation Engine
 =====================
 
 Session 210: Personalized style and content recommendations.
+Session 211: A/B Testing Integration - Experimental recommendation strategies.
 
 This engine uses implicit learning signals to recommend:
 - Styles that match user preferences
@@ -14,6 +15,7 @@ Architecture:
 - ImplicitLearningService provides user preference data
 - StyleEvolution provides temporal patterns
 - StyleTrend provides platform-wide popularity
+- ABTestingService allows experimental recommendation strategies
 - This engine combines all signals into actionable recommendations
 """
 
@@ -94,6 +96,7 @@ class RecommendationEngine:
         self._style_evolution_model = None
         self._style_trend_model = None
         self._behavior_signal_model = None
+        self._ab_testing_service = None
 
     @property
     def learning_service(self):
@@ -127,6 +130,178 @@ class RecommendationEngine:
             self._behavior_signal_model = UserBehaviorSignal
         return self._behavior_signal_model
 
+    @property
+    def ab_testing_service(self):
+        """Lazy load A/B testing service."""
+        if self._ab_testing_service is None:
+            from core.services.ab_testing import get_ab_testing_service
+            self._ab_testing_service = get_ab_testing_service()
+        return self._ab_testing_service
+
+    # ==================== A/B Testing Integration ====================
+
+    def get_experiment_variant(
+        self,
+        user_id: int,
+        session_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get the user's variant assignment for any active recommendation experiments.
+
+        Returns:
+            Dict with experiment_id, variant_name, and variant_config if in experiment,
+            None otherwise.
+        """
+        try:
+            # Look for active recommendation experiments
+            experiments = self.ab_testing_service.get_active_experiments(
+                domain='style_recommendations'
+            )
+
+            if not experiments:
+                return None
+
+            # Get first active experiment (typically only one runs at a time)
+            experiment = experiments[0]
+            variant = self.ab_testing_service.get_variant_for_user(
+                experiment_id=experiment['id'],
+                user_id=user_id,
+                session_id=session_id
+            )
+
+            if variant:
+                return {
+                    'experiment_id': str(experiment['id']),
+                    'experiment_name': experiment['name'],
+                    'variant_name': variant.name,
+                    'variant_config': variant.config,
+                    'is_control': variant.is_control
+                }
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting experiment variant: {e}")
+            return None
+
+    def _apply_experiment_weights(
+        self,
+        weights: Dict[str, float],
+        variant_config: Dict[str, Any]
+    ) -> Dict[str, float]:
+        """
+        Apply experimental weights from A/B test variant config.
+
+        Args:
+            weights: Default weights for recommendation sources
+            variant_config: Configuration from the assigned variant
+
+        Returns:
+            Modified weights dictionary
+        """
+        modified_weights = weights.copy()
+
+        # Allow variant to override weights
+        if 'weights' in variant_config:
+            for source, weight in variant_config['weights'].items():
+                if source in modified_weights:
+                    modified_weights[source] = weight
+
+        return modified_weights
+
+    def track_recommendation_click(
+        self,
+        user_id: int,
+        style: str,
+        recommendation_source: str,
+        session_id: Optional[str] = None
+    ) -> bool:
+        """
+        Track when a user clicks on a recommendation (for A/B testing).
+
+        Args:
+            user_id: User who clicked
+            style: Style that was clicked
+            recommendation_source: Source of recommendation (personal, trending, etc.)
+            session_id: Session ID for anonymous tracking
+
+        Returns:
+            True if conversion was tracked, False otherwise
+        """
+        try:
+            # Find active recommendation experiments
+            experiments = self.ab_testing_service.get_active_experiments(
+                domain='style_recommendations'
+            )
+
+            tracked = False
+            for experiment in experiments:
+                success = self.ab_testing_service.track_conversion(
+                    experiment_id=experiment['id'],
+                    conversion_type='click',
+                    user_id=user_id,
+                    session_id=session_id,
+                    value=1.0,
+                    metadata={
+                        'style': style,
+                        'recommendation_source': recommendation_source
+                    }
+                )
+                if success:
+                    tracked = True
+
+            return tracked
+
+        except Exception as e:
+            logger.error(f"Error tracking recommendation click: {e}")
+            return False
+
+    def track_recommendation_apply(
+        self,
+        user_id: int,
+        style: str,
+        recommendation_source: str,
+        session_id: Optional[str] = None
+    ) -> bool:
+        """
+        Track when a user applies a recommended style (higher value conversion).
+
+        Args:
+            user_id: User who applied
+            style: Style that was applied
+            recommendation_source: Source of recommendation
+            session_id: Session ID for anonymous tracking
+
+        Returns:
+            True if conversion was tracked, False otherwise
+        """
+        try:
+            experiments = self.ab_testing_service.get_active_experiments(
+                domain='style_recommendations'
+            )
+
+            tracked = False
+            for experiment in experiments:
+                success = self.ab_testing_service.track_conversion(
+                    experiment_id=experiment['id'],
+                    conversion_type='apply',
+                    user_id=user_id,
+                    session_id=session_id,
+                    value=5.0,  # Higher value for applying vs clicking
+                    metadata={
+                        'style': style,
+                        'recommendation_source': recommendation_source
+                    }
+                )
+                if success:
+                    tracked = True
+
+            return tracked
+
+        except Exception as e:
+            logger.error(f"Error tracking recommendation apply: {e}")
+            return False
+
     # ==================== Main Recommendation Methods ====================
 
     def get_style_recommendations(
@@ -135,7 +310,8 @@ class RecommendationEngine:
         limit: int = 10,
         exclude_recent: bool = True,
         include_trending: bool = True,
-        include_temporal: bool = True
+        include_temporal: bool = True,
+        session_id: Optional[str] = None
     ) -> List[StyleRecommendation]:
         """
         Get personalized style recommendations for a user.
@@ -146,6 +322,7 @@ class RecommendationEngine:
             exclude_recent: Don't recommend recently used styles
             include_trending: Include trending styles
             include_temporal: Include time-of-day appropriate styles
+            session_id: Session ID for A/B testing (anonymous users)
 
         Returns:
             List of StyleRecommendation objects sorted by relevance
@@ -153,26 +330,57 @@ class RecommendationEngine:
         try:
             recommendations: List[StyleRecommendation] = []
 
+            # Check for A/B experiment variant
+            experiment_variant = self.get_experiment_variant(user_id, session_id)
+
+            # Default weights for each recommendation source
+            source_weights = {
+                'personal': 1.0,
+                'collaborative': 0.9,
+                'complementary': 0.8,
+                'trending': 0.6,
+                'temporal': 0.5
+            }
+
+            # Apply experimental weights if in an experiment
+            if experiment_variant and not experiment_variant['is_control']:
+                source_weights = self._apply_experiment_weights(
+                    source_weights,
+                    experiment_variant['variant_config']
+                )
+                logger.info(f"User {user_id} in experiment: {experiment_variant['experiment_name']}, "
+                          f"variant: {experiment_variant['variant_name']}")
+
             # 1. Personal preferences (highest weight)
             personal_recs = self._get_personal_recommendations(user_id)
+            for rec in personal_recs:
+                rec.score *= source_weights['personal']
             recommendations.extend(personal_recs)
 
             # 2. "Users like you" collaborative filtering
             collaborative_recs = self._get_collaborative_recommendations(user_id)
+            for rec in collaborative_recs:
+                rec.score *= source_weights['collaborative']
             recommendations.extend(collaborative_recs)
 
             # 3. Complementary styles ("because you like X")
             complementary_recs = self._get_complementary_recommendations(user_id)
+            for rec in complementary_recs:
+                rec.score *= source_weights['complementary']
             recommendations.extend(complementary_recs)
 
             # 4. Trending styles (if enabled)
             if include_trending:
                 trending_recs = self._get_trending_recommendations()
+                for rec in trending_recs:
+                    rec.score *= source_weights['trending']
                 recommendations.extend(trending_recs)
 
             # 5. Time-appropriate styles (if enabled)
             if include_temporal:
                 temporal_recs = self._get_temporal_recommendations()
+                for rec in temporal_recs:
+                    rec.score *= source_weights['temporal']
                 recommendations.extend(temporal_recs)
 
             # Deduplicate and merge scores
@@ -185,6 +393,17 @@ class RecommendationEngine:
 
             # Sort by score and limit
             merged.sort(key=lambda x: x.score, reverse=True)
+
+            # Add experiment info to metadata if in experiment
+            if experiment_variant:
+                for rec in merged[:limit]:
+                    if rec.metadata is None:
+                        rec.metadata = {}
+                    rec.metadata['experiment'] = {
+                        'id': experiment_variant['experiment_id'],
+                        'variant': experiment_variant['variant_name']
+                    }
+
             return merged[:limit]
 
         except Exception as e:

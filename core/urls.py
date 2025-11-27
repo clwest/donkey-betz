@@ -105,6 +105,7 @@ from core.views_spider_intelligence import (
 
 # Session 206: Import preferences dashboard views
 # Session 210: Added implicit learning & recommendations
+# Session 211: Added A/B testing
 from core.views_preferences import (
     get_all_preferences,
     domain_preferences,
@@ -124,6 +125,14 @@ from core.views_preferences import (
     get_style_evolution,
     record_evolution_snapshot,
     get_style_shifts,
+    # Session 211: A/B Testing Framework
+    list_experiments,
+    create_experiment,
+    start_experiment,
+    stop_experiment,
+    get_experiment_results,
+    get_my_variant,
+    track_ab_conversion,
 )
 from core.views_spider_data import (
     get_spider_items,
@@ -625,6 +634,15 @@ urlpatterns = [
     path('api/preferences/evolution/', get_style_evolution, name='preferences-evolution'),
     path('api/preferences/evolution/snapshot/', record_evolution_snapshot, name='preferences-evolution-snapshot'),
     path('api/preferences/evolution/shifts/', get_style_shifts, name='preferences-evolution-shifts'),
+
+    # Session 211: A/B Testing Framework API
+    path('api/experiments/', list_experiments, name='experiments-list'),
+    path('api/experiments/create/', create_experiment, name='experiments-create'),
+    path('api/experiments/<str:experiment_id>/start/', start_experiment, name='experiments-start'),
+    path('api/experiments/<str:experiment_id>/stop/', stop_experiment, name='experiments-stop'),
+    path('api/experiments/<str:experiment_id>/results/', get_experiment_results, name='experiments-results'),
+    path('api/experiments/<str:experiment_id>/variant/', get_my_variant, name='experiments-variant'),
+    path('api/experiments/<str:experiment_id>/convert/', track_ab_conversion, name='experiments-convert'),
 
     # Domain preferences (catch-all - must be LAST in preferences routes)
     path('api/preferences/<str:domain>/', domain_preferences, name='preferences-domain'),
