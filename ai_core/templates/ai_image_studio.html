@@ -9052,6 +9052,124 @@
                     </div>
                     <!-- END Quick Actions Bar -->
 
+                    <!-- ============================================================ -->
+                    <!-- Session 232: Learning Loop Section (Phase 5)                 -->
+                    <!-- ============================================================ -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.15); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                    <h5 class="mb-0" style="color: #a855f7;">🧠 Learning Loop - AI Insights</h5>
+                                    <div>
+                                        <button class="btn btn-sm me-2" onclick="loadLearningDashboard()" style="background: rgba(139, 92, 246, 0.3); border: 1px solid rgba(139, 92, 246, 0.5); color: white;">
+                                            🔄 Refresh
+                                        </button>
+                                        <button class="btn btn-sm" onclick="generateNewInsights()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white;">
+                                            ✨ Generate Insights
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body" id="learningLoopContainer">
+                                    <!-- Learning Stats Row -->
+                                    <div class="row mb-4" id="learningStatsRow">
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card h-100" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #10b981;" id="learningPatternsCount">0</h3>
+                                                    <small class="text-muted">Success Patterns</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card h-100" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #3b82f6;" id="learningPredictionsCount">0</h3>
+                                                    <small class="text-muted">Predictions Made</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card h-100" style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #f97316;" id="learningInsightsCount">0</h3>
+                                                    <small class="text-muted">Active Insights</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card h-100" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h3 class="mb-1" style="color: #ec4899;" id="learningConfidenceScore">0%</h3>
+                                                    <small class="text-muted">Avg Confidence</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Top Success Patterns -->
+                                    <div class="row mb-4">
+                                        <div class="col-lg-6 mb-3">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                                <div class="card-header" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                                                    <h6 class="mb-0" style="color: #10b981;">📈 Top Success Patterns</h6>
+                                                </div>
+                                                <div class="card-body p-0" id="topPatternsContainer" style="max-height: 250px; overflow-y: auto;">
+                                                    <div class="text-center py-4 text-muted" id="noPatternsMsg">
+                                                        <small>📊 Analyzing your distribution patterns...</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-3">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                                <div class="card-header" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid rgba(59, 130, 246, 0.3);">
+                                                    <h6 class="mb-0" style="color: #3b82f6;">💡 AI Insights</h6>
+                                                </div>
+                                                <div class="card-body p-0" id="learningInsightsContainer" style="max-height: 250px; overflow-y: auto;">
+                                                    <div class="text-center py-4 text-muted" id="noInsightsMsg">
+                                                        <small>🤖 Click "Generate Insights" to get AI recommendations</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pricing Optimization & Performance Comparison -->
+                                    <div class="row">
+                                        <div class="col-lg-6 mb-3">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                                                    <h6 class="mb-0" style="color: #f97316;">💰 Pricing Optimization</h6>
+                                                    <button class="btn btn-sm" onclick="showPricingModal()" style="background: rgba(249, 115, 22, 0.3); border: none; color: white; font-size: 0.7rem;">
+                                                        Optimize
+                                                    </button>
+                                                </div>
+                                                <div class="card-body" id="pricingOptContainer">
+                                                    <div class="text-center py-3 text-muted">
+                                                        <small>💵 Select a product to get pricing suggestions</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 mb-3">
+                                            <div class="card h-100" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5);">
+                                                <div class="card-header" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                                                    <h6 class="mb-0" style="color: #ec4899;">🏆 Performance vs Peers</h6>
+                                                </div>
+                                                <div class="card-body" id="performanceCompareContainer">
+                                                    <div class="text-center py-3 text-muted">
+                                                        <small>📊 Performance comparison coming soon...</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END Learning Loop Section -->
+
                     <div class="row">
                         <!-- Platforms List -->
                         <div class="col-lg-8">
@@ -41758,6 +41876,363 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // END Session 231: Frontend Enhancement JavaScript
+        // ============================================================
+
+        // ============================================================
+        // Session 232: Learning Loop JavaScript Functions (Phase 5)
+        // ============================================================
+
+        // Load Learning Loop Dashboard
+        async function loadLearningDashboard() {
+            try {
+                const response = await fetch('/api/learning/dashboard/');
+                const data = await response.json();
+
+                if (data.success) {
+                    const dashboard = data.dashboard || {};
+
+                    // Update stats
+                    document.getElementById('learningPatternsCount').textContent = dashboard.patterns_count || 0;
+                    document.getElementById('learningPredictionsCount').textContent = dashboard.predictions_count || 0;
+                    document.getElementById('learningInsightsCount').textContent = dashboard.unread_insights || 0;
+
+                    const avgConfidence = dashboard.avg_confidence || 0;
+                    document.getElementById('learningConfidenceScore').textContent = Math.round(avgConfidence) + '%';
+
+                    // Load patterns
+                    if (dashboard.top_patterns && dashboard.top_patterns.length > 0) {
+                        renderTopPatterns(dashboard.top_patterns);
+                    }
+
+                    // Load insights
+                    if (dashboard.recent_insights && dashboard.recent_insights.length > 0) {
+                        renderLearningInsights(dashboard.recent_insights);
+                    }
+                } else {
+                    console.log('Learning dashboard requires authentication');
+                }
+            } catch (error) {
+                console.error('Error loading learning dashboard:', error);
+            }
+        }
+
+        // Render Top Success Patterns
+        function renderTopPatterns(patterns) {
+            const container = document.getElementById('topPatternsContainer');
+            if (!patterns || patterns.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <small>📊 No patterns discovered yet. Keep distributing content!</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const patternTypeIcons = {
+                'content_style': '🎨',
+                'pricing_strategy': '💰',
+                'timing': '⏰',
+                'platform_match': '🎯',
+                'tag_combination': '🏷️',
+                'description_format': '📝',
+                'category_niche': '📂'
+            };
+
+            container.innerHTML = patterns.map(p => `
+                <div class="list-group-item" style="background: transparent; border-color: rgba(71, 85, 105, 0.3);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong style="color: #10b981;">${patternTypeIcons[p.type] || '📊'} ${p.name || p.type}</strong>
+                            <br>
+                            <small class="text-muted">${p.description || 'Pattern discovered from your data'}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success">${Math.round(p.success_rate || 0)}% success</span>
+                            <br>
+                            <small class="text-muted">${Math.round(p.confidence || 0)}% confidence</small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Learning Insights
+        function renderLearningInsights(insights) {
+            const container = document.getElementById('learningInsightsContainer');
+            if (!insights || insights.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-muted" id="noInsightsMsg">
+                        <small>🤖 Click "Generate Insights" to get AI recommendations</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const insightTypeColors = {
+                'pricing_opportunity': '#f97316',
+                'timing_suggestion': '#3b82f6',
+                'platform_recommendation': '#10b981',
+                'tag_optimization': '#8b5cf6',
+                'content_improvement': '#ec4899',
+                'trend_alert': '#fbbf24',
+                'performance_warning': '#ef4444',
+                'success_celebration': '#22c55e'
+            };
+
+            container.innerHTML = insights.map(i => `
+                <div class="list-group-item" style="background: transparent; border-color: rgba(71, 85, 105, 0.3); border-left: 3px solid ${insightTypeColors[i.type] || '#6b7280'};">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <strong style="color: ${insightTypeColors[i.type] || '#6b7280'};">${i.title}</strong>
+                            <br>
+                            <small class="text-muted">${i.message}</small>
+                            ${i.action_items && i.action_items.length > 0 ? `
+                                <div class="mt-2">
+                                    ${i.action_items.slice(0, 2).map(action => `
+                                        <span class="badge bg-secondary me-1" style="font-size: 0.7rem;">→ ${action}</span>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="markInsightRead('${i.id}')" title="Mark as read">
+                                ✓
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="dismissInsight('${i.id}')" title="Dismiss">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Generate New Insights
+        async function generateNewInsights() {
+            showToast('Generating AI insights...', 'info');
+            try {
+                const response = await fetch('/api/learning/insights/generate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Generated ${data.insights_generated || 0} new insights!`, 'success');
+                    loadLearningDashboard();
+                } else {
+                    showToast(data.error?.message || 'Failed to generate insights', 'error');
+                }
+            } catch (error) {
+                console.error('Error generating insights:', error);
+                showToast('Error generating insights', 'error');
+            }
+        }
+
+        // Mark Insight as Read
+        async function markInsightRead(insightId) {
+            try {
+                const response = await fetch(`/api/learning/insights/${insightId}/read/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    loadLearningDashboard();
+                }
+            } catch (error) {
+                console.error('Error marking insight read:', error);
+            }
+        }
+
+        // Dismiss Insight
+        async function dismissInsight(insightId) {
+            try {
+                const response = await fetch(`/api/learning/insights/${insightId}/dismiss/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Insight dismissed', 'info');
+                    loadLearningDashboard();
+                }
+            } catch (error) {
+                console.error('Error dismissing insight:', error);
+            }
+        }
+
+        // Show Pricing Optimization Modal
+        function showPricingModal() {
+            const modalHtml = `
+                <div class="modal fade" id="pricingOptModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1e293b; border: 1px solid rgba(71, 85, 105, 0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                                <h5 class="modal-title" style="color: #f97316;">💰 Pricing Optimization</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Content Type</label>
+                                    <select class="form-select" id="pricingContentType" style="background: rgba(30, 41, 59, 0.8); border-color: rgba(71, 85, 105, 0.5); color: white;">
+                                        <option value="image">Image / Digital Art</option>
+                                        <option value="video">Video Content</option>
+                                        <option value="audio">Audio / Music</option>
+                                        <option value="3d">3D Model</option>
+                                        <option value="template">Template / Design</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Platform</label>
+                                    <select class="form-select" id="pricingPlatform" style="background: rgba(30, 41, 59, 0.8); border-color: rgba(71, 85, 105, 0.5); color: white;">
+                                        <option value="etsy">Etsy</option>
+                                        <option value="gumroad">Gumroad</option>
+                                        <option value="shutterstock">Shutterstock</option>
+                                        <option value="redbubble">Redbubble</option>
+                                        <option value="creative_market">Creative Market</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Current Price ($)</label>
+                                    <input type="number" class="form-control" id="pricingCurrentPrice" step="0.01" placeholder="e.g., 9.99" style="background: rgba(30, 41, 59, 0.8); border-color: rgba(71, 85, 105, 0.5); color: white;">
+                                </div>
+                                <div id="pricingResults" class="mt-4" style="display: none;">
+                                    <h6 style="color: #f97316;">📊 AI Pricing Recommendation</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h4 id="optimalPrice" style="color: #10b981;">$0.00</h4>
+                                                    <small class="text-muted">Optimal Price</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h4 id="priceRange" style="color: #3b82f6;">$0 - $0</h4>
+                                                    <small class="text-muted">Price Range</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                                <div class="card-body text-center">
+                                                    <h4 id="priceConfidence" style="color: #8b5cf6;">0%</h4>
+                                                    <small class="text-muted">Confidence</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 p-3" style="background: rgba(30, 41, 59, 0.5); border-radius: 8px;">
+                                        <p id="pricingRationale" class="text-muted mb-0"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(71, 85, 105, 0.3);">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-warning" onclick="getPricingOptimization()">
+                                    🔍 Analyze Pricing
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('pricingOptModal');
+            if (existingModal) existingModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('pricingOptModal'));
+            modal.show();
+        }
+
+        // Get Pricing Optimization
+        async function getPricingOptimization() {
+            const contentType = document.getElementById('pricingContentType').value;
+            const platform = document.getElementById('pricingPlatform').value;
+            const currentPrice = document.getElementById('pricingCurrentPrice').value;
+
+            try {
+                const params = new URLSearchParams({
+                    content_type: contentType,
+                    platform: platform
+                });
+                if (currentPrice) params.append('current_price', currentPrice);
+
+                const response = await fetch(`/api/learning/pricing/?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const opt = data.optimization || {};
+                    document.getElementById('optimalPrice').textContent = `$${(opt.optimal_price || 0).toFixed(2)}`;
+                    document.getElementById('priceRange').textContent = `$${(opt.min_price || 0).toFixed(2)} - $${(opt.max_price || 0).toFixed(2)}`;
+                    document.getElementById('priceConfidence').textContent = `${Math.round(opt.confidence || 0)}%`;
+                    document.getElementById('pricingRationale').textContent = opt.rationale || 'Based on market analysis and historical data.';
+                    document.getElementById('pricingResults').style.display = 'block';
+                } else {
+                    showToast(data.error?.message || 'Failed to get pricing optimization', 'error');
+                }
+            } catch (error) {
+                console.error('Error getting pricing optimization:', error);
+                showToast('Error getting pricing optimization', 'error');
+            }
+        }
+
+        // Load Patterns List
+        async function loadPatternsList() {
+            try {
+                const response = await fetch('/api/learning/patterns/');
+                const data = await response.json();
+
+                if (data.success) {
+                    renderTopPatterns(data.patterns || []);
+                }
+            } catch (error) {
+                console.error('Error loading patterns:', error);
+            }
+        }
+
+        // Load Learning Insights
+        async function loadLearningInsights() {
+            try {
+                const response = await fetch('/api/learning/insights/');
+                const data = await response.json();
+
+                if (data.success) {
+                    renderLearningInsights(data.insights || []);
+                }
+            } catch (error) {
+                console.error('Error loading insights:', error);
+            }
+        }
+
+        // Initialize Learning Loop when Distribute tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const distributeTab = document.getElementById('distribute-tab');
+            if (distributeTab) {
+                distributeTab.addEventListener('shown.bs.tab', function() {
+                    loadLearningDashboard();
+                });
+            }
+        });
+
+        // END Session 232: Learning Loop JavaScript Functions
         // ============================================================
 
         // Update opportunity stats

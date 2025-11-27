@@ -311,6 +311,24 @@ from core.views_revenue_analytics import (
     export_revenue_data,
 )
 
+# Session 232: Import Learning Loop views (Phase 5)
+from core.views_learning_loop import (
+    list_success_patterns,
+    pattern_detail,
+    analyze_patterns,
+    predict_performance,
+    list_predictions,
+    get_pricing_optimization,
+    get_learning_profile,
+    update_learning_profile,
+    list_insights,
+    generate_insights,
+    mark_insight_read,
+    dismiss_insight,
+    get_performance_comparison,
+    learning_dashboard,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -936,6 +954,22 @@ urlpatterns = [
     path('api/distribution/revenue/forecast/', revenue_forecast, name='revenue-forecast'),
     path('api/distribution/revenue/goals/', revenue_goals, name='revenue-goals'),
     path('api/distribution/revenue/export/', export_revenue_data, name='export-revenue-data'),
+
+    # Session 232: Learning Loop APIs (Phase 5)
+    path('api/learning/dashboard/', learning_dashboard, name='learning-dashboard'),
+    path('api/learning/patterns/', list_success_patterns, name='learning-patterns'),
+    path('api/learning/patterns/<uuid:pattern_id>/', pattern_detail, name='learning-pattern-detail'),
+    path('api/learning/patterns/analyze/', analyze_patterns, name='learning-patterns-analyze'),
+    path('api/learning/predict/', predict_performance, name='learning-predict'),
+    path('api/learning/predictions/', list_predictions, name='learning-predictions'),
+    path('api/learning/pricing/', get_pricing_optimization, name='learning-pricing'),
+    path('api/learning/profile/', get_learning_profile, name='learning-profile'),
+    path('api/learning/profile/update/', update_learning_profile, name='learning-profile-update'),
+    path('api/learning/insights/', list_insights, name='learning-insights'),
+    path('api/learning/insights/generate/', generate_insights, name='learning-insights-generate'),
+    path('api/learning/insights/<uuid:insight_id>/read/', mark_insight_read, name='learning-insight-read'),
+    path('api/learning/insights/<uuid:insight_id>/dismiss/', dismiss_insight, name='learning-insight-dismiss'),
+    path('api/learning/compare/', get_performance_comparison, name='learning-compare'),
 
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
