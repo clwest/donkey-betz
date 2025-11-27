@@ -33920,13 +33920,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const activeSpiders = spiders.filter(s => s.status === 'Active' || s.status === 'Scanning');
             const dormantSpiders = spiders.filter(s => s.status === 'Idle');
 
-            // Active spiders
+            // Active spiders - Session 207: Use displayName for UI, name for execution
             if (activeSpiders.length > 0) {
                 activeContainer.innerHTML = activeSpiders.map(spider => `
                     <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.2);">
                         <div>
                             <span class="me-2">${spider.icon}</span>
-                            <span class="text-light">${spider.name}</span>
+                            <span class="text-light">${spider.displayName || spider.name}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <span style="color: #22c55e; font-size: 0.8rem;">${spider.dataCollected} items</span>
@@ -33938,13 +33938,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 activeContainer.innerHTML = '<p class="text-muted text-center py-3">No active spiders</p>';
             }
 
-            // Dormant spiders
+            // Dormant spiders - Session 207: Use displayName for UI, name for execution
             if (dormantSpiders.length > 0) {
                 dormantContainer.innerHTML = dormantSpiders.map(spider => `
                     <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
                         <div>
                             <span class="me-2">${spider.icon}</span>
-                            <span class="text-light">${spider.name}</span>
+                            <span class="text-light">${spider.displayName || spider.name}</span>
                         </div>
                         <button class="btn btn-sm btn-outline-warning" onclick="activateSpider(${spider.id}, '${spider.name}')" style="padding: 2px 8px; font-size: 0.7rem;">Activate</button>
                     </div>
