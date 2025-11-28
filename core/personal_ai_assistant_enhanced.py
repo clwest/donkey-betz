@@ -513,7 +513,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         },
                         "topic": {
                             "type": "string",
-                            "description": "The research topic or subject (e.g., 'coffee shops in colorado', 'modern AI company', 'fitness brand', 'tech startup')"
+                            "description": "The research topic INCLUDING any character/mascot mentioned. Examples: 'AI content generation with donkey mascot', 'coffee shop with owl character', 'tech startup'. If user mentions a specific character (donkey, owl, lion, etc.), include it in the topic!"
                         },
                         "count": {
                             "type": "integer",
@@ -522,7 +522,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         },
                         "style_preferences": {
                             "type": "string",
-                            "description": "Optional style preferences (e.g., 'minimalist', 'vibrant colors', 'professional')"
+                            "description": "CRITICAL: Extract ANY style mentioned by user! Animation styles: 'pixar', 'disney', 'dreamworks', 'ghibli', 'anime', 'cartoon'. Art styles: 'watercolor', 'cyberpunk', 'minimalist', 'retro'. If user says 'DreamWorks style donkey' → style_preferences='dreamworks'. If user says 'Pixar-style mascot' → style_preferences='pixar'. ALWAYS extract the style - this determines whether we generate mascot characters vs flat geometric icons!"
                         },
                         "image_id": {
                             "type": "string",

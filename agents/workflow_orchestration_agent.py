@@ -722,11 +722,37 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             }
 
     def _execute_web_search_step(self, context: Dict) -> Dict[str, Any]:
-        """Execute web search to research the topic."""
+        """
+        Execute web search to research the topic.
+
+        Session 238: Now augmented with Spider Intelligence!
+        Before searching the web, we query our spider network for:
+        - Trending topics in relevant categories
+        - Real-time market insights
+        - Industry-specific trends
+
+        This gives the research step access to live data from 67 spiders
+        across 21 real data sources.
+        """
         topic = context['topic']
         year = context['year']
         style_prefs = context.get('style_preferences', '')
         content_type = context.get('content_type', 'logos')
+
+        # =====================================================================
+        # SESSION 238: SPIDER INTELLIGENCE INTEGRATION
+        # Query our spider network FIRST to get real-time trending insights
+        # =====================================================================
+        spider_insights = self._get_spider_intelligence(topic, content_type)
+        spider_trending_terms = spider_insights.get('trending_terms', [])
+        spider_context = spider_insights.get('context_summary', '')
+
+        # Store spider insights in context for later use (executives, prompts)
+        context['spider_insights'] = spider_insights
+        context['spider_trending'] = spider_trending_terms
+
+        if spider_trending_terms:
+            logger.info(f"🕷️ Spider Intelligence found {len(spider_trending_terms)} trending terms: {spider_trending_terms[:5]}")
 
         # Session 199/200/212: Build content-type-specific search queries
         if content_type == 'youtube_thumbnails':
@@ -764,17 +790,132 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         if style_prefs:
             query += f" {style_prefs}"
 
+        # Session 238: Augment query with spider trending terms (top 3)
+        if spider_trending_terms:
+            trending_addition = ' '.join(spider_trending_terms[:3])
+            query += f" {trending_addition}"
+            logger.info(f"🕷️ Augmented query with spider trends: {trending_addition}")
+
         logger.info(f"🔍 Web search query ({content_type}): {query}")
 
         try:
             # Import and execute web search
             from core.views_image import _execute_web_search
             result = _execute_web_search({'query': query})
+
+            # Session 238: Merge spider context into research summary
+            if result.get('success') and spider_context:
+                existing_summary = ''
+                if result.get('results'):
+                    snippets = [r.get('snippet', '') for r in result['results'][:3]]
+                    existing_summary = ' '.join(snippets)[:300]
+
+                # Prepend spider insights to the research summary
+                result['spider_insights'] = spider_insights
+                result['enhanced_summary'] = f"🕷️ LIVE TRENDS: {spider_context}\n\n📰 WEB RESEARCH: {existing_summary}"
+                logger.info(f"🕷️ Enhanced research with spider intelligence")
+
             return result
 
         except Exception as e:
             logger.error(f"Web search failed: {e}")
             return {'success': False, 'error': str(e)}
+
+    def _get_spider_intelligence(self, topic: str, content_type: str) -> Dict[str, Any]:
+        """
+        Session 238: Query spider intelligence for topic-relevant trends.
+
+        This method:
+        1. Determines which spider categories are relevant to the topic
+        2. Queries SpiderIntelligenceService for trending data
+        3. Extracts actionable keywords for image generation
+        4. Returns a context summary for executives
+
+        Args:
+            topic: The user's topic (e.g., "AI content generation")
+            content_type: Type of content being created (logos, thumbnails, etc.)
+
+        Returns:
+            Dict with trending_terms, context_summary, and raw_trends
+        """
+        try:
+            from core.services.spider_intelligence import SpiderIntelligenceService
+            spider_service = SpiderIntelligenceService()
+
+            # Determine relevant categories based on topic keywords
+            topic_lower = topic.lower()
+            categories_to_query = []
+
+            # Map topic keywords to spider categories
+            if any(kw in topic_lower for kw in ['ai', 'ml', 'tech', 'software', 'app', 'saas', 'developer', 'code', 'programming']):
+                categories_to_query.append('tech')
+            if any(kw in topic_lower for kw in ['design', 'creative', 'art', 'visual', 'brand', 'logo', 'graphic']):
+                categories_to_query.append('creative')
+            if any(kw in topic_lower for kw in ['crypto', 'bitcoin', 'ethereum', 'nft', 'blockchain', 'defi', 'web3']):
+                categories_to_query.append('crypto')
+            if any(kw in topic_lower for kw in ['finance', 'invest', 'stock', 'market', 'money', 'trading']):
+                categories_to_query.append('financial')
+            if any(kw in topic_lower for kw in ['job', 'career', 'remote', 'freelance', 'hire', 'work']):
+                categories_to_query.append('jobs')
+            if any(kw in topic_lower for kw in ['news', 'trending', 'viral', 'popular', 'current']):
+                categories_to_query.append('news')
+
+            # Default to tech + creative if no specific match
+            if not categories_to_query:
+                categories_to_query = ['tech', 'creative']
+
+            # Query each relevant category
+            all_trends = []
+            for category in categories_to_query[:3]:  # Max 3 categories
+                try:
+                    trends = spider_service.get_trending_topics(
+                        category=category,
+                        hours=48,  # Last 48 hours
+                        limit=10
+                    )
+                    for trend in trends:
+                        trend['category'] = category
+                    all_trends.extend(trends)
+                except Exception as e:
+                    logger.warning(f"Spider query failed for {category}: {e}")
+
+            if not all_trends:
+                logger.info(f"🕷️ No spider trends found for topic: {topic}")
+                return {'trending_terms': [], 'context_summary': '', 'raw_trends': []}
+
+            # Sort by score and deduplicate
+            all_trends.sort(key=lambda x: x.get('score', 0), reverse=True)
+            seen_topics = set()
+            unique_trends = []
+            for trend in all_trends:
+                topic_name = trend.get('topic', '').lower()
+                if topic_name and topic_name not in seen_topics:
+                    seen_topics.add(topic_name)
+                    unique_trends.append(trend)
+
+            # Extract top trending terms (for query augmentation)
+            trending_terms = [t['topic'] for t in unique_trends[:8]]
+
+            # Build context summary (for executives)
+            top_trends = unique_trends[:5]
+            if top_trends:
+                trend_list = ', '.join([f"{t['topic']} ({t.get('category', 'general')})" for t in top_trends])
+                context_summary = f"Currently trending: {trend_list}. These topics are getting attention across {len(categories_to_query)} categories from our spider network."
+            else:
+                context_summary = ''
+
+            logger.info(f"🕷️ Spider Intelligence: Found {len(unique_trends)} trends across {categories_to_query}")
+
+            return {
+                'trending_terms': trending_terms,
+                'context_summary': context_summary,
+                'raw_trends': unique_trends[:10],
+                'categories_queried': categories_to_query
+            }
+
+        except Exception as e:
+            logger.error(f"Spider intelligence query failed: {e}")
+            return {'trending_terms': [], 'context_summary': '', 'raw_trends': []}
 
     def _execute_coleadership_step(self, context: Dict) -> Dict[str, Any]:
         """Execute co-leadership agent for executive review."""
@@ -783,15 +924,26 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         research_summary = context.get('research_summary', 'Research completed')
         content_type = context.get('content_type', 'logos')
 
+        # Session 238: Include spider intelligence in executive context
+        spider_insights = context.get('spider_insights', {})
+        spider_context = spider_insights.get('context_summary', '')
+        spider_trending = context.get('spider_trending', [])
+
         # Session 199/200/201: Build content-type-specific questions
         # Session 201: Questions now explicitly mention AI image generation
-        # This helps executives give AI-specific advice (prompt engineering, model selection, etc.)
+        # Session 238: Now includes live spider intelligence!
         ai_context = (
             "IMPORTANT: You are advising on AI IMAGE GENERATION using Stability AI. "
             "Your recommendations will be converted into prompts for the AI model. "
             "Consider what works well for AI: simple clear descriptions, style keywords, "
             "avoiding complex text/typography (AI struggles with text), focusing on composition and mood."
         )
+
+        # Session 238: Add spider intelligence to executive context
+        if spider_context:
+            ai_context += f"\n\n🕷️ LIVE MARKET INTELLIGENCE FROM OUR SPIDER NETWORK:\n{spider_context}"
+        if spider_trending:
+            ai_context += f"\n\nTrending keywords to consider: {', '.join(spider_trending[:5])}"
 
         if content_type == 'youtube_thumbnails':
             question = (
@@ -1023,10 +1175,11 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             is_animated_style = any(anim in style_lower for anim in animated_styles)
 
             if is_animated_style:
-                # Session 238: ANIMATED STYLE - generate a mascot/character logo, not flat icon
-                prompt = f"3D animated mascot character logo for {topic}, cute friendly character, expressive face, vibrant colors, simple memorable design, professional brand mascot, clean background, NO TEXT, NO WORDS, NO LETTERS"
-                style = "mascot character, 3D animated, friendly, professional brand"
-                logger.info(f"🎬 Session 238: Detected animated style '{style_prefs}' - using mascot prompt")
+                # Session 238/239: ANIMATED STYLE - generate a mascot/character logo, not flat icon
+                # Include the specific animation style in the prompt for better results
+                prompt = f"3D animated {style_prefs} style mascot character for {topic}, cute friendly character, expressive face, vibrant colors, simple memorable design, professional brand mascot, clean background, NO TEXT, NO WORDS, NO LETTERS"
+                style = f"{style_prefs} style, mascot character, 3D animated, friendly, professional brand"
+                logger.info(f"🎬 Session 238: Detected animated style '{style_prefs}' - using mascot prompt with style")
             else:
                 # Default: flat/geometric logo
                 prompt = f"single professional {topic} logo mark, abstract symbol only, NO TEXT, NO WORDS, NO LETTERS, minimalist icon, bold geometric shapes, simple clean design"
@@ -1411,12 +1564,18 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         elif step_name in ['create_images', 'create_thumbnails', 'create_brand_images', 'create_product_images', 'create_thumbnail_series']:
             context['image_generation_result'] = result
-            # Extract image IDs
+            # Extract image IDs - Session 239: Enhanced logging for debugging
+            logger.info(f"🔍 Session 239 DEBUG: Image generation result keys: {result.keys() if result else 'None'}")
             if result.get('success'):
                 if result.get('images'):
+                    logger.info(f"🔍 Session 239 DEBUG: Found {len(result['images'])} images in result")
                     context['generated_image_ids'] = [img.get('image_id') for img in result['images'] if img.get('image_id')]
+                    logger.info(f"🔍 Session 239 DEBUG: Extracted image IDs: {context['generated_image_ids']}")
                 elif result.get('image_id'):
                     context['generated_image_ids'] = [result['image_id']]
+                    logger.info(f"🔍 Session 239 DEBUG: Single image ID: {context['generated_image_ids']}")
+                else:
+                    logger.warning(f"⚠️ Session 239: No 'images' or 'image_id' in result. Available keys: {list(result.keys())}")
 
         elif step_name == 'create_project':
             context['project_created'] = result
