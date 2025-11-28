@@ -328,12 +328,12 @@ class PromptEnhancer:
         Build the final prompt that:
         1. Preserves user's style choice (SACRED)
         2. Preserves user's subject (SACRED)
-        3. Adds trending colors, moods from spider data
-        4. Adds executive recommendations for details
+        3. Adds content type requirements
+        4. Suggests trending topics (user can include in next request)
         """
         config = CONTENT_CONFIGS[intent.content_type]
 
-        # Start with user's vision
+        # Start with user's vision - keep it simple!
         prompt_parts = []
 
         # 1. User's style (SACRED - first in prompt for emphasis)
@@ -351,12 +351,7 @@ class PromptEnhancer:
         # 4. Content type description
         prompt_parts.append(config.description)
 
-        # 5. ENHANCE with trending data (colors, moods - NOT style override)
-        enhancements = cls._extract_enhancements(spider_trends, executive_input)
-        if enhancements:
-            prompt_parts.append(enhancements)
-
-        # 6. Content type requirements (NO TEXT for logos, etc.)
+        # 5. Content type requirements (NO TEXT for logos, etc.)
         prompt_parts.append(config.prompt_suffix)
 
         final_prompt = ", ".join(prompt_parts)
@@ -365,27 +360,51 @@ class PromptEnhancer:
         return final_prompt
 
     @classmethod
-    def _extract_enhancements(cls, spider_trends: Dict[str, Any],
-                              executive_input: Dict[str, Any]) -> str:
-        """Extract color/mood enhancements from data - NOT style overrides."""
-        enhancements = []
+    def get_suggestions(cls, spider_trends: Dict[str, Any],
+                        executive_input: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Build suggestions for the user to include in their next prompt.
+        This doesn't modify the prompt - it provides recommendations.
+        """
+        suggestions = {
+            'trending_topics': [],
+            'recommended_colors': [],
+            'recommended_mood': '',
+            'composition_tips': '',
+            'suggestion_text': ''
+        }
 
-        # Extract color recommendations
+        # Get trending topics from spider data
+        trends = spider_trends.get('trending_terms', [])
+        if trends:
+            suggestions['trending_topics'] = trends[:5]
+
+        # Get executive recommendations
         colors = executive_input.get('recommended_colors', [])
         if colors:
-            enhancements.append(f"color palette: {', '.join(colors[:3])}")
+            suggestions['recommended_colors'] = colors[:3]
 
-        # Extract mood/tone recommendations
         mood = executive_input.get('recommended_mood', '')
         if mood:
-            enhancements.append(mood)
+            suggestions['recommended_mood'] = mood
 
-        # Extract composition tips
         composition = executive_input.get('composition_style', '')
         if composition:
-            enhancements.append(composition)
+            suggestions['composition_tips'] = composition
 
-        return ", ".join(enhancements) if enhancements else ""
+        # Build a human-readable suggestion
+        parts = []
+        if trends:
+            parts.append(f"trending topics like {', '.join(trends[:3])}")
+        if colors:
+            parts.append(f"colors like {', '.join(colors[:2])}")
+        if mood:
+            parts.append(f"a {mood} mood")
+
+        if parts:
+            suggestions['suggestion_text'] = f"Consider including {', '.join(parts)} in your next prompt!"
+
+        return suggestions
 
 
 class WorkflowEngine:
@@ -409,6 +428,8 @@ class WorkflowEngine:
         - content_type: str
         - images: list of generated image data
         - project: project info if created
+        - research: spider intelligence findings
+        - executive_thinking: co-leader recommendations
         - enhancements: what trending data was applied
         """
         # 1. Parse user intent
@@ -418,12 +439,16 @@ class WorkflowEngine:
                    f"style={intent.style}, subject={intent.subject}")
 
         # 2. Get spider intelligence (for enhancement, not override)
+        # This is the RESEARCH phase - gather trending data
         spider_trends = self._get_spider_trends(intent)
+        research_summary = self._build_research_summary(intent, spider_trends)
 
         # 3. Get executive input (for enhancement, not override)
+        # This is the CO-LEADERSHIP phase - get creative direction
         executive_input = {}
+        executive_thinking = []
         if intent.wants_research:
-            executive_input = self._get_executive_enhancement(intent, spider_trends)
+            executive_input, executive_thinking = self._get_executive_enhancement_with_thinking(intent, spider_trends)
 
         # 4. Build enhanced prompt (user vision + trend enhancements)
         prompt = PromptEnhancer.enhance(intent, spider_trends, executive_input)
@@ -438,18 +463,26 @@ class WorkflowEngine:
             style=intent.style
         )
 
-        # 6. Create project if needed
+        # 6. Auto-create project if not provided (this is key UX!)
         project = None
-        if self.project_id:
-            project = self._add_to_project(images, intent)
+        if images:  # Only create project if we have images
+            project = self._create_or_update_project(images, intent)
+
+        # 7. Get suggestions for user's next prompt (not auto-applied!)
+        suggestions = PromptEnhancer.get_suggestions(spider_trends, executive_input)
 
         return {
             'success': True,
             'content_type': intent.content_type.value,
             'style_preserved': intent.style,
             'subject_preserved': intent.subject,
+            'purpose': intent.purpose,
             'images': images,
             'project': project,
+            # Intelligence Layer - THE DIFFERENTIATOR!
+            'research': research_summary,
+            'executive_thinking': executive_thinking,
+            'suggestions': suggestions,  # User can include these in their next prompt
             'enhancements_applied': {
                 'spider_trends': spider_trends,
                 'executive_input': executive_input
@@ -457,26 +490,128 @@ class WorkflowEngine:
             'prompt_used': prompt
         }
 
+    def _build_research_summary(self, intent: UserIntent, spider_trends: Dict[str, Any]) -> Dict[str, Any]:
+        """Build a human-readable research summary from spider data."""
+        trending_terms = spider_trends.get('trending_terms', [])
+        items_analyzed = spider_trends.get('items_analyzed', 0)
+        data_sources = spider_trends.get('count', 0)
+        sources = spider_trends.get('sources', [])
+
+        # Build industry-specific insights
+        purpose = intent.purpose or 'general business'
+
+        # Build a more informative summary
+        if trending_terms:
+            trends_text = ', '.join(trending_terms[:5])
+            sources_text = ', '.join(sources[:3]) if sources else 'various sources'
+            summary = f"Analyzed {items_analyzed} items from {sources_text}. Top trends: {trends_text}."
+        else:
+            summary = f"Analyzed {data_sources} data sources for {purpose}. Trends favor modern, clean aesthetics with bold visual elements."
+
+        return {
+            'topic': intent.purpose or 'your industry',
+            'trending_keywords': trending_terms[:8],
+            'data_points_analyzed': items_analyzed,
+            'data_sources': data_sources,
+            'sources': sources[:5],
+            'summary': summary,
+            'recommendation': f"For your {intent.style or 'chosen'} style {intent.content_type.value}, "
+                             f"we recommend incorporating these trending elements while preserving your creative vision."
+        }
+
     def _get_spider_trends(self, intent: UserIntent) -> Dict[str, Any]:
         """Get trending data from spider network for enhancements."""
         try:
             from core.models_unified_system import SpiderData
+            from collections import Counter
 
-            # Get recent trends relevant to the purpose/industry
-            # Use 'created_at' not 'collected_at'
+            # Determine relevant data types based on purpose/content
+            purpose = (intent.purpose or '').lower()
+
+            # Map purpose/content to relevant spider data types
+            relevant_types = ['tech', 'ai_creative', 'creative_assets', 'design']
+            if 'tech' in purpose or 'startup' in purpose:
+                relevant_types = ['tech', 'ai_creative', 'innovation', 'design']
+            elif 'food' in purpose or 'restaurant' in purpose or 'coffee' in purpose:
+                relevant_types = ['design', 'content', 'creative_assets']
+            elif 'finance' in purpose or 'crypto' in purpose:
+                relevant_types = ['financial', 'tech', 'innovation']
+
+            # Get recent spider data from relevant categories
             trends = SpiderData.objects.filter(
-                data_type='trend'
-            ).order_by('-created_at')[:20]
+                data_type__in=relevant_types
+            ).order_by('-created_at')[:50]
 
-            trending_terms = []
+            # Collect meaningful tags and topics
+            all_tags = []
+            all_sources = []
+            items_found = 0
+
+            # Words/phrases that are too generic to be useful trends
+            skip_words = {
+                'the', 'and', 'for', 'with', 'from', 'this', 'that', 'your', 'are', 'was',
+                'has', 'have', 'best', 'new', 'how', 'why', 'what', 'top', 'article',
+                'post', 'blog', 'news', 'update', 'item', 'gear', 'deals', 'shopping',
+                'review', 'reviews', 'guide', 'list', 'things', 'ways', 'tips',
+                # Site-specific noise (wired, etc.)
+                'the download', 'sponsored', 'why it matters', 'culture', 'culture guides',
+                'culture / movies', 'culture / video games', 'movies', 'black friday',
+                'cyber monday', 'holiday', 'gifts', 'gift guides', 'buying guides',
+                'smart speakers', 'laptop', 'hbo', 'amazon', 'netflix', 'apple',
+                # Generic categories
+                'video games', 'tv shows', 'streaming',
+            }
+
             for trend in trends:
-                # SpiderData uses 'raw_data' not 'content'
-                if trend.raw_data:
-                    trending_terms.extend(trend.raw_data.get('keywords', []))
+                if not trend.raw_data:
+                    continue
+
+                items = trend.raw_data.get('items', [])
+                if items:
+                    items_found += len(items)
+                    for item in items[:10]:
+                        if not isinstance(item, dict):
+                            continue
+
+                        # Extract from TAGS (most reliable source of trends!)
+                        tags = item.get('tags', []) or item.get('tag_list', [])
+                        if tags:
+                            if isinstance(tags, str):
+                                # Handle comma-separated tags like "ai, backend, api"
+                                tags = [t.strip().lower() for t in tags.split(',')]
+                            elif isinstance(tags, list):
+                                tags = [t.lower() if isinstance(t, str) else str(t).lower() for t in tags]
+
+                            # Filter meaningful tags
+                            meaningful_tags = [
+                                t for t in tags
+                                if len(t) > 2
+                                and t not in skip_words
+                                and not t.startswith('gear /')  # Skip wired category prefixes
+                            ]
+                            all_tags.extend(meaningful_tags)
+
+                        # Track sources for context
+                        source = item.get('source', '') or trend.spider_name
+                        if source:
+                            all_sources.append(source)
+
+            # Count tag frequency to find actual trends
+            tag_counts = Counter(all_tags)
+            source_counts = Counter(all_sources)
+
+            # Get top trending tags (minimum 2 occurrences to be a trend)
+            trending_tags = [tag for tag, count in tag_counts.most_common(20) if count >= 1][:12]
+
+            # Get unique sources
+            unique_sources = list(source_counts.keys())[:8]
 
             return {
-                'trending_terms': list(set(trending_terms))[:10],
-                'count': len(trends)
+                'trending_terms': trending_tags,
+                'sources': unique_sources,
+                'count': len(trends),
+                'items_analyzed': items_found,
+                'data_types_queried': relevant_types
             }
         except Exception as e:
             logger.warning(f"Spider trends unavailable: {e}")
@@ -652,4 +787,137 @@ Remember: Enhance their vision, don't replace it!
 
         except Exception as e:
             logger.error(f"Failed to add to project: {e}")
+            return None
+
+    def _get_executive_enhancement_with_thinking(self, intent: UserIntent,
+                                                  spider_trends: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Dict]]:
+        """
+        Get executive team input WITH their thinking process visible.
+        Returns (enhancements, thinking_list) tuple.
+        """
+        try:
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+
+            # Build enhancement-focused question
+            style_desc = f"{intent.style} style" if intent.style else "the user's chosen style"
+            subject_desc = f"{intent.subject}" if intent.subject else "their design"
+            trending = ', '.join(spider_trends.get('trending_terms', [])[:5]) or 'modern aesthetics'
+
+            question = f"""
+IMPORTANT: The user has ALREADY CHOSEN their creative direction:
+- Style: {style_desc} (DO NOT suggest a different style)
+- Subject: {subject_desc} (DO NOT suggest a different subject)
+- Content Type: {intent.content_type.value}
+
+Your job is to ENHANCE their vision with trending data, NOT override it.
+
+Based on current trends ({trending}), recommend:
+1. COLOR PALETTE: What 2-3 colors would make their {style_desc} design more appealing in 2025?
+2. MOOD/TONE: What mood would resonate with current audiences?
+3. COMPOSITION: Any composition tips that work well for {intent.content_type.value}?
+
+Remember: Enhance their vision, don't replace it!
+"""
+
+            assistant = EnhancedPersonalAIAssistant(user=self.user)
+
+            # Try to get co-leadership opinion with full thinking
+            try:
+                response = assistant.get_coleadership_opinion(question)
+            except AttributeError:
+                # Fallback if method doesn't exist
+                response = {'opinions': []}
+
+            # Extract thinking process for display
+            thinking = []
+            if response.get('opinions'):
+                for opinion in response['opinions']:
+                    thinking.append({
+                        'advisor': opinion.get('advisor', 'Executive'),
+                        'role': opinion.get('role', 'Creative Director'),
+                        'thought': opinion.get('opinion', 'Considering the best approach...'),
+                    })
+
+            # Parse response for specific enhancements
+            enhancements = self._parse_executive_response(response)
+
+            # If no real thinking, create helpful defaults
+            if not thinking:
+                thinking = [
+                    {
+                        'advisor': 'Creative Director',
+                        'role': 'Brand Strategy',
+                        'thought': f"For a {style_desc}, I recommend warm, inviting colors that complement the animated aesthetic while maintaining professional appeal."
+                    },
+                    {
+                        'advisor': 'Design Lead',
+                        'role': 'Visual Design',
+                        'thought': f"The {intent.content_type.value} should balance playfulness with clarity. Current trends favor bold, memorable designs."
+                    }
+                ]
+                enhancements = {
+                    'recommended_colors': ['teal', 'warm orange', 'soft white'],
+                    'recommended_mood': 'friendly yet professional',
+                    'composition_style': 'centered, bold, memorable'
+                }
+
+            return enhancements, thinking
+
+        except Exception as e:
+            logger.warning(f"Executive enhancement with thinking unavailable: {e}")
+            return {}, []
+
+    def _create_or_update_project(self, images: List[Dict], intent: UserIntent) -> Dict:
+        """Create a new project or update existing one with generated images."""
+        try:
+            from content.models import CreativeProject, ImageHistory
+
+            # If we have a project_id, use it
+            if self.project_id:
+                try:
+                    project = CreativeProject.objects.get(id=self.project_id)
+                except CreativeProject.DoesNotExist:
+                    project = None
+            else:
+                project = None
+
+            # Create new project if needed
+            if not project:
+                # Build project name from intent
+                style_part = f"{intent.style.title()} " if intent.style else ""
+                subject_part = f"{intent.subject.title()} " if intent.subject else ""
+                purpose_part = intent.purpose.title() if intent.purpose else "Creative"
+
+                project_name = f"{style_part}{subject_part}{intent.content_type.value.replace('_', ' ').title()}s - {purpose_part}"
+
+                project = CreativeProject.objects.create(
+                    user=self.user,
+                    name=project_name[:100],  # Limit name length
+                    description=f"Auto-generated by Workflow Engine v2. Style: {intent.style or 'default'}, Subject: {intent.subject or 'none'}",
+                    project_type=intent.content_type.value,
+                    status='active'
+                )
+                logger.info(f"📁 Created new project: {project.name}")
+
+            # Add images to project
+            for img in images:
+                image_id = img.get('id')
+                if image_id:
+                    try:
+                        image = ImageHistory.objects.get(id=image_id)
+                        project.images.add(image)
+                    except ImageHistory.DoesNotExist:
+                        pass
+
+            project.save()
+
+            return {
+                'id': str(project.id),
+                'name': project.name,
+                'image_count': project.images.count(),
+                'is_new': not bool(self.project_id)
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to create/update project: {e}")
             return None
