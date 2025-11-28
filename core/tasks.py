@@ -4763,3 +4763,587 @@ def organize_memories_into_rooms(agent_id: str):
     except Exception as e:
         logger.exception(f"🧠 [MEMORY PALACE] Failed to organize memories: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 252: Agent Mood System Tasks
+# =============================================================================
+
+@shared_task(name='core.tasks.update_agent_mood')
+def update_agent_mood(agent_id: str, mood: str, intensity: float = 0.7,
+                      trigger_type: str = 'task_success', trigger_source: str = '',
+                      duration_minutes: int = 60):
+    """
+    Session 252: Update an agent's mood from a task or event.
+
+    This is called from various parts of the system when something happens
+    that should affect an agent's mood.
+    """
+    logger.info(f"🎭 [MOOD] Updating mood for agent {agent_id} to {mood}")
+
+    try:
+        from core.models_unified_system import Agent, AgentMood, MoodHistory
+        from django.utils import timezone
+        from datetime import timedelta
+
+        agent = Agent.objects.get(id=agent_id)
+        mood_obj, created = AgentMood.objects.get_or_create(agent=agent)
+
+        # Record previous mood in history
+        if not created and mood_obj.current_mood != mood:
+            previous_duration = None
+            if mood_obj.mood_started_at:
+                previous_duration = int((timezone.now() - mood_obj.mood_started_at).total_seconds() / 60)
+
+            MoodHistory.objects.create(
+                agent=agent,
+                mood=mood_obj.current_mood,
+                intensity=mood_obj.intensity,
+                trigger_type=mood_obj.trigger_type,
+                trigger_source=mood_obj.trigger_source,
+                creativity_level=mood_obj.creativity_level,
+                precision_level=mood_obj.precision_level,
+                sociability_level=mood_obj.sociability_level,
+                risk_tolerance=mood_obj.risk_tolerance,
+                duration_minutes=previous_duration,
+            )
+
+        # Mood dimension mappings
+        mood_dimensions = {
+            'inspired': {'creativity': 0.9, 'precision': 0.5, 'sociability': 0.7, 'risk': 0.8},
+            'focused': {'creativity': 0.4, 'precision': 0.95, 'sociability': 0.3, 'risk': 0.2},
+            'curious': {'creativity': 0.7, 'precision': 0.6, 'sociability': 0.8, 'risk': 0.7},
+            'confident': {'creativity': 0.6, 'precision': 0.7, 'sociability': 0.7, 'risk': 0.6},
+            'contemplative': {'creativity': 0.6, 'precision': 0.7, 'sociability': 0.4, 'risk': 0.4},
+            'energetic': {'creativity': 0.7, 'precision': 0.5, 'sociability': 0.9, 'risk': 0.7},
+            'calm': {'creativity': 0.5, 'precision': 0.6, 'sociability': 0.5, 'risk': 0.4},
+            'frustrated': {'creativity': 0.3, 'precision': 0.4, 'sociability': 0.6, 'risk': 0.3},
+            'tired': {'creativity': 0.3, 'precision': 0.4, 'sociability': 0.2, 'risk': 0.2},
+            'playful': {'creativity': 0.85, 'precision': 0.4, 'sociability': 0.9, 'risk': 0.85},
+        }
+
+        dims = mood_dimensions.get(mood, {'creativity': 0.5, 'precision': 0.5, 'sociability': 0.5, 'risk': 0.5})
+
+        # Update mood
+        mood_obj.current_mood = mood
+        mood_obj.intensity = intensity
+        mood_obj.creativity_level = dims['creativity'] * intensity
+        mood_obj.precision_level = dims['precision'] * intensity
+        mood_obj.sociability_level = dims['sociability'] * intensity
+        mood_obj.risk_tolerance = dims['risk'] * intensity
+        mood_obj.trigger_type = trigger_type
+        mood_obj.trigger_source = trigger_source[:200] if trigger_source else ''
+        mood_obj.mood_started_at = timezone.now()
+        mood_obj.mood_expires_at = timezone.now() + timedelta(minutes=duration_minutes) if duration_minutes > 0 else None
+        mood_obj.total_mood_changes += 1
+        mood_obj.save()
+
+        logger.info(f"🎭 [MOOD] {agent.name} is now {mood} ({intensity:.0%})")
+
+        return {
+            'status': 'success',
+            'agent': agent.name,
+            'mood': mood,
+            'intensity': intensity
+        }
+
+    except Exception as e:
+        logger.exception(f"🎭 [MOOD] Failed to update mood: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.check_mood_expirations')
+def check_mood_expirations():
+    """
+    Session 252: Check for expired moods and reset them to calm.
+
+    Run this periodically (e.g., every 5 minutes) to auto-reset moods.
+    """
+    logger.info("🎭 [MOOD] Checking for expired moods...")
+
+    try:
+        from core.models_unified_system import AgentMood, MoodHistory
+        from django.utils import timezone
+
+        expired_moods = AgentMood.objects.filter(
+            mood_expires_at__isnull=False,
+            mood_expires_at__lte=timezone.now()
+        ).exclude(current_mood='calm')
+
+        reset_count = 0
+        for mood in expired_moods:
+            # Record history
+            previous_duration = None
+            if mood.mood_started_at:
+                previous_duration = int((timezone.now() - mood.mood_started_at).total_seconds() / 60)
+
+            MoodHistory.objects.create(
+                agent=mood.agent,
+                mood=mood.current_mood,
+                intensity=mood.intensity,
+                trigger_type=mood.trigger_type,
+                trigger_source=mood.trigger_source,
+                creativity_level=mood.creativity_level,
+                precision_level=mood.precision_level,
+                sociability_level=mood.sociability_level,
+                risk_tolerance=mood.risk_tolerance,
+                duration_minutes=previous_duration,
+            )
+
+            # Reset to calm
+            mood.current_mood = 'calm'
+            mood.intensity = 0.5
+            mood.creativity_level = 0.5
+            mood.precision_level = 0.6
+            mood.sociability_level = 0.5
+            mood.risk_tolerance = 0.4
+            mood.trigger_type = 'idle'
+            mood.trigger_source = 'Mood expired'
+            mood.mood_started_at = timezone.now()
+            mood.mood_expires_at = None
+            mood.total_mood_changes += 1
+            mood.save()
+
+            reset_count += 1
+            logger.info(f"🎭 [MOOD] Reset {mood.agent.name}'s mood to calm (was expired)")
+
+        logger.info(f"🎭 [MOOD] Reset {reset_count} expired moods")
+
+        return {
+            'status': 'success',
+            'moods_reset': reset_count
+        }
+
+    except Exception as e:
+        logger.exception(f"🎭 [MOOD] Failed to check expirations: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.apply_mood_trigger_rules')
+def apply_mood_trigger_rules(agent_id: str = None):
+    """
+    Session 252: Apply mood trigger rules to agents.
+
+    Check if any rules should trigger mood changes based on recent activity.
+    """
+    logger.info(f"🎭 [MOOD] Applying mood trigger rules...")
+
+    try:
+        from core.models_unified_system import Agent, AgentMood, MoodTriggerRule
+        from django.utils import timezone
+
+        # Get rules (filtered by agent if specified)
+        rules = MoodTriggerRule.objects.filter(is_active=True).order_by('-priority')
+        if agent_id:
+            rules = rules.filter(agent__isnull=True) | rules.filter(agent_id=agent_id)
+
+        # Get agents to check
+        if agent_id:
+            agents = Agent.objects.filter(id=agent_id, is_active=True)
+        else:
+            agents = Agent.objects.filter(is_active=True)
+
+        triggers_applied = 0
+
+        for agent in agents:
+            for rule in rules:
+                # Skip agent-specific rules that don't match
+                if rule.agent and rule.agent_id != agent.id:
+                    continue
+
+                # Check condition
+                condition_met = False
+
+                if rule.condition_type == 'time_of_day':
+                    hour = timezone.now().hour
+                    start_hour = rule.condition_value.get('start_hour', 0)
+                    end_hour = rule.condition_value.get('end_hour', 24)
+                    condition_met = start_hour <= hour < end_hour
+
+                elif rule.condition_type == 'idle_time':
+                    mood, _ = AgentMood.objects.get_or_create(agent=agent)
+                    if mood.mood_started_at:
+                        idle_minutes = (timezone.now() - mood.mood_started_at).total_seconds() / 60
+                        threshold = rule.condition_value.get('minutes', 60)
+                        condition_met = idle_minutes > threshold
+
+                # Apply trigger if condition met
+                if condition_met:
+                    update_agent_mood.delay(
+                        agent_id=str(agent.id),
+                        mood=rule.target_mood,
+                        intensity=rule.target_intensity,
+                        trigger_type=rule.condition_type,
+                        trigger_source=f"Rule: {rule.name}",
+                        duration_minutes=rule.duration_minutes
+                    )
+                    triggers_applied += 1
+                    break  # Only apply first matching rule per agent
+
+        logger.info(f"🎭 [MOOD] Applied {triggers_applied} mood trigger rules")
+
+        return {
+            'status': 'success',
+            'triggers_applied': triggers_applied
+        }
+
+    except Exception as e:
+        logger.exception(f"🎭 [MOOD] Failed to apply rules: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 253: AGENT RIVALRIES & ALLIANCES
+# =============================================================================
+
+@shared_task(name='core.tasks.evolve_agent_relationships')
+def evolve_agent_relationships():
+    """
+    Session 253: Periodically evolve agent relationships based on activity.
+
+    Called by Celery Beat every 30 minutes to:
+    - Strengthen relationships that have recent positive interactions
+    - Weaken relationships with no recent activity
+    - Potentially evolve relationship types based on cumulative interactions
+    """
+    try:
+        from core.models_unified_system import AgentRelationship, RelationshipEvent
+
+        relationships = AgentRelationship.objects.all()
+        evolved_count = 0
+
+        for rel in relationships:
+            # Check for stale relationships (no interaction in 7 days)
+            if rel.last_interaction_at:
+                days_since_interaction = (timezone.now() - rel.last_interaction_at).days
+
+                if days_since_interaction > 7:
+                    # Slightly decay strength for inactive relationships
+                    old_strength = rel.strength
+                    rel.strength = max(0.1, rel.strength - 0.02)
+
+                    if old_strength != rel.strength:
+                        rel.save()
+                        evolved_count += 1
+
+            # Natural trust recovery for rivalries with positive interactions
+            if rel.relationship_type == 'rivalry' and rel.respect_level > 0.7:
+                rel.trust_level = min(1.0, rel.trust_level + 0.01)
+                rel.save()
+                evolved_count += 1
+
+        logger.info(f"⚔️ [RELATIONSHIPS] Evolved {evolved_count} relationships")
+
+        return {
+            'status': 'success',
+            'evolved_count': evolved_count
+        }
+
+    except Exception as e:
+        logger.exception(f"⚔️ [RELATIONSHIPS] Failed to evolve: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.update_alliance_strengths')
+def update_alliance_strengths():
+    """
+    Session 253: Update combined strength for all active alliances.
+
+    Called by Celery Beat every hour.
+    """
+    try:
+        from core.models_unified_system import Alliance
+
+        alliances = Alliance.objects.filter(is_active=True)
+        updated_count = 0
+
+        for alliance in alliances:
+            old_strength = alliance.combined_strength
+            alliance.update_combined_strength()
+
+            if old_strength != alliance.combined_strength:
+                updated_count += 1
+
+        logger.info(f"🤝 [ALLIANCES] Updated {updated_count} alliance strengths")
+
+        return {
+            'status': 'success',
+            'updated_count': updated_count
+        }
+
+    except Exception as e:
+        logger.exception(f"🤝 [ALLIANCES] Failed to update: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.broadcast_relationship_status')
+def broadcast_relationship_status():
+    """
+    Session 253: Broadcast relationship status via WebSocket.
+
+    Called by Celery Beat every 2 minutes for real-time UI updates.
+    """
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from core.models_unified_system import AgentRelationship, Alliance, Rivalry
+        from django.db.models import Count
+
+        # Get relationship stats
+        relationship_counts = AgentRelationship.objects.values('relationship_type').annotate(
+            count=Count('id')
+        )
+        relationship_distribution = {r['relationship_type']: r['count'] for r in relationship_counts}
+
+        # Get active alliances and rivalries
+        active_alliances = Alliance.objects.filter(is_active=True).count()
+        active_rivalries = Rivalry.objects.filter(is_active=True).count()
+
+        # Get recent events
+        from core.models_unified_system import RelationshipEvent
+        recent_events = RelationshipEvent.objects.select_related(
+            'relationship__agent_from', 'relationship__agent_to'
+        ).order_by('-created_at')[:5]
+
+        events_data = []
+        for event in recent_events:
+            events_data.append({
+                'event_type': event.event_type,
+                'description': event.description,
+                'agents': f"{event.relationship.agent_from.name} & {event.relationship.agent_to.name}",
+                'created_at': event.created_at.isoformat(),
+            })
+
+        # Broadcast
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'agent_relationships',
+                {
+                    'type': 'relationship_update',
+                    'data': {
+                        'relationship_distribution': relationship_distribution,
+                        'active_alliances': active_alliances,
+                        'active_rivalries': active_rivalries,
+                        'total_relationships': AgentRelationship.objects.count(),
+                        'recent_events': events_data,
+                        'timestamp': timezone.now().isoformat(),
+                    }
+                }
+            )
+            logger.debug("⚔️ [RELATIONSHIPS] Broadcast relationship status")
+        except Exception as ws_error:
+            logger.debug(f"⚔️ [RELATIONSHIPS] WebSocket broadcast skipped: {ws_error}")
+
+        return {'status': 'success'}
+
+    except Exception as e:
+        logger.exception(f"⚔️ [RELATIONSHIPS] Failed to broadcast: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 254: AGENT EVOLUTION SYSTEM
+# =============================================================================
+
+@shared_task(name='core.tasks.process_agent_activity_xp')
+def process_agent_activity_xp():
+    """
+    Session 254: Award XP to agents based on their recent activity.
+
+    Called by Celery Beat every 15 minutes.
+    Looks at agent activity from the last 15 minutes and awards XP accordingly.
+    """
+    try:
+        from core.models_unified_system import (
+            AgentEvolution, Agent, AgentConversation, AgentDream, AgentLearning
+        )
+
+        now = timezone.now()
+        fifteen_min_ago = now - timezone.timedelta(minutes=15)
+
+        agents_awarded = 0
+        total_xp_awarded = 0
+
+        # Award XP for conversations
+        try:
+            recent_conversations = AgentConversation.objects.filter(
+                created_at__gte=fifteen_min_ago
+            ).values('initiator', 'responder')
+
+            for convo in recent_conversations:
+                for agent_id in [convo['initiator'], convo['responder']]:
+                    if agent_id:
+                        try:
+                            agent = Agent.objects.get(id=agent_id)
+                            evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
+                            evolution.award_xp(5, 'conversation', 'Participated in agent conversation')
+                            agents_awarded += 1
+                            total_xp_awarded += 5
+                        except Agent.DoesNotExist:
+                            pass
+        except Exception as e:
+            logger.debug(f"📈 [EVOLUTION] Conversation XP check skipped: {e}")
+
+        # Award XP for dreams
+        try:
+            recent_dreams = AgentDream.objects.filter(
+                created_at__gte=fifteen_min_ago
+            ).values('agent')
+
+            for dream in recent_dreams:
+                if dream['agent']:
+                    try:
+                        agent = Agent.objects.get(id=dream['agent'])
+                        evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
+                        evolution.award_xp(3, 'dream', 'Generated creative dream')
+                        agents_awarded += 1
+                        total_xp_awarded += 3
+                    except Agent.DoesNotExist:
+                        pass
+        except Exception as e:
+            logger.debug(f"📈 [EVOLUTION] Dream XP check skipped: {e}")
+
+        # Award XP for learning
+        try:
+            recent_learning = AgentLearning.objects.filter(
+                created_at__gte=fifteen_min_ago
+            ).values('agent')
+
+            for learning in recent_learning:
+                if learning['agent']:
+                    try:
+                        agent = Agent.objects.get(id=learning['agent'])
+                        evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
+                        evolution.award_xp(8, 'learning', 'Acquired new knowledge')
+                        agents_awarded += 1
+                        total_xp_awarded += 8
+                    except Agent.DoesNotExist:
+                        pass
+        except Exception as e:
+            logger.debug(f"📈 [EVOLUTION] Learning XP check skipped: {e}")
+
+        logger.info(f"📈 [EVOLUTION] Awarded {total_xp_awarded} XP to {agents_awarded} agent activities")
+
+        return {
+            'status': 'success',
+            'agents_awarded': agents_awarded,
+            'total_xp': total_xp_awarded
+        }
+
+    except Exception as e:
+        logger.exception(f"📈 [EVOLUTION] Failed to process activity XP: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.check_level_milestones')
+def check_level_milestones():
+    """
+    Session 254: Check for and record any missed level milestones.
+
+    Called by Celery Beat hourly to ensure milestones are recorded.
+    """
+    try:
+        from core.models_unified_system import AgentEvolution, LevelMilestone
+
+        evolutions = AgentEvolution.objects.all()
+        milestones_created = 0
+
+        for evo in evolutions:
+            # Check if milestone exists for current level
+            if not LevelMilestone.objects.filter(evolution=evo, level=evo.current_level).exists():
+                LevelMilestone.objects.create(
+                    evolution=evo,
+                    level=evo.current_level,
+                    title=evo.level_title,
+                    xp_at_milestone=evo.total_xp,
+                    bonus_awarded='milestone_check'
+                )
+                milestones_created += 1
+
+        logger.info(f"📈 [EVOLUTION] Created {milestones_created} missing milestones")
+
+        return {
+            'status': 'success',
+            'milestones_created': milestones_created
+        }
+
+    except Exception as e:
+        logger.exception(f"📈 [EVOLUTION] Failed to check milestones: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.broadcast_evolution_status')
+def broadcast_evolution_status():
+    """
+    Session 254: Broadcast evolution status via WebSocket.
+
+    Called by Celery Beat every 2 minutes for real-time UI updates.
+    """
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from core.models_unified_system import AgentEvolution, XPHistory
+        from django.db.models import Sum, Count
+
+        # Get evolution stats
+        evolutions = AgentEvolution.objects.all()
+
+        total_xp = evolutions.aggregate(Sum('total_xp'))['total_xp__sum'] or 0
+        total_levels = evolutions.aggregate(Sum('current_level'))['current_level__sum'] or 0
+        total_prestiges = evolutions.aggregate(Sum('prestige_level'))['prestige_level__sum'] or 0
+
+        # Level distribution
+        level_distribution = {}
+        for i in range(1, 11):
+            level_distribution[str(i)] = evolutions.filter(current_level=i).count()
+
+        # Recent XP gains
+        recent_xp = XPHistory.objects.select_related('evolution__agent').order_by('-created_at')[:5]
+        recent_gains = []
+        for xp in recent_xp:
+            recent_gains.append({
+                'agent_name': xp.evolution.agent.name,
+                'amount': xp.amount,
+                'source': xp.source,
+                'created_at': xp.created_at.isoformat()
+            })
+
+        # Top agents
+        top_agents = []
+        for evo in evolutions.order_by('-current_level', '-total_xp')[:5]:
+            top_agents.append({
+                'agent_name': evo.agent.name,
+                'level': evo.current_level,
+                'level_title': evo.level_title,
+                'total_xp': evo.total_xp
+            })
+
+        # Broadcast
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'agent_evolution',
+                {
+                    'type': 'evolution_update',
+                    'data': {
+                        'total_xp': total_xp,
+                        'total_levels': total_levels,
+                        'total_prestiges': total_prestiges,
+                        'evolved_agents': evolutions.count(),
+                        'level_distribution': level_distribution,
+                        'recent_xp_gains': recent_gains,
+                        'top_agents': top_agents,
+                        'timestamp': timezone.now().isoformat(),
+                    }
+                }
+            )
+            logger.debug("📈 [EVOLUTION] Broadcast evolution status")
+        except Exception as ws_error:
+            logger.debug(f"📈 [EVOLUTION] WebSocket broadcast skipped: {ws_error}")
+
+        return {'status': 'success'}
+
+    except Exception as e:
+        logger.exception(f"📈 [EVOLUTION] Failed to broadcast: {e}")
+        return {'status': 'failed', 'error': str(e)}

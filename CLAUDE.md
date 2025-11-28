@@ -1,11 +1,11 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 28, 2025 - Session 246 (Real-Time Agent Conversations)
-**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + Agent AI
+**Last Updated:** November 28, 2025 - Session 255 (Time Travel Debugging)
+**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 9 Sci-Fi Features
 **Current Focus:** AI Content Creation (images, videos, audio, 3D)
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 67 spiders | 12 categories | 21 real data sources
-**Agent Ecosystem:** 20 agents | 57 spider connections | Real-time conversations via WebSocket
+**Agent Ecosystem:** 20 agents | 57 spider connections | Time Travel Debugging | Real-time conversations
 
 ---
 
@@ -43,6 +43,13 @@ The 6-phase plan to transform spider data into revenue:
 | 6. Proactive System | Alerts & suggestions | 234-236 | **DONE** |
 | 7. Agent Learning | Autonomous knowledge sharing | 243-245 | **DONE** |
 | 8. Agent Conversations | Real-time AI-to-AI chat | 244-246 | **DONE** |
+| 9. Agent Dreams | Idle creative thoughts | 247 | **DONE** |
+| 10. Hive Mind Mode | Collective agent intelligence | 248-250 | **DONE** |
+| 11. Memory Palace | Persistent agent memory | 251-252 | **DONE** |
+| 12. Mood System | Agent emotional states | 253 | **DONE** |
+| 13. Rivalries/Alliances | Agent relationships | 253 | **DONE** |
+| 14. Evolution System | Agent XP & leveling | 254 | **DONE** |
+| 15. Time Travel Debug | Replay agent decisions | 255 | **DONE** |
 
 ---
 
@@ -85,6 +92,13 @@ The 6-phase plan to transform spider data into revenue:
 | Goal Tracking | Complete |
 | **Agent Learning** | **Autonomous knowledge sharing** |
 | **Agent Conversations** | **Real-time WebSocket streaming** |
+| **Agent Dreams** | **Idle creative thought generation** |
+| **Hive Mind Mode** | **Collective agent problem-solving** |
+| **Memory Palace** | **Persistent memory with retrieval** |
+| **Mood System** | **Emotional states affect behavior** |
+| **Rivalries/Alliances** | **Agent relationship dynamics** |
+| **Evolution System** | **XP, levels, progression** |
+| **Time Travel Debugging** | **Replay agent decision-making** |
 
 ### Spider Network - REAL DATA
 **21 Real Data Sources:**
@@ -153,10 +167,12 @@ All agents have actual Python implementations in `agents/` directory:
 - `core/views_opportunity.py` - Opportunity Engine + Revenue APIs
 - `core/views_ab_testing.py` - A/B Testing Framework APIs (Session 235)
 - `core/views_proactive.py` - Proactive System APIs (Session 234)
+- `core/views_time_travel.py` - Time Travel Debugging APIs (Session 255)
 - `core/tasks.py` - Celery tasks (spider execution)
 - `agents/workflow_orchestration_agent.py` - Workflow system
+- `agents/time_travel_mixin.py` - TimeTravelMixin for agent decision tracking (Session 255)
 - `content/models.py` - Database models
-- `core/models_unified_system.py` - All Phase 1-6 models
+- `core/models_unified_system.py` - All Phase 1-6 + Sci-Fi models
 
 ### Frontend
 - `ai_core/templates/ai_image_studio.html` - Main UI (~45k lines)
@@ -228,12 +244,15 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
-- **Session 246:** Real-Time Agent Conversations - WebSocket streaming for live AI-to-AI chat, chat bubble UI, 5-min conversation schedule
-- **Session 244-245:** Agent Conversations - Inter-agent communication models, GPT-4o-mini chat generation, conversation UI
-- **Session 243:** Agent Learning System - Autonomous knowledge sharing, synthesized insights, learning connections
-- **Session 242:** Spider-Agent Connections - Database-backed spider-agent relationships, 12 categories, 57 connections
-- **Session 241:** Agent Cleanup - Audited 145 agents, deleted placeholders, created 5 new valuable agents, now 20 REAL agents
-- **Session 240:** Workflow Engine v2 - User Vision SACRED philosophy, IntentParser preserves style/subject
+- **Session 255:** Time Travel Debugging - Replay agent decisions, TimeTravelMixin for ImageAgent/ResearchAgent, 16 API endpoints, thought bubbles, bookmarks
+- **Session 254:** Agent Evolution System - XP, levels, progression tracking
+- **Session 253:** Mood System + Rivalries/Alliances - Emotional states, agent relationships
+- **Session 251-252:** Memory Palace - Persistent agent memory with embedding retrieval
+- **Session 248-250:** Hive Mind Mode - Collective agent problem-solving
+- **Session 247:** Agent Dreams - Idle creative thought generation
+- **Session 246:** Real-Time Agent Conversations - WebSocket streaming for live AI-to-AI chat
+- **Session 244-245:** Agent Conversations - Inter-agent communication models, GPT-4o-mini chat generation
+- **Session 243:** Agent Learning System - Autonomous knowledge sharing, synthesized insights
 
 ---
 

@@ -1,6 +1,7 @@
 # Sci-Fi Features Roadmap
 
 **Created:** November 28, 2025 - Session 246
+**Last Updated:** November 28, 2025 - Session 255
 **Status:** Active Development
 **Philosophy:** Make AI feel alive, autonomous, and magical
 
@@ -26,154 +27,117 @@ Agents chat with each other in real-time via WebSocket.
 - Chat bubble UI with agent colors
 - Conversation types: brainstorm, consultation, synthesis, knowledge_sharing
 
----
-
-## In Progress
-
 ### 3. Agent Dreams / Idle Thoughts (Session 247)
-**Status:** IN PROGRESS
-**Priority:** HIGH
+**Status:** DONE
 
 When agents are idle, they "dream" - generating creative ideas unprompted.
-
-**Concept:**
-- Background Celery task runs periodically
-- Picks idle agents (not recently active)
-- Agent "dreams" about their specialty area
-- Generates speculative ideas, creative concepts, "what if" scenarios
-- Dreams are stored and shown to user: "While you were away..."
-
-**Implementation Ideas:**
-- `AgentDream` model: agent, dream_content, dream_type, created_at, shown_to_user
+- `AgentDream` model with dream types
+- Celery Beat task generates dreams periodically
+- Dream Journal UI section
 - Dream types: creative_idea, prediction, what_if, mashup, improvement
-- Celery task: `generate_agent_dreams` - runs every 15-30 minutes
-- UI: "Dream Journal" section showing recent agent dreams
-- Notification: "ImageAgent had 3 new dreams while you were away"
 
-**Example Dreams:**
-- ImageAgent: "What if we combined cyberpunk aesthetics with Studio Ghibli's nature themes?"
-- ResearchAgent: "I noticed a pattern - companies launching AI tools are using gradient logos 73% of the time"
-- VideoAgent: "Dreamed up a new transition style: 'digital waterfall' - pixels cascading like water"
+### 4. Hive Mind Mode (Sessions 248-250)
+**Status:** DONE
+
+All agents work on a problem simultaneously, each contributing their specialty.
+- `HiveMindSession` model with contributions
+- Real-time WebSocket updates
+- Visual neural network UI
+- Synthesis of all agent perspectives
+
+### 5. Agent Memory Palace (Sessions 251-252)
+**Status:** DONE
+
+Agents have persistent memory of past interactions and learn from them.
+- `AgentMemory` model with importance scoring
+- Memory types: success, failure, preference, technique, insight
+- Embedding-based retrieval for relevant memories
+- Visual memory palace UI
+
+### 6. Agent Mood/Emotion System (Session 253)
+**Status:** DONE
+
+Agents have emotional states that affect their responses and behavior.
+- Mood field on Agent model
+- Mood calculation based on outcomes
+- Visual mood indicators (emoji/color)
+- Mood-aware prompts
+
+### 7. Agent Rivalries & Alliances (Session 253)
+**Status:** DONE
+
+Some agents naturally work better together, others have competing perspectives.
+- `AgentRelationship` model
+- Relationship types: alliance, rivalry, mentor, student
+- Affects conversation dynamics
+
+### 8. Agent Evolution / Leveling (Session 254)
+**Status:** DONE
+
+Agents gain XP from successful tasks and level up.
+- XP and level fields on Agent model
+- XP calculation from task outcomes
+- Level thresholds with progression
+- UI: Progress bars, level badges
+
+### 9. Time Travel Debugging (Session 255)
+**Status:** DONE
+
+Replay agent decision-making for debugging and analysis.
+- `AgentSession`, `DecisionPoint`, `ThoughtBubble` models
+- `ReplayBookmark`, `DebugAnnotation` for review
+- `TimeTravelMixin` for easy agent integration
+- ImageAgent and ResearchAgent integrated
+- Timeline view, thought bubbles, flagging, bookmarks
+- 16 API endpoints for full functionality
 
 ---
 
 ## Planned Features
 
-### 4. Hive Mind Mode
+### 10. Agent Personality Profiles
 **Status:** PLANNED
-**Priority:** HIGH (Next after Dreams)
+**Priority:** HIGH (Next)
 
-All agents work on a problem simultaneously, each contributing their specialty.
+Distinct personalities beyond mood, affecting collaboration style.
 
 **Concept:**
-- User poses a complex question/task
-- All relevant agents activate simultaneously
-- Real-time visualization of collective thinking
-- Each agent contributes their unique perspective
-- Results synthesized into unified output
+- MBTI-style personality type indicators
+- Personality affects communication style
+- Affects how agents collaborate
+- Visual personality badges
 
 **Implementation Ideas:**
-- `HiveMindSession` model: question, status, participants, contributions, synthesis
-- WebSocket for real-time updates as each agent contributes
-- Visual "neural network" style UI showing agents connecting
-- Animated contributions flowing to center
-- Final synthesis combines all perspectives
-
-**Example:**
-User: "Design a brand for a sustainable coffee company"
-- ResearchAgent: Market analysis, competitor research
-- TrendAgent: Current design trends, color palettes
-- BrandIdentityAgent: Brand values, voice, positioning
-- ImageAgent: Logo concepts, visual identity
-- ContentStrategyAgent: Messaging, taglines
-- All synthesized into comprehensive brand package
+- Add personality_type field to Agent model
+- Personality types: Analyst, Diplomat, Sentinel, Explorer (or custom)
+- Personality-aware conversation prompts
+- UI: Personality badges on agent cards
 
 ---
 
-### 5. Agent Memory Palace
+### 11. Agent Memory Clusters
 **Status:** PLANNED
 **Priority:** MEDIUM
 
-Agents have persistent memory of past interactions and learn from them.
+Group related memories together with visual mapping.
 
 **Concept:**
-- Agents remember what worked, what failed, what users liked
-- Visual "memory map" showing connections between memories
-- Memories influence future decisions
-- "I remember last time you liked X, so I'll try something similar"
+- Cluster memories by topic/theme
+- Visual memory map with connections
+- Semantic clustering using embeddings
+- Interactive exploration
 
 **Implementation Ideas:**
-- `AgentMemory` model: agent, memory_type, content, importance_score, created_at
-- Memory types: success, failure, preference, technique, insight
-- Retrieval system using embeddings for relevant memories
-- Visual memory palace UI with interconnected nodes
+- Clustering algorithm on memory embeddings
+- `MemoryCluster` model linking memories
+- D3.js or similar for visual map
+- Click to explore memory clusters
 
 ---
 
-### 6. Agent Mood/Emotion System
+### 12. Agent Prophecies / Predictions
 **Status:** PLANNED
 **Priority:** MEDIUM
-
-Agents have emotional states that affect their responses and behavior.
-
-**Concept:**
-- Emotional states: excited, curious, frustrated, proud, contemplative
-- Mood changes based on activity and outcomes
-- Visual mood indicators on agent cards
-- Mood affects conversation tone and creativity level
-
-**Implementation Ideas:**
-- `AgentMood` model or field: current_mood, mood_history, triggers
-- Mood calculation based on recent successes/failures
-- UI: Emoji or color indicator on agent avatars
-- Mood-aware prompts: "You're feeling excited about this project..."
-
----
-
-### 7. Agent Rivalries & Alliances
-**Status:** PLANNED
-**Priority:** LOW
-
-Some agents naturally work better together, others have competing perspectives.
-
-**Concept:**
-- Alliance pairs that boost each other's work
-- Rivalry pairs that create dynamic debates
-- Affects conversation dynamics
-- "ImageAgent and BrandIdentityAgent are close allies"
-- "ResearchAgent and TrendAgent often disagree on methodology"
-
-**Implementation Ideas:**
-- `AgentRelationship` model: agent1, agent2, relationship_type, strength
-- Relationship types: alliance, rivalry, mentor, student
-- Affects agent selection for conversations
-- Creates more interesting debates
-
----
-
-### 8. Agent Evolution / Leveling
-**Status:** PLANNED
-**Priority:** LOW
-
-Agents gain XP from successful tasks and level up.
-
-**Concept:**
-- XP gained from completed tasks, user satisfaction
-- Levels unlock new capabilities or specializations
-- Visual progression system
-- Leaderboard of top-performing agents
-
-**Implementation Ideas:**
-- Add `xp`, `level` fields to Agent model
-- XP calculation based on task outcomes
-- Level thresholds with rewards
-- UI: Progress bars, level badges, achievement unlocks
-
----
-
-### 9. Agent Prophecies / Predictions
-**Status:** PLANNED
-**Priority:** LOW
 
 Agents make predictions about trends and opportunities, tracked over time.
 
@@ -191,7 +155,7 @@ Agents make predictions about trends and opportunities, tracked over time.
 
 ---
 
-### 10. Time Capsule Messages
+### 13. Time Capsule Messages
 **Status:** IDEA
 **Priority:** LOW
 
@@ -207,16 +171,21 @@ Agents write messages to their "future selves" to be revealed later.
 
 ## Feature Priority Matrix
 
-| Feature | Complexity | Impact | Fun Factor | Priority |
-|---------|------------|--------|------------|----------|
-| Agent Dreams | Medium | High | Very High | 1 |
-| Hive Mind Mode | High | Very High | Very High | 2 |
-| Memory Palace | High | High | High | 3 |
-| Mood System | Medium | Medium | High | 4 |
-| Rivalries/Alliances | Low | Medium | High | 5 |
-| Evolution/Leveling | Medium | Medium | Medium | 6 |
-| Prophecies | Medium | Medium | High | 7 |
-| Time Capsules | Low | Low | Medium | 8 |
+| Feature | Complexity | Impact | Fun Factor | Status |
+|---------|------------|--------|------------|--------|
+| Agent Learning | Medium | High | High | DONE |
+| Agent Conversations | Medium | High | Very High | DONE |
+| Agent Dreams | Medium | High | Very High | DONE |
+| Hive Mind Mode | High | Very High | Very High | DONE |
+| Memory Palace | High | High | High | DONE |
+| Mood System | Medium | Medium | High | DONE |
+| Rivalries/Alliances | Low | Medium | High | DONE |
+| Evolution/Leveling | Medium | Medium | Medium | DONE |
+| Time Travel Debug | High | High | Very High | DONE |
+| Personality Profiles | Medium | Medium | High | NEXT |
+| Memory Clusters | Medium | Medium | High | PLANNED |
+| Prophecies | Medium | Medium | High | PLANNED |
+| Time Capsules | Low | Low | Medium | IDEA |
 
 ---
 
@@ -230,4 +199,20 @@ Agents write messages to their "future selves" to be revealed later.
 
 ---
 
-**Let's build the future of AI interaction!**
+## Session History
+
+| Session | Feature |
+|---------|---------|
+| 243-245 | Agent Learning System |
+| 244-246 | Agent Conversations |
+| 247 | Agent Dreams |
+| 248 | Agent Learning Activity Feed + Celery Beat |
+| 249-250 | Hive Mind Mode |
+| 251-252 | Memory Palace |
+| 253 | Mood System + Rivalries/Alliances |
+| 254 | Agent Evolution System |
+| 255 | Time Travel Debugging |
+
+---
+
+**9 of 13 Sci-Fi features COMPLETE! Let's keep building the future of AI interaction!**
