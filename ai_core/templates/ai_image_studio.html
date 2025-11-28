@@ -7835,6 +7835,331 @@
                         </div>
                     </div>
 
+                    <!-- Session 257: Memory Clusters - Semantic Grouping of Agent Memories -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22d3ee;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 211, 238, 0.2); border-bottom: 1px solid #22d3ee;">
+                            <h5 class="mb-0" style="color: #22d3ee;">
+                                <span style="display: inline-block;">🧩</span>
+                                Memory Clusters
+                            </h5>
+                            <div>
+                                <span class="badge" id="memory-clusters-total-badge" style="background: #22d3ee; color: #000;">0 clusters</span>
+                                <span class="badge bg-secondary" id="memory-clusters-agents-badge">0 agents</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Overview Stats -->
+                            <div class="row mb-3">
+                                <div class="col-4 text-center">
+                                    <div class="small text-muted">Total Clusters</div>
+                                    <div class="fs-4" id="clusters-total-count" style="color: #22d3ee;">0</div>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div class="small text-muted">Agents Clustered</div>
+                                    <div class="fs-4" id="clusters-agents-count" style="color: #22d3ee;">0</div>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div class="small text-muted">Avg Coherence</div>
+                                    <div class="fs-4" id="clusters-avg-coherence" style="color: #22d3ee;">0%</div>
+                                </div>
+                            </div>
+
+                            <!-- Agent Selector for Cluster View -->
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Select Agent</label>
+                                <select id="cluster-agent-select" class="form-select form-select-sm"
+                                        style="background: #2a2a2a; border: 1px solid #22d3ee; color: white;"
+                                        onchange="loadAgentClusters()">
+                                    <option value="">All Agents</option>
+                                </select>
+                            </div>
+
+                            <!-- Cluster Visualization Canvas -->
+                            <div class="mb-3 p-3 rounded" style="background: #0d1117; border: 1px solid #22d3ee; min-height: 300px;">
+                                <div id="clusters-visualization" style="width: 100%; height: 280px; position: relative;">
+                                    <div class="text-center text-muted pt-5">
+                                        <div style="font-size: 48px;">🧩</div>
+                                        <div>Select an agent to view memory clusters</div>
+                                        <div class="small">Or generate clusters for all agents</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Clusters List -->
+                            <div id="clusters-list" class="mb-3" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Clusters will be rendered here -->
+                            </div>
+
+                            <!-- Selected Cluster Details -->
+                            <div id="selected-cluster-details" style="display: none;" class="mb-3 p-3 rounded" style="background: #2a2a2a;">
+                                <h6 id="selected-cluster-name" style="color: #22d3ee;">Cluster Name</h6>
+                                <p id="selected-cluster-description" class="small text-muted mb-2"></p>
+                                <div class="row mb-2">
+                                    <div class="col-6">
+                                        <span class="small text-muted">Coherence:</span>
+                                        <span id="selected-cluster-coherence" style="color: #22d3ee;"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="small text-muted">Memories:</span>
+                                        <span id="selected-cluster-memory-count" style="color: #22d3ee;"></span>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="small text-muted">Keywords:</span>
+                                    <div id="selected-cluster-keywords"></div>
+                                </div>
+                                <div id="selected-cluster-memories" class="mt-2">
+                                    <!-- Memories in cluster will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Generate Clusters Button -->
+                            <div class="mt-3 pt-3 border-top" style="border-color: #333 !important;">
+                                <button class="btn btn-sm w-100" onclick="generateAllMemoryClusters()" style="background: #22d3ee; color: #000;">
+                                    🧩 Generate Clusters for All Agents
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session 258: Agent Predictions / Prophecies -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6; animation: pulse-violet 2s infinite;">
+                        <style>
+                            @keyframes pulse-violet {
+                                0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.3); }
+                                50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); }
+                            }
+                        </style>
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                            <h5 class="mb-0" style="color: #8b5cf6;">
+                                <span style="display: inline-block;">🔮</span>
+                                Agent Prophecies
+                            </h5>
+                            <div>
+                                <span class="badge" id="predictions-total-badge" style="background: #8b5cf6;">0 predictions</span>
+                                <span class="badge bg-success" id="predictions-accuracy-badge">0% accuracy</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "Agents gaze into the future, making timestamped predictions tracked for accuracy over time."
+                            </p>
+
+                            <!-- Overview Stats -->
+                            <div class="row mb-3" id="predictions-overview">
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Total</div>
+                                    <div class="fs-4" id="predictions-total-count" style="color: #8b5cf6;">0</div>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Pending</div>
+                                    <div class="fs-4" id="predictions-pending-count" style="color: #fbbf24;">0</div>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Verified</div>
+                                    <div class="fs-4" id="predictions-verified-count" style="color: #22c55e;">0</div>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Accuracy</div>
+                                    <div class="fs-4" id="predictions-overall-accuracy" style="color: #8b5cf6;">0%</div>
+                                </div>
+                            </div>
+
+                            <!-- Agent Selector for Predictions -->
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #8b5cf6; color: #8b5cf6;">🤖</span>
+                                    <select id="predictions-agent-select" class="form-select"
+                                            style="background: #2a2a2a; border: 1px solid #8b5cf6; color: white;"
+                                            onchange="loadAgentPredictions()">
+                                        <option value="">All Agents - View All Predictions</option>
+                                    </select>
+                                    <button class="btn btn-outline-violet" onclick="loadPredictionsOverview()" style="border-color: #8b5cf6; color: #8b5cf6;">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Leaderboard Button -->
+                            <div class="mb-3 text-center">
+                                <button class="btn btn-sm" onclick="showPredictionLeaderboard()" style="background: rgba(139, 92, 246, 0.3); color: #8b5cf6; border: 1px solid #8b5cf6;">
+                                    🏆 Accuracy Leaderboard
+                                </button>
+                                <button class="btn btn-sm" onclick="generatePredictionsFromDreams()" style="background: rgba(139, 92, 246, 0.3); color: #8b5cf6; border: 1px solid #8b5cf6;">
+                                    💭 Generate from Dreams
+                                </button>
+                            </div>
+
+                            <!-- Predictions Timeline -->
+                            <div id="predictions-timeline" style="max-height: 400px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3">
+                                    <span style="color: #8b5cf6;">🔮</span> Loading predictions...
+                                </div>
+                            </div>
+
+                            <!-- Prediction Detail Modal (inline) -->
+                            <div id="prediction-detail-panel" style="display: none; background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 id="prediction-detail-title" style="color: #8b5cf6;"></h6>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="closePredictionDetail()">×</button>
+                                </div>
+                                <p id="prediction-detail-content" class="small text-light mb-2"></p>
+                                <div class="d-flex flex-wrap gap-2 mb-2" id="prediction-detail-tags"></div>
+                                <div class="row small text-muted mb-2">
+                                    <div class="col-6">
+                                        <strong>Confidence:</strong> <span id="prediction-detail-confidence"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Timeframe:</strong> <span id="prediction-detail-timeframe"></span>
+                                    </div>
+                                </div>
+                                <div class="row small text-muted mb-3">
+                                    <div class="col-6">
+                                        <strong>Deadline:</strong> <span id="prediction-detail-deadline"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Status:</strong> <span id="prediction-detail-status"></span>
+                                    </div>
+                                </div>
+                                <!-- Verification Buttons -->
+                                <div id="prediction-verify-buttons" class="d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-sm btn-success" onclick="verifyPrediction('verified_true')">✓ True</button>
+                                    <button class="btn btn-sm btn-danger" onclick="verifyPrediction('verified_false')">✗ False</button>
+                                    <button class="btn btn-sm btn-warning" onclick="verifyPrediction('partially_true')">◐ Partial</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="upvotePrediction()">👍 <span id="prediction-upvote-count">0</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session 259: Time Capsule Messages - The Final Sci-Fi Feature! -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4; animation: pulse-cyan 2s infinite;">
+                        <style>
+                            @keyframes pulse-cyan {
+                                0%, 100% { box-shadow: 0 0 5px rgba(6, 182, 212, 0.3); }
+                                50% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.6); }
+                            }
+                        </style>
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+                            <h5 class="mb-0" style="color: #06b6d4;">
+                                <span style="display: inline-block;">⏳</span>
+                                Time Capsules
+                            </h5>
+                            <div>
+                                <span class="badge" id="capsules-total-badge" style="background: #06b6d4;">0 capsules</span>
+                                <span class="badge bg-warning" id="capsules-ready-badge">0 ready</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "Agents write messages to their future selves - sealed until time reveals their wisdom."
+                            </p>
+
+                            <!-- Overview Stats -->
+                            <div class="row mb-3" id="capsules-overview">
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Total</div>
+                                    <div class="fs-4" id="capsules-total-count" style="color: #06b6d4;">0</div>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Sealed</div>
+                                    <div class="fs-4" id="capsules-sealed-count" style="color: #fbbf24;">0</div>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Revealed</div>
+                                    <div class="fs-4" id="capsules-revealed-count" style="color: #22c55e;">0</div>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="small text-muted">Ready</div>
+                                    <div class="fs-4" id="capsules-ready-count" style="color: #f97316;">0</div>
+                                </div>
+                            </div>
+
+                            <!-- Agent Selector for Time Capsules -->
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #06b6d4; color: #06b6d4;">🤖</span>
+                                    <select id="capsules-agent-select" class="form-select"
+                                            style="background: #2a2a2a; border: 1px solid #06b6d4; color: white;"
+                                            onchange="loadAgentCapsules()">
+                                        <option value="">All Agents - View All Capsules</option>
+                                    </select>
+                                    <button class="btn btn-outline-cyan" onclick="loadCapsulesOverview()" style="border-color: #06b6d4; color: #06b6d4;">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="mb-3 text-center">
+                                <button class="btn btn-sm" onclick="showReadyToReveal()" style="background: rgba(6, 182, 212, 0.3); color: #06b6d4; border: 1px solid #06b6d4;">
+                                    🔓 Ready to Open
+                                </button>
+                                <button class="btn btn-sm" onclick="generateTimeCapsules()" style="background: rgba(6, 182, 212, 0.3); color: #06b6d4; border: 1px solid #06b6d4;">
+                                    ✨ Generate Capsules
+                                </button>
+                            </div>
+
+                            <!-- Capsules Timeline -->
+                            <div id="capsules-timeline" style="max-height: 400px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3">
+                                    <span style="color: #06b6d4;">⏳</span> Loading time capsules...
+                                </div>
+                            </div>
+
+                            <!-- Capsule Detail Panel -->
+                            <div id="capsule-detail-panel" style="display: none; background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 id="capsule-detail-title" style="color: #06b6d4;"></h6>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="closeCapsuleDetail()">×</button>
+                                </div>
+                                <div id="capsule-sealed-message" style="display: none;">
+                                    <div class="text-center py-4" style="background: rgba(6, 182, 212, 0.05); border-radius: 8px;">
+                                        <div style="font-size: 48px;">🔒</div>
+                                        <p class="text-muted mb-1">This capsule is sealed</p>
+                                        <p id="capsule-reveal-countdown" style="color: #06b6d4; font-weight: bold;"></p>
+                                    </div>
+                                </div>
+                                <div id="capsule-revealed-content" style="display: none;">
+                                    <div class="mb-3 p-3" style="background: rgba(6, 182, 212, 0.05); border-radius: 8px;">
+                                        <h6 class="text-muted small mb-1">Original Message:</h6>
+                                        <p id="capsule-detail-message" class="text-light mb-0"></p>
+                                    </div>
+                                    <div class="mb-3 p-3" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+                                        <h6 class="text-muted small mb-1">Agent's Reflection:</h6>
+                                        <p id="capsule-detail-reflection" class="text-light mb-0" style="font-style: italic;"></p>
+                                    </div>
+                                    <div id="capsule-comparison" class="mb-3" style="display: none;">
+                                        <h6 class="small text-muted">Then vs Now:</h6>
+                                        <div id="capsule-comparison-content" class="small"></div>
+                                    </div>
+                                </div>
+                                <div class="row small text-muted mb-2">
+                                    <div class="col-6">
+                                        <strong>Trigger:</strong> <span id="capsule-detail-trigger"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Sealed:</strong> <span id="capsule-detail-days-sealed"></span> days
+                                    </div>
+                                </div>
+                                <!-- Reveal Button / Reactions -->
+                                <div id="capsule-action-buttons" class="d-flex gap-2 flex-wrap">
+                                    <button id="capsule-reveal-btn" class="btn btn-sm" style="display: none; background: #f97316; color: white;" onclick="revealCapsule()">
+                                        🔓 Open Capsule
+                                    </button>
+                                    <div id="capsule-reactions" style="display: none;" class="d-flex gap-1 flex-wrap">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="reactToCapsule('touching')">💗</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="reactToCapsule('insightful')">💡</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="reactToCapsule('funny')">😄</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="reactToCapsule('inspiring')">✨</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="reactToCapsule('nostalgic')">🕰️</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="reactToCapsule('surprising')">😲</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Session 251: Memory Palace - Agent Memory Visualization -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a855f7;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.2); border-bottom: 1px solid #a855f7;">
@@ -42964,6 +43289,1084 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // =========================================================================
         // End Session 256: Agent Personality Profile Functions
+        // =========================================================================
+
+        // =========================================================================
+        // Session 257: Memory Clusters Functions
+        // =========================================================================
+
+        // Initialize Memory Clusters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMemoryClustersOverview();
+            populateClusterAgentSelect();
+        });
+
+        // Load overview of all memory clusters
+        async function loadMemoryClustersOverview() {
+            try {
+                const response = await fetch('/api/memory-clusters/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update badges
+                        document.getElementById('memory-clusters-total-badge').textContent = `${data.stats.total_clusters} clusters`;
+                        document.getElementById('memory-clusters-agents-badge').textContent = `${data.stats.agents_with_clusters} agents`;
+                        document.getElementById('clusters-total-count').textContent = data.stats.total_clusters;
+                        document.getElementById('clusters-agents-count').textContent = data.stats.agents_with_clusters;
+
+                        // Calculate average coherence
+                        let totalCoherence = 0;
+                        let clusterCount = 0;
+                        for (const agentName in data.clusters_by_agent) {
+                            for (const cluster of data.clusters_by_agent[agentName]) {
+                                totalCoherence += cluster.coherence_score || 0;
+                                clusterCount++;
+                            }
+                        }
+                        const avgCoherence = clusterCount > 0 ? (totalCoherence / clusterCount * 100).toFixed(0) : 0;
+                        document.getElementById('clusters-avg-coherence').textContent = `${avgCoherence}%`;
+
+                        // Render clusters by agent in the list
+                        renderClustersList(data.clusters_by_agent);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading clusters overview:', error);
+            }
+        }
+
+        // Populate agent dropdown for cluster view
+        async function populateClusterAgentSelect() {
+            try {
+                const response = await fetch('/api/agents/');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('cluster-agent-select');
+
+                    // Clear existing options except first
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+
+                    // Add agents
+                    const agents = data.agents || data || [];
+                    for (const agent of agents) {
+                        const option = document.createElement('option');
+                        option.value = agent.id;
+                        option.textContent = agent.name;
+                        select.appendChild(option);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agents for cluster select:', error);
+            }
+        }
+
+        // Load clusters for a specific agent
+        async function loadAgentClusters() {
+            const agentId = document.getElementById('cluster-agent-select').value;
+
+            if (!agentId) {
+                // Show overview instead
+                loadMemoryClustersOverview();
+                document.getElementById('clusters-visualization').innerHTML = `
+                    <div class="text-center text-muted pt-5">
+                        <div style="font-size: 48px;">🧩</div>
+                        <div>Select an agent to view memory clusters</div>
+                        <div class="small">Or generate clusters for all agents</div>
+                    </div>
+                `;
+                document.getElementById('selected-cluster-details').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/memory-clusters/agent/${agentId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderAgentClusters(data.clusters, data.agent);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agent clusters:', error);
+            }
+        }
+
+        // Render clusters list by agent
+        function renderClustersList(clustersByAgent) {
+            const listEl = document.getElementById('clusters-list');
+
+            if (Object.keys(clustersByAgent).length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center text-muted p-3">
+                        <div>No clusters generated yet</div>
+                        <div class="small">Click "Generate Clusters" to start</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            for (const agentName in clustersByAgent) {
+                const clusters = clustersByAgent[agentName];
+                html += `<div class="mb-2">
+                    <div class="small text-muted mb-1">${agentName}</div>`;
+
+                for (const cluster of clusters) {
+                    const coherencePercent = (cluster.coherence_score * 100).toFixed(0);
+                    html += `
+                        <div class="p-2 mb-1 rounded d-flex justify-content-between align-items-center"
+                             style="background: ${cluster.color}22; border-left: 3px solid ${cluster.color}; cursor: pointer;"
+                             onclick="viewClusterDetails('${cluster.id}')">
+                            <div>
+                                <span>${cluster.icon || '🧩'}</span>
+                                <span class="small" style="color: ${cluster.color};">${cluster.name}</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-secondary me-1">${cluster.memory_count}</span>
+                                <span class="small text-muted">${coherencePercent}%</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+
+            listEl.innerHTML = html;
+        }
+
+        // Render clusters for a specific agent with visualization
+        function renderAgentClusters(clusters, agent) {
+            const vizEl = document.getElementById('clusters-visualization');
+            const listEl = document.getElementById('clusters-list');
+
+            if (clusters.length === 0) {
+                vizEl.innerHTML = `
+                    <div class="text-center text-muted pt-5">
+                        <div style="font-size: 48px;">🧩</div>
+                        <div>${agent.name} has no clusters yet</div>
+                        <button class="btn btn-sm mt-2" onclick="generateAgentClusters('${agent.id}')" style="background: #22d3ee; color: #000;">
+                            Generate Clusters
+                        </button>
+                    </div>
+                `;
+                listEl.innerHTML = '';
+                return;
+            }
+
+            // Render simple cluster bubbles visualization
+            let vizHtml = '<div class="d-flex flex-wrap justify-content-center align-items-center h-100">';
+            for (const cluster of clusters) {
+                const size = 60 + (cluster.memory_count * 5);
+                const coherencePercent = (cluster.coherence_score * 100).toFixed(0);
+                vizHtml += `
+                    <div class="text-center m-2" style="cursor: pointer;" onclick="viewClusterDetails('${cluster.id}')">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                             style="width: ${size}px; height: ${size}px; background: ${cluster.color}33; border: 2px solid ${cluster.color};">
+                            <div>
+                                <div style="font-size: 24px;">${cluster.icon || '🧩'}</div>
+                                <div class="small" style="color: ${cluster.color};">${cluster.memory_count}</div>
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-1" style="max-width: ${size + 20}px;">${cluster.name}</div>
+                    </div>
+                `;
+            }
+            vizHtml += '</div>';
+            vizEl.innerHTML = vizHtml;
+
+            // Render list
+            let listHtml = '';
+            for (const cluster of clusters) {
+                const coherencePercent = (cluster.coherence_score * 100).toFixed(0);
+                listHtml += `
+                    <div class="p-2 mb-1 rounded d-flex justify-content-between align-items-center"
+                         style="background: ${cluster.color}22; border-left: 3px solid ${cluster.color}; cursor: pointer;"
+                         onclick="viewClusterDetails('${cluster.id}')">
+                        <div>
+                            <span>${cluster.icon || '🧩'}</span>
+                            <span class="small" style="color: ${cluster.color};">${cluster.name}</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-secondary me-1">${cluster.memory_count}</span>
+                            <span class="small text-muted">${coherencePercent}%</span>
+                        </div>
+                    </div>
+                `;
+            }
+            listEl.innerHTML = listHtml;
+        }
+
+        // View details of a specific cluster
+        async function viewClusterDetails(clusterId) {
+            try {
+                const response = await fetch(`/api/memory-clusters/cluster/${clusterId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const cluster = data.cluster;
+                        const memories = data.memories;
+
+                        // Update detail view
+                        document.getElementById('selected-cluster-name').textContent = `${cluster.icon || '🧩'} ${cluster.name}`;
+                        document.getElementById('selected-cluster-name').style.color = cluster.color;
+                        document.getElementById('selected-cluster-description').textContent = cluster.description || 'No description';
+                        document.getElementById('selected-cluster-coherence').textContent = `${(cluster.coherence_score * 100).toFixed(0)}%`;
+                        document.getElementById('selected-cluster-memory-count').textContent = cluster.memory_count;
+
+                        // Keywords
+                        const keywords = cluster.keywords || [];
+                        const keywordsHtml = keywords.map(k =>
+                            `<span class="badge me-1" style="background: ${cluster.color}22; color: ${cluster.color};">${k}</span>`
+                        ).join('');
+                        document.getElementById('selected-cluster-keywords').innerHTML = keywordsHtml || '<span class="text-muted">No keywords</span>';
+
+                        // Memories
+                        let memoriesHtml = '';
+                        for (const memory of memories.slice(0, 5)) {
+                            const simPercent = (memory.similarity_to_centroid * 100).toFixed(0);
+                            memoriesHtml += `
+                                <div class="p-2 mb-1 rounded small" style="background: #2a2a2a;">
+                                    <div class="d-flex justify-content-between">
+                                        <span style="color: ${cluster.color};">${memory.title}</span>
+                                        <span class="text-muted">${simPercent}%</span>
+                                    </div>
+                                    <div class="text-muted" style="font-size: 10px;">${memory.memory_type}</div>
+                                </div>
+                            `;
+                        }
+                        if (memories.length > 5) {
+                            memoriesHtml += `<div class="text-muted small text-center">+ ${memories.length - 5} more memories</div>`;
+                        }
+                        document.getElementById('selected-cluster-memories').innerHTML = memoriesHtml || '<div class="text-muted">No memories in cluster</div>';
+
+                        // Show detail view
+                        document.getElementById('selected-cluster-details').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error viewing cluster details:', error);
+            }
+        }
+
+        // Generate clusters for a specific agent
+        async function generateAgentClusters(agentId) {
+            try {
+                const response = await fetch(`/api/memory-clusters/agent/${agentId}/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ method: 'semantic' })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(`Generated ${data.clusters.length} clusters!`);
+                        loadAgentClusters();
+                    } else {
+                        alert(data.error || 'Failed to generate clusters');
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating agent clusters:', error);
+                alert('Error generating clusters');
+            }
+        }
+
+        // Generate clusters for all agents
+        async function generateAllMemoryClusters() {
+            if (!confirm('This will generate memory clusters for all agents with sufficient memories. Continue?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/memory-clusters/generate-all/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ method: 'semantic', min_memories: 5 })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(data.message);
+                        loadMemoryClustersOverview();
+                    } else {
+                        alert(data.error || 'Failed to generate clusters');
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating all clusters:', error);
+                alert('Error generating clusters');
+            }
+        }
+
+        // =========================================================================
+        // End Session 257: Memory Clusters Functions
+        // =========================================================================
+
+        // =========================================================================
+        // Session 258: Agent Predictions / Prophecies Functions
+        // =========================================================================
+
+        // Store current prediction ID for detail panel
+        let currentPredictionId = null;
+
+        // Initialize Predictions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPredictionsOverview();
+            loadPredictionsAgentSelect();
+        });
+
+        // Load predictions overview
+        async function loadPredictionsOverview() {
+            try {
+                const response = await fetch('/api/predictions/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update badges
+                        document.getElementById('predictions-total-badge').textContent = `${data.overview.total_predictions} predictions`;
+                        document.getElementById('predictions-accuracy-badge').textContent = `${Math.round(data.overview.overall_accuracy * 100)}% accuracy`;
+
+                        // Update stats
+                        document.getElementById('predictions-total-count').textContent = data.overview.total_predictions;
+                        document.getElementById('predictions-pending-count').textContent = data.overview.pending_predictions;
+                        document.getElementById('predictions-verified-count').textContent = data.overview.verified_predictions;
+                        document.getElementById('predictions-overall-accuracy').textContent = `${Math.round(data.overview.overall_accuracy * 100)}%`;
+
+                        // Render timeline
+                        renderPredictionsTimeline(data.recent_predictions);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading predictions overview:', error);
+            }
+        }
+
+        // Load agent selector for predictions
+        async function loadPredictionsAgentSelect() {
+            try {
+                const response = await fetch('/api/agents/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success || data.agents) {
+                        const agents = data.agents || data;
+                        const select = document.getElementById('predictions-agent-select');
+                        const currentVal = select.value;
+
+                        // Clear existing options except first
+                        select.innerHTML = '<option value="">All Agents - View All Predictions</option>';
+
+                        agents.forEach(agent => {
+                            const option = document.createElement('option');
+                            option.value = agent.id;
+                            option.textContent = agent.name;
+                            select.appendChild(option);
+                        });
+
+                        // Restore selection if any
+                        if (currentVal) select.value = currentVal;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agents for predictions:', error);
+            }
+        }
+
+        // Load predictions for specific agent
+        async function loadAgentPredictions() {
+            const agentId = document.getElementById('predictions-agent-select').value;
+
+            if (!agentId) {
+                // Load all predictions
+                loadPredictionsOverview();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/predictions/agent/${agentId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderPredictionsTimeline(data.predictions);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agent predictions:', error);
+            }
+        }
+
+        // Render predictions timeline
+        function renderPredictionsTimeline(predictions) {
+            const container = document.getElementById('predictions-timeline');
+
+            if (!predictions || predictions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <div style="font-size: 48px; opacity: 0.5;">🔮</div>
+                        <p class="text-muted">No predictions yet. Generate some from agent dreams!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const categoryEmojis = {
+                'trend': '📈', 'market': '💹', 'technology': '🤖', 'creative': '🎨',
+                'opportunity': '💡', 'user_behavior': '👤', 'seasonal': '🌸',
+                'competition': '🏆', 'general': '🔮'
+            };
+
+            const statusColors = {
+                'pending': '#fbbf24',
+                'verified_true': '#22c55e',
+                'verified_false': '#ef4444',
+                'partially_true': '#f97316',
+                'expired': '#6b7280',
+                'cancelled': '#9ca3af'
+            };
+
+            const statusIcons = {
+                'pending': '⏳',
+                'verified_true': '✅',
+                'verified_false': '❌',
+                'partially_true': '◐',
+                'expired': '⌛',
+                'cancelled': '🚫'
+            };
+
+            container.innerHTML = predictions.map(p => `
+                <div class="prediction-card mb-2 p-3" style="background: rgba(139, 92, 246, 0.1); border: 1px solid ${statusColors[p.status] || '#8b5cf6'}; border-radius: 8px; cursor: pointer;"
+                     onclick="showPredictionDetail('${p.id}')">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <span style="font-size: 1.2em;">${categoryEmojis[p.category] || '🔮'}</span>
+                            <strong style="color: #8b5cf6;">${p.title}</strong>
+                        </div>
+                        <span class="badge" style="background: ${statusColors[p.status] || '#8b5cf6'};">
+                            ${statusIcons[p.status] || '🔮'} ${p.status.replace('_', ' ')}
+                        </span>
+                    </div>
+                    <p class="small text-light mb-1" style="opacity: 0.8;">${p.prediction.substring(0, 150)}${p.prediction.length > 150 ? '...' : ''}</p>
+                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                        <span>🤖 ${p.agent_name || 'Unknown'}</span>
+                        <span>🎯 ${Math.round(p.confidence * 100)}% confidence</span>
+                        <span>⏱️ ${p.timeframe}</span>
+                        <span>👍 ${p.upvotes || 0}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show prediction detail
+        async function showPredictionDetail(predictionId) {
+            currentPredictionId = predictionId;
+
+            try {
+                const response = await fetch(`/api/predictions/${predictionId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const p = data.prediction;
+
+                        document.getElementById('prediction-detail-title').textContent = p.title;
+                        document.getElementById('prediction-detail-content').textContent = p.prediction;
+                        document.getElementById('prediction-detail-confidence').textContent = `${Math.round(p.confidence * 100)}%`;
+                        document.getElementById('prediction-detail-timeframe').textContent = p.timeframe;
+                        document.getElementById('prediction-detail-deadline').textContent = p.deadline ? new Date(p.deadline).toLocaleDateString() : 'Not set';
+                        document.getElementById('prediction-detail-status').textContent = p.status.replace('_', ' ');
+                        document.getElementById('prediction-upvote-count').textContent = p.upvotes || 0;
+
+                        // Render tags
+                        const tagsEl = document.getElementById('prediction-detail-tags');
+                        tagsEl.innerHTML = (p.tags || []).map(tag =>
+                            `<span class="badge" style="background: rgba(139, 92, 246, 0.3); color: #8b5cf6;">${tag}</span>`
+                        ).join('');
+
+                        // Show/hide verify buttons based on status
+                        const verifyBtns = document.getElementById('prediction-verify-buttons');
+                        if (p.status === 'pending') {
+                            verifyBtns.style.display = 'flex';
+                        } else {
+                            verifyBtns.style.display = 'none';
+                        }
+
+                        document.getElementById('prediction-detail-panel').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading prediction detail:', error);
+            }
+        }
+
+        // Close prediction detail panel
+        function closePredictionDetail() {
+            document.getElementById('prediction-detail-panel').style.display = 'none';
+            currentPredictionId = null;
+        }
+
+        // Verify prediction
+        async function verifyPrediction(status) {
+            if (!currentPredictionId) return;
+
+            const notes = prompt('Add verification notes (optional):');
+
+            try {
+                const response = await fetch(`/api/predictions/${currentPredictionId}/verify/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: status,
+                        notes: notes || '',
+                        verified_by: 'user'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(`Prediction verified as: ${status.replace('_', ' ')}`);
+                        closePredictionDetail();
+                        loadPredictionsOverview();
+                    } else {
+                        alert(data.error || 'Failed to verify prediction');
+                    }
+                }
+            } catch (error) {
+                console.error('Error verifying prediction:', error);
+                alert('Error verifying prediction');
+            }
+        }
+
+        // Upvote prediction
+        async function upvotePrediction() {
+            if (!currentPredictionId) return;
+
+            try {
+                const response = await fetch(`/api/predictions/${currentPredictionId}/upvote/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        document.getElementById('prediction-upvote-count').textContent = data.upvotes;
+                    }
+                }
+            } catch (error) {
+                console.error('Error upvoting prediction:', error);
+            }
+        }
+
+        // Show prediction leaderboard
+        async function showPredictionLeaderboard() {
+            try {
+                const response = await fetch('/api/predictions/leaderboard/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.leaderboard.length > 0) {
+                        const tierEmojis = {
+                            'Oracle': '🏆', 'Visionary': '⭐', 'Prophet': '🔮',
+                            'Forecaster': '📊', 'Novice': '🌱'
+                        };
+
+                        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                        data.leaderboard.forEach((entry, idx) => {
+                            html += `
+                                <div class="d-flex justify-content-between align-items-center p-2 mb-1" style="background: rgba(139, 92, 246, ${0.3 - idx * 0.03}); border-radius: 6px;">
+                                    <div>
+                                        <span style="font-weight: bold; color: #8b5cf6;">#${idx + 1}</span>
+                                        ${tierEmojis[entry.tier] || '🔮'}
+                                        <strong>${entry.agent_name}</strong>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success">${Math.round(entry.accuracy * 100)}%</span>
+                                        <span class="badge bg-secondary">${entry.total_predictions} predictions</span>
+                                        <span class="small text-muted">${entry.current_streak > 0 ? '🔥' + entry.current_streak : ''}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+
+                        // Create modal for leaderboard
+                        const modal = document.createElement('div');
+                        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #8b5cf6; border-radius: 12px; padding: 20px; z-index: 10000; max-width: 500px; width: 90%;';
+                        modal.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 style="color: #8b5cf6;">🏆 Prediction Accuracy Leaderboard</h5>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="this.parentElement.parentElement.remove()">×</button>
+                            </div>
+                            ${html}
+                        `;
+                        document.body.appendChild(modal);
+                    } else {
+                        alert('No prediction stats available yet. Agents need to make and verify predictions first!');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                alert('Error loading leaderboard');
+            }
+        }
+
+        // Generate predictions from agent dreams
+        async function generatePredictionsFromDreams() {
+            if (!confirm('Generate predictions from recent agent dreams? This will analyze dreams and create predictions.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/predictions/generate-from-dreams/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days: 7 })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(`Generated ${data.predictions_created} predictions from ${data.dreams_processed} dreams!`);
+                        loadPredictionsOverview();
+                    } else {
+                        alert(data.error || 'Failed to generate predictions');
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating predictions:', error);
+                alert('Error generating predictions');
+            }
+        }
+
+        // =========================================================================
+        // End Session 258: Agent Predictions Functions
+        // =========================================================================
+
+        // =========================================================================
+        // Session 259: Time Capsule Messages Functions - The Final Sci-Fi Feature!
+        // =========================================================================
+
+        let currentCapsuleId = null;
+
+        // Initialize Time Capsules on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCapsulesOverview();
+            loadCapsulesAgentSelect();
+        });
+
+        // Load time capsules overview
+        async function loadCapsulesOverview() {
+            try {
+                const response = await fetch('/api/time-capsules/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update badges
+                        document.getElementById('capsules-total-badge').textContent = `${data.stats.total_capsules} capsules`;
+                        document.getElementById('capsules-ready-badge').textContent = `${data.stats.ready_to_reveal} ready`;
+
+                        // Update stats
+                        document.getElementById('capsules-total-count').textContent = data.stats.total_capsules;
+                        document.getElementById('capsules-sealed-count').textContent = data.stats.sealed;
+                        document.getElementById('capsules-revealed-count').textContent = data.stats.revealed;
+                        document.getElementById('capsules-ready-count').textContent = data.stats.ready_to_reveal;
+
+                        // Render coming soon and recent revealed
+                        renderCapsulesTimeline(data.coming_soon, data.recent_revealed);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading time capsules overview:', error);
+            }
+        }
+
+        // Load agent selector for capsules
+        async function loadCapsulesAgentSelect() {
+            try {
+                const response = await fetch('/api/agents/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success || data.agents) {
+                        const agents = data.agents || data;
+                        const select = document.getElementById('capsules-agent-select');
+                        const currentVal = select.value;
+
+                        // Clear existing options except first
+                        select.innerHTML = '<option value="">All Agents - View All Capsules</option>';
+
+                        agents.forEach(agent => {
+                            const option = document.createElement('option');
+                            option.value = agent.id;
+                            option.textContent = agent.name;
+                            select.appendChild(option);
+                        });
+
+                        // Restore selection if any
+                        if (currentVal) select.value = currentVal;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agents for capsules:', error);
+            }
+        }
+
+        // Load capsules for specific agent
+        async function loadAgentCapsules() {
+            const agentId = document.getElementById('capsules-agent-select').value;
+
+            if (!agentId) {
+                // Load all capsules
+                loadCapsulesOverview();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/time-capsules/agent/${agentId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderAgentCapsulesTimeline(data.capsules, data.agent.name);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agent capsules:', error);
+            }
+        }
+
+        // Render capsules timeline
+        function renderCapsulesTimeline(comingSoon, recentRevealed) {
+            const timeline = document.getElementById('capsules-timeline');
+
+            if ((!comingSoon || comingSoon.length === 0) && (!recentRevealed || recentRevealed.length === 0)) {
+                timeline.innerHTML = `
+                    <div class="text-center py-4">
+                        <div style="font-size: 48px; opacity: 0.5;">⏳</div>
+                        <p class="text-muted mb-2">No time capsules yet</p>
+                        <button class="btn btn-sm" onclick="generateTimeCapsules()" style="background: rgba(6, 182, 212, 0.3); color: #06b6d4; border: 1px solid #06b6d4;">
+                            ✨ Generate First Capsules
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            // Coming Soon section
+            if (comingSoon && comingSoon.length > 0) {
+                html += '<h6 class="small text-muted mb-2">🔒 Sealed - Coming Soon</h6>';
+                comingSoon.forEach(capsule => {
+                    const triggerEmoji = getTriggerEmoji(capsule.trigger);
+                    html += `
+                        <div class="p-2 mb-2" style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px; cursor: pointer;"
+                             onclick="showCapsuleDetail('${capsule.id}')">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span style="color: #06b6d4;">${triggerEmoji}</span>
+                                    <strong class="text-light">${capsule.title}</strong>
+                                    <span class="badge bg-secondary ms-1">${capsule.agent_name}</span>
+                                </div>
+                                <span class="badge" style="background: #fbbf24; color: black;">${capsule.days_until} days</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Recently Revealed section
+            if (recentRevealed && recentRevealed.length > 0) {
+                html += '<h6 class="small text-muted mt-3 mb-2">📖 Recently Revealed</h6>';
+                recentRevealed.forEach(capsule => {
+                    const triggerEmoji = getTriggerEmoji(capsule.trigger);
+                    html += `
+                        <div class="p-2 mb-2" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; cursor: pointer;"
+                             onclick="showCapsuleDetail('${capsule.id}')">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span style="color: #22c55e;">${triggerEmoji}</span>
+                                    <strong class="text-light">${capsule.title}</strong>
+                                    <span class="badge bg-secondary ms-1">${capsule.agent_name}</span>
+                                </div>
+                                <span class="badge bg-success">${capsule.seal_days}d sealed</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            timeline.innerHTML = html;
+        }
+
+        // Render agent-specific capsules
+        function renderAgentCapsulesTimeline(capsules, agentName) {
+            const timeline = document.getElementById('capsules-timeline');
+
+            if (!capsules || capsules.length === 0) {
+                timeline.innerHTML = `
+                    <div class="text-center py-4">
+                        <div style="font-size: 48px; opacity: 0.5;">⏳</div>
+                        <p class="text-muted">${agentName} has no time capsules yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `<h6 class="small text-muted mb-2">📦 ${agentName}'s Capsules</h6>`;
+
+            capsules.forEach(capsule => {
+                const triggerEmoji = getTriggerEmoji(capsule.trigger);
+                const isSealed = capsule.status === 'sealed';
+                const bgColor = isSealed ? 'rgba(6, 182, 212, 0.05)' : 'rgba(34, 197, 94, 0.05)';
+                const borderColor = isSealed ? 'rgba(6, 182, 212, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+
+                html += `
+                    <div class="p-2 mb-2" style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 8px; cursor: pointer;"
+                         onclick="showCapsuleDetail('${capsule.id}')">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span>${isSealed ? '🔒' : '📖'}</span>
+                                <span style="color: ${isSealed ? '#06b6d4' : '#22c55e'};">${triggerEmoji}</span>
+                                <strong class="text-light">${capsule.title}</strong>
+                            </div>
+                            <span class="badge ${isSealed ? 'bg-warning' : 'bg-success'}">${capsule.days_sealed}d</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            timeline.innerHTML = html;
+        }
+
+        // Get emoji for trigger type
+        function getTriggerEmoji(trigger) {
+            const emojis = {
+                'reflection': '🪞',
+                'milestone': '🏆',
+                'prediction': '🔮',
+                'lesson': '📚',
+                'goal': '🎯',
+                'dream': '💭',
+                'question': '❓',
+                'celebration': '🎉',
+                'change': '🔄',
+                'random': '🎲'
+            };
+            return emojis[trigger] || '📦';
+        }
+
+        // Show capsule detail
+        async function showCapsuleDetail(capsuleId) {
+            currentCapsuleId = capsuleId;
+
+            try {
+                const response = await fetch(`/api/time-capsules/${capsuleId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const capsule = data.capsule;
+                        const panel = document.getElementById('capsule-detail-panel');
+
+                        document.getElementById('capsule-detail-title').textContent = capsule.title;
+                        document.getElementById('capsule-detail-trigger').textContent = capsule.trigger;
+                        document.getElementById('capsule-detail-days-sealed').textContent = data.days_sealed;
+
+                        // Show appropriate content based on status
+                        const sealedDiv = document.getElementById('capsule-sealed-message');
+                        const revealedDiv = document.getElementById('capsule-revealed-content');
+                        const revealBtn = document.getElementById('capsule-reveal-btn');
+                        const reactionsDiv = document.getElementById('capsule-reactions');
+
+                        if (capsule.status === 'sealed') {
+                            sealedDiv.style.display = 'block';
+                            revealedDiv.style.display = 'none';
+                            reactionsDiv.style.display = 'none';
+
+                            // Check if ready to reveal
+                            const revealDate = new Date(capsule.reveal_at);
+                            const now = new Date();
+
+                            if (revealDate <= now) {
+                                revealBtn.style.display = 'inline-block';
+                                document.getElementById('capsule-reveal-countdown').textContent = 'Ready to open!';
+                            } else {
+                                revealBtn.style.display = 'none';
+                                const daysLeft = Math.ceil((revealDate - now) / (1000 * 60 * 60 * 24));
+                                document.getElementById('capsule-reveal-countdown').textContent = `Opens in ${daysLeft} days`;
+                            }
+                        } else if (capsule.status === 'revealed') {
+                            sealedDiv.style.display = 'none';
+                            revealedDiv.style.display = 'block';
+                            revealBtn.style.display = 'none';
+                            reactionsDiv.style.display = 'flex';
+
+                            document.getElementById('capsule-detail-message').textContent = capsule.message;
+                            document.getElementById('capsule-detail-reflection').textContent = capsule.reflection || 'No reflection yet';
+
+                            // Show comparison if available
+                            const comparisonDiv = document.getElementById('capsule-comparison');
+                            if (capsule.comparison && capsule.comparison.changes && Object.keys(capsule.comparison.changes).length > 0) {
+                                comparisonDiv.style.display = 'block';
+                                let compHtml = '';
+                                for (const [key, change] of Object.entries(capsule.comparison.changes)) {
+                                    if (key === 'mood') {
+                                        compHtml += `<div><strong>${key}:</strong> ${change.from} → ${change.to}</div>`;
+                                    } else {
+                                        const arrow = change.delta > 0 ? '↑' : '↓';
+                                        compHtml += `<div><strong>${key}:</strong> ${change.from} → ${change.to} (${arrow}${Math.abs(change.delta)})</div>`;
+                                    }
+                                }
+                                document.getElementById('capsule-comparison-content').innerHTML = compHtml;
+                            } else {
+                                comparisonDiv.style.display = 'none';
+                            }
+                        }
+
+                        panel.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading capsule detail:', error);
+            }
+        }
+
+        // Close capsule detail
+        function closeCapsuleDetail() {
+            document.getElementById('capsule-detail-panel').style.display = 'none';
+            currentCapsuleId = null;
+        }
+
+        // Reveal a capsule
+        async function revealCapsule() {
+            if (!currentCapsuleId) return;
+
+            if (!confirm('Open this time capsule? The agent will reflect on their past message.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/time-capsules/${currentCapsuleId}/reveal/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(`Capsule opened! It was sealed for ${data.capsule.days_sealed} days.`);
+                        showCapsuleDetail(currentCapsuleId);
+                        loadCapsulesOverview();
+                    } else {
+                        alert(data.error || 'Failed to reveal capsule');
+                    }
+                }
+            } catch (error) {
+                console.error('Error revealing capsule:', error);
+                alert('Error revealing capsule');
+            }
+        }
+
+        // React to a revealed capsule
+        async function reactToCapsule(reaction) {
+            if (!currentCapsuleId) return;
+
+            try {
+                const response = await fetch(`/api/time-capsules/${currentCapsuleId}/react/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reaction })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Show brief feedback
+                        const reactionEmojis = {
+                            'touching': '💗',
+                            'insightful': '💡',
+                            'funny': '😄',
+                            'inspiring': '✨',
+                            'nostalgic': '🕰️',
+                            'surprising': '😲'
+                        };
+                        console.log(`Reacted with ${reactionEmojis[reaction]}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error adding reaction:', error);
+            }
+        }
+
+        // Show ready to reveal capsules
+        async function showReadyToReveal() {
+            try {
+                const response = await fetch('/api/time-capsules/ready-to-reveal/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        if (data.count === 0) {
+                            alert('No capsules are ready to reveal yet.');
+                            return;
+                        }
+
+                        let html = '<h6 class="small text-muted mb-2">🔓 Ready to Open (${data.count})</h6>';
+
+                        data.capsules.forEach(capsule => {
+                            const triggerEmoji = getTriggerEmoji(capsule.trigger);
+                            html += `
+                                <div class="p-2 mb-2" style="background: rgba(249, 115, 22, 0.1); border: 1px solid #f97316; border-radius: 8px; cursor: pointer;"
+                                     onclick="showCapsuleDetail('${capsule.id}')">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <span style="color: #f97316;">${triggerEmoji}</span>
+                                            <strong class="text-light">${capsule.title}</strong>
+                                            <span class="badge bg-secondary ms-1">${capsule.agent_name}</span>
+                                        </div>
+                                        <span class="badge bg-warning">${capsule.days_overdue}d overdue</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        document.getElementById('capsules-timeline').innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading ready to reveal:', error);
+            }
+        }
+
+        // Generate time capsules
+        async function generateTimeCapsules() {
+            if (!confirm('Generate time capsules for agents? This will create thoughtful messages for their future selves.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/time-capsules/generate/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        alert(`Generated ${data.created} time capsules!`);
+                        loadCapsulesOverview();
+                    } else {
+                        alert(data.error || 'Failed to generate capsules');
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating capsules:', error);
+                alert('Error generating capsules');
+            }
+        }
+
+        // =========================================================================
+        // End Session 259: Time Capsule Messages Functions
         // =========================================================================
 
         // =========================================================================

@@ -410,19 +410,38 @@ RESPONSE:"""
         }
 
 
-    def generate_completion(self, prompt, max_tokens=500, temperature=0.7, agent_name="Agent"):
+    def generate_completion(self, system_prompt=None, user_prompt=None, prompt=None,
+                             max_tokens=500, max_completion_tokens=None,
+                             temperature=0.7, agent_name="Agent", model=None):
         """
         Compatibility method for executors expecting generate_completion
         Maps to enforce_real_ai internally
+
+        Session 260: Updated to accept both old and new parameter names:
+        - max_tokens (legacy) and max_completion_tokens (GPT-5)
+        - temperature is ignored for GPT-5 models (only supports default 1.0)
+        - model parameter is accepted but we always use GPT-5.1 via enforce_real_ai
         """
+        # Build the prompt from system_prompt + user_prompt if provided
+        if user_prompt:
+            full_prompt = user_prompt
+            context = system_prompt or ""
+        else:
+            full_prompt = prompt or ""
+            context = ""
+
+        # Use max_completion_tokens if provided, otherwise fall back to max_tokens
+        effective_max_tokens = max_completion_tokens if max_completion_tokens else max_tokens
+
         result = self.enforce_real_ai(
-            prompt=prompt,
+            prompt=full_prompt,
+            context=context,
             agent_name=agent_name,
-            max_tokens=max_tokens,
-            temperature=temperature,
+            max_tokens=effective_max_tokens,
+            temperature=temperature,  # Ignored internally for GPT-5 models
             task_type="content"
         )
-        
+
         # Return just the response text for compatibility
         if result['success']:
             return result['response']
