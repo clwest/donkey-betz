@@ -7013,6 +7013,53 @@
                         </div>
                     </div>
 
+                    <!-- Session 244: Agent Conversations Section - Now with WebSocket Streaming! -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                            <h5 class="mb-0" style="color: #8b5cf6;">💬 Agent Conversations</h5>
+                            <div>
+                                <span class="badge me-2" id="conversation-ws-status" style="background: #6b7280;">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" style="width: 10px; height: 10px;"></span>
+                                    Connecting...
+                                </span>
+                                <span class="badge bg-purple me-2" id="conversations-today-badge" style="background: #8b5cf6;">0 today</span>
+                                <button class="btn btn-sm btn-outline-purple" id="start-conversation-btn" onclick="startLiveConversation()" style="border-color: #8b5cf6; color: #8b5cf6;">
+                                    <span class="spinner-border spinner-border-sm d-none me-1" id="start-conv-spinner" role="status"></span>
+                                    Start Chat
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                            <!-- Live typing indicator -->
+                            <div id="typing-indicator" class="d-none mb-3 p-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                                <span id="typing-agent-name" style="color: #a78bfa;"></span>
+                                <span class="typing-dots" style="color: #8b5cf6;">
+                                    <span>.</span><span>.</span><span>.</span>
+                                </span>
+                            </div>
+                            <!-- Conversations list -->
+                            <div id="agent-conversations-list">
+                                <p class="text-muted text-center">Connecting to agent chat stream...</p>
+                            </div>
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    Agents discuss topics every 5 minutes via WebSocket - watch live or trigger a new chat!
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .typing-dots span {
+                            animation: blink 1.4s infinite both;
+                        }
+                        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+                        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+                        @keyframes blink {
+                            0%, 80%, 100% { opacity: 0; }
+                            40% { opacity: 1; }
+                        }
+                    </style>
+
                     <!-- Collaboration Health Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -39636,6 +39683,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 217C: Load workflow analytics
                 loadWorkflowAnalytics();
 
+                // Session 244: Load agent conversations
+                loadAgentConversations();
+
                 // Hide loading, show content
                 loadingEl.style.display = 'none';
                 containerEl.style.display = 'block';
@@ -39722,6 +39772,361 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (diffMins < 60) return `${diffMins}m ago`;
             if (diffHours < 24) return `${diffHours}h ago`;
             return `${diffDays}d ago`;
+        }
+
+        // Session 244: Update Agent Conversations Display
+        function updateAgentConversations(data) {
+            const listEl = document.getElementById('agent-conversations-list');
+            const todayBadge = document.getElementById('conversations-today-badge');
+
+            if (data?.total_today !== undefined) {
+                todayBadge.textContent = `${data.total_today} today`;
+            }
+
+            const conversations = data?.recent_conversations || [];
+
+            if (conversations.length > 0) {
+                listEl.innerHTML = conversations.map(conv => {
+                    const timeAgo = conv.started_at ? formatTimeAgo(conv.started_at) : 'Just now';
+                    const statusBadge = conv.status === 'concluded' ?
+                        '<span class="badge bg-success">Concluded</span>' :
+                        '<span class="badge bg-warning">Active</span>';
+                    const typeIcons = {
+                        'knowledge_sharing': '📚',
+                        'question_answer': '❓',
+                        'debate': '⚔️',
+                        'brainstorm': '💡',
+                        'consultation': '🎓',
+                        'synthesis': '🔮'
+                    };
+                    const typeIcon = typeIcons[conv.type] || '💬';
+
+                    // Build conversation messages display (chat bubble style)
+                    let messagesHtml = '';
+                    if (conv.messages && conv.messages.length > 0) {
+                        // Assign consistent colors to each agent
+                        const agentColors = {};
+                        const colorPalette = ['#8b5cf6', '#06b6d4', '#22c55e', '#f59e0b', '#ec4899', '#6366f1'];
+                        let colorIndex = 0;
+
+                        messagesHtml = conv.messages.map((msg, idx) => {
+                            // Get or assign color for this agent
+                            if (!agentColors[msg.agent]) {
+                                agentColors[msg.agent] = colorPalette[colorIndex % colorPalette.length];
+                                colorIndex++;
+                            }
+                            const agentColor = agentColors[msg.agent];
+
+                            // Clean content - remove agent name prefix if GPT included it
+                            let cleanContent = msg.content;
+                            const prefixPattern = new RegExp(`^${msg.agent}:\\s*`, 'i');
+                            cleanContent = cleanContent.replace(prefixPattern, '');
+
+                            // Alternate alignment for chat feel
+                            const isLeft = idx % 2 === 0;
+                            const alignStyle = isLeft ? 'margin-right: 15%;' : 'margin-left: 15%;';
+
+                            return `
+                                <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.08); border-radius: 12px; border-left: 3px solid ${agentColor}; ${alignStyle}">
+                                    <div style="font-size: 11px; color: ${agentColor}; font-weight: 600; margin-bottom: 4px;">
+                                        ${msg.agent}
+                                    </div>
+                                    <div style="color: #e5e7eb; font-size: 13px; line-height: 1.4;">${cleanContent}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    // Build conclusion display if available
+                    let conclusionHtml = '';
+                    if (conv.conclusion) {
+                        conclusionHtml = `
+                            <div class="mt-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 2px solid #22c55e;">
+                                <div style="font-size: 11px; color: #22c55e;">Conclusion:</div>
+                                <div style="color: #d1d5db; font-size: 12px;">${conv.conclusion}</div>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="mb-3 p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span style="font-size: 18px;">${typeIcon}</span>
+                                    <strong style="color: #c4b5fd;">${conv.topic}</strong>
+                                </div>
+                                <div class="text-end">
+                                    ${statusBadge}
+                                    <div class="text-muted small">${timeAgo}</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">
+                                Participants: ${conv.participants.join(' + ')}
+                                <span class="ms-2 badge bg-secondary">${conv.message_count} messages</span>
+                            </div>
+                            <div class="conversation-messages">
+                                ${messagesHtml}
+                            </div>
+                            ${conclusionHtml}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listEl.innerHTML = '<p class="text-muted text-center">No recent conversations. Click "Start Chat" to begin!</p>';
+            }
+        }
+
+        // Session 244: WebSocket for Real-Time Agent Conversations
+        let conversationWs = null;
+        let conversationWsReconnectTimeout = null;
+
+        function connectAgentConversationWs() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/agent-conversations/`;
+
+            const statusBadge = document.getElementById('conversation-ws-status');
+
+            try {
+                conversationWs = new WebSocket(wsUrl);
+
+                conversationWs.onopen = function() {
+                    console.log('Agent Conversation WebSocket connected');
+                    statusBadge.innerHTML = '<span style="color: #22c55e;">Live</span>';
+                    statusBadge.style.background = 'rgba(34, 197, 94, 0.3)';
+                };
+
+                conversationWs.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleConversationWsMessage(data);
+                };
+
+                conversationWs.onclose = function() {
+                    console.log('Agent Conversation WebSocket disconnected');
+                    statusBadge.innerHTML = '<span style="color: #f59e0b;">Reconnecting...</span>';
+                    statusBadge.style.background = 'rgba(245, 158, 11, 0.3)';
+
+                    // Reconnect after 5 seconds
+                    conversationWsReconnectTimeout = setTimeout(connectAgentConversationWs, 5000);
+                };
+
+                conversationWs.onerror = function(error) {
+                    console.error('Agent Conversation WebSocket error:', error);
+                    statusBadge.innerHTML = '<span style="color: #ef4444;">Error</span>';
+                    statusBadge.style.background = 'rgba(239, 68, 68, 0.3)';
+                };
+
+            } catch (error) {
+                console.error('Failed to connect to Agent Conversation WebSocket:', error);
+            }
+        }
+
+        function handleConversationWsMessage(data) {
+            console.log('Conversation WS message:', data);
+
+            switch (data.type) {
+                case 'connected':
+                    console.log('Connected to agent conversations stream');
+                    break;
+
+                case 'recent_conversations':
+                    // Format and display recent conversations
+                    if (data.conversations && data.conversations.length > 0) {
+                        const formattedData = {
+                            total_today: data.conversations.filter(c => {
+                                const today = new Date().toDateString();
+                                return new Date(c.started_at).toDateString() === today;
+                            }).length,
+                            recent_conversations: data.conversations.map(conv => ({
+                                topic: conv.topic,
+                                type: conv.type,
+                                status: conv.status,
+                                initiator: conv.initiator,
+                                participants: conv.participants,
+                                message_count: conv.message_count,
+                                conclusion: conv.conclusion,
+                                started_at: conv.started_at,
+                                messages: conv.messages
+                            }))
+                        };
+                        updateAgentConversations(formattedData);
+                    }
+                    break;
+
+                case 'conversation_starting':
+                    showNotification('Agent conversation starting...', 'info');
+                    break;
+
+                case 'conversation_started':
+                    showTypingIndicator(data.participants[0], true);
+                    break;
+
+                case 'typing':
+                    showTypingIndicator(data.agent, true);
+                    break;
+
+                case 'new_message':
+                    showTypingIndicator(null, false);
+                    appendLiveMessage(data);
+                    break;
+
+                case 'conversation_complete':
+                    showTypingIndicator(null, false);
+                    document.getElementById('start-conv-spinner').classList.add('d-none');
+                    document.getElementById('start-conversation-btn').disabled = false;
+
+                    if (data.result && data.result.status === 'success') {
+                        showNotification('Conversation complete!', 'success');
+                        // Refresh the conversation list
+                        if (conversationWs && conversationWs.readyState === WebSocket.OPEN) {
+                            conversationWs.send(JSON.stringify({ type: 'get_recent' }));
+                        }
+                    }
+                    break;
+
+                case 'conversation_ended':
+                    showTypingIndicator(null, false);
+                    showNotification(`Conversation concluded: ${data.conclusion?.substring(0, 50)}...`, 'success');
+                    break;
+
+                case 'error':
+                    showTypingIndicator(null, false);
+                    document.getElementById('start-conv-spinner').classList.add('d-none');
+                    document.getElementById('start-conversation-btn').disabled = false;
+                    showNotification(`Error: ${data.message}`, 'error');
+                    break;
+            }
+        }
+
+        function showTypingIndicator(agentName, show) {
+            const indicator = document.getElementById('typing-indicator');
+            const nameSpan = document.getElementById('typing-agent-name');
+
+            if (show && agentName) {
+                nameSpan.textContent = `${agentName} is thinking`;
+                indicator.classList.remove('d-none');
+            } else {
+                indicator.classList.add('d-none');
+            }
+        }
+
+        function appendLiveMessage(msgData) {
+            const listEl = document.getElementById('agent-conversations-list');
+
+            // Create or find live conversation container
+            let liveContainer = document.getElementById('live-conversation-container');
+            if (!liveContainer) {
+                liveContainer = document.createElement('div');
+                liveContainer.id = 'live-conversation-container';
+                liveContainer.className = 'mb-3 p-3';
+                liveContainer.style.cssText = 'background: rgba(139, 92, 246, 0.15); border-radius: 10px; border: 2px solid #8b5cf6;';
+                liveContainer.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong style="color: #c4b5fd;">Live Conversation</strong>
+                        <span class="badge" style="background: #22c55e; animation: pulse 1.5s infinite;">LIVE</span>
+                    </div>
+                    <div id="live-messages"></div>
+                `;
+                listEl.insertBefore(liveContainer, listEl.firstChild);
+            }
+
+            const messagesDiv = document.getElementById('live-messages');
+            const msgTypeColors = {
+                'question': '#f59e0b',
+                'insight': '#22c55e',
+                'agreement': '#06b6d4',
+                'disagreement': '#ef4444',
+                'suggestion': '#8b5cf6',
+                'statement': '#94a3b8',
+                'conclusion': '#22c55e'
+            };
+            const msgColor = msgTypeColors[msgData.message_type] || '#94a3b8';
+
+            const msgHtml = `
+                <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.05); border-radius: 6px; border-left: 2px solid ${msgColor}; animation: fadeIn 0.3s;">
+                    <div style="font-size: 12px; color: #a78bfa;">
+                        <strong>${msgData.agent}</strong>
+                        <span class="badge ms-2" style="background: ${msgColor}; font-size: 9px;">${msgData.message_type}</span>
+                    </div>
+                    <div style="color: #d1d5db; font-size: 13px; margin-top: 4px;">${msgData.content}</div>
+                </div>
+            `;
+            messagesDiv.insertAdjacentHTML('beforeend', msgHtml);
+
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function startLiveConversation() {
+            if (!conversationWs || conversationWs.readyState !== WebSocket.OPEN) {
+                showNotification('WebSocket not connected. Reconnecting...', 'warning');
+                connectAgentConversationWs();
+                return;
+            }
+
+            // Show spinner
+            document.getElementById('start-conv-spinner').classList.remove('d-none');
+            document.getElementById('start-conversation-btn').disabled = true;
+
+            // Clear any existing live conversation
+            const liveContainer = document.getElementById('live-conversation-container');
+            if (liveContainer) {
+                liveContainer.remove();
+            }
+
+            // Request new conversation
+            conversationWs.send(JSON.stringify({
+                type: 'start_conversation',
+                topic: null  // Let the system pick a topic from agent knowledge
+            }));
+        }
+
+        // Connect WebSocket when Agents tab is activated
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we're on the Agents tab initially or when tab changes
+            const agentsTabTrigger = document.querySelector('[data-bs-target="#agents"]');
+            if (agentsTabTrigger) {
+                agentsTabTrigger.addEventListener('shown.bs.tab', function() {
+                    if (!conversationWs || conversationWs.readyState !== WebSocket.OPEN) {
+                        connectAgentConversationWs();
+                    }
+                });
+            }
+        });
+
+        // Session 244: Load Agent Conversations from API (fallback)
+        async function loadAgentConversations() {
+            try {
+                const response = await fetch('/api/agent-conversations/?limit=5');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Transform API data to format expected by updateAgentConversations
+                    const formattedData = {
+                        total_today: data.today_count,
+                        recent_conversations: data.conversations.map(conv => ({
+                            topic: conv.topic,
+                            type: conv.type,
+                            type_display: conv.type_display,
+                            status: conv.status,
+                            initiator: conv.initiator,
+                            participants: conv.participants.map(p => p.name),
+                            message_count: conv.message_count,
+                            quality_score: conv.quality_score,
+                            conclusion: conv.conclusion,
+                            started_at: conv.started_at,
+                            messages: conv.messages.map(m => ({
+                                agent: m.agent,
+                                content: m.content,
+                                type: m.type,
+                                sequence: m.sequence
+                            }))
+                        }))
+                    };
+                    updateAgentConversations(formattedData);
+                }
+            } catch (error) {
+                console.error('Error loading agent conversations:', error);
+            }
         }
 
         // Session 216: Update Active Collaborations

@@ -308,6 +308,22 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+    # Session 244: Agent Conversations (Inter-Agent Chat)
+    # Agents discuss topics with each other autonomously
+    'agent-conversation-cycle': {
+        'task': 'core.tasks.run_agent_conversation',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes - agents chat frequently
+        'options': {
+            'expires': 300,  # 5 minutes
+        }
+    },
+    'broadcast-conversation-status': {
+        'task': 'core.tasks.broadcast_conversation_status',
+        'schedule': 120.0,  # Every 2 minutes - show recent conversations
+        'options': {
+            'expires': 115,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

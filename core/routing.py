@@ -382,3 +382,14 @@ collaboration_patterns = [
 ]
 
 websocket_urlpatterns.extend(collaboration_patterns)
+
+# Session 244: Agent Conversations WebSocket - Real-time agent chat streaming
+from .agent_conversation_consumer import AgentConversationConsumer
+
+agent_conversation_patterns = [
+    # Agent conversations WebSocket - stream live agent chat
+    re_path(r'^ws/agent-conversations/$', AgentConversationConsumer.as_asgi()),
+    re_path(r'^ws/agent-chat/$', AgentConversationConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(agent_conversation_patterns)
