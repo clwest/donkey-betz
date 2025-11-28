@@ -91,33 +91,27 @@ Replay agent decision-making for debugging and analysis.
 - Timeline view, thought bubbles, flagging, bookmarks
 - 16 API endpoints for full functionality
 
+### 10. Agent Personality Profiles (Session 256)
+**Status:** DONE
+
+MBTI-style personality system giving each agent a distinct personality.
+- `AgentPersonality` model with OneToOne relation to Agent
+- 4-letter type code (E/I, S/N, T/F, J/P)
+- 12 personality traits (formality, verbosity, humor, etc.)
+- 8 archetypes: Analyst, Diplomat, Sentinel, Explorer, Commander, Visionary, Advocate, Entertainer
+- Auto-generation based on agent specialization
+- Compatibility checking between agents
+- Prompt modifier generation for personality-aware AI prompts
+- 7 API endpoints for full functionality
+- All 20 agents now have personalities (10 Visionary, 5 Commander, 5 Analyst)
+
 ---
 
 ## Planned Features
 
-### 10. Agent Personality Profiles
-**Status:** PLANNED
-**Priority:** HIGH (Next)
-
-Distinct personalities beyond mood, affecting collaboration style.
-
-**Concept:**
-- MBTI-style personality type indicators
-- Personality affects communication style
-- Affects how agents collaborate
-- Visual personality badges
-
-**Implementation Ideas:**
-- Add personality_type field to Agent model
-- Personality types: Analyst, Diplomat, Sentinel, Explorer (or custom)
-- Personality-aware conversation prompts
-- UI: Personality badges on agent cards
-
----
-
 ### 11. Agent Memory Clusters
 **Status:** PLANNED
-**Priority:** MEDIUM
+**Priority:** HIGH (Next)
 
 Group related memories together with visual mapping.
 
@@ -182,8 +176,8 @@ Agents write messages to their "future selves" to be revealed later.
 | Rivalries/Alliances | Low | Medium | High | DONE |
 | Evolution/Leveling | Medium | Medium | Medium | DONE |
 | Time Travel Debug | High | High | Very High | DONE |
-| Personality Profiles | Medium | Medium | High | NEXT |
-| Memory Clusters | Medium | Medium | High | PLANNED |
+| Personality Profiles | Medium | Medium | High | DONE |
+| Memory Clusters | Medium | Medium | High | NEXT |
 | Prophecies | Medium | Medium | High | PLANNED |
 | Time Capsules | Low | Low | Medium | IDEA |
 
