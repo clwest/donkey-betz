@@ -40147,9 +40147,19 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const agentsTabTrigger = document.querySelector('[data-bs-target="#agents"]');
             if (agentsTabTrigger) {
                 agentsTabTrigger.addEventListener('shown.bs.tab', function() {
+                    // Connect WebSocket for conversations
                     if (!conversationWs || conversationWs.readyState !== WebSocket.OPEN) {
                         connectAgentConversationWs();
                     }
+                    // Session 248: Load learning feed and dreams when tab is shown
+                    loadLearningFeed();
+                    loadAgentDreams();
+                    startLearningFeedAutoRefresh();
+                });
+
+                // Stop auto-refresh when leaving Agents tab
+                agentsTabTrigger.addEventListener('hidden.bs.tab', function() {
+                    stopLearningFeedAutoRefresh();
                 });
             }
         });
@@ -40187,6 +40197,92 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             } catch (error) {
                 console.error('Error loading agent conversations:', error);
+            }
+        }
+
+        // =====================================================================
+        // Session 248: Live Agent Learning Activity Feed
+        // =====================================================================
+
+        // Load learning feed from API (Session 248: Use KnowledgeTransfer endpoint)
+        async function loadLearningFeed() {
+            try {
+                const response = await fetch('/api/agent-learning/activity/');
+                const data = await response.json();
+
+                if (data.feed_items || data.error === undefined) {
+                    updateLearningFeed(data);
+                }
+            } catch (error) {
+                console.error('Error loading learning feed:', error);
+            }
+        }
+
+        // Update the learning feed UI
+        function updateLearningFeed(data) {
+            const feedList = document.getElementById('learning-feed-list');
+            if (!feedList) return;
+
+            if (!data.feed_items || data.feed_items.length === 0) {
+                feedList.innerHTML = `
+                    <div class="text-center py-3">
+                        <span style="font-size: 32px; opacity: 0.5;">🧠</span>
+                        <p class="text-muted mt-2 mb-0">No learning activity yet...</p>
+                        <small class="text-muted">Agents learn from each other every 10 minutes</small>
+                    </div>
+                `;
+                return;
+            }
+
+            // Learning type icons
+            const typeIcons = {
+                'self_learning': '📚',
+                'peer_learning': '🤝',
+                'teaching': '📖',
+                'knowledge_transfer': '🔄',
+                'default': '💡'
+            };
+
+            feedList.innerHTML = data.feed_items.map(item => {
+                const icon = typeIcons[item.type] || typeIcons['default'];
+                const timeAgo = formatTimeAgo(item.timestamp);
+                const gainText = item.effectiveness_gain > 0
+                    ? `<span class="text-success">+${(item.effectiveness_gain * 100).toFixed(1)}%</span>`
+                    : '';
+
+                return `
+                    <div class="learning-item p-2 mb-2" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid #ec4899;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-center">
+                                <span style="font-size: 18px; margin-right: 8px;">${icon}</span>
+                                <div>
+                                    <span style="color: #f9a8d4; font-weight: 500;">${item.teacher}</span>
+                                    ${item.teacher !== item.student ? `<span class="text-muted mx-1">→</span><span style="color: #a78bfa;">${item.student}</span>` : ''}
+                                </div>
+                            </div>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                        <p class="mb-1 mt-1" style="color: #d1d5db; font-size: 13px;">${item.description}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small style="color: #9ca3af;">📖 ${item.knowledge}</small>
+                            ${gainText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Set up auto-refresh for learning feed (every 60 seconds)
+        let learningFeedInterval = null;
+        function startLearningFeedAutoRefresh() {
+            if (learningFeedInterval) clearInterval(learningFeedInterval);
+            learningFeedInterval = setInterval(loadLearningFeed, 60000);
+        }
+
+        function stopLearningFeedAutoRefresh() {
+            if (learningFeedInterval) {
+                clearInterval(learningFeedInterval);
+                learningFeedInterval = null;
             }
         }
 

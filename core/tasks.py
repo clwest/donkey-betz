@@ -3731,7 +3731,7 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
 
         # Check recent executions
         recent_executions = AgentExecution.objects.filter(
-            started_at__gte=recent_cutoff
+            created_at__gte=recent_cutoff
         ).values_list('agent_id', flat=True)
         recently_active_ids.update(recent_executions)
 
