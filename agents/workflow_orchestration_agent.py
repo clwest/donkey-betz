@@ -1115,11 +1115,19 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     "watermark, signature"
                 )
 
+            # Session 238: Use SD3 for logos/brand_identity (better at avoiding text)
+            # SDXL is faster but often ignores "no text" instructions
+            # SD3 follows instructions more precisely, worth the extra ~2s per image
+            if content_type in ['logos', 'brand_identity']:
+                model = 'sd3'
+            else:
+                model = 'sdxl'
+
             parameters = {
                 'prompt': prompt,
                 'negative_prompt': negative_prompt,
                 'count': count,
-                'model': 'sdxl',
+                'model': model,
                 'style': style,
                 'width': width,
                 'height': height,
