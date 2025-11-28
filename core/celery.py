@@ -299,6 +299,15 @@ app.conf.beat_schedule = {
             'expires': 55,
         }
     },
+    # Session 244: Daily Learning Embeddings
+    # Convert all agent learning into searchable vector embeddings
+    'embed-daily-agent-learning': {
+        'task': 'core.tasks.embed_daily_agent_learning',
+        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration

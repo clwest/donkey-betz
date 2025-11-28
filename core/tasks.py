@@ -3036,3 +3036,303 @@ def broadcast_learning_status():
     except Exception as e:
         logger.exception(f"📡 [BROADCAST] Status broadcast failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 244: Daily Learning Embeddings
+# Convert all agent learning (knowledge transfers, syntheses, insights) into
+# searchable vector embeddings stored in PGVector. This enables semantic search
+# across all agent learning and builds the foundation for long-term AI memory.
+# =============================================================================
+
+@shared_task
+def embed_daily_agent_learning():
+    """
+    Create document embeddings for all agent learning activity.
+
+    This task:
+    1. Gathers all knowledge transfers, learned items, and syntheses from the last 24 hours
+    2. Creates rich text documents from each learning event
+    3. Generates embeddings using OpenAI
+    4. Stores them in PGVector via DocumentEmbedding
+
+    Runs daily at 2 AM to capture a full day's learning.
+    This is the key to AI longevity - everything becomes a searchable document.
+    """
+    import asyncio
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db import transaction
+    from core.models import Agent, AgentKnowledgeSource, KnowledgeTransfer, AgentLearningConnection
+    from content.models import Document, DocumentEmbedding, DocumentType, EmbeddingModel, ContentStatus, ContentSource
+    from content.embeddings import EmbeddingManager
+
+    logger.info("📚 [EMBEDDINGS] Starting daily agent learning embedding task...")
+
+    def run_async(coro):
+        """Run an async coroutine synchronously."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        embedding_manager = EmbeddingManager()
+        cutoff = timezone.now() - timedelta(hours=24)
+
+        stats = {
+            'transfers_processed': 0,
+            'learned_items_processed': 0,
+            'syntheses_processed': 0,
+            'embeddings_created': 0,
+            'embeddings_failed': 0,
+            'total_cost': 0.0
+        }
+
+        # Get or create a system user for the learning document
+        system_user, _ = User.objects.get_or_create(
+            username='system_learning',
+            defaults={
+                'email': 'system@learning.internal',
+                'is_active': True,
+            }
+        )
+
+        # Get or create the master learning document
+        learning_doc, created = Document.objects.get_or_create(
+            title='Agent Learning Knowledge Base',
+            document_type=DocumentType.KNOWLEDGE_EXTRACT,
+            defaults={
+                'owner': system_user,
+                'description': 'Embedded knowledge from agent-to-agent learning, syntheses, and insights',
+                'raw_content': '',
+                'processed_content': '',
+                'status': ContentStatus.PROCESSED,
+                'source': ContentSource.WORKFLOW,
+                'tags': ['agent_learning', 'knowledge_transfer', 'synthesis', 'embedded']
+            }
+        )
+
+        # Track existing chunk indices to avoid duplicates
+        existing_indices = set(
+            DocumentEmbedding.objects.filter(document=learning_doc)
+            .values_list('chunk_index', flat=True)
+        )
+        next_index = max(existing_indices) + 1 if existing_indices else 0
+
+        # 1. Process Knowledge Transfers
+        recent_transfers = KnowledgeTransfer.objects.filter(
+            created_at__gte=cutoff
+        ).select_related(
+            'connection__teacher_agent',
+            'connection__student_agent',
+            'source_knowledge'
+        )
+
+        for transfer in recent_transfers:
+            # Create a unique identifier for this transfer
+            transfer_id = f"transfer_{transfer.id}"
+
+            # Build rich text document from transfer
+            text_parts = [
+                f"Knowledge Transfer Event",
+                f"Teacher: {transfer.connection.teacher_agent.name if transfer.connection.teacher_agent else 'Unknown'}",
+                f"Student: {transfer.connection.student_agent.name if transfer.connection.student_agent else 'Unknown'}",
+                f"Knowledge Topic: {transfer.source_knowledge.title if transfer.source_knowledge else 'Unknown'}",
+                f"Summary: {transfer.transfer_summary or 'No summary'}",
+                f"Key Points: {', '.join(transfer.key_points) if transfer.key_points else 'No key points'}",
+                f"Usefulness Score: {transfer.usefulness_score}",
+                f"Was Applied: {transfer.was_applied}",
+                f"Timestamp: {transfer.created_at.isoformat()}"
+            ]
+
+            if transfer.source_knowledge:
+                text_parts.append(f"Source Knowledge Summary: {transfer.source_knowledge.summary[:500] if transfer.source_knowledge.summary else 'No summary'}")
+
+            text = "\n".join(text_parts)
+
+            # Generate embedding
+            result = run_async(
+                embedding_manager.generate_embedding(text, EmbeddingModel.OPENAI_SMALL)
+            )
+
+            if result.success:
+                with transaction.atomic():
+                    DocumentEmbedding.objects.update_or_create(
+                        document=learning_doc,
+                        chunk_index=next_index,
+                        embedding_model=EmbeddingModel.OPENAI_SMALL,
+                        defaults={
+                            'chunk_text': text,
+                            'chunk_size': len(text),
+                            'embedding_vector': result.embedding,
+                            'embedding_dimension': result.dimension,
+                            'processing_time_ms': result.processing_time_ms,
+                            'embedding_cost': result.cost,
+                            'metadata': {
+                                'type': 'knowledge_transfer',
+                                'transfer_id': str(transfer.id),
+                                'teacher': transfer.connection.teacher_agent.name if transfer.connection.teacher_agent else None,
+                                'student': transfer.connection.student_agent.name if transfer.connection.student_agent else None,
+                                'date': transfer.created_at.isoformat()
+                            }
+                        }
+                    )
+                next_index += 1
+                stats['embeddings_created'] += 1
+                stats['total_cost'] += float(result.cost)
+            else:
+                stats['embeddings_failed'] += 1
+                logger.warning(f"📚 [EMBEDDINGS] Failed to embed transfer {transfer.id}: {result.error_message}")
+
+            stats['transfers_processed'] += 1
+
+        # 2. Process Learned Items (knowledge sources with [Learned] prefix)
+        learned_items = AgentKnowledgeSource.objects.filter(
+            first_discovered_at__gte=cutoff,
+            title__startswith='[Learned]',
+            is_active=True
+        ).select_related('agent')
+
+        for item in learned_items:
+            text_parts = [
+                f"Learned Knowledge Item",
+                f"Agent: {item.agent.name if item.agent else 'Unknown'}",
+                f"Title: {item.title}",
+                f"Type: {item.knowledge_type}",
+                f"Summary: {item.summary or 'No summary'}",
+                f"Key Insights: {', '.join(item.key_insights) if item.key_insights else 'No insights'}",
+                f"Confidence: {item.confidence_score}",
+                f"Data Points: {item.data_points_count}",
+                f"Learned At: {item.first_discovered_at.isoformat()}"
+            ]
+
+            text = "\n".join(text_parts)
+
+            result = run_async(
+                embedding_manager.generate_embedding(text, EmbeddingModel.OPENAI_SMALL)
+            )
+
+            if result.success:
+                with transaction.atomic():
+                    DocumentEmbedding.objects.update_or_create(
+                        document=learning_doc,
+                        chunk_index=next_index,
+                        embedding_model=EmbeddingModel.OPENAI_SMALL,
+                        defaults={
+                            'chunk_text': text,
+                            'chunk_size': len(text),
+                            'embedding_vector': result.embedding,
+                            'embedding_dimension': result.dimension,
+                            'processing_time_ms': result.processing_time_ms,
+                            'embedding_cost': result.cost,
+                            'metadata': {
+                                'type': 'learned_item',
+                                'knowledge_id': str(item.id),
+                                'agent': item.agent.name if item.agent else None,
+                                'knowledge_type': item.knowledge_type,
+                                'date': item.first_discovered_at.isoformat()
+                            }
+                        }
+                    )
+                next_index += 1
+                stats['embeddings_created'] += 1
+                stats['total_cost'] += float(result.cost)
+            else:
+                stats['embeddings_failed'] += 1
+
+            stats['learned_items_processed'] += 1
+
+        # 3. Process Syntheses (knowledge sources with [Synthesis] prefix)
+        syntheses = AgentKnowledgeSource.objects.filter(
+            first_discovered_at__gte=cutoff,
+            title__startswith='[Synthesis]',
+            is_active=True
+        ).select_related('agent')
+
+        for synthesis in syntheses:
+            text_parts = [
+                f"Agent Synthesis - Combined Insight",
+                f"Agent: {synthesis.agent.name if synthesis.agent else 'Unknown'}",
+                f"Title: {synthesis.title}",
+                f"Summary: {synthesis.summary or 'No summary'}",
+                f"Key Insights: {', '.join(synthesis.key_insights) if synthesis.key_insights else 'No insights'}",
+                f"Confidence: {synthesis.confidence_score}",
+                f"Source Data Points: {synthesis.data_points_count}",
+                f"Synthesized At: {synthesis.first_discovered_at.isoformat()}"
+            ]
+
+            text = "\n".join(text_parts)
+
+            result = run_async(
+                embedding_manager.generate_embedding(text, EmbeddingModel.OPENAI_SMALL)
+            )
+
+            if result.success:
+                with transaction.atomic():
+                    DocumentEmbedding.objects.update_or_create(
+                        document=learning_doc,
+                        chunk_index=next_index,
+                        embedding_model=EmbeddingModel.OPENAI_SMALL,
+                        defaults={
+                            'chunk_text': text,
+                            'chunk_size': len(text),
+                            'embedding_vector': result.embedding,
+                            'embedding_dimension': result.dimension,
+                            'processing_time_ms': result.processing_time_ms,
+                            'embedding_cost': result.cost,
+                            'metadata': {
+                                'type': 'synthesis',
+                                'knowledge_id': str(synthesis.id),
+                                'agent': synthesis.agent.name if synthesis.agent else None,
+                                'date': synthesis.first_discovered_at.isoformat()
+                            }
+                        }
+                    )
+                next_index += 1
+                stats['embeddings_created'] += 1
+                stats['total_cost'] += float(result.cost)
+            else:
+                stats['embeddings_failed'] += 1
+
+            stats['syntheses_processed'] += 1
+
+        # Update the document's last modified time
+        learning_doc.save()
+
+        # Broadcast success
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'embeddings_complete',
+                'stats': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(
+            f"📚 [EMBEDDINGS] Daily embedding complete: "
+            f"{stats['transfers_processed']} transfers, "
+            f"{stats['learned_items_processed']} learned items, "
+            f"{stats['syntheses_processed']} syntheses, "
+            f"{stats['embeddings_created']} embeddings created, "
+            f"${stats['total_cost']:.4f} total cost"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"📚 [EMBEDDINGS] Daily embedding failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
