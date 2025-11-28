@@ -495,6 +495,46 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["brand_name", "concept"]
                 }
+            },
+
+            # Session 238: Workflow Orchestration Agent - THE FIX!
+            # This was missing, causing GPT to call individual tools instead of the unified workflow
+            {
+                "type": "function",
+                "name": "workflow_orchestration_agent",
+                "description": "⚡ HIGHEST PRIORITY for research+create requests! Execute complete multi-step creative workflows in ONE call. This agent handles the ENTIRE workflow internally: research → executive review → image generation → project creation. Use this when user wants BOTH research AND creation, e.g., 'research X and create Y logos', 'look up trends and make images', 'find inspiration and generate designs'. DO NOT call web_search, coleadership_agent, or image_generation_agent individually for these requests - use THIS agent instead! Available workflows: 'research_and_create_logos' (research topic + exec review + logos), 'research_and_create_images' (research + general artwork), 'youtube_thumbnail_package' (research + thumbnails), 'brand_identity_package' (research + brand assets), 'product_photography_kit' (research + product photos), 'logo_to_video' (animate existing logo).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "workflow": {
+                            "type": "string",
+                            "enum": ["research_and_create_logos", "research_and_create_images", "youtube_thumbnail_package", "brand_identity_package", "product_photography_kit", "logo_to_video"],
+                            "description": "Workflow type: 'research_and_create_logos' (most common - for logo requests), 'research_and_create_images' (for general artwork/illustrations), 'youtube_thumbnail_package' (for YouTube thumbnails), 'brand_identity_package' (full brand kit), 'product_photography_kit' (product photos), 'logo_to_video' (animate a logo)"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "The research topic or subject (e.g., 'coffee shops in colorado', 'modern AI company', 'fitness brand', 'tech startup')"
+                        },
+                        "count": {
+                            "type": "integer",
+                            "default": 3,
+                            "description": "Number of images/logos to generate (1-5)"
+                        },
+                        "style_preferences": {
+                            "type": "string",
+                            "description": "Optional style preferences (e.g., 'minimalist', 'vibrant colors', 'professional')"
+                        },
+                        "image_id": {
+                            "type": "string",
+                            "description": "For 'logo_to_video' workflow: the logo image ID to animate"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Optional project ID to associate all generated content with"
+                        }
+                    },
+                    "required": ["workflow", "topic"]
+                }
             }
         ]
 
