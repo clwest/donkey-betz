@@ -10778,10 +10778,16 @@
                 'create', 'make', 'generate', 'design', 'build', 'produce'
             ];
 
-            // Logo/image keywords for the workflow type
+            // Logo keywords for the workflow type
             const logoKeywords = [
-                'logo', 'logos', 'brand', 'branding', 'icon', 'emblem',
-                'image', 'images', 'banner', 'banners'
+                'logo', 'logos', 'brand', 'branding', 'icon', 'emblem', 'symbol'
+            ];
+
+            // Session 240: General images/artwork keywords (separate from logos)
+            const imageKeywords = [
+                'image', 'images', 'picture', 'pictures', 'artwork', 'artworks',
+                'illustration', 'illustrations', 'graphic', 'graphics',
+                'social media', 'post', 'posts', 'banner', 'banners'
             ];
 
             // Session 199: YouTube thumbnail keywords
@@ -10818,6 +10824,7 @@
             const hasResearch = researchKeywords.some(k => lower.includes(k));
             const hasCreate = createKeywords.some(k => lower.includes(k));
             const hasLogoIntent = logoKeywords.some(k => lower.includes(k));
+            const hasImageIntent = imageKeywords.some(k => lower.includes(k));  // Session 240
             const hasYoutubeIntent = youtubeKeywords.some(k => lower.includes(k));
             const hasBrandIdentityIntent = brandIdentityKeywords.some(k => lower.includes(k));
             const hasProductPhotoIntent = productPhotoKeywords.some(k => lower.includes(k));
@@ -10957,16 +10964,15 @@
             }
 
             // Original: research_and_create_logos workflow
-            // Session 201: Now distinguishes between "logos" (text-free) and "images" (general artwork)
-            if (hasResearch && hasCreate && hasLogoIntent) {
-                // Session 201: Determine if user wants logos (text-free) or general images
-                // Use word boundary checks to avoid false positives (e.g., "branding" shouldn't match "brand")
-                // Note: \bimages?\b matches both "image" and "images"
-                const wantsLogos = /\blogos?\b/i.test(lower) || /\bbrand\b/i.test(lower) || /\bemblems?\b/i.test(lower) || /\bicons?\b/i.test(lower);
-                const wantsImages = (/\bimages?\b/i.test(lower) || /\bpictures?\b/i.test(lower) || /\bartworks?\b/i.test(lower) || /\billustrations?\b/i.test(lower)) && !wantsLogos;
+            // Session 201/240: Now distinguishes between "logos" (text-free) and "images" (general artwork)
+            if (hasResearch && hasCreate && (hasLogoIntent || hasImageIntent)) {
+                // Session 240: Images take priority - if user says "images", they want images not logos
+                // Only fall back to logos if they explicitly said logo/brand/icon/etc.
+                const wantsImages = hasImageIntent && !hasLogoIntent;
+                const wantsLogos = hasLogoIntent;
 
                 const workflowType = wantsImages ? 'research_and_create_images' : 'research_and_create_logos';
-                console.log(`🎯 Session 201: Detected ${workflowType} workflow pattern (wantsLogos: ${wantsLogos}, wantsImages: ${wantsImages})`);
+                console.log(`🎯 Session 240: Detected ${workflowType} workflow pattern (hasLogoIntent: ${hasLogoIntent}, hasImageIntent: ${hasImageIntent})`);
 
                 // Session 192 FIX: Better topic extraction using pattern matching
                 // Look for "research X" or "research X and create" patterns
@@ -11084,6 +11090,66 @@
                 return result;
             } catch (error) {
                 console.error('❌ Session 192: Workflow orchestration error:', error);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        /**
+         * Session 240: Execute New Workflow Engine v2
+         * User-vision-first philosophy: User's style/subject is SACRED, system ENHANCES with trends.
+         *
+         * @param {string} message - The original user message
+         * @param {string} projectId - Optional project ID
+         * @returns {Promise<Object>} - Workflow execution result with images
+         */
+        async function executeWorkflowV2(message, projectId = null) {
+            console.log('🚀 Session 240: Executing v2 workflow engine:', message);
+
+            try {
+                const requestBody = { message };
+                if (projectId) {
+                    requestBody.project_id = projectId;
+                }
+
+                const response = await authenticatedFetch('/api/v2/workflow/execute/', {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody)
+                });
+
+                const result = await response.json();
+                console.log('✅ Session 240: Workflow v2 result:', result);
+                return result;
+            } catch (error) {
+                console.error('❌ Session 240: Workflow v2 error:', error);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        /**
+         * Session 240: Parse user intent for v2 workflow (for preview before execution)
+         * @param {string} message - The user message to parse
+         * @returns {Promise<Object>} - Parsed intent with content type, style, etc.
+         */
+        async function parseWorkflowIntentV2(message) {
+            console.log('🔍 Session 240: Parsing intent for preview:', message);
+
+            try {
+                const response = await authenticatedFetch('/api/v2/workflow/parse/', {
+                    method: 'POST',
+                    body: JSON.stringify({ message })
+                });
+
+                const result = await response.json();
+                console.log('✅ Session 240: Parsed intent:', result);
+                return result;
+            } catch (error) {
+                console.error('❌ Session 240: Intent parsing error:', error);
                 return {
                     success: false,
                     error: error.message
@@ -22854,67 +22920,105 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     };
                 }
 
-                // Session 192/200: Check for workflow patterns FIRST
-                // This bypasses GPT tool selection which was ignoring workflow_orchestration_agent
+                // Session 192/200/240: Check for workflow patterns FIRST
+                // Session 240: Use NEW v2 workflow engine for research+create patterns
+                // The v2 engine follows user-vision-first philosophy: style/subject SACRED, system ENHANCES
                 const workflowParams = detectWorkflowPattern(message);
                 if (workflowParams) {
-                    console.log('🎯 Session 200: Intercepting for workflow orchestration:', workflowParams);
+                    console.log('🎯 Session 240: Intercepting for workflow:', workflowParams);
 
                     // Get the project ID if we have one
                     const projectId = this.activeProjectId || null;
 
-                    // Session 200: Build workflow-specific message
-                    let workflowMessage = '';
-                    let workflowSteps = '';
+                    // Session 240: Use v2 engine for content creation workflows
+                    // These are the workflows that should use the new user-vision-first philosophy
+                    const v2Workflows = [
+                        'research_and_create_logos',
+                        'research_and_create_images',
+                        'youtube_thumbnail_package',
+                        'brand_identity_package',
+                        'product_photography_kit',
+                        'video_thumbnail_series'
+                    ];
 
-                    switch (workflowParams.workflow) {
-                        case 'youtube_thumbnail_package':
-                            workflowMessage = `🔄 **Starting YouTube Thumbnail Workflow**\n\nI'll research best practices and create ${workflowParams.count} thumbnail variations for **${workflowParams.topic}**.`;
-                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching thumbnail best practices & CTR optimization\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} thumbnails (1280x720)\n4. 📁 Organizing into project`;
-                            break;
-                        case 'brand_identity_package':
-                            workflowMessage = `🔄 **Starting Brand Identity Workflow**\n\nI'll research brand trends and create ${workflowParams.count} brand identity images for **${workflowParams.topic}**.`;
-                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching brand identity trends\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} brand images\n4. 📁 Organizing into project`;
-                            break;
-                        case 'product_photography_kit':
-                            workflowMessage = `🔄 **Starting Product Photography Workflow**\n\nI'll research product photography and create ${workflowParams.count} professional shots for **${workflowParams.topic}**.`;
-                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching product photography styles\n2. 🏢 Executive team creative direction\n3. 📸 Generating ${workflowParams.count} product photos\n4. 📁 Organizing into project`;
-                            break;
-                        case 'video_thumbnail_series':
-                            workflowMessage = `🔄 **Starting Thumbnail Series Workflow**\n\nI'll research series branding and create ${workflowParams.count} consistent thumbnails for **${workflowParams.topic}**.`;
-                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching thumbnail series branding\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} consistent thumbnails (1280x720)\n4. 📁 Organizing into project`;
-                            break;
-                        case 'logo_to_video':
-                            workflowMessage = `🔄 **Starting Logo Animation Workflow**\n\nI'll animate ${workflowParams.image_id ? 'image #' + workflowParams.image_id : 'your logo'} into a professional video.`;
-                            workflowSteps = `\n\n**Steps:**\n1. 🖼️ Selecting logo image\n2. 🎬 Creating animated video (Runway)\n3. 🔊 Adding audio (optional)\n4. 📁 Organizing into project`;
-                            break;
-                        default: // research_and_create_logos
-                            workflowMessage = `🔄 **Starting Research & Create Workflow**\n\nI'll research **${workflowParams.topic}** and create ${workflowParams.count} professional logos for you.`;
-                            workflowSteps = `\n\n**Steps:**\n1. 🔍 Researching trends and best practices\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} logos\n4. 📁 Organizing into project`;
+                    if (v2Workflows.includes(workflowParams.workflow)) {
+                        console.log('🚀 Session 240: Using v2 workflow engine for:', workflowParams.workflow);
+
+                        // Call v2 API with the original message (it does its own parsing)
+                        const result = await executeWorkflowV2(message, projectId);
+
+                        if (result.success) {
+                            // Format v2 response for display
+                            let responseHtml = `<div class="workflow-result">`;
+                            responseHtml += `<h4>✨ ${result.message}</h4>`;
+
+                            // Add style preservation info if available
+                            if (result.style_preserved) {
+                                responseHtml += `<p><strong>Your Style:</strong> ${result.style_preserved}</p>`;
+                            }
+                            if (result.subject_preserved) {
+                                responseHtml += `<p><strong>Your Subject:</strong> ${result.subject_preserved}</p>`;
+                            }
+
+                            // Show trending enhancements if applied
+                            const enhancements = result.enhancements_applied || {};
+                            if (enhancements.executive_input) {
+                                const execInput = enhancements.executive_input;
+                                if (execInput.recommended_colors && execInput.recommended_colors.length > 0) {
+                                    responseHtml += `<p><em>Enhanced with trending colors: ${execInput.recommended_colors.slice(0, 3).join(', ')}</em></p>`;
+                                }
+                            }
+
+                            // Render images
+                            const images = result.images || [];
+                            if (images.length > 0) {
+                                responseHtml += `<div class="generated-images" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">`;
+                                images.forEach((img, idx) => {
+                                    if (img.success && img.url) {
+                                        responseHtml += `
+                                            <div class="image-container" style="max-width: 300px;">
+                                                <img src="${img.url}" alt="Generated ${idx + 1}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="viewAsset(this, '${img.id || ''}', 'image')">
+                                                <p style="font-size: 12px; color: #888; margin-top: 5px;">${img.prompt ? img.prompt.substring(0, 100) + '...' : 'Generated image'}</p>
+                                            </div>
+                                        `;
+                                    }
+                                });
+                                responseHtml += `</div>`;
+                            }
+
+                            responseHtml += `</div>`;
+
+                            return { message: responseHtml };
+                        } else {
+                            // Error from v2 engine
+                            return { message: `❌ **Workflow Error:** ${result.error || 'Unknown error occurred'}` };
+                        }
                     }
 
-                    // Build arguments with optional image_id for logo_to_video
-                    const toolArguments = {
-                        workflow: workflowParams.workflow,
-                        topic: workflowParams.topic,
-                        count: workflowParams.count,
-                        style_preferences: workflowParams.style_preferences || '',
-                        project_id: projectId
-                    };
+                    // Session 200: Legacy workflow handling for logo_to_video (requires video tools)
+                    if (workflowParams.workflow === 'logo_to_video') {
+                        const workflowMessage = `🔄 **Starting Logo Animation Workflow**\n\nI'll animate ${workflowParams.image_id ? 'image #' + workflowParams.image_id : 'your logo'} into a professional video.`;
+                        const workflowSteps = `\n\n**Steps:**\n1. 🖼️ Selecting logo image\n2. 🎬 Creating animated video (Runway)\n3. 🔊 Adding audio (optional)\n4. 📁 Organizing into project`;
 
-                    // Session 200: Add image_id for logo_to_video workflow
-                    if (workflowParams.image_id) {
-                        toolArguments.image_id = workflowParams.image_id;
+                        const toolArguments = {
+                            workflow: workflowParams.workflow,
+                            topic: workflowParams.topic,
+                            count: workflowParams.count,
+                            style_preferences: workflowParams.style_preferences || '',
+                            project_id: projectId
+                        };
+                        if (workflowParams.image_id) {
+                            toolArguments.image_id = workflowParams.image_id;
+                        }
+
+                        return {
+                            message: workflowMessage + workflowSteps + `\n\n*This is an automated workflow - please wait...*`,
+                            tool_calls: [{
+                                name: 'workflow_orchestration_agent',
+                                arguments: toolArguments
+                            }]
+                        };
                     }
-
-                    // Execute workflow directly - this creates a synthetic tool_call
-                    return {
-                        message: workflowMessage + workflowSteps + `\n\n*This is an automated workflow - please wait...*`,
-                        tool_calls: [{
-                            name: 'workflow_orchestration_agent',
-                            arguments: toolArguments
-                        }]
-                    };
                 }
 
                 // Session 65: Everything else goes to GPT-5-mini executor for autonomous handling
@@ -32083,8 +32187,25 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (workflowParams) {
                 console.log('🎯 Session 192: Project assistant intercepting for workflow orchestration:', workflowParams);
 
+                // Session 240: Generate dynamic workflow message based on workflow type
+                let contentType = 'professional logos';
+                let stepLabel = 'logos';
+                if (workflowParams.workflow === 'research_and_create_images') {
+                    contentType = 'images';
+                    stepLabel = 'images';
+                } else if (workflowParams.workflow === 'youtube_thumbnail_package') {
+                    contentType = 'YouTube thumbnails';
+                    stepLabel = 'thumbnails';
+                } else if (workflowParams.workflow === 'brand_identity_package') {
+                    contentType = 'brand identity assets';
+                    stepLabel = 'brand images';
+                } else if (workflowParams.workflow === 'product_photography_kit') {
+                    contentType = 'product photos';
+                    stepLabel = 'product shots';
+                }
+
                 // Show workflow start message
-                const startMessage = `🔄 **Starting Research & Create Workflow**\n\nI'll research **${workflowParams.topic}** and create ${workflowParams.count} professional logos for you.\n\n**Steps:**\n1. 🔍 Researching trends and best practices\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} logos\n4. 📁 Organizing into project\n\n*This is an automated workflow - please wait...*`;
+                const startMessage = `🔄 **Starting Research & Create Workflow**\n\nI'll research **${workflowParams.topic}** and create ${workflowParams.count} ${contentType} for you.\n\n**Steps:**\n1. 🔍 Researching trends and best practices\n2. 🏢 Executive team creative direction\n3. 🎨 Generating ${workflowParams.count} ${stepLabel}\n4. 📁 Organizing into project\n\n*This is an automated workflow - please wait...*`;
                 addProjectChatMessage(projectId, 'assistant', startMessage);
                 statusDiv.innerHTML = '🔄 Executing workflow orchestration...';
 

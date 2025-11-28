@@ -823,6 +823,9 @@ from core.views_diagnostics import (
     diagnostic_dashboard
 )
 
+# Session 240: New Workflow Engine (user-vision-first philosophy)
+from core.views_workflow_engine import execute_workflow_v2, parse_intent
+
 urlpatterns = [
     # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
     # Removed duplicate /v2/ namespace - see docs/debugging-sessions/SESSION_31_URL_CONSOLIDATION_PLAN.md
@@ -1153,6 +1156,11 @@ urlpatterns = [
     path('api/workflows/<str:workflow_id>/schedule/', workflow_schedule, name='workflow-schedule'),
     path('api/workflows/<str:workflow_id>/share/', workflow_share, name='workflow-share'),
     path('api/workflows/<str:workflow_id>/unshare/', workflow_unshare, name='workflow-unshare'),
+
+    # Session 240: New Workflow Engine v2 (user-vision-first philosophy)
+    # User's style/subject = SACRED | System ENHANCES with trending colors/moods
+    path('api/v2/workflow/execute/', execute_workflow_v2, name='workflow-v2-execute'),
+    path('api/v2/workflow/parse/', parse_intent, name='workflow-v2-parse'),
 
     # Session 214: Agent Collaboration API
     path('api/collaboration/request/', request_collaboration, name='collaboration-request'),
