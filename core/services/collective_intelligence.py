@@ -1027,7 +1027,8 @@ class CollectiveIntelligenceService:
                 Agent,
                 AgentKnowledgeSource,
                 AgentSpiderConnection,
-                AgentLearningConnection  # Session 243
+                AgentLearningConnection,  # Session 243
+                KnowledgeTransfer  # Session 243
             )
 
             # Collaboration stats
@@ -1053,6 +1054,28 @@ class CollectiveIntelligenceService:
 
             # Learning connections (Session 243)
             learning_connections = AgentLearningConnection.objects.filter(is_active=True).count()
+
+            # Learning stats (Session 244)
+            total_transfers = KnowledgeTransfer.objects.count()
+            learned_items = AgentKnowledgeSource.objects.filter(title__startswith='[Learned]').count()
+            synthesized_items = AgentKnowledgeSource.objects.filter(title__startswith='[Synthesis]').count()
+
+            # Recent transfers for live feed
+            recent_transfers = KnowledgeTransfer.objects.select_related(
+                'connection__teacher_agent',
+                'connection__student_agent',
+                'source_knowledge'
+            ).order_by('-created_at')[:10]
+
+            recent_transfer_list = []
+            for t in recent_transfers:
+                recent_transfer_list.append({
+                    'teacher': t.connection.teacher_agent.name if t.connection.teacher_agent else 'Unknown',
+                    'student': t.connection.student_agent.name if t.connection.student_agent else 'Unknown',
+                    'knowledge': t.source_knowledge.title[:50] if t.source_knowledge else 'Unknown',
+                    'usefulness': round(t.usefulness_score, 2),
+                    'time': t.created_at.isoformat() if t.created_at else None
+                })
 
             # Message stats
             total_messages = InterAgentMessage.objects.count()
@@ -1082,6 +1105,12 @@ class CollectiveIntelligenceService:
                     'avg_quality_score': avg_quality,
                     'spider_connections': spider_connections,  # Session 242
                     'learning_connections': learning_connections  # Session 243
+                },
+                'learning': {  # Session 244: Autonomous learning stats
+                    'total_transfers': total_transfers,
+                    'learned_items': learned_items,
+                    'synthesized_items': synthesized_items,
+                    'recent_transfers': recent_transfer_list
                 },
                 'messages': {
                     'total': total_messages

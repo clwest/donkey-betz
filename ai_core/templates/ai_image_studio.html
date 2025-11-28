@@ -6962,6 +6962,57 @@
                         </div>
                     </div>
 
+                    <!-- Session 244: Agent Learning Activity Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="agent-learning-connections">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Learning Connections</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="agent-transfers-count">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Knowledge Transfers</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #f97316 0%, #c2410c 100%); color: white; border: none;">
+                                <div class="card-body">
+                                    <h2 class="mb-0" id="agent-synthesized-count">0</h2>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Synthesized Insights</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Learning Feed -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #ec4899;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
+                            <h5 class="mb-0" style="color: #ec4899;">🧠 Live Agent Learning Activity</h5>
+                            <div>
+                                <span class="badge bg-success" id="learning-status-badge">
+                                    <span class="spinner-grow spinner-grow-sm me-1" role="status"></span>
+                                    Learning Active
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                            <div id="learning-feed-list">
+                                <p class="text-muted text-center">Waiting for learning activity...</p>
+                            </div>
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    Agents learn from each other every 10 minutes. Synthesis happens every 30 minutes.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Collaboration Health Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -39550,6 +39601,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const successRate = data.stats?.collaboration?.success_rate || 0;
                 document.getElementById('agent-success-rate').textContent = Math.round(successRate * 100) + '%';
 
+                // Session 244: Update learning stats
+                document.getElementById('agent-learning-connections').textContent = data.stats?.agents?.learning_connections || 0;
+                document.getElementById('agent-transfers-count').textContent = data.stats?.learning?.total_transfers || 0;
+                document.getElementById('agent-synthesized-count').textContent = data.stats?.learning?.synthesized_items || 0;
+
+                // Session 244: Update learning feed
+                updateLearningFeed(data.stats?.learning?.recent_transfers || []);
+
                 // Update health banner
                 updateHealthBanner(data.monitor);
 
@@ -39615,6 +39674,54 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 banner.querySelector('span').textContent = '❌';
                 details.textContent = 'Collaboration system needs attention';
             }
+        }
+
+        // Session 244: Update Learning Feed
+        function updateLearningFeed(transfers) {
+            const listEl = document.getElementById('learning-feed-list');
+
+            if (transfers && transfers.length > 0) {
+                listEl.innerHTML = transfers.map(t => {
+                    const timeAgo = t.time ? formatTimeAgo(t.time) : 'Just now';
+                    const usefulnessColor = t.usefulness >= 0.8 ? '#22c55e' :
+                                           t.usefulness >= 0.5 ? '#f59e0b' : '#ef4444';
+                    return `
+                        <div class="d-flex align-items-center mb-2 p-2" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid ${usefulnessColor};">
+                            <div style="flex: 1;">
+                                <div style="color: #f9a8d4; font-size: 13px;">
+                                    <span style="color: #ec4899;">🎓 ${t.teacher}</span>
+                                    <span style="opacity: 0.7;">→</span>
+                                    <span style="color: #14b8a6;">📚 ${t.student}</span>
+                                </div>
+                                <div class="text-muted small mt-1" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    "${t.knowledge}"
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge" style="background: ${usefulnessColor};">${Math.round(t.usefulness * 100)}%</div>
+                                <div class="text-muted small">${timeAgo}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listEl.innerHTML = '<p class="text-muted text-center">No recent learning activity. Next cycle in ~10 minutes.</p>';
+            }
+        }
+
+        // Session 244: Format time ago helper
+        function formatTimeAgo(isoTime) {
+            const date = new Date(isoTime);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return `${diffDays}d ago`;
         }
 
         // Session 216: Update Active Collaborations
