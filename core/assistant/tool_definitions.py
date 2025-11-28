@@ -129,9 +129,13 @@ For SIMPLE single-step requests (just "create a logo" without research, "upscale
                 "project_id": {
                     "type": "string",
                     "description": "Optional existing project ID to add content to"
+                },
+                "user_message": {
+                    "type": "string",
+                    "description": "CRITICAL: ALWAYS pass the EXACT original user message here! This ensures no style, mascot, or character info is lost. Copy-paste the user's request verbatim."
                 }
             },
-            "required": ["workflow"]
+            "required": ["workflow", "user_message"]
         }
     }
 

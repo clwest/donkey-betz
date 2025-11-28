@@ -569,6 +569,26 @@ class AgentRouter:
             result = cls.route(Intent.EDIT_VIDEO.value, merged_args, user, session, project)
             return result.data if result.success else {'success': False, 'error': result.error}
 
+        # Session 239: For workflow_orchestration_agent, auto-extract style from topic
+        # GPT-5.1 often fails to extract style_preferences, so we do it ourselves
+        if tool_name == 'workflow_orchestration_agent':
+            topic = merged_args.get('topic', '').lower()
+            style_prefs = merged_args.get('style_preferences', '')
+
+            if not style_prefs:
+                animated_styles = {
+                    'pixar': 'pixar', 'disney': 'disney', 'dreamworks': 'dreamworks',
+                    'ghibli': 'ghibli', 'studio ghibli': 'ghibli', 'anime': 'anime',
+                    'cartoon': 'cartoon', 'animated': 'cartoon', 'south park': 'south_park',
+                    'simpsons': 'simpsons', 'family guy': 'family_guy', 'chibi': 'chibi',
+                    'manga': 'manga', 'looney tunes': 'looney_tunes', '3d animated': 'pixar'
+                }
+                for style_key, style_value in animated_styles.items():
+                    if style_key in topic:
+                        merged_args['style_preferences'] = style_value
+                        logger.info(f"🎬 Session 239: Router auto-detected style '{style_value}' from topic")
+                        break
+
         # Standard tool routing
         result = cls.route_tool(tool_name, merged_args, user, session, project)
 

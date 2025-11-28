@@ -554,6 +554,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         topic: str,
         count: int = 3,
         style_preferences: str = '',
+        user_message: str = '',
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -564,6 +565,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             topic: The research topic (e.g., 'modern AI company')
             count: Number of images to create (1-5)
             style_preferences: Optional style preferences
+            user_message: Original user message (Session 239 - for style extraction)
             **kwargs: Additional workflow-specific parameters
 
         Returns:
@@ -573,7 +575,8 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             f"execute workflow: {workflow}",
             topic=topic,
             count=count,
-            style_preferences=style_preferences
+            style_preferences=style_preferences,
+            user_message=user_message[:100] if user_message else ''
         )
 
         # Validate workflow exists
@@ -585,6 +588,71 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         workflow_def = self.WORKFLOWS[workflow]
         steps = workflow_def['steps']
+
+        # Session 239: Extract style and mascot from ORIGINAL user message
+        # This is the key fix - GPT often strips this info from topic/style_preferences
+        extracted_style = ''
+        extracted_mascot = ''
+        if user_message:
+            user_msg_lower = user_message.lower()
+            logger.info(f"🔍 Session 239: Extracting from original message: {user_message[:100]}...")
+
+            # Extract style from original message
+            style_mapping = {
+                'pixar': 'pixar', 'disney': 'disney', 'dreamworks': 'dreamworks',
+                'ghibli': 'ghibli', 'studio ghibli': 'ghibli', 'anime': 'anime',
+                'cartoon': 'cartoon', 'animated': 'cartoon', 'south park': 'south_park',
+                'simpsons': 'simpsons', 'family guy': 'family_guy', 'chibi': 'chibi',
+                'manga': 'manga', 'looney tunes': 'looney_tunes', '3d animated': 'pixar',
+                'watercolor': 'watercolor', 'oil painting': 'oil_painting',
+                'cyberpunk': 'cyberpunk', 'steampunk': 'steampunk', 'minimalist': 'minimalist',
+                'retro': 'retro', 'vintage': 'vintage', 'pop art': 'pop_art',
+                'art deco': 'art_deco', 'impressionist': 'impressionist'
+            }
+            for style_key, style_value in style_mapping.items():
+                if style_key in user_msg_lower:
+                    extracted_style = style_value
+                    logger.info(f"🎬 Session 239: Extracted style '{style_value}' from user message!")
+                    break
+
+            # Extract mascot/character from original message
+            mascot_keywords = [
+                'donkey', 'owl', 'lion', 'bear', 'fox', 'wolf', 'eagle', 'dragon',
+                'unicorn', 'penguin', 'cat', 'dog', 'rabbit', 'monkey', 'elephant',
+                'tiger', 'panda', 'koala', 'dinosaur', 'robot', 'mascot', 'character'
+            ]
+            for mascot in mascot_keywords:
+                if mascot in user_msg_lower:
+                    extracted_mascot = mascot
+                    logger.info(f"🦊 Session 239: Extracted mascot '{mascot}' from user message!")
+                    break
+
+        # Override GPT's stripped values with extracted ones
+        if extracted_style and not style_preferences:
+            style_preferences = extracted_style
+            logger.info(f"✅ Session 239: Using extracted style: {style_preferences}")
+
+        # If we found a mascot but it's not in the topic, add it
+        if extracted_mascot and extracted_mascot not in topic.lower():
+            topic = f"{topic} with {extracted_mascot} mascot"
+            logger.info(f"✅ Session 239: Enhanced topic with mascot: {topic}")
+
+        # Session 239: AUTO-DETECT style from topic if GPT didn't extract it
+        # GPT often fails to extract style_preferences, so we do it ourselves
+        if not style_preferences:
+            topic_lower = topic.lower()
+            animated_styles = {
+                'pixar': 'pixar', 'disney': 'disney', 'dreamworks': 'dreamworks',
+                'ghibli': 'ghibli', 'studio ghibli': 'ghibli', 'anime': 'anime',
+                'cartoon': 'cartoon', 'animated': 'cartoon', 'south park': 'south_park',
+                'simpsons': 'simpsons', 'family guy': 'family_guy', 'chibi': 'chibi',
+                'manga': 'manga', 'looney tunes': 'looney_tunes', '3d animated': 'pixar'
+            }
+            for style_key, style_value in animated_styles.items():
+                if style_key in topic_lower:
+                    style_preferences = style_value
+                    logger.info(f"🎬 Session 239: Auto-detected style '{style_value}' from topic")
+                    break
 
         # Initialize workflow context - shared data between steps
         context = {

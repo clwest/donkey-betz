@@ -531,9 +531,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         "project_id": {
                             "type": "string",
                             "description": "Optional project ID to associate all generated content with"
+                        },
+                        "user_message": {
+                            "type": "string",
+                            "description": "CRITICAL: ALWAYS pass the EXACT original user message here verbatim! This ensures no style, mascot, or character info is lost. Copy-paste the user's request exactly as they typed it."
                         }
                     },
-                    "required": ["workflow", "topic"]
+                    "required": ["workflow", "topic", "user_message"]
                 }
             }
         ]
