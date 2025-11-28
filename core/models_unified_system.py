@@ -64,6 +64,15 @@ class Agent(models.Model):
     api_endpoint = models.CharField(max_length=200, blank=True)
     webhook_url = models.CharField(max_length=200, blank=True)
 
+    # Spider connections - what data sources feed this agent
+    spider_categories = models.ManyToManyField(
+        'SpiderCategory',
+        through='AgentSpiderConnection',
+        related_name='agents',
+        blank=True,
+        help_text="Spider categories that feed data to this agent"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -73,12 +82,152 @@ class Agent(models.Model):
             return 0
         return (self.successful_executions / self.total_executions) * 100
 
+    @property
+    def knowledge_count(self):
+        """Count of knowledge sources this agent has"""
+        return self.knowledge_sources.filter(is_active=True).count()
+
+    @property
+    def connected_spider_count(self):
+        """Count of spider categories feeding this agent"""
+        return self.spider_connections.count()
+
+    def get_knowledge_summary(self):
+        """Get a summary of this agent's knowledge sources"""
+        knowledge = self.knowledge_sources.filter(is_active=True)
+        return {
+            'total_count': knowledge.count(),
+            'by_type': {
+                k['knowledge_type']: k['count']
+                for k in knowledge.values('knowledge_type').annotate(count=models.Count('id'))
+            },
+            'avg_confidence': knowledge.aggregate(avg=models.Avg('confidence_score'))['avg'] or 0,
+            'data_points': knowledge.aggregate(total=models.Sum('data_points_count'))['total'] or 0,
+        }
+
     def __str__(self):
         return f"{self.name} ({self.agent_type})"
 
     class Meta:
         app_label = 'core'
         ordering = ['-effectiveness_score', 'name']
+
+
+class SpiderCategory(models.Model):
+    """
+    Categories for spider data sources (tech, jobs, crypto, etc.)
+    """
+    slug = models.SlugField(unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=10, default='🕷️')
+
+    class Meta:
+        app_label = 'core'
+        verbose_name_plural = "Spider Categories"
+
+    def __str__(self):
+        return self.name
+
+
+class AgentSpiderConnection(models.Model):
+    """
+    Many-to-many through table connecting Agents to Spider categories.
+    This defines which agents process data from which spider categories.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='spider_connections')
+    spider_category = models.ForeignKey(SpiderCategory, on_delete=models.CASCADE, related_name='agent_connections')
+
+    # Routing configuration
+    is_primary = models.BooleanField(default=False, help_text="Is this agent the primary handler for this category?")
+    priority = models.IntegerField(default=5, help_text="Routing priority (1=highest, 10=lowest)")
+
+    # Processing stats
+    total_processed = models.IntegerField(default=0)
+    successful_processed = models.IntegerField(default=0)
+    avg_processing_time_ms = models.IntegerField(default=0)
+    last_processed_at = models.DateTimeField(null=True, blank=True)
+
+    # Quality tracking
+    avg_quality_score = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['agent', 'spider_category']
+        ordering = ['priority', '-is_primary']
+
+    def __str__(self):
+        return f"{self.agent.name} ← {self.spider_category.name}"
+
+    @property
+    def success_rate(self):
+        if self.total_processed == 0:
+            return 0
+        return (self.successful_processed / self.total_processed) * 100
+
+
+class AgentKnowledgeSource(models.Model):
+    """
+    Tracks what knowledge each agent has learned from spider data.
+    Aggregates spider data into agent-specific knowledge.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='knowledge_sources')
+
+    # Knowledge categorization
+    knowledge_type = models.CharField(max_length=50, choices=[
+        ('trend', 'Trend Data'),
+        ('market', 'Market Intelligence'),
+        ('opportunity', 'Opportunity'),
+        ('competitor', 'Competitor Info'),
+        ('pricing', 'Pricing Data'),
+        ('user_behavior', 'User Behavior'),
+        ('content_idea', 'Content Ideas'),
+        ('tool_discovery', 'Tool Discovery'),
+    ])
+
+    # Source tracking
+    spider_category = models.ForeignKey(SpiderCategory, on_delete=models.SET_NULL, null=True, blank=True)
+    source_spider_names = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        help_text="Names of spiders that contributed to this knowledge"
+    )
+
+    # Knowledge content
+    title = models.CharField(max_length=500)
+    summary = models.TextField(help_text="Summary of the knowledge")
+    key_insights = models.JSONField(default=list, help_text="List of key insights")
+
+    # Metrics
+    data_points_count = models.IntegerField(default=0, help_text="Number of spider data points used")
+    confidence_score = models.FloatField(default=0.0, help_text="Confidence in this knowledge (0.0-1.0)")
+    relevance_score = models.FloatField(default=0.0)
+    freshness_score = models.FloatField(default=1.0, help_text="How fresh/current this knowledge is (0.0-1.0)")
+
+    # Timestamps
+    first_discovered_at = models.DateTimeField(auto_now_add=True)
+    last_updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_validated = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-confidence_score', '-last_updated_at']
+        indexes = [
+            models.Index(fields=['agent', 'knowledge_type']),
+            models.Index(fields=['spider_category', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.title[:50]}"
 
 
 class Advisor(models.Model):

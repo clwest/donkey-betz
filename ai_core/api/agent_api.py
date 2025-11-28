@@ -13,6 +13,7 @@ from datetime import datetime
 import logging
 from agents.models import UnifiedAgentTemplate, AgentExecution
 from ai_core.agents.concrete_executor import ConcreteAgentExecutor
+from core.models import Agent, SpiderCategory, AgentSpiderConnection, AgentKnowledgeSource
 
 logger = logging.getLogger(__name__)
 
@@ -99,24 +100,62 @@ class AgentStatsAPI(View):
                     'success': exec.status == 'completed'
                 })
 
-            # Check for spider-connected agents
-            spider_connections = 0
-            try:
-                # Check Redis for agent-spider connections
-                connection_keys = redis_client.keys('agent_spider_connection:*')
-                spider_connections = len(connection_keys)
-            except:
-                pass
+            # Get DATABASE spider connections (Session 242)
+            db_spider_connections = AgentSpiderConnection.objects.count()
+            db_spider_categories = SpiderCategory.objects.count()
+            db_knowledge_sources = AgentKnowledgeSource.objects.filter(is_active=True).count()
+
+            # Get agent count from core.Agent model (the real 20 agents)
+            core_agents = Agent.objects.filter(is_active=True)
+            core_agent_count = core_agents.count()
+
+            # Build enhanced agent list with spider data
+            enhanced_agents = []
+            for agent in core_agents:
+                spider_cats = list(agent.spider_categories.values_list('name', flat=True))
+                knowledge_count = agent.knowledge_sources.filter(is_active=True).count()
+
+                enhanced_agents.append({
+                    'id': str(agent.id),
+                    'name': agent.name,
+                    'type': agent.agent_type,
+                    'description': agent.description,
+                    'effectiveness_score': agent.effectiveness_score,
+                    'total_executions': agent.total_executions,
+                    'success_rate': agent.success_rate,
+                    'spider_categories': spider_cats,
+                    'spider_count': len(spider_cats),
+                    'knowledge_count': knowledge_count,
+                    'is_active': agent.is_active,
+                })
+
+            # Get spider category summary
+            spider_category_summary = [
+                {
+                    'slug': cat.slug,
+                    'name': cat.name,
+                    'icon': cat.icon,
+                    'agent_count': cat.agent_connections.count(),
+                }
+                for cat in SpiderCategory.objects.all()
+            ]
 
             return JsonResponse({
                 'success': True,
-                'total_agents': runtime_agents,
+                # Core agents (the real 20)
+                'total_agents': core_agent_count,
+                'core_agents': enhanced_agents,
+                # Runtime agents (for backward compatibility)
                 'runtime_agents': runtime_agents,
                 'categories': list(by_category.keys()),
                 'agents': agent_list,
                 'by_category': by_category,
                 'recent_activity': recent_activity,
-                'spider_connections': spider_connections,
+                # Spider connection data (Session 242)
+                'spider_connections': db_spider_connections,
+                'spider_categories': db_spider_categories,
+                'spider_category_list': spider_category_summary,
+                'knowledge_sources': db_knowledge_sources,
                 'timestamp': datetime.now().isoformat()
             })
 
@@ -213,44 +252,65 @@ class AgentExecuteAPI(View):
 
 
 class AgentSpiderConnectionAPI(View):
-    """API for agent-spider connections"""
+    """API for agent-spider connections (Session 242 - Database backed)"""
 
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
     def get(self, request):
-        """Get agent-spider connection status"""
+        """Get agent-spider connection status from database"""
         try:
+            # Get all connections from database (Session 242)
+            db_connections = AgentSpiderConnection.objects.select_related(
+                'agent', 'spider_category'
+            ).order_by('agent__name', 'priority')
+
             connections = []
+            for conn in db_connections:
+                connections.append({
+                    'id': str(conn.id),
+                    'agent': conn.agent.name,
+                    'agent_type': conn.agent.agent_type,
+                    'spider_category': conn.spider_category.name,
+                    'spider_icon': conn.spider_category.icon,
+                    'is_primary': conn.is_primary,
+                    'priority': conn.priority,
+                    'total_processed': conn.total_processed,
+                    'successful_processed': conn.successful_processed,
+                    'success_rate': conn.success_rate,
+                    'avg_quality_score': conn.avg_quality_score,
+                    'last_processed_at': conn.last_processed_at.isoformat() if conn.last_processed_at else None,
+                    'status': 'active'
+                })
 
-            # Get connection keys from Redis
-            connection_keys = redis_client.keys('agent_spider_connection:*')
+            # Group by agent
+            by_agent = {}
+            for conn in connections:
+                agent_name = conn['agent']
+                if agent_name not in by_agent:
+                    by_agent[agent_name] = []
+                by_agent[agent_name].append(conn)
 
-            for key in connection_keys:
-                parts = key.split(':')
-                if len(parts) >= 3:
-                    agent = parts[1]
-                    spider = parts[2] if len(parts) > 2 else 'unknown'
-
-                    data = redis_client.get(key)
-                    if data:
-                        try:
-                            conn_data = json.loads(data)
-                            connections.append({
-                                'agent': agent,
-                                'spider': spider,
-                                'data_points': conn_data.get('data_points', 0),
-                                'last_update': conn_data.get('last_update', ''),
-                                'status': 'active'
-                            })
-                        except:
-                            pass
+            # Get category summary
+            categories = [
+                {
+                    'slug': cat.slug,
+                    'name': cat.name,
+                    'icon': cat.icon,
+                    'description': cat.description,
+                    'connected_agents': cat.agent_connections.count(),
+                }
+                for cat in SpiderCategory.objects.all()
+            ]
 
             return JsonResponse({
                 'success': True,
                 'connections': connections,
+                'by_agent': by_agent,
+                'categories': categories,
                 'total_connections': len(connections),
+                'total_categories': len(categories),
                 'timestamp': datetime.now().isoformat()
             })
 
