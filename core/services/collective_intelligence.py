@@ -1026,7 +1026,8 @@ class CollectiveIntelligenceService:
                 InterAgentMessage,
                 Agent,
                 AgentKnowledgeSource,
-                AgentSpiderConnection
+                AgentSpiderConnection,
+                AgentLearningConnection  # Session 243
             )
 
             # Collaboration stats
@@ -1049,6 +1050,9 @@ class CollectiveIntelligenceService:
 
             # Spider connection stats (Session 242)
             spider_connections = AgentSpiderConnection.objects.count()
+
+            # Learning connections (Session 243)
+            learning_connections = AgentLearningConnection.objects.filter(is_active=True).count()
 
             # Message stats
             total_messages = InterAgentMessage.objects.count()
@@ -1076,7 +1080,8 @@ class CollectiveIntelligenceService:
                 'agents': {
                     'total': total_agents,
                     'avg_quality_score': avg_quality,
-                    'spider_connections': spider_connections  # Session 242
+                    'spider_connections': spider_connections,  # Session 242
+                    'learning_connections': learning_connections  # Session 243
                 },
                 'messages': {
                     'total': total_messages
