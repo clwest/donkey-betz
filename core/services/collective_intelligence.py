@@ -1023,24 +1023,32 @@ class CollectiveIntelligenceService:
                 CollaborationSession,
                 SharedKnowledge,
                 AgentPerformanceMetric,
-                InterAgentMessage
+                InterAgentMessage,
+                Agent,
+                AgentKnowledgeSource,
+                AgentSpiderConnection
             )
 
             # Collaboration stats
             total_collabs = CollaborationSession.objects.count()
             completed_collabs = CollaborationSession.objects.filter(status='completed').count()
 
-            # Knowledge stats
-            total_knowledge = SharedKnowledge.objects.count()
+            # Knowledge stats - use AgentKnowledgeSource if available, fallback to SharedKnowledge
+            knowledge_source_count = AgentKnowledgeSource.objects.filter(is_active=True).count()
+            total_knowledge = knowledge_source_count if knowledge_source_count > 0 else SharedKnowledge.objects.count()
             avg_effectiveness = SharedKnowledge.objects.aggregate(
                 avg=Avg('effectiveness_score')
             )['avg'] or 0
 
-            # Agent stats
-            total_agents = AgentPerformanceMetric.objects.count()
+            # Agent stats - use core.Agent model (the real 20 agents) with fallback
+            real_agent_count = Agent.objects.filter(is_active=True).count()
+            total_agents = real_agent_count if real_agent_count > 0 else AgentPerformanceMetric.objects.count()
             avg_quality = AgentPerformanceMetric.objects.aggregate(
                 avg=Avg('quality_score')
             )['avg'] or 0
+
+            # Spider connection stats (Session 242)
+            spider_connections = AgentSpiderConnection.objects.count()
 
             # Message stats
             total_messages = InterAgentMessage.objects.count()
@@ -1067,7 +1075,8 @@ class CollectiveIntelligenceService:
                 },
                 'agents': {
                     'total': total_agents,
-                    'avg_quality_score': avg_quality
+                    'avg_quality_score': avg_quality,
+                    'spider_connections': spider_connections  # Session 242
                 },
                 'messages': {
                     'total': total_messages
