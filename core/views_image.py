@@ -7425,7 +7425,8 @@ def execute_tool(request):
                 workflow=parameters.get('workflow'),
                 topic=parameters.get('topic'),
                 count=parameters.get('count', 3),
-                style_preferences=parameters.get('style_preferences', '')
+                style_preferences=parameters.get('style_preferences', ''),
+                user_message=parameters.get('user_message', '')  # Session 239: Pass original message
             )
 
         elif tool_name in ('generate_image', 'image_generation_agent'):
