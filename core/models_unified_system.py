@@ -6176,3 +6176,227 @@ class UserGoal(models.Model):
             )
         except Exception:
             pass  # Don't fail if notification fails
+
+
+# =============================================================================
+# Session 244: Agent Conversations (Inter-Agent Chat)
+# Agents discuss topics with each other, share insights, and debate ideas
+# =============================================================================
+
+class AgentConversation(models.Model):
+    """
+    A conversation between two or more agents discussing a topic.
+
+    This is where the magic happens - agents talking to each other,
+    sharing knowledge, asking questions, and forming new insights.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Conversation metadata
+    topic = models.CharField(
+        max_length=200,
+        help_text="What the agents are discussing"
+    )
+
+    conversation_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('knowledge_sharing', 'Knowledge Sharing'),
+            ('question_answer', 'Question & Answer'),
+            ('debate', 'Debate/Discussion'),
+            ('brainstorm', 'Brainstorming'),
+            ('consultation', 'Expert Consultation'),
+            ('synthesis', 'Collaborative Synthesis'),
+        ],
+        default='knowledge_sharing'
+    )
+
+    # Participants
+    initiator = models.ForeignKey(
+        Agent,
+        on_delete=models.CASCADE,
+        related_name='initiated_conversations',
+        help_text="Agent who started the conversation"
+    )
+
+    participants = models.ManyToManyField(
+        Agent,
+        related_name='conversations',
+        help_text="All agents participating in this conversation"
+    )
+
+    # Context - what triggered this conversation
+    trigger_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('learning_transfer', 'During Knowledge Transfer'),
+            ('synthesis', 'During Synthesis'),
+            ('scheduled', 'Scheduled Discussion'),
+            ('user_triggered', 'User Initiated'),
+            ('anomaly', 'Anomaly Detected'),
+            ('opportunity', 'New Opportunity'),
+        ],
+        default='scheduled'
+    )
+
+    # Related knowledge that sparked the conversation
+    related_knowledge = models.ForeignKey(
+        'AgentKnowledgeSource',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='conversations'
+    )
+
+    # Conversation state
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('concluded', 'Concluded'),
+            ('paused', 'Paused'),
+        ],
+        default='active'
+    )
+
+    # Outcome
+    conclusion = models.TextField(
+        blank=True,
+        help_text="Summary of what was concluded/learned"
+    )
+
+    insights_generated = models.JSONField(
+        default=list,
+        help_text="New insights that came from this conversation"
+    )
+
+    # Metrics
+    message_count = models.IntegerField(default=0)
+    quality_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How valuable was this conversation"
+    )
+
+    # Timestamps
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-started_at']
+        verbose_name = "Agent Conversation"
+        verbose_name_plural = "Agent Conversations"
+
+    def __str__(self):
+        return f"{self.initiator.name}: {self.topic[:50]}"
+
+    def add_message(self, agent, content, message_type='statement'):
+        """Add a message to this conversation."""
+        message = ConversationMessage.objects.create(
+            conversation=self,
+            agent=agent,
+            content=content,
+            message_type=message_type,
+            sequence_number=self.message_count + 1
+        )
+        self.message_count += 1
+        self.save(update_fields=['message_count'])
+        return message
+
+    def conclude(self, conclusion_text, insights=None):
+        """End the conversation with a conclusion."""
+        self.status = 'concluded'
+        self.conclusion = conclusion_text
+        if insights:
+            self.insights_generated = insights
+        self.ended_at = timezone.now()
+        self.save()
+
+
+class ConversationMessage(models.Model):
+    """
+    A single message in an agent conversation.
+
+    Like a chat message, but between AI agents discussing topics.
+    Renamed from AgentMessage to avoid conflict with Session 227 AgentMessage.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    conversation = models.ForeignKey(
+        AgentConversation,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )
+
+    agent = models.ForeignKey(
+        Agent,
+        on_delete=models.CASCADE,
+        related_name='conversation_messages'
+    )
+
+    # Message content
+    content = models.TextField(
+        help_text="What the agent said"
+    )
+
+    message_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('statement', 'Statement'),
+            ('question', 'Question'),
+            ('answer', 'Answer'),
+            ('insight', 'Insight'),
+            ('agreement', 'Agreement'),
+            ('disagreement', 'Disagreement'),
+            ('suggestion', 'Suggestion'),
+            ('conclusion', 'Conclusion'),
+        ],
+        default='statement'
+    )
+
+    # Ordering
+    sequence_number = models.IntegerField(
+        default=1,
+        help_text="Order of message in conversation"
+    )
+
+    # Reactions from other agents
+    reactions = models.JSONField(
+        default=dict,
+        help_text="Reactions from other participating agents"
+    )
+
+    # Quality metrics
+    relevance_score = models.FloatField(
+        default=0.8,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+    )
+
+    # Reference to knowledge used (JSON list of knowledge IDs for simplicity)
+    referenced_knowledge_ids = models.JSONField(
+        default=list,
+        help_text="IDs of AgentKnowledgeSource records referenced in this message"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['conversation', 'sequence_number']
+        verbose_name = "Conversation Message"
+        verbose_name_plural = "Conversation Messages"
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.content[:50]}..."
+
+    def add_reaction(self, agent, reaction_type):
+        """Add a reaction from another agent."""
+        if not self.reactions:
+            self.reactions = {}
+        self.reactions[str(agent.id)] = {
+            'agent_name': agent.name,
+            'reaction': reaction_type,
+            'timestamp': timezone.now().isoformat()
+        }
+        self.save(update_fields=['reactions'])

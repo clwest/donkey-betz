@@ -151,7 +151,10 @@ from core.views_agent_learning import (
     clear_preferences as learning_clear,
     get_preferences_summary as learning_summary,
     share_learning as learning_share,
-    get_all_preferences as learning_all
+    get_all_preferences as learning_all,
+    # Session 244: Agent Conversations
+    get_agent_conversations,
+    trigger_agent_conversation
 )
 
 # Session 219 Phase D: Import marketplace views
@@ -1972,6 +1975,10 @@ urlpatterns = [
     path('api/agent-learning/summary/<str:agent_name>/', learning_summary, name='learning-summary'),
     path('api/agent-learning/share/<str:agent_name>/', learning_share, name='learning-share'),
     path('api/agent-learning/all-preferences/', learning_all, name='learning-all'),
+
+    # Session 244: Agent Conversations API
+    path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
+    path('api/agent-conversations/trigger/', trigger_agent_conversation, name='trigger-agent-conversation'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),

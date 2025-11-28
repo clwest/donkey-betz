@@ -3336,3 +3336,355 @@ def embed_daily_agent_learning():
     except Exception as e:
         logger.exception(f"📚 [EMBEDDINGS] Daily embedding failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 244: Agent Conversations (Inter-Agent Chat)
+# =============================================================================
+
+@shared_task(bind=True)
+def run_agent_conversation(self, max_conversations: int = 3, max_messages: int = 6):
+    """
+    Generate autonomous conversations between agents.
+
+    Agents discuss topics based on their knowledge, creating dynamic
+    inter-agent dialogues that feel like natural discussions.
+
+    Args:
+        max_conversations: Maximum new conversations to start
+        max_messages: Maximum messages per conversation
+
+    Returns:
+        Stats about conversations generated
+    """
+    from django.utils import timezone
+    from core.models import (
+        Agent, AgentConversation, ConversationMessage,
+        AgentKnowledgeSource, AgentLearningConnection
+    )
+    import random
+    import openai
+    import os
+
+    logger.info("💬 [CONVERSATIONS] Starting agent conversation cycle...")
+
+    try:
+        # Get agents that have knowledge
+        agents_with_knowledge = Agent.objects.filter(
+            is_active=True,
+            knowledge_sources__isnull=False
+        ).distinct()[:20]
+
+        if agents_with_knowledge.count() < 2:
+            logger.warning("💬 [CONVERSATIONS] Need at least 2 agents with knowledge")
+            return {'status': 'skipped', 'reason': 'insufficient_agents'}
+
+        stats = {
+            'conversations_started': 0,
+            'messages_generated': 0,
+            'insights_discovered': 0,
+            'agents_participated': set()
+        }
+
+        # Conversation types with their prompts
+        conversation_templates = [
+            {
+                'type': 'knowledge_sharing',
+                'starter': "I've been analyzing {topic} and noticed something interesting...",
+                'responder': "That's a great observation. In my experience with {specialty}..."
+            },
+            {
+                'type': 'question_answer',
+                'starter': "I have a question about {topic} - how do you approach this?",
+                'responder': "Based on my expertise in {specialty}, I'd suggest..."
+            },
+            {
+                'type': 'brainstorm',
+                'starter': "Let's brainstorm ideas for {topic}. What if we considered...",
+                'responder': "Building on that idea, we could also..."
+            },
+            {
+                'type': 'debate',
+                'starter': "I think {topic} could be approached differently. Here's my view...",
+                'responder': "Interesting perspective. However, from my angle..."
+            }
+        ]
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        for _ in range(max_conversations):
+            # Pick two random agents with learning connections
+            agents_list = list(agents_with_knowledge)
+            if len(agents_list) < 2:
+                break
+
+            initiator = random.choice(agents_list)
+
+            # Try to find a connected agent first
+            connected_agents = AgentLearningConnection.objects.filter(
+                teacher_agent=initiator
+            ).values_list('student_agent_id', flat=True)
+
+            possible_responders = [a for a in agents_list if a.id != initiator.id]
+            if connected_agents:
+                connected_responders = [a for a in possible_responders if a.id in connected_agents]
+                if connected_responders:
+                    possible_responders = connected_responders
+
+            if not possible_responders:
+                continue
+
+            responder = random.choice(possible_responders)
+
+            # Get a knowledge item to discuss
+            initiator_knowledge = AgentKnowledgeSource.objects.filter(
+                agent=initiator
+            ).order_by('-last_updated_at')[:10]
+
+            if not initiator_knowledge.exists():
+                continue
+
+            knowledge_item = random.choice(list(initiator_knowledge))
+            topic = knowledge_item.title or "recent insights"
+
+            # Choose conversation type
+            template = random.choice(conversation_templates)
+
+            # Create the conversation
+            conversation = AgentConversation.objects.create(
+                topic=f"Discussion: {topic[:100]}",
+                conversation_type=template['type'],
+                initiator=initiator,
+                trigger_type='scheduled',
+                related_knowledge=knowledge_item,
+                status='active'
+            )
+            conversation.participants.add(initiator, responder)
+
+            stats['conversations_started'] += 1
+            stats['agents_participated'].add(initiator.name)
+            stats['agents_participated'].add(responder.name)
+
+            # Generate conversation messages using GPT
+            messages = []
+            current_speaker = initiator
+            other_speaker = responder
+
+            for msg_num in range(max_messages):
+                # Build the conversation context
+                speaker_role = "initiator" if current_speaker == initiator else "responder"
+
+                # Create the prompt for the current speaker
+                system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
+You are having a professional discussion with {other_speaker.name} about: {topic}
+
+Your knowledge context: {knowledge_item.summary[:500] if knowledge_item.summary else 'No specific context'}
+
+Guidelines:
+- Keep responses concise (2-3 sentences)
+- Be insightful and add value to the discussion
+- Reference your specialization when relevant
+- If this is a later message, build on what was said before
+- Be collaborative and constructive"""
+
+                # Build message history for context
+                history = []
+                for prev_msg in messages[-4:]:  # Last 4 messages for context
+                    history.append({
+                        "role": "user" if prev_msg['agent'] != current_speaker.name else "assistant",
+                        "content": f"{prev_msg['agent']}: {prev_msg['content']}"
+                    })
+
+                # Generate the message
+                if msg_num == 0:
+                    user_content = f"Start a {template['type'].replace('_', ' ')} discussion about {topic}. Be the first to speak."
+                else:
+                    user_content = f"Continue the conversation. The last message was from {other_speaker.name}. Respond appropriately."
+
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            *history,
+                            {"role": "user", "content": user_content}
+                        ],
+                        max_tokens=150,
+                        temperature=0.8
+                    )
+
+                    content = response.choices[0].message.content.strip()
+
+                    # Clean up the content (remove agent name prefix if present)
+                    if content.startswith(f"{current_speaker.name}:"):
+                        content = content[len(current_speaker.name)+1:].strip()
+
+                    # Determine message type based on content
+                    msg_type = 'statement'
+                    content_lower = content.lower()
+                    if '?' in content:
+                        msg_type = 'question'
+                    elif 'agree' in content_lower or 'exactly' in content_lower or "you're right" in content_lower:
+                        msg_type = 'agreement'
+                    elif 'however' in content_lower or 'but' in content_lower or 'disagree' in content_lower:
+                        msg_type = 'disagreement'
+                    elif 'suggest' in content_lower or 'could' in content_lower or 'what if' in content_lower:
+                        msg_type = 'suggestion'
+                    elif 'insight' in content_lower or 'realize' in content_lower or 'discovered' in content_lower:
+                        msg_type = 'insight'
+
+                    # Save the message
+                    ConversationMessage.objects.create(
+                        conversation=conversation,
+                        agent=current_speaker,
+                        content=content,
+                        message_type=msg_type,
+                        sequence_number=msg_num + 1,
+                        referenced_knowledge_ids=[str(knowledge_item.id)]
+                    )
+
+                    messages.append({
+                        'agent': current_speaker.name,
+                        'content': content,
+                        'type': msg_type
+                    })
+
+                    stats['messages_generated'] += 1
+
+                    if msg_type == 'insight':
+                        stats['insights_discovered'] += 1
+
+                except Exception as e:
+                    logger.warning(f"💬 [CONVERSATIONS] Failed to generate message: {e}")
+                    break
+
+                # Swap speakers
+                current_speaker, other_speaker = other_speaker, current_speaker
+
+            # Conclude the conversation
+            if messages:
+                # Generate a conclusion
+                try:
+                    conclusion_response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": "Summarize the key insights from this agent discussion in 1-2 sentences."},
+                            {"role": "user", "content": f"Discussion between {initiator.name} and {responder.name} about {topic}:\n\n" +
+                                "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
+                        ],
+                        max_tokens=100
+                    )
+                    conclusion = conclusion_response.choices[0].message.content.strip()
+                except:
+                    conclusion = f"Productive discussion about {topic}"
+
+                conversation.conclude(
+                    conclusion,
+                    insights=[m['content'] for m in messages if m['type'] == 'insight']
+                )
+                conversation.quality_score = min(1.0, len(messages) / max_messages * 0.8 + 0.2)
+                conversation.save()
+
+        # Broadcast the update
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'conversation_complete',
+                'stats': {
+                    'conversations_started': stats['conversations_started'],
+                    'messages_generated': stats['messages_generated'],
+                    'insights_discovered': stats['insights_discovered'],
+                    'agents_participated': list(stats['agents_participated'])
+                },
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(
+            f"💬 [CONVERSATIONS] Cycle complete: "
+            f"{stats['conversations_started']} conversations, "
+            f"{stats['messages_generated']} messages, "
+            f"{stats['insights_discovered']} insights, "
+            f"{len(stats['agents_participated'])} agents participated"
+        )
+
+        return {
+            'status': 'success',
+            'stats': {
+                'conversations_started': stats['conversations_started'],
+                'messages_generated': stats['messages_generated'],
+                'insights_discovered': stats['insights_discovered'],
+                'agents_participated': list(stats['agents_participated'])
+            },
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"💬 [CONVERSATIONS] Conversation cycle failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(bind=True)
+def broadcast_conversation_status(self):
+    """
+    Broadcast current conversation activity status via WebSocket.
+    Shows recent agent conversations in real-time.
+    """
+    from django.utils import timezone
+    from core.models import AgentConversation, ConversationMessage
+    import redis
+    import json
+
+    try:
+        # Get recent conversations
+        recent_conversations = AgentConversation.objects.filter(
+            started_at__gte=timezone.now() - timezone.timedelta(hours=24)
+        ).order_by('-started_at')[:5]
+
+        conversations_data = []
+        for conv in recent_conversations:
+            messages = ConversationMessage.objects.filter(
+                conversation=conv
+            ).order_by('sequence_number')[:4]
+
+            conversations_data.append({
+                'id': str(conv.id),
+                'topic': conv.topic,
+                'type': conv.conversation_type,
+                'initiator': conv.initiator.name if conv.initiator else 'Unknown',
+                'participants': [p.name for p in conv.participants.all()],
+                'status': conv.status,
+                'message_count': conv.message_count,
+                'quality_score': conv.quality_score,
+                'conclusion': conv.conclusion[:100] if conv.conclusion else None,
+                'started_at': conv.started_at.isoformat(),
+                'messages': [
+                    {
+                        'agent': msg.agent.name if msg.agent else 'Unknown',
+                        'content': msg.content[:200],
+                        'type': msg.message_type
+                    }
+                    for msg in messages
+                ]
+            })
+
+        # Broadcast to WebSocket
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r.publish('agent_learning', json.dumps({
+            'type': 'conversation_status',
+            'recent_conversations': conversations_data,
+            'total_today': AgentConversation.objects.filter(
+                started_at__gte=timezone.now() - timezone.timedelta(hours=24)
+            ).count(),
+            'timestamp': timezone.now().isoformat()
+        }))
+
+        return {'status': 'success', 'conversations_broadcast': len(conversations_data)}
+
+    except Exception as e:
+        logger.warning(f"💬 [CONVERSATIONS] Status broadcast failed: {e}")
+        return {'status': 'failed', 'error': str(e)}

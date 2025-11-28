@@ -369,6 +369,177 @@ def get_all_preferences(request):
         }, status=500)
 
 
+# ============================================================================
+# Session 244: Agent Conversations API
+# ============================================================================
+
+@require_http_methods(["GET"])
+@login_required
+def get_agent_conversations(request):
+    """
+    Get recent agent conversations for display in UI.
+
+    GET /api/agent-conversations/
+
+    Query params:
+    - limit: Max conversations to return (default 10)
+    - status: Filter by status (active, concluded, paused)
+    - today_only: If 'true', only return today's conversations
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import AgentConversation
+
+        limit = int(request.GET.get('limit', 10))
+        status_filter = request.GET.get('status')
+        today_only = request.GET.get('today_only', 'false').lower() == 'true'
+
+        # Build query
+        queryset = AgentConversation.objects.select_related('initiator').prefetch_related(
+            'participants', 'messages__agent'
+        ).order_by('-started_at')
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        if today_only:
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            queryset = queryset.filter(started_at__gte=today_start)
+
+        conversations = queryset[:limit]
+
+        # Format response
+        conversations_data = []
+        for conv in conversations:
+            messages_data = []
+            for msg in conv.messages.all()[:10]:  # Limit messages per conversation
+                messages_data.append({
+                    'id': str(msg.id),
+                    'agent': msg.agent.name,
+                    'agent_emoji': _get_agent_emoji(msg.agent.specialization),
+                    'content': msg.content,
+                    'type': msg.message_type,
+                    'sequence': msg.sequence_number,
+                    'relevance': msg.relevance_score,
+                    'created_at': msg.created_at.isoformat()
+                })
+
+            conversations_data.append({
+                'id': str(conv.id),
+                'topic': conv.topic,
+                'type': conv.conversation_type,
+                'type_display': conv.get_conversation_type_display(),
+                'trigger': conv.trigger_type,
+                'status': conv.status,
+                'initiator': conv.initiator.name,
+                'initiator_emoji': _get_agent_emoji(conv.initiator.specialization),
+                'participants': [
+                    {'name': p.name, 'emoji': _get_agent_emoji(p.specialization)}
+                    for p in conv.participants.all()
+                ],
+                'message_count': conv.message_count,
+                'quality_score': conv.quality_score,
+                'conclusion': conv.conclusion,
+                'insights': conv.insights_generated,
+                'started_at': conv.started_at.isoformat(),
+                'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
+                'messages': messages_data
+            })
+
+        # Get today's count
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_count = AgentConversation.objects.filter(started_at__gte=today_start).count()
+
+        return JsonResponse({
+            'success': True,
+            'conversations': conversations_data,
+            'count': len(conversations_data),
+            'today_count': today_count
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting agent conversations: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def _get_agent_emoji(specialization: str) -> str:
+    """Get emoji for agent based on specialization."""
+    emoji_map = {
+        'image': '🎨',
+        'video': '🎬',
+        'audio': '🎵',
+        '3d': '🎮',
+        'text': '📝',
+        'code': '💻',
+        'research': '🔍',
+        'analysis': '📊',
+        'creative': '✨',
+        'workflow': '⚡',
+        'assistant': '🤖',
+        'learning': '🧠',
+        'training': '🎓',
+    }
+
+    if specialization:
+        specialization_lower = specialization.lower()
+        for key, emoji in emoji_map.items():
+            if key in specialization_lower:
+                return emoji
+
+    return '🤖'
+
+
+@require_http_methods(["POST"])
+@login_required
+def trigger_agent_conversation(request):
+    """
+    Manually trigger an agent conversation on a specific topic.
+
+    POST /api/agent-conversations/trigger/
+
+    Body:
+    {
+        "topic": "Best practices for logo design",
+        "conversation_type": "brainstorm",  // optional
+        "participant_ids": [...]  // optional specific agents
+    }
+    """
+    try:
+        from core.tasks import run_agent_conversation
+
+        body = json.loads(request.body)
+        topic = body.get('topic')
+
+        if not topic:
+            return JsonResponse({
+                'success': False,
+                'error': 'Topic is required'
+            }, status=400)
+
+        # Trigger conversation task
+        result = run_agent_conversation.delay(
+            max_conversations=1,
+            max_messages=6
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Agent conversation triggered on topic: {topic}',
+            'task_id': result.id
+        })
+
+    except Exception as e:
+        logger.error(f"Error triggering agent conversation: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
@@ -380,7 +551,9 @@ from core.views_agent_learning import (
     clear_preferences as learning_clear,
     get_preferences_summary as learning_summary,
     share_learning as learning_share,
-    get_all_preferences as learning_all
+    get_all_preferences as learning_all,
+    get_agent_conversations,
+    trigger_agent_conversation
 )
 
 urlpatterns += [
@@ -393,5 +566,8 @@ urlpatterns += [
     path('api/agent-learning/summary/<str:agent_name>/', learning_summary, name='learning-summary'),
     path('api/agent-learning/share/<str:agent_name>/', learning_share, name='learning-share'),
     path('api/agent-learning/all-preferences/', learning_all, name='learning-all'),
+    # Session 244: Agent Conversations
+    path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
+    path('api/agent-conversations/trigger/', trigger_agent_conversation, name='trigger-agent-conversation'),
 ]
 """
