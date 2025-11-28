@@ -269,6 +269,36 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+    # Session 243: Autonomous Agent Learning System
+    # Agents learn from each other in the background
+    'agent-learning-cycle': {
+        'task': 'core.tasks.run_agent_learning_cycle',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes - agents share knowledge
+        'options': {
+            'expires': 600,
+        }
+    },
+    'agent-think-synthesize': {
+        'task': 'core.tasks.agent_think_and_synthesize',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes - agents synthesize insights
+        'options': {
+            'expires': 1800,
+        }
+    },
+    'update-agent-effectiveness': {
+        'task': 'core.tasks.update_agent_effectiveness_from_learning',
+        'schedule': crontab(hour=5, minute=30),  # Daily at 5:30 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'broadcast-learning-status': {
+        'task': 'core.tasks.broadcast_learning_status',
+        'schedule': 60.0,  # Every 60 seconds - real-time learning updates
+        'options': {
+            'expires': 55,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

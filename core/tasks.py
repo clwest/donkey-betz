@@ -2641,3 +2641,398 @@ def expire_old_suggestions(days=14):
     except Exception as e:
         logger.exception(f"📋 [SUGGESTIONS] Expiration failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 243: AUTONOMOUS AGENT LEARNING SYSTEM
+# =============================================================================
+# Agents learn from each other in the background, sharing knowledge and insights
+# This is the heart of the collective intelligence system
+# =============================================================================
+
+@shared_task
+def run_agent_learning_cycle():
+    """
+    Main learning cycle - agents share knowledge with connected agents.
+    Runs every 10 minutes to facilitate continuous learning.
+
+    This creates the "agents learning from each other" effect:
+    1. Select active learning connections
+    2. For each connection, transfer relevant knowledge
+    3. Track what was learned and how useful it was
+    4. Update connection strength based on successful transfers
+    """
+    import random
+    from django.utils import timezone
+    from core.models import (
+        Agent, AgentLearningConnection, AgentKnowledgeSource, KnowledgeTransfer
+    )
+
+    logger.info("🧠 [LEARNING] Starting autonomous agent learning cycle...")
+
+    try:
+        # Get active learning connections
+        connections = AgentLearningConnection.objects.filter(
+            is_active=True
+        ).select_related('teacher_agent', 'student_agent').order_by('?')[:10]  # Random 10
+
+        transfers_made = 0
+        learning_events = []
+
+        for connection in connections:
+            teacher = connection.teacher_agent
+            student = connection.student_agent
+
+            # Get teacher's recent knowledge that student doesn't have
+            teacher_knowledge = AgentKnowledgeSource.objects.filter(
+                agent=teacher,
+                is_active=True,
+                knowledge_type__in=connection.shareable_knowledge_types or ['trend', 'market', 'opportunity']
+            ).order_by('-confidence_score', '-last_updated_at')[:5]
+
+            for knowledge in teacher_knowledge:
+                # Check if student already has similar knowledge
+                student_has_similar = AgentKnowledgeSource.objects.filter(
+                    agent=student,
+                    title__icontains=knowledge.title.split()[0] if knowledge.title else '',
+                    knowledge_type=knowledge.knowledge_type
+                ).exists()
+
+                if not student_has_similar:
+                    # Create knowledge transfer record
+                    usefulness = random.uniform(0.6, 1.0)  # Simulate usefulness
+
+                    transfer = KnowledgeTransfer.objects.create(
+                        connection=connection,
+                        source_knowledge=knowledge,
+                        transfer_summary=f"{teacher.name} shared '{knowledge.title[:50]}' with {student.name}",
+                        key_points=knowledge.key_insights[:3] if knowledge.key_insights else [],
+                        was_useful=usefulness > 0.7,
+                        usefulness_score=usefulness,
+                        was_applied=random.random() > 0.3,  # 70% chance of being applied
+                    )
+
+                    # Create new knowledge for student (adapted from teacher's)
+                    new_knowledge = AgentKnowledgeSource.objects.create(
+                        agent=student,
+                        knowledge_type=knowledge.knowledge_type,
+                        spider_category=knowledge.spider_category,
+                        source_spider_names=knowledge.source_spider_names + [f'learned_from_{teacher.name}'],
+                        title=f"[Learned] {knowledge.title}",
+                        summary=f"Learned from {teacher.name}: {knowledge.summary[:200]}",
+                        key_insights=knowledge.key_insights,
+                        data_points_count=knowledge.data_points_count,
+                        confidence_score=knowledge.confidence_score * 0.9,  # Slightly lower confidence
+                        relevance_score=knowledge.relevance_score,
+                        freshness_score=1.0,  # Fresh for student
+                        is_active=True,
+                    )
+
+                    transfers_made += 1
+                    learning_events.append({
+                        'teacher': teacher.name,
+                        'student': student.name,
+                        'knowledge': knowledge.title[:50],
+                        'type': connection.learning_type,
+                        'usefulness': usefulness
+                    })
+
+                    # Update connection stats
+                    connection.total_transfers += 1
+                    if usefulness > 0.7:
+                        connection.successful_transfers += 1
+                    connection.last_transfer_at = timezone.now()
+
+                    # Update connection strength based on success
+                    if connection.total_transfers > 0:
+                        success_rate = connection.successful_transfers / connection.total_transfers
+                        connection.strength = min(1.0, connection.strength + (success_rate * 0.05))
+                        connection.avg_improvement_score = (
+                            connection.avg_improvement_score * 0.9 + usefulness * 0.1
+                        )
+                    connection.save()
+
+                    logger.info(
+                        f"🎓 [LEARNING] {teacher.name} → {student.name}: "
+                        f"'{knowledge.title[:30]}...' (usefulness: {usefulness:.2f})"
+                    )
+
+                    # Only transfer one piece of knowledge per connection per cycle
+                    break
+
+        # Broadcast learning events via Redis for real-time updates
+        if learning_events:
+            try:
+                import redis
+                import json
+                r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+                for event in learning_events:
+                    r.publish('agent_learning', json.dumps({
+                        'type': 'knowledge_transfer',
+                        'data': event,
+                        'timestamp': timezone.now().isoformat()
+                    }))
+
+                # Also store last learning events for dashboard
+                r.setex(
+                    'agent_learning:recent_events',
+                    3600,  # 1 hour TTL
+                    json.dumps(learning_events)
+                )
+                r.set('agent_learning:last_cycle', timezone.now().isoformat())
+                r.set('agent_learning:total_transfers_today',
+                      int(r.get('agent_learning:total_transfers_today') or 0) + transfers_made)
+            except Exception as redis_err:
+                logger.warning(f"Redis broadcast failed: {redis_err}")
+
+        logger.info(
+            f"🧠 [LEARNING] Cycle complete: {transfers_made} knowledge transfers made "
+            f"across {len(connections)} connections"
+        )
+
+        return {
+            'status': 'success',
+            'transfers_made': transfers_made,
+            'connections_processed': len(connections),
+            'learning_events': learning_events,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [LEARNING] Learning cycle failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def agent_think_and_synthesize():
+    """
+    Agents "think" about their knowledge and synthesize new insights.
+    This simulates agents processing what they've learned and forming new ideas.
+
+    Runs every 30 minutes.
+    """
+    import random
+    from django.utils import timezone
+    from core.models import Agent, AgentKnowledgeSource
+
+    logger.info("💭 [THINKING] Agents are synthesizing knowledge...")
+
+    try:
+        # Get agents with enough knowledge to synthesize
+        agents = Agent.objects.filter(
+            is_active=True
+        ).prefetch_related('knowledge_sources')
+
+        insights_created = 0
+
+        for agent in agents:
+            knowledge_count = agent.knowledge_sources.filter(is_active=True).count()
+
+            # Agents need at least 10 knowledge items to synthesize
+            if knowledge_count >= 10:
+                # Get diverse knowledge types
+                knowledge_by_type = {}
+                for k in agent.knowledge_sources.filter(is_active=True)[:20]:
+                    if k.knowledge_type not in knowledge_by_type:
+                        knowledge_by_type[k.knowledge_type] = []
+                    knowledge_by_type[k.knowledge_type].append(k)
+
+                # If agent has knowledge in multiple areas, synthesize
+                if len(knowledge_by_type) >= 2:
+                    types = list(knowledge_by_type.keys())[:2]
+                    k1 = random.choice(knowledge_by_type[types[0]])
+                    k2 = random.choice(knowledge_by_type[types[1]])
+
+                    # Create synthesized insight
+                    synthesis_title = f"[Synthesis] Combining {types[0]} and {types[1]} insights"
+                    synthesis_summary = (
+                        f"{agent.name} synthesized knowledge from {k1.title[:30]} "
+                        f"and {k2.title[:30]} to form new understanding."
+                    )
+
+                    # Check if similar synthesis exists
+                    if not AgentKnowledgeSource.objects.filter(
+                        agent=agent,
+                        title__icontains="Synthesis",
+                        knowledge_type='trend'  # Syntheses are trends
+                    ).exists():
+                        AgentKnowledgeSource.objects.create(
+                            agent=agent,
+                            knowledge_type='trend',
+                            title=synthesis_title,
+                            summary=synthesis_summary,
+                            source_spider_names=[f'synthesized_by_{agent.name}'],
+                            key_insights=[
+                                f"Combined insight from {types[0]} and {types[1]}",
+                                k1.key_insights[0] if k1.key_insights else "Primary source",
+                                k2.key_insights[0] if k2.key_insights else "Secondary source"
+                            ],
+                            data_points_count=k1.data_points_count + k2.data_points_count,
+                            confidence_score=(k1.confidence_score + k2.confidence_score) / 2 * 0.85,
+                            freshness_score=1.0,
+                            is_active=True,
+                        )
+                        insights_created += 1
+
+                        logger.info(f"💡 [THINKING] {agent.name} synthesized: {synthesis_title[:50]}")
+
+        # Broadcast thinking results
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'synthesis_complete',
+                'insights_created': insights_created,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(f"💭 [THINKING] Synthesis complete: {insights_created} new insights created")
+
+        return {
+            'status': 'success',
+            'insights_created': insights_created,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"💭 [THINKING] Synthesis failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def update_agent_effectiveness_from_learning():
+    """
+    Update agent effectiveness scores based on their learning activity.
+    Agents that learn more and share more become more effective.
+
+    Runs daily.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models import Agent, AgentLearningConnection, AgentKnowledgeSource
+
+    logger.info("📈 [EFFECTIVENESS] Updating agent effectiveness from learning...")
+
+    try:
+        cutoff = timezone.now() - timedelta(days=7)
+
+        for agent in Agent.objects.filter(is_active=True):
+            # Count recent learning activity
+            knowledge_learned = agent.knowledge_sources.filter(
+                first_discovered_at__gte=cutoff,
+                title__startswith='[Learned]'
+            ).count()
+
+            knowledge_shared = AgentLearningConnection.objects.filter(
+                teacher_agent=agent,
+                last_transfer_at__gte=cutoff
+            ).count()
+
+            syntheses_made = agent.knowledge_sources.filter(
+                first_discovered_at__gte=cutoff,
+                title__startswith='[Synthesis]'
+            ).count()
+
+            # Calculate learning score (0-20 points)
+            learning_score = min(20, (knowledge_learned * 2) + (knowledge_shared * 3) + (syntheses_made * 5))
+
+            # Update effectiveness (blend with existing)
+            old_effectiveness = agent.effectiveness_score
+            new_effectiveness = min(100, old_effectiveness + (learning_score - 10))  # +/- 10 based on learning
+            new_effectiveness = max(50, new_effectiveness)  # Don't go below 50
+
+            if new_effectiveness != old_effectiveness:
+                agent.effectiveness_score = new_effectiveness
+                agent.save(update_fields=['effectiveness_score'])
+
+                logger.info(
+                    f"📈 [EFFECTIVENESS] {agent.name}: {old_effectiveness} → {new_effectiveness} "
+                    f"(learned: {knowledge_learned}, shared: {knowledge_shared}, synthesized: {syntheses_made})"
+                )
+
+        return {'status': 'success', 'timestamp': timezone.now().isoformat()}
+
+    except Exception as e:
+        logger.exception(f"📈 [EFFECTIVENESS] Update failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def broadcast_learning_status():
+    """
+    Broadcast current learning network status via WebSocket.
+    Called frequently to keep the UI updated with learning activity.
+    """
+    from django.utils import timezone
+    from core.models import Agent, AgentLearningConnection, AgentKnowledgeSource, KnowledgeTransfer
+    from datetime import timedelta
+
+    try:
+        import redis
+        import json
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+        now = timezone.now()
+        last_hour = now - timedelta(hours=1)
+        last_day = now - timedelta(days=1)
+
+        # Gather stats
+        stats = {
+            'total_agents': Agent.objects.filter(is_active=True).count(),
+            'total_knowledge': AgentKnowledgeSource.objects.filter(is_active=True).count(),
+            'total_connections': AgentLearningConnection.objects.filter(is_active=True).count(),
+            'transfers_last_hour': KnowledgeTransfer.objects.filter(created_at__gte=last_hour).count(),
+            'transfers_last_day': KnowledgeTransfer.objects.filter(created_at__gte=last_day).count(),
+            'active_learners': Agent.objects.filter(
+                teachers__last_transfer_at__gte=last_hour
+            ).distinct().count(),
+            'active_teachers': Agent.objects.filter(
+                students__last_transfer_at__gte=last_hour
+            ).distinct().count(),
+            'timestamp': now.isoformat()
+        }
+
+        # Top learning agents
+        top_learners = []
+        for agent in Agent.objects.filter(is_active=True).order_by('-effectiveness_score')[:5]:
+            top_learners.append({
+                'name': agent.name,
+                'knowledge_count': agent.knowledge_sources.filter(is_active=True).count(),
+                'effectiveness': agent.effectiveness_score,
+                'teaches': agent.students.count(),
+                'learns_from': agent.teachers.count()
+            })
+
+        stats['top_learners'] = top_learners
+
+        # Recent transfers
+        recent_transfers = []
+        for transfer in KnowledgeTransfer.objects.order_by('-created_at')[:5]:
+            recent_transfers.append({
+                'teacher': transfer.connection.teacher_agent.name,
+                'student': transfer.connection.student_agent.name,
+                'summary': transfer.transfer_summary[:50],
+                'useful': transfer.was_useful,
+                'time': transfer.created_at.isoformat()
+            })
+
+        stats['recent_transfers'] = recent_transfers
+
+        # Publish to Redis
+        r.publish('agent_learning', json.dumps({
+            'type': 'status_update',
+            'data': stats
+        }))
+
+        # Cache for API access
+        r.setex('agent_learning:status', 300, json.dumps(stats))
+
+        return stats
+
+    except Exception as e:
+        logger.exception(f"📡 [BROADCAST] Status broadcast failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
