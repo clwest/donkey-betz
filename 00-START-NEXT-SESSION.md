@@ -1,67 +1,77 @@
-# Session 248: Ready for Next Feature!
+# Session 249: Ready for Next Feature!
 
 **Date:** November 28, 2025
-**Previous Session:** 247 (Agent Dreams - Idle Thoughts & Creative Ideas)
-**Session Type:** Feature Complete
+**Previous Session:** 248 (Bug Fixes - Learning Feed + Celery Beat)
+**Session Type:** Bug Fix Complete
 
 ---
 
-## Session 247 Completed - Agent Dreams Feature
+## Session 248 Completed - Bug Fixes
 
-### What We Built
+### Issues Fixed
 
-**The Big Idea:** When agents are idle, they "dream" - generating creative ideas, predictions, what-if scenarios, and wild thoughts based on their knowledge. This makes agents feel alive even when not actively working!
+1. **Live Agent Learning Activity Feed Empty**
+   - **Problem:** The Learning Activity section showed "No learning activity yet..." despite having data
+   - **Root Cause:** JavaScript called `/api/learning/feed/` which queried the empty `AgentLearning` model instead of `KnowledgeTransfer` model (which had 6 records)
+   - **Fix:** Created new endpoint `/api/agent-learning/activity/` that queries `KnowledgeTransfer` model and updated JavaScript to call it
 
-### Key Features Added
+2. **Celery Beat Not Running Scheduled Tasks**
+   - **Problem:** After running overnight (11 hours), no new learning had occurred - `run_agent_learning_cycle` wasn't being triggered automatically
+   - **Root Cause:** `celerybeat-schedule.db` was from September 12 - completely stale! Celery Beat was using cached schedule data
+   - **Fix:** Deleted stale schedule file and restarted Celery with fresh schedule:
+   ```bash
+   pkill -f celery && rm -f celerybeat-schedule.db && make celery
+   ```
 
-1. **AgentDream Database Model** (`core/models_unified_system.py`)
-   - Dream types: creative_idea, what_if, mashup, prediction, improvement, observation, wild_thought
-   - Quality scores: vividness_score, creativity_score
-   - User interaction: shown_to_user, user_reaction, user_feedback
-   - Inspiration tracking: inspiration_source, related_topics
+3. **Dream Generation Field Name Error**
+   - **Problem:** `generate_agent_dreams` task had incorrect field name
+   - **Fix:** Changed `started_at__gte` to `created_at__gte` in `core/tasks.py`
 
-2. **Celery Tasks** (`core/tasks.py`)
-   - `generate_agent_dreams` - Creates dreams for idle agents every 15 minutes
-   - `broadcast_dream_journal` - Broadcasts unread dreams via WebSocket every 3 minutes
-   - Uses GPT-4o-mini with temperature 0.95 for creative dream generation
-
-3. **Dream Journal UI** (`ai_core/templates/ai_image_studio.html`)
-   - Pink-themed card with floating dream icon animation
-   - Dream cards with type icons and badges
-   - User reactions: like, interesting, explore
-   - "Trigger Dream" button for manual generation
-   - Unread dream counter and time-ago formatting
-
-4. **REST API Endpoints** (`core/views_agent_learning.py`)
-   - `GET /api/agent-dreams/` - Fetch recent dreams
-   - `POST /api/agent-dreams/trigger/` - Manually trigger dreams
-   - `POST /api/agent-dreams/mark-shown/` - Mark dreams as seen
-   - `POST /api/agent-dreams/{id}/react/` - React to a dream
-
-5. **Sci-Fi Features Roadmap** (`docs/features/SCIFI_ROADMAP.md`)
-   - Documented all sci-fi feature ideas with priority matrix
-   - Next up: Hive Mind Mode!
-
-### Files Modified (Session 247)
-
-**New Files:**
-- `core/migrations/0038_add_agent_dream_model.py` - Migration for AgentDream model
-- `docs/features/SCIFI_ROADMAP.md` - Roadmap for all sci-fi features
+### Files Modified (Session 248)
 
 **Backend Updates:**
-- `core/models_unified_system.py` - Added AgentDream model
-- `core/models/__init__.py` - Exported AgentDream
-- `core/tasks.py` - Added dream generation and broadcast tasks
-- `core/celery.py` - Added Celery Beat schedules for dreams
-- `core/views_agent_learning.py` - Added 4 dream API endpoints
-- `core/urls.py` - Added dream URL routes
+- `core/views_agent_learning.py` - Added `get_knowledge_transfer_feed()` endpoint
+- `core/urls.py` - Added route for `/api/agent-learning/activity/`
+- `core/auth_middleware.py` - Added `/api/agent-learning/` and `/api/learning/` to PUBLIC_PATHS
+- `core/tasks.py` - Fixed field name in dream generation task
 
 **Frontend Updates:**
-- `ai_core/templates/ai_image_studio.html`:
-  - Dream Journal UI section with pink theme
-  - Dream cards with type icons
-  - Reaction buttons
-  - JavaScript functions for loading, triggering, and reacting to dreams
+- `ai_core/templates/ai_image_studio.html` - Updated `loadLearningFeed()` to call new endpoint
+
+---
+
+## PRIORITY FOR NEXT SESSION: Dream Feedback System
+
+The user specifically requested: **"We will need to have a serious look at building that feedback system!!"**
+
+### Current Dream Reaction System
+The Dream Journal has 3 reaction buttons:
+- 👍 **Like** (`like`) - "I like this idea"
+- 🤔 **Interesting** (`interesting`) - "This is interesting"
+- 🚀 **Explore** (`explore`) - "Let's explore this!"
+
+### What Needs to Be Built
+Currently, reactions are stored but don't influence agent behavior. We need:
+
+1. **Feedback Loop Integration**
+   - When user reacts to a dream, it should influence future dream generation
+   - "Explore" reactions should trigger deeper exploration of that topic
+   - Track which dream types and topics get positive reactions
+
+2. **Dream Quality Improvement**
+   - Use reaction data to adjust `vividness_score` and `creativity_score`
+   - Dreams that get more positive reactions should inform future generation
+   - Learn user preferences for dream types
+
+3. **Agent Learning Integration**
+   - Connect dream reactions to the agent's learning system
+   - Positive reactions could add to agent's knowledge base
+   - "Explore" could trigger research tasks
+
+### Relevant Files
+- `core/views_agent_learning.py` - Has `react_to_dream()` endpoint (line ~200)
+- `core/models_unified_system.py` - `AgentDream` model with `user_reaction`, `user_feedback` fields
+- `core/tasks.py` - `generate_agent_dreams` task
 
 ---
 
@@ -75,9 +85,10 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Go to Agents tab - see "Dream Journal" section
-
-# 4. Click "Trigger Dream" button to generate creative thoughts!
+# 3. Go to Agents tab to see:
+#    - Agent Conversations (real-time)
+#    - Dream Journal (creative ideas)
+#    - Live Agent Learning Activity
 ```
 
 ---
@@ -122,6 +133,23 @@ open http://localhost:8000/ai-studio/
 
 ---
 
+## Troubleshooting
+
+### Celery Beat Not Running Tasks
+If scheduled tasks aren't running after a long time:
+```bash
+# Delete stale schedule and restart
+pkill -f celery && rm -f celerybeat-schedule.db && make celery
+```
+
+### Check Task Execution
+```bash
+# Look for specific task in logs
+grep "run_agent_learning_cycle" celery.log | tail -20
+```
+
+---
+
 ## Dream Types
 
 | Type | Icon | Description |
@@ -136,18 +164,18 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Next Session Ideas
+## Future Session Ideas
 
-1. **Hive Mind Mode** - All agents work on a problem simultaneously
-2. **Memory Palace** - Agents remember past interactions
-3. **Agent Mood System** - Emotional states affecting behavior
-4. **Agent Rivalries/Alliances** - Relationship dynamics
-5. **Agent Evolution** - XP and leveling system
-6. **Agent Prophecies** - Tracked predictions
+1. **Dream Feedback System** - PRIORITY! Make reactions influence agent learning
+2. **Hive Mind Mode** - All agents work on a problem simultaneously
+3. **Memory Palace** - Agents remember past interactions
+4. **Agent Mood System** - Emotional states affecting behavior
+5. **Agent Rivalries/Alliances** - Relationship dynamics
+6. **Agent Evolution** - XP and leveling system
+7. **Agent Prophecies** - Tracked predictions
 
 See `docs/features/SCIFI_ROADMAP.md` for the complete roadmap!
 
 ---
 
-**Agents now dream up creative ideas when idle - making AI feel truly alive!**
-
+**All 3 Agents tab features now working: Conversations, Dreams, and Learning Activity!**
