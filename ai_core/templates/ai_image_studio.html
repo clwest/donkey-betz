@@ -7060,6 +7060,67 @@
                         }
                     </style>
 
+                    <!-- Session 247: Agent Dream Journal - Creative Idle Thoughts -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #ec4899;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
+                            <h5 class="mb-0" style="color: #ec4899;">
+                                <span id="dream-icon" style="display: inline-block; animation: float 3s ease-in-out infinite;">💭</span>
+                                Dream Journal
+                            </h5>
+                            <div>
+                                <span class="badge me-2" id="dreams-unread-badge" style="background: #ec4899;">0 new dreams</span>
+                                <span class="badge bg-secondary me-2" id="dreams-today-badge">0 today</span>
+                                <button class="btn btn-sm btn-outline-pink" onclick="triggerAgentDream()" style="border-color: #ec4899; color: #ec4899;">
+                                    <span class="spinner-border spinner-border-sm d-none me-1" id="trigger-dream-spinner" role="status"></span>
+                                    Trigger Dream
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "While you were away, your agents were dreaming up creative ideas..."
+                            </p>
+                            <div id="agent-dreams-list">
+                                <p class="text-muted text-center">Loading dreams...</p>
+                            </div>
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    Agents dream every 15 minutes when idle - generating creative ideas, predictions, and wild thoughts!
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes float {
+                            0%, 100% { transform: translateY(0); }
+                            50% { transform: translateY(-5px); }
+                        }
+                        .dream-card {
+                            background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+                            border: 1px solid rgba(236, 72, 153, 0.3);
+                            border-radius: 12px;
+                            padding: 12px;
+                            margin-bottom: 12px;
+                            transition: transform 0.2s, box-shadow 0.2s;
+                        }
+                        .dream-card:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+                        }
+                        .dream-type-badge {
+                            font-size: 10px;
+                            padding: 2px 8px;
+                            border-radius: 12px;
+                        }
+                        .dream-type-creative_idea { background: #8b5cf6; }
+                        .dream-type-what_if { background: #06b6d4; }
+                        .dream-type-mashup { background: #f97316; }
+                        .dream-type-prediction { background: #22c55e; }
+                        .dream-type-improvement { background: #eab308; }
+                        .dream-type-observation { background: #6366f1; }
+                        .dream-type-wild_thought { background: #ec4899; }
+                    </style>
+
                     <!-- Collaboration Health Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -40128,6 +40189,206 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.error('Error loading agent conversations:', error);
             }
         }
+
+        // =====================================================================
+        // Session 247: Agent Dreams - Creative Idle Thoughts
+        // =====================================================================
+
+        // Load agent dreams from API
+        async function loadAgentDreams() {
+            try {
+                const response = await fetch('/api/agent-dreams/?limit=10');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateAgentDreams(data);
+                }
+            } catch (error) {
+                console.error('Error loading agent dreams:', error);
+            }
+        }
+
+        // Update the dreams UI
+        function updateAgentDreams(data) {
+            const dreamsList = document.getElementById('agent-dreams-list');
+            const unreadBadge = document.getElementById('dreams-unread-badge');
+            const todayBadge = document.getElementById('dreams-today-badge');
+
+            if (unreadBadge) unreadBadge.textContent = `${data.unread_count || 0} new dreams`;
+            if (todayBadge) todayBadge.textContent = `${data.today_count || 0} today`;
+
+            if (!data.dreams || data.dreams.length === 0) {
+                dreamsList.innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">💭</span>
+                        <p class="text-muted mt-2">No dreams yet... agents are still waking up!</p>
+                        <small class="text-muted">Dreams generate every 15 minutes when agents are idle</small>
+                    </div>
+                `;
+                return;
+            }
+
+            // Dream type icons
+            const dreamTypeIcons = {
+                'creative_idea': '💡',
+                'what_if': '🤔',
+                'mashup': '🔀',
+                'prediction': '🔮',
+                'improvement': '📈',
+                'observation': '👁️',
+                'wild_thought': '🌀'
+            };
+
+            const dreamTypeLabels = {
+                'creative_idea': 'Creative Idea',
+                'what_if': 'What If?',
+                'mashup': 'Mashup',
+                'prediction': 'Prediction',
+                'improvement': 'Improvement',
+                'observation': 'Observation',
+                'wild_thought': 'Wild Thought'
+            };
+
+            dreamsList.innerHTML = data.dreams.map(dream => {
+                const icon = dreamTypeIcons[dream.dream_type] || '💭';
+                const typeLabel = dreamTypeLabels[dream.dream_type] || dream.dream_type;
+                const timeAgo = formatTimeAgo(dream.dreamed_at);
+                const isUnread = !dream.shown_to_user;
+
+                return `
+                    <div class="dream-card ${isUnread ? 'border-start border-pink border-3' : ''}" data-dream-id="${dream.id}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <span style="font-size: 24px; margin-right: 8px;">${icon}</span>
+                                <div>
+                                    <strong style="color: #f9a8d4;">${dream.agent_name}</strong>
+                                    <span class="badge ms-2 dream-type-badge dream-type-${dream.dream_type}">${typeLabel}</span>
+                                </div>
+                            </div>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                        <h6 style="color: #fbbf24; margin-bottom: 8px;">"${dream.title}"</h6>
+                        <p style="color: #d1d5db; margin-bottom: 8px; line-height: 1.5;">${dream.content}</p>
+                        ${dream.inspiration ? `
+                            <div class="d-flex align-items-center" style="font-size: 12px; color: #9ca3af;">
+                                <span class="me-1">💫</span>
+                                <span>Inspired by: ${dream.inspiration}</span>
+                            </div>
+                        ` : ''}
+                        <div class="mt-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-light" onclick="reactToDream('${dream.id}', 'like')" title="I like this!">
+                                👍
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" onclick="reactToDream('${dream.id}', 'interesting')" title="Interesting...">
+                                🤔
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" onclick="reactToDream('${dream.id}', 'explore')" title="Let's explore this!">
+                                🚀
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Mark dreams as shown
+            markDreamsAsShown(data.dreams.filter(d => !d.shown_to_user).map(d => d.id));
+        }
+
+        // Format time ago helper
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // Mark dreams as shown to user
+        async function markDreamsAsShown(dreamIds) {
+            if (!dreamIds || dreamIds.length === 0) return;
+            try {
+                await fetch('/api/agent-dreams/mark-shown/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ dream_ids: dreamIds })
+                });
+            } catch (error) {
+                console.error('Error marking dreams as shown:', error);
+            }
+        }
+
+        // React to a dream
+        async function reactToDream(dreamId, reaction) {
+            try {
+                const response = await fetch(`/api/agent-dreams/${dreamId}/react/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ reaction: reaction })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        showNotification(`Reaction recorded: ${reaction === 'like' ? '👍' : reaction === 'interesting' ? '🤔' : '🚀'}`, 'success');
+                        loadAgentDreams(); // Refresh the list
+                    }
+                }
+            } catch (error) {
+                console.error('Error reacting to dream:', error);
+            }
+        }
+
+        // Trigger a new dream manually
+        async function triggerAgentDream() {
+            const spinner = document.getElementById('trigger-dream-spinner');
+            const btn = document.querySelector('[onclick="triggerAgentDream()"]');
+
+            spinner.classList.remove('d-none');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/agent-dreams/trigger/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(`💭 ${data.dreams_generated || 0} new dreams generated!`, 'success');
+                    loadAgentDreams();
+                } else {
+                    showNotification(data.error || 'Failed to generate dreams', 'warning');
+                }
+            } catch (error) {
+                console.error('Error triggering dream:', error);
+                showNotification('Error triggering dreams', 'danger');
+            } finally {
+                spinner.classList.add('d-none');
+                btn.disabled = false;
+            }
+        }
+
+        // Load dreams when Agents tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const agentsTabTrigger = document.querySelector('[data-bs-target="#agents"]');
+            if (agentsTabTrigger) {
+                agentsTabTrigger.addEventListener('shown.bs.tab', function() {
+                    loadAgentDreams();
+                });
+            }
+        });
 
         // Session 216: Update Active Collaborations
         function updateActiveCollaborations(monitor) {

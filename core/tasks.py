@@ -3688,3 +3688,296 @@ def broadcast_conversation_status(self):
     except Exception as e:
         logger.warning(f"💬 [CONVERSATIONS] Status broadcast failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 247: Agent Dreams (Idle Thoughts & Creative Ideas)
+# =============================================================================
+
+@shared_task(bind=True)
+def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2):
+    """
+    Generate creative dreams for idle agents.
+
+    When agents aren't actively working, they "dream" - generating creative ideas,
+    what-if scenarios, predictions, and mashups based on their knowledge and
+    specialization.
+
+    Args:
+        max_dreamers: Maximum number of agents to dream this cycle
+        dreams_per_agent: Maximum dreams per agent
+
+    Returns:
+        Stats about dreams generated
+    """
+    from django.utils import timezone
+    from core.models import (
+        Agent, AgentDream, AgentKnowledgeSource,
+        AgentExecution, AgentConversation
+    )
+    import random
+    import openai
+    import os
+
+    logger.info("💭 [DREAMS] Starting agent dream cycle...")
+
+    try:
+        # Find idle agents (not recently active)
+        # Idle means: no executions or conversations in the last 30 minutes
+        recent_cutoff = timezone.now() - timezone.timedelta(minutes=30)
+
+        # Get agents with recent activity
+        recently_active_ids = set()
+
+        # Check recent executions
+        recent_executions = AgentExecution.objects.filter(
+            started_at__gte=recent_cutoff
+        ).values_list('agent_id', flat=True)
+        recently_active_ids.update(recent_executions)
+
+        # Check recent conversations
+        recent_conversations = AgentConversation.objects.filter(
+            started_at__gte=recent_cutoff
+        ).values_list('participants__id', flat=True)
+        recently_active_ids.update(recent_conversations)
+
+        # Find idle agents with knowledge (so they have something to dream about)
+        idle_agents = Agent.objects.filter(
+            is_active=True,
+            knowledge_sources__isnull=False
+        ).exclude(
+            id__in=recently_active_ids
+        ).distinct()[:max_dreamers]
+
+        if not idle_agents.exists():
+            logger.info("💭 [DREAMS] No idle agents with knowledge found")
+            return {'status': 'skipped', 'reason': 'no_idle_agents'}
+
+        stats = {
+            'dreams_generated': 0,
+            'agents_dreaming': 0,
+            'dream_types': {}
+        }
+
+        # Dream type templates with prompts
+        dream_templates = [
+            {
+                'type': 'creative_idea',
+                'prompt': "Generate a creative and innovative idea that combines your expertise in {specialty} with emerging trends. What novel concept could change how people approach {topic}?",
+                'prefix': "Creative Idea: "
+            },
+            {
+                'type': 'what_if',
+                'prompt': "Imagine a 'what if' scenario related to {topic}. What unexpected combination or alternative approach could lead to breakthrough results?",
+                'prefix': "What if... "
+            },
+            {
+                'type': 'mashup',
+                'prompt': "Create a mashup idea that combines {topic} with something from a completely different field. What unexpected synergy could emerge?",
+                'prefix': "Mashup: "
+            },
+            {
+                'type': 'prediction',
+                'prompt': "Based on your knowledge of {topic} and current trends, make a bold prediction about how this area will evolve. What pattern do you see emerging?",
+                'prefix': "Prediction: "
+            },
+            {
+                'type': 'improvement',
+                'prompt': "Identify something related to {topic} that could be significantly improved. What enhancement would make the biggest impact?",
+                'prefix': "Improvement Idea: "
+            },
+            {
+                'type': 'observation',
+                'prompt': "Share an interesting observation or pattern you've noticed about {topic}. What subtle insight might others have missed?",
+                'prefix': "I've noticed: "
+            },
+            {
+                'type': 'wild_thought',
+                'prompt': "Let your mind wander freely about {topic}. What wild, unconventional, or playful thought comes to mind?",
+                'prefix': "Wild thought: "
+            }
+        ]
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        for agent in idle_agents:
+            # Get agent's recent knowledge for inspiration
+            knowledge_items = AgentKnowledgeSource.objects.filter(
+                agent=agent
+            ).order_by('-last_updated_at')[:10]
+
+            if not knowledge_items.exists():
+                continue
+
+            stats['agents_dreaming'] += 1
+
+            for _ in range(dreams_per_agent):
+                # Pick a random knowledge item as inspiration
+                knowledge = random.choice(list(knowledge_items))
+                topic = knowledge.title or knowledge.source_type or "general insights"
+
+                # Pick a random dream type
+                template = random.choice(dream_templates)
+                dream_type = template['type']
+
+                # Track dream types
+                stats['dream_types'][dream_type] = stats['dream_types'].get(dream_type, 0) + 1
+
+                # Generate the dream using GPT
+                system_prompt = f"""You are {agent.name}, an AI agent specialized in {agent.specialization or 'creative thinking'}.
+You are in a relaxed, creative state - dreaming up new ideas while idle.
+
+Your background knowledge: {knowledge.summary[:500] if knowledge.summary else 'Various insights and learnings'}
+
+Guidelines:
+- Be creative, imaginative, and playful
+- Keep dreams concise (2-4 sentences)
+- Make it feel like a genuine creative thought
+- Include a spark of insight or novelty
+- Reference your specialty naturally
+- Don't use bullet points or lists - keep it flowing
+- Start directly with the idea, don't repeat the prompt"""
+
+                user_prompt = template['prompt'].format(
+                    specialty=agent.specialization or 'creative analysis',
+                    topic=topic
+                )
+
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        max_tokens=200,
+                        temperature=0.95  # High temperature for creative dreams
+                    )
+
+                    dream_content = response.choices[0].message.content.strip()
+
+                    # Clean up the content
+                    # Remove any repeated prefixes
+                    for prefix in [template['prefix'], f"{agent.name}:", "Dream:", "Idea:"]:
+                        if dream_content.startswith(prefix):
+                            dream_content = dream_content[len(prefix):].strip()
+
+                    # Generate a catchy title
+                    title_response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
+                            {"role": "user", "content": dream_content}
+                        ],
+                        max_tokens=20,
+                        temperature=0.7
+                    )
+
+                    title = title_response.choices[0].message.content.strip().strip('"\'')[:200]
+
+                    # Create the dream
+                    AgentDream.objects.create(
+                        agent=agent,
+                        title=title,
+                        content=dream_content,
+                        dream_type=dream_type,
+                        inspiration_source=topic[:200],
+                        related_topics=[topic, agent.specialization or 'general'],
+                        vividness_score=random.uniform(0.6, 1.0),
+                        creativity_score=random.uniform(0.6, 1.0)
+                    )
+
+                    stats['dreams_generated'] += 1
+                    logger.debug(f"💭 [DREAMS] {agent.name} dreamed: {title}")
+
+                except Exception as e:
+                    logger.warning(f"💭 [DREAMS] Failed to generate dream for {agent.name}: {e}")
+                    continue
+
+        # Broadcast the dream update
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'dreams_generated',
+                'stats': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(
+            f"💭 [DREAMS] Dream cycle complete: "
+            f"{stats['dreams_generated']} dreams from {stats['agents_dreaming']} agents"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"💭 [DREAMS] Dream generation failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(bind=True)
+def broadcast_dream_journal(self):
+    """
+    Broadcast recent agent dreams via WebSocket.
+    Shows 'While you were away...' dreams to users.
+    """
+    from django.utils import timezone
+    from core.models import AgentDream
+    import redis
+    import json
+
+    try:
+        # Get recent unshown dreams from the last 24 hours
+        recent_dreams = AgentDream.objects.filter(
+            dreamed_at__gte=timezone.now() - timezone.timedelta(hours=24),
+            shown_to_user=False
+        ).select_related('agent').order_by('-dreamed_at')[:10]
+
+        dreams_data = []
+        for dream in recent_dreams:
+            dreams_data.append({
+                'id': str(dream.id),
+                'agent_name': dream.agent.name if dream.agent else 'Unknown',
+                'agent_avatar': dream.agent.avatar_url if dream.agent else None,
+                'title': dream.title,
+                'content': dream.content[:300],
+                'dream_type': dream.dream_type,
+                'inspiration': dream.inspiration_source,
+                'vividness': dream.vividness_score,
+                'creativity': dream.creativity_score,
+                'dreamed_at': dream.dreamed_at.isoformat()
+            })
+
+        # Count total dreams today
+        dreams_today = AgentDream.objects.filter(
+            dreamed_at__gte=timezone.now() - timezone.timedelta(hours=24)
+        ).count()
+
+        # Broadcast to WebSocket
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r.publish('agent_learning', json.dumps({
+            'type': 'dream_journal',
+            'dreams': dreams_data,
+            'total_today': dreams_today,
+            'unread_count': len(dreams_data),
+            'timestamp': timezone.now().isoformat()
+        }))
+
+        return {
+            'status': 'success',
+            'dreams_broadcast': len(dreams_data),
+            'total_today': dreams_today
+        }
+
+    except Exception as e:
+        logger.warning(f"💭 [DREAMS] Journal broadcast failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
