@@ -6510,3 +6510,246 @@ class AgentDream(models.Model):
             dreamed_at__gte=since_datetime,
             shown_to_user=False
         ).select_related('agent').order_by('-dreamed_at')[:limit]
+
+
+class DreamFeedbackPreference(models.Model):
+    """
+    Session 249: Dream Feedback System
+
+    Tracks user preferences learned from dream reactions to influence
+    future dream generation. When users react to dreams (like, interesting,
+    explore), we learn what types of dreams and topics they prefer.
+
+    This creates a feedback loop where agent dreams become more aligned
+    with what users find valuable over time.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # What we're tracking preferences for
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='dream_preferences',
+        null=True,
+        blank=True,
+        help_text="Specific agent preference (null = global preference)"
+    )
+    dream_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Dream type preference (creative_idea, what_if, etc.)"
+    )
+    topic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Topic/subject preference learned from inspiration_source"
+    )
+
+    # Reaction counts - track all reaction types
+    like_count = models.PositiveIntegerField(default=0)
+    interesting_count = models.PositiveIntegerField(default=0)
+    explore_count = models.PositiveIntegerField(default=0)
+
+    # Calculated preference score (updated on each reaction)
+    # Like = 1 point, Interesting = 2 points, Explore = 3 points
+    preference_score = models.FloatField(
+        default=0.0,
+        help_text="Weighted score: like=1, interesting=2, explore=3"
+    )
+
+    # Decay tracking - preferences should fade over time if not reinforced
+    last_reaction_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Dream Feedback Preference"
+        verbose_name_plural = "Dream Feedback Preferences"
+        # Unique constraint: one preference record per agent+type+topic combo
+        constraints = [
+            models.UniqueConstraint(
+                fields=['agent', 'dream_type', 'topic'],
+                name='unique_dream_preference'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['-preference_score']),
+            models.Index(fields=['dream_type', '-preference_score']),
+            models.Index(fields=['agent', '-preference_score']),
+        ]
+
+    def __str__(self):
+        parts = []
+        if self.agent:
+            parts.append(f"Agent: {self.agent.name}")
+        if self.dream_type:
+            parts.append(f"Type: {self.dream_type}")
+        if self.topic:
+            parts.append(f"Topic: {self.topic[:30]}")
+        return f"DreamPref({', '.join(parts)}) score={self.preference_score:.1f}"
+
+    def record_reaction(self, reaction_type):
+        """
+        Record a reaction and update the preference score.
+
+        Args:
+            reaction_type: 'like', 'interesting', or 'explore'
+        """
+        if reaction_type == 'like':
+            self.like_count += 1
+        elif reaction_type == 'interesting':
+            self.interesting_count += 1
+        elif reaction_type == 'explore':
+            self.explore_count += 1
+
+        # Recalculate weighted score
+        self.preference_score = (
+            self.like_count * 1.0 +
+            self.interesting_count * 2.0 +
+            self.explore_count * 3.0
+        )
+        self.save()
+
+    @classmethod
+    def get_or_create_preference(cls, agent=None, dream_type='', topic=''):
+        """Get or create a preference record for the given criteria."""
+        # Normalize empty strings to empty
+        dream_type = dream_type or ''
+        topic = topic[:200] if topic else ''
+
+        preference, created = cls.objects.get_or_create(
+            agent=agent,
+            dream_type=dream_type,
+            topic=topic
+        )
+        return preference
+
+    @classmethod
+    def get_top_preferences(cls, preference_type='dream_type', limit=10):
+        """
+        Get top preferences by type.
+
+        Args:
+            preference_type: 'dream_type', 'topic', or 'agent'
+            limit: Max results to return
+
+        Returns:
+            List of (value, score) tuples
+        """
+        from django.db.models import Sum
+
+        if preference_type == 'dream_type':
+            return cls.objects.exclude(dream_type='').values('dream_type').annotate(
+                total_score=Sum('preference_score')
+            ).order_by('-total_score')[:limit]
+        elif preference_type == 'topic':
+            return cls.objects.exclude(topic='').values('topic').annotate(
+                total_score=Sum('preference_score')
+            ).order_by('-total_score')[:limit]
+        elif preference_type == 'agent':
+            return cls.objects.exclude(agent__isnull=True).values(
+                'agent__name'
+            ).annotate(
+                total_score=Sum('preference_score')
+            ).order_by('-total_score')[:limit]
+
+        return []
+
+    @classmethod
+    def get_dream_type_weights(cls):
+        """
+        Get weighted probabilities for dream types based on user preferences.
+
+        Returns:
+            Dict mapping dream_type to weight (higher = more likely to generate)
+        """
+        from django.db.models import Sum
+
+        # Base weights (equal probability)
+        base_types = [
+            'creative_idea', 'what_if', 'mashup', 'prediction',
+            'improvement', 'observation', 'wild_thought'
+        ]
+        weights = {dt: 1.0 for dt in base_types}
+
+        # Get preference scores by dream type
+        preferences = cls.objects.exclude(dream_type='').values('dream_type').annotate(
+            total_score=Sum('preference_score')
+        )
+
+        # Boost weights based on preferences
+        for pref in preferences:
+            dream_type = pref['dream_type']
+            if dream_type in weights:
+                # Add preference score as boost (normalized)
+                weights[dream_type] += pref['total_score'] * 0.5
+
+        return weights
+
+    @classmethod
+    def get_preferred_topics(cls, limit=20):
+        """
+        Get list of topics that users have shown interest in.
+
+        Returns:
+            List of topic strings, ordered by preference
+        """
+        from django.db.models import Sum
+
+        topics = cls.objects.exclude(topic='').values('topic').annotate(
+            total_score=Sum('preference_score')
+        ).order_by('-total_score')[:limit]
+
+        return [t['topic'] for t in topics]
+
+
+class DreamExploration(models.Model):
+    """
+    Session 249: Dream Exploration Tracking
+
+    When a user clicks "Explore" on a dream, we create a deeper exploration
+    of that topic. This model tracks those explorations and their outcomes.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to the original dream
+    dream = models.ForeignKey(
+        'AgentDream',
+        on_delete=models.CASCADE,
+        related_name='explorations'
+    )
+
+    # Exploration status
+    status = models.CharField(max_length=50, choices=[
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ], default='pending')
+
+    # Exploration results
+    exploration_content = models.TextField(
+        blank=True,
+        help_text="Deeper exploration/research on the dream topic"
+    )
+    insights_generated = models.JSONField(
+        default=list,
+        help_text="List of insights discovered during exploration"
+    )
+    related_knowledge_added = models.BooleanField(
+        default=False,
+        help_text="Whether this exploration added to agent's knowledge"
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Dream Exploration"
+        verbose_name_plural = "Dream Explorations"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Exploration of '{self.dream.title}' ({self.status})"

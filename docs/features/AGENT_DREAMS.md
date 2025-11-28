@@ -1,7 +1,7 @@
 # Agent Dreams - Idle Thoughts & Creative Ideas
 
-**Session:** 247
-**Status:** Complete
+**Session:** 247-249
+**Status:** Complete with Feedback System
 **Last Updated:** November 28, 2025
 
 ---
@@ -45,6 +45,21 @@ When agents are idle (not actively working on tasks), they "dream" - generating 
 - User reactions recorded (like, interesting, explore)
 - Optional text feedback for dreams
 
+### 5. Dream Feedback System (Session 249)
+User reactions now influence future dream generation:
+
+| Reaction | Icon | Effect |
+|----------|------|--------|
+| Like | 👍 | +1 point - Dream type becomes more likely |
+| Interesting | 🤔 | +2 points - Topic appears more in future dreams |
+| Explore | 🚀 | +3 points - Triggers deep exploration + knowledge added |
+
+**How it works:**
+1. Each reaction updates `DreamFeedbackPreference` records
+2. Preferences are tracked for: dream_type, topic, agent, and agent+type combos
+3. `generate_agent_dreams` task uses weighted random selection based on preferences
+4. "Explore" reactions trigger `explore_dream_topic` Celery task for deeper research
+
 ---
 
 ## Database Model
@@ -84,6 +99,41 @@ class AgentDream(models.Model):
     user_feedback = TextField()
 
     dreamed_at = DateTimeField(auto_now_add=True)
+```
+
+### DreamFeedbackPreference (Session 249)
+
+```python
+class DreamFeedbackPreference(models.Model):
+    agent = ForeignKey('Agent', null=True)  # null = global preference
+    dream_type = CharField(max_length=50)
+    topic = CharField(max_length=200)
+
+    # Reaction counts
+    like_count = PositiveIntegerField(default=0)
+    interesting_count = PositiveIntegerField(default=0)
+    explore_count = PositiveIntegerField(default=0)
+
+    # Weighted score: like=1, interesting=2, explore=3
+    preference_score = FloatField(default=0.0)
+
+    last_reaction_at = DateTimeField(auto_now=True)
+    created_at = DateTimeField(auto_now_add=True)
+```
+
+### DreamExploration (Session 249)
+
+```python
+class DreamExploration(models.Model):
+    dream = ForeignKey('AgentDream')
+    status = CharField(choices=[pending, in_progress, completed, failed])
+
+    exploration_content = TextField()  # Deeper exploration
+    insights_generated = JSONField()   # List of insights
+    related_knowledge_added = BooleanField()
+
+    created_at = DateTimeField(auto_now_add=True)
+    completed_at = DateTimeField(null=True)
 ```
 
 ---
@@ -154,14 +204,63 @@ Record a user reaction to a dream.
 }
 ```
 
+**Response (Session 249):**
+```json
+{
+    "success": true,
+    "message": "Reaction \"like\" recorded",
+    "dream_id": "uuid",
+    "preferences_updated": ["dream_type:what_if", "topic:AI trends", "agent:ResearchAgent"],
+    "exploration_id": null,
+    "feedback_effect": "This dream type will be more likely in the future!"
+}
+```
+
+### GET /api/agent-dreams/preferences/ (Session 249)
+Get dream feedback preferences and statistics.
+
+**Response:**
+```json
+{
+    "success": true,
+    "preferences": {
+        "top_dream_types": [{"dream_type": "what_if", "total_score": 15.0}],
+        "top_topics": [{"topic": "AI trends", "total_score": 10.0}],
+        "top_agents": [{"agent__name": "ResearchAgent", "total_score": 8.0}],
+        "type_weights": {"creative_idea": 3.5, "what_if": 8.5, ...}
+    },
+    "reaction_totals": {"likes": 5, "interesting": 3, "explores": 2},
+    "explorations": {"total": 2, "completed": 2, "knowledge_added": 1}
+}
+```
+
+### GET /api/agent-dreams/explorations/{id}/ (Session 249)
+Get details of a dream exploration.
+
+**Response:**
+```json
+{
+    "success": true,
+    "exploration": {
+        "id": "uuid",
+        "status": "completed",
+        "dream": {"id": "uuid", "title": "...", "content": "..."},
+        "exploration_content": "Deep exploration text...",
+        "insights": ["insight 1", "insight 2"],
+        "knowledge_added": true
+    }
+}
+```
+
 ---
 
 ## Celery Tasks
 
 | Task | Schedule | Description |
 |------|----------|-------------|
-| `generate_agent_dreams` | Every 15 min | Generate dreams for idle agents |
+| `generate_agent_dreams` | Every 15 min | Generate dreams for idle agents (uses feedback weights) |
 | `broadcast_dream_journal` | Every 3 min | Broadcast unread dreams via WebSocket |
+| `explore_dream_topic` | On-demand | Triggered when user clicks "Explore" on a dream |
 
 ---
 

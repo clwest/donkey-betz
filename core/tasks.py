@@ -3798,6 +3798,15 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
             }
         ]
 
+        # Session 249: Get dream type weights from user preferences
+        from core.models import DreamFeedbackPreference
+        type_weights = DreamFeedbackPreference.get_dream_type_weights()
+        preferred_topics = DreamFeedbackPreference.get_preferred_topics(limit=20)
+
+        logger.info(f"💭 [DREAMS] Dream type weights from feedback: {type_weights}")
+        if preferred_topics:
+            logger.info(f"💭 [DREAMS] Preferred topics from feedback: {preferred_topics[:5]}")
+
         # Initialize OpenAI client
         client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
@@ -3812,13 +3821,61 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
 
             stats['agents_dreaming'] += 1
 
+            # Session 249: Check if this agent has specific preferences
+            agent_type_weights = type_weights.copy()
+            try:
+                agent_prefs = DreamFeedbackPreference.objects.filter(
+                    agent=agent,
+                    dream_type__isnull=False
+                ).exclude(dream_type='')
+                for pref in agent_prefs:
+                    if pref.dream_type in agent_type_weights:
+                        # Further boost types that this specific agent is good at
+                        agent_type_weights[pref.dream_type] += pref.preference_score * 0.3
+            except Exception:
+                pass
+
             for _ in range(dreams_per_agent):
                 # Pick a random knowledge item as inspiration
-                knowledge = random.choice(list(knowledge_items))
+                # Session 249: Prefer topics that users have reacted positively to
+                knowledge_list = list(knowledge_items)
+                if preferred_topics:
+                    # Sort knowledge by whether they match preferred topics
+                    def topic_score(k):
+                        title = (k.title or '').lower()
+                        for i, pt in enumerate(preferred_topics):
+                            if pt.lower() in title or title in pt.lower():
+                                return len(preferred_topics) - i  # Higher score for higher preference
+                        return 0
+                    knowledge_list.sort(key=topic_score, reverse=True)
+                    # 60% chance to pick from top 3, 40% random
+                    if random.random() < 0.6 and len(knowledge_list) > 3:
+                        knowledge = random.choice(knowledge_list[:3])
+                    else:
+                        knowledge = random.choice(knowledge_list)
+                else:
+                    knowledge = random.choice(knowledge_list)
+
                 topic = knowledge.title or knowledge.source_type or "general insights"
 
-                # Pick a random dream type
-                template = random.choice(dream_templates)
+                # Session 249: Pick dream type using weighted random selection
+                # instead of uniform random
+                templates_with_weights = []
+                for t in dream_templates:
+                    weight = agent_type_weights.get(t['type'], 1.0)
+                    templates_with_weights.append((t, weight))
+
+                # Weighted random selection
+                total_weight = sum(w for _, w in templates_with_weights)
+                r = random.uniform(0, total_weight)
+                cumulative = 0
+                template = dream_templates[0]  # fallback
+                for t, w in templates_with_weights:
+                    cumulative += w
+                    if r <= cumulative:
+                        template = t
+                        break
+
                 dream_type = template['type']
 
                 # Track dream types
@@ -3980,4 +4037,205 @@ def broadcast_dream_journal(self):
 
     except Exception as e:
         logger.warning(f"💭 [DREAMS] Journal broadcast failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(bind=True)
+def explore_dream_topic(self, exploration_id: str):
+    """
+    Session 249: Deep exploration of a dream topic when user clicks "Explore".
+
+    When a user reacts to a dream with "explore", we trigger a deeper investigation
+    of that topic. The agent generates additional insights, related ideas, and
+    potentially adds to their knowledge base.
+
+    Args:
+        exploration_id: UUID of the DreamExploration to process
+
+    Returns:
+        Exploration results and status
+    """
+    from django.utils import timezone
+    from core.models import (
+        DreamExploration, AgentKnowledgeSource, AgentDream
+    )
+    import openai
+    import os
+
+    logger.info(f"🚀 [EXPLORE] Starting dream exploration: {exploration_id}")
+
+    try:
+        # Get the exploration record
+        exploration = DreamExploration.objects.select_related(
+            'dream', 'dream__agent'
+        ).filter(id=exploration_id).first()
+
+        if not exploration:
+            logger.error(f"🚀 [EXPLORE] Exploration not found: {exploration_id}")
+            return {'status': 'failed', 'error': 'Exploration not found'}
+
+        if exploration.status != 'pending':
+            logger.info(f"🚀 [EXPLORE] Exploration already processed: {exploration.status}")
+            return {'status': 'skipped', 'reason': 'already_processed'}
+
+        # Mark as in progress
+        exploration.status = 'in_progress'
+        exploration.save()
+
+        dream = exploration.dream
+        agent = dream.agent
+
+        if not agent:
+            exploration.status = 'failed'
+            exploration.save()
+            return {'status': 'failed', 'error': 'No agent associated with dream'}
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        # Generate deep exploration content
+        system_prompt = f"""You are {agent.name}, an AI agent specialized in {agent.specialization or 'creative analysis'}.
+
+You had an interesting dream/idea that the user wants you to explore further:
+
+Dream Title: {dream.title}
+Dream Content: {dream.content}
+Inspiration Source: {dream.inspiration_source}
+
+Now you are diving deeper into this concept. Generate a thoughtful exploration that:
+1. Expands on the core idea with more detail and context
+2. Identifies 3-5 key insights or implications
+3. Suggests potential applications or next steps
+4. Connects it to related concepts in your area of expertise
+
+Be thorough but engaging. This should feel like a creative deep-dive, not a dry analysis."""
+
+        user_prompt = f"""Explore this dream idea more deeply: "{dream.title}"
+
+Generate:
+1. An expanded exploration (2-3 paragraphs) that develops the idea further
+2. A JSON array of 3-5 key insights (just the insights, each as a short sentence)
+3. What knowledge or action this could lead to
+
+Format your response as:
+EXPLORATION:
+[your expanded exploration here]
+
+INSIGHTS:
+["insight 1", "insight 2", "insight 3"]
+
+NEXT_STEPS:
+[what this could lead to - one paragraph]"""
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=800,
+                temperature=0.85
+            )
+
+            full_response = response.choices[0].message.content.strip()
+
+            # Parse the response
+            exploration_content = ""
+            insights = []
+            next_steps = ""
+
+            if "EXPLORATION:" in full_response:
+                parts = full_response.split("INSIGHTS:")
+                exploration_content = parts[0].replace("EXPLORATION:", "").strip()
+
+                if len(parts) > 1:
+                    remaining = parts[1]
+                    if "NEXT_STEPS:" in remaining:
+                        insight_part, next_part = remaining.split("NEXT_STEPS:")
+                        next_steps = next_part.strip()
+
+                        # Try to parse insights as JSON
+                        try:
+                            import json
+                            # Find JSON array in the insight part
+                            start = insight_part.find('[')
+                            end = insight_part.rfind(']') + 1
+                            if start >= 0 and end > start:
+                                insights = json.loads(insight_part[start:end])
+                        except:
+                            # Fallback: split by newlines
+                            insights = [line.strip().strip('-•').strip()
+                                       for line in insight_part.strip().split('\n')
+                                       if line.strip() and not line.strip().startswith('[')]
+            else:
+                # Fallback: use the entire response
+                exploration_content = full_response
+
+            # Update the exploration record
+            exploration.exploration_content = exploration_content
+            exploration.insights_generated = insights[:5] if insights else []
+            exploration.status = 'completed'
+            exploration.completed_at = timezone.now()
+
+            # Optionally add to agent's knowledge base
+            if exploration_content and len(exploration_content) > 100:
+                try:
+                    AgentKnowledgeSource.objects.create(
+                        agent=agent,
+                        knowledge_type='content_idea',  # Dream explorations are content ideas
+                        title=f"Dream Explored: {dream.title[:100]}",
+                        summary=exploration_content[:1000],
+                        key_insights=insights[:5] if insights else [],
+                        data_points_count=1,
+                        confidence_score=0.8,
+                        relevance_score=0.9,
+                        freshness_score=1.0,
+                        source_spider_names=['dream_exploration']
+                    )
+                    exploration.related_knowledge_added = True
+                    logger.info(f"🚀 [EXPLORE] Added to {agent.name}'s knowledge base")
+                except Exception as ke:
+                    logger.warning(f"🚀 [EXPLORE] Could not add to knowledge: {ke}")
+
+            exploration.save()
+
+            # Broadcast the exploration result
+            try:
+                import redis
+                import json
+                r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                r.publish('agent_learning', json.dumps({
+                    'type': 'dream_explored',
+                    'exploration_id': str(exploration.id),
+                    'dream_id': str(dream.id),
+                    'dream_title': dream.title,
+                    'agent_name': agent.name,
+                    'insights_count': len(insights),
+                    'knowledge_added': exploration.related_knowledge_added,
+                    'timestamp': timezone.now().isoformat()
+                }))
+            except:
+                pass
+
+            logger.info(
+                f"🚀 [EXPLORE] Completed exploration of '{dream.title}' "
+                f"- {len(insights)} insights, knowledge_added={exploration.related_knowledge_added}"
+            )
+
+            return {
+                'status': 'success',
+                'exploration_id': str(exploration.id),
+                'insights_count': len(insights),
+                'knowledge_added': exploration.related_knowledge_added
+            }
+
+        except Exception as api_error:
+            logger.error(f"🚀 [EXPLORE] API call failed: {api_error}")
+            exploration.status = 'failed'
+            exploration.save()
+            return {'status': 'failed', 'error': str(api_error)}
+
+    except Exception as e:
+        logger.exception(f"🚀 [EXPLORE] Exploration failed: {e}")
         return {'status': 'failed', 'error': str(e)}
