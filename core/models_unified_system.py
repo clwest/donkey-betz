@@ -6400,3 +6400,113 @@ class ConversationMessage(models.Model):
             'timestamp': timezone.now().isoformat()
         }
         self.save(update_fields=['reactions'])
+
+
+# =============================================================================
+# Session 247: Agent Dreams - Sci-Fi Feature
+# =============================================================================
+
+class AgentDream(models.Model):
+    """
+    Session 247: Agent Dreams - Idle Thoughts & Creative Ideas
+
+    When agents are idle, they "dream" - generating creative ideas,
+    speculative concepts, and "what if" scenarios unprompted.
+
+    This creates a sense that agents are alive and thinking even
+    when the user isn't actively using them.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='dreams')
+
+    # Dream content
+    title = models.CharField(max_length=200, help_text="Short catchy title for the dream")
+    content = models.TextField(help_text="The full dream content/idea")
+
+    # Dream categorization
+    dream_type = models.CharField(max_length=50, choices=[
+        ('creative_idea', 'Creative Idea'),       # New concept or creation
+        ('what_if', 'What If?'),                  # Speculative scenario
+        ('mashup', 'Mashup'),                     # Combining two things
+        ('prediction', 'Prediction'),             # Future trend prediction
+        ('improvement', 'Improvement'),           # Way to improve something
+        ('observation', 'Observation'),           # Pattern noticed
+        ('wild_thought', 'Wild Thought'),         # Crazy but interesting idea
+    ])
+
+    # Dream metadata
+    inspiration_source = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="What inspired this dream (knowledge, trend, etc.)"
+    )
+    related_topics = models.JSONField(
+        default=list,
+        help_text="List of topics/tags related to this dream"
+    )
+
+    # Quality and engagement
+    vividness_score = models.FloatField(
+        default=0.7,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How vivid/detailed the dream is (0.0-1.0)"
+    )
+    creativity_score = models.FloatField(
+        default=0.7,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How creative/novel the dream is (0.0-1.0)"
+    )
+
+    # User interaction
+    shown_to_user = models.BooleanField(default=False)
+    shown_at = models.DateTimeField(null=True, blank=True)
+    user_reaction = models.CharField(max_length=50, blank=True, choices=[
+        ('loved', 'Loved It'),
+        ('interesting', 'Interesting'),
+        ('meh', 'Meh'),
+        ('dismissed', 'Dismissed'),
+    ])
+    user_feedback = models.TextField(blank=True)
+
+    # Timestamps
+    dreamed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-dreamed_at']
+        verbose_name = "Agent Dream"
+        verbose_name_plural = "Agent Dreams"
+        indexes = [
+            models.Index(fields=['agent', '-dreamed_at']),
+            models.Index(fields=['dream_type', 'shown_to_user']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name}'s dream: {self.title}"
+
+    def mark_as_shown(self):
+        """Mark this dream as shown to the user."""
+        self.shown_to_user = True
+        self.shown_at = timezone.now()
+        self.save(update_fields=['shown_to_user', 'shown_at'])
+
+    def record_reaction(self, reaction, feedback=''):
+        """Record user's reaction to this dream."""
+        self.user_reaction = reaction
+        self.user_feedback = feedback
+        self.save(update_fields=['user_reaction', 'user_feedback'])
+
+    @classmethod
+    def get_unshown_dreams(cls, limit=10):
+        """Get dreams that haven't been shown to the user yet."""
+        return cls.objects.filter(
+            shown_to_user=False
+        ).select_related('agent').order_by('-dreamed_at')[:limit]
+
+    @classmethod
+    def get_dreams_while_away(cls, since_datetime, limit=5):
+        """Get dreams that happened since a given time (while user was away)."""
+        return cls.objects.filter(
+            dreamed_at__gte=since_datetime,
+            shown_to_user=False
+        ).select_related('agent').order_by('-dreamed_at')[:limit]

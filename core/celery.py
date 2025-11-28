@@ -324,6 +324,22 @@ app.conf.beat_schedule = {
             'expires': 115,
         }
     },
+    # Session 247: Agent Dreams (Idle Thoughts & Creative Ideas)
+    # Agents dream up creative ideas when they're idle
+    'agent-dream-cycle': {
+        'task': 'core.tasks.generate_agent_dreams',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes - agents dream when idle
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
+    'broadcast-dream-journal': {
+        'task': 'core.tasks.broadcast_dream_journal',
+        'schedule': 180.0,  # Every 3 minutes - show recent dreams
+        'options': {
+            'expires': 175,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

@@ -540,6 +540,209 @@ def trigger_agent_conversation(request):
         }, status=500)
 
 
+# =============================================================================
+# Session 247: Agent Dreams API
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_agent_dreams(request):
+    """
+    Get recent agent dreams.
+
+    GET /api/agent-dreams/?limit=10
+
+    Query params:
+    - limit: Max dreams to return (default 10)
+    - agent_id: Filter by specific agent
+    - unread_only: Only show dreams not yet shown to user
+    """
+    try:
+        from django.utils import timezone
+        from core.models import AgentDream
+
+        limit = int(request.GET.get('limit', 10))
+        agent_id = request.GET.get('agent_id')
+        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+
+        # Get dreams from the last 24 hours
+        cutoff = timezone.now() - timezone.timedelta(hours=24)
+        dreams = AgentDream.objects.filter(
+            dreamed_at__gte=cutoff
+        ).select_related('agent').order_by('-dreamed_at')
+
+        if agent_id:
+            dreams = dreams.filter(agent_id=agent_id)
+
+        if unread_only:
+            dreams = dreams.filter(shown_to_user=False)
+
+        dreams = dreams[:limit]
+
+        # Count totals
+        today_count = AgentDream.objects.filter(
+            dreamed_at__gte=cutoff
+        ).count()
+
+        unread_count = AgentDream.objects.filter(
+            dreamed_at__gte=cutoff,
+            shown_to_user=False
+        ).count()
+
+        dreams_data = []
+        for dream in dreams:
+            dreams_data.append({
+                'id': str(dream.id),
+                'agent_id': str(dream.agent.id) if dream.agent else None,
+                'agent_name': dream.agent.name if dream.agent else 'Unknown',
+                'title': dream.title,
+                'content': dream.content,
+                'dream_type': dream.dream_type,
+                'inspiration': dream.inspiration_source,
+                'related_topics': dream.related_topics,
+                'vividness': dream.vividness_score,
+                'creativity': dream.creativity_score,
+                'shown_to_user': dream.shown_to_user,
+                'user_reaction': dream.user_reaction,
+                'dreamed_at': dream.dreamed_at.isoformat()
+            })
+
+        return JsonResponse({
+            'success': True,
+            'dreams': dreams_data,
+            'today_count': today_count,
+            'unread_count': unread_count
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching agent dreams: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def trigger_agent_dreams(request):
+    """
+    Manually trigger dream generation for idle agents.
+
+    POST /api/agent-dreams/trigger/
+    """
+    try:
+        from core.tasks import generate_agent_dreams
+
+        result = generate_agent_dreams.delay(
+            max_dreamers=5,
+            dreams_per_agent=2
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Dream generation triggered',
+            'task_id': result.id,
+            'dreams_generated': 0  # Will be updated async
+        })
+
+    except Exception as e:
+        logger.error(f"Error triggering agent dreams: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def mark_dreams_shown(request):
+    """
+    Mark dreams as shown to the user.
+
+    POST /api/agent-dreams/mark-shown/
+
+    Body:
+    {
+        "dream_ids": ["uuid1", "uuid2", ...]
+    }
+    """
+    try:
+        from django.utils import timezone
+        from core.models import AgentDream
+
+        body = json.loads(request.body)
+        dream_ids = body.get('dream_ids', [])
+
+        if not dream_ids:
+            return JsonResponse({
+                'success': True,
+                'marked': 0
+            })
+
+        updated = AgentDream.objects.filter(
+            id__in=dream_ids,
+            shown_to_user=False
+        ).update(
+            shown_to_user=True,
+            shown_at=timezone.now()
+        )
+
+        return JsonResponse({
+            'success': True,
+            'marked': updated
+        })
+
+    except Exception as e:
+        logger.error(f"Error marking dreams as shown: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def react_to_dream(request, dream_id):
+    """
+    Record a user reaction to a dream.
+
+    POST /api/agent-dreams/{dream_id}/react/
+
+    Body:
+    {
+        "reaction": "like" | "interesting" | "explore",
+        "feedback": "optional text feedback"
+    }
+    """
+    try:
+        from core.models import AgentDream
+
+        body = json.loads(request.body)
+        reaction = body.get('reaction', '')
+        feedback = body.get('feedback', '')
+
+        dream = AgentDream.objects.filter(id=dream_id).first()
+        if not dream:
+            return JsonResponse({
+                'success': False,
+                'error': 'Dream not found'
+            }, status=404)
+
+        dream.user_reaction = reaction
+        if feedback:
+            dream.user_feedback = feedback
+        dream.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Reaction "{reaction}" recorded',
+            'dream_id': str(dream_id)
+        })
+
+    except Exception as e:
+        logger.error(f"Error reacting to dream: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
@@ -553,7 +756,12 @@ from core.views_agent_learning import (
     share_learning as learning_share,
     get_all_preferences as learning_all,
     get_agent_conversations,
-    trigger_agent_conversation
+    trigger_agent_conversation,
+    # Session 247: Agent Dreams
+    get_agent_dreams,
+    trigger_agent_dreams,
+    mark_dreams_shown,
+    react_to_dream
 )
 
 urlpatterns += [
@@ -569,5 +777,10 @@ urlpatterns += [
     # Session 244: Agent Conversations
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
     path('api/agent-conversations/trigger/', trigger_agent_conversation, name='trigger-agent-conversation'),
+    # Session 247: Agent Dreams
+    path('api/agent-dreams/', get_agent_dreams, name='agent-dreams'),
+    path('api/agent-dreams/trigger/', trigger_agent_dreams, name='trigger-agent-dreams'),
+    path('api/agent-dreams/mark-shown/', mark_dreams_shown, name='mark-dreams-shown'),
+    path('api/agent-dreams/<uuid:dream_id>/react/', react_to_dream, name='react-to-dream'),
 ]
 """

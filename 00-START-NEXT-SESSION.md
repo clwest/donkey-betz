@@ -1,57 +1,67 @@
-# Session 247: Ready for Next Feature!
+# Session 248: Ready for Next Feature!
 
 **Date:** November 28, 2025
-**Previous Session:** 246 (WebSocket Streaming for Agent Conversations)
+**Previous Session:** 247 (Agent Dreams - Idle Thoughts & Creative Ideas)
 **Session Type:** Feature Complete
 
 ---
 
-## Session 246 Completed - Real-Time Agent Conversations via WebSocket
+## Session 247 Completed - Agent Dreams Feature
 
 ### What We Built
 
-**The Big Idea:** Agents now chat in REAL-TIME via WebSocket! Click "Start Chat" and watch as two agents have a live conversation powered by GPT-4o-mini. Messages stream as they're generated - like watching a Slack conversation unfold.
+**The Big Idea:** When agents are idle, they "dream" - generating creative ideas, predictions, what-if scenarios, and wild thoughts based on their knowledge. This makes agents feel alive even when not actively working!
 
 ### Key Features Added
 
-1. **WebSocket Consumer** (`core/agent_conversation_consumer.py`)
-   - Real-time streaming of agent conversations
-   - `ws/agent-conversations/` endpoint
-   - Loads recent conversations on connect
-   - "Start Chat" triggers live conversation generation
-   - Auto-reconnect with 5-second backoff
+1. **AgentDream Database Model** (`core/models_unified_system.py`)
+   - Dream types: creative_idea, what_if, mashup, prediction, improvement, observation, wild_thought
+   - Quality scores: vividness_score, creativity_score
+   - User interaction: shown_to_user, user_reaction, user_feedback
+   - Inspiration tracking: inspiration_source, related_topics
 
-2. **Live UI Updates**
-   - WebSocket status indicator (Connected/Disconnected)
-   - "Start Chat" button to trigger new conversations
-   - Typing indicator while agents are thinking
-   - Chat bubble style messages with:
-     - Each agent gets a unique color (purple, cyan, green, orange, pink, indigo)
-     - Alternating left/right alignment for chat feel
-     - Clean topic titles (no more [Synthesis] prefixes)
-   - Variety of conversation type icons (📚 💡 🎓 🔮)
+2. **Celery Tasks** (`core/tasks.py`)
+   - `generate_agent_dreams` - Creates dreams for idle agents every 15 minutes
+   - `broadcast_dream_journal` - Broadcasts unread dreams via WebSocket every 3 minutes
+   - Uses GPT-4o-mini with temperature 0.95 for creative dream generation
 
-3. **Conversation Task Schedule**
-   - Changed from every 20 minutes to every 5 minutes
-   - Agents chat more frequently!
+3. **Dream Journal UI** (`ai_core/templates/ai_image_studio.html`)
+   - Pink-themed card with floating dream icon animation
+   - Dream cards with type icons and badges
+   - User reactions: like, interesting, explore
+   - "Trigger Dream" button for manual generation
+   - Unread dream counter and time-ago formatting
 
-### Files Modified (Session 246)
+4. **REST API Endpoints** (`core/views_agent_learning.py`)
+   - `GET /api/agent-dreams/` - Fetch recent dreams
+   - `POST /api/agent-dreams/trigger/` - Manually trigger dreams
+   - `POST /api/agent-dreams/mark-shown/` - Mark dreams as seen
+   - `POST /api/agent-dreams/{id}/react/` - React to a dream
 
-**New File:**
-- `core/agent_conversation_consumer.py` - WebSocket consumer for real-time agent chat
+5. **Sci-Fi Features Roadmap** (`docs/features/SCIFI_ROADMAP.md`)
+   - Documented all sci-fi feature ideas with priority matrix
+   - Next up: Hive Mind Mode!
+
+### Files Modified (Session 247)
+
+**New Files:**
+- `core/migrations/0038_add_agent_dream_model.py` - Migration for AgentDream model
+- `docs/features/SCIFI_ROADMAP.md` - Roadmap for all sci-fi features
 
 **Backend Updates:**
-- `core/routing.py` - Added WebSocket routes for agent conversations
-- `core/celery.py` - Changed conversation schedule from 20min to 5min
+- `core/models_unified_system.py` - Added AgentDream model
+- `core/models/__init__.py` - Exported AgentDream
+- `core/tasks.py` - Added dream generation and broadcast tasks
+- `core/celery.py` - Added Celery Beat schedules for dreams
+- `core/views_agent_learning.py` - Added 4 dream API endpoints
+- `core/urls.py` - Added dream URL routes
 
 **Frontend Updates:**
 - `ai_core/templates/ai_image_studio.html`:
-  - WebSocket connection with auto-reconnect
-  - "Start Chat" button
-  - Typing indicator
-  - Chat bubble style messages
-  - Agent-specific colors
-  - Clean topic titles
+  - Dream Journal UI section with pink theme
+  - Dream cards with type icons
+  - Reaction buttons
+  - JavaScript functions for loading, triggering, and reacting to dreams
 
 ---
 
@@ -65,9 +75,9 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Go to Agents tab - see "Agent Conversations" section
+# 3. Go to Agents tab - see "Dream Journal" section
 
-# 4. Click "Start Chat" button to trigger a live conversation!
+# 4. Click "Trigger Dream" button to generate creative thoughts!
 ```
 
 ---
@@ -86,16 +96,18 @@ open http://localhost:8000/ai-studio/
 | 7. Agent Learning | Autonomous learning + embeddings | **DONE** |
 | 8. Agent Conversations | Inter-agent communication | **DONE** |
 | 9. WebSocket Streaming | Real-time conversation viewing | **DONE** |
+| 10. Agent Dreams | Idle thoughts & creative ideas | **DONE** |
 
 ### System Health
 - **Reality Score:** 100%
 - **Services:** Daphne, Redis, Celery Worker, Celery Beat - All Running
 - **Spider Network:** 67 spiders | 12 categories | 21 real data sources
 - **Agents:** 20 REAL agents | 660 knowledge items | 37 learning connections
-- **Autonomous Learning:** ACTIVE (7 Celery tasks running)
+- **Autonomous Learning:** ACTIVE (9 Celery tasks running)
 - **Agent Conversations:** Real-time via WebSocket!
+- **Agent Dreams:** Creative ideas when idle!
 
-### Autonomous Learning Tasks (7 total)
+### Autonomous Tasks (9 total)
 | Task | Schedule | Description |
 |------|----------|-------------|
 | `run_agent_learning_cycle` | Every 10 min | Agents share knowledge |
@@ -105,19 +117,37 @@ open http://localhost:8000/ai-studio/
 | `embed_daily_agent_learning` | Daily 2 AM | Vector embeddings |
 | `run_agent_conversation` | Every 5 min | Agent-to-agent chat |
 | `broadcast_conversation_status` | Every 2 min | Conversation updates |
+| `generate_agent_dreams` | Every 15 min | Creative idle thoughts |
+| `broadcast_dream_journal` | Every 3 min | Dream journal updates |
+
+---
+
+## Dream Types
+
+| Type | Icon | Description |
+|------|------|-------------|
+| Creative Idea | 💡 | Novel concepts from expertise |
+| What If? | 🤔 | Alternative scenarios |
+| Mashup | 🔀 | Cross-domain combinations |
+| Prediction | 🔮 | Future trend forecasts |
+| Improvement | 📈 | Enhancement suggestions |
+| Observation | 👁️ | Pattern recognition |
+| Wild Thought | 🌀 | Unconventional ideas |
 
 ---
 
 ## Next Session Ideas
 
-1. **Conversation Threading** - Multiple conversation threads on same topic
-2. **Conversation Search** - Embed conversations for semantic search
-3. **User Participation** - Let users join agent conversations
-4. **Agent Personalities** - Give agents distinct debate/communication styles
-5. **Expert Consultation** - Agents can request help from specific experts
-6. **3+ Agent Conversations** - Group discussions with multiple agents
+1. **Hive Mind Mode** - All agents work on a problem simultaneously
+2. **Memory Palace** - Agents remember past interactions
+3. **Agent Mood System** - Emotional states affecting behavior
+4. **Agent Rivalries/Alliances** - Relationship dynamics
+5. **Agent Evolution** - XP and leveling system
+6. **Agent Prophecies** - Tracked predictions
+
+See `docs/features/SCIFI_ROADMAP.md` for the complete roadmap!
 
 ---
 
-**Agents now chat in real-time via WebSocket - watch AI-to-AI conversations unfold live!**
+**Agents now dream up creative ideas when idle - making AI feel truly alive!**
 

@@ -154,7 +154,12 @@ from core.views_agent_learning import (
     get_all_preferences as learning_all,
     # Session 244: Agent Conversations
     get_agent_conversations,
-    trigger_agent_conversation
+    trigger_agent_conversation,
+    # Session 247: Agent Dreams
+    get_agent_dreams,
+    trigger_agent_dreams,
+    mark_dreams_shown,
+    react_to_dream
 )
 
 # Session 219 Phase D: Import marketplace views
@@ -1979,6 +1984,12 @@ urlpatterns = [
     # Session 244: Agent Conversations API
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
     path('api/agent-conversations/trigger/', trigger_agent_conversation, name='trigger-agent-conversation'),
+
+    # Session 247: Agent Dreams API
+    path('api/agent-dreams/', get_agent_dreams, name='agent-dreams'),
+    path('api/agent-dreams/trigger/', trigger_agent_dreams, name='trigger-agent-dreams'),
+    path('api/agent-dreams/mark-shown/', mark_dreams_shown, name='mark-dreams-shown'),
+    path('api/agent-dreams/<uuid:dream_id>/react/', react_to_dream, name='react-to-dream'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),
