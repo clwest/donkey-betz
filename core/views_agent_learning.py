@@ -541,6 +541,103 @@ def trigger_agent_conversation(request):
 
 
 # =============================================================================
+# Session 248: Knowledge Transfer Activity Feed
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_knowledge_transfer_feed(request):
+    """
+    Get the live agent learning activity feed based on KnowledgeTransfer records.
+
+    GET /api/agent-learning/activity/
+
+    Query params:
+    - limit: max items to return (default 20)
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import Agent, AgentLearningConnection, AgentKnowledgeSource, KnowledgeTransfer
+
+        limit = int(request.GET.get('limit', 20))
+        now = timezone.now()
+        last_hour = now - timedelta(hours=1)
+        last_day = now - timedelta(days=1)
+
+        # Gather stats (same as broadcast_learning_status task)
+        stats = {
+            'total_agents': Agent.objects.filter(is_active=True).count(),
+            'total_knowledge': AgentKnowledgeSource.objects.filter(is_active=True).count(),
+            'total_connections': AgentLearningConnection.objects.filter(is_active=True).count(),
+            'transfers_last_hour': KnowledgeTransfer.objects.filter(created_at__gte=last_hour).count(),
+            'transfers_last_day': KnowledgeTransfer.objects.filter(created_at__gte=last_day).count(),
+            'active_learners': Agent.objects.filter(
+                teachers__last_transfer_at__gte=last_hour
+            ).distinct().count(),
+            'active_teachers': Agent.objects.filter(
+                students__last_transfer_at__gte=last_hour
+            ).distinct().count(),
+        }
+
+        # Top learning agents
+        top_learners = []
+        for agent in Agent.objects.filter(is_active=True).order_by('-effectiveness_score')[:5]:
+            top_learners.append({
+                'name': agent.name,
+                'knowledge_count': agent.knowledge_sources.filter(is_active=True).count(),
+                'effectiveness': agent.effectiveness_score,
+                'teaches': agent.students.count(),
+                'learns_from': agent.teachers.count()
+            })
+
+        # Recent knowledge transfers as feed items
+        feed_items = []
+        for transfer in KnowledgeTransfer.objects.select_related(
+            'connection__teacher_agent',
+            'connection__student_agent'
+        ).order_by('-created_at')[:limit]:
+            teacher = transfer.connection.teacher_agent
+            student = transfer.connection.student_agent
+
+            # Determine learning source type
+            if teacher.id == student.id:
+                source = 'self_learning'
+                description = f"{teacher.name} acquired new knowledge"
+            else:
+                source = 'knowledge_transfer'
+                description = f"{teacher.name} shared knowledge with {student.name}"
+
+            feed_items.append({
+                'timestamp': transfer.created_at.isoformat(),
+                'type': source,
+                'source': 'Knowledge transfer',
+                'description': description,
+                'knowledge': transfer.transfer_summary[:100] if transfer.transfer_summary else 'Knowledge shared',
+                'teacher': teacher.name,
+                'student': student.name,
+                'was_useful': transfer.was_useful,
+                'effectiveness_gain': 0.0  # Could calculate if stored
+            })
+
+        return JsonResponse({
+            'success': True,
+            'feed_items': feed_items,
+            'stats': stats,
+            'top_learners': top_learners,
+            'total_count': len(feed_items),
+            'timestamp': now.isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching knowledge transfer feed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'feed_items': []
+        }, status=500)
+
+
+# =============================================================================
 # Session 247: Agent Dreams API
 # =============================================================================
 

@@ -159,7 +159,9 @@ from core.views_agent_learning import (
     get_agent_dreams,
     trigger_agent_dreams,
     mark_dreams_shown,
-    react_to_dream
+    react_to_dream,
+    # Session 248: Knowledge Transfer Activity Feed
+    get_knowledge_transfer_feed
 )
 
 # Session 219 Phase D: Import marketplace views
@@ -1980,6 +1982,8 @@ urlpatterns = [
     path('api/agent-learning/summary/<str:agent_name>/', learning_summary, name='learning-summary'),
     path('api/agent-learning/share/<str:agent_name>/', learning_share, name='learning-share'),
     path('api/agent-learning/all-preferences/', learning_all, name='learning-all'),
+    # Session 248: Knowledge Transfer Activity Feed
+    path('api/agent-learning/activity/', get_knowledge_transfer_feed, name='learning-activity'),
 
     # Session 244: Agent Conversations API
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
