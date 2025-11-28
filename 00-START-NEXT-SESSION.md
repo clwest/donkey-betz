@@ -1,79 +1,61 @@
-# Session 240: New Workflow Engine Complete!
+# Session 241: Intelligence Layer Complete!
 
 **Date:** November 27, 2025
-**Previous Session:** 239 (Style Extraction Fixes)
-**Session Type:** Major Architecture Rebuild
+**Previous Session:** 240 (Workflow Engine v2)
+**Session Type:** Intelligence Layer + UX Polish
 
 ---
 
-## Session 240 Complete!
+## Session 240 Continued - Intelligence Layer Added!
 
-### Philosophy Shift: User Vision is SACRED
+### What We Built
 
-We rebuilt the workflow engine from the ground up with a new philosophy:
-- **User provides:** Style, Subject, Purpose - These are SACRED, never overridden
-- **System enhances:** Trending colors, moods, compositions - ENHANCE, don't replace
+The v2 Workflow Engine now includes a full **Intelligence Layer** that differentiates this platform from basic image generators like Midjourney or ChatGPT.
 
-**The "Facebook Blue" Rule:** What if AI told Facebook it couldn't use blue? Exactly - user's style choices are SACRED.
+### Intelligence Layer Components
 
-### New Workflow Engine v2
+1. **Spider Intelligence Research**
+   - Queries 50+ data sources (behance, wired, mit_tech_review, devto, hackernews, kickstarter)
+   - Extracts REAL trending tags from spider data (not random title words)
+   - Filters noise (generic words like "best", "deals", seasonal terms)
+   - Shows: "Analyzed 301 items from behance, wired, mit_tech_review. Top trends: artificial intelligence, python, computing..."
 
-Created `/agents/workflow_engine.py` with:
-- `IntentParser` - Extracts user's style, subject, content type, count
-- `PromptEnhancer` - Builds prompts that preserve user vision + add trending enhancements
-- `WorkflowEngine` - Orchestrates the full workflow
+2. **Co-Leadership Creative Direction**
+   - Executive team provides creative thinking (not auto-applied)
+   - Shows advisor name, role, and their thought process
+   - Example: "Creative Director (Brand Strategy): For a dreamworks style, I recommend warm, inviting colors..."
 
-### New API Endpoints
+3. **User Vision PRESERVED (SACRED)**
+   - Style, Subject, Purpose are NEVER overridden
+   - Displayed prominently: "Style: dreamworks, Subject: donkey, For: tech startup"
 
-- `POST /api/v2/workflow/execute/` - Execute with user-vision-first philosophy
-- `POST /api/v2/workflow/parse/` - Parse intent for UI preview
+4. **Suggestions for Next Prompt**
+   - Trending topics, colors, moods shown as suggestions
+   - NOT auto-applied to prompts (prevents "orange fruit" bugs)
+   - User can include what they want in their next prompt
+   - Example: "Consider including trending topics like python, artificial intelligence..."
 
-### Content Types Supported
+5. **Auto-Project Creation**
+   - Generated images automatically organized into projects
+   - Project name derived from intent: "Dreamworks Donkey Logos - Tech Startup"
 
-| Type | Dimensions | Text Allowed |
-|------|------------|--------------|
-| logo | 1024x1024 | NO |
-| social_image | 1080x1080 | YES |
-| youtube_thumbnail | 1280x720 | YES |
-| banner | 1200x630 | YES |
-| product_photo | 1024x1024 | NO |
-| illustration | 1024x1024 | NO |
-| brand_identity | 1024x1024 | NO |
+6. **Vague Request Guidance**
+   - When user is vague ("Create something about designing"), system provides helpful creative consulting
+   - Not just "I don't understand" - actual design guidance and education
+   - Differentiator from ChatGPT and other tools
 
-### Frontend Integration
+### Key Fixes
 
-Updated `ai_image_studio.html`:
-- `executeWorkflowV2()` - Calls new v2 API
-- `parseWorkflowIntentV2()` - Gets intent preview
-- Workflow detection now routes to v2 engine for content creation
-
-### Test Results
-
-```
-=== DreamWorks Donkey Test ===
-Style: dreamworks
-Subject: donkey
-Content Type: logo
-Purpose: tech startup
-Wants Research: True
-
-=== Social Media Images Test ===
-Style: None
-Content Type: social_image (NOT logo!)
-Count: 3
-```
+- **Orange Fruit Bug**: Fixed by NOT auto-injecting colors into prompts
+- **Spider Data "0 items"**: Fixed by querying actual data types (tech, design, etc.) instead of non-existent "trend" type
+- **Noise in Trends**: Added filter for generic words (best, deals, shopping, etc.)
 
 ---
 
-## Files Created/Modified
+## Files Modified
 
-### New Files
-- `agents/workflow_engine.py` - New unified workflow engine
-- `core/views_workflow_engine.py` - v2 API endpoints
-
-### Modified Files
-- `core/urls.py` - Added v2 routes
-- `ai_core/templates/ai_image_studio.html` - Frontend integration
+- `agents/workflow_engine.py` - Intelligence Layer, smarter spider extraction, suggestions
+- `ai_core/templates/ai_image_studio.html` - UI for all intelligence sections
 
 ---
 
@@ -107,17 +89,36 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test New Workflow
-# Say: "Research trending AI tools and create a DreamWorks-style donkey logo"
-# The system will preserve YOUR style (DreamWorks) and YOUR subject (donkey)
-# while enhancing with trending colors and moods!
+# 3. Test Intelligence Layer
+# Specific request (triggers v2 workflow):
+#   "Research trending AI tools and create a DreamWorks-style donkey logo"
+#   -> Shows research, executive thinking, suggestions, generated images
+
+# Vague request (triggers smart guidance):
+#   "Create something about designing"
+#   -> Provides helpful creative consulting and design education
 ```
+
+---
+
+## The Differentiator
+
+**Why this matters:**
+- Anyone can go to Midjourney and say "Create me a logo"
+- But NOWHERE else on the internet is there a system that:
+  - Researches trending topics from real data sources
+  - Shows you what the "executive team" is thinking
+  - Preserves YOUR creative vision while suggesting enhancements
+  - Provides smart guidance when you're unsure what you want
+  - Auto-organizes your creations into projects
+
+This is what makes the platform unique - it's a creative partner, not just an image generator.
 
 ---
 
 ## Next Session Ideas
 
-1. **Test the new workflow in browser** - Try various style/subject combinations
-2. **Add more animated styles** - Adventure Time, Gravity Falls, etc.
-3. **Improve executive enhancement parsing** - Better color/mood extraction
-4. **Add thumbnail-specific enhancements** - CTR optimization tips
+1. **Real-time spider data** - Run spiders more frequently for fresher trends
+2. **Better trend analysis** - Use NLP to extract more meaningful keywords
+3. **User preference learning** - Remember what styles/colors user prefers
+4. **Prompt templates** - Quick-start templates based on trending content types

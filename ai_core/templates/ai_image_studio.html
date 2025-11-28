@@ -22948,45 +22948,125 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         const result = await executeWorkflowV2(message, projectId);
 
                         if (result.success) {
-                            // Format v2 response for display
-                            let responseHtml = `<div class="workflow-result">`;
-                            responseHtml += `<h4>✨ ${result.message}</h4>`;
+                            // Format v2 response with FULL INTELLIGENCE LAYER display
+                            let responseHtml = `<div class="workflow-result" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 20px; margin: 10px 0;">`;
 
-                            // Add style preservation info if available
-                            if (result.style_preserved) {
-                                responseHtml += `<p><strong>Your Style:</strong> ${result.style_preserved}</p>`;
-                            }
-                            if (result.subject_preserved) {
-                                responseHtml += `<p><strong>Your Subject:</strong> ${result.subject_preserved}</p>`;
+                            // === SECTION 1: Research Findings ===
+                            const research = result.research || {};
+                            if (research.summary || research.trending_keywords?.length) {
+                                responseHtml += `
+                                    <div class="research-section" style="background: rgba(34, 211, 238, 0.1); border-left: 3px solid #22d3ee; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
+                                        <h5 style="color: #22d3ee; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                                            <span>🔍</span> Spider Intelligence Research
+                                        </h5>
+                                        <p style="color: #cbd5e1; margin: 0; font-size: 14px;">${research.summary || 'Analyzed current trends in your industry.'}</p>
+                                        ${research.trending_keywords?.length ? `
+                                            <div style="margin-top: 8px;">
+                                                <span style="color: #94a3b8; font-size: 12px;">Trending: </span>
+                                                ${research.trending_keywords.map(k => `<span style="background: rgba(34, 211, 238, 0.2); color: #22d3ee; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-right: 4px;">${k}</span>`).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
                             }
 
-                            // Show trending enhancements if applied
-                            const enhancements = result.enhancements_applied || {};
-                            if (enhancements.executive_input) {
-                                const execInput = enhancements.executive_input;
-                                if (execInput.recommended_colors && execInput.recommended_colors.length > 0) {
-                                    responseHtml += `<p><em>Enhanced with trending colors: ${execInput.recommended_colors.slice(0, 3).join(', ')}</em></p>`;
-                                }
+                            // === SECTION 2: Executive Team Thinking ===
+                            const thinking = result.executive_thinking || [];
+                            if (thinking.length > 0) {
+                                responseHtml += `
+                                    <div class="executive-section" style="background: rgba(168, 85, 247, 0.1); border-left: 3px solid #a855f7; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
+                                        <h5 style="color: #a855f7; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;">
+                                            <span>🏢</span> Co-Leadership Creative Direction
+                                        </h5>
+                                        ${thinking.map(t => `
+                                            <div style="margin-bottom: 10px; padding-left: 10px; border-left: 2px solid rgba(168, 85, 247, 0.3);">
+                                                <div style="color: #c4b5fd; font-weight: 600; font-size: 13px;">${t.advisor} <span style="color: #94a3b8; font-weight: 400;">• ${t.role}</span></div>
+                                                <div style="color: #e2e8f0; font-size: 13px; margin-top: 4px;">"${t.thought}"</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `;
                             }
 
-                            // Render images
+                            // === SECTION 3: Your Vision Preserved ===
+                            responseHtml += `
+                                <div class="vision-section" style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
+                                    <h5 style="color: #22c55e; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                                        <span>✨</span> Your Creative Vision (PRESERVED)
+                                    </h5>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                        ${result.style_preserved ? `<span style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 4px 12px; border-radius: 16px; font-size: 13px;"><strong>Style:</strong> ${result.style_preserved}</span>` : ''}
+                                        ${result.subject_preserved ? `<span style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 4px 12px; border-radius: 16px; font-size: 13px;"><strong>Subject:</strong> ${result.subject_preserved}</span>` : ''}
+                                        ${result.purpose ? `<span style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 4px 12px; border-radius: 16px; font-size: 13px;"><strong>For:</strong> ${result.purpose}</span>` : ''}
+                                    </div>
+                                </div>
+                            `;
+
+                            // === SECTION 4: Suggestions for Next Prompt ===
+                            const suggestions = result.suggestions || {};
+                            if (suggestions.trending_topics?.length || suggestions.recommended_colors?.length || suggestions.recommended_mood) {
+                                responseHtml += `
+                                    <div class="suggestions-section" style="background: rgba(251, 146, 60, 0.1); border-left: 3px solid #fb923c; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
+                                        <h5 style="color: #fb923c; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                                            <span>💡</span> Try Including in Your Next Prompt
+                                        </h5>
+                                        <div style="color: #fed7aa; font-size: 13px;">
+                                            ${suggestions.trending_topics?.length ? `<p style="margin: 4px 0;"><strong>Trending Topics:</strong> ${suggestions.trending_topics.join(', ')}</p>` : ''}
+                                            ${suggestions.recommended_colors?.length ? `<p style="margin: 4px 0;"><strong>Popular Colors:</strong> ${suggestions.recommended_colors.join(', ')}</p>` : ''}
+                                            ${suggestions.recommended_mood ? `<p style="margin: 4px 0;"><strong>Trending Mood:</strong> ${suggestions.recommended_mood}</p>` : ''}
+                                            ${suggestions.composition_tips ? `<p style="margin: 4px 0;"><strong>Composition Tips:</strong> ${suggestions.composition_tips}</p>` : ''}
+                                        </div>
+                                        ${suggestions.suggestion_text ? `<p style="margin: 8px 0 0 0; color: #fbbf24; font-size: 12px; font-style: italic;">${suggestions.suggestion_text}</p>` : ''}
+                                    </div>
+                                `;
+                            }
+
+                            // === SECTION 5: Project Created ===
+                            const project = result.project;
+                            if (project) {
+                                responseHtml += `
+                                    <div class="project-section" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
+                                        <h5 style="color: #3b82f6; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                                            <span>📁</span> ${project.is_new ? 'New Project Created' : 'Added to Project'}
+                                        </h5>
+                                        <p style="color: #93c5fd; margin: 0; font-size: 14px;">
+                                            <strong>${project.name}</strong> • ${project.image_count} images
+                                        </p>
+                                    </div>
+                                `;
+                            }
+
+                            // === SECTION 6: Generated Images ===
                             const images = result.images || [];
                             if (images.length > 0) {
-                                responseHtml += `<div class="generated-images" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">`;
+                                responseHtml += `
+                                    <div class="images-section" style="margin-top: 15px;">
+                                        <h5 style="color: #f1f5f9; margin: 0 0 12px 0;">🎨 Generated ${images.length} ${result.content_type.replace('_', ' ')}${images.length > 1 ? 's' : ''}</h5>
+                                        <div class="generated-images" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                `;
                                 images.forEach((img, idx) => {
                                     if (img.success && img.url) {
                                         responseHtml += `
-                                            <div class="image-container" style="max-width: 300px;">
-                                                <img src="${img.url}" alt="Generated ${idx + 1}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="viewAsset(this, '${img.id || ''}', 'image')">
-                                                <p style="font-size: 12px; color: #888; margin-top: 5px;">${img.prompt ? img.prompt.substring(0, 100) + '...' : 'Generated image'}</p>
+                                            <div class="image-card" style="background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                                <img src="${img.url}" alt="Generated ${idx + 1}" style="width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer;" onclick="viewAsset(this, '${img.id || ''}', 'image')">
+                                                <div style="padding: 10px;">
+                                                    <div style="color: #94a3b8; font-size: 11px;">${img.model || 'SD3'} • ${img.style || 'Custom'}</div>
+                                                </div>
                                             </div>
                                         `;
                                     }
                                 });
-                                responseHtml += `</div>`;
+                                responseHtml += `</div></div>`;
                             }
 
                             responseHtml += `</div>`;
+
+                            // Update active project if one was created
+                            if (project && project.is_new) {
+                                this.activeProjectId = project.id;
+                                this.activeProjectName = project.name;
+                                await this.loadProjects();
+                            }
 
                             return { message: responseHtml };
                         } else {
