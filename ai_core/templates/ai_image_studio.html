@@ -40371,16 +40371,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 <span>Inspired by: ${dream.inspiration}</span>
                             </div>
                         ` : ''}
-                        <div class="mt-2 d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-light" onclick="reactToDream('${dream.id}', 'like')" title="I like this!">
+                        <div class="mt-2 d-flex gap-2 align-items-center">
+                            <button class="btn btn-sm ${dream.user_reaction === 'like' ? 'btn-success' : 'btn-outline-light'}" onclick="reactToDream('${dream.id}', 'like')" title="I like this! Future dreams will be more like this.">
                                 👍
                             </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="reactToDream('${dream.id}', 'interesting')" title="Interesting...">
+                            <button class="btn btn-sm ${dream.user_reaction === 'interesting' ? 'btn-info' : 'btn-outline-light'}" onclick="reactToDream('${dream.id}', 'interesting')" title="Interesting! More dreams on this topic.">
                                 🤔
                             </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="reactToDream('${dream.id}', 'explore')" title="Let's explore this!">
+                            <button class="btn btn-sm ${dream.user_reaction === 'explore' ? 'btn-primary' : 'btn-outline-light'}" onclick="reactToDream('${dream.id}', 'explore')" title="Explore! The agent will dive deeper.">
                                 🚀
                             </button>
+                            ${dream.user_reaction ? `<small class="text-muted ms-2">✓ ${dream.user_reaction}</small>` : ''}
                         </div>
                     </div>
                 `;
@@ -40419,9 +40420,19 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
-        // React to a dream
+        // React to a dream - Session 249: Now with feedback effects!
         async function reactToDream(dreamId, reaction) {
             try {
+                // Show immediate visual feedback
+                const btn = event.target.closest('button');
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        btn.style.transform = 'scale(1)';
+                    }, 200);
+                }
+
                 const response = await fetch(`/api/agent-dreams/${dreamId}/react/`, {
                     method: 'POST',
                     headers: {
@@ -40434,12 +40445,60 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
-                        showNotification(`Reaction recorded: ${reaction === 'like' ? '👍' : reaction === 'interesting' ? '🤔' : '🚀'}`, 'success');
+                        // Session 249: Show the feedback effect message
+                        const emoji = reaction === 'like' ? '👍' : reaction === 'interesting' ? '🤔' : '🚀';
+                        let message = `${emoji} Reaction recorded!`;
+
+                        // Add the feedback effect message
+                        if (data.feedback_effect) {
+                            message += ` ${data.feedback_effect}`;
+                        }
+
+                        // Special notification for "explore" reaction
+                        if (reaction === 'explore' && data.exploration_id) {
+                            message = `🚀 Exploring this idea! The agent is diving deeper...`;
+                            showNotification(message, 'info');
+
+                            // Show exploration progress indicator
+                            showExplorationProgress(dreamId);
+                        } else {
+                            showNotification(message, 'success');
+                        }
+
                         loadAgentDreams(); // Refresh the list
                     }
                 }
             } catch (error) {
                 console.error('Error reacting to dream:', error);
+                showNotification('Error recording reaction', 'danger');
+            }
+        }
+
+        // Session 249: Show exploration progress for "Explore" reactions
+        function showExplorationProgress(dreamId) {
+            const dreamCard = document.querySelector(`[data-dream-id="${dreamId}"]`);
+            if (dreamCard) {
+                const existingIndicator = dreamCard.querySelector('.exploration-indicator');
+                if (existingIndicator) return;
+
+                const indicator = document.createElement('div');
+                indicator.className = 'exploration-indicator mt-2 p-2 rounded';
+                indicator.style.cssText = 'background: linear-gradient(90deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2)); border: 1px solid rgba(118,75,162,0.4);';
+                indicator.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-info me-2" role="status"></div>
+                        <small class="text-light">Agent is exploring this idea...</small>
+                    </div>
+                `;
+                dreamCard.appendChild(indicator);
+
+                // Remove after 30 seconds (exploration should complete)
+                setTimeout(() => {
+                    indicator.innerHTML = `
+                        <small class="text-success"><i class="fas fa-check me-1"></i>Exploration complete! Knowledge added.</small>
+                    `;
+                    setTimeout(() => indicator.remove(), 5000);
+                }, 15000);
             }
         }
 

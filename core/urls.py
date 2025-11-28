@@ -161,7 +161,10 @@ from core.views_agent_learning import (
     mark_dreams_shown,
     react_to_dream,
     # Session 248: Knowledge Transfer Activity Feed
-    get_knowledge_transfer_feed
+    get_knowledge_transfer_feed,
+    # Session 249: Dream Feedback System
+    get_dream_preferences,
+    get_dream_exploration,
 )
 
 # Session 219 Phase D: Import marketplace views
@@ -1994,6 +1997,9 @@ urlpatterns = [
     path('api/agent-dreams/trigger/', trigger_agent_dreams, name='trigger-agent-dreams'),
     path('api/agent-dreams/mark-shown/', mark_dreams_shown, name='mark-dreams-shown'),
     path('api/agent-dreams/<uuid:dream_id>/react/', react_to_dream, name='react-to-dream'),
+    # Session 249: Dream Feedback System
+    path('api/agent-dreams/preferences/', get_dream_preferences, name='dream-preferences'),
+    path('api/agent-dreams/explorations/<uuid:exploration_id>/', get_dream_exploration, name='dream-exploration'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),

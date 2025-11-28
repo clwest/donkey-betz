@@ -797,7 +797,7 @@ def mark_dreams_shown(request):
 @require_http_methods(["POST"])
 def react_to_dream(request, dream_id):
     """
-    Record a user reaction to a dream.
+    Record a user reaction to a dream and update preferences.
 
     POST /api/agent-dreams/{dream_id}/react/
 
@@ -806,34 +806,230 @@ def react_to_dream(request, dream_id):
         "reaction": "like" | "interesting" | "explore",
         "feedback": "optional text feedback"
     }
+
+    Session 249: Now records preferences to influence future dream generation!
+    - Updates DreamFeedbackPreference for dream_type, topic, and agent
+    - "Explore" reactions trigger a deeper exploration task
     """
     try:
-        from core.models import AgentDream
+        from core.models import AgentDream, DreamFeedbackPreference, DreamExploration
 
         body = json.loads(request.body)
         reaction = body.get('reaction', '')
         feedback = body.get('feedback', '')
 
-        dream = AgentDream.objects.filter(id=dream_id).first()
+        dream = AgentDream.objects.select_related('agent').filter(id=dream_id).first()
         if not dream:
             return JsonResponse({
                 'success': False,
                 'error': 'Dream not found'
             }, status=404)
 
+        # Update the dream itself
         dream.user_reaction = reaction
         if feedback:
             dream.user_feedback = feedback
         dream.save()
 
+        # Session 249: Record preferences for future dream generation
+        preferences_updated = []
+
+        # 1. Record preference for dream type (global - no agent)
+        if dream.dream_type:
+            type_pref = DreamFeedbackPreference.get_or_create_preference(
+                agent=None,
+                dream_type=dream.dream_type,
+                topic=''
+            )
+            type_pref.record_reaction(reaction)
+            preferences_updated.append(f"dream_type:{dream.dream_type}")
+
+        # 2. Record preference for topic (global - no agent)
+        if dream.inspiration_source:
+            topic_pref = DreamFeedbackPreference.get_or_create_preference(
+                agent=None,
+                dream_type='',
+                topic=dream.inspiration_source
+            )
+            topic_pref.record_reaction(reaction)
+            preferences_updated.append(f"topic:{dream.inspiration_source[:30]}")
+
+        # 3. Record preference for specific agent (all their dreams)
+        if dream.agent:
+            agent_pref = DreamFeedbackPreference.get_or_create_preference(
+                agent=dream.agent,
+                dream_type='',
+                topic=''
+            )
+            agent_pref.record_reaction(reaction)
+            preferences_updated.append(f"agent:{dream.agent.name}")
+
+        # 4. Record preference for agent + dream_type combo
+        if dream.agent and dream.dream_type:
+            combo_pref = DreamFeedbackPreference.get_or_create_preference(
+                agent=dream.agent,
+                dream_type=dream.dream_type,
+                topic=''
+            )
+            combo_pref.record_reaction(reaction)
+            preferences_updated.append(f"agent+type:{dream.agent.name}+{dream.dream_type}")
+
+        logger.info(f"💭 [DREAM FEEDBACK] Recorded '{reaction}' for dream '{dream.title}' - updated {len(preferences_updated)} preferences")
+
+        # 5. Special handling for "explore" reaction - create exploration task
+        exploration_id = None
+        if reaction == 'explore':
+            exploration = DreamExploration.objects.create(
+                dream=dream,
+                status='pending'
+            )
+            exploration_id = str(exploration.id)
+            logger.info(f"🚀 [DREAM EXPLORE] Created exploration task {exploration_id} for dream '{dream.title}'")
+
+            # Trigger the exploration task asynchronously
+            try:
+                from core.tasks import explore_dream_topic
+                explore_dream_topic.delay(str(exploration.id))
+            except Exception as task_error:
+                logger.warning(f"Could not trigger exploration task: {task_error}")
+
         return JsonResponse({
             'success': True,
             'message': f'Reaction "{reaction}" recorded',
-            'dream_id': str(dream_id)
+            'dream_id': str(dream_id),
+            'preferences_updated': preferences_updated,
+            'exploration_id': exploration_id,
+            'feedback_effect': _get_feedback_effect_message(reaction)
         })
 
     except Exception as e:
         logger.error(f"Error reacting to dream: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def _get_feedback_effect_message(reaction):
+    """Get a user-friendly message about what effect their reaction will have."""
+    if reaction == 'like':
+        return "This dream type will be more likely in the future!"
+    elif reaction == 'interesting':
+        return "We'll generate more dreams exploring this topic area!"
+    elif reaction == 'explore':
+        return "The agent is diving deeper into this idea for you!"
+    return ""
+
+
+@require_http_methods(["GET"])
+def get_dream_preferences(request):
+    """
+    Session 249: Get dream feedback preferences and statistics.
+
+    GET /api/agent-dreams/preferences/
+
+    Returns insights about what types of dreams and topics the user prefers,
+    which will influence future dream generation.
+    """
+    try:
+        from core.models import DreamFeedbackPreference, DreamExploration
+
+        # Get top dream types by preference
+        top_types = list(DreamFeedbackPreference.get_top_preferences('dream_type', limit=7))
+
+        # Get top topics by preference
+        top_topics = list(DreamFeedbackPreference.get_top_preferences('topic', limit=10))
+
+        # Get top agents by preference
+        top_agents = list(DreamFeedbackPreference.get_top_preferences('agent', limit=5))
+
+        # Get dream type weights (for debugging/transparency)
+        type_weights = DreamFeedbackPreference.get_dream_type_weights()
+
+        # Get exploration stats
+        total_explorations = DreamExploration.objects.count()
+        completed_explorations = DreamExploration.objects.filter(status='completed').count()
+        knowledge_added = DreamExploration.objects.filter(related_knowledge_added=True).count()
+
+        # Total reaction counts
+        from django.db.models import Sum
+        totals = DreamFeedbackPreference.objects.aggregate(
+            total_likes=Sum('like_count'),
+            total_interesting=Sum('interesting_count'),
+            total_explores=Sum('explore_count')
+        )
+
+        return JsonResponse({
+            'success': True,
+            'preferences': {
+                'top_dream_types': top_types,
+                'top_topics': top_topics,
+                'top_agents': top_agents,
+                'type_weights': type_weights
+            },
+            'reaction_totals': {
+                'likes': totals['total_likes'] or 0,
+                'interesting': totals['total_interesting'] or 0,
+                'explores': totals['total_explores'] or 0
+            },
+            'explorations': {
+                'total': total_explorations,
+                'completed': completed_explorations,
+                'knowledge_added': knowledge_added
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting dream preferences: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_dream_exploration(request, exploration_id):
+    """
+    Session 249: Get details of a dream exploration.
+
+    GET /api/agent-dreams/explorations/{exploration_id}/
+
+    Returns the full exploration content and insights.
+    """
+    try:
+        from core.models import DreamExploration
+
+        exploration = DreamExploration.objects.select_related(
+            'dream', 'dream__agent'
+        ).filter(id=exploration_id).first()
+
+        if not exploration:
+            return JsonResponse({
+                'success': False,
+                'error': 'Exploration not found'
+            }, status=404)
+
+        return JsonResponse({
+            'success': True,
+            'exploration': {
+                'id': str(exploration.id),
+                'status': exploration.status,
+                'dream': {
+                    'id': str(exploration.dream.id),
+                    'title': exploration.dream.title,
+                    'content': exploration.dream.content,
+                    'agent_name': exploration.dream.agent.name if exploration.dream.agent else 'Unknown'
+                },
+                'exploration_content': exploration.exploration_content,
+                'insights': exploration.insights_generated,
+                'knowledge_added': exploration.related_knowledge_added,
+                'created_at': exploration.created_at.isoformat(),
+                'completed_at': exploration.completed_at.isoformat() if exploration.completed_at else None
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting dream exploration: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)
