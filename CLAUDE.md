@@ -1,11 +1,11 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 27, 2025 - Session 240 (Intelligence Layer)
+**Last Updated:** November 27, 2025 - Session 241 (Agent Cleanup)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE
 **Current Focus:** AI Content Creation (images, videos, audio, 3D)
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 67 active spiders | 21 real data sources
-**Workflow Engine:** v2 - User Vision SACRED + Intelligence Layer
+**Agent Ecosystem:** 20 real agents | 25 legendary advisors
 
 ---
 
@@ -102,6 +102,42 @@ The 6-phase plan to transform spider data into revenue:
 - `video_thumbnail_series` - Consistent thumbnail series
 - `logo_to_video` - Animate logo into video
 
+### Agent Ecosystem (20 Real Agents)
+
+All agents have actual Python implementations in `agents/` directory:
+
+**Generation Agents:**
+- `ImageAgent` - Unified image generation (logos, social media, illustrations)
+- `VideoAgent` - Text-to-video, image-to-video, editing, color grading
+- `AudioAgent` - Text-to-speech, sound effects, voiceovers
+- `3DGenerationAgent` - 3D model and scene generation
+
+**Research & Analysis:**
+- `ResearchAgent` - Web search + spider intelligence
+- `TrendAnalysisAgent` - Trending topics, colors, styles
+
+**Workflow & Orchestration:**
+- `WorkflowOrchestrationAgent` - Multi-step creative workflows
+- `OpportunityScoringAgent` - Score spider data as opportunities
+
+**Specialized Generation:**
+- `CharacterTrainingAgent` - Train custom character styles
+- `TrainedCreationAgent` - Generate with trained characters
+- `CreationAgent` - General content creation
+- `PromptEngineeringAgent` - Prompt optimization
+
+**Strategy Agents (Session 241):**
+- `ContentStrategyAgent` - Content recommendations from trends
+- `SEOOptimizerAgent` - Hashtags, metadata, SEO optimization
+- `BrandIdentityAgent` - Brand colors, styles, consistency
+- `SocialMediaAgent` - Platform-specific content
+- `CreativeDirectorAgent` - High-level creative direction
+
+**Executive Agents:**
+- `CTOAgent` - Technical decisions
+- `COOAgent` - Operations oversight
+- `MeetingCoordinatorAgent` - Team coordination
+
 ---
 
 ## Key File Locations
@@ -188,12 +224,12 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
-- **Session 240:** NEW Workflow Engine v2 - User Vision SACRED philosophy, new API endpoints, IntentParser preserves style/subject
+- **Session 241:** Agent Cleanup - Audited 145 agents, deleted placeholders, created 5 new valuable agents, now 20 REAL agents
+- **Session 240:** Workflow Engine v2 - User Vision SACRED philosophy, IntentParser preserves style/subject
 - **Session 239:** Style Extraction Fixes - Pass original user message to workflow
-- **Session 238:** Major Workflow Fixes - Added workflow_orchestration_agent tool, SD3 for logos, Pixar-style detection
+- **Session 238:** Major Workflow Fixes - SD3 for logos, Pixar-style detection, smart keyword extraction
 - **Session 237:** Spider Intelligence & Trending Topics - Fixed API endpoints, trending topics
 - **Session 236:** A/B Testing & Goal Tracking UI - Phase 6 Complete! Dashboard sections, creation modals
-- **Session 235:** A/B Testing Framework - 4 models, 15 APIs, Alert/Automation modals, Notification Bell
 
 ---
 
