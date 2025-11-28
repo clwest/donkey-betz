@@ -7604,7 +7604,7 @@
                                 <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
                                     <h5 class="mb-0" style="color: #a78bfa; font-size: 14px;">₿ Market Pulse</h5>
                                 </div>
-                                <div class="card-body" style="max-height: 120px; overflow-y: auto;">
+                                <div class="card-body" style="max-height: 200px; overflow-y: auto;">
                                     <div id="trending-market-list">
                                         <p style="color: #6b7280; font-size: 12px;">Loading market data...</p>
                                     </div>
@@ -7648,13 +7648,13 @@
                                 </div>
                                 <div class="card-body">
                                     <div id="trending-categories" class="d-flex flex-wrap gap-2">
-                                        <span class="badge" onclick="loadTrendingTab(null)" style="background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer;">All</span>
-                                        <span class="badge" onclick="filterTrendsByCategory('tech')" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; cursor: pointer;">💻 Tech</span>
-                                        <span class="badge" onclick="filterTrendsByCategory('creative')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; cursor: pointer;">🎨 Creative</span>
-                                        <span class="badge" onclick="filterTrendsByCategory('financial')" style="background: rgba(34, 197, 94, 0.2); color: #86efac; cursor: pointer;">💰 Finance</span>
-                                        <span class="badge" onclick="filterTrendsByCategory('jobs')" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d; cursor: pointer;">💼 Jobs</span>
-                                        <span class="badge" onclick="filterTrendsByCategory('news')" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9; cursor: pointer;">📰 News</span>
-                                        <span class="badge" onclick="filterTrendsByCategory('crypto')" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; cursor: pointer;">₿ Crypto</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('all', this)" style="background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; transition: all 0.2s;">All</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('tech', this)" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; cursor: pointer; transition: all 0.2s;">💻 Tech</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('creative', this)" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; cursor: pointer; transition: all 0.2s;">🎨 Creative</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('financial', this)" style="background: rgba(34, 197, 94, 0.2); color: #86efac; cursor: pointer; transition: all 0.2s;">💰 Finance</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('jobs', this)" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d; cursor: pointer; transition: all 0.2s;">💼 Jobs</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('news', this)" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9; cursor: pointer; transition: all 0.2s;">📰 News</span>
+                                        <span class="badge" onclick="filterTrendsByCategory('crypto', this)" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; cursor: pointer; transition: all 0.2s;">₿ Crypto</span>
                                     </div>
                                 </div>
                             </div>
@@ -12977,7 +12977,7 @@
                                         <span style="color: #22c55e; font-size: 10px; margin-left: auto;">⚡ ${score} score</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-sm" onclick="useTrendingPrompt('${topic.replace(/'/g, "\\'")}', 'Create content about ${topic.replace(/'/g, "\\'")}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
+                                <button class="btn btn-sm" onclick="useTrendingPrompt('${topic.replace(/'/g, "\\'")}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
                                     Use
                                 </button>
                             </div>
@@ -13010,8 +13010,10 @@
                 }
 
                 // === RENDER MARKET INSIGHTS ===
+                // Session 241: Fixed percentage display (was multiplying already-percentage values by 100)
+                // Session 241: Show more items (8 instead of 4)
                 if (marketList && marketData.status === 'success' && marketData.insights?.crypto) {
-                    const crypto = marketData.insights.crypto.slice(0, 4);
+                    const crypto = marketData.insights.crypto.slice(0, 8);
                     marketList.innerHTML = crypto.map(coin => {
                         const change = coin.change_24h || 0;
                         const changeColor = change >= 0 ? '#22c55e' : '#ef4444';
@@ -13023,7 +13025,7 @@
                                     <span style="color: #c4b5fd; font-weight: 600;">${coin.symbol || coin.name}</span>
                                     <span style="color: #6b7280; font-size: 11px; margin-left: 8px;">$${price}</span>
                                 </div>
-                                <span style="color: ${changeColor}; font-size: 12px;">${changeIcon} ${change >= 0 ? '+' : ''}${(change * 100).toFixed(2)}%</span>
+                                <span style="color: ${changeColor}; font-size: 12px;">${changeIcon} ${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>
                             </div>
                         `;
                     }).join('');
@@ -13032,18 +13034,21 @@
                 }
 
                 // === RENDER JOB OPPORTUNITIES ===
-                if (jobsList && jobsData.status === 'success' && jobsData.summary?.featured_jobs) {
-                    const jobs = jobsData.summary.featured_jobs.slice(0, 4);
+                // Session 241: Fixed - API returns job_market.jobs, not summary.featured_jobs
+                const jobsArray = jobsData.job_market?.jobs || jobsData.summary?.featured_jobs || [];
+                if (jobsList && jobsData.status === 'success' && jobsArray.length > 0) {
+                    const jobs = jobsArray.slice(0, 5);
                     jobsList.innerHTML = jobs.map(job => `
-                        <div class="p-2 mb-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; cursor: pointer;" onclick="useTrendingPrompt('${(job.title || '').replace(/'/g, "\\'")}', 'Create content for ${(job.company || 'job opportunity').replace(/'/g, "\\'")}')">
+                        <a href="${job.url || '#'}" target="_blank" class="text-decoration-none d-block p-2 mb-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; cursor: pointer;">
                             <div style="color: #86efac; font-size: 12px; font-weight: 600;">${job.title || 'Remote Job'}</div>
-                            <div style="color: #6b7280; font-size: 11px;">${job.company || ''} ${job.salary ? `• ${job.salary}` : ''}</div>
-                        </div>
+                            <div style="color: #6b7280; font-size: 11px;">${job.company || ''} ${job.location ? `• ${job.location}` : ''}</div>
+                        </a>
                     `).join('');
                 } else if (jobsList) {
                     // Show job categories instead
-                    if (jobsData.summary?.categories) {
-                        const cats = Object.entries(jobsData.summary.categories).slice(0, 4);
+                    const categories = jobsData.job_market?.categories || jobsData.summary?.categories;
+                    if (categories) {
+                        const cats = Object.entries(categories).slice(0, 5);
                         jobsList.innerHTML = cats.map(([cat, count]) => `
                             <div class="d-flex justify-content-between p-2 mb-1" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px;">
                                 <span style="color: #86efac; font-size: 12px; text-transform: capitalize;">${cat.replace(/_/g, ' ')}</span>
@@ -13066,15 +13071,25 @@
         }
 
         // Session 241: Filter trends by category
-        function filterTrendsByCategory(category) {
-            // Update active state on category badges
+        function filterTrendsByCategory(category, element) {
+            // Update active state on category badges - dim all, highlight selected
             document.querySelectorAll('#trending-categories .badge').forEach(badge => {
                 badge.style.opacity = '0.5';
+                badge.style.transform = 'scale(1)';
             });
-            event.target.style.opacity = '1';
 
-            // Reload with category filter
-            loadTrendingTab(category);
+            // Highlight the clicked badge
+            if (element) {
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1.1)';
+            }
+
+            // Show loading indicator
+            const displayCategory = category === 'all' ? 'all categories' : category;
+            showToast(`Filtering by ${displayCategory}...`, 'info');
+
+            // Reload with category filter (null for 'all')
+            loadTrendingTab(category === 'all' ? null : category);
         }
 
         // Session 237: Helper to get icon for trend topic
@@ -13093,13 +13108,49 @@
             return '🔥';
         }
 
-        function useTrendingPrompt(title, description) {
-            const chatInput = document.getElementById('asstUserInput');
-            if (chatInput) {
-                const prompt = description ? `${title}: ${description}` : title;
-                chatInput.value = prompt;
-                chatInput.focus();
-                showToast('Trend applied to prompt!', 'success');
+        // Session 241: Fixed - create actionable prompts from trends
+        function useTrendingPrompt(title) {
+            const promptInput = document.getElementById('prompt');
+            if (promptInput) {
+                // Build a creative, actionable prompt based on the trend topic
+                const topic = title.toLowerCase();
+                let prompt = '';
+
+                // Generate topic-specific creative prompts
+                if (topic.includes('ai') || topic.includes('artificial intelligence')) {
+                    prompt = `A futuristic ${topic} concept visualization, digital art style, glowing neural networks, blue and purple color scheme, professional tech illustration`;
+                } else if (topic.includes('design') || topic.includes('creative')) {
+                    prompt = `Modern ${topic} workspace, minimalist aesthetic, creative tools and inspiration, warm lighting, professional photography style`;
+                } else if (topic.includes('tech') || topic.includes('technology')) {
+                    prompt = `Cutting-edge ${topic} innovation, sleek devices and interfaces, modern corporate style, clean lines, professional product photography`;
+                } else if (topic.includes('crypto') || topic.includes('bitcoin') || topic.includes('blockchain')) {
+                    prompt = `${topic} concept art, digital currency visualization, futuristic finance, gold and dark theme, 3D rendered style`;
+                } else if (topic.includes('startup') || topic.includes('business')) {
+                    prompt = `${topic} team collaboration, modern office environment, diverse professionals, dynamic composition, corporate photography style`;
+                } else if (topic.includes('gaming') || topic.includes('game')) {
+                    prompt = `Epic ${topic} scene, dramatic lighting, vibrant colors, action-packed composition, AAA game art style`;
+                } else {
+                    prompt = `Professional ${topic} themed illustration, modern design, vibrant colors, high quality, trending on artstation`;
+                }
+
+                promptInput.value = prompt;
+
+                // Switch to Images tab (where the prompt input lives)
+                const imagesTab = document.getElementById('images-tab');
+                if (imagesTab) {
+                    const tab = new bootstrap.Tab(imagesTab);
+                    tab.show();
+                }
+
+                // Focus the prompt after tab switch
+                setTimeout(() => {
+                    promptInput.focus();
+                    promptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+
+                showToast(`"${title}" trend applied! Edit prompt and generate.`, 'success');
+            } else {
+                showToast('Could not find prompt input', 'error');
             }
         }
 
@@ -39913,10 +39964,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             // Session 219: Initialize Trending Tab on Tab Show
+            // Session 241: Also load spider network data when tab is shown
             const trendingTab = document.getElementById('trending-tab');
             if (trendingTab) {
                 trendingTab.addEventListener('shown.bs.tab', function() {
                     loadTrendingTab();
+                    loadSpiderNetwork();  // Session 241: Auto-load spider status
                 });
             }
 
