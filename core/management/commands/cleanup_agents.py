@@ -69,10 +69,14 @@ class Command(BaseCommand):
             'SocialMediaAgent',
             'CreativeDirectorAgent',
 
-            # Executive agents (partial implementations)
+            # Executive agents
             'CTOAgent',
             'COOAgent',
             'MeetingCoordinatorAgent',
+
+            # Additional agents with code
+            'CreationAgent',
+            'PromptEngineeringAgent',
         ]
 
         # Count current agents
