@@ -268,6 +268,44 @@ from core.views_personality import (
     personality_archetypes,
 )
 
+# Session 257: Agent Memory Clusters
+from core.views_memory_clusters import (
+    clusters_overview,
+    agent_clusters,
+    cluster_detail,
+    cluster_visualization_data,
+    generate_all_clusters,
+    add_memory_to_cluster,
+    remove_memory_from_cluster,
+    cluster_evolution,
+    find_similar_clusters,
+)
+
+# Session 258: Agent Predictions / Prophecies
+from core.views_predictions import (
+    predictions_overview,
+    agent_predictions,
+    prediction_detail,
+    verify_prediction,
+    upvote_prediction,
+    add_comment,
+    prediction_leaderboard,
+    generate_predictions_from_dreams,
+    expire_old_predictions,
+)
+
+# Session 259: Time Capsule Messages
+from core.views_time_capsules import (
+    TimeCapsuleOverviewView,
+    AgentTimeCapsuleView,
+    TimeCapsuleDetailView,
+    RevealTimeCapsuleView,
+    TimeCapsuleReactView,
+    ReadyToRevealView,
+    GenerateTimeCapsuleView,
+    ExpireOldCapsulesView,
+)
+
 # Session 219 Phase D: Import marketplace views
 from core.views_marketplace import (
     browse_workflows as marketplace_browse,
@@ -2191,6 +2229,39 @@ urlpatterns = [
     path('api/personality/generate-all/', generate_all_personalities, name='personality-generate-all'),
     path('api/personality/compatibility/<uuid:agent1_id>/<uuid:agent2_id>/', personality_compatibility, name='personality-compatibility'),
     path('api/personality/archetypes/', personality_archetypes, name='personality-archetypes'),
+
+    # Session 257: Memory Clusters API
+    path('api/memory-clusters/', clusters_overview, name='memory-clusters-overview'),
+    path('api/memory-clusters/agent/<uuid:agent_id>/', agent_clusters, name='memory-clusters-agent'),
+    path('api/memory-clusters/cluster/<uuid:cluster_id>/', cluster_detail, name='memory-clusters-detail'),
+    path('api/memory-clusters/visualization/', cluster_visualization_data, name='memory-clusters-viz'),
+    path('api/memory-clusters/visualization/<uuid:agent_id>/', cluster_visualization_data, name='memory-clusters-viz-agent'),
+    path('api/memory-clusters/generate-all/', generate_all_clusters, name='memory-clusters-generate-all'),
+    path('api/memory-clusters/cluster/<uuid:cluster_id>/add-memory/', add_memory_to_cluster, name='memory-clusters-add-memory'),
+    path('api/memory-clusters/cluster/<uuid:cluster_id>/memory/<uuid:memory_id>/', remove_memory_from_cluster, name='memory-clusters-remove-memory'),
+    path('api/memory-clusters/evolution/<uuid:agent_id>/', cluster_evolution, name='memory-clusters-evolution'),
+    path('api/memory-clusters/find-similar/', find_similar_clusters, name='memory-clusters-find-similar'),
+
+    # Session 258: Agent Predictions / Prophecies API
+    path('api/predictions/', predictions_overview, name='predictions-overview'),
+    path('api/predictions/agent/<uuid:agent_id>/', agent_predictions, name='predictions-agent'),
+    path('api/predictions/<uuid:prediction_id>/', prediction_detail, name='predictions-detail'),
+    path('api/predictions/<uuid:prediction_id>/verify/', verify_prediction, name='predictions-verify'),
+    path('api/predictions/<uuid:prediction_id>/upvote/', upvote_prediction, name='predictions-upvote'),
+    path('api/predictions/<uuid:prediction_id>/comment/', add_comment, name='predictions-comment'),
+    path('api/predictions/leaderboard/', prediction_leaderboard, name='predictions-leaderboard'),
+    path('api/predictions/generate-from-dreams/', generate_predictions_from_dreams, name='predictions-from-dreams'),
+    path('api/predictions/expire-old/', expire_old_predictions, name='predictions-expire'),
+
+    # Session 259: Time Capsule Messages API
+    path('api/time-capsules/', TimeCapsuleOverviewView.as_view(), name='time-capsules-overview'),
+    path('api/time-capsules/agent/<uuid:agent_id>/', AgentTimeCapsuleView.as_view(), name='time-capsules-agent'),
+    path('api/time-capsules/<uuid:capsule_id>/', TimeCapsuleDetailView.as_view(), name='time-capsules-detail'),
+    path('api/time-capsules/<uuid:capsule_id>/reveal/', RevealTimeCapsuleView.as_view(), name='time-capsules-reveal'),
+    path('api/time-capsules/<uuid:capsule_id>/react/', TimeCapsuleReactView.as_view(), name='time-capsules-react'),
+    path('api/time-capsules/ready-to-reveal/', ReadyToRevealView.as_view(), name='time-capsules-ready'),
+    path('api/time-capsules/generate/', GenerateTimeCapsuleView.as_view(), name='time-capsules-generate'),
+    path('api/time-capsules/expire-old/', ExpireOldCapsulesView.as_view(), name='time-capsules-expire'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),

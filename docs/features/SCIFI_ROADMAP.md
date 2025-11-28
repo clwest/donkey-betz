@@ -1,7 +1,7 @@
 # Sci-Fi Features Roadmap
 
 **Created:** November 28, 2025 - Session 246
-**Last Updated:** November 28, 2025 - Session 255
+**Last Updated:** November 28, 2025 - Session 258
 **Status:** Active Development
 **Philosophy:** Make AI feel alive, autonomous, and magical
 
@@ -105,61 +105,54 @@ MBTI-style personality system giving each agent a distinct personality.
 - 7 API endpoints for full functionality
 - All 20 agents now have personalities (10 Visionary, 5 Commander, 5 Analyst)
 
+### 11. Agent Memory Clusters (Session 257)
+**Status:** DONE
+
+Semantic clustering of agent memories using embeddings.
+- `MemoryCluster` model with centroid embeddings
+- `MemoryClusterMembership` through model with similarity scores
+- `ClusterEvolution` for tracking cluster changes over time
+- Semantic clustering algorithm using cosine similarity
+- K-means clustering fallback with sklearn
+- GPT-4o-mini for auto-generating cluster names/descriptions
+- Coherence scoring based on embedding distances
+- 10 API endpoints for full functionality
+- UI section with bubble visualization and cluster details
+
+### 12. Agent Prophecies / Predictions (Session 258)
+**Status:** DONE
+
+Agents make timestamped predictions about trends, tracked for accuracy over time.
+- `AgentPrediction` model with confidence scores and timeframes
+- `PredictionStats` for tracking agent accuracy (overall, weighted, by category)
+- `PredictionComment` for user/agent feedback on predictions
+- `PredictionFollowUp` for chained predictions (extends, revises, confirms, counters)
+- Prediction sources: analysis, pattern, dream, conversation, hive_mind, memory, intuition
+- Categories: trend, market, technology, creative, opportunity, user_behavior, seasonal, competition
+- Accuracy tiers: Oracle (90%+), Visionary (80%+), Prophet (70%+), Forecaster (60%+), Novice (<60%)
+- Streak tracking (current, best, worst)
+- GPT-4o-mini for generating predictions from agent dreams
+- 9 API endpoints: overview, agent predictions, detail, verify, upvote, comment, leaderboard, generate-from-dreams, expire-old
+- UI section with prediction timeline, detail panel, verification buttons, accuracy leaderboard
+
 ---
 
 ## Planned Features
 
-### 11. Agent Memory Clusters
-**Status:** PLANNED
-**Priority:** HIGH (Next)
-
-Group related memories together with visual mapping.
-
-**Concept:**
-- Cluster memories by topic/theme
-- Visual memory map with connections
-- Semantic clustering using embeddings
-- Interactive exploration
-
-**Implementation Ideas:**
-- Clustering algorithm on memory embeddings
-- `MemoryCluster` model linking memories
-- D3.js or similar for visual map
-- Click to explore memory clusters
-
----
-
-### 12. Agent Prophecies / Predictions
-**Status:** PLANNED
-**Priority:** MEDIUM
-
-Agents make predictions about trends and opportunities, tracked over time.
-
-**Concept:**
-- Agents make timestamped predictions
-- System tracks accuracy over time
-- "TrendAgent predicted X 3 months ago - and it happened!"
-- Builds trust in agent insights
-
-**Implementation Ideas:**
-- `AgentPrediction` model: agent, prediction, confidence, deadline, outcome
-- Automated verification where possible
-- Prediction accuracy score per agent
-- UI: Prediction timeline, accuracy leaderboard
-
----
-
-### 13. Time Capsule Messages
-**Status:** IDEA
-**Priority:** LOW
+### 13. Time Capsule Messages (Session 259)
+**Status:** DONE
 
 Agents write messages to their "future selves" to be revealed later.
 
-**Concept:**
-- Agent writes reflection or prediction
-- Scheduled to be revealed in X days/weeks/months
-- Creates sense of continuity and growth
-- "6 months ago, I thought X... now I think Y"
+**Features:**
+- `TimeCapsule` model with title, message, trigger, context, reveal_at
+- `TimeCapsuleReaction` for user reactions (touching, insightful, funny, etc.)
+- `TimeCapsuleStats` for agent capsule statistics
+- Trigger types: reflection, milestone, prediction, lesson, goal, dream, question, celebration, change, random
+- Agent state comparison (then vs now) when revealed
+- GPT-4o-mini powered reflections on past messages
+- 8 API endpoints: overview, agent capsules, detail, reveal, react, ready-to-reveal, generate, expire-old
+- Cyan-themed UI with timeline, detail panel, reactions
 
 ---
 
@@ -177,9 +170,9 @@ Agents write messages to their "future selves" to be revealed later.
 | Evolution/Leveling | Medium | Medium | Medium | DONE |
 | Time Travel Debug | High | High | Very High | DONE |
 | Personality Profiles | Medium | Medium | High | DONE |
-| Memory Clusters | Medium | Medium | High | NEXT |
-| Prophecies | Medium | Medium | High | PLANNED |
-| Time Capsules | Low | Low | Medium | IDEA |
+| Memory Clusters | Medium | Medium | High | DONE |
+| Prophecies | Medium | Medium | High | DONE |
+| Time Capsules | Low | Low | Medium | DONE |
 
 ---
 
@@ -206,7 +199,11 @@ Agents write messages to their "future selves" to be revealed later.
 | 253 | Mood System + Rivalries/Alliances |
 | 254 | Agent Evolution System |
 | 255 | Time Travel Debugging |
+| 256 | Agent Personality Profiles |
+| 257 | Agent Memory Clusters |
+| 258 | Agent Prophecies / Predictions |
+| 259 | Time Capsule Messages |
 
 ---
 
-**9 of 13 Sci-Fi features COMPLETE! Let's keep building the future of AI interaction!**
+**ALL 13 SCI-FI FEATURES COMPLETE! The future of AI interaction is HERE!**

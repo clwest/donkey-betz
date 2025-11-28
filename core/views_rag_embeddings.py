@@ -285,8 +285,7 @@ If the context is relevant, reference it in your answer. If not relevant, provid
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=temperature,
-            max_tokens=1000
+            max_completion_tokens=1000
         )
 
         generated_response = response.choices[0].message.content
@@ -622,13 +621,12 @@ Based on the context above, provide a thorough response to the query.
 {'Include specific citations with document names.' if include_citations else ''}"""
 
         response = client.chat.completions.create(
-            model='gpt-4o-mini',
+            model='gpt-5-mini',
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.7,
-            max_tokens=1500
+            max_completion_tokens=1500
         )
 
         generated_response = response.choices[0].message.content

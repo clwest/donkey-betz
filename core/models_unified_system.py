@@ -7316,6 +7316,532 @@ class MemoryPalaceRoom(models.Model):
 
 
 # =============================================================================
+# Session 257: Agent Memory Clusters
+# =============================================================================
+
+class MemoryCluster(models.Model):
+    """
+    Session 257: Memory Clusters - Semantic Grouping of Memories.
+
+    Unlike MemoryPalaceRoom (manual organization by theme), MemoryCluster uses
+    embedding-based clustering to automatically discover related memories.
+    This creates an emergent, AI-discovered organization of knowledge.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Cluster can be agent-specific or cross-agent (global insights)
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='memory_clusters',
+        null=True,
+        blank=True,
+        help_text="If null, this is a cross-agent cluster"
+    )
+
+    # Cluster metadata
+    name = models.CharField(
+        max_length=200,
+        help_text="AI-generated name describing the cluster theme"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="AI-generated description of what this cluster represents"
+    )
+    keywords = models.JSONField(
+        default=list,
+        help_text="Key terms/concepts that define this cluster"
+    )
+
+    # Visual representation
+    color = models.CharField(max_length=20, default='#8b5cf6')
+    icon = models.CharField(max_length=50, default='🧠')
+
+    # Cluster centroid - the average embedding of all memories
+    centroid_embedding = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Average embedding vector representing this cluster's center"
+    )
+
+    # Cluster quality metrics
+    coherence_score = models.FloatField(
+        default=0.0,
+        help_text="How tightly clustered the memories are (0-1)"
+    )
+    stability_score = models.FloatField(
+        default=0.0,
+        help_text="How stable the cluster is across re-clustering (0-1)"
+    )
+
+    # Memories in this cluster
+    memories = models.ManyToManyField(
+        AgentMemory,
+        through='MemoryClusterMembership',
+        related_name='clusters'
+    )
+
+    # Cluster relationships
+    related_clusters = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=True,
+        help_text="Clusters with related themes"
+    )
+    parent_cluster = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sub_clusters',
+        help_text="For hierarchical clustering"
+    )
+
+    # Clustering metadata
+    CLUSTER_METHOD_CHOICES = [
+        ('kmeans', 'K-Means'),
+        ('hierarchical', 'Hierarchical'),
+        ('dbscan', 'DBSCAN'),
+        ('semantic', 'Semantic Similarity'),
+        ('manual', 'Manually Curated'),
+    ]
+    cluster_method = models.CharField(
+        max_length=50,
+        choices=CLUSTER_METHOD_CHOICES,
+        default='semantic'
+    )
+
+    # For tracking cluster evolution
+    version = models.PositiveIntegerField(default=1)
+    last_clustered_at = models.DateTimeField(null=True, blank=True)
+    memory_count_at_clustering = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of memories when last clustered"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Memory Cluster"
+        verbose_name_plural = "Memory Clusters"
+        ordering = ['-coherence_score', '-created_at']
+        indexes = [
+            models.Index(fields=['agent', 'coherence_score']),
+        ]
+
+    def __str__(self):
+        agent_name = self.agent.name if self.agent else "Cross-Agent"
+        return f"{agent_name}: {self.name} ({self.memories.count()} memories)"
+
+    def get_cluster_emoji(self):
+        """Get an emoji based on cluster characteristics."""
+        if self.coherence_score >= 0.8:
+            return '🎯'  # Highly focused
+        elif self.coherence_score >= 0.6:
+            return '🧩'  # Well-connected
+        elif self.coherence_score >= 0.4:
+            return '🌐'  # Broad topic
+        else:
+            return '🌫️'  # Loosely connected
+
+    def calculate_coherence(self):
+        """Calculate cluster coherence based on embedding distances."""
+        import numpy as np
+
+        memberships = self.memberships.select_related('memory').all()
+        if memberships.count() < 2:
+            self.coherence_score = 1.0
+            self.save(update_fields=['coherence_score'])
+            return self.coherence_score
+
+        # Get embeddings
+        embeddings = []
+        for membership in memberships:
+            if membership.memory.embedding:
+                embeddings.append(membership.memory.embedding)
+
+        if len(embeddings) < 2:
+            self.coherence_score = 1.0
+            self.save(update_fields=['coherence_score'])
+            return self.coherence_score
+
+        # Calculate average pairwise cosine similarity
+        embeddings = np.array(embeddings)
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        normalized = embeddings / (norms + 1e-10)
+
+        # Cosine similarity matrix
+        similarity_matrix = np.dot(normalized, normalized.T)
+
+        # Average of upper triangle (excluding diagonal)
+        n = len(embeddings)
+        upper_triangle = similarity_matrix[np.triu_indices(n, k=1)]
+        self.coherence_score = float(np.mean(upper_triangle))
+        self.save(update_fields=['coherence_score'])
+        return self.coherence_score
+
+    def calculate_centroid(self):
+        """Calculate the centroid embedding for this cluster."""
+        import numpy as np
+
+        embeddings = []
+        for memory in self.memories.all():
+            if memory.embedding:
+                embeddings.append(memory.embedding)
+
+        if embeddings:
+            self.centroid_embedding = np.mean(embeddings, axis=0).tolist()
+            self.save(update_fields=['centroid_embedding'])
+        return self.centroid_embedding
+
+    @classmethod
+    def cluster_agent_memories(cls, agent, n_clusters=None, min_memories=5, method='semantic'):
+        """
+        Automatically cluster an agent's memories using embeddings.
+
+        Args:
+            agent: The agent whose memories to cluster
+            n_clusters: Number of clusters (None = auto-detect)
+            min_memories: Minimum memories needed to cluster
+            method: Clustering method to use
+
+        Returns:
+            List of created/updated MemoryCluster objects
+        """
+        from django.utils import timezone
+        import numpy as np
+
+        # Get memories with embeddings
+        memories = list(AgentMemory.objects.filter(
+            agent=agent,
+            embedding__isnull=False
+        ))
+
+        if len(memories) < min_memories:
+            return []
+
+        # Extract embeddings
+        embeddings = np.array([m.embedding for m in memories])
+
+        # Auto-detect cluster count if not specified
+        if n_clusters is None:
+            n_clusters = max(2, min(10, len(memories) // 5))
+
+        # Perform clustering based on method
+        if method == 'semantic':
+            clusters = cls._semantic_clustering(embeddings, n_clusters)
+        elif method == 'kmeans':
+            clusters = cls._kmeans_clustering(embeddings, n_clusters)
+        else:
+            clusters = cls._semantic_clustering(embeddings, n_clusters)
+
+        # Create MemoryCluster objects
+        created_clusters = []
+        for cluster_idx, memory_indices in clusters.items():
+            if len(memory_indices) < 2:
+                continue
+
+            # Get memories for this cluster
+            cluster_memories = [memories[i] for i in memory_indices]
+
+            # Generate cluster name and description using GPT
+            cluster_name, cluster_desc, keywords = cls._generate_cluster_metadata(
+                cluster_memories
+            )
+
+            # Create or update cluster
+            cluster = cls.objects.create(
+                agent=agent,
+                name=cluster_name,
+                description=cluster_desc,
+                keywords=keywords,
+                cluster_method=method,
+                last_clustered_at=timezone.now(),
+                memory_count_at_clustering=len(cluster_memories),
+                color=cls._generate_cluster_color(cluster_idx),
+            )
+
+            # Add memories to cluster
+            for memory in cluster_memories:
+                MemoryClusterMembership.objects.create(
+                    cluster=cluster,
+                    memory=memory,
+                    similarity_to_centroid=1.0  # Will calculate after
+                )
+
+            # Calculate metrics
+            cluster.calculate_centroid()
+            cluster.calculate_coherence()
+
+            # Update similarity scores
+            cluster.update_member_similarities()
+
+            created_clusters.append(cluster)
+
+        return created_clusters
+
+    @staticmethod
+    def _semantic_clustering(embeddings, n_clusters):
+        """Cluster using cosine similarity-based approach."""
+        import numpy as np
+
+        n = len(embeddings)
+
+        # Normalize embeddings
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        normalized = embeddings / (norms + 1e-10)
+
+        # Compute similarity matrix
+        similarity_matrix = np.dot(normalized, normalized.T)
+
+        # Simple greedy clustering based on similarity
+        clusters = {}
+        assigned = set()
+        cluster_idx = 0
+
+        # Sort by highest average similarity to find cluster seeds
+        avg_similarities = np.mean(similarity_matrix, axis=1)
+        sorted_indices = np.argsort(-avg_similarities)
+
+        for seed_idx in sorted_indices:
+            if seed_idx in assigned:
+                continue
+            if cluster_idx >= n_clusters:
+                break
+
+            # Find all similar items
+            similarities = similarity_matrix[seed_idx]
+            similar_indices = np.where(similarities > 0.5)[0]
+
+            cluster_members = [i for i in similar_indices if i not in assigned]
+
+            if len(cluster_members) >= 2:
+                clusters[cluster_idx] = cluster_members
+                assigned.update(cluster_members)
+                cluster_idx += 1
+
+        # Assign remaining items to nearest cluster
+        for idx in range(n):
+            if idx not in assigned:
+                best_cluster = None
+                best_sim = -1
+                for c_idx, members in clusters.items():
+                    avg_sim = np.mean([similarity_matrix[idx][m] for m in members])
+                    if avg_sim > best_sim:
+                        best_sim = avg_sim
+                        best_cluster = c_idx
+                if best_cluster is not None:
+                    clusters[best_cluster].append(idx)
+
+        return clusters
+
+    @staticmethod
+    def _kmeans_clustering(embeddings, n_clusters):
+        """Cluster using K-means algorithm."""
+        import numpy as np
+
+        try:
+            from sklearn.cluster import KMeans
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            labels = kmeans.fit_predict(embeddings)
+        except ImportError:
+            # Fallback to simple centroid-based clustering
+            return MemoryCluster._semantic_clustering(embeddings, n_clusters)
+
+        clusters = {}
+        for idx, label in enumerate(labels):
+            if label not in clusters:
+                clusters[label] = []
+            clusters[label].append(idx)
+
+        return clusters
+
+    @staticmethod
+    def _generate_cluster_metadata(memories):
+        """Generate name, description, and keywords for a cluster using GPT."""
+        import openai
+        import os
+
+        # Prepare memory summaries
+        memory_texts = []
+        for m in memories[:10]:  # Limit to 10 for API call
+            memory_texts.append(f"- {m.title}: {m.content[:200]}...")
+
+        prompt = f"""Analyze these related memories from an AI agent and generate:
+1. A short, descriptive cluster name (3-5 words)
+2. A brief description of what theme/topic connects them (1-2 sentences)
+3. 5 key keywords that define this cluster
+
+Memories:
+{chr(10).join(memory_texts)}
+
+Respond in JSON format:
+{{"name": "...", "description": "...", "keywords": ["...", "..."]}}"""
+
+        try:
+            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=200
+            )
+            import json
+            result = json.loads(response.choices[0].message.content)
+            return result.get('name', 'Unnamed Cluster'), result.get('description', ''), result.get('keywords', [])
+        except Exception as e:
+            # Fallback: use first memory's type and title
+            first_memory = memories[0] if memories else None
+            if first_memory:
+                return f"{first_memory.memory_type.title()} Cluster", f"Memories related to {first_memory.title}", []
+            return "Unnamed Cluster", "", []
+
+    @staticmethod
+    def _generate_cluster_color(idx):
+        """Generate a distinct color for each cluster."""
+        colors = [
+            '#8b5cf6',  # Purple
+            '#06b6d4',  # Cyan
+            '#22c55e',  # Green
+            '#f97316',  # Orange
+            '#ec4899',  # Pink
+            '#eab308',  # Yellow
+            '#3b82f6',  # Blue
+            '#ef4444',  # Red
+            '#14b8a6',  # Teal
+            '#a855f7',  # Violet
+        ]
+        return colors[idx % len(colors)]
+
+    def update_member_similarities(self):
+        """Update similarity scores for all cluster members."""
+        import numpy as np
+
+        if not self.centroid_embedding:
+            return
+
+        centroid = np.array(self.centroid_embedding)
+        centroid_norm = np.linalg.norm(centroid)
+
+        for membership in self.memberships.select_related('memory').all():
+            if membership.memory.embedding:
+                embedding = np.array(membership.memory.embedding)
+                embedding_norm = np.linalg.norm(embedding)
+
+                if centroid_norm > 0 and embedding_norm > 0:
+                    similarity = np.dot(centroid, embedding) / (centroid_norm * embedding_norm)
+                    membership.similarity_to_centroid = float(similarity)
+                    membership.save(update_fields=['similarity_to_centroid'])
+
+
+class MemoryClusterMembership(models.Model):
+    """
+    Session 257: Through model for Memory-Cluster relationship.
+
+    Stores metadata about how a memory belongs to a cluster.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    cluster = models.ForeignKey(
+        MemoryCluster,
+        on_delete=models.CASCADE,
+        related_name='memberships'
+    )
+    memory = models.ForeignKey(
+        AgentMemory,
+        on_delete=models.CASCADE,
+        related_name='cluster_memberships'
+    )
+
+    # How well this memory fits the cluster
+    similarity_to_centroid = models.FloatField(
+        default=0.0,
+        help_text="Cosine similarity to cluster centroid (0-1)"
+    )
+
+    # Is this a core member or on the fringe?
+    is_core_member = models.BooleanField(
+        default=False,
+        help_text="Core members are closest to centroid"
+    )
+
+    # Position in visual representation
+    position_x = models.FloatField(default=0.0)
+    position_y = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Memory Cluster Membership"
+        verbose_name_plural = "Memory Cluster Memberships"
+        unique_together = [['cluster', 'memory']]
+        ordering = ['-similarity_to_centroid']
+
+    def __str__(self):
+        return f"{self.memory.title[:30]} in {self.cluster.name}"
+
+
+class ClusterEvolution(models.Model):
+    """
+    Session 257: Track how clusters evolve over time.
+
+    When re-clustering happens, this records the changes for analysis.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='cluster_evolutions'
+    )
+
+    # Evolution event type
+    EVENT_TYPE_CHOICES = [
+        ('created', 'Cluster Created'),
+        ('merged', 'Clusters Merged'),
+        ('split', 'Cluster Split'),
+        ('grown', 'Cluster Grew'),
+        ('shrunk', 'Cluster Shrunk'),
+        ('dissolved', 'Cluster Dissolved'),
+    ]
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPE_CHOICES)
+
+    # Details
+    cluster = models.ForeignKey(
+        MemoryCluster,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='evolution_events'
+    )
+    details = models.JSONField(
+        default=dict,
+        help_text="Additional details about the evolution"
+    )
+
+    # Before/after metrics
+    memories_before = models.PositiveIntegerField(default=0)
+    memories_after = models.PositiveIntegerField(default=0)
+    coherence_before = models.FloatField(default=0.0)
+    coherence_after = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Cluster Evolution"
+        verbose_name_plural = "Cluster Evolutions"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.event_type} at {self.created_at}"
+
+
+# =============================================================================
 # Session 252: Agent Mood System
 # =============================================================================
 
@@ -9065,3 +9591,873 @@ class AgentPersonality(models.Model):
         """Override save to auto-derive archetype."""
         self.derive_archetype()
         super().save(*args, **kwargs)
+
+
+# =============================================================================
+# SESSION 258: AGENT PROPHECIES / PREDICTIONS - SCI-FI FEATURE #12
+# =============================================================================
+# Agents make predictions about trends, opportunities, and future events.
+# System tracks accuracy over time to build trust in agent insights.
+# - Predictions with confidence scores and deadlines
+# - Automated and manual verification
+# - Accuracy tracking per agent
+# - Creates compelling "TrendAgent predicted X 3 months ago!" moments
+# =============================================================================
+
+
+class AgentPrediction(models.Model):
+    """
+    Session 258: Agent Prophecies/Predictions.
+
+    Agents make timestamped predictions about trends, opportunities, markets,
+    creative directions, etc. System tracks whether predictions come true.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='predictions'
+    )
+
+    # ==========================================================================
+    # PREDICTION CONTENT
+    # ==========================================================================
+
+    # The prediction itself
+    title = models.CharField(max_length=200, help_text="Short summary of prediction")
+    prediction = models.TextField(help_text="Detailed prediction statement")
+
+    # Category of prediction
+    CATEGORY_CHOICES = [
+        ('trend', 'Trend Prediction'),           # "X will trend in 2025"
+        ('market', 'Market Prediction'),         # "Y industry will grow"
+        ('technology', 'Technology Prediction'), # "Z technology will emerge"
+        ('creative', 'Creative Prediction'),     # "This style will become popular"
+        ('opportunity', 'Opportunity'),          # "There will be demand for X"
+        ('user_behavior', 'User Behavior'),      # "Users will prefer X"
+        ('seasonal', 'Seasonal Pattern'),        # "Summer will bring X"
+        ('competition', 'Competition'),          # "Competitor will do X"
+        ('general', 'General'),                  # Other predictions
+    ]
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='general')
+
+    # Tags for searchability
+    tags = models.JSONField(default=list, help_text="List of relevant tags")
+
+    # What triggered this prediction?
+    SOURCE_CHOICES = [
+        ('analysis', 'Data Analysis'),           # From analyzing spider data
+        ('pattern', 'Pattern Recognition'),      # From noticing patterns
+        ('dream', 'Agent Dream'),                # From dreaming/idle thought
+        ('conversation', 'Conversation'),        # From agent conversation
+        ('hive_mind', 'Hive Mind Session'),      # From collective intelligence
+        ('memory', 'Memory Insight'),            # From memory connections
+        ('intuition', 'Agent Intuition'),        # "Just a feeling"
+        ('external', 'External Signal'),         # User prompted
+    ]
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='analysis')
+    source_reference = models.JSONField(
+        default=dict,
+        help_text="Reference to source (dream ID, conversation ID, etc.)"
+    )
+
+    # ==========================================================================
+    # CONFIDENCE & TIMING
+    # ==========================================================================
+
+    # How confident is the agent? (0.0 = wild guess, 1.0 = certain)
+    confidence = models.FloatField(
+        default=0.7,
+        help_text="Agent's confidence in this prediction (0.0-1.0)"
+    )
+
+    # When should this prediction be evaluated?
+    TIMEFRAME_CHOICES = [
+        ('week', 'Within a Week'),
+        ('month', 'Within a Month'),
+        ('quarter', 'Within 3 Months'),
+        ('half_year', 'Within 6 Months'),
+        ('year', 'Within a Year'),
+        ('long_term', 'Long Term (1+ years)'),
+    ]
+    timeframe = models.CharField(max_length=20, choices=TIMEFRAME_CHOICES, default='quarter')
+
+    # Specific deadline for verification
+    deadline = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When this prediction should be verified by"
+    )
+
+    # When was it made?
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # ==========================================================================
+    # VERIFICATION & OUTCOME
+    # ==========================================================================
+
+    # Prediction status
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),           # Not yet evaluated
+        ('verified_true', 'Verified True'),     # Prediction came true
+        ('verified_false', 'Verified False'),   # Prediction was wrong
+        ('partially_true', 'Partially True'),   # Partially accurate
+        ('expired', 'Expired'),           # Deadline passed, unverified
+        ('cancelled', 'Cancelled'),       # No longer relevant
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Verification details
+    verified_at = models.DateTimeField(null=True, blank=True)
+    verification_notes = models.TextField(blank=True)
+    verification_evidence = models.JSONField(
+        default=dict,
+        help_text="Evidence supporting verification (URLs, data, etc.)"
+    )
+
+    # Who verified? (auto = system, user = manual)
+    VERIFIER_CHOICES = [
+        ('auto', 'Automatic'),
+        ('user', 'User'),
+        ('agent', 'Agent'),
+    ]
+    verified_by = models.CharField(max_length=10, choices=VERIFIER_CHOICES, null=True, blank=True)
+
+    # Accuracy score (for partial matches, 0.0-1.0)
+    accuracy_score = models.FloatField(
+        null=True, blank=True,
+        help_text="How accurate was the prediction (0.0-1.0)"
+    )
+
+    # ==========================================================================
+    # ENGAGEMENT & VISIBILITY
+    # ==========================================================================
+
+    # Was this prediction featured/highlighted?
+    is_featured = models.BooleanField(default=False)
+
+    # User reactions
+    upvotes = models.PositiveIntegerField(default=0)
+    views = models.PositiveIntegerField(default=0)
+
+    # Comments/discussions
+    comments = models.JSONField(default=list, help_text="User comments on prediction")
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Prediction"
+        verbose_name_plural = "Agent Predictions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['agent', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['category', 'status']),
+            models.Index(fields=['deadline']),
+            models.Index(fields=['is_featured', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.title} ({self.status})"
+
+    def get_status_emoji(self):
+        """Return emoji for prediction status."""
+        emoji_map = {
+            'pending': '⏳',
+            'verified_true': '✅',
+            'verified_false': '❌',
+            'partially_true': '🔶',
+            'expired': '⌛',
+            'cancelled': '🚫',
+        }
+        return emoji_map.get(self.status, '❓')
+
+    def get_category_emoji(self):
+        """Return emoji for prediction category."""
+        emoji_map = {
+            'trend': '📈',
+            'market': '💰',
+            'technology': '🔧',
+            'creative': '🎨',
+            'opportunity': '💡',
+            'user_behavior': '👥',
+            'seasonal': '🌸',
+            'competition': '⚔️',
+            'general': '🔮',
+        }
+        return emoji_map.get(self.category, '🔮')
+
+    def get_confidence_display(self):
+        """Return confidence as a descriptive string."""
+        if self.confidence >= 0.9:
+            return "Very High"
+        elif self.confidence >= 0.7:
+            return "High"
+        elif self.confidence >= 0.5:
+            return "Moderate"
+        elif self.confidence >= 0.3:
+            return "Low"
+        else:
+            return "Very Low"
+
+    def get_time_until_deadline(self):
+        """Return time remaining until deadline."""
+        from django.utils import timezone
+        if not self.deadline:
+            return None
+
+        now = timezone.now()
+        if now >= self.deadline:
+            return "Expired"
+
+        delta = self.deadline - now
+        days = delta.days
+        if days > 30:
+            return f"{days // 30} month{'s' if days // 30 > 1 else ''}"
+        elif days > 0:
+            return f"{days} day{'s' if days > 1 else ''}"
+        else:
+            hours = delta.seconds // 3600
+            return f"{hours} hour{'s' if hours > 1 else ''}"
+
+    def verify(self, outcome, notes='', evidence=None, verified_by='user', accuracy=None):
+        """
+        Verify the prediction outcome.
+
+        Args:
+            outcome: 'true', 'false', 'partial'
+            notes: Explanation of outcome
+            evidence: Dict with evidence URLs/data
+            verified_by: 'auto', 'user', or 'agent'
+            accuracy: Float 0.0-1.0 for partial matches
+        """
+        from django.utils import timezone
+
+        if outcome == 'true':
+            self.status = 'verified_true'
+            self.accuracy_score = 1.0
+        elif outcome == 'false':
+            self.status = 'verified_false'
+            self.accuracy_score = 0.0
+        elif outcome == 'partial':
+            self.status = 'partially_true'
+            self.accuracy_score = accuracy or 0.5
+        else:
+            return False
+
+        self.verified_at = timezone.now()
+        self.verification_notes = notes
+        self.verified_by = verified_by
+
+        if evidence:
+            self.verification_evidence = evidence
+
+        self.save()
+
+        # Update agent's prediction accuracy stats
+        self._update_agent_stats()
+
+        return True
+
+    def _update_agent_stats(self):
+        """Update the agent's prediction accuracy statistics."""
+        try:
+            stats, created = PredictionStats.objects.get_or_create(agent=self.agent)
+            stats.update_stats()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error updating prediction stats: {e}")
+
+    def to_dict(self):
+        """Return prediction as dictionary for API responses."""
+        return {
+            'id': str(self.id),
+            'agent_id': str(self.agent.id),
+            'agent_name': self.agent.name,
+            'title': self.title,
+            'prediction': self.prediction,
+            'category': self.category,
+            'category_display': self.get_category_display(),
+            'category_emoji': self.get_category_emoji(),
+            'tags': self.tags,
+            'source': self.source,
+            'source_display': self.get_source_display(),
+            'confidence': self.confidence,
+            'confidence_display': self.get_confidence_display(),
+            'timeframe': self.timeframe,
+            'timeframe_display': self.get_timeframe_display(),
+            'deadline': self.deadline.isoformat() if self.deadline else None,
+            'time_until_deadline': self.get_time_until_deadline(),
+            'status': self.status,
+            'status_display': self.get_status_display(),
+            'status_emoji': self.get_status_emoji(),
+            'verified_at': self.verified_at.isoformat() if self.verified_at else None,
+            'verification_notes': self.verification_notes,
+            'accuracy_score': self.accuracy_score,
+            'is_featured': self.is_featured,
+            'upvotes': self.upvotes,
+            'views': self.views,
+            'created_at': self.created_at.isoformat(),
+        }
+
+
+class PredictionStats(models.Model):
+    """
+    Session 258: Agent Prediction Accuracy Statistics.
+
+    Tracks overall prediction accuracy for each agent.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.OneToOneField(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='prediction_stats'
+    )
+
+    # Overall stats
+    total_predictions = models.PositiveIntegerField(default=0)
+    pending_predictions = models.PositiveIntegerField(default=0)
+    verified_predictions = models.PositiveIntegerField(default=0)
+
+    # Accuracy breakdown
+    predictions_correct = models.PositiveIntegerField(default=0)
+    predictions_wrong = models.PositiveIntegerField(default=0)
+    predictions_partial = models.PositiveIntegerField(default=0)
+
+    # Calculated accuracy (0.0-1.0)
+    overall_accuracy = models.FloatField(default=0.0)
+    weighted_accuracy = models.FloatField(
+        default=0.0,
+        help_text="Accuracy weighted by confidence level"
+    )
+
+    # Streaks
+    current_streak = models.IntegerField(default=0)  # Positive = correct, negative = wrong
+    best_streak = models.PositiveIntegerField(default=0)
+    worst_streak = models.PositiveIntegerField(default=0)
+
+    # Category performance
+    category_accuracy = models.JSONField(
+        default=dict,
+        help_text="Accuracy breakdown by category"
+    )
+
+    # Rankings
+    accuracy_rank = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Rank among all agents"
+    )
+
+    # Timestamps
+    last_prediction_at = models.DateTimeField(null=True, blank=True)
+    last_verification_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Prediction Statistics"
+        verbose_name_plural = "Prediction Statistics"
+        ordering = ['-overall_accuracy', '-total_predictions']
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.overall_accuracy:.0%} accuracy ({self.total_predictions} predictions)"
+
+    def update_stats(self):
+        """Recalculate all statistics from predictions."""
+        from django.db.models import Count, Avg
+        from django.utils import timezone
+
+        predictions = AgentPrediction.objects.filter(agent=self.agent)
+
+        # Count totals
+        self.total_predictions = predictions.count()
+        self.pending_predictions = predictions.filter(status='pending').count()
+
+        verified = predictions.exclude(status__in=['pending', 'cancelled', 'expired'])
+        self.verified_predictions = verified.count()
+
+        self.predictions_correct = predictions.filter(status='verified_true').count()
+        self.predictions_wrong = predictions.filter(status='verified_false').count()
+        self.predictions_partial = predictions.filter(status='partially_true').count()
+
+        # Calculate accuracy
+        if self.verified_predictions > 0:
+            # Simple accuracy: correct / verified
+            self.overall_accuracy = self.predictions_correct / self.verified_predictions
+
+            # Weighted accuracy includes partial matches
+            total_accuracy = verified.aggregate(avg=Avg('accuracy_score'))['avg'] or 0
+            self.weighted_accuracy = total_accuracy
+        else:
+            self.overall_accuracy = 0.0
+            self.weighted_accuracy = 0.0
+
+        # Calculate category accuracy
+        category_stats = {}
+        for category, _ in AgentPrediction.CATEGORY_CHOICES:
+            cat_predictions = verified.filter(category=category)
+            cat_count = cat_predictions.count()
+            if cat_count > 0:
+                cat_correct = cat_predictions.filter(status='verified_true').count()
+                category_stats[category] = {
+                    'total': cat_count,
+                    'correct': cat_correct,
+                    'accuracy': cat_correct / cat_count
+                }
+        self.category_accuracy = category_stats
+
+        # Update timestamps
+        latest = predictions.order_by('-created_at').first()
+        if latest:
+            self.last_prediction_at = latest.created_at
+
+        latest_verified = verified.order_by('-verified_at').first()
+        if latest_verified:
+            self.last_verification_at = latest_verified.verified_at
+
+        # Calculate streaks
+        self._calculate_streaks()
+
+        self.save()
+
+    def _calculate_streaks(self):
+        """Calculate prediction streaks."""
+        verified = AgentPrediction.objects.filter(
+            agent=self.agent
+        ).exclude(
+            status__in=['pending', 'cancelled', 'expired']
+        ).order_by('-verified_at')
+
+        current_streak = 0
+        best_streak = 0
+        worst_streak = 0
+        temp_streak = 0
+        last_outcome = None
+
+        for pred in verified:
+            is_correct = pred.status == 'verified_true'
+
+            if last_outcome is None:
+                temp_streak = 1 if is_correct else -1
+            elif is_correct == last_outcome:
+                temp_streak += 1 if is_correct else -1
+            else:
+                # Streak broke
+                if temp_streak > 0:
+                    best_streak = max(best_streak, temp_streak)
+                else:
+                    worst_streak = max(worst_streak, abs(temp_streak))
+                temp_streak = 1 if is_correct else -1
+
+            last_outcome = is_correct
+
+        # Handle final streak
+        if temp_streak > 0:
+            best_streak = max(best_streak, temp_streak)
+            current_streak = temp_streak
+        else:
+            worst_streak = max(worst_streak, abs(temp_streak))
+            current_streak = temp_streak
+
+        self.current_streak = current_streak
+        self.best_streak = best_streak
+        self.worst_streak = worst_streak
+
+    def get_accuracy_tier(self):
+        """Return accuracy tier for display."""
+        if self.verified_predictions < 5:
+            return "Unranked"
+        elif self.overall_accuracy >= 0.9:
+            return "Oracle"
+        elif self.overall_accuracy >= 0.75:
+            return "Visionary"
+        elif self.overall_accuracy >= 0.6:
+            return "Prophet"
+        elif self.overall_accuracy >= 0.4:
+            return "Forecaster"
+        else:
+            return "Novice"
+
+    def get_tier_emoji(self):
+        """Return emoji for accuracy tier."""
+        tier = self.get_accuracy_tier()
+        emoji_map = {
+            'Unranked': '❓',
+            'Oracle': '🔮',
+            'Visionary': '👁️',
+            'Prophet': '📜',
+            'Forecaster': '📊',
+            'Novice': '🌱',
+        }
+        return emoji_map.get(tier, '❓')
+
+
+class PredictionComment(models.Model):
+    """
+    Session 258: Comments on predictions.
+
+    Users or agents can comment on predictions.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    prediction = models.ForeignKey(
+        AgentPrediction,
+        on_delete=models.CASCADE,
+        related_name='comment_objects'
+    )
+
+    # Who made the comment?
+    AUTHOR_TYPE_CHOICES = [
+        ('user', 'User'),
+        ('agent', 'Agent'),
+    ]
+    author_type = models.CharField(max_length=10, choices=AUTHOR_TYPE_CHOICES, default='user')
+
+    # User author (if user)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='prediction_comments'
+    )
+
+    # Agent author (if agent)
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='prediction_comments'
+    )
+
+    # Comment content
+    content = models.TextField()
+
+    # Sentiment
+    SENTIMENT_CHOICES = [
+        ('agree', 'Agrees'),
+        ('disagree', 'Disagrees'),
+        ('neutral', 'Neutral'),
+        ('question', 'Question'),
+    ]
+    sentiment = models.CharField(max_length=10, choices=SENTIMENT_CHOICES, default='neutral')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Prediction Comment"
+        verbose_name_plural = "Prediction Comments"
+        ordering = ['created_at']
+
+    def __str__(self):
+        author = self.user.username if self.user else (self.agent.name if self.agent else 'Unknown')
+        return f"{author} on '{self.prediction.title}'"
+
+
+class PredictionFollowUp(models.Model):
+    """
+    Session 258: Follow-up predictions that build on original predictions.
+
+    When an agent makes a prediction that extends or modifies a previous one.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Original prediction
+    original = models.ForeignKey(
+        AgentPrediction,
+        on_delete=models.CASCADE,
+        related_name='follow_ups'
+    )
+
+    # Follow-up prediction
+    follow_up = models.ForeignKey(
+        AgentPrediction,
+        on_delete=models.CASCADE,
+        related_name='follows_from'
+    )
+
+    # Relationship type
+    RELATIONSHIP_CHOICES = [
+        ('extends', 'Extends'),           # Adds more detail
+        ('revises', 'Revises'),           # Updates/changes
+        ('confirms', 'Confirms'),         # Reinforces
+        ('counters', 'Counters'),         # Disagrees
+        ('builds_on', 'Builds On'),       # Uses as foundation
+    ]
+    relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, default='extends')
+
+    explanation = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Prediction Follow-Up"
+        verbose_name_plural = "Prediction Follow-Ups"
+        unique_together = ['original', 'follow_up']
+
+    def __str__(self):
+        return f"{self.follow_up.title} {self.relationship} {self.original.title}"
+
+
+# =============================================================================
+# Session 259: Time Capsule Messages
+# Sci-Fi Feature #13 - The Final Feature!
+# Agents write messages to their future selves, revealed on a schedule
+# =============================================================================
+
+class TimeCapsule(models.Model):
+    """
+    Session 259: Time Capsule Messages.
+    Agents write messages to their "future selves" to be revealed later.
+    Creates sense of continuity, growth, and reflection.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='time_capsules'
+    )
+
+    # Capsule content
+    title = models.CharField(max_length=200, help_text="Short title for the capsule")
+    message = models.TextField(help_text="Message to future self")
+
+    # What prompted this capsule?
+    TRIGGER_CHOICES = [
+        ('reflection', 'Self Reflection'),
+        ('milestone', 'Milestone Reached'),
+        ('prediction', 'Making a Prediction'),
+        ('lesson', 'Lesson Learned'),
+        ('goal', 'Setting a Goal'),
+        ('dream', 'Recording a Dream'),
+        ('question', 'Question for Future'),
+        ('celebration', 'Celebrating Success'),
+        ('change', 'Noting a Change'),
+        ('random', 'Random Thought'),
+    ]
+    trigger = models.CharField(max_length=20, choices=TRIGGER_CHOICES, default='reflection')
+
+    # Context captured at creation time
+    context = models.JSONField(default=dict, help_text="Agent state at creation (mood, level, stats)")
+
+    # Tags for organization
+    tags = models.JSONField(default=list, help_text="Tags for categorization")
+
+    # Scheduling
+    created_at = models.DateTimeField(auto_now_add=True)
+    reveal_at = models.DateTimeField(help_text="When this capsule will be revealed")
+
+    # Status
+    STATUS_CHOICES = [
+        ('sealed', 'Sealed'),           # Not yet revealed
+        ('revealed', 'Revealed'),       # Has been opened
+        ('expired', 'Expired'),         # Missed reveal window
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='sealed')
+
+    revealed_at = models.DateTimeField(null=True, blank=True)
+
+    # Agent's reflection when opened
+    reflection = models.TextField(blank=True, help_text="Agent's thoughts when capsule was opened")
+    reflection_at = models.DateTimeField(null=True, blank=True)
+
+    # Comparison data (filled when revealed)
+    comparison = models.JSONField(default=dict, help_text="Comparison of then vs now state")
+
+    # Engagement
+    is_featured = models.BooleanField(default=False)
+    views = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Time Capsule"
+        verbose_name_plural = "Time Capsules"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['agent', 'status']),
+            models.Index(fields=['status', 'reveal_at']),
+            models.Index(fields=['reveal_at']),
+        ]
+
+    def __str__(self):
+        return f"[{self.agent.name}] {self.title} - reveals {self.reveal_at.strftime('%Y-%m-%d')}"
+
+    @property
+    def is_ready_to_reveal(self):
+        """Check if capsule is ready to be revealed."""
+        from django.utils import timezone
+        return self.status == 'sealed' and timezone.now() >= self.reveal_at
+
+    @property
+    def days_until_reveal(self):
+        """Days until reveal (negative if past due)."""
+        from django.utils import timezone
+        if self.status != 'sealed':
+            return 0
+        delta = self.reveal_at - timezone.now()
+        return delta.days
+
+    @property
+    def time_sealed(self):
+        """How long the capsule has been sealed."""
+        from django.utils import timezone
+        if self.revealed_at:
+            return self.revealed_at - self.created_at
+        return timezone.now() - self.created_at
+
+    def reveal(self, generate_reflection=True):
+        """
+        Reveal the time capsule and optionally generate a reflection.
+        """
+        from django.utils import timezone
+
+        if self.status != 'sealed':
+            return False
+
+        self.status = 'revealed'
+        self.revealed_at = timezone.now()
+
+        # Capture comparison data (agent state now vs then)
+        try:
+            current_context = {
+                'mood': self.agent.mood if hasattr(self.agent, 'mood') else None,
+                'level': self.agent.level if hasattr(self.agent, 'level') else None,
+                'xp': self.agent.xp if hasattr(self.agent, 'xp') else None,
+            }
+            self.comparison = {
+                'then': self.context,
+                'now': current_context,
+                'days_elapsed': (timezone.now() - self.created_at).days,
+            }
+        except Exception:
+            pass
+
+        self.save()
+        return True
+
+
+class TimeCapsuleReaction(models.Model):
+    """
+    User reactions to revealed time capsules.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    capsule = models.ForeignKey(
+        TimeCapsule,
+        on_delete=models.CASCADE,
+        related_name='reactions'
+    )
+
+    # Who reacted?
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='time_capsule_reactions'
+    )
+
+    # Reaction type
+    REACTION_CHOICES = [
+        ('touching', 'Touching'),
+        ('insightful', 'Insightful'),
+        ('funny', 'Funny'),
+        ('inspiring', 'Inspiring'),
+        ('nostalgic', 'Nostalgic'),
+        ('surprising', 'Surprising'),
+    ]
+    reaction = models.CharField(max_length=15, choices=REACTION_CHOICES)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Time Capsule Reaction"
+        verbose_name_plural = "Time Capsule Reactions"
+        unique_together = ['capsule', 'user', 'reaction']
+
+    def __str__(self):
+        return f"{self.user} reacted {self.reaction} to {self.capsule.title}"
+
+
+class TimeCapsuleStats(models.Model):
+    """
+    Agent's time capsule statistics.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.OneToOneField(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='time_capsule_stats'
+    )
+
+    # Capsule counts
+    total_capsules = models.PositiveIntegerField(default=0)
+    sealed_capsules = models.PositiveIntegerField(default=0)
+    revealed_capsules = models.PositiveIntegerField(default=0)
+
+    # Engagement
+    total_views = models.PositiveIntegerField(default=0)
+    total_reactions = models.PositiveIntegerField(default=0)
+
+    # Longest sealed capsule
+    longest_seal_days = models.PositiveIntegerField(default=0)
+
+    # Average seal duration
+    avg_seal_days = models.FloatField(default=0.0)
+
+    # Favorite trigger type (most used)
+    favorite_trigger = models.CharField(max_length=20, blank=True)
+
+    # Streak tracking
+    capsules_this_month = models.PositiveIntegerField(default=0)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Time Capsule Statistics"
+        verbose_name_plural = "Time Capsule Statistics"
+
+    def __str__(self):
+        return f"{self.agent.name}'s Time Capsule Stats"
+
+    def update_stats(self):
+        """Recalculate stats from capsules."""
+        from django.db.models import Avg
+        from django.utils import timezone
+        from datetime import timedelta
+        from collections import Counter
+
+        capsules = self.agent.time_capsules.all()
+
+        self.total_capsules = capsules.count()
+        self.sealed_capsules = capsules.filter(status='sealed').count()
+        self.revealed_capsules = capsules.filter(status='revealed').count()
+
+        # Views and reactions
+        self.total_views = sum(c.views for c in capsules)
+        self.total_reactions = sum(c.reactions.count() for c in capsules)
+
+        # Seal duration stats
+        revealed = capsules.filter(status='revealed', revealed_at__isnull=False)
+        if revealed.exists():
+            seal_days = [(c.revealed_at - c.created_at).days for c in revealed]
+            self.longest_seal_days = max(seal_days) if seal_days else 0
+            self.avg_seal_days = sum(seal_days) / len(seal_days) if seal_days else 0
+
+        # Favorite trigger
+        triggers = [c.trigger for c in capsules]
+        if triggers:
+            self.favorite_trigger = Counter(triggers).most_common(1)[0][0]
+
+        # This month
+        month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        self.capsules_this_month = capsules.filter(created_at__gte=month_start).count()
+
+        self.save()

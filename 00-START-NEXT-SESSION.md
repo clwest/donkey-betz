@@ -1,102 +1,46 @@
-# Session 257: Ready for Next Feature!
+# Session 261: Post Sci-Fi Completion - Platform Polish & Next Steps
 
 **Date:** November 28, 2025
-**Previous Session:** 256 (Agent Personality Profiles)
-**Session Type:** Feature Complete
+**Previous Session:** 260 (GPT-5-mini Parameter Compatibility Fix)
+**Session Type:** Maintenance & Planning
 
 ---
 
-## Session 256 Completed - Agent Personality Profiles (MBTI-style)
+## Session 260 Completed - GPT-5-mini Parameter Fix
 
-### What Was Built
+### What Was Fixed
 
-**Agent Personality Profiles** gives each AI agent a distinct personality using an MBTI-inspired 4-dimension system. Personalities affect communication style, collaboration preferences, and decision-making.
+**Critical Issue:** All GPT-5-mini API calls were using incorrect parameters that would cause failures:
+- GPT-5-mini does NOT support the `temperature` parameter (only default 1.0)
+- GPT-5-mini uses `max_completion_tokens` instead of `max_tokens`
 
-**New Database Model:**
-1. `AgentPersonality` - Complete personality profile per agent
-   - 4 Personality Dimensions (E/I, S/N, T/F, J/P)
-   - 12 Personality Traits (0.0-1.0 scale)
-   - 8 Archetypes (analyst, diplomat, sentinel, explorer, commander, visionary, advocate, entertainer)
+### Files Fixed
 
-**Personality Dimensions:**
-- **Energy Direction:** Extrovert (E) vs Introvert (I) - Collaborative vs Solo-focused
-- **Information Processing:** Sensor (S) vs Intuitive (N) - Data-driven vs Pattern-seeking
-- **Decision Making:** Thinker (T) vs Feeler (F) - Logical vs Empathetic
-- **Work Style:** Judger (J) vs Perceiver (P) - Structured vs Flexible
+1. **`core/views_time_capsules.py`** (2 occurrences)
+   - `generate_capsule_reflection()` - Fixed API call for reflection generation
+   - `GenerateTimeCapsuleView.post()` - Fixed API call for capsule message generation
 
-**12 Personality Traits:**
-1. `formality` - Casual to Highly Formal
-2. `verbosity` - Concise to Detailed
-3. `humor` - Serious to Frequently Humorous
-4. `assertiveness` - Passive to Direct
-5. `leadership` - Supportive to Natural Leader
-6. `team_orientation` - Independent to Team Player
-7. `teaching_tendency` - Keeps Knowledge to Loves Teaching
-8. `competitiveness` - Collaborative to Competitive
-9. `risk_appetite` - Cautious to High Risk Tolerance
-10. `creativity` - By-the-book to Highly Creative
-11. `patience` - Impatient to Very Patient
-12. `perfectionism` - Good Enough to Perfectionist
+2. **`core/views_predictions.py`** (1 occurrence)
+   - `generate_agent_prediction()` - Fixed API call for prediction generation
 
-**8 Archetypes (with emojis and colors):**
-| Archetype | Emoji | Color | Type Code | Description |
-|-----------|-------|-------|-----------|-------------|
-| Analyst | 🔬 | #3b82f6 (Blue) | INTJ/INTP | Logical problem solvers |
-| Diplomat | 🤝 | #22c55e (Green) | INFJ/INFP | Harmonious mediators |
-| Sentinel | 🛡️ | #f59e0b (Amber) | ISTJ/ISFJ | Reliable guardians |
-| Explorer | 🧭 | #8b5cf6 (Violet) | ISTP/ISFP | Curious adventurers |
-| Commander | 👑 | #ef4444 (Red) | ENTJ/ESTJ | Natural leaders |
-| Visionary | 🔮 | #a855f7 (Purple) | ENTP/ENFP | Creative innovators |
-| Advocate | 💝 | #ec4899 (Pink) | ENFJ/ESFJ | Caring supporters |
-| Entertainer | 🎭 | #f97316 (Orange) | ESTP/ESFP | Engaging performers |
+3. **`core/views_advisor_api.py`** (1 occurrence)
+   - `advisor_consult()` - Fixed LLMEnforcer call for advisor consultation
 
-**Preset Personalities by Specialization:**
-- Research agents -> INTJ Analyst (focused, thorough)
-- Creative agents -> ENFP Visionary (innovative, enthusiastic)
-- Technical agents -> ISTP Explorer (practical, hands-on)
-- Leadership agents -> ENTJ Commander (decisive, strategic)
-- Support agents -> ISFJ Sentinel (reliable, helpful)
-- Strategy agents -> INTP Analyst (analytical, conceptual)
-- Communication agents -> ENFJ Advocate (empathetic, engaging)
+4. **`core/views_rag_embeddings.py`** (2 occurrences)
+   - `rag_generate()` - Fixed API call for RAG response generation
+   - `advanced_rag_query()` - Fixed API call for multi-collection queries
 
-**Current Agent Personality Distribution (20 agents):**
-- 10 Visionary (creative agents)
-- 5 Commander (leadership agents)
-- 5 Analyst (research/strategy agents)
+5. **`core/llm_enforcer.py`** (1 method updated)
+   - `generate_completion()` - Updated to accept both legacy and GPT-5 parameters:
+     - Accepts `max_tokens` (legacy) and `max_completion_tokens` (GPT-5)
+     - Accepts `system_prompt` and `user_prompt` for context
+     - Temperature is accepted but ignored for GPT-5 models
 
-**New API Endpoints:**
-- `GET /api/personality/` - Overview stats and all agents
-- `GET /api/personality/agent/{id}/` - Get agent's personality
-- `POST /api/personality/agent/{id}/` - Create/update personality
-- `POST /api/personality/agent/{id}/generate/` - Auto-generate based on specialization
-- `POST /api/personality/generate-all/` - Generate personalities for all agents
-- `GET /api/personality/compatibility/{id1}/{id2}/` - Check compatibility between agents
-- `GET /api/personality/archetypes/` - Get all archetype definitions
-
-**UI Features:**
-- Personality stats badges (Total Agents, Typed, Top Archetype, Avg Compatibility)
-- Agent selector dropdown to view individual personalities
-- Type code display (ENFP, INTJ, etc.) with archetype name and emoji
-- 4-dimension breakdown (Energy, Processing, Decisions, Work Style)
-- 12 trait progress bars with color coding
-- Communication and Collaboration style display
-- Archetype gallery showing all 8 types with colors/emojis
-- Compatibility checker between two agents
-- "Generate All Personalities" button for bulk creation
-
-### Files Created/Modified (Session 256)
-
-**Database:**
-- `core/models_unified_system.py` - Added AgentPersonality model with helper methods
-- `core/migrations/0046_session_256_agent_personality.py` - Migration
-
-**Backend:**
-- `core/views_personality.py` - NEW: All Personality API endpoints with presets
-- `core/urls.py` - Added new routes
-- `core/auth_middleware.py` - Added /api/personality/ to PUBLIC_PATHS
-
-**Frontend:**
-- `ai_core/templates/ai_image_studio.html` - Agent Personalities UI section + JavaScript (lines 7664-7836, 42655-42962)
+### Testing Results
+- Server starts successfully
+- Time Capsules API: Working (`/api/time-capsules/`)
+- Predictions API: Working (`/api/predictions/`)
+- Generate Time Capsules: Successfully created 5 new capsules with GPT-5-mini
 
 ---
 
@@ -110,87 +54,128 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Go to Agents tab -> Agent Personalities section (orange border)
-#    - View archetype gallery
-#    - Select an agent to see their personality
-#    - Check compatibility between two agents
+# 3. Test APIs
+curl http://localhost:8000/api/time-capsules/
+curl http://localhost:8000/api/predictions/
 ```
 
 ---
 
-## Testing Agent Personalities
+## ALL 13 SCI-FI FEATURES COMPLETE!
 
-### Test via UI
-1. Go to AI Studio -> Agents tab
-2. Find the Agent Personalities section (orange border)
-3. View the archetype gallery (8 personality types)
-4. Select an agent from the dropdown to view their full personality
-5. Use the Compatibility Checker to compare two agents
-
-### Test via API
-```bash
-# Get personality overview
-curl http://localhost:8000/api/personality/
-
-# Get archetypes
-curl http://localhost:8000/api/personality/archetypes/
-
-# Get specific agent's personality
-curl http://localhost:8000/api/personality/agent/{agent_id}/
-
-# Generate personality for an agent
-curl -X POST http://localhost:8000/api/personality/agent/{agent_id}/generate/
-
-# Check compatibility between two agents
-curl http://localhost:8000/api/personality/compatibility/{agent1_id}/{agent2_id}/
-```
-
----
-
-## What's Next (Session 257+)
-
-From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
-
-### Priority 1: Agent Memory Clusters
-- Group related memories together
-- Visual memory map
-- Semantic clustering
-
-### Priority 2: Collaborative Editing Mode
-- Multiple agents working on same content
-- Live cursors and annotations
-- Merge conflict resolution
-
-### Priority 3: Agent Reputation System
-- Track agent success rates
-- Build reputation over time
-- Agents recommend other agents
-
-### Other Ideas:
-- Personality affects prompt modifiers (already implemented in model)
-- Personality-based team formation recommendations
-- Compatibility scores for workflow assignments
+| # | Feature | Sessions | Status |
+|---|---------|----------|--------|
+| 1 | Agent Learning System | 243-245 | COMPLETE |
+| 2 | Agent Conversations | 244-246 | COMPLETE |
+| 3 | Agent Dreams | 247 | COMPLETE |
+| 4 | Hive Mind Mode | 248-250 | COMPLETE |
+| 5 | Memory Palace | 251-252 | COMPLETE |
+| 6 | Mood System | 253 | COMPLETE |
+| 7 | Rivalries & Alliances | 253 | COMPLETE |
+| 8 | Evolution/Leveling | 254 | COMPLETE |
+| 9 | Time Travel Debugging | 255 | COMPLETE |
+| 10 | Personality Profiles | 256 | COMPLETE |
+| 11 | Memory Clusters | 257 | COMPLETE |
+| 12 | Prophecies/Predictions | 258 | COMPLETE |
+| 13 | Time Capsules | 259 | COMPLETE |
 
 ---
 
 ## Platform Status
 
-| Feature | Status |
-|---------|--------|
-| Agent Personality Profiles | **COMPLETE** |
-| Time Travel Debugging | COMPLETE |
-| Agent Evolution System | COMPLETE |
-| Agent Rivalries & Alliances | COMPLETE |
-| Agent Mood System | COMPLETE |
-| Memory Palace | COMPLETE |
-| Hive Mind Mode | COMPLETE |
-| Dream Feedback | COMPLETE |
-| Agent Conversations | COMPLETE |
-| Agent Dreams | COMPLETE |
-| Agent Learning | COMPLETE |
+| Category | Status |
+|----------|--------|
+| All 13 Sci-Fi Features | **COMPLETE** |
 | All 6 Creative Phases | COMPLETE |
 | 20 Real Agents | COMPLETE |
 | 67 Spiders | COMPLETE |
+| GPT-5-mini Compatibility | **FIXED (Session 260)** |
+
+---
+
+## Key API Endpoints
+
+### Time Capsules (Session 259)
+- `GET /api/time-capsules/` - Overview stats
+- `GET/POST /api/time-capsules/agent/<agent_id>/` - Agent's capsules
+- `GET /api/time-capsules/<capsule_id>/` - Capsule detail
+- `POST /api/time-capsules/<capsule_id>/reveal/` - Reveal a capsule
+- `POST /api/time-capsules/<capsule_id>/react/` - Add reaction
+- `GET /api/time-capsules/ready-to-reveal/` - Capsules ready to open
+- `POST /api/time-capsules/generate/` - Auto-generate capsules
+- `POST /api/time-capsules/expire-old/` - Expire old capsules
+
+### Predictions (Session 258)
+- `GET /api/predictions/` - Overview stats
+- `GET/POST /api/predictions/agent/<agent_id>/` - Agent's predictions
+- `GET/PATCH/DELETE /api/predictions/<prediction_id>/` - Prediction detail
+- `POST /api/predictions/<prediction_id>/verify/` - Verify outcome
+- `POST /api/predictions/<prediction_id>/upvote/` - Upvote
+- `POST /api/predictions/<prediction_id>/comment/` - Add comment
+- `GET /api/predictions/leaderboard/` - Accuracy leaderboard
+- `POST /api/predictions/generate-from-dreams/` - Convert dreams to predictions
+- `POST /api/predictions/expire-old/` - Expire old predictions
+
+### Memory Clusters (Session 257)
+- `GET /api/memory-clusters/` - Overview stats
+- `GET/POST /api/memory-clusters/agent/<agent_id>/` - Agent's clusters
+- `GET /api/memory-clusters/<cluster_id>/` - Cluster detail
+- `POST /api/memory-clusters/generate/` - Auto-generate clusters
+- `POST /api/memory-clusters/merge/` - Merge clusters
+- `POST /api/memory-clusters/<cluster_id>/search/` - Semantic search
+
+---
+
+## Architecture Overview
+
+### LLM Usage
+- **Primary Model:** GPT-5-mini (via OpenAI Chat Completions API)
+- **Fallback Model:** Claude 3 Haiku (via Anthropic)
+- **LLM Enforcer:** Singleton pattern, enforces real AI usage
+- **Important:** GPT-5-mini requires `max_completion_tokens` (not `max_tokens`) and doesn't support `temperature`
+
+### Key Files
+- `core/llm_enforcer.py` - Central LLM enforcement
+- `core/views_time_capsules.py` - Time Capsules API (8 endpoints)
+- `core/views_predictions.py` - Predictions API (9 endpoints)
+- `core/views_memory_clusters.py` - Memory Clusters API (6 endpoints)
+- `core/views_advisor_api.py` - Advisor consultation API
+
+---
+
+## What's Next?
+
+With all 13 Sci-Fi features complete and GPT-5-mini compatibility fixed, consider:
+
+1. **Integration Improvements**
+   - Make features work together more seamlessly
+   - Cross-feature connections (e.g., predictions from dreams, clusters from memories)
+
+2. **Performance Optimization**
+   - Optimize queries and caching
+   - Add pagination to large lists
+
+3. **UI/UX Polish**
+   - Refine the user experience
+   - Add animations and transitions
+
+4. **New Feature Categories**
+   - Revenue tracking and analytics
+   - External integrations
+   - Collaboration features
+
+5. **Mobile App**
+   - React Native companion app
+
+---
+
+## Files Modified in Session 260
+
+- `core/views_time_capsules.py` - GPT-5-mini params fix
+- `core/views_predictions.py` - GPT-5-mini params fix
+- `core/views_advisor_api.py` - GPT-5-mini params fix
+- `core/views_rag_embeddings.py` - GPT-5-mini params fix
+- `core/llm_enforcer.py` - Updated generate_completion() method
 
 ---
 
@@ -198,5 +183,30 @@ From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
 - [ ] Read this handoff document
 - [ ] Run `make start && make celery`
-- [ ] Test Personalities at http://localhost:8000/ai-studio/ (Agents tab)
-- [ ] Review SciFi Roadmap for next feature: `docs/features/SCIFI_ROADMAP.md`
+- [ ] Test platform at http://localhost:8000/ai-studio/
+- [ ] Review git status for uncommitted changes
+
+---
+
+## Uncommitted Changes (as of Session 260)
+
+```bash
+# Modified files:
+core/llm_enforcer.py
+core/views_time_capsules.py
+core/views_predictions.py
+core/views_advisor_api.py
+core/views_rag_embeddings.py
+core/urls.py
+core/auth_middleware.py
+core/models_unified_system.py
+ai_core/templates/ai_image_studio.html
+docs/features/SCIFI_ROADMAP.md
+
+# Untracked files (NEW from Sessions 257-259):
+core/views_memory_clusters.py
+core/views_predictions.py
+core/views_time_capsules.py
+```
+
+**Note:** These files need to be committed before starting new work!

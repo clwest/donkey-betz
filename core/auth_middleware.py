@@ -59,6 +59,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agent-evolution/',  # Session 254: Agent Evolution System - supports session auth
         '/api/time-travel/',  # Session 255: Time Travel Debugging - supports session auth
         '/api/personality/',  # Session 256: Agent Personality System - supports session auth
+        '/api/memory-clusters/',  # Session 257: Memory Clusters - supports session auth
+        '/api/predictions/',  # Session 258: Agent Predictions - supports session auth
+        '/api/time-capsules/',  # Session 259: Time Capsule Messages - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
