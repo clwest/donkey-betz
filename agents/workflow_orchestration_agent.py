@@ -1013,9 +1013,26 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             style = "product launch, marketing, professional, e-commerce"
         else:
             # Default: logos - NO TEXT
-            prompt = f"single professional {topic} logo mark, abstract symbol only, NO TEXT, NO WORDS, NO LETTERS, minimalist icon, bold geometric shapes, simple clean design"
+            # Session 238: Check if user requested an ANIMATED style (Pixar, Disney, etc.)
+            # These need character/mascot prompts, NOT flat geometric icons
+            animated_styles = ['pixar', 'disney', 'dreamworks', 'ghibli', 'anime', 'cartoon',
+                              'south_park', 'simpsons', 'family_guy', 'rick_and_morty',
+                              'looney_tunes', 'adventure_time', 'chibi', 'manga']
+
+            style_lower = (style_prefs or '').lower().strip()
+            is_animated_style = any(anim in style_lower for anim in animated_styles)
+
+            if is_animated_style:
+                # Session 238: ANIMATED STYLE - generate a mascot/character logo, not flat icon
+                prompt = f"3D animated mascot character logo for {topic}, cute friendly character, expressive face, vibrant colors, simple memorable design, professional brand mascot, clean background, NO TEXT, NO WORDS, NO LETTERS"
+                style = "mascot character, 3D animated, friendly, professional brand"
+                logger.info(f"🎬 Session 238: Detected animated style '{style_prefs}' - using mascot prompt")
+            else:
+                # Default: flat/geometric logo
+                prompt = f"single professional {topic} logo mark, abstract symbol only, NO TEXT, NO WORDS, NO LETTERS, minimalist icon, bold geometric shapes, simple clean design"
+                style = "minimalist icon, bold symbol, no text, contemporary logo design"
+
             width, height = 1024, 1024
-            style = "minimalist icon, bold symbol, no text, contemporary logo design"
 
         if creative_recs:
             # Extract key recommendations
@@ -1472,124 +1489,128 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
     def _aggregate_executive_direction(self, recommendations: List[Dict], content_type: str) -> str:
         """
-        Aggregate creative direction from ALL executive agents intelligently.
+        Session 238: COMPLETELY REWRITTEN - Extract ONLY actionable prompt keywords.
 
-        Session 201: Instead of just taking Creative Director's response, we extract
-        relevant insights from each agent based on their expertise:
-        - Creative Director: Visual style, aesthetics, design direction
-        - CTO: Technical feasibility, format considerations
-        - COO: Practical implementation, timeline considerations
-        - CFO: Budget/resource efficiency suggestions
-        - Data Analyst: Market trends, what performs well
+        The old approach extracted verbose sentences. This new approach extracts
+        ONLY the words/phrases that directly improve image generation prompts:
+        - Colors: "icy blues", "vibrant oranges", "earthy greys"
+        - Shapes: "geometric", "abstract", "mountain silhouette"
+        - Styles: "bold", "minimalist", "dynamic"
+        - Moods: "adventurous", "professional", "playful"
 
-        Args:
-            recommendations: List of {agent, stance, response} dicts
-            content_type: Type of content being created (logos, thumbnails, etc.)
-
-        Returns:
-            Aggregated creative direction string for image generation
+        NO sentences. NO explanations. JUST prompt-ready keywords.
         """
         if not recommendations:
             return ""
 
-        # Keywords to extract from each agent type
-        extraction_keywords = {
-            'CreativeDirector': ['style', 'color', 'aesthetic', 'visual', 'design', 'look', 'feel', 'bold', 'minimalist', 'modern', 'classic', 'vibrant', 'elegant', 'playful', 'professional'],
-            'CTO': ['format', 'resolution', 'scalable', 'vector', 'high-quality', 'responsive', 'web', 'mobile', 'print'],
-            'COO': ['practical', 'versatile', 'adaptable', 'consistent', 'brand', 'recognizable', 'memorable'],
-            'CFO': ['efficient', 'value', 'ROI', 'cost-effective', 'premium', 'budget'],
-            'DataAnalyst': ['trend', 'popular', 'performing', 'engagement', 'conversion', 'market', 'audience', 'demographic'],
-        }
+        # Combine all responses into one text blob for extraction
+        all_text = ' '.join([r.get('response', '') for r in recommendations]).lower()
 
-        # Content-type specific priority ordering
-        agent_priority = {
-            'logos': ['CreativeDirector', 'COO', 'DataAnalyst', 'CTO', 'CFO'],
-            'brand_identity': ['CreativeDirector', 'COO', 'DataAnalyst', 'CTO', 'CFO'],
-            'youtube_thumbnails': ['DataAnalyst', 'CreativeDirector', 'COO', 'CTO', 'CFO'],
-            'thumbnail_series': ['CreativeDirector', 'DataAnalyst', 'COO', 'CTO', 'CFO'],
-            'product_photography': ['CreativeDirector', 'DataAnalyst', 'COO', 'CFO', 'CTO'],
-            'animated_logo': ['CreativeDirector', 'CTO', 'COO', 'DataAnalyst', 'CFO'],
-        }
+        # COLORS - Extract specific color mentions
+        color_patterns = [
+            'icy blue', 'cool blue', 'navy blue', 'sky blue', 'deep blue',
+            'vibrant orange', 'burnt orange', 'warm orange',
+            'earthy grey', 'slate grey', 'charcoal', 'silver',
+            'crisp white', 'pure white', 'off-white', 'cream',
+            'forest green', 'emerald', 'mint green', 'sage',
+            'rich purple', 'violet', 'lavender',
+            'warm gold', 'bronze', 'copper', 'metallic',
+            'deep red', 'burgundy', 'coral', 'salmon',
+            'black and white', 'monochrome', 'grayscale',
+            'earth tones', 'jewel tones', 'pastel', 'neon',
+            'cool tones', 'warm tones', 'muted colors', 'vibrant colors',
+            'high contrast', 'limited palette', 'two-color', 'gradient'
+        ]
 
-        priority_order = agent_priority.get(content_type, agent_priority['logos'])
+        # SHAPES & SYMBOLS - What to depict
+        shape_patterns = [
+            'mountain silhouette', 'mountain peak', 'mountain range',
+            'snowflake', 'geometric snowflake', 'ice crystal',
+            'wave pattern', 'dynamic wave', 'flowing lines',
+            'abstract symbol', 'geometric shape', 'angular design',
+            'circular design', 'rounded forms', 'organic shapes',
+            'sharp edges', 'clean lines', 'flowing curves',
+            'negative space', 'symmetrical', 'asymmetrical',
+            'layered design', 'overlapping elements', 'interlocking',
+            'arrow', 'chevron', 'hexagon', 'triangle', 'diamond'
+        ]
 
-        # Build a map of agent -> response
-        agent_responses = {}
+        # STYLE DESCRIPTORS - How it should look
+        style_patterns = [
+            'bold', 'minimalist', 'modern', 'contemporary', 'classic',
+            'elegant', 'sophisticated', 'professional', 'corporate',
+            'playful', 'fun', 'energetic', 'dynamic', 'active',
+            'rustic', 'vintage', 'retro', 'futuristic', 'tech',
+            'clean', 'simple', 'streamlined', 'sleek', 'refined',
+            'handcrafted', 'artisan', 'organic', 'natural',
+            'luxurious', 'premium', 'high-end', 'upscale',
+            'friendly', 'approachable', 'trustworthy', 'reliable',
+            'innovative', 'cutting-edge', 'forward-thinking'
+        ]
+
+        # MOOD/FEELING - Emotional quality
+        mood_patterns = [
+            'adventurous', 'exciting', 'thrilling', 'action',
+            'calm', 'serene', 'peaceful', 'relaxing',
+            'powerful', 'strong', 'confident', 'bold',
+            'warm', 'inviting', 'welcoming', 'cozy',
+            'cool', 'fresh', 'crisp', 'invigorating',
+            'mysterious', 'intriguing', 'dramatic'
+        ]
+
+        # Extract matching patterns
+        found_colors = []
+        found_shapes = []
+        found_styles = []
+        found_moods = []
+
+        for pattern in color_patterns:
+            if pattern in all_text and pattern not in found_colors:
+                found_colors.append(pattern)
+
+        for pattern in shape_patterns:
+            if pattern in all_text and pattern not in found_shapes:
+                found_shapes.append(pattern)
+
+        for pattern in style_patterns:
+            if pattern in all_text and pattern not in found_styles:
+                found_styles.append(pattern)
+
+        for pattern in mood_patterns:
+            if pattern in all_text and pattern not in found_moods:
+                found_moods.append(pattern)
+
+        # Build concise prompt addition - prioritize variety
+        prompt_parts = []
+
+        # Add top styles (most important for visuals)
+        prompt_parts.extend(found_styles[:4])
+
+        # Add shapes/symbols (what to depict)
+        prompt_parts.extend(found_shapes[:3])
+
+        # Add colors (palette guidance)
+        prompt_parts.extend(found_colors[:3])
+
+        # Add moods (feeling)
+        prompt_parts.extend(found_moods[:2])
+
+        if prompt_parts:
+            result = ', '.join(prompt_parts)
+            logger.info(f"🎯 Session 238: Extracted {len(prompt_parts)} prompt keywords: {result}")
+            return result
+
+        # Fallback: extract any adjectives from Creative Director
         for rec in recommendations:
-            agent_name = rec.get('agent', '')
-            response = rec.get('response', '')
-            if agent_name and response:
-                agent_responses[agent_name] = response
-
-        # Extract key insights from each agent in priority order
-        direction_parts = []
-        seen_keywords = set()  # Avoid redundancy
-
-        for agent_name in priority_order:
-            if agent_name not in agent_responses:
-                continue
-
-            response = agent_responses[agent_name]
-            response_lower = response.lower()
-
-            # Extract relevant keywords/phrases from this agent's response
-            keywords_to_check = extraction_keywords.get(agent_name, [])
-            extracted = []
-
-            for keyword in keywords_to_check:
-                if keyword in response_lower and keyword not in seen_keywords:
-                    # Find the sentence containing this keyword
-                    sentences = response.split('.')
-                    for sentence in sentences:
-                        if keyword in sentence.lower():
-                            # Clean and add the relevant phrase
-                            clean_sentence = sentence.strip()
-                            if len(clean_sentence) > 10 and len(clean_sentence) < 150:
-                                extracted.append(clean_sentence)
-                                seen_keywords.add(keyword)
-                                break
-
-            # Also extract any specific style descriptors mentioned
-            style_descriptors = [
-                'minimalist', 'bold', 'modern', 'classic', 'elegant', 'playful',
-                'professional', 'vibrant', 'clean', 'sophisticated', 'dynamic',
-                'geometric', 'organic', 'rustic', 'vintage', 'futuristic',
-                'warm', 'cool', 'neutral', 'bright', 'muted', 'high-contrast'
-            ]
-
-            for descriptor in style_descriptors:
-                if descriptor in response_lower and descriptor not in seen_keywords:
-                    seen_keywords.add(descriptor)
-                    # Just note the descriptor without full sentence
-                    if descriptor not in ' '.join(direction_parts).lower():
-                        direction_parts.append(descriptor)
-
-            # Add top extracted insight from this agent (limit length)
-            if extracted:
-                best_extract = extracted[0][:100]
-                if best_extract not in direction_parts:
-                    direction_parts.append(best_extract)
-
-        # Build final aggregated direction
-        if direction_parts:
-            # Combine style descriptors first, then insights
-            descriptors = [p for p in direction_parts if len(p) < 20]
-            insights = [p for p in direction_parts if len(p) >= 20]
-
-            aggregated = ', '.join(descriptors[:6])  # Max 6 style descriptors
-            if insights:
-                aggregated += '. ' + '. '.join(insights[:2])  # Max 2 insight sentences
-
-            logger.info(f"🎯 Aggregated executive direction from {len(agent_responses)} agents: {aggregated[:100]}...")
-            return aggregated[:500]  # Cap at 500 chars
-
-        # Fallback: just use Creative Director's full response
-        if 'CreativeDirector' in agent_responses:
-            return agent_responses['CreativeDirector'][:300]
-
-        # Last resort: first recommendation
-        if recommendations:
-            return recommendations[0].get('response', '')[:300]
+            if rec.get('agent') == 'CreativeDirector':
+                # Just grab style words
+                response = rec.get('response', '').lower()
+                fallback = []
+                for word in ['bold', 'clean', 'modern', 'professional', 'dynamic', 'vibrant']:
+                    if word in response:
+                        fallback.append(word)
+                if fallback:
+                    return ', '.join(fallback[:4])
 
         return ""
 
