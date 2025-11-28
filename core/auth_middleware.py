@@ -54,6 +54,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/learning/',  # Session 248: Learning Feed - supports session auth
         '/api/hive-mind/',  # Session 250: Hive Mind Mode - supports session auth
         '/api/memory-palace/',  # Session 251: Memory Palace - supports session auth
+        '/api/agent-mood/',  # Session 252: Agent Mood System - supports session auth
+        '/api/agent-relationships/',  # Session 253: Agent Rivalries & Alliances - supports session auth
+        '/api/agent-evolution/',  # Session 254: Agent Evolution System - supports session auth
+        '/api/time-travel/',  # Session 255: Time Travel Debugging - supports session auth
+        '/api/personality/',  # Session 256: Agent Personality System - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

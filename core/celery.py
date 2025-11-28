@@ -340,6 +340,68 @@ app.conf.beat_schedule = {
             'expires': 175,
         }
     },
+    # Session 252: Agent Mood System
+    # Check for expired moods and reset them periodically
+    'check-mood-expirations': {
+        'task': 'core.tasks.check_mood_expirations',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes - reset expired moods
+        'options': {
+            'expires': 300,
+        }
+    },
+    'apply-mood-rules': {
+        'task': 'core.tasks.apply_mood_trigger_rules',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes - check mood rules
+        'options': {
+            'expires': 600,
+        }
+    },
+    # Session 253: Agent Rivalries & Alliances
+    # Evolve relationships based on activity
+    'evolve-agent-relationships': {
+        'task': 'core.tasks.evolve_agent_relationships',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes - evolve relationships
+        'options': {
+            'expires': 1800,
+        }
+    },
+    'update-alliance-strengths': {
+        'task': 'core.tasks.update_alliance_strengths',
+        'schedule': crontab(minute=0),  # Every hour - update alliance strengths
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'broadcast-relationship-status': {
+        'task': 'core.tasks.broadcast_relationship_status',
+        'schedule': 120.0,  # Every 2 minutes - broadcast status
+        'options': {
+            'expires': 115,
+        }
+    },
+    # Session 254: Agent Evolution System
+    # Agents gain XP from activities and level up
+    'process-agent-activity-xp': {
+        'task': 'core.tasks.process_agent_activity_xp',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes - process activity XP
+        'options': {
+            'expires': 900,
+        }
+    },
+    'check-level-milestones': {
+        'task': 'core.tasks.check_level_milestones',
+        'schedule': crontab(minute=0),  # Every hour - check for missed milestones
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'broadcast-evolution-status': {
+        'task': 'core.tasks.broadcast_evolution_status',
+        'schedule': 120.0,  # Every 2 minutes - broadcast evolution status
+        'options': {
+            'expires': 115,
+        }
+    },
 }
 
 # Spider-specific task routing configuration

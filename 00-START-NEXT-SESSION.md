@@ -1,71 +1,102 @@
-# Session 252: Ready for Next Feature!
+# Session 257: Ready for Next Feature!
 
 **Date:** November 28, 2025
-**Previous Session:** 251 (Memory Palace)
+**Previous Session:** 256 (Agent Personality Profiles)
 **Session Type:** Feature Complete
 
 ---
 
-## Session 251 Completed - Memory Palace
+## Session 256 Completed - Agent Personality Profiles (MBTI-style)
 
 ### What Was Built
 
-**Memory Palace** provides persistent memory storage for agents, allowing them to remember past experiences, learn from successes/failures, and build connections between related memories!
+**Agent Personality Profiles** gives each AI agent a distinct personality using an MBTI-inspired 4-dimension system. Personalities affect communication style, collaboration preferences, and decision-making.
 
-**New Database Models:**
-1. `AgentMemory` - Main memory storage with types, importance, embeddings
-2. `MemoryConnection` - Connections between memories with type and strength
-3. `MemoryPalaceRoom` - Visual organization into themed rooms
+**New Database Model:**
+1. `AgentPersonality` - Complete personality profile per agent
+   - 4 Personality Dimensions (E/I, S/N, T/F, J/P)
+   - 12 Personality Traits (0.0-1.0 scale)
+   - 8 Archetypes (analyst, diplomat, sentinel, explorer, commander, visionary, advocate, entertainer)
 
-**Memory Types:**
-- Success, Failure, Technique, Insight, Preference, Interaction, Feedback
+**Personality Dimensions:**
+- **Energy Direction:** Extrovert (E) vs Introvert (I) - Collaborative vs Solo-focused
+- **Information Processing:** Sensor (S) vs Intuitive (N) - Data-driven vs Pattern-seeking
+- **Decision Making:** Thinker (T) vs Feeler (F) - Logical vs Empathetic
+- **Work Style:** Judger (J) vs Perceiver (P) - Structured vs Flexible
 
-**Core Features:**
-1. **Memory Recording** - Capture successes, failures, preferences, insights
-2. **Embedding Generation** - Semantic embeddings via OpenAI for similarity search
-3. **Memory Rooms** - Organized into themed rooms (Techniques, Successes, Lessons, etc.)
-4. **Semantic Search** - Search memories by meaning, not just keywords
-5. **Memory Connections** - Link related memories together
-6. **Memory Summary** - Prompt-ready summary for agent context
+**12 Personality Traits:**
+1. `formality` - Casual to Highly Formal
+2. `verbosity` - Concise to Detailed
+3. `humor` - Serious to Frequently Humorous
+4. `assertiveness` - Passive to Direct
+5. `leadership` - Supportive to Natural Leader
+6. `team_orientation` - Independent to Team Player
+7. `teaching_tendency` - Keeps Knowledge to Loves Teaching
+8. `competitiveness` - Collaborative to Competitive
+9. `risk_appetite` - Cautious to High Risk Tolerance
+10. `creativity` - By-the-book to Highly Creative
+11. `patience` - Impatient to Very Patient
+12. `perfectionism` - Good Enough to Perfectionist
 
-**UI Features:**
-- Agent selector dropdown
-- Room cards with memory counts
-- Memory cards with importance bars
-- Memory detail modal with connections
-- Semantic search
-- Create memory form
+**8 Archetypes (with emojis and colors):**
+| Archetype | Emoji | Color | Type Code | Description |
+|-----------|-------|-------|-----------|-------------|
+| Analyst | 🔬 | #3b82f6 (Blue) | INTJ/INTP | Logical problem solvers |
+| Diplomat | 🤝 | #22c55e (Green) | INFJ/INFP | Harmonious mediators |
+| Sentinel | 🛡️ | #f59e0b (Amber) | ISTJ/ISFJ | Reliable guardians |
+| Explorer | 🧭 | #8b5cf6 (Violet) | ISTP/ISFP | Curious adventurers |
+| Commander | 👑 | #ef4444 (Red) | ENTJ/ESTJ | Natural leaders |
+| Visionary | 🔮 | #a855f7 (Purple) | ENTP/ENFP | Creative innovators |
+| Advocate | 💝 | #ec4899 (Pink) | ENFJ/ESFJ | Caring supporters |
+| Entertainer | 🎭 | #f97316 (Orange) | ESTP/ESFP | Engaging performers |
+
+**Preset Personalities by Specialization:**
+- Research agents -> INTJ Analyst (focused, thorough)
+- Creative agents -> ENFP Visionary (innovative, enthusiastic)
+- Technical agents -> ISTP Explorer (practical, hands-on)
+- Leadership agents -> ENTJ Commander (decisive, strategic)
+- Support agents -> ISFJ Sentinel (reliable, helpful)
+- Strategy agents -> INTP Analyst (analytical, conceptual)
+- Communication agents -> ENFJ Advocate (empathetic, engaging)
+
+**Current Agent Personality Distribution (20 agents):**
+- 10 Visionary (creative agents)
+- 5 Commander (leadership agents)
+- 5 Analyst (research/strategy agents)
 
 **New API Endpoints:**
-- `GET /api/memory-palace/` - Overview of all agent memories
-- `GET /api/memory-palace/agent/{id}/memories/` - Agent's memories
-- `GET /api/memory-palace/agent/{id}/rooms/` - Agent's rooms
-- `GET /api/memory-palace/agent/{id}/summary/` - Prompt summary
-- `GET /api/memory-palace/memory/{id}/` - Memory detail
-- `GET /api/memory-palace/room/{id}/memories/` - Room's memories
-- `POST /api/memory-palace/create/` - Create memory
-- `POST /api/memory-palace/search/` - Semantic search
-- `POST /api/memory-palace/connect/` - Connect memories
-- `POST /api/memory-palace/assign/` - Assign to room
-- `DELETE /api/memory-palace/memory/{id}/delete/` - Delete memory
+- `GET /api/personality/` - Overview stats and all agents
+- `GET /api/personality/agent/{id}/` - Get agent's personality
+- `POST /api/personality/agent/{id}/` - Create/update personality
+- `POST /api/personality/agent/{id}/generate/` - Auto-generate based on specialization
+- `POST /api/personality/generate-all/` - Generate personalities for all agents
+- `GET /api/personality/compatibility/{id1}/{id2}/` - Check compatibility between agents
+- `GET /api/personality/archetypes/` - Get all archetype definitions
 
-### Files Created/Modified (Session 251)
+**UI Features:**
+- Personality stats badges (Total Agents, Typed, Top Archetype, Avg Compatibility)
+- Agent selector dropdown to view individual personalities
+- Type code display (ENFP, INTJ, etc.) with archetype name and emoji
+- 4-dimension breakdown (Energy, Processing, Decisions, Work Style)
+- 12 trait progress bars with color coding
+- Communication and Collaboration style display
+- Archetype gallery showing all 8 types with colors/emojis
+- Compatibility checker between two agents
+- "Generate All Personalities" button for bulk creation
+
+### Files Created/Modified (Session 256)
 
 **Database:**
-- `core/models_unified_system.py` - Added AgentMemory, MemoryConnection, MemoryPalaceRoom
-- `core/migrations/0041_session_251_memory_palace.py` - Migration
+- `core/models_unified_system.py` - Added AgentPersonality model with helper methods
+- `core/migrations/0046_session_256_agent_personality.py` - Migration
 
 **Backend:**
-- `core/views_memory_palace.py` - NEW: All Memory Palace API endpoints
-- `core/tasks.py` - Added memory embedding and organization tasks
+- `core/views_personality.py` - NEW: All Personality API endpoints with presets
 - `core/urls.py` - Added new routes
-- `core/auth_middleware.py` - Added /api/memory-palace/ to PUBLIC_PATHS
+- `core/auth_middleware.py` - Added /api/personality/ to PUBLIC_PATHS
 
 **Frontend:**
-- `ai_core/templates/ai_image_studio.html` - Memory Palace UI section
-
-**Documentation:**
-- `docs/features/MEMORY_PALACE.md` - Full feature documentation
+- `ai_core/templates/ai_image_studio.html` - Agent Personalities UI section + JavaScript (lines 7664-7836, 42655-42962)
 
 ---
 
@@ -79,72 +110,66 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Go to Agents tab -> Memory Palace section
-#    - Select an agent from dropdown
-#    - Explore their memory rooms
-#    - Search memories semantically
-#    - Create new memories
+# 3. Go to Agents tab -> Agent Personalities section (orange border)
+#    - View archetype gallery
+#    - Select an agent to see their personality
+#    - Check compatibility between two agents
 ```
 
 ---
 
-## Testing Memory Palace
+## Testing Agent Personalities
 
 ### Test via UI
 1. Go to AI Studio -> Agents tab
-2. Find the Memory Palace section (purple border)
-3. Select an agent from the dropdown
-4. Explore their memory rooms
-5. Click on room cards to view memories
-6. Click on memories to see details
-7. Use search to find specific memories
-8. Create new memories with the "Add Memory" button
+2. Find the Agent Personalities section (orange border)
+3. View the archetype gallery (8 personality types)
+4. Select an agent from the dropdown to view their full personality
+5. Use the Compatibility Checker to compare two agents
 
 ### Test via API
 ```bash
-# Get overview
-curl http://localhost:8000/api/memory-palace/
+# Get personality overview
+curl http://localhost:8000/api/personality/
 
-# Get agent memories (replace {id} with agent UUID)
-curl http://localhost:8000/api/memory-palace/agent/{id}/memories/
+# Get archetypes
+curl http://localhost:8000/api/personality/archetypes/
 
-# Create a memory
-curl -X POST http://localhost:8000/api/memory-palace/create/ \
-  -H "Content-Type: application/json" \
-  -d '{"agent_id": "{id}", "title": "Test Memory", "content": "Content here", "memory_type": "insight"}'
+# Get specific agent's personality
+curl http://localhost:8000/api/personality/agent/{agent_id}/
 
-# Search memories
-curl -X POST http://localhost:8000/api/memory-palace/search/ \
-  -H "Content-Type: application/json" \
-  -d '{"agent_id": "{id}", "query": "your search query"}'
+# Generate personality for an agent
+curl -X POST http://localhost:8000/api/personality/agent/{agent_id}/generate/
+
+# Check compatibility between two agents
+curl http://localhost:8000/api/personality/compatibility/{agent1_id}/{agent2_id}/
 ```
 
 ---
 
-## What's Next (Session 252+)
+## What's Next (Session 257+)
 
 From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
-### Priority 1: Agent Mood System
-- Agents have emotional states
-- Moods affect response style and creativity
-- Happy agents are more creative, focused agents are more precise
-- Memories could influence mood
+### Priority 1: Agent Memory Clusters
+- Group related memories together
+- Visual memory map
+- Semantic clustering
 
-### Priority 2: Agent Rivalries & Alliances
-- Agents form competitive dynamics
-- Rivalries push innovation
-- Alliances enable specialized collaborations
+### Priority 2: Collaborative Editing Mode
+- Multiple agents working on same content
+- Live cursors and annotations
+- Merge conflict resolution
 
-### Priority 3: Agent Evolution
-- XP system for agents
-- Level up from experience
-- Unlock new capabilities as they grow
+### Priority 3: Agent Reputation System
+- Track agent success rates
+- Build reputation over time
+- Agents recommend other agents
 
-### Priority 4: Time Travel Debugging
-- Replay agent decisions
-- See what they were "thinking"
-- Debug and improve agent behavior
+### Other Ideas:
+- Personality affects prompt modifiers (already implemented in model)
+- Personality-based team formation recommendations
+- Compatibility scores for workflow assignments
 
 ---
 
@@ -152,7 +177,12 @@ From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
 | Feature | Status |
 |---------|--------|
-| Memory Palace | **COMPLETE** |
+| Agent Personality Profiles | **COMPLETE** |
+| Time Travel Debugging | COMPLETE |
+| Agent Evolution System | COMPLETE |
+| Agent Rivalries & Alliances | COMPLETE |
+| Agent Mood System | COMPLETE |
+| Memory Palace | COMPLETE |
 | Hive Mind Mode | COMPLETE |
 | Dream Feedback | COMPLETE |
 | Agent Conversations | COMPLETE |
@@ -168,5 +198,5 @@ From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
 - [ ] Read this handoff document
 - [ ] Run `make start && make celery`
-- [ ] Test Memory Palace at http://localhost:8000/ai-studio/ (Agents tab)
+- [ ] Test Personalities at http://localhost:8000/ai-studio/ (Agents tab)
 - [ ] Review SciFi Roadmap for next feature: `docs/features/SCIFI_ROADMAP.md`

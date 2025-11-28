@@ -3,11 +3,13 @@ Research Agent - Unified Research Specialist
 =============================================
 
 Session 203: Created as Phase 3 of Agent Architecture Refactor
+Session 255: Added Time Travel Debugging for decision tracking
 
 This agent provides unified research capabilities by combining:
 1. Web search (Serper/Google) for real-time web results
 2. Spider network (40+ specialized spiders) for domain-specific intelligence
 3. Content analysis for deep research synthesis
+4. TIME TRAVEL DEBUGGING (Session 255)
 
 The ResearchAgent makes the 40+ spiders invisible infrastructure - the user
 just asks for research and gets comprehensive results from multiple sources.
@@ -34,6 +36,7 @@ import requests
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from dataclasses import dataclass
+from agents.time_travel_mixin import TimeTravelMixin
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +65,14 @@ class ResearchResult:
         }
 
 
-class ResearchAgent:
+class ResearchAgent(TimeTravelMixin):
     """
     Unified research specialist that combines web search with spider intelligence.
 
     This agent makes the spider network invisible to the user - they just ask
     for research and get comprehensive, multi-source results.
+
+    Session 255: Inherits TimeTravelMixin for decision tracking.
     """
 
     # Spider categories mapped to research domains
@@ -117,6 +122,7 @@ class ResearchAgent:
         """
         self.user = user
         self.project_id = project_id
+        self.agent_name = 'ResearchAgent'  # Session 255: Required for TimeTravelMixin
         self._spider_registry = None
         self._intelligence_service = None
 
@@ -165,35 +171,86 @@ class ResearchAgent:
         """
         logger.info(f"ResearchAgent searching: {query}")
 
-        sources = sources or ['web', 'spiders']
-        web_results = []
-        spider_results = []
-        sources_used = []
+        # Session 255: Time Travel Debugging - wrap in session
+        with self.time_travel_session(
+            task_type="research",
+            task_description=f"Search: {query[:50]}...",
+            input_data={'query': query, 'sources': sources, 'max_web': max_web_results, 'max_spider': max_spider_results}
+        ):
+            sources = sources or ['web', 'spiders']
+            web_results = []
+            spider_results = []
+            sources_used = []
 
-        # Web search
-        if 'web' in sources:
-            web_data = self._search_web(query, max_results=max_web_results)
-            if web_data.get('success'):
-                web_results = web_data.get('results', [])
-                sources_used.append('web_search')
-                logger.info(f"  Web search returned {len(web_results)} results")
+            # Session 255: Record query analysis decision
+            self.record_decision(
+                decision_type="analysis",
+                action=f"Analyzing research query: {query[:50]}...",
+                reasoning="Parsing query to determine relevant sources",
+                context={'query_length': len(query), 'sources_requested': sources},
+                confidence=0.9,
+                thoughts=[
+                    f"User wants to research: {query[:30]}...",
+                    f"Sources to use: {sources}",
+                    f"Max results: web={max_web_results}, spider={max_spider_results}"
+                ]
+            )
 
-        # Spider intelligence
-        if 'spiders' in sources:
-            spider_data = self._search_spiders(query, max_results=max_spider_results)
-            spider_results = spider_data.get('results', [])
-            sources_used.extend(spider_data.get('spiders_queried', []))
-            logger.info(f"  Spider search returned {len(spider_results)} results")
+            # Web search
+            if 'web' in sources:
+                # Session 255: Record web search decision
+                self.record_decision(
+                    decision_type="source_selection",
+                    action="Querying web search (Serper/Google)",
+                    reasoning="Web search provides real-time information",
+                    alternatives=["Skip web search", "Use different search engine"],
+                    confidence=0.85
+                )
+                web_data = self._search_web(query, max_results=max_web_results)
+                if web_data.get('success'):
+                    web_results = web_data.get('results', [])
+                    sources_used.append('web_search')
+                    logger.info(f"  Web search returned {len(web_results)} results")
+                    self.record_thought(f"Web search returned {len(web_results)} results", "observation", 0.7)
 
-        result = ResearchResult(
-            success=True,
-            query=query,
-            sources_used=sources_used,
-            web_results=web_results,
-            spider_results=spider_results
-        )
+            # Spider intelligence
+            if 'spiders' in sources:
+                # Session 255: Record spider search decision
+                relevant_domains = self._identify_relevant_domains(query)
+                self.record_decision(
+                    decision_type="source_selection",
+                    action=f"Querying spider network: {relevant_domains or 'general'}",
+                    reasoning="Spider network provides domain-specific intelligence",
+                    alternatives=["Skip spider intelligence", "Query different domains"],
+                    context={'relevant_domains': relevant_domains},
+                    confidence=0.8
+                )
+                spider_data = self._search_spiders(query, max_results=max_spider_results)
+                spider_results = spider_data.get('results', [])
+                sources_used.extend(spider_data.get('spiders_queried', []))
+                logger.info(f"  Spider search returned {len(spider_results)} results")
+                self.record_thought(f"Spider network returned {len(spider_results)} results", "observation", 0.7)
 
-        return result.to_dict()
+            result = ResearchResult(
+                success=True,
+                query=query,
+                sources_used=sources_used,
+                web_results=web_results,
+                spider_results=spider_results
+            )
+
+            # Session 255: Record completion
+            total_results = len(web_results) + len(spider_results)
+            self.record_decision(
+                decision_type="research_complete",
+                action=f"Research complete: {total_results} total results",
+                reasoning="All sources queried successfully",
+                context={'web_count': len(web_results), 'spider_count': len(spider_results), 'sources_used': sources_used},
+                confidence=0.95
+            )
+            self.mark_decision_outcome(True, f"Found {total_results} results from {len(sources_used)} sources")
+
+            return result.to_dict()
 
     def research_topic(
         self,

@@ -4,6 +4,7 @@ Image Agent - Unified Image Specialist
 
 Session 202: CREATED - Consolidated from ImageEditingAgent, LogoAgent, SocialMediaAgent, EditingOrchestratorAgent
 Session 203: Added preference learning and memory (Phase 4)
+Session 255: Added Time Travel Debugging for decision tracking
 
 This is the ONE agent for ALL image operations:
 - Image generation with 80+ built-in styles
@@ -12,6 +13,7 @@ This is the ONE agent for ALL image operations:
 - Image editing (upscale, remove_bg, variations, recolor, etc.)
 - Multi-step editing workflows
 - USER PREFERENCE LEARNING (Session 203)
+- TIME TRAVEL DEBUGGING (Session 255)
 
 Example Usage:
     image_agent = ImageAgent(user=request.user)
@@ -49,12 +51,13 @@ import json
 
 from content.models import ImageHistory
 from content.image_generation import ImageGenerationService
+from agents.time_travel_mixin import TimeTravelMixin
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class ImageAgent:
+class ImageAgent(TimeTravelMixin):
     """
     Unified agent for all image operations.
     Session 202: Consolidates ImageEditingAgent, LogoAgent, SocialMediaAgent, EditingOrchestratorAgent.
@@ -167,46 +170,116 @@ class ImageAgent:
         logger.info(f"   Style: {style or 'none'}")
         logger.info(f"   Model: {model}")
 
-        try:
-            # Use the centralized image generation that has the 80+ style library
-            from core.views_image import _execute_generate_image
+        # Session 255: Time Travel Debugging - wrap in session
+        with self.time_travel_session(
+            task_type="image_generation",
+            task_description=f"Generate: {prompt[:50]}...",
+            input_data={'prompt': prompt, 'style': style, 'model': model, 'size': size}
+        ):
+            try:
+                # Use the centralized image generation that has the 80+ style library
+                from core.views_image import _execute_generate_image
 
-            parameters = {
-                'prompt': prompt,
-                'model': model,
-                'size': size,
-                'count': count,
-            }
+                # Session 255: Record prompt analysis decision
+                self.record_decision(
+                    decision_type="analysis",
+                    action=f"Analyzing prompt: {prompt[:50]}...",
+                    reasoning="Parsing user intent and requirements",
+                    context={'prompt_length': len(prompt), 'has_style': bool(style)},
+                    confidence=0.9,
+                    thoughts=[
+                        f"User wants to generate: {prompt[:30]}...",
+                        f"Style specified: {style or 'none (will use default or learned)'}",
+                        f"Model selected: {model}"
+                    ]
+                )
 
-            if style:
-                parameters['style'] = style
-            if negative_prompt:
-                parameters['negative_prompt'] = negative_prompt
+                parameters = {
+                    'prompt': prompt,
+                    'model': model,
+                    'size': size,
+                    'count': count,
+                }
 
-            # Session 203: Apply user preferences for missing values
-            if apply_preferences:
-                parameters = self._apply_preferences(parameters)
-                if parameters.get('style') and not style:
-                    logger.info(f"   Applied learned style: {parameters.get('style')}")
+                if style:
+                    parameters['style'] = style
+                if negative_prompt:
+                    parameters['negative_prompt'] = negative_prompt
 
-            result = _execute_generate_image(self.user, parameters, session=session)
+                # Session 203: Apply user preferences for missing values
+                if apply_preferences:
+                    original_style = parameters.get('style')
+                    parameters = self._apply_preferences(parameters)
+                    if parameters.get('style') and not style:
+                        logger.info(f"   Applied learned style: {parameters.get('style')}")
+                        # Session 255: Record preference application decision
+                        self.record_decision(
+                            decision_type="preference_application",
+                            action=f"Applied learned style: {parameters.get('style')}",
+                            reasoning="User has established style preferences from past generations",
+                            alternatives=["Use default style", "Ask user for style"],
+                            context={'learned_style': parameters.get('style')},
+                            confidence=0.85
+                        )
 
-            if result.get('success'):
-                logger.info(f"✅ Image generated successfully")
-                logger.info(f"   Image ID: {result.get('image_id')}")
+                # Session 255: Record model selection decision
+                self.record_decision(
+                    decision_type="model_selection",
+                    action=f"Using model: {parameters.get('model')}",
+                    reasoning=f"Model {parameters.get('model')} selected for {size} generation",
+                    alternatives=["sd3", "sd3-large-turbo", "core", "ultra"],
+                    context={'model': parameters.get('model'), 'size': size},
+                    confidence=0.9
+                )
 
-                # Session 203: Record success for preference learning
-                if learn:
-                    self._record_success(parameters)
+                result = _execute_generate_image(self.user, parameters, session=session)
 
-            return result
+                if result.get('success'):
+                    logger.info(f"✅ Image generated successfully")
+                    logger.info(f"   Image ID: {result.get('image_id')}")
 
-        except Exception as e:
-            logger.error(f"❌ ImageAgent.generate failed: {str(e)}", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e)
-            }
+                    # Session 255: Record success
+                    self.record_decision(
+                        decision_type="generation_complete",
+                        action=f"Successfully generated image: {result.get('image_id')}",
+                        reasoning="Image generation completed without errors",
+                        context={'image_id': result.get('image_id')},
+                        confidence=1.0
+                    )
+                    self.mark_decision_outcome(True, f"Image {result.get('image_id')} created")
+
+                    # Session 203: Record success for preference learning
+                    if learn:
+                        self._record_success(parameters)
+                else:
+                    # Session 255: Record failure
+                    self.record_decision(
+                        decision_type="generation_failed",
+                        action=f"Generation failed: {result.get('error', 'Unknown error')}",
+                        reasoning="API returned error or unexpected response",
+                        context={'error': result.get('error')},
+                        confidence=0.5
+                    )
+                    self.mark_decision_outcome(False, result.get('error', 'Unknown error'))
+                    self.flag_decision("Generation failed - needs review")
+
+                return result
+
+            except Exception as e:
+                logger.error(f"❌ ImageAgent.generate failed: {str(e)}", exc_info=True)
+                # Session 255: Record exception
+                self.record_decision(
+                    decision_type="exception",
+                    action=f"Exception occurred: {str(e)[:100]}",
+                    reasoning="Unexpected error during generation",
+                    context={'exception': str(e)},
+                    confidence=0.0
+                )
+                self.flag_decision(f"Exception: {str(e)[:50]}")
+                return {
+                    'success': False,
+                    'error': str(e)
+                }
 
     def generate_logo(
         self,

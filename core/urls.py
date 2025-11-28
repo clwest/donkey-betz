@@ -192,6 +192,82 @@ from core.views_memory_palace import (
     delete_memory,
 )
 
+# Session 252: Agent Mood System
+from core.views_agent_mood import (
+    get_mood_overview,
+    get_agent_mood,
+    set_agent_mood,
+    get_mood_history,
+    get_mood_rules,
+    create_mood_rule,
+    delete_mood_rule,
+    trigger_mood_from_memory,
+    get_mood_prompt_context,
+)
+
+# Session 253: Agent Rivalries & Alliances
+from core.views_agent_relationships import (
+    get_relationships_overview,
+    get_agent_relationships,
+    create_relationship,
+    record_interaction,
+    get_alliance,
+    create_alliance,
+    add_alliance_member,
+    disband_alliance,
+    get_rivalry,
+    create_rivalry,
+    record_competition,
+    end_rivalry,
+    get_relationship_events,
+    auto_generate_relationships,
+)
+
+# Session 254: Agent Evolution System
+from core.views_agent_evolution import (
+    get_evolution_overview,
+    get_agent_evolution,
+    award_agent_xp,
+    prestige_agent,
+    get_available_abilities,
+    create_ability,
+    unlock_ability,
+    get_xp_leaderboard,
+    get_recent_xp_gains,
+    initialize_all_evolutions,
+    record_task_completion,
+)
+
+# Session 255: Time Travel Debugging API
+from core.views_time_travel import (
+    get_time_travel_overview,
+    get_session_detail,
+    start_session,
+    end_session,
+    toggle_bookmark_session,
+    record_decision,
+    update_decision_outcome,
+    flag_decision,
+    create_bookmark,
+    delete_bookmark,
+    add_annotation,
+    delete_annotation,
+    search_sessions,
+    get_flagged_decisions,
+    get_agent_sessions,
+    simulate_session,
+)
+
+# Session 256: Agent Personality System
+from core.views_personality import (
+    personality_overview,
+    agent_personality,
+    generate_personality,
+    generate_all_personalities,
+    personality_compatibility,
+    personality_archetypes,
+)
+
 # Session 219 Phase D: Import marketplace views
 from core.views_marketplace import (
     browse_workflows as marketplace_browse,
@@ -2046,6 +2122,75 @@ urlpatterns = [
     path('api/memory-palace/search/', search_memories, name='memory-search'),
     path('api/memory-palace/assign/', assign_memory_to_room, name='memory-assign-room'),
     path('api/memory-palace/connect/', connect_memories, name='memory-connect'),
+
+    # Session 252: Agent Mood System API
+    path('api/agent-mood/', get_mood_overview, name='agent-mood-overview'),
+    path('api/agent-mood/agent/<uuid:agent_id>/', get_agent_mood, name='agent-mood-detail'),
+    path('api/agent-mood/agent/<uuid:agent_id>/set/', set_agent_mood, name='agent-mood-set'),
+    path('api/agent-mood/agent/<uuid:agent_id>/history/', get_mood_history, name='agent-mood-history'),
+    path('api/agent-mood/agent/<uuid:agent_id>/prompt-context/', get_mood_prompt_context, name='agent-mood-prompt'),
+    path('api/agent-mood/rules/', get_mood_rules, name='agent-mood-rules'),
+    path('api/agent-mood/rules/create/', create_mood_rule, name='agent-mood-rule-create'),
+    path('api/agent-mood/rules/<uuid:rule_id>/delete/', delete_mood_rule, name='agent-mood-rule-delete'),
+    path('api/agent-mood/trigger-from-memory/', trigger_mood_from_memory, name='agent-mood-from-memory'),
+
+    # Session 253: Agent Rivalries & Alliances API
+    path('api/agent-relationships/', get_relationships_overview, name='agent-relationships-overview'),
+    path('api/agent-relationships/agent/<uuid:agent_id>/', get_agent_relationships, name='agent-relationships-detail'),
+    path('api/agent-relationships/create/', create_relationship, name='agent-relationship-create'),
+    path('api/agent-relationships/relationship/<uuid:relationship_id>/interact/', record_interaction, name='agent-relationship-interact'),
+    path('api/agent-relationships/relationship/<uuid:relationship_id>/events/', get_relationship_events, name='agent-relationship-events'),
+    path('api/agent-relationships/auto-generate/', auto_generate_relationships, name='agent-relationships-auto'),
+    # Alliances
+    path('api/agent-relationships/alliances/<uuid:alliance_id>/', get_alliance, name='agent-alliance-detail'),
+    path('api/agent-relationships/alliances/create/', create_alliance, name='agent-alliance-create'),
+    path('api/agent-relationships/alliances/<uuid:alliance_id>/add/', add_alliance_member, name='agent-alliance-add'),
+    path('api/agent-relationships/alliances/<uuid:alliance_id>/disband/', disband_alliance, name='agent-alliance-disband'),
+    # Rivalries
+    path('api/agent-relationships/rivalries/<uuid:rivalry_id>/', get_rivalry, name='agent-rivalry-detail'),
+    path('api/agent-relationships/rivalries/create/', create_rivalry, name='agent-rivalry-create'),
+    path('api/agent-relationships/rivalries/<uuid:rivalry_id>/compete/', record_competition, name='agent-rivalry-compete'),
+    path('api/agent-relationships/rivalries/<uuid:rivalry_id>/end/', end_rivalry, name='agent-rivalry-end'),
+
+    # Session 254: Agent Evolution System API
+    path('api/agent-evolution/', get_evolution_overview, name='agent-evolution-overview'),
+    path('api/agent-evolution/agent/<uuid:agent_id>/', get_agent_evolution, name='agent-evolution-detail'),
+    path('api/agent-evolution/agent/<uuid:agent_id>/award-xp/', award_agent_xp, name='agent-evolution-award-xp'),
+    path('api/agent-evolution/agent/<uuid:agent_id>/prestige/', prestige_agent, name='agent-evolution-prestige'),
+    path('api/agent-evolution/agent/<uuid:agent_id>/task/', record_task_completion, name='agent-evolution-task'),
+    path('api/agent-evolution/agent/<uuid:agent_id>/unlock/<uuid:ability_id>/', unlock_ability, name='agent-evolution-unlock'),
+    path('api/agent-evolution/abilities/', get_available_abilities, name='agent-evolution-abilities'),
+    path('api/agent-evolution/abilities/create/', create_ability, name='agent-evolution-ability-create'),
+    path('api/agent-evolution/leaderboard/', get_xp_leaderboard, name='agent-evolution-leaderboard'),
+    path('api/agent-evolution/xp-gains/', get_recent_xp_gains, name='agent-evolution-xp-gains'),
+    path('api/agent-evolution/initialize/', initialize_all_evolutions, name='agent-evolution-initialize'),
+
+    # Session 255: Time Travel Debugging API
+    # Replay agent decisions and see what they were "thinking"
+    path('api/time-travel/', get_time_travel_overview, name='time-travel-overview'),
+    path('api/time-travel/session/<uuid:session_id>/', get_session_detail, name='time-travel-session-detail'),
+    path('api/time-travel/session/start/', start_session, name='time-travel-start'),
+    path('api/time-travel/session/<uuid:session_id>/end/', end_session, name='time-travel-end'),
+    path('api/time-travel/session/<uuid:session_id>/bookmark/', toggle_bookmark_session, name='time-travel-bookmark-session'),
+    path('api/time-travel/decision/', record_decision, name='time-travel-record-decision'),
+    path('api/time-travel/decision/<uuid:decision_id>/outcome/', update_decision_outcome, name='time-travel-update-outcome'),
+    path('api/time-travel/decision/<uuid:decision_id>/flag/', flag_decision, name='time-travel-flag'),
+    path('api/time-travel/bookmark/', create_bookmark, name='time-travel-create-bookmark'),
+    path('api/time-travel/bookmark/<uuid:bookmark_id>/', delete_bookmark, name='time-travel-delete-bookmark'),
+    path('api/time-travel/annotation/', add_annotation, name='time-travel-add-annotation'),
+    path('api/time-travel/annotation/<uuid:annotation_id>/', delete_annotation, name='time-travel-delete-annotation'),
+    path('api/time-travel/search/', search_sessions, name='time-travel-search'),
+    path('api/time-travel/flagged/', get_flagged_decisions, name='time-travel-flagged'),
+    path('api/time-travel/agent/<uuid:agent_id>/sessions/', get_agent_sessions, name='time-travel-agent-sessions'),
+    path('api/time-travel/agent/<uuid:agent_id>/simulate/', simulate_session, name='time-travel-simulate'),
+
+    # Session 256: Agent Personality System API
+    path('api/personality/', personality_overview, name='personality-overview'),
+    path('api/personality/agent/<uuid:agent_id>/', agent_personality, name='personality-agent'),
+    path('api/personality/agent/<uuid:agent_id>/generate/', generate_personality, name='personality-generate'),
+    path('api/personality/generate-all/', generate_all_personalities, name='personality-generate-all'),
+    path('api/personality/compatibility/<uuid:agent1_id>/<uuid:agent2_id>/', personality_compatibility, name='personality-compatibility'),
+    path('api/personality/archetypes/', personality_archetypes, name='personality-archetypes'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),

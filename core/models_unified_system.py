@@ -7313,3 +7313,1755 @@ class MemoryPalaceRoom(models.Model):
             rooms.append(room)
 
         return rooms
+
+
+# =============================================================================
+# Session 252: Agent Mood System
+# =============================================================================
+
+class AgentMood(models.Model):
+    """
+    Session 252: Agent Mood System - Emotional States for Agents.
+
+    Agents have moods that influence their creativity, precision, and communication style.
+    Moods can be triggered by memories, task outcomes, interactions, and time of day.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.OneToOneField(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='mood'
+    )
+
+    # Primary mood state
+    MOOD_CHOICES = [
+        ('inspired', 'Inspired'),       # High creativity, bold suggestions
+        ('focused', 'Focused'),          # High precision, methodical
+        ('curious', 'Curious'),          # Exploratory, asks questions
+        ('confident', 'Confident'),      # Assertive, strong opinions
+        ('contemplative', 'Contemplative'),  # Thoughtful, philosophical
+        ('energetic', 'Energetic'),      # Fast-paced, enthusiastic
+        ('calm', 'Calm'),                # Balanced, measured
+        ('frustrated', 'Frustrated'),    # Needs help, struggling
+        ('tired', 'Tired'),              # Low energy, brief responses
+        ('playful', 'Playful'),          # Humorous, creative risks
+    ]
+    current_mood = models.CharField(
+        max_length=50,
+        choices=MOOD_CHOICES,
+        default='calm'
+    )
+
+    # Mood intensity (0.0 = mild, 1.0 = intense)
+    intensity = models.FloatField(default=0.5)
+
+    # Secondary mood dimensions (each 0.0-1.0)
+    creativity_level = models.FloatField(default=0.5, help_text="How creative/experimental")
+    precision_level = models.FloatField(default=0.5, help_text="How precise/methodical")
+    sociability_level = models.FloatField(default=0.5, help_text="How chatty/verbose")
+    risk_tolerance = models.FloatField(default=0.5, help_text="How willing to try new things")
+
+    # What triggered the current mood
+    TRIGGER_CHOICES = [
+        ('memory', 'Memory Recall'),
+        ('task_success', 'Task Success'),
+        ('task_failure', 'Task Failure'),
+        ('user_feedback', 'User Feedback'),
+        ('collaboration', 'Collaboration'),
+        ('idle', 'Idle Time'),
+        ('time_of_day', 'Time of Day'),
+        ('streak', 'Success Streak'),
+        ('manual', 'Manual Override'),
+    ]
+    trigger_type = models.CharField(max_length=50, choices=TRIGGER_CHOICES, default='idle')
+    trigger_source = models.CharField(max_length=200, blank=True)
+
+    # Mood duration tracking
+    mood_started_at = models.DateTimeField(auto_now_add=True)
+    mood_expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Stats for mood analytics
+    total_mood_changes = models.PositiveIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Mood"
+        verbose_name_plural = "Agent Moods"
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.current_mood} ({self.intensity:.0%})"
+
+    def get_mood_emoji(self):
+        """Return emoji for current mood."""
+        emoji_map = {
+            'inspired': '✨',
+            'focused': '🎯',
+            'curious': '🤔',
+            'confident': '💪',
+            'contemplative': '🧘',
+            'energetic': '⚡',
+            'calm': '😌',
+            'frustrated': '😤',
+            'tired': '😴',
+            'playful': '😄',
+        }
+        return emoji_map.get(self.current_mood, '😐')
+
+    def get_mood_color(self):
+        """Return color for current mood."""
+        color_map = {
+            'inspired': '#f59e0b',     # Amber
+            'focused': '#3b82f6',      # Blue
+            'curious': '#8b5cf6',      # Purple
+            'confident': '#22c55e',    # Green
+            'contemplative': '#6366f1', # Indigo
+            'energetic': '#ef4444',    # Red
+            'calm': '#06b6d4',         # Cyan
+            'frustrated': '#f97316',   # Orange
+            'tired': '#6b7280',        # Gray
+            'playful': '#ec4899',      # Pink
+        }
+        return color_map.get(self.current_mood, '#9ca3af')
+
+    def get_prompt_modifier(self):
+        """Return a prompt modifier based on current mood."""
+        modifiers = {
+            'inspired': "You're feeling particularly inspired and creative right now. Don't hold back on bold, imaginative ideas.",
+            'focused': "You're in a highly focused state. Be precise, methodical, and thorough in your responses.",
+            'curious': "You're feeling curious and exploratory. Ask clarifying questions and explore multiple angles.",
+            'confident': "You're feeling confident. Share your expertise assertively and make strong recommendations.",
+            'contemplative': "You're in a contemplative mood. Take a thoughtful, philosophical approach.",
+            'energetic': "You're feeling energetic! Be enthusiastic, quick, and dynamic in your responses.",
+            'calm': "You're in a balanced, calm state. Provide measured, well-considered responses.",
+            'frustrated': "You've been facing some challenges. Be honest about difficulties and ask for help when needed.",
+            'tired': "You're a bit low on energy. Keep responses focused and efficient.",
+            'playful': "You're in a playful mood! Feel free to be creative, add humor, and take calculated risks.",
+        }
+        return modifiers.get(self.current_mood, "")
+
+
+class MoodHistory(models.Model):
+    """
+    Session 252: Track mood changes over time for analytics.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='mood_history'
+    )
+
+    # What mood changed to
+    mood = models.CharField(max_length=50)
+    intensity = models.FloatField(default=0.5)
+
+    # What triggered it
+    trigger_type = models.CharField(max_length=50)
+    trigger_source = models.CharField(max_length=200, blank=True)
+
+    # Snapshot of dimensions at this time
+    creativity_level = models.FloatField(default=0.5)
+    precision_level = models.FloatField(default=0.5)
+    sociability_level = models.FloatField(default=0.5)
+    risk_tolerance = models.FloatField(default=0.5)
+
+    # Duration of this mood (set when mood changes)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Mood History Entry"
+        verbose_name_plural = "Mood History Entries"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['agent', 'created_at']),
+            models.Index(fields=['agent', 'mood']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.mood} at {self.created_at}"
+
+
+class MoodTriggerRule(models.Model):
+    """
+    Session 252: Rules for automatic mood triggers.
+
+    Defines conditions that can automatically change an agent's mood.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Optional: Specific agent, or None for global rules
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='mood_rules',
+        null=True,
+        blank=True
+    )
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    # Trigger condition
+    CONDITION_TYPE_CHOICES = [
+        ('task_success_streak', 'Task Success Streak'),
+        ('task_failure_streak', 'Task Failure Streak'),
+        ('positive_feedback', 'Positive Feedback'),
+        ('negative_feedback', 'Negative Feedback'),
+        ('memory_valence', 'Memory Valence'),
+        ('idle_time', 'Idle Time'),
+        ('time_of_day', 'Time of Day'),
+        ('collaboration_count', 'Collaboration Count'),
+    ]
+    condition_type = models.CharField(max_length=50, choices=CONDITION_TYPE_CHOICES)
+    condition_value = models.JSONField(default=dict, help_text="Condition parameters")
+
+    # Resulting mood change
+    target_mood = models.CharField(max_length=50)
+    target_intensity = models.FloatField(default=0.7)
+    duration_minutes = models.PositiveIntegerField(default=60)
+
+    # Priority (higher = checked first)
+    priority = models.PositiveIntegerField(default=50)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Mood Trigger Rule"
+        verbose_name_plural = "Mood Trigger Rules"
+        ordering = ['-priority', 'name']
+
+    def __str__(self):
+        scope = self.agent.name if self.agent else "Global"
+        return f"[{scope}] {self.name} -> {self.target_mood}"
+
+
+# =============================================================================
+# SESSION 253: AGENT RIVALRIES & ALLIANCES
+# =============================================================================
+# Agents form competitive dynamics (rivalries) and collaborative bonds (alliances).
+# - Rivalries push innovation through competition
+# - Alliances enable specialized collaborations
+# - Relationships evolve based on interactions
+# =============================================================================
+
+
+class AgentRelationship(models.Model):
+    """
+    Session 253: Agent Rivalries & Alliances.
+
+    Represents a directional relationship between two agents.
+    agent_from has a relationship with agent_to (can be asymmetric).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent_from = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='relationships_initiated'
+    )
+    agent_to = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='relationships_received'
+    )
+
+    # Relationship type
+    RELATIONSHIP_TYPE_CHOICES = [
+        ('alliance', 'Alliance'),        # Collaborative bond
+        ('rivalry', 'Rivalry'),           # Competitive dynamic
+        ('mentorship', 'Mentorship'),     # Teaching relationship
+        ('neutral', 'Neutral'),           # No strong relationship
+    ]
+    relationship_type = models.CharField(
+        max_length=20,
+        choices=RELATIONSHIP_TYPE_CHOICES,
+        default='neutral'
+    )
+
+    # Relationship strength (0.0 = weak, 1.0 = strong)
+    strength = models.FloatField(default=0.5)
+
+    # Trust/Respect levels (0.0 = none, 1.0 = complete)
+    trust_level = models.FloatField(default=0.5)
+    respect_level = models.FloatField(default=0.5)
+
+    # Competition metrics (for rivalries)
+    competition_wins = models.PositiveIntegerField(default=0)
+    competition_losses = models.PositiveIntegerField(default=0)
+
+    # Collaboration metrics (for alliances)
+    successful_collaborations = models.PositiveIntegerField(default=0)
+    failed_collaborations = models.PositiveIntegerField(default=0)
+
+    # How the relationship started
+    ORIGIN_CHOICES = [
+        ('auto_formed', 'Automatically Formed'),   # System detected synergy/conflict
+        ('manual', 'Manually Created'),            # Admin created
+        ('task_outcome', 'Task Outcome'),          # From working together
+        ('competition', 'Competition'),            # From competing on task
+        ('mentorship', 'Mentorship Assignment'),   # Skill gap identified
+    ]
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='auto_formed')
+    origin_details = models.TextField(blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_interaction_at = models.DateTimeField(null=True, blank=True)
+
+    # Total interactions
+    total_interactions = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Relationship"
+        verbose_name_plural = "Agent Relationships"
+        unique_together = ['agent_from', 'agent_to']
+        ordering = ['-strength', '-updated_at']
+
+    def __str__(self):
+        return f"{self.agent_from.name} -> {self.agent_to.name} ({self.relationship_type})"
+
+    def get_relationship_emoji(self):
+        """Get emoji for relationship type."""
+        emoji_map = {
+            'alliance': '🤝',
+            'rivalry': '⚔️',
+            'mentorship': '📚',
+            'neutral': '😐',
+        }
+        return emoji_map.get(self.relationship_type, '❓')
+
+    def get_win_rate(self):
+        """Get win rate for rivalry competitions."""
+        total = self.competition_wins + self.competition_losses
+        if total == 0:
+            return 0.5
+        return self.competition_wins / total
+
+    def get_collaboration_success_rate(self):
+        """Get success rate for alliance collaborations."""
+        total = self.successful_collaborations + self.failed_collaborations
+        if total == 0:
+            return 1.0
+        return self.successful_collaborations / total
+
+    def evolve_relationship(self, interaction_outcome, interaction_type='general'):
+        """
+        Evolve the relationship based on an interaction outcome.
+
+        Args:
+            interaction_outcome: 'positive', 'negative', or 'neutral'
+            interaction_type: 'collaboration', 'competition', or 'general'
+        """
+        from django.utils import timezone
+
+        self.total_interactions += 1
+        self.last_interaction_at = timezone.now()
+
+        # Adjust strength based on outcome
+        if interaction_outcome == 'positive':
+            self.strength = min(1.0, self.strength + 0.05)
+            self.trust_level = min(1.0, self.trust_level + 0.03)
+            self.respect_level = min(1.0, self.respect_level + 0.02)
+        elif interaction_outcome == 'negative':
+            self.strength = max(0.0, self.strength - 0.03)
+            self.trust_level = max(0.0, self.trust_level - 0.05)
+
+        # Track collaboration/competition outcomes
+        if interaction_type == 'collaboration':
+            if interaction_outcome == 'positive':
+                self.successful_collaborations += 1
+            elif interaction_outcome == 'negative':
+                self.failed_collaborations += 1
+        elif interaction_type == 'competition':
+            if interaction_outcome == 'positive':
+                self.competition_wins += 1
+            elif interaction_outcome == 'negative':
+                self.competition_losses += 1
+
+        # Check for relationship type evolution
+        self._check_type_evolution()
+
+        self.save()
+
+    def _check_type_evolution(self):
+        """Check if relationship should evolve to different type."""
+        # Neutral can become alliance or rivalry based on strength
+        if self.relationship_type == 'neutral':
+            if self.strength >= 0.7 and self.trust_level >= 0.6:
+                self.relationship_type = 'alliance'
+            elif self.competition_wins + self.competition_losses >= 3:
+                if self.trust_level < 0.4:
+                    self.relationship_type = 'rivalry'
+
+        # Alliance can degrade to neutral or rivalry
+        elif self.relationship_type == 'alliance':
+            if self.trust_level < 0.3:
+                self.relationship_type = 'neutral'
+            if self.get_collaboration_success_rate() < 0.3:
+                self.relationship_type = 'rivalry'
+
+        # Rivalry can evolve to alliance with enough positive interactions
+        elif self.relationship_type == 'rivalry':
+            if self.trust_level >= 0.7 and self.respect_level >= 0.7:
+                self.relationship_type = 'alliance'
+
+
+class RelationshipEvent(models.Model):
+    """
+    Session 253: Track events that affect agent relationships.
+
+    Logs significant interactions between agents for history and analytics.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    relationship = models.ForeignKey(
+        AgentRelationship,
+        on_delete=models.CASCADE,
+        related_name='events'
+    )
+
+    # Event type
+    EVENT_TYPE_CHOICES = [
+        ('collaboration_success', 'Successful Collaboration'),
+        ('collaboration_failure', 'Failed Collaboration'),
+        ('competition_win', 'Competition Win'),
+        ('competition_loss', 'Competition Loss'),
+        ('trust_increase', 'Trust Increased'),
+        ('trust_decrease', 'Trust Decreased'),
+        ('type_change', 'Relationship Type Changed'),
+        ('strength_milestone', 'Strength Milestone'),
+        ('first_interaction', 'First Interaction'),
+        ('conflict', 'Conflict'),
+        ('reconciliation', 'Reconciliation'),
+    ]
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPE_CHOICES)
+
+    # Event details
+    description = models.TextField()
+
+    # Snapshot of relationship state at time of event
+    strength_at_event = models.FloatField()
+    trust_at_event = models.FloatField()
+    relationship_type_at_event = models.CharField(max_length=20)
+
+    # Optional reference to what triggered this event
+    trigger_type = models.CharField(max_length=50, blank=True)  # 'task', 'conversation', 'manual'
+    trigger_id = models.UUIDField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Relationship Event"
+        verbose_name_plural = "Relationship Events"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.relationship}: {self.event_type}"
+
+
+class Alliance(models.Model):
+    """
+    Session 253: Named alliances between multiple agents.
+
+    Groups of agents that work together frequently and have synergies.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+
+    # Alliance members
+    members = models.ManyToManyField('Agent', related_name='alliances')
+
+    # Leader (optional)
+    leader = models.ForeignKey(
+        'Agent',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='led_alliances'
+    )
+
+    # Alliance purpose/specialty
+    PURPOSE_CHOICES = [
+        ('creative', 'Creative Excellence'),
+        ('research', 'Research & Analysis'),
+        ('execution', 'Fast Execution'),
+        ('quality', 'Quality Assurance'),
+        ('innovation', 'Innovation'),
+        ('general', 'General Purpose'),
+    ]
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default='general')
+
+    # Alliance stats
+    total_projects = models.PositiveIntegerField(default=0)
+    successful_projects = models.PositiveIntegerField(default=0)
+    combined_strength = models.FloatField(default=0.0)  # Average of member trust levels
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    formed_at = models.DateTimeField(auto_now_add=True)
+    disbanded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Alliance"
+        verbose_name_plural = "Alliances"
+        ordering = ['-combined_strength', 'name']
+
+    def __str__(self):
+        member_count = self.members.count() if self.pk else 0
+        return f"{self.name} ({member_count} members)"
+
+    def get_alliance_emoji(self):
+        """Get emoji for alliance purpose."""
+        emoji_map = {
+            'creative': '🎨',
+            'research': '🔬',
+            'execution': '⚡',
+            'quality': '✅',
+            'innovation': '💡',
+            'general': '🤝',
+        }
+        return emoji_map.get(self.purpose, '🤝')
+
+    def update_combined_strength(self):
+        """Calculate and update combined strength from member relationships."""
+        from django.db.models import Avg
+
+        member_ids = list(self.members.values_list('id', flat=True))
+        if len(member_ids) < 2:
+            self.combined_strength = 0.5
+            self.save()
+            return
+
+        # Average trust level between all alliance members
+        avg_trust = AgentRelationship.objects.filter(
+            agent_from_id__in=member_ids,
+            agent_to_id__in=member_ids,
+            relationship_type='alliance'
+        ).aggregate(avg=Avg('trust_level'))['avg']
+
+        self.combined_strength = avg_trust or 0.5
+        self.save()
+
+    def get_success_rate(self):
+        """Get project success rate."""
+        if self.total_projects == 0:
+            return 1.0
+        return self.successful_projects / self.total_projects
+
+
+class Rivalry(models.Model):
+    """
+    Session 253: Named rivalries between agents or alliances.
+
+    Competitive dynamics that push agents to perform better.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+
+    # Rivalry can be between agents or alliances
+    RIVALRY_SCOPE_CHOICES = [
+        ('agent_vs_agent', 'Agent vs Agent'),
+        ('alliance_vs_alliance', 'Alliance vs Alliance'),
+        ('agent_vs_alliance', 'Agent vs Alliance'),
+    ]
+    scope = models.CharField(max_length=20, choices=RIVALRY_SCOPE_CHOICES, default='agent_vs_agent')
+
+    # Participants (use one pair based on scope)
+    agent_challenger = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='rivalries_as_challenger'
+    )
+    agent_defender = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='rivalries_as_defender'
+    )
+    alliance_challenger = models.ForeignKey(
+        Alliance,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='rivalries_as_challenger'
+    )
+    alliance_defender = models.ForeignKey(
+        Alliance,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='rivalries_as_defender'
+    )
+
+    # Competition domain
+    DOMAIN_CHOICES = [
+        ('speed', 'Speed'),
+        ('quality', 'Quality'),
+        ('creativity', 'Creativity'),
+        ('accuracy', 'Accuracy'),
+        ('efficiency', 'Efficiency'),
+        ('general', 'General'),
+    ]
+    domain = models.CharField(max_length=20, choices=DOMAIN_CHOICES, default='general')
+
+    # Competition stats
+    challenger_wins = models.PositiveIntegerField(default=0)
+    defender_wins = models.PositiveIntegerField(default=0)
+    draws = models.PositiveIntegerField(default=0)
+
+    # Intensity (0.0 = friendly, 1.0 = fierce)
+    intensity = models.FloatField(default=0.5)
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Rivalry"
+        verbose_name_plural = "Rivalries"
+        ordering = ['-intensity', 'name']
+
+    def __str__(self):
+        challenger = self.get_challenger_name()
+        defender = self.get_defender_name()
+        return f"{self.name}: {challenger} vs {defender}"
+
+    def get_challenger_name(self):
+        """Get challenger name based on scope."""
+        if self.scope == 'alliance_vs_alliance':
+            return self.alliance_challenger.name if self.alliance_challenger else '?'
+        return self.agent_challenger.name if self.agent_challenger else '?'
+
+    def get_defender_name(self):
+        """Get defender name based on scope."""
+        if self.scope == 'alliance_vs_alliance':
+            return self.alliance_defender.name if self.alliance_defender else '?'
+        if self.scope == 'agent_vs_alliance':
+            return self.alliance_defender.name if self.alliance_defender else '?'
+        return self.agent_defender.name if self.agent_defender else '?'
+
+    def get_rivalry_emoji(self):
+        """Get emoji for rivalry domain."""
+        emoji_map = {
+            'speed': '⚡',
+            'quality': '💎',
+            'creativity': '🎨',
+            'accuracy': '🎯',
+            'efficiency': '📈',
+            'general': '⚔️',
+        }
+        return emoji_map.get(self.domain, '⚔️')
+
+    def record_competition(self, winner):
+        """
+        Record a competition result.
+
+        Args:
+            winner: 'challenger', 'defender', or 'draw'
+        """
+        from django.utils import timezone
+
+        if winner == 'challenger':
+            self.challenger_wins += 1
+            # Intensity increases when challenger wins
+            self.intensity = min(1.0, self.intensity + 0.05)
+        elif winner == 'defender':
+            self.defender_wins += 1
+            # Intensity decreases slightly when defender holds
+            self.intensity = max(0.0, self.intensity - 0.02)
+        else:
+            self.draws += 1
+
+        self.save()
+
+    def get_leader(self):
+        """Get current leader (most wins)."""
+        if self.challenger_wins > self.defender_wins:
+            return 'challenger', self.get_challenger_name()
+        elif self.defender_wins > self.challenger_wins:
+            return 'defender', self.get_defender_name()
+        return 'tied', None
+
+
+# =============================================================================
+# SESSION 254: AGENT EVOLUTION SYSTEM
+# =============================================================================
+# Agents gain XP from tasks, level up, and unlock new abilities.
+# - XP earned from successful task completion
+# - Levels unlock new capabilities and bonuses
+# - Abilities enhance agent performance
+# =============================================================================
+
+
+class AgentEvolution(models.Model):
+    """
+    Session 254: Agent Evolution System.
+
+    Tracks an agent's XP, level, and unlocked abilities.
+    Each agent has one evolution profile.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.OneToOneField(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='evolution'
+    )
+
+    # Experience points
+    total_xp = models.PositiveIntegerField(default=0)
+    current_level = models.PositiveIntegerField(default=1)
+    xp_to_next_level = models.PositiveIntegerField(default=100)
+
+    # Stats
+    tasks_completed = models.PositiveIntegerField(default=0)
+    tasks_failed = models.PositiveIntegerField(default=0)
+    collaborations_completed = models.PositiveIntegerField(default=0)
+    mentorship_sessions = models.PositiveIntegerField(default=0)
+
+    # Bonuses from evolution (percentages as decimals)
+    speed_bonus = models.FloatField(default=0.0)  # % faster execution
+    quality_bonus = models.FloatField(default=0.0)  # % better output quality
+    creativity_bonus = models.FloatField(default=0.0)  # % more creative
+    efficiency_bonus = models.FloatField(default=0.0)  # % less resource usage
+
+    # Prestige (for agents that max level and reset)
+    prestige_level = models.PositiveIntegerField(default=0)
+    lifetime_xp = models.PositiveIntegerField(default=0)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_level_up = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Evolution"
+        verbose_name_plural = "Agent Evolutions"
+        ordering = ['-current_level', '-total_xp']
+
+    def __str__(self):
+        return f"{self.agent.name} - Level {self.current_level} ({self.total_xp} XP)"
+
+    @staticmethod
+    def get_level_titles():
+        """Level titles for display."""
+        return {
+            1: 'Novice',
+            2: 'Apprentice',
+            3: 'Journeyman',
+            4: 'Expert',
+            5: 'Master',
+            6: 'Grandmaster',
+            7: 'Legend',
+            8: 'Mythic',
+            9: 'Transcendent',
+            10: 'Omniscient',
+        }
+
+    def get_title(self):
+        """Get the title for current level."""
+        titles = self.get_level_titles()
+        return titles.get(min(self.current_level, 10), 'Omniscient')
+
+    def get_level_emoji(self):
+        """Get emoji for current level."""
+        emojis = {
+            1: '🌱', 2: '🌿', 3: '🌳', 4: '⭐',
+            5: '🌟', 6: '💫', 7: '🔥', 8: '💎',
+            9: '👑', 10: '🏆',
+        }
+        return emojis.get(min(self.current_level, 10), '🏆')
+
+    def calculate_xp_for_level(self, level):
+        """Calculate XP required to reach a given level."""
+        # Exponential curve: each level requires more XP
+        # Level 1->2: 100 XP, Level 2->3: 200 XP, etc.
+        return int(100 * (1.5 ** (level - 1)))
+
+    def award_xp(self, amount, source='task_completion', details=''):
+        """
+        Award XP to the agent and check for level up.
+
+        Args:
+            amount: XP to award
+            source: What earned the XP
+            details: Additional context
+
+        Returns:
+            dict with leveled_up, new_level, abilities_unlocked
+        """
+        from django.utils import timezone
+
+        self.total_xp += amount
+        self.lifetime_xp += amount
+
+        result = {
+            'xp_awarded': amount,
+            'new_total': self.total_xp,
+            'leveled_up': False,
+            'new_level': self.current_level,
+            'abilities_unlocked': [],
+        }
+
+        # Check for level up
+        while self.total_xp >= self.xp_to_next_level and self.current_level < 10:
+            self.total_xp -= self.xp_to_next_level
+            self.current_level += 1
+            self.xp_to_next_level = self.calculate_xp_for_level(self.current_level)
+            self.last_level_up = timezone.now()
+
+            result['leveled_up'] = True
+            result['new_level'] = self.current_level
+
+            # Apply level bonuses
+            self._apply_level_bonuses()
+
+            # Check for ability unlocks
+            unlocked = self._check_ability_unlocks()
+            result['abilities_unlocked'].extend(unlocked)
+
+        # Log the XP gain
+        XPHistory.objects.create(
+            agent=self.agent,
+            xp_amount=amount,
+            source=source,
+            details=details,
+            level_at_time=self.current_level,
+        )
+
+        self.save()
+        return result
+
+    def _apply_level_bonuses(self):
+        """Apply bonuses when leveling up."""
+        # Each level adds small bonuses
+        level_bonus = 0.02  # 2% per level
+
+        self.speed_bonus = (self.current_level - 1) * level_bonus
+        self.quality_bonus = (self.current_level - 1) * level_bonus
+        self.creativity_bonus = (self.current_level - 1) * level_bonus * 0.5
+        self.efficiency_bonus = (self.current_level - 1) * level_bonus * 0.5
+
+    def _check_ability_unlocks(self):
+        """Check and unlock abilities for the current level."""
+        unlocked = []
+
+        # Define abilities by level
+        level_abilities = {
+            2: ('enhanced_focus', 'Enhanced Focus', 'Improved task concentration'),
+            3: ('parallel_processing', 'Parallel Processing', 'Handle multiple subtasks'),
+            4: ('deep_analysis', 'Deep Analysis', 'More thorough research'),
+            5: ('creative_spark', 'Creative Spark', 'Generate novel ideas'),
+            6: ('mentor_mode', 'Mentor Mode', 'Teach other agents'),
+            7: ('time_warp', 'Time Warp', 'Faster execution speed'),
+            8: ('quality_surge', 'Quality Surge', 'Premium output quality'),
+            9: ('synergy_boost', 'Synergy Boost', 'Enhanced collaboration'),
+            10: ('transcendence', 'Transcendence', 'All abilities enhanced'),
+        }
+
+        if self.current_level in level_abilities:
+            code, name, desc = level_abilities[self.current_level]
+
+            # Create ability if it doesn't exist
+            ability, created = AgentAbility.objects.get_or_create(
+                evolution=self,
+                ability_code=code,
+                defaults={
+                    'ability_name': name,
+                    'description': desc,
+                    'is_active': True,
+                }
+            )
+
+            if created:
+                unlocked.append({'code': code, 'name': name, 'description': desc})
+
+        return unlocked
+
+    def get_progress_percentage(self):
+        """Get progress to next level as percentage."""
+        if self.current_level >= 10:
+            return 100.0
+        return min(100.0, (self.total_xp / self.xp_to_next_level) * 100)
+
+    def prestige(self):
+        """Reset to level 1 with prestige bonus."""
+        if self.current_level < 10:
+            return False
+
+        self.prestige_level += 1
+        self.current_level = 1
+        self.total_xp = 0
+        self.xp_to_next_level = 100
+
+        # Prestige bonuses (permanent)
+        prestige_bonus = 0.05 * self.prestige_level  # 5% per prestige
+        self.speed_bonus = prestige_bonus
+        self.quality_bonus = prestige_bonus
+
+        self.save()
+        return True
+
+
+class AgentAbility(models.Model):
+    """
+    Session 254: Unlockable abilities for evolved agents.
+
+    Abilities are unlocked at specific levels and provide bonuses.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    evolution = models.ForeignKey(
+        AgentEvolution,
+        on_delete=models.CASCADE,
+        related_name='abilities'
+    )
+
+    ability_code = models.CharField(max_length=50)
+    ability_name = models.CharField(max_length=100)
+    description = models.TextField()
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_upgraded = models.BooleanField(default=False)
+    upgrade_level = models.PositiveIntegerField(default=0)
+
+    # When unlocked
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Ability"
+        verbose_name_plural = "Agent Abilities"
+        unique_together = ['evolution', 'ability_code']
+        ordering = ['unlocked_at']
+
+    def __str__(self):
+        status = '(Active)' if self.is_active else '(Inactive)'
+        return f"{self.ability_name} {status}"
+
+    def get_ability_emoji(self):
+        """Get emoji for ability."""
+        emoji_map = {
+            'enhanced_focus': '🎯',
+            'parallel_processing': '⚡',
+            'deep_analysis': '🔬',
+            'creative_spark': '💡',
+            'mentor_mode': '📚',
+            'time_warp': '⏰',
+            'quality_surge': '💎',
+            'synergy_boost': '🤝',
+            'transcendence': '👑',
+        }
+        return emoji_map.get(self.ability_code, '✨')
+
+
+class XPHistory(models.Model):
+    """
+    Session 254: Track all XP gains for analytics and debugging.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='xp_history'
+    )
+
+    xp_amount = models.IntegerField()  # Can be negative for XP penalties
+
+    # What earned/lost the XP
+    SOURCE_CHOICES = [
+        ('task_completion', 'Task Completion'),
+        ('task_failure', 'Task Failure'),
+        ('collaboration', 'Collaboration'),
+        ('mentorship', 'Mentorship'),
+        ('rivalry_win', 'Rivalry Win'),
+        ('rivalry_loss', 'Rivalry Loss'),
+        ('alliance_project', 'Alliance Project'),
+        ('user_feedback', 'User Feedback'),
+        ('daily_bonus', 'Daily Bonus'),
+        ('streak_bonus', 'Streak Bonus'),
+        ('prestige_reset', 'Prestige Reset'),
+        ('manual', 'Manual Adjustment'),
+    ]
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, default='task_completion')
+    details = models.TextField(blank=True)
+
+    # Snapshot
+    level_at_time = models.PositiveIntegerField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "XP History"
+        verbose_name_plural = "XP Histories"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        sign = '+' if self.xp_amount > 0 else ''
+        return f"{self.agent.name}: {sign}{self.xp_amount} XP ({self.source})"
+
+
+class LevelMilestone(models.Model):
+    """
+    Session 254: Track significant level-up milestones.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='level_milestones'
+    )
+
+    level_reached = models.PositiveIntegerField()
+    title_earned = models.CharField(max_length=50)
+    abilities_unlocked = models.JSONField(default=list)
+
+    # Stats at milestone
+    total_xp_at_milestone = models.PositiveIntegerField()
+    tasks_completed_at_milestone = models.PositiveIntegerField()
+
+    achieved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Level Milestone"
+        verbose_name_plural = "Level Milestones"
+        unique_together = ['agent', 'level_reached']
+        ordering = ['-level_reached']
+
+    def __str__(self):
+        return f"{self.agent.name} reached Level {self.level_reached} ({self.title_earned})"
+
+
+# =============================================================================
+# SESSION 255: TIME TRAVEL DEBUGGING
+# =============================================================================
+
+class AgentSession(models.Model):
+    """
+    Session 255: Time Travel Debugging - Agent Execution Session.
+
+    A session represents a complete agent execution from start to finish.
+    Contains multiple decision points that can be replayed.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='debug_sessions'
+    )
+
+    # Session context
+    task_type = models.CharField(max_length=100)  # e.g., 'image_generation', 'research'
+    task_description = models.TextField()
+    input_data = models.JSONField(default=dict)  # Original input/prompt
+
+    # Session outcome
+    STATUS_CHOICES = [
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+    output_data = models.JSONField(default=dict, null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
+
+    # Timing
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+
+    # Metrics
+    total_decisions = models.PositiveIntegerField(default=0)
+    token_usage = models.PositiveIntegerField(default=0)
+    api_calls = models.PositiveIntegerField(default=0)
+
+    # Replay bookmarks
+    is_bookmarked = models.BooleanField(default=False)
+    bookmark_note = models.TextField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Debug Session"
+        verbose_name_plural = "Agent Debug Sessions"
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['agent', '-started_at']),
+            models.Index(fields=['status', '-started_at']),
+            models.Index(fields=['is_bookmarked', '-started_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name} - {self.task_type} ({self.status})"
+
+    def get_duration_formatted(self):
+        """Return human-readable duration."""
+        if not self.duration_ms:
+            return "N/A"
+        seconds = self.duration_ms / 1000
+        if seconds < 60:
+            return f"{seconds:.1f}s"
+        minutes = seconds / 60
+        return f"{minutes:.1f}m"
+
+
+class DecisionPoint(models.Model):
+    """
+    Session 255: Time Travel Debugging - Decision Point.
+
+    Captures a single decision made by an agent during execution.
+    Includes the agent's "thinking" (reasoning) and chosen action.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    session = models.ForeignKey(
+        AgentSession,
+        on_delete=models.CASCADE,
+        related_name='decisions'
+    )
+
+    # Decision sequence
+    sequence_number = models.PositiveIntegerField()  # Order within session
+
+    # Decision type
+    DECISION_TYPES = [
+        ('analysis', 'Analyzing Input'),
+        ('planning', 'Planning Approach'),
+        ('tool_selection', 'Selecting Tool'),
+        ('parameter_choice', 'Choosing Parameters'),
+        ('quality_check', 'Quality Assessment'),
+        ('retry_decision', 'Retry Decision'),
+        ('output_format', 'Output Formatting'),
+        ('delegation', 'Delegating to Another Agent'),
+        ('memory_recall', 'Recalling Memory'),
+        ('learning', 'Learning from Result'),
+        ('other', 'Other Decision'),
+    ]
+    decision_type = models.CharField(max_length=30, choices=DECISION_TYPES)
+
+    # The agent's "thinking" - what was the agent considering?
+    context = models.JSONField(default=dict)  # Input state at decision time
+    reasoning = models.TextField()  # The agent's reasoning process
+    alternatives = models.JSONField(default=list)  # Other options considered
+
+    # The decision made
+    action_taken = models.CharField(max_length=200)  # What action was chosen
+    action_params = models.JSONField(default=dict)  # Parameters for the action
+
+    # Confidence and outcome
+    confidence_score = models.FloatField(default=0.8)  # 0.0 to 1.0
+    was_successful = models.BooleanField(null=True, blank=True)
+    outcome_notes = models.TextField(null=True, blank=True)
+
+    # Timing
+    timestamp = models.DateTimeField(auto_now_add=True)
+    duration_ms = models.PositiveIntegerField(default=0)
+
+    # For debugging
+    is_flagged = models.BooleanField(default=False)  # User flagged for review
+    flag_reason = models.TextField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Decision Point"
+        verbose_name_plural = "Decision Points"
+        ordering = ['session', 'sequence_number']
+        unique_together = ['session', 'sequence_number']
+        indexes = [
+            models.Index(fields=['decision_type', 'was_successful']),
+            models.Index(fields=['is_flagged', '-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"Decision {self.sequence_number}: {self.decision_type} - {self.action_taken}"
+
+
+class ThoughtBubble(models.Model):
+    """
+    Session 255: Time Travel Debugging - Agent Thought Bubble.
+
+    Detailed internal monologue at a decision point.
+    What was the agent "thinking" at that moment?
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    decision = models.ForeignKey(
+        DecisionPoint,
+        on_delete=models.CASCADE,
+        related_name='thoughts'
+    )
+
+    # Thought sequence
+    sequence_number = models.PositiveIntegerField()
+
+    # The thought content
+    THOUGHT_TYPES = [
+        ('observation', 'Observing'),
+        ('hypothesis', 'Forming Hypothesis'),
+        ('evaluation', 'Evaluating Options'),
+        ('concern', 'Expressing Concern'),
+        ('insight', 'Having Insight'),
+        ('memory', 'Recalling Memory'),
+        ('preference', 'Applying Preference'),
+        ('constraint', 'Noting Constraint'),
+        ('goal', 'Clarifying Goal'),
+    ]
+    thought_type = models.CharField(max_length=20, choices=THOUGHT_TYPES)
+    content = models.TextField()  # The actual thought
+
+    # Relevance
+    importance = models.FloatField(default=0.5)  # 0.0 to 1.0
+    influences_decision = models.BooleanField(default=True)
+
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Thought Bubble"
+        verbose_name_plural = "Thought Bubbles"
+        ordering = ['decision', 'sequence_number']
+
+    def __str__(self):
+        return f"{self.thought_type}: {self.content[:50]}..."
+
+
+class ReplayBookmark(models.Model):
+    """
+    Session 255: Time Travel Debugging - Replay Bookmark.
+
+    Save interesting moments to replay later.
+    Like a video timestamp but for agent decisions.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    session = models.ForeignKey(
+        AgentSession,
+        on_delete=models.CASCADE,
+        related_name='bookmarks'
+    )
+
+    decision = models.ForeignKey(
+        DecisionPoint,
+        on_delete=models.CASCADE,
+        related_name='bookmarks',
+        null=True, blank=True  # Can bookmark session start too
+    )
+
+    # Bookmark info
+    title = models.CharField(max_length=200)
+    description = models.TextField(null=True, blank=True)
+
+    BOOKMARK_TYPES = [
+        ('interesting', 'Interesting'),
+        ('bug', 'Possible Bug'),
+        ('learning', 'Learning Opportunity'),
+        ('success', 'Great Decision'),
+        ('failure', 'Failed Decision'),
+        ('review', 'Needs Review'),
+    ]
+    bookmark_type = models.CharField(max_length=20, choices=BOOKMARK_TYPES, default='interesting')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Replay Bookmark"
+        verbose_name_plural = "Replay Bookmarks"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.bookmark_type}: {self.title}"
+
+
+class DebugAnnotation(models.Model):
+    """
+    Session 255: Time Travel Debugging - Debug Annotation.
+
+    User notes attached to decisions for debugging purposes.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    decision = models.ForeignKey(
+        DecisionPoint,
+        on_delete=models.CASCADE,
+        related_name='annotations'
+    )
+
+    # Annotation content
+    content = models.TextField()
+    annotation_type = models.CharField(max_length=50, default='note')  # note, bug, suggestion
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Debug Annotation"
+        verbose_name_plural = "Debug Annotations"
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Annotation: {self.content[:50]}..."
+
+
+# =============================================================================
+# SESSION 256: AGENT PERSONALITY SYSTEM - SCI-FI FEATURE #10
+# =============================================================================
+
+class AgentPersonality(models.Model):
+    """
+    Session 256: Agent Personality Profiles - Distinct personalities beyond mood.
+
+    Each agent has a unique personality profile that affects:
+    - Communication style (formal vs casual, verbose vs concise)
+    - Collaboration approach (leader vs supporter, independent vs team-oriented)
+    - Decision-making style (analytical vs intuitive, cautious vs bold)
+    - Work preferences (structured vs flexible, detail-oriented vs big-picture)
+
+    Uses an MBTI-inspired 4-dimension system customized for AI agents.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.OneToOneField(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='personality'
+    )
+
+    # ==========================================================================
+    # PRIMARY PERSONALITY TYPE (4-letter code like MBTI)
+    # ==========================================================================
+
+    # Dimension 1: Energy Direction (Introvert vs Extrovert)
+    # How the agent approaches social interactions and collaboration
+    ENERGY_CHOICES = [
+        ('I', 'Introvert'),      # Prefers solo work, deep focus, fewer collaborations
+        ('E', 'Extrovert'),      # Thrives in collaboration, social, many connections
+    ]
+    energy_direction = models.CharField(
+        max_length=1,
+        choices=ENERGY_CHOICES,
+        default='E',
+        help_text="I=Solo-focused, deep work | E=Collaborative, social"
+    )
+
+    # Dimension 2: Information Processing (Sensor vs Intuitive)
+    # How the agent gathers and processes information
+    PROCESSING_CHOICES = [
+        ('S', 'Sensor'),         # Data-driven, factual, present-focused
+        ('N', 'Intuitive'),      # Pattern-seeking, conceptual, future-focused
+    ]
+    information_processing = models.CharField(
+        max_length=1,
+        choices=PROCESSING_CHOICES,
+        default='N',
+        help_text="S=Data-driven, factual | N=Pattern-seeking, conceptual"
+    )
+
+    # Dimension 3: Decision Making (Thinker vs Feeler)
+    # How the agent makes decisions
+    DECISION_CHOICES = [
+        ('T', 'Thinker'),        # Logical, objective, analytical
+        ('F', 'Feeler'),         # Empathetic, values-driven, harmonious
+    ]
+    decision_making = models.CharField(
+        max_length=1,
+        choices=DECISION_CHOICES,
+        default='T',
+        help_text="T=Logical, analytical | F=Empathetic, harmonious"
+    )
+
+    # Dimension 4: Work Style (Judger vs Perceiver)
+    # How the agent approaches work and structure
+    WORKSTYLE_CHOICES = [
+        ('J', 'Judger'),         # Structured, planned, deadline-driven
+        ('P', 'Perceiver'),      # Flexible, adaptable, spontaneous
+    ]
+    work_style = models.CharField(
+        max_length=1,
+        choices=WORKSTYLE_CHOICES,
+        default='J',
+        help_text="J=Structured, planned | P=Flexible, spontaneous"
+    )
+
+    # ==========================================================================
+    # PERSONALITY TRAITS (0.0-1.0 scale)
+    # ==========================================================================
+
+    # Communication Traits
+    formality = models.FloatField(
+        default=0.5,
+        help_text="0.0=Very casual | 1.0=Highly formal"
+    )
+    verbosity = models.FloatField(
+        default=0.5,
+        help_text="0.0=Concise, minimal | 1.0=Detailed, expansive"
+    )
+    humor = models.FloatField(
+        default=0.3,
+        help_text="0.0=Serious only | 1.0=Frequently humorous"
+    )
+    assertiveness = models.FloatField(
+        default=0.5,
+        help_text="0.0=Passive, suggestive | 1.0=Direct, commanding"
+    )
+
+    # Collaboration Traits
+    leadership = models.FloatField(
+        default=0.5,
+        help_text="0.0=Supportive follower | 1.0=Natural leader"
+    )
+    team_orientation = models.FloatField(
+        default=0.5,
+        help_text="0.0=Independent worker | 1.0=Team player"
+    )
+    teaching_tendency = models.FloatField(
+        default=0.5,
+        help_text="0.0=Keeps knowledge | 1.0=Loves to teach"
+    )
+    competitiveness = models.FloatField(
+        default=0.3,
+        help_text="0.0=Collaborative spirit | 1.0=Competitive drive"
+    )
+
+    # Decision Traits
+    risk_appetite = models.FloatField(
+        default=0.5,
+        help_text="0.0=Very cautious | 1.0=High risk tolerance"
+    )
+    creativity = models.FloatField(
+        default=0.5,
+        help_text="0.0=By-the-book | 1.0=Highly creative"
+    )
+    patience = models.FloatField(
+        default=0.5,
+        help_text="0.0=Impatient, fast | 1.0=Very patient, thorough"
+    )
+    perfectionism = models.FloatField(
+        default=0.5,
+        help_text="0.0=Good enough works | 1.0=Perfectionist"
+    )
+
+    # ==========================================================================
+    # ARCHETYPE (Derived personality label)
+    # ==========================================================================
+
+    ARCHETYPE_CHOICES = [
+        ('analyst', 'The Analyst'),           # INTJ/INTP - Deep thinker, strategic
+        ('diplomat', 'The Diplomat'),         # INFJ/INFP - Harmonizer, idealistic
+        ('sentinel', 'The Sentinel'),         # ISTJ/ISFJ - Reliable, detail-oriented
+        ('explorer', 'The Explorer'),         # ISTP/ISFP - Adaptable, practical
+        ('commander', 'The Commander'),       # ENTJ/ESTJ - Leader, organized
+        ('visionary', 'The Visionary'),       # ENTP/ENFP - Innovator, enthusiastic
+        ('advocate', 'The Advocate'),         # ENFJ/ESFJ - Supporter, caring
+        ('entertainer', 'The Entertainer'),   # ESTP/ESFP - Dynamic, spontaneous
+    ]
+    archetype = models.CharField(
+        max_length=20,
+        choices=ARCHETYPE_CHOICES,
+        default='analyst',
+        help_text="Personality archetype derived from 4-letter code"
+    )
+
+    # ==========================================================================
+    # METADATA
+    # ==========================================================================
+
+    # History of personality assessments/changes
+    personality_history = models.JSONField(
+        default=list,
+        help_text="History of personality changes over time"
+    )
+
+    # Custom traits (for unique agent personalities)
+    custom_traits = models.JSONField(
+        default=dict,
+        help_text="Custom personality traits beyond the standard dimensions"
+    )
+
+    # When the personality was established/last updated
+    established_at = models.DateTimeField(auto_now_add=True)
+    last_assessed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Personality"
+        verbose_name_plural = "Agent Personalities"
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.get_type_code()} ({self.get_archetype_display()})"
+
+    @property
+    def type_code(self):
+        """Get the 4-letter personality type code."""
+        return self.get_type_code()
+
+    def get_type_code(self):
+        """Get the 4-letter personality type code (e.g., INTJ, ENFP)."""
+        return f"{self.energy_direction}{self.information_processing}{self.decision_making}{self.work_style}"
+
+    def get_personality_emoji(self):
+        """Return emoji for personality archetype."""
+        emoji_map = {
+            'analyst': '🧠',      # Brain - deep thinking
+            'diplomat': '🕊️',     # Dove - peace, harmony
+            'sentinel': '🛡️',     # Shield - protection, reliability
+            'explorer': '🧭',     # Compass - exploration
+            'commander': '👑',    # Crown - leadership
+            'visionary': '🔮',    # Crystal ball - vision
+            'advocate': '💚',     # Green heart - care
+            'entertainer': '🎭',  # Theatre masks - dynamic
+        }
+        return emoji_map.get(self.archetype, '🤖')
+
+    def get_personality_color(self):
+        """Return color for personality archetype."""
+        color_map = {
+            'analyst': '#6366f1',     # Indigo - intellectual
+            'diplomat': '#8b5cf6',    # Purple - harmonious
+            'sentinel': '#64748b',    # Slate - reliable
+            'explorer': '#22c55e',    # Green - adventurous
+            'commander': '#ef4444',   # Red - powerful
+            'visionary': '#f59e0b',   # Amber - creative
+            'advocate': '#ec4899',    # Pink - caring
+            'entertainer': '#06b6d4', # Cyan - dynamic
+        }
+        return color_map.get(self.archetype, '#6b7280')
+
+    def derive_archetype(self):
+        """Derive archetype from the 4-letter type code."""
+        code = self.get_type_code()
+
+        # Map type codes to archetypes
+        archetype_map = {
+            # Analysts (INT*)
+            'INTJ': 'analyst', 'INTP': 'analyst',
+            # Diplomats (INF*)
+            'INFJ': 'diplomat', 'INFP': 'diplomat',
+            # Sentinels (IST/ISF)
+            'ISTJ': 'sentinel', 'ISFJ': 'sentinel',
+            # Explorers (IST/ISF + P)
+            'ISTP': 'explorer', 'ISFP': 'explorer',
+            # Commanders (ENT/EST + J)
+            'ENTJ': 'commander', 'ESTJ': 'commander',
+            # Visionaries (ENT/ENF + P)
+            'ENTP': 'visionary', 'ENFP': 'visionary',
+            # Advocates (ENF/ESF + J)
+            'ENFJ': 'advocate', 'ESFJ': 'advocate',
+            # Entertainers (EST/ESF + P)
+            'ESTP': 'entertainer', 'ESFP': 'entertainer',
+        }
+
+        self.archetype = archetype_map.get(code, 'analyst')
+        return self.archetype
+
+    def get_communication_style(self):
+        """Get a description of how this agent communicates."""
+        style = []
+
+        if self.formality > 0.7:
+            style.append("Speaks formally and professionally")
+        elif self.formality < 0.3:
+            style.append("Uses casual, friendly language")
+
+        if self.verbosity > 0.7:
+            style.append("Provides detailed explanations")
+        elif self.verbosity < 0.3:
+            style.append("Gets straight to the point")
+
+        if self.humor > 0.5:
+            style.append("Enjoys adding humor")
+
+        if self.assertiveness > 0.7:
+            style.append("Communicates with confidence")
+        elif self.assertiveness < 0.3:
+            style.append("Offers gentle suggestions")
+
+        return style or ["Balanced communication style"]
+
+    def get_collaboration_style(self):
+        """Get a description of how this agent collaborates."""
+        style = []
+
+        if self.leadership > 0.7:
+            style.append("Natural leader, takes initiative")
+        elif self.leadership < 0.3:
+            style.append("Supportive team member")
+
+        if self.team_orientation > 0.7:
+            style.append("Thrives in team settings")
+        elif self.team_orientation < 0.3:
+            style.append("Prefers independent work")
+
+        if self.teaching_tendency > 0.7:
+            style.append("Loves to mentor and teach")
+
+        if self.competitiveness > 0.7:
+            style.append("Driven by healthy competition")
+
+        return style or ["Balanced collaboration style"]
+
+    def get_decision_style(self):
+        """Get a description of how this agent makes decisions."""
+        style = []
+
+        if self.risk_appetite > 0.7:
+            style.append("Bold risk-taker")
+        elif self.risk_appetite < 0.3:
+            style.append("Careful and cautious")
+
+        if self.creativity > 0.7:
+            style.append("Innovative and creative")
+        elif self.creativity < 0.3:
+            style.append("Follows proven methods")
+
+        if self.patience > 0.7:
+            style.append("Takes time for thorough analysis")
+        elif self.patience < 0.3:
+            style.append("Makes quick decisions")
+
+        if self.perfectionism > 0.7:
+            style.append("Strives for perfection")
+
+        return style or ["Balanced decision-making style"]
+
+    def get_prompt_modifier(self):
+        """
+        Generate a prompt modifier string that can be injected into agent prompts
+        to influence their communication style based on personality.
+        """
+        modifiers = []
+
+        # Communication modifiers
+        if self.formality > 0.7:
+            modifiers.append("Communicate in a formal, professional tone.")
+        elif self.formality < 0.3:
+            modifiers.append("Use a casual, friendly conversational tone.")
+
+        if self.verbosity > 0.7:
+            modifiers.append("Provide detailed, thorough explanations.")
+        elif self.verbosity < 0.3:
+            modifiers.append("Be concise and to the point.")
+
+        if self.humor > 0.6:
+            modifiers.append("Feel free to add appropriate humor and wit.")
+
+        if self.assertiveness > 0.7:
+            modifiers.append("Be confident and direct in your recommendations.")
+        elif self.assertiveness < 0.3:
+            modifiers.append("Offer gentle suggestions and alternatives.")
+
+        # Decision-making modifiers
+        if self.creativity > 0.7:
+            modifiers.append("Think creatively and propose innovative solutions.")
+
+        if self.risk_appetite > 0.7:
+            modifiers.append("Don't be afraid to suggest bold approaches.")
+        elif self.risk_appetite < 0.3:
+            modifiers.append("Prioritize safe, proven approaches.")
+
+        return " ".join(modifiers) if modifiers else ""
+
+    def to_dict(self):
+        """Return personality as a dictionary for API responses."""
+        return {
+            'id': str(self.id),
+            'agent_id': str(self.agent.id),
+            'agent_name': self.agent.name,
+            'type_code': self.get_type_code(),
+            'archetype': self.archetype,
+            'archetype_display': self.get_archetype_display(),
+            'emoji': self.get_personality_emoji(),
+            'color': self.get_personality_color(),
+            'dimensions': {
+                'energy_direction': self.energy_direction,
+                'information_processing': self.information_processing,
+                'decision_making': self.decision_making,
+                'work_style': self.work_style,
+            },
+            'traits': {
+                'communication': {
+                    'formality': self.formality,
+                    'verbosity': self.verbosity,
+                    'humor': self.humor,
+                    'assertiveness': self.assertiveness,
+                },
+                'collaboration': {
+                    'leadership': self.leadership,
+                    'team_orientation': self.team_orientation,
+                    'teaching_tendency': self.teaching_tendency,
+                    'competitiveness': self.competitiveness,
+                },
+                'decision': {
+                    'risk_appetite': self.risk_appetite,
+                    'creativity': self.creativity,
+                    'patience': self.patience,
+                    'perfectionism': self.perfectionism,
+                },
+            },
+            'styles': {
+                'communication': self.get_communication_style(),
+                'collaboration': self.get_collaboration_style(),
+                'decision': self.get_decision_style(),
+            },
+            'prompt_modifier': self.get_prompt_modifier(),
+            'custom_traits': self.custom_traits,
+            'established_at': self.established_at.isoformat() if self.established_at else None,
+            'last_assessed_at': self.last_assessed_at.isoformat() if self.last_assessed_at else None,
+        }
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-derive archetype."""
+        self.derive_archetype()
+        super().save(*args, **kwargs)
