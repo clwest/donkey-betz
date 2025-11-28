@@ -7121,6 +7121,172 @@
                         .dream-type-wild_thought { background: #ec4899; }
                     </style>
 
+                    <!-- Session 250: Hive Mind Mode - Collective Intelligence -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+                            <h5 class="mb-0" style="color: #06b6d4;">
+                                <span style="display: inline-block; animation: pulse 2s ease-in-out infinite;">🧠</span>
+                                Hive Mind Mode
+                            </h5>
+                            <div>
+                                <span class="badge me-2" id="hive-mind-status-badge" style="background: #06b6d4;">Ready</span>
+                                <span class="badge bg-secondary" id="hive-mind-agents-badge">0 agents</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "Pose a question to the collective intelligence - all agents work together to solve it!"
+                            </p>
+
+                            <!-- Hive Mind Input -->
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #06b6d4; color: #06b6d4;">💡</span>
+                                    <input type="text" id="hive-mind-question" class="form-control"
+                                           placeholder="Ask the Hive Mind a complex question (e.g., 'Design a brand for a sustainable coffee company')"
+                                           style="background: #2a2a2a; border: 1px solid #06b6d4; color: white;"
+                                           onkeypress="if(event.key==='Enter') previewHiveMindAgents()">
+                                    <button class="btn btn-outline-info" onclick="previewHiveMindAgents()" id="preview-hive-btn">
+                                        Preview Agents
+                                    </button>
+                                    <button class="btn btn-info" onclick="activateHiveMind()" id="activate-hive-btn" disabled>
+                                        <span class="spinner-border spinner-border-sm d-none me-1" id="hive-mind-spinner" role="status"></span>
+                                        Activate Hive Mind
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Agent Preview Section -->
+                            <div id="hive-mind-preview" style="display: none;" class="mb-3">
+                                <h6 style="color: #06b6d4;">Selected Agents:</h6>
+                                <div id="hive-mind-agents-preview" class="d-flex flex-wrap gap-2">
+                                    <!-- Agent chips will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Hive Mind Visualization -->
+                            <div id="hive-mind-visualization" style="display: none;" class="mb-3">
+                                <div style="background: rgba(6, 182, 212, 0.1); border-radius: 12px; padding: 20px; position: relative; min-height: 300px;">
+                                    <!-- Neural Network Style Visualization -->
+                                    <div id="hive-mind-network" class="position-relative" style="height: 250px;">
+                                        <div class="text-center" id="hive-mind-center-node"
+                                             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                                                    width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+                                                    display: flex; align-items: center; justify-content: center; font-size: 30px;
+                                                    box-shadow: 0 0 30px rgba(6, 182, 212, 0.5); z-index: 10;">
+                                            🧠
+                                        </div>
+                                        <div id="hive-mind-agent-nodes">
+                                            <!-- Agent nodes will be positioned in a circle around the center -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Progress Bar -->
+                                    <div class="mt-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span style="color: #06b6d4;">Progress:</span>
+                                            <span id="hive-mind-progress-text" style="color: white;">Waiting...</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; background: rgba(6, 182, 212, 0.2);">
+                                            <div class="progress-bar" role="progressbar" id="hive-mind-progress-bar"
+                                                 style="width: 0%; background: linear-gradient(90deg, #06b6d4, #8b5cf6); transition: width 0.3s;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contributions Feed -->
+                            <div id="hive-mind-contributions" style="display: none;" class="mb-3">
+                                <h6 style="color: #06b6d4;">Agent Contributions:</h6>
+                                <div id="hive-mind-contributions-list" style="max-height: 300px; overflow-y: auto;">
+                                    <!-- Contributions will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Synthesis Result -->
+                            <div id="hive-mind-synthesis" style="display: none;">
+                                <h6 style="color: #22c55e;">🎯 Unified Synthesis:</h6>
+                                <div id="hive-mind-synthesis-content" style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e;
+                                            border-radius: 12px; padding: 16px; max-height: 400px; overflow-y: auto;">
+                                    <!-- Synthesis will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Recent Sessions -->
+                            <div class="mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0" style="color: #888;">Recent Hive Mind Sessions:</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadHiveMindSessions()">🔄</button>
+                                </div>
+                                <div id="hive-mind-sessions-list" style="max-height: 150px; overflow-y: auto;">
+                                    <p class="text-muted small text-center">No recent sessions</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes pulse {
+                            0%, 100% { transform: scale(1); opacity: 1; }
+                            50% { transform: scale(1.1); opacity: 0.8; }
+                        }
+                        .hive-agent-chip {
+                            background: rgba(6, 182, 212, 0.2);
+                            border: 1px solid #06b6d4;
+                            border-radius: 20px;
+                            padding: 4px 12px;
+                            font-size: 12px;
+                            color: #06b6d4;
+                        }
+                        .hive-agent-node {
+                            position: absolute;
+                            width: 50px;
+                            height: 50px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 20px;
+                            transition: all 0.3s;
+                            cursor: pointer;
+                        }
+                        .hive-agent-node.pending {
+                            background: rgba(100, 100, 100, 0.3);
+                            border: 2px solid #666;
+                        }
+                        .hive-agent-node.thinking {
+                            background: rgba(251, 191, 36, 0.3);
+                            border: 2px solid #fbbf24;
+                            animation: pulse 1s ease-in-out infinite;
+                        }
+                        .hive-agent-node.completed {
+                            background: rgba(34, 197, 94, 0.3);
+                            border: 2px solid #22c55e;
+                        }
+                        .hive-agent-node.failed {
+                            background: rgba(239, 68, 68, 0.3);
+                            border: 2px solid #ef4444;
+                        }
+                        .hive-contribution-card {
+                            background: rgba(6, 182, 212, 0.1);
+                            border: 1px solid rgba(6, 182, 212, 0.3);
+                            border-radius: 8px;
+                            padding: 12px;
+                            margin-bottom: 8px;
+                        }
+                        .hive-session-item {
+                            background: rgba(255,255,255,0.05);
+                            border-radius: 8px;
+                            padding: 8px 12px;
+                            margin-bottom: 6px;
+                            cursor: pointer;
+                            transition: background 0.2s;
+                        }
+                        .hive-session-item:hover {
+                            background: rgba(6, 182, 212, 0.1);
+                        }
+                    </style>
+
                     <!-- Collaboration Health Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -40541,9 +40707,458 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (agentsTabTrigger) {
                 agentsTabTrigger.addEventListener('shown.bs.tab', function() {
                     loadAgentDreams();
+                    loadHiveMindSessions();
                 });
             }
         });
+
+        // =========================================================================
+        // Session 250: Hive Mind Mode - Collective Intelligence Functions
+        // =========================================================================
+
+        let hiveMindWebSocket = null;
+        let currentHiveMindSession = null;
+        let hiveMindAgents = [];
+
+        // Preview which agents would be selected for a question
+        async function previewHiveMindAgents() {
+            const question = document.getElementById('hive-mind-question').value.trim();
+            if (!question) {
+                showNotification('Please enter a question first', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('preview-hive-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Analyzing...';
+
+            try {
+                const response = await fetch('/api/hive-mind/preview/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ question: question, max_agents: 8 })
+                });
+
+                const data = await response.json();
+                if (data.success && data.agents.length > 0) {
+                    hiveMindAgents = data.agents;
+
+                    // Show preview section
+                    const previewEl = document.getElementById('hive-mind-preview');
+                    previewEl.style.display = 'block';
+
+                    // Render agent chips
+                    const chipsEl = document.getElementById('hive-mind-agents-preview');
+                    chipsEl.innerHTML = data.agents.map(agent => `
+                        <span class="hive-agent-chip" title="${agent.specialization}">
+                            ${getAgentEmoji(agent.name)} ${agent.name}
+                        </span>
+                    `).join('');
+
+                    // Update badge
+                    document.getElementById('hive-mind-agents-badge').textContent = `${data.agents.length} agents`;
+
+                    // Enable activate button
+                    document.getElementById('activate-hive-btn').disabled = false;
+
+                    showNotification(`🧠 ${data.agents.length} agents ready to think collectively!`, 'info');
+                } else {
+                    showNotification('No suitable agents found for this question', 'warning');
+                }
+            } catch (error) {
+                console.error('Error previewing agents:', error);
+                showNotification('Error previewing agents', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Preview Agents';
+            }
+        }
+
+        // Get emoji for agent based on name
+        function getAgentEmoji(name) {
+            const nameL = name.toLowerCase();
+            if (nameL.includes('image')) return '🎨';
+            if (nameL.includes('video')) return '🎬';
+            if (nameL.includes('audio')) return '🎵';
+            if (nameL.includes('research')) return '🔍';
+            if (nameL.includes('trend')) return '📈';
+            if (nameL.includes('brand')) return '💼';
+            if (nameL.includes('content')) return '📝';
+            if (nameL.includes('seo')) return '🔗';
+            if (nameL.includes('3d')) return '🧊';
+            if (nameL.includes('prompt')) return '✨';
+            if (nameL.includes('social')) return '📱';
+            if (nameL.includes('director')) return '🎬';
+            return '🤖';
+        }
+
+        // Activate Hive Mind - Start a session
+        async function activateHiveMind() {
+            const question = document.getElementById('hive-mind-question').value.trim();
+            if (!question) {
+                showNotification('Please enter a question first', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('activate-hive-btn');
+            const spinner = document.getElementById('hive-mind-spinner');
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+
+            try {
+                const response = await fetch('/api/hive-mind/start/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ question: question, max_agents: 8 })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentHiveMindSession = data.session_id;
+
+                    // Update status badge
+                    document.getElementById('hive-mind-status-badge').textContent = 'Active';
+                    document.getElementById('hive-mind-status-badge').style.background = '#22c55e';
+
+                    // Show visualization
+                    showHiveMindVisualization(data.participants);
+
+                    // Connect WebSocket for real-time updates
+                    connectHiveMindWebSocket(data.session_id);
+
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification(data.error || 'Failed to start Hive Mind', 'danger');
+                }
+            } catch (error) {
+                console.error('Error activating Hive Mind:', error);
+                showNotification('Error activating Hive Mind', 'danger');
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+
+        // Show the neural network visualization
+        function showHiveMindVisualization(participants) {
+            const vizEl = document.getElementById('hive-mind-visualization');
+            const nodesEl = document.getElementById('hive-mind-agent-nodes');
+            const contributionsEl = document.getElementById('hive-mind-contributions');
+            const contributionsListEl = document.getElementById('hive-mind-contributions-list');
+
+            vizEl.style.display = 'block';
+            contributionsEl.style.display = 'block';
+            contributionsListEl.innerHTML = '';
+
+            // Position agents in a circle around the center
+            const radius = 100;
+            const centerX = 50;
+            const centerY = 50;
+
+            nodesEl.innerHTML = participants.map((agent, index) => {
+                const angle = (2 * Math.PI * index) / participants.length - Math.PI / 2;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                return `
+                    <div class="hive-agent-node pending" id="hive-node-${agent.id}"
+                         style="left: calc(${x}% - 25px); top: calc(${y}% - 25px);"
+                         title="${agent.name}: ${agent.specialization}">
+                        ${getAgentEmoji(agent.name)}
+                    </div>
+                `;
+            }).join('');
+
+            // Reset progress
+            document.getElementById('hive-mind-progress-bar').style.width = '0%';
+            document.getElementById('hive-mind-progress-text').textContent = 'Agents are thinking...';
+        }
+
+        // Connect to Hive Mind WebSocket for real-time updates
+        function connectHiveMindWebSocket(sessionId) {
+            if (hiveMindWebSocket) {
+                hiveMindWebSocket.close();
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            hiveMindWebSocket = new WebSocket(`${protocol}//${window.location.host}/ws/hive-mind/`);
+
+            hiveMindWebSocket.onopen = function() {
+                console.log('Hive Mind WebSocket connected');
+                // Subscribe to this session
+                hiveMindWebSocket.send(JSON.stringify({
+                    type: 'subscribe',
+                    session_id: sessionId
+                }));
+            };
+
+            hiveMindWebSocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleHiveMindUpdate(data);
+            };
+
+            hiveMindWebSocket.onerror = function(error) {
+                console.error('Hive Mind WebSocket error:', error);
+            };
+
+            hiveMindWebSocket.onclose = function() {
+                console.log('Hive Mind WebSocket closed');
+            };
+        }
+
+        // Handle real-time Hive Mind updates
+        function handleHiveMindUpdate(data) {
+            console.log('Hive Mind update:', data);
+
+            if (data.type === 'contribution_update') {
+                // Update agent node status
+                const nodeEl = document.querySelector(`[id*="hive-node"]`);
+                const nodes = document.querySelectorAll('.hive-agent-node');
+
+                nodes.forEach(node => {
+                    if (node.title.includes(data.agent_name)) {
+                        node.classList.remove('pending', 'thinking', 'completed', 'failed');
+                        node.classList.add(data.status);
+                    }
+                });
+
+                // Update progress
+                updateHiveMindProgress();
+
+                // Add contribution to feed if completed
+                if (data.status === 'completed') {
+                    // We'll fetch the full contribution details
+                    fetchAndDisplayContribution(data.agent_name);
+                }
+            } else if (data.type === 'session_status') {
+                if (data.status === 'synthesizing') {
+                    document.getElementById('hive-mind-progress-text').textContent = 'Synthesizing all contributions...';
+                    document.getElementById('hive-mind-progress-bar').style.width = '90%';
+                } else if (data.status === 'completed') {
+                    document.getElementById('hive-mind-progress-text').textContent = 'Complete!';
+                    document.getElementById('hive-mind-progress-bar').style.width = '100%';
+                    document.getElementById('hive-mind-status-badge').textContent = 'Complete';
+
+                    // Fetch and display the synthesis
+                    fetchHiveMindSynthesis();
+                }
+            } else if (data.type === 'session_status' && data.session_id === currentHiveMindSession) {
+                // Update progress based on session data
+                if (data.progress !== undefined) {
+                    document.getElementById('hive-mind-progress-bar').style.width = `${data.progress}%`;
+                }
+            }
+        }
+
+        // Update progress bar based on completed nodes
+        function updateHiveMindProgress() {
+            const nodes = document.querySelectorAll('.hive-agent-node');
+            const completed = document.querySelectorAll('.hive-agent-node.completed').length;
+            const total = nodes.length;
+
+            if (total > 0) {
+                const progress = Math.round((completed / total) * 80); // 80% for contributions, 20% for synthesis
+                document.getElementById('hive-mind-progress-bar').style.width = `${progress}%`;
+                document.getElementById('hive-mind-progress-text').textContent =
+                    `${completed}/${total} agents contributed`;
+            }
+        }
+
+        // Fetch and display a contribution in the feed
+        async function fetchAndDisplayContribution(agentName) {
+            // For now, we'll add a placeholder that will be updated when we poll the session
+            const contributionsListEl = document.getElementById('hive-mind-contributions-list');
+
+            const card = document.createElement('div');
+            card.className = 'hive-contribution-card';
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong style="color: #06b6d4;">${getAgentEmoji(agentName)} ${agentName}</strong>
+                    <span class="badge bg-success">Completed</span>
+                </div>
+                <small class="text-muted">Contribution received - view full synthesis for details</small>
+            `;
+            contributionsListEl.appendChild(card);
+        }
+
+        // Fetch and display the final synthesis
+        async function fetchHiveMindSynthesis() {
+            if (!currentHiveMindSession) return;
+
+            try {
+                const response = await fetch(`/api/hive-mind/session/${currentHiveMindSession}/`);
+                const data = await response.json();
+
+                if (data.success && data.session.status === 'completed') {
+                    // Show synthesis section
+                    const synthesisEl = document.getElementById('hive-mind-synthesis');
+                    const contentEl = document.getElementById('hive-mind-synthesis-content');
+
+                    synthesisEl.style.display = 'block';
+
+                    // Format synthesis with markdown-like styling
+                    const synthesis = data.session.synthesis || 'Synthesis pending...';
+                    contentEl.innerHTML = formatSynthesis(synthesis);
+
+                    // Update contributions list with full details
+                    const contributionsListEl = document.getElementById('hive-mind-contributions-list');
+                    contributionsListEl.innerHTML = data.contributions.map(c => `
+                        <div class="hive-contribution-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong style="color: #06b6d4;">
+                                    ${getAgentEmoji(c.agent.name)} ${c.agent.name}
+                                </strong>
+                                <span class="badge" style="background: ${getPerspectiveColor(c.perspective_type)}">
+                                    ${c.perspective_type}
+                                </span>
+                            </div>
+                            <p class="small text-light mb-2">${c.contribution.substring(0, 200)}...</p>
+                            ${c.key_points.length > 0 ? `
+                                <ul class="small text-muted mb-0">
+                                    ${c.key_points.slice(0, 3).map(p => `<li>${p}</li>`).join('')}
+                                </ul>
+                            ` : ''}
+                            <small class="text-muted">Thinking time: ${c.thinking_time.toFixed(1)}s</small>
+                        </div>
+                    `).join('');
+
+                    showNotification('🧠 Hive Mind synthesis complete!', 'success');
+
+                    // Refresh sessions list
+                    loadHiveMindSessions();
+                }
+            } catch (error) {
+                console.error('Error fetching synthesis:', error);
+            }
+        }
+
+        // Get color for perspective type
+        function getPerspectiveColor(type) {
+            const colors = {
+                'analysis': '#8b5cf6',
+                'creative': '#ec4899',
+                'strategic': '#22c55e',
+                'technical': '#06b6d4',
+                'general': '#6b7280'
+            };
+            return colors[type] || colors['general'];
+        }
+
+        // Format synthesis text with basic styling
+        function formatSynthesis(text) {
+            // Convert markdown-like headers and lists
+            return text
+                .replace(/^## (.+)$/gm, '<h6 style="color: #22c55e; margin-top: 16px;">$1</h6>')
+                .replace(/^# (.+)$/gm, '<h5 style="color: #22c55e; margin-top: 16px;">$1</h5>')
+                .replace(/^\- (.+)$/gm, '<li style="margin-left: 16px;">$1</li>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Load recent Hive Mind sessions
+        async function loadHiveMindSessions() {
+            try {
+                const response = await fetch('/api/hive-mind/sessions/?limit=5');
+                const data = await response.json();
+
+                const listEl = document.getElementById('hive-mind-sessions-list');
+
+                if (data.success && data.sessions.length > 0) {
+                    listEl.innerHTML = data.sessions.map(s => `
+                        <div class="hive-session-item" onclick="loadHiveMindSession('${s.id}')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-light small">${s.question}</span>
+                                <span class="badge ${getStatusBadgeClass(s.status)}">${s.status}</span>
+                            </div>
+                            <small class="text-muted">
+                                ${s.participant_count} agents | ${new Date(s.created_at).toLocaleDateString()}
+                            </small>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = '<p class="text-muted small text-center">No recent sessions</p>';
+                }
+            } catch (error) {
+                console.error('Error loading Hive Mind sessions:', error);
+            }
+        }
+
+        // Get badge class for status
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'completed': 'bg-success',
+                'gathering': 'bg-warning',
+                'synthesizing': 'bg-info',
+                'failed': 'bg-danger',
+                'initializing': 'bg-secondary'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+
+        // Load a previous Hive Mind session
+        async function loadHiveMindSession(sessionId) {
+            try {
+                const response = await fetch(`/api/hive-mind/session/${sessionId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentHiveMindSession = sessionId;
+
+                    // Set the question
+                    document.getElementById('hive-mind-question').value = data.session.question;
+
+                    // Update status
+                    document.getElementById('hive-mind-status-badge').textContent = data.session.status;
+                    document.getElementById('hive-mind-agents-badge').textContent =
+                        `${data.contributions.length} agents`;
+
+                    // Show visualization if we have contributions
+                    if (data.contributions.length > 0) {
+                        const participants = data.contributions.map(c => ({
+                            id: c.agent.id,
+                            name: c.agent.name,
+                            specialization: c.agent.specialization
+                        }));
+                        showHiveMindVisualization(participants);
+
+                        // Update node statuses
+                        data.contributions.forEach(c => {
+                            const nodes = document.querySelectorAll('.hive-agent-node');
+                            nodes.forEach(node => {
+                                if (node.title.includes(c.agent.name)) {
+                                    node.classList.remove('pending', 'thinking', 'completed', 'failed');
+                                    node.classList.add(c.status);
+                                }
+                            });
+                        });
+
+                        // Update progress
+                        document.getElementById('hive-mind-progress-bar').style.width = `${data.progress}%`;
+                        document.getElementById('hive-mind-progress-text').textContent =
+                            data.session.status === 'completed' ? 'Complete!' : `${data.progress}% complete`;
+                    }
+
+                    // Show synthesis if completed
+                    if (data.session.status === 'completed' && data.session.synthesis) {
+                        const synthesisEl = document.getElementById('hive-mind-synthesis');
+                        const contentEl = document.getElementById('hive-mind-synthesis-content');
+                        synthesisEl.style.display = 'block';
+                        contentEl.innerHTML = formatSynthesis(data.session.synthesis);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading Hive Mind session:', error);
+            }
+        }
+
+        // =========================================================================
+        // End Session 250: Hive Mind Mode Functions
+        // =========================================================================
 
         // Session 216: Update Active Collaborations
         function updateActiveCollaborations(monitor) {

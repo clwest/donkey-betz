@@ -4239,3 +4239,301 @@ NEXT_STEPS:
     except Exception as e:
         logger.exception(f"🚀 [EXPLORE] Exploration failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 250: Hive Mind Mode Tasks
+# =============================================================================
+
+@shared_task(bind=True)
+def run_hive_mind_session(self, session_id: str):
+    """
+    Session 250: Orchestrate a Hive Mind session.
+
+    All participating agents work on the question simultaneously,
+    then their contributions are synthesized into a unified output.
+    """
+    logger.info(f"🧠 [HIVE MIND] Starting session {session_id}")
+
+    try:
+        from core.models import HiveMindSession, HiveMindContribution, Agent
+        from django.utils import timezone
+        import time
+        import concurrent.futures
+        from openai import OpenAI
+
+        session = HiveMindSession.objects.get(id=session_id)
+        contributions = session.contributions.all().select_related('agent')
+
+        if not contributions.exists():
+            logger.warning(f"🧠 [HIVE MIND] No contributions found for session {session_id}")
+            session.status = 'failed'
+            session.save()
+            return {'status': 'failed', 'error': 'No contributions found'}
+
+        client = OpenAI()
+        total_thinking_time = 0
+        completed_count = 0
+
+        # Process each agent's contribution
+        # We use a thread pool to parallelize API calls
+        def process_contribution(contribution):
+            try:
+                from django.utils import timezone as tz
+                start_time = time.time()
+
+                # Update status to thinking
+                contribution.status = 'thinking'
+                contribution.save()
+
+                # Broadcast status update
+                broadcast_hive_mind_update(session, contribution, 'thinking')
+
+                # Build the prompt for this agent
+                agent = contribution.agent
+                prompt = f"""You are {agent.name}, an AI agent specializing in {agent.specialization}.
+
+Your colleague agents are also working on this problem. Contribute YOUR unique perspective based on your specialty.
+
+QUESTION: {session.question}
+
+{f'ADDITIONAL CONTEXT: {session.context}' if session.context else ''}
+
+Provide your expert contribution in 2-3 paragraphs. Focus on:
+1. Your unique perspective based on your specialization
+2. Specific actionable insights only you can provide
+3. How your expertise addresses the question
+
+End with 3-5 key bullet points summarizing your main contributions.
+
+Respond as {agent.name}:"""
+
+                # Call GPT-4o-mini for the contribution
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": f"You are {agent.name}, a specialized AI agent. Your expertise: {agent.description}"
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=600
+                )
+
+                contribution_text = response.choices[0].message.content.strip()
+                thinking_time = time.time() - start_time
+
+                # Determine perspective type based on agent specialization
+                spec_lower = agent.specialization.lower()
+                if 'research' in spec_lower or 'analysis' in spec_lower:
+                    perspective_type = 'analysis'
+                elif 'creative' in spec_lower or 'design' in spec_lower or 'image' in spec_lower:
+                    perspective_type = 'creative'
+                elif 'strategy' in spec_lower or 'business' in spec_lower:
+                    perspective_type = 'strategic'
+                elif 'tech' in spec_lower or 'code' in spec_lower:
+                    perspective_type = 'technical'
+                else:
+                    perspective_type = 'general'
+
+                # Extract key points (look for bullet points)
+                key_points = []
+                lines = contribution_text.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith('- ') or line.startswith('• ') or line.startswith('* '):
+                        key_points.append(line[2:].strip())
+
+                # Update contribution
+                contribution.contribution = contribution_text
+                contribution.key_points = key_points[:5]  # Max 5 key points
+                contribution.perspective_type = perspective_type
+                contribution.thinking_time = thinking_time
+                contribution.status = 'completed'
+                contribution.completed_at = tz.now()
+                contribution.save()
+
+                # Broadcast completion
+                broadcast_hive_mind_update(session, contribution, 'completed')
+
+                logger.info(f"🧠 [HIVE MIND] {agent.name} contributed in {thinking_time:.1f}s")
+
+                return {
+                    'agent': agent.name,
+                    'status': 'completed',
+                    'thinking_time': thinking_time,
+                    'key_points': len(key_points)
+                }
+
+            except Exception as e:
+                contribution.status = 'failed'
+                contribution.save()
+                broadcast_hive_mind_update(session, contribution, 'failed')
+                logger.error(f"🧠 [HIVE MIND] {contribution.agent.name} failed: {e}")
+                return {
+                    'agent': contribution.agent.name,
+                    'status': 'failed',
+                    'error': str(e)
+                }
+
+        # Process contributions in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(process_contribution, c): c
+                for c in contributions
+            }
+
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result.get('status') == 'completed':
+                    completed_count += 1
+                    total_thinking_time += result.get('thinking_time', 0)
+
+        # Now synthesize all contributions
+        session.status = 'synthesizing'
+        session.save()
+        broadcast_hive_mind_status(session, 'synthesizing')
+
+        # Get all completed contributions for synthesis
+        completed_contributions = session.contributions.filter(status='completed')
+
+        if completed_contributions.count() == 0:
+            session.status = 'failed'
+            session.save()
+            return {'status': 'failed', 'error': 'No contributions completed'}
+
+        # Build synthesis prompt
+        contributions_text = "\n\n".join([
+            f"## {c.agent.name} ({c.perspective_type.upper()} perspective):\n{c.contribution}"
+            for c in completed_contributions
+        ])
+
+        synthesis_prompt = f"""You are the Hive Mind Synthesizer. Multiple specialized AI agents have provided their perspectives on a question. Your job is to synthesize their contributions into a unified, comprehensive response.
+
+ORIGINAL QUESTION: {session.question}
+
+{f'CONTEXT: {session.context}' if session.context else ''}
+
+## AGENT CONTRIBUTIONS:
+{contributions_text}
+
+## YOUR TASK:
+Create a comprehensive synthesis that:
+1. Combines the unique insights from each agent
+2. Identifies common themes and agreements
+3. Notes any interesting tensions or different perspectives
+4. Provides actionable recommendations
+
+Structure your response with clear sections and end with:
+- A brief summary (2-3 sentences)
+- Top 5 unified recommendations
+
+The synthesis should read as a cohesive document, not just a collection of separate ideas."""
+
+        # Generate synthesis
+        synthesis_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are the Hive Mind Synthesizer, an AI that combines multiple agent perspectives into unified insights."
+                },
+                {"role": "user", "content": synthesis_prompt}
+            ],
+            temperature=0.6,
+            max_tokens=1500
+        )
+
+        synthesis = synthesis_response.choices[0].message.content.strip()
+
+        # Extract a brief summary (first 2-3 sentences or look for summary section)
+        summary_lines = synthesis.split('\n')
+        summary = ""
+        for line in summary_lines:
+            if 'summary' in line.lower() and ':' in line:
+                # Found a summary section
+                idx = summary_lines.index(line)
+                if idx + 1 < len(summary_lines):
+                    summary = summary_lines[idx + 1].strip()
+                    break
+        if not summary:
+            # Take first meaningful paragraph
+            for line in summary_lines:
+                if len(line.strip()) > 50:
+                    summary = line.strip()[:500]
+                    break
+
+        # Update session with final results
+        session.synthesis = synthesis
+        session.synthesis_summary = summary
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.contribution_count = completed_count
+        session.total_thinking_time = total_thinking_time
+        session.save()
+
+        # Broadcast completion
+        broadcast_hive_mind_status(session, 'completed')
+
+        logger.info(
+            f"🧠 [HIVE MIND] Session {session_id} completed! "
+            f"{completed_count} contributions, {total_thinking_time:.1f}s total thinking time"
+        )
+
+        return {
+            'status': 'success',
+            'session_id': session_id,
+            'contribution_count': completed_count,
+            'total_thinking_time': total_thinking_time
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [HIVE MIND] Session {session_id} failed: {e}")
+        try:
+            session = HiveMindSession.objects.get(id=session_id)
+            session.status = 'failed'
+            session.save()
+        except:
+            pass
+        return {'status': 'failed', 'error': str(e)}
+
+
+def broadcast_hive_mind_update(session, contribution, status):
+    """Broadcast a contribution update via Redis pub/sub."""
+    try:
+        import redis
+        import json
+        from django.utils import timezone
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r.publish('hive_mind', json.dumps({
+            'type': 'contribution_update',
+            'session_id': str(session.id),
+            'contribution_id': str(contribution.id),
+            'agent_name': contribution.agent.name,
+            'status': status,
+            'perspective_type': contribution.perspective_type,
+            'thinking_time': contribution.thinking_time,
+            'timestamp': timezone.now().isoformat()
+        }))
+    except Exception as e:
+        logger.debug(f"Failed to broadcast hive mind update: {e}")
+
+
+def broadcast_hive_mind_status(session, status):
+    """Broadcast a session status update via Redis pub/sub."""
+    try:
+        import redis
+        import json
+        from django.utils import timezone
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r.publish('hive_mind', json.dumps({
+            'type': 'session_status',
+            'session_id': str(session.id),
+            'status': status,
+            'contribution_count': session.contribution_count,
+            'timestamp': timezone.now().isoformat()
+        }))
+    except Exception as e:
+        logger.debug(f"Failed to broadcast hive mind status: {e}")
