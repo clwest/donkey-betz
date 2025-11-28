@@ -176,6 +176,22 @@ from core.views_hive_mind import (
     preview_agents,
 )
 
+# Session 251: Memory Palace
+from core.views_memory_palace import (
+    get_agent_memories,
+    get_memory_detail,
+    create_memory,
+    search_memories,
+    get_memory_palace_rooms,
+    get_room_memories,
+    assign_memory_to_room,
+    get_memory_summary,
+    connect_memories,
+    get_memory_connections,
+    get_memory_palace_overview,
+    delete_memory,
+)
+
 # Session 219 Phase D: Import marketplace views
 from core.views_marketplace import (
     browse_workflows as marketplace_browse,
@@ -2016,6 +2032,20 @@ urlpatterns = [
     path('api/hive-mind/sessions/', list_hive_mind_sessions, name='hive-mind-sessions'),
     path('api/hive-mind/agents/', get_available_agents, name='hive-mind-agents'),
     path('api/hive-mind/preview/', preview_agents, name='hive-mind-preview'),
+
+    # Session 251: Memory Palace API
+    path('api/memory-palace/', get_memory_palace_overview, name='memory-palace-overview'),
+    path('api/memory-palace/agent/<uuid:agent_id>/memories/', get_agent_memories, name='memory-palace-agent-memories'),
+    path('api/memory-palace/agent/<uuid:agent_id>/rooms/', get_memory_palace_rooms, name='memory-palace-rooms'),
+    path('api/memory-palace/agent/<uuid:agent_id>/summary/', get_memory_summary, name='memory-palace-summary'),
+    path('api/memory-palace/memory/<uuid:memory_id>/', get_memory_detail, name='memory-palace-detail'),
+    path('api/memory-palace/memory/<uuid:memory_id>/delete/', delete_memory, name='memory-palace-delete'),
+    path('api/memory-palace/memory/<uuid:memory_id>/connections/', get_memory_connections, name='memory-connections'),
+    path('api/memory-palace/room/<uuid:room_id>/memories/', get_room_memories, name='memory-room-memories'),
+    path('api/memory-palace/create/', create_memory, name='memory-create'),
+    path('api/memory-palace/search/', search_memories, name='memory-search'),
+    path('api/memory-palace/assign/', assign_memory_to_room, name='memory-assign-room'),
+    path('api/memory-palace/connect/', connect_memories, name='memory-connect'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),

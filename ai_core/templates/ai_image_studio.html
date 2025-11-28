@@ -7287,6 +7287,223 @@
                         }
                     </style>
 
+                    <!-- Session 251: Memory Palace - Agent Memory Visualization -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a855f7;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.2); border-bottom: 1px solid #a855f7;">
+                            <h5 class="mb-0" style="color: #a855f7;">
+                                <span style="display: inline-block;">🏛️</span>
+                                Memory Palace
+                            </h5>
+                            <div>
+                                <span class="badge" id="memory-palace-total-badge" style="background: #a855f7;">0 memories</span>
+                                <span class="badge bg-secondary" id="memory-palace-agents-badge">0 agents</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "Explore the halls of agent memory - where past experiences shape future wisdom."
+                            </p>
+
+                            <!-- Agent Selector -->
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #a855f7; color: #a855f7;">🤖</span>
+                                    <select id="memory-palace-agent-select" class="form-select"
+                                            style="background: #2a2a2a; border: 1px solid #a855f7; color: white;"
+                                            onchange="loadAgentMemoryPalace()">
+                                        <option value="">Select an agent to explore memories...</option>
+                                    </select>
+                                    <button class="btn btn-outline-purple" onclick="loadMemoryPalaceAgents()" style="border-color: #a855f7; color: #a855f7;">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Memory Palace Overview (shown when no agent selected) -->
+                            <div id="memory-palace-overview" class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-4 text-center p-3" style="background: rgba(168, 85, 247, 0.1); border-radius: 12px; margin: 0 auto;">
+                                        <h2 id="memory-palace-total-memories" style="color: #a855f7; font-size: 48px; font-weight: bold;">0</h2>
+                                        <p class="mb-0 text-muted">Total Memories</p>
+                                    </div>
+                                </div>
+                                <div id="memory-palace-type-breakdown" class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
+                                    <!-- Memory type badges will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Memory Palace Rooms (shown when agent selected) -->
+                            <div id="memory-palace-rooms" style="display: none;" class="mb-3">
+                                <h6 style="color: #a855f7;">🏛️ Memory Rooms:</h6>
+                                <div id="memory-palace-rooms-grid" class="row g-3">
+                                    <!-- Room cards will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Memory Search -->
+                            <div id="memory-palace-search" style="display: none;" class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #a855f7; color: #a855f7;">🔍</span>
+                                    <input type="text" id="memory-search-query" class="form-control"
+                                           placeholder="Search agent memories semantically..."
+                                           style="background: #2a2a2a; border: 1px solid #a855f7; color: white;"
+                                           onkeypress="if(event.key==='Enter') searchAgentMemories()">
+                                    <button class="btn btn-outline-purple" onclick="searchAgentMemories()" style="border-color: #a855f7; color: #a855f7;">
+                                        Search
+                                    </button>
+                                </div>
+                                <div id="memory-search-results" class="mt-3" style="display: none;">
+                                    <!-- Search results will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Room Contents (shown when viewing a room) -->
+                            <div id="memory-palace-room-contents" style="display: none;" class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 id="memory-room-title" style="color: #a855f7;">Room Name</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="closeMemoryRoom()">← Back to Rooms</button>
+                                </div>
+                                <div id="memory-room-memories" style="max-height: 400px; overflow-y: auto;">
+                                    <!-- Memories will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Memory Detail Modal -->
+                            <div id="memory-detail-modal" class="modal fade" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content" style="background: #1a1a1a; border: 2px solid #a855f7;">
+                                        <div class="modal-header" style="border-bottom: 1px solid #a855f7;">
+                                            <h5 class="modal-title" id="memory-detail-title" style="color: #a855f7;"></h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="memory-detail-content"></div>
+                                            <hr style="border-color: #333;">
+                                            <h6 style="color: #a855f7;">Connected Memories:</h6>
+                                            <div id="memory-detail-connections" class="d-flex flex-wrap gap-2">
+                                                <!-- Connected memory chips -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Create Memory Form -->
+                            <div id="memory-palace-create-form" style="display: none;" class="mt-3">
+                                <h6 style="color: #a855f7;">➕ Record New Memory:</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <input type="text" id="new-memory-title" class="form-control"
+                                               placeholder="Memory title..."
+                                               style="background: #2a2a2a; border: 1px solid #a855f7; color: white;">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select id="new-memory-type" class="form-select"
+                                                style="background: #2a2a2a; border: 1px solid #a855f7; color: white;">
+                                            <option value="interaction">💬 Interaction</option>
+                                            <option value="success">✅ Success</option>
+                                            <option value="failure">❌ Failure</option>
+                                            <option value="technique">⚙️ Technique</option>
+                                            <option value="insight">💡 Insight</option>
+                                            <option value="preference">❤️ Preference</option>
+                                            <option value="feedback">📝 Feedback</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select id="new-memory-valence" class="form-select"
+                                                style="background: #2a2a2a; border: 1px solid #a855f7; color: white;">
+                                            <option value="neutral">😐 Neutral</option>
+                                            <option value="positive">😊 Positive</option>
+                                            <option value="negative">😞 Negative</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <textarea id="new-memory-content" class="form-control" rows="3"
+                                              placeholder="Memory content..."
+                                              style="background: #2a2a2a; border: 1px solid #a855f7; color: white;"></textarea>
+                                </div>
+                                <div class="mt-2 d-flex gap-2">
+                                    <button class="btn btn-outline-secondary" onclick="toggleCreateMemoryForm()">Cancel</button>
+                                    <button class="btn btn-purple" onclick="createMemory()" style="background: #a855f7; border-color: #a855f7; color: white;">
+                                        Save Memory
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Recent Memories Feed -->
+                            <div id="memory-palace-recent" class="mt-3" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0" style="color: #888;">Recent Memories:</h6>
+                                    <button class="btn btn-sm btn-outline-purple" onclick="toggleCreateMemoryForm()" style="border-color: #a855f7; color: #a855f7;">
+                                        ➕ Add Memory
+                                    </button>
+                                </div>
+                                <div id="memory-palace-recent-list" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-muted small text-center">No memories yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .memory-room-card {
+                            background: rgba(168, 85, 247, 0.1);
+                            border: 1px solid rgba(168, 85, 247, 0.3);
+                            border-radius: 12px;
+                            padding: 16px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            text-align: center;
+                        }
+                        .memory-room-card:hover {
+                            background: rgba(168, 85, 247, 0.2);
+                            border-color: #a855f7;
+                            transform: translateY(-2px);
+                        }
+                        .memory-room-icon {
+                            font-size: 32px;
+                            margin-bottom: 8px;
+                        }
+                        .memory-room-name {
+                            color: #a855f7;
+                            font-weight: 600;
+                        }
+                        .memory-room-count {
+                            color: #888;
+                            font-size: 12px;
+                        }
+                        .memory-card {
+                            background: rgba(168, 85, 247, 0.1);
+                            border: 1px solid rgba(168, 85, 247, 0.3);
+                            border-radius: 8px;
+                            padding: 12px;
+                            margin-bottom: 8px;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        }
+                        .memory-card:hover {
+                            background: rgba(168, 85, 247, 0.2);
+                        }
+                        .memory-type-badge {
+                            font-size: 10px;
+                            padding: 2px 6px;
+                            border-radius: 10px;
+                            background: rgba(168, 85, 247, 0.3);
+                            color: #a855f7;
+                        }
+                        .memory-importance-bar {
+                            height: 4px;
+                            background: rgba(168, 85, 247, 0.2);
+                            border-radius: 2px;
+                            overflow: hidden;
+                        }
+                        .memory-importance-fill {
+                            height: 100%;
+                            background: linear-gradient(90deg, #a855f7, #ec4899);
+                            transition: width 0.3s;
+                        }
+                    </style>
+
                     <!-- Collaboration Health Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -41158,6 +41375,354 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // =========================================================================
         // End Session 250: Hive Mind Mode Functions
+        // =========================================================================
+
+        // =========================================================================
+        // Session 251: Memory Palace Functions
+        // =========================================================================
+
+        // Initialize Memory Palace on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMemoryPalaceOverview();
+            loadMemoryPalaceAgents();
+        });
+
+        // Load overview of all agents' memories
+        async function loadMemoryPalaceOverview() {
+            try {
+                const response = await fetch('/api/memory-palace/');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update badges
+                        document.getElementById('memory-palace-total-badge').textContent = `${data.overview.total_memories} memories`;
+                        document.getElementById('memory-palace-agents-badge').textContent = `${data.overview.agents_with_memories} agents`;
+                        document.getElementById('memory-palace-total-memories').textContent = data.overview.total_memories;
+
+                        // Update type breakdown
+                        const typeEl = document.getElementById('memory-palace-type-breakdown');
+                        const typeEmojis = {
+                            'success': '✅', 'failure': '❌', 'technique': '⚙️',
+                            'insight': '💡', 'preference': '❤️', 'interaction': '💬', 'feedback': '📝'
+                        };
+                        typeEl.innerHTML = data.overview.memory_types.map(t => `
+                            <span class="badge" style="background: rgba(168, 85, 247, 0.3); color: #a855f7;">
+                                ${typeEmojis[t.memory_type] || '🧠'} ${t.memory_type}: ${t.count}
+                            </span>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading memory palace overview:', error);
+            }
+        }
+
+        // Load agents for dropdown
+        async function loadMemoryPalaceAgents() {
+            try {
+                const response = await fetch('/api/agents/');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('memory-palace-agent-select');
+                    select.innerHTML = '<option value="">Select an agent to explore memories...</option>';
+
+                    (data.agents || []).forEach(agent => {
+                        const option = document.createElement('option');
+                        option.value = agent.id;
+                        option.textContent = `${agent.name} (${agent.specialty || 'General'})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading agents:', error);
+            }
+        }
+
+        // Load memory palace for selected agent
+        async function loadAgentMemoryPalace() {
+            const agentId = document.getElementById('memory-palace-agent-select').value;
+
+            if (!agentId) {
+                // Show overview when no agent selected
+                document.getElementById('memory-palace-overview').style.display = 'block';
+                document.getElementById('memory-palace-rooms').style.display = 'none';
+                document.getElementById('memory-palace-search').style.display = 'none';
+                document.getElementById('memory-palace-recent').style.display = 'none';
+                document.getElementById('memory-palace-room-contents').style.display = 'none';
+                return;
+            }
+
+            try {
+                // Load rooms for the agent
+                const response = await fetch(`/api/memory-palace/agent/${agentId}/rooms/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Hide overview, show rooms and search
+                        document.getElementById('memory-palace-overview').style.display = 'none';
+                        document.getElementById('memory-palace-rooms').style.display = 'block';
+                        document.getElementById('memory-palace-search').style.display = 'block';
+                        document.getElementById('memory-palace-recent').style.display = 'block';
+                        document.getElementById('memory-palace-room-contents').style.display = 'none';
+
+                        // Render room cards
+                        const roomsGrid = document.getElementById('memory-palace-rooms-grid');
+                        const roomIcons = {
+                            'techniques': '⚙️', 'successes': '🏆', 'lessons': '📚',
+                            'preferences': '❤️', 'insights': '💡', 'experiments': '🧪', 'general': '🏠'
+                        };
+
+                        roomsGrid.innerHTML = data.rooms.map(room => `
+                            <div class="col-md-4 col-sm-6">
+                                <div class="memory-room-card" onclick="openMemoryRoom('${room.id}', '${room.name}')">
+                                    <div class="memory-room-icon">${room.icon || roomIcons[room.room_type] || '🏠'}</div>
+                                    <div class="memory-room-name">${room.name}</div>
+                                    <div class="memory-room-count">${room.memory_count} memories</div>
+                                </div>
+                            </div>
+                        `).join('');
+
+                        // Load recent memories
+                        loadRecentMemories(agentId);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading memory palace:', error);
+            }
+        }
+
+        // Open a memory room to view its contents
+        async function openMemoryRoom(roomId, roomName) {
+            try {
+                const response = await fetch(`/api/memory-palace/room/${roomId}/memories/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Hide rooms grid, show room contents
+                        document.getElementById('memory-palace-rooms').style.display = 'none';
+                        document.getElementById('memory-palace-room-contents').style.display = 'block';
+                        document.getElementById('memory-room-title').textContent = `${data.room.color || ''} ${roomName}`;
+
+                        // Render memories
+                        const memoriesEl = document.getElementById('memory-room-memories');
+                        const valenceEmojis = {'positive': '😊', 'negative': '😞', 'neutral': '😐'};
+
+                        if (data.memories.length === 0) {
+                            memoriesEl.innerHTML = '<p class="text-muted text-center">No memories in this room yet</p>';
+                        } else {
+                            memoriesEl.innerHTML = data.memories.map(m => `
+                                <div class="memory-card" onclick="openMemoryDetail('${m.id}')">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong style="color: white;">${m.title}</strong>
+                                            <span class="memory-type-badge ms-2">${m.memory_type}</span>
+                                        </div>
+                                        <span>${valenceEmojis[m.valence] || '😐'}</span>
+                                    </div>
+                                    <p class="text-muted small mb-1 mt-1">${m.content}</p>
+                                    <div class="memory-importance-bar">
+                                        <div class="memory-importance-fill" style="width: ${m.importance_score * 100}%"></div>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error opening memory room:', error);
+            }
+        }
+
+        // Close memory room and go back to rooms view
+        function closeMemoryRoom() {
+            document.getElementById('memory-palace-room-contents').style.display = 'none';
+            document.getElementById('memory-palace-rooms').style.display = 'block';
+        }
+
+        // Open memory detail modal
+        async function openMemoryDetail(memoryId) {
+            try {
+                const response = await fetch(`/api/memory-palace/memory/${memoryId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const m = data.memory;
+                        const typeEmojis = {
+                            'success': '✅', 'failure': '❌', 'technique': '⚙️',
+                            'insight': '💡', 'preference': '❤️', 'interaction': '💬', 'feedback': '📝'
+                        };
+
+                        document.getElementById('memory-detail-title').textContent = `${typeEmojis[m.memory_type] || '🧠'} ${m.title}`;
+                        document.getElementById('memory-detail-content').innerHTML = `
+                            <div class="mb-3">
+                                <span class="badge me-2" style="background: rgba(168, 85, 247, 0.3); color: #a855f7;">${m.memory_type}</span>
+                                <span class="badge" style="background: rgba(100, 100, 100, 0.3); color: #888;">${m.valence}</span>
+                            </div>
+                            <div style="color: white; white-space: pre-wrap;">${m.content}</div>
+                            ${m.context ? `<div class="mt-3"><strong style="color: #a855f7;">Context:</strong><br><span class="text-muted">${m.context}</span></div>` : ''}
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Importance: ${(m.importance_score * 100).toFixed(0)}% |
+                                    Accessed: ${m.access_count} times |
+                                    Created: ${new Date(m.created_at).toLocaleDateString()}
+                                </small>
+                            </div>
+                        `;
+
+                        // Show connected memories
+                        const connectionsEl = document.getElementById('memory-detail-connections');
+                        if (m.connected_memories && m.connected_memories.length > 0) {
+                            connectionsEl.innerHTML = m.connected_memories.map(c => `
+                                <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; cursor: pointer;"
+                                      onclick="openMemoryDetail('${c.id}')">${c.title}</span>
+                            `).join('');
+                        } else {
+                            connectionsEl.innerHTML = '<span class="text-muted">No connected memories</span>';
+                        }
+
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('memory-detail-modal'));
+                        modal.show();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading memory detail:', error);
+            }
+        }
+
+        // Search agent memories
+        async function searchAgentMemories() {
+            const agentId = document.getElementById('memory-palace-agent-select').value;
+            const query = document.getElementById('memory-search-query').value.trim();
+
+            if (!agentId || !query) {
+                alert('Please select an agent and enter a search query');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/memory-palace/search/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({agent_id: agentId, query: query, limit: 10})
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const resultsEl = document.getElementById('memory-search-results');
+                    resultsEl.style.display = 'block';
+
+                    if (data.memories && data.memories.length > 0) {
+                        const valenceEmojis = {'positive': '😊', 'negative': '😞', 'neutral': '😐'};
+                        resultsEl.innerHTML = `
+                            <h6 style="color: #a855f7;">Search Results (${data.result_count}):</h6>
+                            ${data.memories.map(m => `
+                                <div class="memory-card" onclick="openMemoryDetail('${m.id}')">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong style="color: white;">${m.title}</strong>
+                                            <span class="memory-type-badge ms-2">${m.memory_type}</span>
+                                        </div>
+                                        <span>${valenceEmojis[m.valence] || '😐'}</span>
+                                    </div>
+                                    <p class="text-muted small mb-0 mt-1">${m.content}</p>
+                                </div>
+                            `).join('')}
+                        `;
+                    } else {
+                        resultsEl.innerHTML = '<p class="text-muted text-center">No memories found matching your query</p>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error searching memories:', error);
+            }
+        }
+
+        // Load recent memories for an agent
+        async function loadRecentMemories(agentId) {
+            try {
+                const response = await fetch(`/api/memory-palace/agent/${agentId}/memories/?limit=5`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const listEl = document.getElementById('memory-palace-recent-list');
+
+                    if (data.memories && data.memories.length > 0) {
+                        const typeEmojis = {
+                            'success': '✅', 'failure': '❌', 'technique': '⚙️',
+                            'insight': '💡', 'preference': '❤️', 'interaction': '💬', 'feedback': '📝'
+                        };
+                        listEl.innerHTML = data.memories.map(m => `
+                            <div class="memory-card" onclick="openMemoryDetail('${m.id}')">
+                                <span>${typeEmojis[m.memory_type] || '🧠'}</span>
+                                <strong style="color: white; margin-left: 8px;">${m.title}</strong>
+                                <small class="text-muted d-block mt-1">${new Date(m.created_at).toLocaleDateString()}</small>
+                            </div>
+                        `).join('');
+                    } else {
+                        listEl.innerHTML = '<p class="text-muted small text-center">No memories yet</p>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recent memories:', error);
+            }
+        }
+
+        // Toggle create memory form
+        function toggleCreateMemoryForm() {
+            const form = document.getElementById('memory-palace-create-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Create a new memory
+        async function createMemory() {
+            const agentId = document.getElementById('memory-palace-agent-select').value;
+            const title = document.getElementById('new-memory-title').value.trim();
+            const content = document.getElementById('new-memory-content').value.trim();
+            const memoryType = document.getElementById('new-memory-type').value;
+            const valence = document.getElementById('new-memory-valence').value;
+
+            if (!agentId || !title || !content) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/memory-palace/create/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        agent_id: agentId,
+                        title: title,
+                        content: content,
+                        memory_type: memoryType,
+                        valence: valence,
+                        importance: 0.5
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Clear form
+                        document.getElementById('new-memory-title').value = '';
+                        document.getElementById('new-memory-content').value = '';
+                        toggleCreateMemoryForm();
+
+                        // Reload memories
+                        loadRecentMemories(agentId);
+                        loadMemoryPalaceOverview();
+
+                        alert(`Memory "${title}" created successfully!`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error creating memory:', error);
+                alert('Error creating memory');
+            }
+        }
+
+        // =========================================================================
+        // End Session 251: Memory Palace Functions
         // =========================================================================
 
         // Session 216: Update Active Collaborations
