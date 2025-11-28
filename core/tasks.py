@@ -4537,3 +4537,229 @@ def broadcast_hive_mind_status(session, status):
         }))
     except Exception as e:
         logger.debug(f"Failed to broadcast hive mind status: {e}")
+
+
+# =============================================================================
+# Session 251: Memory Palace Tasks
+# =============================================================================
+
+@shared_task
+def generate_memory_embedding(memory_id: str):
+    """
+    Session 251: Generate an embedding for a memory.
+
+    Uses text-embedding-3-small for semantic search.
+    """
+    logger.info(f"🧠 [MEMORY] Generating embedding for memory {memory_id}")
+
+    try:
+        from core.models_unified_system import AgentMemory
+        from openai import OpenAI
+        import os
+
+        memory = AgentMemory.objects.get(id=memory_id)
+
+        # Create embedding text combining title, content, and context
+        embed_text = f"{memory.title}\n\n{memory.content}"
+        if memory.context:
+            embed_text += f"\n\nContext: {memory.context}"
+
+        # Generate embedding via OpenAI
+        client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=embed_text,
+            encoding_format="float"
+        )
+
+        embedding = response.data[0].embedding
+
+        # Store embedding
+        memory.embedding = embedding
+        memory.save(update_fields=['embedding'])
+
+        logger.info(f"🧠 [MEMORY] Embedding generated for memory '{memory.title}'")
+
+        return {'status': 'success', 'memory_id': str(memory_id)}
+
+    except Exception as e:
+        logger.exception(f"🧠 [MEMORY] Failed to generate embedding: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def auto_connect_memories(memory_id: str, threshold: float = 0.7):
+    """
+    Session 251: Automatically find and connect similar memories.
+
+    Uses embedding similarity to find related memories.
+    """
+    logger.info(f"🧠 [MEMORY] Auto-connecting memories for {memory_id}")
+
+    try:
+        from core.models_unified_system import AgentMemory, MemoryConnection
+        import numpy as np
+
+        memory = AgentMemory.objects.get(id=memory_id)
+
+        if not memory.embedding:
+            logger.warning(f"🧠 [MEMORY] No embedding for memory {memory_id}")
+            return {'status': 'skipped', 'reason': 'no_embedding'}
+
+        # Get other memories from same agent with embeddings
+        other_memories = AgentMemory.objects.filter(
+            agent=memory.agent,
+            embedding__isnull=False
+        ).exclude(id=memory_id)[:50]
+
+        if not other_memories.exists():
+            return {'status': 'skipped', 'reason': 'no_other_memories'}
+
+        # Calculate similarities
+        source_embedding = np.array(memory.embedding)
+        connections_created = 0
+
+        for other in other_memories:
+            other_embedding = np.array(other.embedding)
+
+            # Cosine similarity
+            similarity = np.dot(source_embedding, other_embedding) / (
+                np.linalg.norm(source_embedding) * np.linalg.norm(other_embedding)
+            )
+
+            if similarity >= threshold:
+                # Create connection if similarity is high enough
+                connection, created = MemoryConnection.objects.get_or_create(
+                    source_memory=memory,
+                    target_memory=other,
+                    defaults={
+                        'connection_type': 'similar',
+                        'strength': float(similarity)
+                    }
+                )
+
+                if created:
+                    connections_created += 1
+                    # Also add to M2M
+                    memory.connected_memories.add(other)
+
+        logger.info(f"🧠 [MEMORY] Created {connections_created} connections for memory '{memory.title}'")
+
+        return {
+            'status': 'success',
+            'connections_created': connections_created
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [MEMORY] Failed to auto-connect memories: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def record_agent_memory(
+    agent_id: str,
+    title: str,
+    content: str,
+    memory_type: str = 'interaction',
+    valence: str = 'neutral',
+    importance: float = 0.5,
+    context: str = '',
+    source_type: str = '',
+    source_id: str = ''
+):
+    """
+    Session 251: Record a new memory for an agent.
+
+    This is a convenient task that can be called from anywhere
+    to record memories asynchronously.
+    """
+    logger.info(f"🧠 [MEMORY] Recording memory '{title}' for agent {agent_id}")
+
+    try:
+        from core.models_unified_system import AgentMemory, Agent
+
+        agent = Agent.objects.get(id=agent_id)
+
+        # Create memory
+        memory = AgentMemory.objects.create(
+            agent=agent,
+            title=title,
+            content=content,
+            memory_type=memory_type,
+            valence=valence,
+            importance_score=importance,
+            context=context,
+            source_type=source_type,
+            source_id=source_id
+        )
+
+        # Queue embedding generation
+        generate_memory_embedding.delay(str(memory.id))
+
+        logger.info(f"🧠 [MEMORY] Memory '{title}' recorded for {agent.name}")
+
+        return {
+            'status': 'success',
+            'memory_id': str(memory.id),
+            'agent_name': agent.name
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [MEMORY] Failed to record memory: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def organize_memories_into_rooms(agent_id: str):
+    """
+    Session 251: Automatically organize memories into appropriate rooms.
+
+    Assigns memories to rooms based on their type.
+    """
+    logger.info(f"🧠 [MEMORY PALACE] Organizing memories for agent {agent_id}")
+
+    try:
+        from core.models_unified_system import AgentMemory, MemoryPalaceRoom, Agent
+
+        agent = Agent.objects.get(id=agent_id)
+
+        # Ensure rooms exist
+        rooms = MemoryPalaceRoom.objects.filter(agent=agent)
+        if not rooms.exists():
+            MemoryPalaceRoom.create_default_rooms(agent)
+            rooms = MemoryPalaceRoom.objects.filter(agent=agent)
+
+        # Map memory types to room types
+        type_to_room = {
+            'technique': 'techniques',
+            'success': 'successes',
+            'failure': 'lessons',
+            'preference': 'preferences',
+            'insight': 'insights',
+            'interaction': 'general',
+            'feedback': 'lessons'
+        }
+
+        # Get unassigned memories
+        room_dict = {r.room_type: r for r in rooms}
+        memories_organized = 0
+
+        for memory in AgentMemory.objects.filter(agent=agent):
+            target_room_type = type_to_room.get(memory.memory_type, 'general')
+            target_room = room_dict.get(target_room_type)
+
+            if target_room and not target_room.memories.filter(id=memory.id).exists():
+                target_room.memories.add(memory)
+                memories_organized += 1
+
+        logger.info(f"🧠 [MEMORY PALACE] Organized {memories_organized} memories for {agent.name}")
+
+        return {
+            'status': 'success',
+            'memories_organized': memories_organized
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [MEMORY PALACE] Failed to organize memories: {e}")
+        return {'status': 'failed', 'error': str(e)}

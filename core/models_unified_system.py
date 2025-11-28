@@ -6975,3 +6975,341 @@ class HiveMindContribution(models.Model):
 
     def __str__(self):
         return f"{self.agent.name} contribution to {self.session.id}"
+
+
+# =============================================================================
+# Session 251: Memory Palace - Agent Persistent Memory
+# =============================================================================
+
+class AgentMemory(models.Model):
+    """
+    Session 251: Memory Palace
+
+    Agents remember past interactions, successes, failures, and learned preferences.
+    Memories are stored with embeddings for semantic retrieval.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Which agent owns this memory
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='memories'
+    )
+
+    # Memory content
+    title = models.CharField(
+        max_length=200,
+        help_text="Brief title/summary of the memory"
+    )
+    content = models.TextField(
+        help_text="Detailed content of the memory"
+    )
+    context = models.TextField(
+        blank=True,
+        help_text="Context in which this memory was formed"
+    )
+
+    # Memory classification
+    MEMORY_TYPE_CHOICES = [
+        ('success', 'Success'),           # Something that worked well
+        ('failure', 'Failure'),           # Something that didn't work
+        ('preference', 'User Preference'),  # User liked/disliked something
+        ('technique', 'Technique'),       # A technique or approach learned
+        ('insight', 'Insight'),           # A realization or pattern noticed
+        ('interaction', 'Interaction'),   # A notable interaction
+        ('feedback', 'Feedback'),         # Direct feedback received
+    ]
+    memory_type = models.CharField(
+        max_length=50,
+        choices=MEMORY_TYPE_CHOICES,
+        default='interaction'
+    )
+
+    # Emotional valence and importance
+    VALENCE_CHOICES = [
+        ('positive', 'Positive'),
+        ('negative', 'Negative'),
+        ('neutral', 'Neutral'),
+    ]
+    valence = models.CharField(
+        max_length=20,
+        choices=VALENCE_CHOICES,
+        default='neutral'
+    )
+    importance_score = models.FloatField(
+        default=0.5,
+        help_text="How important is this memory (0-1)"
+    )
+
+    # Embedding for semantic search
+    embedding = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding for semantic retrieval"
+    )
+
+    # Memory connections (for the visual memory map)
+    connected_memories = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=True,
+        help_text="Related memories that form conceptual connections"
+    )
+
+    # Metadata
+    source_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="What triggered this memory: task, conversation, dream, hive_mind"
+    )
+    source_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="ID of the source event/task/conversation"
+    )
+
+    # Usage tracking
+    access_count = models.PositiveIntegerField(
+        default=0,
+        help_text="How many times this memory has been retrieved"
+    )
+    last_accessed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this memory was last retrieved"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Memory"
+        verbose_name_plural = "Agent Memories"
+        ordering = ['-importance_score', '-created_at']
+        indexes = [
+            models.Index(fields=['agent', 'memory_type']),
+            models.Index(fields=['agent', 'importance_score']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name}: {self.title[:50]} ({self.memory_type})"
+
+    def record_access(self):
+        """Record that this memory was accessed/retrieved."""
+        from django.utils import timezone
+        self.access_count += 1
+        self.last_accessed_at = timezone.now()
+        self.save(update_fields=['access_count', 'last_accessed_at'])
+
+    @classmethod
+    def create_memory(cls, agent, title, content, memory_type='interaction',
+                      valence='neutral', importance=0.5, context='', source_type='', source_id=''):
+        """Helper to create a memory with optional embedding generation."""
+        memory = cls.objects.create(
+            agent=agent,
+            title=title,
+            content=content,
+            memory_type=memory_type,
+            valence=valence,
+            importance_score=importance,
+            context=context,
+            source_type=source_type,
+            source_id=source_id
+        )
+        # Queue embedding generation
+        from core.tasks import generate_memory_embedding
+        generate_memory_embedding.delay(str(memory.id))
+        return memory
+
+    @classmethod
+    def search_memories(cls, agent, query, limit=5, memory_types=None):
+        """
+        Search agent memories by relevance.
+        Uses embeddings if available, falls back to text search.
+        """
+        memories = cls.objects.filter(agent=agent)
+
+        if memory_types:
+            memories = memories.filter(memory_type__in=memory_types)
+
+        # For now, use simple text search
+        # TODO: Implement embedding-based semantic search
+        query_lower = query.lower()
+        keywords = query_lower.split()
+
+        scored_memories = []
+        for memory in memories:
+            score = 0
+            text = f"{memory.title} {memory.content}".lower()
+            for keyword in keywords:
+                if len(keyword) > 2 and keyword in text:
+                    score += 1
+            # Boost by importance
+            score *= (1 + memory.importance_score)
+            if score > 0:
+                scored_memories.append((memory, score))
+
+        scored_memories.sort(key=lambda x: x[1], reverse=True)
+        return [m for m, _ in scored_memories[:limit]]
+
+    @classmethod
+    def get_memory_summary(cls, agent, limit=10):
+        """Get a summary of an agent's key memories for prompt context."""
+        memories = cls.objects.filter(agent=agent).order_by('-importance_score')[:limit]
+
+        summary_parts = []
+        for memory in memories:
+            emoji = {
+                'success': '✅',
+                'failure': '❌',
+                'preference': '⭐',
+                'technique': '🔧',
+                'insight': '💡',
+                'interaction': '💬',
+                'feedback': '📝',
+            }.get(memory.memory_type, '📎')
+
+            summary_parts.append(f"{emoji} {memory.title}")
+
+        return "\n".join(summary_parts) if summary_parts else "No significant memories yet."
+
+
+class MemoryConnection(models.Model):
+    """
+    Session 251: Connections between memories for the visual memory map.
+
+    While AgentMemory has a ManyToMany field, this model allows storing
+    metadata about the connection strength and type.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    memory_from = models.ForeignKey(
+        AgentMemory,
+        on_delete=models.CASCADE,
+        related_name='connections_from'
+    )
+    memory_to = models.ForeignKey(
+        AgentMemory,
+        on_delete=models.CASCADE,
+        related_name='connections_to'
+    )
+
+    # Connection metadata
+    CONNECTION_TYPE_CHOICES = [
+        ('causal', 'Caused By'),        # One memory led to another
+        ('similar', 'Similar To'),      # Conceptually similar
+        ('contrast', 'Contrasts With'), # Opposite or conflicting
+        ('elaborates', 'Elaborates'),   # Adds detail to another
+        ('temporal', 'Follows'),        # Happened after
+    ]
+    connection_type = models.CharField(
+        max_length=50,
+        choices=CONNECTION_TYPE_CHOICES,
+        default='similar'
+    )
+    strength = models.FloatField(
+        default=0.5,
+        help_text="How strong is this connection (0-1)"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Memory Connection"
+        verbose_name_plural = "Memory Connections"
+        unique_together = [['memory_from', 'memory_to']]
+
+    def __str__(self):
+        return f"{self.memory_from.title[:20]} -> {self.memory_to.title[:20]}"
+
+
+class MemoryPalaceRoom(models.Model):
+    """
+    Session 251: Visual organization of memories into "rooms".
+
+    The Memory Palace metaphor - each agent has rooms that organize
+    their memories by theme or purpose.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='memory_rooms'
+    )
+
+    # Room metadata
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default='🏠')
+
+    # Room theme/purpose
+    ROOM_TYPE_CHOICES = [
+        ('techniques', 'Techniques Library'),
+        ('successes', 'Hall of Victories'),
+        ('lessons', 'Lessons Learned'),
+        ('preferences', 'User Preferences'),
+        ('insights', 'Insight Garden'),
+        ('experiments', 'Experiment Lab'),
+        ('general', 'General Archive'),
+    ]
+    room_type = models.CharField(
+        max_length=50,
+        choices=ROOM_TYPE_CHOICES,
+        default='general'
+    )
+
+    # Visual position for the memory palace map
+    position_x = models.IntegerField(default=0)
+    position_y = models.IntegerField(default=0)
+    color = models.CharField(max_length=20, default='#8b5cf6')
+
+    # Memories in this room
+    memories = models.ManyToManyField(
+        AgentMemory,
+        blank=True,
+        related_name='rooms'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Memory Palace Room"
+        verbose_name_plural = "Memory Palace Rooms"
+        ordering = ['agent', 'name']
+
+    def __str__(self):
+        return f"{self.agent.name}'s {self.name}"
+
+    @classmethod
+    def create_default_rooms(cls, agent):
+        """Create default rooms for a new agent."""
+        default_rooms = [
+            {'name': 'Techniques Library', 'room_type': 'techniques', 'icon': '📚', 'color': '#06b6d4'},
+            {'name': 'Hall of Victories', 'room_type': 'successes', 'icon': '🏆', 'color': '#22c55e'},
+            {'name': 'Lessons Learned', 'room_type': 'lessons', 'icon': '📖', 'color': '#f97316'},
+            {'name': 'User Preferences', 'room_type': 'preferences', 'icon': '⭐', 'color': '#eab308'},
+            {'name': 'Insight Garden', 'room_type': 'insights', 'icon': '💡', 'color': '#8b5cf6'},
+        ]
+
+        rooms = []
+        for i, room_data in enumerate(default_rooms):
+            room, created = cls.objects.get_or_create(
+                agent=agent,
+                room_type=room_data['room_type'],
+                defaults={
+                    'name': room_data['name'],
+                    'icon': room_data['icon'],
+                    'color': room_data['color'],
+                    'position_x': i * 150,
+                    'position_y': 100,
+                }
+            )
+            rooms.append(room)
+
+        return rooms

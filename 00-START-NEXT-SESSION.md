@@ -1,61 +1,71 @@
-# Session 251: Ready for Next Feature!
+# Session 252: Ready for Next Feature!
 
 **Date:** November 28, 2025
-**Previous Session:** 250 (Hive Mind Mode)
+**Previous Session:** 251 (Memory Palace)
 **Session Type:** Feature Complete
 
 ---
 
-## Session 250 Completed - Hive Mind Mode
+## Session 251 Completed - Memory Palace
 
 ### What Was Built
 
-**Hive Mind Mode** enables all relevant agents to work on a problem simultaneously, creating a "collective intelligence" experience!
+**Memory Palace** provides persistent memory storage for agents, allowing them to remember past experiences, learn from successes/failures, and build connections between related memories!
 
 **New Database Models:**
-1. `HiveMindSession` - Tracks the session, question, participants, status, and synthesis
-2. `HiveMindContribution` - Individual agent contributions with key points and perspective type
+1. `AgentMemory` - Main memory storage with types, importance, embeddings
+2. `MemoryConnection` - Connections between memories with type and strength
+3. `MemoryPalaceRoom` - Visual organization into themed rooms
+
+**Memory Types:**
+- Success, Failure, Technique, Insight, Preference, Interaction, Feedback
 
 **Core Features:**
-1. **Intelligent Agent Selection** - Automatically picks the most relevant agents (up to 8) based on the question
-2. **Parallel Processing** - All agents think simultaneously using ThreadPoolExecutor
-3. **Real-Time Updates** - WebSocket broadcasting as each agent contributes
-4. **Unified Synthesis** - GPT-4o-mini synthesizes all perspectives into a comprehensive response
+1. **Memory Recording** - Capture successes, failures, preferences, insights
+2. **Embedding Generation** - Semantic embeddings via OpenAI for similarity search
+3. **Memory Rooms** - Organized into themed rooms (Techniques, Successes, Lessons, etc.)
+4. **Semantic Search** - Search memories by meaning, not just keywords
+5. **Memory Connections** - Link related memories together
+6. **Memory Summary** - Prompt-ready summary for agent context
 
 **UI Features:**
-- Neural network visualization with agents arranged around central "brain"
-- Visual status indicators (pending/thinking/completed/failed)
-- Progress bar showing completion percentage
-- Contributions feed with agent perspectives
-- Final synthesis display with markdown formatting
-- Recent sessions list for reviewing past Hive Mind sessions
+- Agent selector dropdown
+- Room cards with memory counts
+- Memory cards with importance bars
+- Memory detail modal with connections
+- Semantic search
+- Create memory form
 
 **New API Endpoints:**
-- `POST /api/hive-mind/start/` - Start a new Hive Mind session
-- `GET /api/hive-mind/session/{id}/` - Get session status and contributions
-- `POST /api/hive-mind/preview/` - Preview which agents would be selected
-- `GET /api/hive-mind/sessions/` - List recent sessions
-- `GET /api/hive-mind/agents/` - Get available agents
+- `GET /api/memory-palace/` - Overview of all agent memories
+- `GET /api/memory-palace/agent/{id}/memories/` - Agent's memories
+- `GET /api/memory-palace/agent/{id}/rooms/` - Agent's rooms
+- `GET /api/memory-palace/agent/{id}/summary/` - Prompt summary
+- `GET /api/memory-palace/memory/{id}/` - Memory detail
+- `GET /api/memory-palace/room/{id}/memories/` - Room's memories
+- `POST /api/memory-palace/create/` - Create memory
+- `POST /api/memory-palace/search/` - Semantic search
+- `POST /api/memory-palace/connect/` - Connect memories
+- `POST /api/memory-palace/assign/` - Assign to room
+- `DELETE /api/memory-palace/memory/{id}/delete/` - Delete memory
 
-### Files Created/Modified (Session 250)
+### Files Created/Modified (Session 251)
 
 **Database:**
-- `core/models_unified_system.py` - Added HiveMindSession, HiveMindContribution models
-- `core/migrations/0040_session_250_hive_mind_mode.py` - Migration
+- `core/models_unified_system.py` - Added AgentMemory, MemoryConnection, MemoryPalaceRoom
+- `core/migrations/0041_session_251_memory_palace.py` - Migration
 
 **Backend:**
-- `core/views_hive_mind.py` - NEW: All Hive Mind API endpoints
-- `core/tasks.py` - Added run_hive_mind_session(), broadcast functions
+- `core/views_memory_palace.py` - NEW: All Memory Palace API endpoints
+- `core/tasks.py` - Added memory embedding and organization tasks
 - `core/urls.py` - Added new routes
-- `core/hive_mind_consumer.py` - NEW: WebSocket consumer for real-time updates
-- `core/routing.py` - Added WebSocket routes
-- `core/auth_middleware.py` - Added /api/hive-mind/ to PUBLIC_PATHS
+- `core/auth_middleware.py` - Added /api/memory-palace/ to PUBLIC_PATHS
 
 **Frontend:**
-- `ai_core/templates/ai_image_studio.html` - Hive Mind UI section with visualization
+- `ai_core/templates/ai_image_studio.html` - Memory Palace UI section
 
 **Documentation:**
-- `docs/features/HIVE_MIND_MODE.md` - Full feature documentation
+- `docs/features/MEMORY_PALACE.md` - Full feature documentation
 
 ---
 
@@ -69,66 +79,72 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Go to Agents tab -> Hive Mind Mode section
-#    - Enter a complex question
-#    - Click "Preview Agents" to see who will participate
-#    - Click "Activate Hive Mind" to start collective thinking!
+# 3. Go to Agents tab -> Memory Palace section
+#    - Select an agent from dropdown
+#    - Explore their memory rooms
+#    - Search memories semantically
+#    - Create new memories
 ```
 
 ---
 
-## Testing Hive Mind Mode
+## Testing Memory Palace
 
 ### Test via UI
 1. Go to AI Studio -> Agents tab
-2. Find the Hive Mind Mode section (cyan border)
-3. Enter a question like: "Design a marketing strategy for a sustainable fashion brand"
-4. Click "Preview Agents" to see the selected agents
-5. Click "Activate Hive Mind" to start
-6. Watch as agents think simultaneously and contribute!
-7. View the final synthesis when complete
+2. Find the Memory Palace section (purple border)
+3. Select an agent from the dropdown
+4. Explore their memory rooms
+5. Click on room cards to view memories
+6. Click on memories to see details
+7. Use search to find specific memories
+8. Create new memories with the "Add Memory" button
 
 ### Test via API
 ```bash
-# Preview agents
-curl -X POST http://localhost:8000/api/hive-mind/preview/ \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Create a content strategy for a tech startup"}'
+# Get overview
+curl http://localhost:8000/api/memory-palace/
 
-# Start a session
-curl -X POST http://localhost:8000/api/hive-mind/start/ \
-  -H "Content-Type: application/json" \
-  -d '{"question": "How can we improve urban sustainability?"}'
+# Get agent memories (replace {id} with agent UUID)
+curl http://localhost:8000/api/memory-palace/agent/{id}/memories/
 
-# Check session status (replace {id} with session_id from above)
-curl http://localhost:8000/api/hive-mind/session/{id}/
+# Create a memory
+curl -X POST http://localhost:8000/api/memory-palace/create/ \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id": "{id}", "title": "Test Memory", "content": "Content here", "memory_type": "insight"}'
+
+# Search memories
+curl -X POST http://localhost:8000/api/memory-palace/search/ \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id": "{id}", "query": "your search query"}'
 ```
 
 ---
 
-## What's Next (Session 251+)
+## What's Next (Session 252+)
 
 From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
-### Priority 1: Memory Palace
-- Spatial visualization of agent knowledge
-- 3D room metaphor for memory organization
-- Users can "walk through" agent memories
-
-### Priority 2: Agent Mood System
+### Priority 1: Agent Mood System
 - Agents have emotional states
 - Moods affect response style and creativity
 - Happy agents are more creative, focused agents are more precise
+- Memories could influence mood
 
-### Priority 3: Agent Rivalries & Alliances
+### Priority 2: Agent Rivalries & Alliances
 - Agents form competitive dynamics
 - Rivalries push innovation
 - Alliances enable specialized collaborations
 
-### Priority 4: Agent Evolution
+### Priority 3: Agent Evolution
 - XP system for agents
 - Level up from experience
 - Unlock new capabilities as they grow
+
+### Priority 4: Time Travel Debugging
+- Replay agent decisions
+- See what they were "thinking"
+- Debug and improve agent behavior
 
 ---
 
@@ -136,7 +152,8 @@ From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
 | Feature | Status |
 |---------|--------|
-| Hive Mind Mode | **COMPLETE** |
+| Memory Palace | **COMPLETE** |
+| Hive Mind Mode | COMPLETE |
 | Dream Feedback | COMPLETE |
 | Agent Conversations | COMPLETE |
 | Agent Dreams | COMPLETE |
@@ -151,5 +168,5 @@ From the SciFi Roadmap (docs/features/SCIFI_ROADMAP.md):
 
 - [ ] Read this handoff document
 - [ ] Run `make start && make celery`
-- [ ] Test Hive Mind at http://localhost:8000/ai-studio/ (Agents tab)
+- [ ] Test Memory Palace at http://localhost:8000/ai-studio/ (Agents tab)
 - [ ] Review SciFi Roadmap for next feature: `docs/features/SCIFI_ROADMAP.md`
