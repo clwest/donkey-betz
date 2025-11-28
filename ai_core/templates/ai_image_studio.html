@@ -41420,7 +41420,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agents for dropdown
         async function loadMemoryPalaceAgents() {
             try {
-                const response = await fetch('/api/agents/');
+                const response = await fetch('/api/hive-mind/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     const select = document.getElementById('memory-palace-agent-select');
