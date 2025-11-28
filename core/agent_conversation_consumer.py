@@ -3,15 +3,23 @@ Agent Conversation WebSocket Consumer
 =====================================
 
 Session 244: Real-time streaming of agent-to-agent conversations.
+Session 261: Upgraded to use ConversationOrchestrator for outcome-driven conversations.
 
 Agents chat in real-time via WebSocket - messages stream as they're generated
 by GPT-4o-mini. This creates a "Slack for AI agents" experience.
+
+Session 261 Improvements:
+- Constructive tension (no empty agreement)
+- Platform grounding (metrics and systems referenced)
+- Structured outputs (DecisionSummary with insights and features)
+- Role-specific prompts for each agent type
 """
 
 import json
 import asyncio
 import logging
 import random
+import re
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from asgiref.sync import sync_to_async
@@ -163,13 +171,19 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def generate_live_conversation(self, topic=None):
-        """Generate a conversation and broadcast each message."""
-        import openai
-        import os
+        """
+        Generate a conversation using the Session 261 ConversationOrchestrator.
+
+        This upgraded version ensures:
+        - Constructive tension (no empty agreement)
+        - Platform grounding (metrics and systems referenced)
+        - Structured outputs (DecisionSummary with insights and features)
+        """
         from core.models import (
             Agent, AgentConversation, ConversationMessage,
-            AgentKnowledgeSource, AgentLearningConnection
+            AgentKnowledgeSource
         )
+        from core.conversation_orchestrator import ConversationOrchestrator
 
         # Get agents with knowledge
         agents_list = list(Agent.objects.filter(
@@ -178,50 +192,76 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
         ).distinct()[:20])
 
         if len(agents_list) < 2:
-            return {'status': 'error', 'reason': 'Not enough agents with knowledge'}
+            # Fallback to any active agents
+            agents_list = list(Agent.objects.filter(is_active=True)[:20])
+            if len(agents_list) < 2:
+                return {'status': 'error', 'reason': 'Not enough agents available'}
 
-        # Pick two random agents
-        initiator = random.choice(agents_list)
-        possible_responders = [a for a in agents_list if a.id != initiator.id]
-        responder = random.choice(possible_responders)
+        # Prefer strategic agent pairings for better conversations
+        # Priority 1: ContentStrategyAgent + ResearchAgent (the recommended pair)
+        content_agents = [a for a in agents_list if 'Content' in a.name or 'Strategy' in a.name]
+        research_agents = [a for a in agents_list if 'Research' in a.name]
 
-        # Pick a random conversation type for variety
+        # Priority 2: CreativeDirector + any analytical agent
+        creative_agents = [a for a in agents_list if 'Creative' in a.name or 'Director' in a.name]
+        analytical_agents = [a for a in agents_list if any(x in a.name for x in ['SEO', 'Trend', 'Analysis', 'Research'])]
+
+        if content_agents and research_agents:
+            initiator = random.choice(content_agents)
+            responder = random.choice(research_agents)
+            logger.info("Using preferred pairing: ContentStrategy + Research")
+        elif creative_agents and analytical_agents:
+            initiator = random.choice(creative_agents)
+            responder = random.choice(analytical_agents)
+            logger.info("Using secondary pairing: Creative + Analytical")
+        else:
+            # Random pairing as fallback
+            initiator = random.choice(agents_list)
+            possible_responders = [a for a in agents_list if a.id != initiator.id]
+            responder = random.choice(possible_responders)
+            logger.info(f"Using random pairing: {initiator.name} + {responder.name}")
+
+        # Pick conversation type - weighted toward strategic types
         conversation_types = [
-            'knowledge_sharing',
-            'brainstorm',
-            'consultation',
-            'synthesis',
+            ('brainstorm', 3),      # Strategic brainstorming
+            ('analysis', 2),        # Deep analysis
+            ('planning', 2),        # Implementation planning
+            ('critique', 1),        # Constructive critique
+            ('synthesis', 1),       # Knowledge synthesis
+            ('consultation', 1),    # Expert consultation
         ]
-        conv_type = random.choice(conversation_types)
+        conv_type = random.choices(
+            [t[0] for t in conversation_types],
+            weights=[t[1] for t in conversation_types]
+        )[0]
 
-        # Get topic from knowledge if not provided - make it cleaner
+        # Get topic from knowledge if not provided
         if not topic:
             knowledge = AgentKnowledgeSource.objects.filter(
                 agent=initiator
             ).order_by('-last_updated_at').first()
 
             if knowledge:
-                # Clean up the title - remove brackets and prefixes
                 clean_title = knowledge.title
-                # Remove common prefixes like "[Synthesis]", "[Analysis]", etc.
-                import re
                 clean_title = re.sub(r'^\[.*?\]\s*', '', clean_title)
-                # Truncate if too long
                 if len(clean_title) > 60:
                     clean_title = clean_title[:57] + "..."
                 topic = clean_title
             else:
-                # Random interesting topics if no knowledge found
+                # Strategic topics that encourage good conversations
                 topics = [
-                    "The Future of AI Creativity",
-                    "Creative Tools & Innovation",
-                    "AI-Human Collaboration",
-                    "Emerging Tech Trends",
-                    "Digital Content Creation",
+                    "Optimizing Content Engagement Through Data-Driven Insights",
+                    "Building a Pacing Score System for Long-Form Content",
+                    "Measuring and Improving User Retention Metrics",
+                    "Creating an Authority vs Virality Framework",
+                    "Designing Dashboard Widgets for Creator Analytics",
+                    "Leveraging Spider Data for Content Recommendations",
+                    "Building Embedding-Based Content Quality Scoring",
+                    "A/B Testing Strategies for Creative Content",
                 ]
                 topic = random.choice(topics)
 
-        # Create conversation
+        # Create conversation record
         conversation = AgentConversation.objects.create(
             topic=topic,
             conversation_type=conv_type,
@@ -231,116 +271,83 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
         )
         conversation.participants.add(initiator, responder)
 
-        # Initialize OpenAI
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        # Use the new ConversationOrchestrator (Session 261)
+        try:
+            orchestrator = ConversationOrchestrator()
 
-        messages_generated = []
-        conversation_context = []
+            result = orchestrator.generate_conversation(
+                agent1={
+                    'name': initiator.name,
+                    'type': initiator.agent_type,
+                    'specialization': initiator.specialization or 'AI assistance'
+                },
+                agent2={
+                    'name': responder.name,
+                    'type': responder.agent_type,
+                    'specialization': responder.specialization or 'AI assistance'
+                },
+                topic=topic,
+                conversation_type=conv_type,
+                num_turns=6,
+                max_retries=2
+            )
 
-        # Generate messages back and forth
-        for i in range(6):  # 6 messages total
-            current_agent = initiator if i % 2 == 0 else responder
-            other_agent = responder if i % 2 == 0 else initiator
-
-            # Build prompt
-            if i == 0:
-                prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'AI'}.
-
-Start a thoughtful conversation with {other_agent.name} about: {topic}
-
-Ask an insightful question or share an interesting observation. Keep it concise (2-3 sentences).
-
-IMPORTANT: Do NOT prefix your response with your name. Just write your message directly."""
-            else:
-                context_str = "\n".join([f"{m['agent']}: {m['content']}" for m in conversation_context[-4:]])
-                prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'AI'}.
-
-Conversation so far:
-{context_str}
-
-Continue this conversation naturally. Respond to what was said, add your perspective, or ask a follow-up question. Keep it concise (2-3 sentences).
-
-IMPORTANT: Do NOT prefix your response with your name. Just write your message directly."""
-
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=150,
-                    temperature=0.8
-                )
-
-                content = response.choices[0].message.content.strip()
-
-                # Determine message type
-                if '?' in content:
-                    msg_type = 'question'
-                elif i == 5:
-                    msg_type = 'conclusion'
-                elif any(word in content.lower() for word in ['agree', 'exactly', 'right']):
-                    msg_type = 'agreement'
-                elif any(word in content.lower() for word in ['however', 'but', 'disagree']):
-                    msg_type = 'disagreement'
-                else:
-                    msg_type = 'statement'
-
-                # Save message
-                msg = ConversationMessage.objects.create(
+            # Save messages to database
+            for msg_data in result['messages']:
+                agent = initiator if msg_data['agent'] == initiator.name else responder
+                ConversationMessage.objects.create(
                     conversation=conversation,
-                    agent=current_agent,
-                    content=content,
-                    message_type=msg_type,
-                    sequence_number=i + 1
+                    agent=agent,
+                    content=msg_data['content'],
+                    message_type=msg_data['type'],
+                    sequence_number=msg_data['sequence']
                 )
 
-                msg_data = {
-                    'agent': current_agent.name,
-                    'content': content,
-                    'type': msg_type,
-                    'sequence': i + 1
-                }
+            # Update conversation
+            conversation.message_count = len(result['messages'])
+            conversation.status = 'concluded'
 
-                messages_generated.append(msg_data)
-                conversation_context.append(msg_data)
+            # Build conclusion from decision summary
+            decision_summary = result.get('decision_summary')
+            if decision_summary:
+                conclusion_parts = []
+                if decision_summary.get('proposed_feature', {}).get('name'):
+                    conclusion_parts.append(f"Proposed: {decision_summary['proposed_feature']['name']}")
+                if decision_summary.get('insights'):
+                    conclusion_parts.append(f"{len(decision_summary['insights'])} key insights identified")
+                if decision_summary.get('next_steps'):
+                    conclusion_parts.append(f"{len(decision_summary['next_steps'])} action items defined")
+                conversation.conclusion = ". ".join(conclusion_parts) if conclusion_parts else "Strategic discussion completed with actionable outcomes."
+            else:
+                conversation.conclusion = "Strategic discussion completed."
 
-            except Exception as e:
-                logger.error(f"Error generating message {i}: {e}")
-                break
+            conversation.ended_at = timezone.now()
+            conversation.save()
 
-        # Update conversation
-        conversation.message_count = len(messages_generated)
-        conversation.status = 'concluded'
+            # Return enhanced result
+            return {
+                'status': 'success',
+                'conversation_id': str(conversation.id),
+                'topic': topic,
+                'conversation_type': conv_type,
+                'participants': [initiator.name, responder.name],
+                'messages': result['messages'],
+                'decision_summary': decision_summary,
+                'validation': result.get('validation', {}),
+                'quality_score': result.get('validation', {}).get('score', 0),
+                'conclusion': conversation.conclusion
+            }
 
-        # Generate conclusion
-        if messages_generated:
-            try:
-                conclusion_prompt = f"""Summarize this agent conversation in one sentence:
-
-{chr(10).join([f"{m['agent']}: {m['content']}" for m in messages_generated])}
-
-Summary:"""
-
-                conclusion_response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": conclusion_prompt}],
-                    max_tokens=100,
-                    temperature=0.5
-                )
-                conversation.conclusion = conclusion_response.choices[0].message.content.strip()
-            except:
-                pass
-
-        conversation.ended_at = timezone.now()
-        conversation.save()
-
-        return {
-            'status': 'success',
-            'conversation_id': str(conversation.id),
-            'topic': topic,
-            'participants': [initiator.name, responder.name],
-            'messages': messages_generated,
-            'conclusion': conversation.conclusion
-        }
+        except Exception as e:
+            logger.error(f"ConversationOrchestrator failed: {e}", exc_info=True)
+            conversation.status = 'failed'
+            conversation.conclusion = f"Conversation generation failed: {str(e)}"
+            conversation.save()
+            return {
+                'status': 'error',
+                'conversation_id': str(conversation.id),
+                'reason': str(e)
+            }
 
     # Group message handlers
     async def conversation_message(self, event):

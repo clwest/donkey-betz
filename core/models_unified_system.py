@@ -6403,6 +6403,140 @@ class ConversationMessage(models.Model):
 
 
 # =============================================================================
+# Session 261: Conversation Artifacts - Structured Outputs from Agent Conversations
+# =============================================================================
+
+class ConversationArtifact(models.Model):
+    """
+    Stores structured outputs extracted from agent conversations.
+
+    Session 261: Agent conversations now produce concrete artifacts like
+    DecisionSummaries, frameworks, and feature specifications.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    conversation = models.ForeignKey(
+        AgentConversation,
+        on_delete=models.CASCADE,
+        related_name='artifacts'
+    )
+
+    # Artifact type
+    artifact_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('decision_summary', 'Decision Summary'),
+            ('framework', 'Named Framework'),
+            ('feature_spec', 'Feature Specification'),
+            ('action_plan', 'Action Plan'),
+            ('insight_list', 'Insight List'),
+            ('trade_off_analysis', 'Trade-off Analysis'),
+        ],
+        default='decision_summary'
+    )
+
+    # Artifact content
+    title = models.CharField(max_length=200)
+    content = models.JSONField(
+        default=dict,
+        help_text="Structured content of the artifact"
+    )
+
+    # For decision summaries
+    insights = models.JSONField(
+        default=list,
+        help_text="List of insights from the conversation"
+    )
+
+    proposed_feature = models.JSONField(
+        default=dict,
+        help_text="Proposed feature specification"
+    )
+
+    next_steps = models.JSONField(
+        default=list,
+        help_text="Action items from the conversation"
+    )
+
+    # Quality metrics from Session 261 validation
+    quality_score = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Quality score (0-100) from conversation validation"
+    )
+
+    tension_count = models.IntegerField(
+        default=0,
+        help_text="Number of tension/disagreement instances in conversation"
+    )
+
+    grounding_count = models.IntegerField(
+        default=0,
+        help_text="Number of platform grounding references in conversation"
+    )
+
+    # Grounding references found
+    grounding_refs = models.JSONField(
+        default=list,
+        help_text="List of platform metrics and systems referenced"
+    )
+
+    # Validation status
+    is_valid = models.BooleanField(
+        default=False,
+        help_text="Whether the conversation met all contract requirements"
+    )
+
+    validation_issues = models.JSONField(
+        default=list,
+        help_text="List of validation issues if any"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = "Conversation Artifact"
+        verbose_name_plural = "Conversation Artifacts"
+
+    def __str__(self):
+        return f"{self.artifact_type}: {self.title}"
+
+    @classmethod
+    def create_from_orchestrator_result(cls, conversation, result):
+        """
+        Create a ConversationArtifact from ConversationOrchestrator result.
+
+        Args:
+            conversation: AgentConversation instance
+            result: Dict from ConversationOrchestrator.generate_conversation()
+
+        Returns:
+            ConversationArtifact instance
+        """
+        decision_summary = result.get('decision_summary') or {}
+        validation = result.get('validation') or {}
+        state = result.get('state') or {}
+
+        return cls.objects.create(
+            conversation=conversation,
+            artifact_type='decision_summary',
+            title=decision_summary.get('proposed_feature', {}).get('name', 'Conversation Summary'),
+            content=decision_summary,
+            insights=decision_summary.get('insights', []),
+            proposed_feature=decision_summary.get('proposed_feature', {}),
+            next_steps=decision_summary.get('next_steps', []),
+            quality_score=validation.get('score', 0),
+            tension_count=state.get('tension_count', 0),
+            grounding_count=state.get('grounding_count', 0),
+            grounding_refs=state.get('unique_grounding_refs', []),
+            is_valid=validation.get('is_valid', False),
+            validation_issues=validation.get('issues', [])
+        )
+
+
+# =============================================================================
 # Session 247: Agent Dreams - Sci-Fi Feature
 # =============================================================================
 

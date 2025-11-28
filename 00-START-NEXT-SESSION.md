@@ -1,46 +1,65 @@
-# Session 261: Post Sci-Fi Completion - Platform Polish & Next Steps
+# Session 262: Post Agent Conversation Upgrade - Continued Development
 
 **Date:** November 28, 2025
-**Previous Session:** 260 (GPT-5-mini Parameter Compatibility Fix)
-**Session Type:** Maintenance & Planning
+**Previous Session:** 261 (Agent Conversation Upgrade)
+**Session Type:** Development
+**Status:** All Sci-Fi Features Complete + Conversation System Upgraded
 
 ---
 
-## Session 260 Completed - GPT-5-mini Parameter Fix
+## Session 261 Completed - Agent Conversation Upgrade
 
-### What Was Fixed
+### What Was Built
 
-**Critical Issue:** All GPT-5-mini API calls were using incorrect parameters that would cause failures:
-- GPT-5-mini does NOT support the `temperature` parameter (only default 1.0)
-- GPT-5-mini uses `max_completion_tokens` instead of `max_tokens`
+Based on ChatGPT's analysis of agent conversation quality, we implemented a complete overhaul of the agent conversation system:
 
-### Files Fixed
+**Problem Solved:**
+- Agents were too agreeable ("Great point!", "Absolutely!")
+- Conversations were generic, not grounded in our platform
+- No concrete outputs or actionable artifacts
+- Open-ended conclusions with no next steps
 
-1. **`core/views_time_capsules.py`** (2 occurrences)
-   - `generate_capsule_reflection()` - Fixed API call for reflection generation
-   - `GenerateTimeCapsuleView.post()` - Fixed API call for capsule message generation
+**Solution Implemented:**
 
-2. **`core/views_predictions.py`** (1 occurrence)
-   - `generate_agent_prediction()` - Fixed API call for prediction generation
+1. **`core/conversation_roles.py`** (NEW)
+   - Role-specific prompts for each agent type
+   - ResearchAgent: Data realist, pattern enforcer
+   - ContentStrategyAgent: Storytelling, psychology specialist
+   - Tension indicators library
+   - Grounding terms library (metrics + systems)
+   - DecisionSummary extraction and validation
 
-3. **`core/views_advisor_api.py`** (1 occurrence)
-   - `advisor_consult()` - Fixed LLMEnforcer call for advisor consultation
+2. **`core/conversation_orchestrator.py`** (NEW)
+   - ConversationOrchestrator class for managing conversations
+   - Enforces "Conversation Contract":
+     - Tension requirement (challenge every 2-3 turns)
+     - Grounding requirement (reference metrics/systems)
+     - DecisionSummary requirement (insights, feature, next steps)
+   - Quality scoring (0-100)
+   - Retry logic for contract compliance
 
-4. **`core/views_rag_embeddings.py`** (2 occurrences)
-   - `rag_generate()` - Fixed API call for RAG response generation
-   - `advanced_rag_query()` - Fixed API call for multi-collection queries
+3. **`core/agent_conversation_consumer.py`** (UPDATED)
+   - Now uses ConversationOrchestrator
+   - Prefers strategic agent pairings (ContentStrategy + Research)
+   - Returns validation results and decision summaries
 
-5. **`core/llm_enforcer.py`** (1 method updated)
-   - `generate_completion()` - Updated to accept both legacy and GPT-5 parameters:
-     - Accepts `max_tokens` (legacy) and `max_completion_tokens` (GPT-5)
-     - Accepts `system_prompt` and `user_prompt` for context
-     - Temperature is accepted but ignored for GPT-5 models
+4. **`core/models_unified_system.py`** (UPDATED)
+   - Added ConversationArtifact model
+   - Stores structured outputs from conversations
+   - Tracks quality metrics, tension counts, grounding refs
 
-### Testing Results
-- Server starts successfully
-- Time Capsules API: Working (`/api/time-capsules/`)
-- Predictions API: Working (`/api/predictions/`)
-- Generate Time Capsules: Successfully created 5 new capsules with GPT-5-mini
+5. **`tests/test_conversation_contract.py`** (NEW)
+   - 40 tests for tension detection, grounding detection
+   - DecisionSummary extraction and validation
+   - All tests passing
+
+### Test Results
+
+Generated a sample conversation with **Quality Score: 100**:
+- Tension count: 5 (exceeded 2 required)
+- Grounding count: 6 (exceeded 2 required)
+- Valid DecisionSummary with proposed "Emotional Engagement Dashboard" feature
+- Conversations now use phrases like "However, I'd question...", "The trade-off here is..."
 
 ---
 
@@ -54,14 +73,23 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test APIs
-curl http://localhost:8000/api/time-capsules/
-curl http://localhost:8000/api/predictions/
+# 3. Test new conversation system
+python manage.py shell -c "
+from core.conversation_orchestrator import ConversationOrchestrator
+orchestrator = ConversationOrchestrator()
+result = orchestrator.generate_conversation(
+    agent1={'name': 'ContentStrategyAgent', 'type': 'ContentStrategyAgent'},
+    agent2={'name': 'ResearchAgent', 'type': 'ResearchAgent'},
+    topic='Your topic here',
+    num_turns=6
+)
+print('Quality Score:', result['validation']['score'])
+"
 ```
 
 ---
 
-## ALL 13 SCI-FI FEATURES COMPLETE!
+## ALL 13 SCI-FI FEATURES + CONVERSATION UPGRADE COMPLETE!
 
 | # | Feature | Sessions | Status |
 |---|---------|----------|--------|
@@ -78,104 +106,90 @@ curl http://localhost:8000/api/predictions/
 | 11 | Memory Clusters | 257 | COMPLETE |
 | 12 | Prophecies/Predictions | 258 | COMPLETE |
 | 13 | Time Capsules | 259 | COMPLETE |
+| 14 | **Conversation Upgrade** | **261** | **COMPLETE** |
 
 ---
 
-## Platform Status
+## New Files Created in Session 261
 
-| Category | Status |
-|----------|--------|
-| All 13 Sci-Fi Features | **COMPLETE** |
-| All 6 Creative Phases | COMPLETE |
-| 20 Real Agents | COMPLETE |
-| 67 Spiders | COMPLETE |
-| GPT-5-mini Compatibility | **FIXED (Session 260)** |
+```
+core/conversation_roles.py          # Agent role definitions, tension/grounding detection
+core/conversation_orchestrator.py   # Conversation orchestration with contract enforcement
+tests/test_conversation_contract.py # 40 unit tests
+docs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md  # Full implementation plan
+```
 
 ---
 
 ## Key API Endpoints
 
-### Time Capsules (Session 259)
-- `GET /api/time-capsules/` - Overview stats
-- `GET/POST /api/time-capsules/agent/<agent_id>/` - Agent's capsules
-- `GET /api/time-capsules/<capsule_id>/` - Capsule detail
-- `POST /api/time-capsules/<capsule_id>/reveal/` - Reveal a capsule
-- `POST /api/time-capsules/<capsule_id>/react/` - Add reaction
-- `GET /api/time-capsules/ready-to-reveal/` - Capsules ready to open
-- `POST /api/time-capsules/generate/` - Auto-generate capsules
-- `POST /api/time-capsules/expire-old/` - Expire old capsules
+### Conversation System (Session 261)
+- WebSocket: `ws://localhost:8000/ws/agent-conversations/`
+- Sends `{type: 'start_conversation', topic: '...'}` to trigger
+- Returns messages with validation scores and decision summaries
 
-### Predictions (Session 258)
-- `GET /api/predictions/` - Overview stats
-- `GET/POST /api/predictions/agent/<agent_id>/` - Agent's predictions
-- `GET/PATCH/DELETE /api/predictions/<prediction_id>/` - Prediction detail
-- `POST /api/predictions/<prediction_id>/verify/` - Verify outcome
-- `POST /api/predictions/<prediction_id>/upvote/` - Upvote
-- `POST /api/predictions/<prediction_id>/comment/` - Add comment
-- `GET /api/predictions/leaderboard/` - Accuracy leaderboard
-- `POST /api/predictions/generate-from-dreams/` - Convert dreams to predictions
-- `POST /api/predictions/expire-old/` - Expire old predictions
-
-### Memory Clusters (Session 257)
-- `GET /api/memory-clusters/` - Overview stats
-- `GET/POST /api/memory-clusters/agent/<agent_id>/` - Agent's clusters
-- `GET /api/memory-clusters/<cluster_id>/` - Cluster detail
-- `POST /api/memory-clusters/generate/` - Auto-generate clusters
-- `POST /api/memory-clusters/merge/` - Merge clusters
-- `POST /api/memory-clusters/<cluster_id>/search/` - Semantic search
+### Existing Sci-Fi APIs (unchanged)
+- Time Capsules: `/api/time-capsules/`
+- Predictions: `/api/predictions/`
+- Memory Clusters: `/api/memory-clusters/`
 
 ---
 
-## Architecture Overview
+## Conversation Contract Summary
 
-### LLM Usage
-- **Primary Model:** GPT-5-mini (via OpenAI Chat Completions API)
-- **Fallback Model:** Claude 3 Haiku (via Anthropic)
-- **LLM Enforcer:** Singleton pattern, enforces real AI usage
-- **Important:** GPT-5-mini requires `max_completion_tokens` (not `max_tokens`) and doesn't support `temperature`
+Every agent conversation now must:
 
-### Key Files
-- `core/llm_enforcer.py` - Central LLM enforcement
-- `core/views_time_capsules.py` - Time Capsules API (8 endpoints)
-- `core/views_predictions.py` - Predictions API (9 endpoints)
-- `core/views_memory_clusters.py` - Memory Clusters API (6 endpoints)
-- `core/views_advisor_api.py` - Advisor consultation API
+1. **Include Tension (2+ instances)**
+   - "However...", "My concern is...", "The trade-off here..."
+   - Challenge assumptions, highlight trade-offs
+
+2. **Include Grounding (2+ instances)**
+   - Reference metrics: scroll depth, completion rate, engagement
+   - Reference systems: embeddings, RAG, spiders, dashboards
+
+3. **End with DecisionSummary**
+   ```
+   === DecisionSummary ===
+   Insights:
+   1. [Specific insight]
+   2. [Second insight]
+   3. [Third insight]
+
+   Proposed Feature:
+   - Name: [Feature name]
+   - Inputs: [What it needs]
+   - Outputs: [What it produces]
+   - Where it plugs into the system: [Integration point]
+
+   Next Steps:
+   1. [First action]
+   2. [Second action]
+   ```
 
 ---
 
 ## What's Next?
 
-With all 13 Sci-Fi features complete and GPT-5-mini compatibility fixed, consider:
+With the conversation system upgraded, consider:
 
-1. **Integration Improvements**
-   - Make features work together more seamlessly
-   - Cross-feature connections (e.g., predictions from dreams, clusters from memories)
+1. **Apply Pattern to Other Agent Pairs**
+   - CreativeDirectorAgent + TrendAnalysisAgent
+   - VideoAgent + AudioAgent
+   - Custom pairings for specific use cases
 
-2. **Performance Optimization**
-   - Optimize queries and caching
-   - Add pagination to large lists
+2. **Integration Improvements**
+   - Connect decision summaries to feature backlog
+   - Auto-create tasks from conversation next steps
+   - Track which proposed features get implemented
 
-3. **UI/UX Polish**
-   - Refine the user experience
-   - Add animations and transitions
+3. **UI Enhancements**
+   - Display quality scores in conversation UI
+   - Show tension/grounding indicators
+   - Highlight decision summaries
 
-4. **New Feature Categories**
-   - Revenue tracking and analytics
-   - External integrations
-   - Collaboration features
-
-5. **Mobile App**
-   - React Native companion app
-
----
-
-## Files Modified in Session 260
-
-- `core/views_time_capsules.py` - GPT-5-mini params fix
-- `core/views_predictions.py` - GPT-5-mini params fix
-- `core/views_advisor_api.py` - GPT-5-mini params fix
-- `core/views_rag_embeddings.py` - GPT-5-mini params fix
-- `core/llm_enforcer.py` - Updated generate_completion() method
+4. **AI Content Creation Focus**
+   - Per CLAUDE.md: images, videos, audio, 3D
+   - Apply upgraded conversations to creative workflows
 
 ---
 
@@ -188,25 +202,21 @@ With all 13 Sci-Fi features complete and GPT-5-mini compatibility fixed, conside
 
 ---
 
-## Uncommitted Changes (as of Session 260)
+## Files Modified in Session 261
 
 ```bash
-# Modified files:
-core/llm_enforcer.py
-core/views_time_capsules.py
-core/views_predictions.py
-core/views_advisor_api.py
-core/views_rag_embeddings.py
-core/urls.py
-core/auth_middleware.py
-core/models_unified_system.py
-ai_core/templates/ai_image_studio.html
-docs/features/SCIFI_ROADMAP.md
+# New files:
+core/conversation_roles.py
+core/conversation_orchestrator.py
+tests/test_conversation_contract.py
+docs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md
 
-# Untracked files (NEW from Sessions 257-259):
-core/views_memory_clusters.py
-core/views_predictions.py
-core/views_time_capsules.py
+# Updated files:
+core/agent_conversation_consumer.py  # Uses new orchestrator
+core/models_unified_system.py        # Added ConversationArtifact model
+core/migrations/0050_session_261_conversation_artifacts.py  # New migration
 ```
 
-**Note:** These files need to be committed before starting new work!
+---
+
+**Always read this document first - it has the current priorities!**
