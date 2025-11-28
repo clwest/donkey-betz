@@ -230,6 +230,99 @@ class AgentKnowledgeSource(models.Model):
         return f"{self.agent.name}: {self.title[:50]}"
 
 
+class AgentLearningConnection(models.Model):
+    """
+    Defines learning relationships between agents.
+    Agents can learn from each other based on complementary skills.
+
+    Session 243: Enabling agent-to-agent knowledge sharing
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The learning relationship
+    teacher_agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='students')
+    student_agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='teachers')
+
+    # Learning configuration
+    learning_type = models.CharField(max_length=50, choices=[
+        ('complementary', 'Complementary Skills'),  # Different skills that work together
+        ('specialization', 'Specialization'),  # Teacher is specialist in student's area
+        ('pipeline', 'Pipeline'),  # Student uses teacher's output as input
+        ('validation', 'Validation'),  # Cross-validation of work
+        ('collaborative', 'Collaborative'),  # Working together on tasks
+    ])
+
+    # What knowledge types can be shared
+    shareable_knowledge_types = ArrayField(
+        models.CharField(max_length=50),
+        default=list,
+        help_text="Types of knowledge that can be transferred"
+    )
+
+    # Learning metrics
+    total_transfers = models.IntegerField(default=0)
+    successful_transfers = models.IntegerField(default=0)
+    avg_improvement_score = models.FloatField(default=0.0, help_text="Average improvement from knowledge transfer")
+    last_transfer_at = models.DateTimeField(null=True, blank=True)
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    strength = models.FloatField(default=0.5, help_text="Connection strength 0.0-1.0")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['teacher_agent', 'student_agent']
+        ordering = ['-strength', '-total_transfers']
+
+    def __str__(self):
+        return f"{self.teacher_agent.name} → {self.student_agent.name} ({self.learning_type})"
+
+    @property
+    def success_rate(self):
+        if self.total_transfers == 0:
+            return 0
+        return (self.successful_transfers / self.total_transfers) * 100
+
+
+class KnowledgeTransfer(models.Model):
+    """
+    Records of knowledge being transferred between agents.
+    When an agent learns something useful, it can share with connected agents.
+
+    Session 243: Tracking knowledge flow between agents
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The transfer
+    connection = models.ForeignKey(AgentLearningConnection, on_delete=models.CASCADE, related_name='transfers')
+    source_knowledge = models.ForeignKey(AgentKnowledgeSource, on_delete=models.CASCADE, related_name='transfers_out')
+
+    # What was transferred
+    transfer_summary = models.TextField(help_text="Summary of what was learned")
+    key_points = models.JSONField(default=list)
+
+    # Outcome
+    was_useful = models.BooleanField(null=True, blank=True)
+    usefulness_score = models.FloatField(default=0.0, help_text="How useful was this transfer (0.0-1.0)")
+    student_feedback = models.TextField(blank=True)
+
+    # Application
+    was_applied = models.BooleanField(default=False)
+    application_result = models.JSONField(default=dict, help_text="Result of applying the knowledge")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Transfer: {self.connection} at {self.created_at}"
+
+
 class Advisor(models.Model):
     """
     Represents one of the 25 legendary advisors (Warren Buffett, Cathie Wood, etc.)
