@@ -6753,3 +6753,225 @@ class DreamExploration(models.Model):
 
     def __str__(self):
         return f"Exploration of '{self.dream.title}' ({self.status})"
+
+
+# =============================================================================
+# Session 250: Hive Mind Mode
+# =============================================================================
+
+class HiveMindSession(models.Model):
+    """
+    Session 250: Hive Mind Mode
+
+    All agents work on a problem simultaneously, each contributing their specialty.
+    Creates a "collective intelligence" experience where multiple AI perspectives
+    combine to solve complex problems.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The question/task posed to the hive
+    question = models.TextField(
+        help_text="The question or task posed to the collective agents"
+    )
+    context = models.TextField(
+        blank=True,
+        help_text="Additional context provided by the user"
+    )
+
+    # Session status
+    STATUS_CHOICES = [
+        ('initializing', 'Initializing'),
+        ('gathering', 'Gathering Contributions'),
+        ('synthesizing', 'Synthesizing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='initializing')
+
+    # Participating agents (stored as list of agent IDs)
+    participant_ids = models.JSONField(
+        default=list,
+        help_text="List of agent UUIDs participating in this session"
+    )
+
+    # Results
+    synthesis = models.TextField(
+        blank=True,
+        help_text="The final synthesized output combining all contributions"
+    )
+    synthesis_summary = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Brief summary of the synthesis"
+    )
+
+    # Stats
+    contribution_count = models.PositiveIntegerField(default=0)
+    total_thinking_time = models.FloatField(
+        default=0.0,
+        help_text="Total seconds of agent thinking time"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Hive Mind Session"
+        verbose_name_plural = "Hive Mind Sessions"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"HiveMind: {self.question[:50]}... ({self.status})"
+
+    def get_participants(self):
+        """Get the actual Agent objects for this session."""
+        return Agent.objects.filter(id__in=self.participant_ids)
+
+    def get_contributions(self):
+        """Get all contributions for this session."""
+        return self.contributions.all().order_by('created_at')
+
+    def get_contributions_by_agent(self):
+        """Get contributions grouped by agent."""
+        contributions = {}
+        for contrib in self.contributions.all():
+            agent_name = contrib.agent.name if contrib.agent else 'Unknown'
+            contributions[agent_name] = contrib
+        return contributions
+
+    @classmethod
+    def select_relevant_agents(cls, question: str, max_agents: int = 8):
+        """
+        Select the most relevant agents for a given question.
+        Uses keyword matching and agent specializations.
+        """
+        from django.db.models import Q
+
+        # Keywords to look for in question
+        keywords = question.lower().split()
+
+        # Get all active agents
+        agents = Agent.objects.filter(is_active=True)
+
+        # Score agents based on relevance
+        scored_agents = []
+        for agent in agents:
+            score = 0
+            agent_text = f"{agent.name} {agent.description} {agent.specialization}".lower()
+
+            for keyword in keywords:
+                if len(keyword) > 3 and keyword in agent_text:
+                    score += 1
+
+            # Bonus for certain agent types based on question content
+            question_lower = question.lower()
+            if 'brand' in question_lower and 'brand' in agent.name.lower():
+                score += 3
+            if 'image' in question_lower and 'image' in agent.name.lower():
+                score += 3
+            if 'video' in question_lower and 'video' in agent.name.lower():
+                score += 3
+            if 'research' in question_lower and 'research' in agent.name.lower():
+                score += 3
+            if 'trend' in question_lower and 'trend' in agent.name.lower():
+                score += 3
+            if 'content' in question_lower and 'content' in agent.name.lower():
+                score += 2
+            if 'strategy' in question_lower and 'strategy' in agent.name.lower():
+                score += 2
+            if 'seo' in question_lower and 'seo' in agent.name.lower():
+                score += 3
+
+            # Always include certain core agents with minimum score
+            core_agents = ['ResearchAgent', 'TrendAnalysisAgent', 'ContentStrategyAgent']
+            if agent.name in core_agents:
+                score = max(score, 1)
+
+            if score > 0:
+                scored_agents.append((agent, score))
+
+        # Sort by score and take top agents
+        scored_agents.sort(key=lambda x: x[1], reverse=True)
+        selected = [agent for agent, score in scored_agents[:max_agents]]
+
+        # If we don't have enough, add some core agents
+        if len(selected) < 3:
+            core_agents = Agent.objects.filter(
+                name__in=['ResearchAgent', 'TrendAnalysisAgent', 'ImageAgent', 'ContentStrategyAgent']
+            )
+            for agent in core_agents:
+                if agent not in selected and len(selected) < max_agents:
+                    selected.append(agent)
+
+        return selected
+
+
+class HiveMindContribution(models.Model):
+    """
+    Session 250: Individual agent contribution to a Hive Mind session
+
+    Each participating agent provides their unique perspective on the question.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to session and agent
+    session = models.ForeignKey(
+        HiveMindSession,
+        on_delete=models.CASCADE,
+        related_name='contributions'
+    )
+    agent = models.ForeignKey(
+        'Agent',
+        on_delete=models.CASCADE,
+        related_name='hive_mind_contributions'
+    )
+
+    # Contribution content
+    contribution = models.TextField(
+        help_text="The agent's contribution to the collective discussion"
+    )
+    key_points = models.JSONField(
+        default=list,
+        help_text="Key points extracted from the contribution"
+    )
+
+    # Agent's perspective
+    perspective_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Type of perspective: analysis, creative, technical, strategic, etc."
+    )
+    confidence_score = models.FloatField(
+        default=0.8,
+        help_text="Agent's confidence in their contribution (0-1)"
+    )
+
+    # Status
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('thinking', 'Thinking'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+
+    # Timing
+    thinking_time = models.FloatField(
+        default=0.0,
+        help_text="Seconds the agent spent thinking"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Hive Mind Contribution"
+        verbose_name_plural = "Hive Mind Contributions"
+        ordering = ['created_at']
+        unique_together = [['session', 'agent']]
+
+    def __str__(self):
+        return f"{self.agent.name} contribution to {self.session.id}"

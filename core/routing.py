@@ -393,3 +393,14 @@ agent_conversation_patterns = [
 ]
 
 websocket_urlpatterns.extend(agent_conversation_patterns)
+
+# Session 250: Hive Mind Mode WebSocket - Real-time collective intelligence
+from .hive_mind_consumer import HiveMindConsumer
+
+hive_mind_patterns = [
+    # Hive Mind WebSocket - stream live agent contributions
+    re_path(r'^ws/hive-mind/$', HiveMindConsumer.as_asgi()),
+    re_path(r'^ws/collective-intelligence/$', HiveMindConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(hive_mind_patterns)

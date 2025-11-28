@@ -52,6 +52,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agent-learning/',  # Session 244: Agent Learning - supports session auth
         '/api/autonomous-learning/',  # Session 243: Autonomous Learning - supports session auth
         '/api/learning/',  # Session 248: Learning Feed - supports session auth
+        '/api/hive-mind/',  # Session 250: Hive Mind Mode - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

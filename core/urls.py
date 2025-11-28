@@ -167,6 +167,15 @@ from core.views_agent_learning import (
     get_dream_exploration,
 )
 
+# Session 250: Hive Mind Mode
+from core.views_hive_mind import (
+    start_hive_mind_session,
+    get_hive_mind_session,
+    list_hive_mind_sessions,
+    get_available_agents,
+    preview_agents,
+)
+
 # Session 219 Phase D: Import marketplace views
 from core.views_marketplace import (
     browse_workflows as marketplace_browse,
@@ -2000,6 +2009,13 @@ urlpatterns = [
     # Session 249: Dream Feedback System
     path('api/agent-dreams/preferences/', get_dream_preferences, name='dream-preferences'),
     path('api/agent-dreams/explorations/<uuid:exploration_id>/', get_dream_exploration, name='dream-exploration'),
+
+    # Session 250: Hive Mind Mode API
+    path('api/hive-mind/start/', start_hive_mind_session, name='hive-mind-start'),
+    path('api/hive-mind/session/<uuid:session_id>/', get_hive_mind_session, name='hive-mind-session'),
+    path('api/hive-mind/sessions/', list_hive_mind_sessions, name='hive-mind-sessions'),
+    path('api/hive-mind/agents/', get_available_agents, name='hive-mind-agents'),
+    path('api/hive-mind/preview/', preview_agents, name='hive-mind-preview'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),
