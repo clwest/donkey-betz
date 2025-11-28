@@ -111,7 +111,7 @@ For SIMPLE single-step requests (just "create a logo" without research, "upscale
                 },
                 "topic": {
                     "type": "string",
-                    "description": "The main topic to research (e.g., 'modern AI company', 'tech startup', 'coffee shop', 'fitness brand'). Extract the key subject from the user's request."
+                    "description": "The main topic INCLUDING any character/mascot. Examples: 'AI content generation with donkey mascot', 'coffee shop with owl character', 'tech startup'. If user mentions a specific character (donkey, owl, lion, etc.), INCLUDE it in the topic!"
                 },
                 "count": {
                     "type": "integer",
@@ -120,7 +120,7 @@ For SIMPLE single-step requests (just "create a logo" without research, "upscale
                 },
                 "style_preferences": {
                     "type": "string",
-                    "description": "Optional style preferences mentioned by user (e.g., 'minimalist', 'bold colors', 'geometric', 'professional')"
+                    "description": "CRITICAL: Extract ANY style mentioned by user! Animation styles: 'pixar', 'disney', 'dreamworks', 'ghibli', 'anime', 'cartoon'. Art styles: 'watercolor', 'cyberpunk', 'minimalist', 'retro'. If user says 'DreamWorks style donkey' → style_preferences='dreamworks'. If user says 'Pixar-style mascot' → style_preferences='pixar'. ALWAYS extract the style - this determines mascot characters vs flat icons!"
                 },
                 "image_id": {
                     "type": "string",
