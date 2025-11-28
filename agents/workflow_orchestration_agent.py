@@ -589,48 +589,70 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         workflow_def = self.WORKFLOWS[workflow]
         steps = workflow_def['steps']
 
-        # Session 239: Extract style and mascot from ORIGINAL user message
-        # This is the key fix - GPT often strips this info from topic/style_preferences
+        # Session 239/240: Extract style and mascot from BOTH user_message AND topic
+        # GPT often fails to pass user_message, so we extract from topic as fallback
         extracted_style = ''
         extracted_mascot = ''
+
+        # Style mapping used for both user_message and topic extraction
+        style_mapping = {
+            'pixar': 'pixar', 'disney': 'disney', 'dreamworks': 'dreamworks',
+            'ghibli': 'ghibli', 'studio ghibli': 'ghibli', 'anime': 'anime',
+            'cartoon': 'cartoon', 'animated': 'cartoon', 'south park': 'south_park',
+            'simpsons': 'simpsons', 'family guy': 'family_guy', 'chibi': 'chibi',
+            'manga': 'manga', 'looney tunes': 'looney_tunes', '3d animated': 'pixar',
+            'watercolor': 'watercolor', 'oil painting': 'oil_painting',
+            'cyberpunk': 'cyberpunk', 'steampunk': 'steampunk', 'minimalist': 'minimalist',
+            'retro': 'retro', 'vintage': 'vintage', 'pop art': 'pop_art',
+            'art deco': 'art_deco', 'impressionist': 'impressionist',
+            'dreamworks-style': 'dreamworks', 'pixar-style': 'pixar', 'disney-style': 'disney'
+        }
+
+        # Mascot keywords to look for
+        mascot_keywords = [
+            'donkey', 'owl', 'lion', 'bear', 'fox', 'wolf', 'eagle', 'dragon',
+            'unicorn', 'penguin', 'cat', 'dog', 'rabbit', 'monkey', 'elephant',
+            'tiger', 'panda', 'koala', 'dinosaur', 'robot', 'mascot', 'character',
+            'horse', 'bird', 'fish', 'shark', 'whale', 'octopus', 'bee', 'butterfly'
+        ]
+
+        # First, try to extract from user_message (most reliable source)
         if user_message:
             user_msg_lower = user_message.lower()
             logger.info(f"🔍 Session 239: Extracting from original message: {user_message[:100]}...")
 
-            # Extract style from original message
-            style_mapping = {
-                'pixar': 'pixar', 'disney': 'disney', 'dreamworks': 'dreamworks',
-                'ghibli': 'ghibli', 'studio ghibli': 'ghibli', 'anime': 'anime',
-                'cartoon': 'cartoon', 'animated': 'cartoon', 'south park': 'south_park',
-                'simpsons': 'simpsons', 'family guy': 'family_guy', 'chibi': 'chibi',
-                'manga': 'manga', 'looney tunes': 'looney_tunes', '3d animated': 'pixar',
-                'watercolor': 'watercolor', 'oil painting': 'oil_painting',
-                'cyberpunk': 'cyberpunk', 'steampunk': 'steampunk', 'minimalist': 'minimalist',
-                'retro': 'retro', 'vintage': 'vintage', 'pop art': 'pop_art',
-                'art deco': 'art_deco', 'impressionist': 'impressionist'
-            }
             for style_key, style_value in style_mapping.items():
                 if style_key in user_msg_lower:
                     extracted_style = style_value
                     logger.info(f"🎬 Session 239: Extracted style '{style_value}' from user message!")
                     break
 
-            # Extract mascot/character from original message
-            mascot_keywords = [
-                'donkey', 'owl', 'lion', 'bear', 'fox', 'wolf', 'eagle', 'dragon',
-                'unicorn', 'penguin', 'cat', 'dog', 'rabbit', 'monkey', 'elephant',
-                'tiger', 'panda', 'koala', 'dinosaur', 'robot', 'mascot', 'character'
-            ]
             for mascot in mascot_keywords:
                 if mascot in user_msg_lower:
                     extracted_mascot = mascot
                     logger.info(f"🦊 Session 239: Extracted mascot '{mascot}' from user message!")
                     break
 
+        # Session 240: Also extract from topic parameter (fallback when GPT doesn't pass user_message)
+        topic_lower = topic.lower()
+        if not extracted_style:
+            for style_key, style_value in style_mapping.items():
+                if style_key in topic_lower:
+                    extracted_style = style_value
+                    logger.info(f"🎬 Session 240: Extracted style '{style_value}' from topic!")
+                    break
+
+        if not extracted_mascot:
+            for mascot in mascot_keywords:
+                if mascot in topic_lower:
+                    extracted_mascot = mascot
+                    logger.info(f"🦊 Session 240: Extracted mascot '{mascot}' from topic!")
+                    break
+
         # Override GPT's stripped values with extracted ones
         if extracted_style and not style_preferences:
             style_preferences = extracted_style
-            logger.info(f"✅ Session 239: Using extracted style: {style_preferences}")
+            logger.info(f"✅ Session 239/240: Using extracted style: {style_preferences}")
 
         # If we found a mascot but it's not in the topic, add it
         if extracted_mascot and extracted_mascot not in topic.lower():
@@ -659,6 +681,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             'topic': topic,
             'count': count,
             'style_preferences': style_preferences,
+            'extracted_mascot': extracted_mascot,  # Session 240: Store mascot for image prompt
             'year': datetime.now().year,
             'user': self.user,
             'project_id': self.project_id,
@@ -1175,6 +1198,16 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         style_prefs = context.get('style_preferences', '')
         creative_recs = context.get('creative_recommendations', '')
         content_type = context.get('content_type', 'logos')
+        extracted_mascot = context.get('extracted_mascot', '')  # Session 240: Get mascot
+
+        logger.info(f"🎨 Session 240: Image generation - topic='{topic}', style='{style_prefs}', mascot='{extracted_mascot}'")
+
+        # Session 240: Pre-check for animated styles (used to decide if exec recommendations apply)
+        animated_styles = ['pixar', 'disney', 'dreamworks', 'ghibli', 'anime', 'cartoon',
+                          'south_park', 'simpsons', 'family_guy', 'rick_and_morty',
+                          'looney_tunes', 'adventure_time', 'chibi', 'manga']
+        style_lower = (style_prefs or '').lower().strip()
+        is_animated_style = any(anim in style_lower for anim in animated_styles)
 
         # Session 199/200/201: Build content-type-specific prompts and dimensions
         # Session 201: Added "NO TEXT, NO WORDS, NO LETTERS" to all logo prompts
@@ -1233,21 +1266,23 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             style = "product launch, marketing, professional, e-commerce"
         else:
             # Default: logos - NO TEXT
-            # Session 238: Check if user requested an ANIMATED style (Pixar, Disney, etc.)
+            # Session 238/240: Check if user requested an ANIMATED style (Pixar, Disney, etc.)
             # These need character/mascot prompts, NOT flat geometric icons
-            animated_styles = ['pixar', 'disney', 'dreamworks', 'ghibli', 'anime', 'cartoon',
-                              'south_park', 'simpsons', 'family_guy', 'rick_and_morty',
-                              'looney_tunes', 'adventure_time', 'chibi', 'manga']
-
-            style_lower = (style_prefs or '').lower().strip()
-            is_animated_style = any(anim in style_lower for anim in animated_styles)
+            # NOTE: is_animated_style already computed at top of function
 
             if is_animated_style:
-                # Session 238/239: ANIMATED STYLE - generate a mascot/character logo, not flat icon
-                # Include the specific animation style in the prompt for better results
-                prompt = f"3D animated {style_prefs} style mascot character for {topic}, cute friendly character, expressive face, vibrant colors, simple memorable design, professional brand mascot, clean background, NO TEXT, NO WORDS, NO LETTERS"
-                style = f"{style_prefs} style, mascot character, 3D animated, friendly, professional brand"
-                logger.info(f"🎬 Session 238: Detected animated style '{style_prefs}' - using mascot prompt with style")
+                # Session 238/239/240: ANIMATED STYLE - generate a mascot/character logo, not flat icon
+                # Include the specific animation style AND mascot type in the prompt
+                if extracted_mascot:
+                    # User specified a mascot type (donkey, owl, etc.) - use it!
+                    prompt = f"{style_prefs} 3D animated style {extracted_mascot} character mascot, cute friendly {extracted_mascot} with expressive face, vibrant colors, simple memorable design, professional brand mascot for {topic}, clean solid background, NO TEXT, NO WORDS, NO LETTERS"
+                    style = f"{style_prefs} style, {extracted_mascot} mascot character, 3D animated, friendly, professional brand"
+                    logger.info(f"🎬 Session 240: Using {style_prefs} style with {extracted_mascot} mascot!")
+                else:
+                    # No specific mascot - generic animated mascot
+                    prompt = f"3D animated {style_prefs} style mascot character for {topic}, cute friendly character, expressive face, vibrant colors, simple memorable design, professional brand mascot, clean background, NO TEXT, NO WORDS, NO LETTERS"
+                    style = f"{style_prefs} style, mascot character, 3D animated, friendly, professional brand"
+                    logger.info(f"🎬 Session 238: Detected animated style '{style_prefs}' - using generic mascot prompt")
             else:
                 # Default: flat/geometric logo
                 prompt = f"single professional {topic} logo mark, abstract symbol only, NO TEXT, NO WORDS, NO LETTERS, minimalist icon, bold geometric shapes, simple clean design"
@@ -1256,7 +1291,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             width, height = 1024, 1024
 
         if creative_recs:
-            # Extract key recommendations
+            # Add executive recommendations to prompt
             prompt += f", {creative_recs[:200]}"
 
         if style_prefs:

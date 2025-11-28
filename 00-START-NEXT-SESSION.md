@@ -1,40 +1,79 @@
-# Session 239: Ready for Next Feature
+# Session 240: New Workflow Engine Complete!
 
 **Date:** November 27, 2025
-**Previous Session:** 238 (Major Workflow Fixes)
-**Session Type:** Development Ready
+**Previous Session:** 239 (Style Extraction Fixes)
+**Session Type:** Major Architecture Rebuild
 
 ---
 
-## Session 238 Complete! 🎉
+## Session 240 Complete!
 
-Major improvements to the workflow orchestration and logo generation system.
+### Philosophy Shift: User Vision is SACRED
 
-### Bug Fixes
+We rebuilt the workflow engine from the ground up with a new philosophy:
+- **User provides:** Style, Subject, Purpose - These are SACRED, never overridden
+- **System enhances:** Trending colors, moods, compositions - ENHANCE, don't replace
 
-1. **Workflow Loop Fix** - GPT was looping 5 times on "research and create" requests
-   - **Root Cause:** `workflow_orchestration_agent` wasn't in tool definitions
-   - **Fix:** Added the tool so GPT calls it in ONE shot
-   - **File:** `core/personal_ai_assistant_enhanced.py`
+**The "Facebook Blue" Rule:** What if AI told Facebook it couldn't use blue? Exactly - user's style choices are SACRED.
 
-2. **Text-on-Logos Fix** - SDXL was ignoring "no text" instructions
-   - **Fix:** Switch to SD3 model for logos/brand_identity
-   - **Result:** Clean, text-free logos!
-   - **Files:** `agents/workflow_orchestration_agent.py`, `agents/image_agent.py`
+### New Workflow Engine v2
 
-3. **Pixar Style Fix** - Animated styles were generating flat geometric icons
-   - **Fix:** Detect animated styles (pixar, disney, ghibli, etc.) and use mascot prompts
-   - **Result:** Proper 3D animated mascot characters!
-   - **File:** `agents/workflow_orchestration_agent.py`
+Created `/agents/workflow_engine.py` with:
+- `IntentParser` - Extracts user's style, subject, content type, count
+- `PromptEnhancer` - Builds prompts that preserve user vision + add trending enhancements
+- `WorkflowEngine` - Orchestrates the full workflow
 
-4. **Executive Feedback Fix** - Verbose recommendations were polluting prompts
-   - **Fix:** Rewritten extraction to pull ONLY actionable keywords (colors, shapes, styles, moods)
-   - **Result:** Cleaner, more relevant prompts
-   - **File:** `agents/workflow_orchestration_agent.py`
+### New API Endpoints
 
-### Documentation Created
+- `POST /api/v2/workflow/execute/` - Execute with user-vision-first philosophy
+- `POST /api/v2/workflow/parse/` - Parse intent for UI preview
 
-- `docs/architecture/PROMPTING_SYSTEM.md` - Complete architecture documentation
+### Content Types Supported
+
+| Type | Dimensions | Text Allowed |
+|------|------------|--------------|
+| logo | 1024x1024 | NO |
+| social_image | 1080x1080 | YES |
+| youtube_thumbnail | 1280x720 | YES |
+| banner | 1200x630 | YES |
+| product_photo | 1024x1024 | NO |
+| illustration | 1024x1024 | NO |
+| brand_identity | 1024x1024 | NO |
+
+### Frontend Integration
+
+Updated `ai_image_studio.html`:
+- `executeWorkflowV2()` - Calls new v2 API
+- `parseWorkflowIntentV2()` - Gets intent preview
+- Workflow detection now routes to v2 engine for content creation
+
+### Test Results
+
+```
+=== DreamWorks Donkey Test ===
+Style: dreamworks
+Subject: donkey
+Content Type: logo
+Purpose: tech startup
+Wants Research: True
+
+=== Social Media Images Test ===
+Style: None
+Content Type: social_image (NOT logo!)
+Count: 3
+```
+
+---
+
+## Files Created/Modified
+
+### New Files
+- `agents/workflow_engine.py` - New unified workflow engine
+- `core/views_workflow_engine.py` - v2 API endpoints
+
+### Modified Files
+- `core/urls.py` - Added v2 routes
+- `ai_core/templates/ai_image_studio.html` - Frontend integration
 
 ---
 
@@ -68,40 +107,17 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Check Health
-curl http://localhost:8000/health/ping/
+# 3. Test New Workflow
+# Say: "Research trending AI tools and create a DreamWorks-style donkey logo"
+# The system will preserve YOUR style (DreamWorks) and YOUR subject (donkey)
+# while enhancing with trending colors and moods!
 ```
 
 ---
 
-## Session 238 Commits
+## Next Session Ideas
 
-1. `9737c2a` - Add workflow_orchestration_agent to tool definitions
-2. `acc795f` - Use SD3 model for logo generation
-3. `[pending]` - Executive feedback extraction + Pixar style detection
-
----
-
-## Key Files Modified (Session 238)
-
-| File | Changes |
-|------|---------|
-| `core/personal_ai_assistant_enhanced.py` | Added workflow_orchestration_agent tool definition |
-| `agents/workflow_orchestration_agent.py` | SD3 for logos, Pixar detection, keyword extraction |
-| `agents/image_agent.py` | SD3 + strong negative prompt for logos |
-| `docs/architecture/PROMPTING_SYSTEM.md` | Complete prompting flow documentation |
-
----
-
-## What's Next?
-
-The workflow system is now much more reliable. Possible next steps:
-
-1. **Voice Input Improvements** - Continue refining the voice-to-creation pipeline
-2. **More Animated Styles** - Add more style detection (watercolor, cyberpunk, etc.)
-3. **Spider Intelligence in Prompts** - Inject market intelligence as context
-4. **New Feature** - Based on user priorities
-
----
-
-**Always read this file first - it has the current context!**
+1. **Test the new workflow in browser** - Try various style/subject combinations
+2. **Add more animated styles** - Adventure Time, Gravity Falls, etc.
+3. **Improve executive enhancement parsing** - Better color/mood extraction
+4. **Add thumbnail-specific enhancements** - CTR optimization tips

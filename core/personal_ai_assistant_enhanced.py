@@ -513,7 +513,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         },
                         "topic": {
                             "type": "string",
-                            "description": "The research topic INCLUDING any character/mascot mentioned. Examples: 'AI content generation with donkey mascot', 'coffee shop with owl character', 'tech startup'. If user mentions a specific character (donkey, owl, lion, etc.), include it in the topic!"
+                            "description": "The research topic (e.g., 'modern AI company', 'fitness brand', 'coffee shop')"
                         },
                         "count": {
                             "type": "integer",
@@ -4918,23 +4918,42 @@ CRITICAL INSTRUCTIONS:
     - If you see "🛑 STRATEGIC/EXECUTIVE REVIEW COMPLETE", do NOT call coleadership_agent or strategic_review again.
     - Instead, proceed to the NEXT STEP suggested in the continuation message.
     REPEATING TOOL CALLS WASTES USER CREDITS AND IS STRICTLY FORBIDDEN.
-17. **WORKFLOW ORCHESTRATION AGENT (SESSION 191 - HIGHEST PRIORITY):**
+17. **WORKFLOW ORCHESTRATION AGENT (SESSION 191/240 - HIGHEST PRIORITY):**
     ⚡ CRITICAL: For ANY request involving BOTH "research" AND "create/make/generate":
-    ✅ Call workflow_orchestration_agent(workflow="research_and_create_logos", topic="...", count=N)
-    ⛔ DO NOT call web_search, coleadership_agent, image_generation_agent, or character_training_agent individually!
-    ⛔ DO NOT call audio_generation_agent - logo workflows do NOT need audio!
+    ✅ Call workflow_orchestration_agent with the CORRECT workflow type!
+    ⛔ DO NOT call web_search, coleadership_agent, image_generation_agent individually!
+
+    **CHOOSE THE RIGHT WORKFLOW based on what user wants:**
+
+    | User Wants | Workflow | Example |
+    |------------|----------|---------|
+    | Logos, brand marks, icons | research_and_create_logos | "create logos for my startup" |
+    | Social media images, artwork, illustrations | research_and_create_images | "create images for social media" |
+    | YouTube thumbnails | youtube_thumbnail_package | "make thumbnails for my channel" |
+    | Full brand identity (logo + colors + assets) | brand_identity_package | "create brand identity" |
+    | Product photos, e-commerce images | product_photography_kit | "product photos for my store" |
+    | Animate an existing logo | logo_to_video | "animate my logo" |
+
+    **Keywords to detect:**
+    - LOGOS: "logo", "brand mark", "icon", "symbol", "emblem"
+    - IMAGES/ARTWORK: "image", "artwork", "illustration", "social media", "post", "graphic"
+    - THUMBNAILS: "thumbnail", "YouTube", "video thumbnail"
+    - BRAND IDENTITY: "brand identity", "branding package", "brand kit"
+    - PRODUCT PHOTOS: "product photo", "e-commerce", "product shot"
 
     The workflow_orchestration_agent will AUTOMATICALLY handle ALL steps:
     1. Web research (research trends and best practices)
     2. Executive review (get co-leadership creative direction)
-    3. Image generation (create the logos)
+    3. Image generation (create the content)
     4. Project organization (save everything to a project)
 
-    Examples that MUST use workflow_orchestration_agent:
+    **Examples:**
+    - "Research AI trends and create images for social media"
+      → workflow_orchestration_agent(workflow="research_and_create_images", topic="AI trends for social media", count=3)
     - "Research modern AI company logo trends and create 3 professional logos"
       → workflow_orchestration_agent(workflow="research_and_create_logos", topic="modern AI company", count=3)
-    - "Look up fitness brand logos and make 5 designs"
-      → workflow_orchestration_agent(workflow="research_and_create_logos", topic="fitness brand", count=5)
+    - "Look up fitness content and make YouTube thumbnails"
+      → workflow_orchestration_agent(workflow="youtube_thumbnail_package", topic="fitness content", count=3)
 
     This ensures proper order and prevents tool calling errors. ONE tool call handles everything!
 
@@ -4945,10 +4964,14 @@ CRITICAL INSTRUCTIONS:
     - CORRECT: "single professional logo design" with count=3 to get 3 separate logo images
     - The prompt should describe ONE logo. The count parameter handles creating multiple images.
 
-**Example - CORRECT (Session 191 - Workflow Orchestration Agent):**
-User: "Research cloud computing logo trends and create 3 modern logos"
+**Example - CORRECT (Session 191/240 - Workflow Orchestration Agent):**
+User: "Research tech trends and create images for social media"
+Call: workflow_orchestration_agent(workflow="research_and_create_images", topic="tech trends for social media", count=3)
+[Detected "images" + "social media" → uses research_and_create_images workflow, NOT logos!]
+
+User: "Research cloud computing and create 3 logos"
 Call: workflow_orchestration_agent(workflow="research_and_create_logos", topic="cloud computing", count=3)
-[ONE tool call handles ALL steps automatically: research → executive review → image generation → project creation]
+[Detected "logos" → uses research_and_create_logos workflow]
 
 **Example - CORRECT (Session 131 - Agent Orchestration):**
 User: "Remove background from image 3"
