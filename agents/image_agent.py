@@ -273,15 +273,22 @@ class ImageAgent:
             prompt = ", ".join(prompt_parts)
 
             # Generate logos
+            # Session 238: Use SD3 for better text avoidance + strong negative prompt
             results = []
+            logo_negative_prompt = (
+                "text, text, text, words, words, letters, letters, typography, font, writing, "
+                "alphabet, numbers, watermark, signature, label, caption, title, slogan, "
+                "brand name, company name, initials, monogram, readable text, any text, "
+                "blurry, low quality, pixelated, distorted, cluttered, busy background"
+            )
             for i in range(count):
                 result = self.generate(
                     prompt=prompt,
                     style=style,
-                    model=model,
+                    model='sd3',  # Session 238: SD3 follows text-avoidance instructions better
                     size='1024x1024',
                     session=session,
-                    negative_prompt="blurry, low quality, pixelated, distorted text, cluttered"
+                    negative_prompt=logo_negative_prompt
                 )
                 if result.get('success'):
                     results.append({
