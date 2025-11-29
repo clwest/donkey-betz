@@ -3,7 +3,9 @@ AI Content Creation Agents Registry
 ====================================
 
 Session 219: Defines specialized agents for AI Content Creation platform.
-These agents receive intelligence from the 67 spiders and provide:
+Session 266: Updated to use central prompt registry.
+
+These agents receive intelligence from the 70 spiders and provide:
 - Trend analysis and recommendations
 - Style suggestions and inspiration
 - Content ideas and opportunities
@@ -11,6 +13,8 @@ These agents receive intelligence from the 67 spiders and provide:
 
 Each agent is designed to receive specific spider data categories
 and transform them into actionable intelligence for users.
+
+NOTE: Agent prompts are now defined in core/prompts/registry.py
 """
 
 import logging
@@ -20,6 +24,14 @@ from datetime import datetime, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Session 266: Import from central registry
+try:
+    from core.prompts import get_agent_prompt, get_platform_context
+    REGISTRY_AVAILABLE = True
+except ImportError:
+    REGISTRY_AVAILABLE = False
+    logger.warning("Prompt registry not available, using legacy prompts")
 
 
 class AgentCapability(Enum):
@@ -45,20 +57,32 @@ class AIContentAgent:
     description: str
     capabilities: List[AgentCapability]
     data_interests: List[str]  # Spider categories this agent is interested in
-    prompt_template: str
+    prompt_template: str = ""  # Session 266: Now optional, pulls from registry
     is_active: bool = True
     priority: int = 5  # 1-10, higher = more important
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
+    def get_prompt(self) -> str:
+        """Session 266: Get prompt from registry, fallback to template."""
+        if REGISTRY_AVAILABLE:
+            # Try to get from central registry first
+            registry_prompt = get_agent_prompt(self.name, include_platform_context=True)
+            if registry_prompt and len(registry_prompt) > 100:
+                return registry_prompt
+        # Fallback to legacy prompt_template
+        return self.prompt_template
+
     def get_context_prompt(self, intelligence_data: List[Dict]) -> str:
         """Generate context-enhanced prompt with spider intelligence"""
+        base_prompt = self.get_prompt()
+
         if not intelligence_data:
-            return self.prompt_template
+            return base_prompt
 
         # Format intelligence into context
         intel_summary = self._format_intelligence(intelligence_data)
 
-        return f"""{self.prompt_template}
+        return f"""{base_prompt}
 
 ## Current Intelligence ({len(intelligence_data)} items):
 {intel_summary}

@@ -749,6 +749,148 @@ class SpiderIntelligenceService:
 
         return (intersection / len(query_words)) + phrase_bonus
 
+    def get_creative_trends(self, hours: int = 48, limit: int = 10) -> dict:
+        """
+        Session 266: Get trending creative/design styles from spider data.
+
+        Queries creative spiders (Dribbble, Behance, Medium, Etsy, etc.)
+        for trending styles, colors, and design patterns.
+
+        Returns:
+            Dict with trending styles, colors, and design patterns for AI generation
+        """
+        since = timezone.now() - timedelta(hours=hours)
+
+        # Creative spider sources
+        creative_spiders = [
+            'dribbble', 'behance', 'medium', 'etsy', 'creativemarket',
+            'envato', 'unsplash', 'pinterest', 'figma', 'canva'
+        ]
+
+        creative_data = self.SpiderData.objects.filter(
+            spider_name__in=creative_spiders,
+            created_at__gte=since
+        ).order_by('-created_at')
+
+        # Design terms to extract
+        design_styles = {
+            'abstract', 'geometric', 'minimalist', 'maximalist', 'vintage', 'retro',
+            'modern', 'contemporary', 'boho', 'bohemian', 'scandinavian', 'industrial',
+            'art-deco', 'art-nouveau', 'bauhaus', 'brutalist', 'cyberpunk', 'vaporwave',
+            'watercolor', 'line-art', 'illustration', 'vector', 'flat-design',
+            'gradient', '3d', 'isometric', 'hand-drawn', 'sketch', 'botanical',
+            'floral', 'nature', 'organic', 'textured', 'grunge', 'clean', 'sleek',
+            'playful', 'elegant', 'luxury', 'rustic', 'coastal', 'tropical',
+            'psychedelic', 'surreal', 'pop-art', 'collage', 'mixed-media'
+        }
+
+        color_palettes = {
+            'earth-tones', 'pastels', 'neutrals', 'monochrome', 'jewel-tones',
+            'neon', 'muted', 'vibrant', 'warm', 'cool', 'terracotta', 'sage',
+            'blush', 'dusty-rose', 'mustard', 'olive', 'navy', 'burgundy',
+            'coral', 'teal', 'mauve', 'cream', 'charcoal', 'forest-green'
+        }
+
+        # Count occurrences
+        style_counts = Counter()
+        color_counts = Counter()
+        keywords = []
+        sources_found = set()
+
+        for entry in creative_data:
+            if not entry.raw_data:
+                continue
+
+            sources_found.add(entry.spider_name)
+            items = entry.raw_data.get('items', [])
+
+            for item in items:
+                # Extract from title, description, tags
+                text_fields = [
+                    item.get('title', ''),
+                    item.get('description', ''),
+                    ' '.join(item.get('tags', []) if isinstance(item.get('tags'), list) else []),
+                    item.get('category', ''),
+                ]
+                combined_text = ' '.join(text_fields).lower()
+
+                # Count style mentions
+                for style in design_styles:
+                    if style in combined_text or style.replace('-', ' ') in combined_text:
+                        style_counts[style] += 1
+
+                # Count color palette mentions
+                for color in color_palettes:
+                    if color in combined_text or color.replace('-', ' ') in combined_text:
+                        color_counts[color] += 1
+
+                # Extract notable keywords
+                if item.get('tags'):
+                    tags = item.get('tags')
+                    if isinstance(tags, list):
+                        keywords.extend([t.lower() for t in tags[:5]])
+
+        # Build trending results
+        trending_styles = [
+            {'style': style, 'count': count, 'type': 'design'}
+            for style, count in style_counts.most_common(limit)
+        ]
+
+        trending_colors = [
+            {'palette': color, 'count': count, 'type': 'color'}
+            for color, count in color_counts.most_common(limit)
+        ]
+
+        # Get unique relevant keywords
+        keyword_counts = Counter(keywords)
+        top_keywords = [kw for kw, _ in keyword_counts.most_common(20)
+                        if kw not in self.STOPWORDS and len(kw) > 3]
+
+        # If no spider data, provide curated defaults based on current design trends
+        if not trending_styles:
+            trending_styles = [
+                {'style': 'abstract', 'count': 0, 'type': 'default'},
+                {'style': 'botanical', 'count': 0, 'type': 'default'},
+                {'style': 'geometric', 'count': 0, 'type': 'default'},
+                {'style': 'watercolor', 'count': 0, 'type': 'default'},
+                {'style': 'line-art', 'count': 0, 'type': 'default'},
+            ]
+
+        if not trending_colors:
+            trending_colors = [
+                {'palette': 'earth-tones', 'count': 0, 'type': 'default'},
+                {'palette': 'sage', 'count': 0, 'type': 'default'},
+                {'palette': 'neutrals', 'count': 0, 'type': 'default'},
+                {'palette': 'terracotta', 'count': 0, 'type': 'default'},
+            ]
+
+        return {
+            'trending_styles': trending_styles,
+            'trending_colors': trending_colors,
+            'keywords': top_keywords[:10],
+            'sources_queried': list(sources_found),
+            'data_freshness_hours': hours,
+            'has_live_data': len(sources_found) > 0,
+            'summary': self._build_creative_summary(trending_styles, trending_colors)
+        }
+
+    def _build_creative_summary(self, styles: list, colors: list) -> str:
+        """Build a human-readable summary of creative trends."""
+        parts = []
+
+        if styles:
+            style_names = [s['style'] for s in styles[:5]]
+            parts.append(f"Trending styles: {', '.join(style_names)}")
+
+        if colors:
+            color_names = [c['palette'] for c in colors[:5]]
+            parts.append(f"Popular palettes: {', '.join(color_names)}")
+
+        if not parts:
+            parts.append("Using curated 2024 design trends")
+
+        return '. '.join(parts) + '.'
+
 
 # Convenience function for quick access
 def get_spider_intelligence() -> SpiderIntelligenceService:

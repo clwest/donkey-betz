@@ -23766,6 +23766,19 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 nextStepSuggestion = `\n\n🎯 NEXT STEP: Research and image generation are complete. Call create_project_from_research to organize this work into a project. Use the image IDs: ${cumulativeStats.imageIds.join(', ')}`;
                             }
 
+                            // Session 267: STOP workflow after simple image generation (no research context)
+                            // If images were generated and this was NOT a research workflow, we're done!
+                            if (cumulativeStats.imagesGenerated > 0 && cumulativeStats.searchesCompleted === 0 && !cumulativeStats.strategicReviewCompleted) {
+                                console.log('✅ Session 267: Simple image generation complete - stopping workflow');
+                                console.log('📊 Final stats:', cumulativeStats);
+
+                                // Show completion message
+                                this.updateWorkflowStatus('✅ Image generation complete!', true);
+
+                                // Break out of the autonomous loop
+                                break;
+                            }
+
                             currentMessage = `Tool execution results:\n${toolSummary}${completionStatus}${nextStepSuggestion}\n\nIMPORTANT INSTRUCTIONS:\n1. Review what has been completed above.\n2. If images are marked as COMPLETE, do NOT generate more images.\n3. Follow the NEXT STEP suggestion above.\n4. Only call tools that haven't been completed yet.\n5. If all requested work is done, provide a final summary to the user.`;
 
                             // Show thinking indicator for continuation

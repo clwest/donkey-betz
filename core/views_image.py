@@ -7432,7 +7432,23 @@ def execute_tool(request):
         elif tool_name in ('generate_image', 'image_generation_agent'):
             result = _execute_generate_image(request.user, parameters, session=session)
         elif tool_name in ('generate_video', 'video_generation_agent'):
-            result = _execute_generate_video(request.user, parameters, session=session)
+            # Session 267: SAFETY CHECK - Redirect logo/banner requests to image generation
+            # GPT sometimes incorrectly routes these to video generation
+            prompt = parameters.get('params', {}).get('prompt', '').lower()
+            if 'logo' in prompt or 'banner' in prompt or 'icon' in prompt:
+                logger.warning(f"⚠️ Session 267: Blocking video generation for logo/banner request. Redirecting to image generation.")
+                logger.warning(f"⚠️ Original prompt: {prompt}")
+                # Redirect to image generation instead
+                image_params = {
+                    'prompt': parameters.get('params', {}).get('prompt', ''),
+                    'count': 3,
+                    'params': {'width': 1024, 'height': 1024, 'quality': 'high'}
+                }
+                result = _execute_generate_image(request.user, image_params, session=session)
+                result['redirected_from'] = 'video_generation_agent'
+                result['redirect_reason'] = 'Logo/banner requests should use image generation, not video'
+            else:
+                result = _execute_generate_video(request.user, parameters, session=session)
         elif tool_name == 'inpaint':
             result = _execute_inpaint(request.user, parameters)
         elif tool_name == 'resize_image_for_format':
@@ -8003,13 +8019,20 @@ def _execute_generate_image(user, parameters, session=None):
             size = parameters.get('size', '1024x1024')
 
         # Session 182: Get project for association
+        # Session 267: Validate UUID before querying to avoid ValidationError
         project = None
         project_id = parameters.get('project_id')
         if project_id:
             from content.models import CreativeProject
+            import uuid
+            # Validate that project_id is a valid UUID before querying
             try:
+                uuid.UUID(str(project_id))  # This will raise ValueError if invalid
                 project = CreativeProject.objects.get(id=project_id, user=user)
                 logger.info(f"📁 Image will be associated with project: {project.name}")
+            except ValueError:
+                logger.warning(f"⚠️ Invalid project_id format (not a UUID): {project_id}")
+                project_id = None  # Clear invalid project_id
             except CreativeProject.DoesNotExist:
                 logger.warning(f"⚠️ Project {project_id} not found")
 

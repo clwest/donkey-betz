@@ -1,156 +1,286 @@
-# Session 267: Super Platform FULLY INTEGRATED!
+# Session 268: Clean Architecture Implementation - Phase 1
 
-**Date:** November 28, 2025
-**Previous Session:** 266 (Prompting System Integration Complete!)
-**Session Type:** Polish & Optimization
-**Status:** COMPLETE - Super Platform Connected to Active System!
-
----
-
-## Session 266 COMPLETED: Prompting System Fully Integrated!
-
-The Super Platform infrastructure is now CONNECTED to the active prompting system!
-
-### What Was Done:
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **1** | QueryClassifier injected | ✅ DONE |
-| **2** | ContextAggregator injected | ✅ DONE |
-| **3** | Spider intelligence in prompts | ✅ DONE |
-| **4** | Learning Loop outcome recording | ✅ DONE |
-| **5** | Sci-Fi context for personality | ✅ DONE |
-
-### The New Flow:
-
-```
-User → views_assistant_bypass → EnhancedPersonalAIAssistant
-                                      ↓
-                                 QueryClassifier.classify()
-                                 🎯 Classifies as: question, creation, workflow, etc.
-                                      ↓
-                                 ContextAggregator.aggregate()
-                                 📊 Gathers: spider data, memories, mood
-                                      ↓
-                                 _build_spider_intelligence_section()
-                                 🕷️ Injects trending topics, news, market data
-                                      ↓
-                                 GPT-5.1 with RICH CONTEXT
-                                      ↓
-                                 _record_learning_outcome()
-                                 📚 Records for improvement
-```
+**Date:** November 29, 2025
+**Previous Session:** 267 (Clean Architecture Proposal)
+**Session Type:** Major Architecture Overhaul
+**Status:** READY TO IMPLEMENT
 
 ---
 
-## Quick Start
+## CRITICAL CONTEXT: Why We're Doing This
+
+### The Problem (Session 267)
+The Personal Assistant has 14+ tools available and GPT picks the wrong one:
+- "Create a cyberpunk logo" → GPT calls `video_generation_agent` (WRONG!)
+- Questions → GPT calls `workflow_orchestration_agent` (WRONG!)
+- We tried band-aid fixes (tool descriptions, ordering, safety redirects) - they don't work reliably
+
+### The Root Cause
+**The Assistant knows too much.** It sees all tools and makes bad choices.
+
+### The Solution: Layered Architecture
+```
+User → Personal Assistant → Agent Router → Specialized Agents → Tools
+```
+
+- **Assistant** has ONLY `delegate_to_agent` - cannot misroute
+- **Each Agent** has ONLY its domain tools - ImageAgent cannot generate video
+- **Router** is deterministic string matching - no GPT guessing
+
+---
+
+## APPROVED ARCHITECTURE
+
+Full proposal: `docs/SESSION_267_CLEAN_ARCHITECTURE_PROPOSAL.md`
+
+### Key Design Decisions:
+
+| Decision | Choice |
+|----------|--------|
+| Assistant Tools | ONLY: `delegate_to_agent`, `remember_preference`, `recall_memory` |
+| Agent Tool Isolation | Each agent sees ONLY its own tools |
+| Routing | Deterministic (string match on agent_name), NOT LLM-based |
+| Workflow Orchestration | Server-side WorkflowAgent, NOT frontend loop |
+| Sci-Fi Integration | All 15 features preserved via SciFiContext injection |
+| Spider Integration | SpiderIntelligenceService feeds ContextAggregator |
+| Migration | Feature flag `USE_CLEAN_AGENT_ARCHITECTURE` |
+
+---
+
+## Phase 1 Tasks (This Session)
+
+### 1. Create Base Agent Class
+```
+core/agents/base_agent.py
+```
+- Abstract base class
+- TimeTravelMixin integration
+- Standard execute() interface
+- Sci-Fi context injection point
+- Spider context injection point
+
+### 2. Create ImageAgent (Test Case)
+```
+core/agents/image_agent.py
+```
+- System prompt: "You create images. That's all."
+- Tools: ONLY `generate_image`, `batch_generate`
+- NO video, audio, 3D, or search tools
+- Connects to existing Stability AI integration
+
+### 3. Create Agent Router
+```
+core/agent_router.py
+```
+- Simple dictionary mapping: `agent_name` → `AgentClass`
+- Injects SciFiContext before execution
+- Injects SpiderContext before execution
+- Returns AgentResult
+
+### 4. Add Feature Flag
+```python
+# In settings or constants
+USE_CLEAN_AGENT_ARCHITECTURE = False  # Start disabled
+```
+
+### 5. Test ImageAgent in Isolation
+- Direct call to ImageAgent.execute()
+- Verify it can ONLY generate images
+- Verify sci-fi context is injected
+- Verify spider context is injected
+
+---
+
+## Files to Create
+
+```
+core/
+├── agents/
+│   ├── __init__.py
+│   ├── base_agent.py       # Abstract base with TimeTravelMixin
+│   └── image_agent.py      # Image generation ONLY
+├── agent_router.py         # Simple deterministic routing
+```
+
+---
+
+## Reference: Existing Code to Leverage
+
+### Image Generation (use this)
+```python
+# core/views_image.py - _execute_generate_image()
+# This is the actual Stability AI integration - ImageAgent should call this
+```
+
+### TimeTravelMixin (inherit this)
+```python
+# agents/time_travel_mixin.py - TimeTravelMixin
+# Provides record_decision(), time_travel_session()
+```
+
+### SciFi Integration (use this)
+```python
+# core/super_platform/scifi_integration.py - SciFiIntegrationService
+# Provides get_context(agent_name) → SciFiContext
+```
+
+### Spider Intelligence (use this)
+```python
+# core/services/spider_intelligence.py - SpiderIntelligenceService
+# Provides get_insights_for_prompt(query) → context dict
+```
+
+---
+
+## Implementation Pattern
+
+```python
+# core/agents/base_agent.py
+from abc import ABC, abstractmethod
+from agents.time_travel_mixin import TimeTravelMixin
+
+class BaseAgent(ABC, TimeTravelMixin):
+    """Base class for all clean architecture agents."""
+
+    name: str = "BaseAgent"
+    system_prompt: str = ""
+    tools: list = []
+
+    @abstractmethod
+    def execute(self, task: str, context: dict,
+                scifi_context: dict, spider_context: dict) -> dict:
+        """Execute the agent's task. Must be implemented by subclasses."""
+        pass
+
+    def _build_prompt(self, task: str, scifi_context: dict, spider_context: dict) -> str:
+        """Build the complete prompt with all context."""
+        prompt = self.system_prompt
+
+        # Add mood modifier if available
+        if scifi_context.get('mood'):
+            prompt += f"\n\nCurrent mood: {scifi_context['mood']['state']}"
+            prompt += f"\n{scifi_context['mood']['prompt_modifier']}"
+
+        # Add spider insights if available
+        if spider_context.get('trends'):
+            prompt += f"\n\nCurrent trends: {spider_context['trends']}"
+
+        prompt += f"\n\nTask: {task}"
+        return prompt
+```
+
+```python
+# core/agents/image_agent.py
+from core.agents.base_agent import BaseAgent
+from core.views_image import _execute_generate_image
+
+class ImageAgent(BaseAgent):
+    """Agent specialized in image generation. Cannot do anything else."""
+
+    name = "ImageAgent"
+    system_prompt = """You are ImageAgent, a specialist in creating images.
+
+Your ONLY job is to generate images based on the task given to you.
+You have ONE tool: generate_image.
+
+When given a task like "create a cyberpunk logo for a tech startup":
+1. Enhance the prompt for better results
+2. Call generate_image with appropriate parameters
+3. Return the result
+
+You cannot create videos, audio, or anything else. Just images."""
+
+    tools = [
+        {
+            "type": "function",
+            "name": "generate_image",
+            "description": "Generate an image from a text prompt",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "Text description"},
+                    "count": {"type": "integer", "default": 1},
+                    "style": {"type": "string"},
+                    "size": {"type": "string", "default": "1024x1024"}
+                },
+                "required": ["prompt"]
+            }
+        }
+    ]
+
+    def execute(self, task: str, context: dict,
+                scifi_context: dict, spider_context: dict) -> dict:
+        """Generate images based on the task."""
+        with self.time_travel_session("image_generation", task):
+            # Build prompt with context
+            prompt = self._build_prompt(task, scifi_context, spider_context)
+
+            # Call GPT with ONLY image tools
+            # ... GPT call here ...
+
+            # Execute the tool call
+            # result = _execute_generate_image(user, params, session)
+
+            return result
+```
+
+---
+
+## Testing Checklist
+
+After Phase 1 implementation:
+
+- [ ] `ImageAgent` can be instantiated
+- [ ] `ImageAgent.execute()` generates images
+- [ ] `ImageAgent` has NO access to video tools
+- [ ] `AgentRouter.route("ImageAgent", task)` works
+- [ ] Sci-Fi context is injected into prompt
+- [ ] Spider context is injected into prompt
+- [ ] TimeTravelMixin records decisions
+- [ ] Feature flag controls old vs new path
+
+---
+
+## What NOT To Do Yet
+
+- Do NOT modify Personal Assistant yet (Phase 4)
+- Do NOT modify frontend yet (Phase 5)
+- Do NOT create all agents yet (Phase 2)
+- Do NOT remove old code yet (Phase 6)
+
+Focus ONLY on Phase 1: base class, ImageAgent, router, feature flag, testing.
+
+---
+
+## Quick Reference Commands
 
 ```bash
-# 1. Start Platform
+# Start servers
 make start
 make celery
 
-# 2. Read the integration blueprint
-cat docs/SESSION_266_PROMPTING_SYSTEM_INTEGRATION.md
-
-# 3. The main file to modify:
-code core/personal_ai_assistant_enhanced.py
-
-# 4. Super Platform components to import:
-# from core.super_platform import (
-#     QueryClassifier,
-#     ContextAggregator,
-#     DynamicPromptBuilder,
-#     get_learning_loop_service,
-#     get_scifi_integration_service,
-# )
+# Test ImageAgent directly (after implementation)
+python manage.py shell
+>>> from core.agents.image_agent import ImageAgent
+>>> from core.agent_router import AgentRouter
+>>>
+>>> agent = ImageAgent()
+>>> result = agent.execute("create a cyberpunk logo", {}, {}, {})
+>>> print(result)
 ```
 
 ---
 
-## Key Files
+## Full Implementation Plan (All Phases)
 
-### Files to MODIFY:
-
-| File | Purpose |
-|------|---------|
-| `core/personal_ai_assistant_enhanced.py` | Add classification, aggregation, dynamic prompts |
-
-### Files to USE (not modify):
-
-| File | Purpose |
-|------|---------|
-| `core/super_platform/query_classifier.py` | 9 query types, pattern matching |
-| `core/super_platform/context_aggregator.py` | Spider + memory + mood gathering |
-| `core/super_platform/prompt_builder.py` | Dynamic prompt construction |
-| `core/super_platform/learning_loop.py` | Outcome recording |
-| `core/super_platform/scifi_integration.py` | Agent personality |
-
-### Files to PRESERVE (working correctly):
-
-| File | Why |
-|------|-----|
-| `core/llm_enforcer.py` | GPT-5.1 Responses API works perfectly |
-| `core/views_assistant_bypass.py` | Entry point is fine |
-
----
-
-## Historical Context
-
-### Session 25 (October 2025)
-- GPT-5-mini needed explicit "FINAL ANSWER:" markers
-- Fixed in `llm_enforcer.py` - DONE
-
-### Session 129
-- Upgraded to GPT-5.1 with Responses API
-- Tool calling works - DONE
-
-### Sessions 264-265 (November 2025)
-- Built Super Platform (6 phases)
-- All components ready but NOT CONNECTED
-
-### Session 266 (Current)
-- Connect Super Platform to active prompting system
-- This is the integration session
-
----
-
-## Super Platform Components (ALL READY)
-
-| Component | Import | Purpose |
-|-----------|--------|---------|
-| QueryClassifier | `from core.super_platform import QueryClassifier` | Classify user intent |
-| ContextAggregator | `from core.super_platform import ContextAggregator` | Gather all context |
-| DynamicPromptBuilder | `from core.super_platform import DynamicPromptBuilder` | Build smart prompts |
-| LearningLoopService | `from core.super_platform import get_learning_loop_service` | Record outcomes |
-| SciFiIntegrationService | `from core.super_platform import get_scifi_integration_service` | Agent personality |
-| AgentContextService | `from core.super_platform import get_agent_context_service` | Spider data for agents |
-| RevenueIntegrationService | `from core.super_platform import get_revenue_integration_service` | Opportunities |
-| AutonomyEngine | `from core.super_platform import get_autonomy_engine` | Self-operating |
-
----
-
-## Test After Integration
-
-```python
-# In Django shell:
-from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-user = User.objects.first()
-assistant = EnhancedPersonalAIAssistant(user)
-
-# Should now use dynamic prompts with spider intelligence
-response = assistant.process_message("What's trending in AI?")
-print(response)
-
-# Should see in logs:
-# - Query classified as "question"
-# - Context aggregated from spider_intelligence
-# - Dynamic prompt built
-# - Spider trends in response
-```
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **1** | Base agent + ImageAgent + Router | **THIS SESSION** |
+| 2 | All creation/editing/research agents | Pending |
+| 3 | Super Platform Coordinator integration | Pending |
+| 4 | Personal Assistant modification | Pending |
+| 5 | Frontend updates | Pending |
+| 6 | Testing & cleanup | Pending |
 
 ---
 
@@ -161,20 +291,9 @@ print(response)
 | Total Spiders | 70 |
 | Real Data Sources | 24 |
 | Agents | 22 |
-| Super Platform Phases | 6 (all complete) |
-| Development Sessions | 266 |
+| Sci-Fi Features | 15 |
+| Development Sessions | 267 |
 
 ---
 
-## Pre-Session Checklist
-
-- [ ] Read `docs/SESSION_266_PROMPTING_SYSTEM_INTEGRATION.md` (FULL BLUEPRINT)
-- [ ] Run `make start && make celery`
-- [ ] Open `core/personal_ai_assistant_enhanced.py`
-- [ ] Follow the 6 phases in the blueprint
-
----
-
-**GOAL:** Connect the dormant Super Platform infrastructure to the active prompting system so users get spider intelligence, memory context, and mood-influenced responses.
-
-**The infrastructure is READY. We just need to WIRE IT UP.**
+**GOAL:** Create the foundation (base agent, ImageAgent, router) that proves the clean architecture pattern works. Test in isolation before proceeding.

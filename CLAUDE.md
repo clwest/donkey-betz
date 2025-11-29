@@ -1,11 +1,12 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 28, 2025 - Session 264 (Super Platform Phase 1 Complete)
+**Last Updated:** November 28, 2025 - Session 266 (Central Prompt Registry + Tool Routing Fix)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
-**Current Focus:** AI Content Creation (images, videos, audio, 3D) + Super Platform Unification (Phase 2)
+**Current Focus:** AI Content Creation (images, videos, audio, 3D) + Tool Routing Optimization
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 70 spiders | 20 categories | 24 real data sources
 **Agent Ecosystem:** 22 agents | 70 spider connections | Time Travel Debugging | Real-time conversations
+**Prompt Registry:** Central `core/prompts/` - All prompts in one place!
 
 ---
 
@@ -183,6 +184,29 @@ All agents have actual Python implementations in `agents/` directory:
 
 ---
 
+## Prompt Registry (Session 266)
+
+Central location for ALL prompts: `core/prompts/`
+
+| File | Purpose |
+|------|---------|
+| `registry.py` | Main prompt registry (all system prompts) |
+| `tool_descriptions.py` | GPT tool descriptions (when to use each tool) |
+| `agents/` | Agent-specific prompts (future) |
+
+### Key Prompts:
+- `PERSONAL_ASSISTANT_PROMPT` - Main AI assistant system prompt
+- `TOOL_DESCRIPTIONS` - Dict of when to use each tool
+- `PARAM_DESCRIPTIONS` - Parameter-level descriptions
+
+### Tool Routing Rules (Session 266):
+1. **Questions** → No tool call, just answer conversationally
+2. **Simple creation** ("create a logo") → `image_generation_agent`
+3. **Package requests** ("research and create") → `workflow_orchestration_agent`
+4. **Editing existing** ("upscale image 5") → `image_editing_agent`
+
+---
+
 ## Key File Locations
 
 ### Backend
@@ -215,9 +239,14 @@ All agents have actual Python implementations in `agents/` directory:
 - `ai_core/templates/ai_image_studio.html` - Main UI (~55k lines)
 
 ### Configuration
-- `core/assistant/tool_definitions.py` - GPT tool schemas
+- `core/assistant/tool_definitions.py` - GPT tool schemas (ordering matters!)
 - `core/assistant/constants.py` - System constants
 - `core/celery.py` - Celery Beat schedules
+
+### Prompt Registry (Session 266)
+- `core/prompts/registry.py` - Central prompt registry
+- `core/prompts/tool_descriptions.py` - Tool descriptions for GPT
+- `core/prompts/agents/` - Agent-specific prompts (future)
 
 ### Key Documentation
 - `docs/SESSION_263_SUPER_PLATFORM_INTEGRATION_BLUEPRINT.md` - **CRITICAL: Master integration plan**
@@ -301,6 +330,7 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 266:** Central Prompt Registry + Tool Routing Fix - All prompts in `core/prompts/`, question detection, tool ordering
 - **Session 264:** Super Platform Phase 1 Complete - SuperPlatformCoordinator, QueryClassifier, DynamicPromptBuilder, ContextAggregator
 - **Session 263:** Super Platform Integration Blueprint + 3 new spiders (Reddit, Unsplash, Adzuna) to reach 70 total
 - **Session 262:** Spider Intelligence Integration - Personal Assistant now uses real-time spider data

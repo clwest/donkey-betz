@@ -11,6 +11,7 @@ dynamically based on:
 - User preferences (personalization)
 
 Session 264: Phase 1 Foundation
+Session 266: Integrated with central prompt registry
 """
 
 from dataclasses import dataclass
@@ -18,6 +19,9 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from .query_classifier import QueryType, ClassificationResult
+
+# Session 266: Central prompt registry
+from core.prompts import DYNAMIC_PROMPT_SECTIONS, QUERY_TYPE_INTROS, get_dynamic_section
 
 
 @dataclass
@@ -38,113 +42,27 @@ class DynamicPromptBuilder:
 
     Instead of one giant static prompt, we build prompts that include
     only the relevant context for the current interaction.
+
+    Session 266: All prompt content is now sourced from core.prompts registry.
     """
 
-    # Base identity - always included
-    BASE_IDENTITY = """You are the Super Platform Intelligence Hub - a unified AI system that coordinates:
-- 22 specialized agents for content creation (images, videos, audio, 3D)
-- 70 spiders collecting real-time data from 24 sources
-- A Memory Palace that remembers every interaction
-- A Mood System that influences creative decisions
-- A Revenue Pipeline that turns opportunities into income
+    # Session 266: Use central registry for all prompt content
+    BASE_IDENTITY = DYNAMIC_PROMPT_SECTIONS.get('base_identity', '')
 
-You are not just an assistant - you are an intelligent partner that can sense, think, create, learn, and earn."""
+    # Context-specific prompt sections - now from registry
+    PROMPT_SECTIONS = DYNAMIC_PROMPT_SECTIONS
 
-    # Context-specific prompt sections
-    PROMPT_SECTIONS = {
-        'spider_intelligence': """
-## Real-Time Intelligence
-I have access to fresh data from my spider network:
-
-{spider_context}
-
-Use this intelligence to provide informed, up-to-date responses.""",
-
-        'creation_tools': """
-## Content Creation Capabilities
-
-I can create:
-- **Images**: Logos, thumbnails, illustrations, product photos (80+ styles including Pixar, anime, cyberpunk, watercolor)
-- **Videos**: Text-to-video, image animation, video editing, lip sync
-- **Audio**: Text-to-speech, voiceovers, narration
-- **3D Models**: Image-to-3D conversion
-
-Available workflows:
-- `research_and_create_logos` - Research trends + generate logos
-- `youtube_thumbnail_package` - Research + thumbnails
-- `brand_identity_package` - Complete brand kit
-- `product_photography_kit` - Product photos
-- `video_thumbnail_series` - Consistent thumbnail series
-
-Just describe what you need, including any style preferences.""",
-
-        'memory_context': """
-## Memory Palace
-
-I remember our past interactions:
-
-{memory_context}
-
-I'll use these memories to provide personalized, contextual responses.""",
-
-        'mood_influence': """
-## Creative Mood
-
-Current agent mood: **{mood_name}**
-Mood influence: {mood_description}
-
-This affects how I approach creative tasks - {mood_effect}.""",
-
-        'opportunity_focus': """
-## Revenue Opportunity Mode
-
-I'm analyzing opportunities through the lens of:
-- Profit potential
-- Competition level
-- Time sensitivity
-- Skill match
-
-Current market intelligence:
-{opportunity_context}
-
-I'll help identify the most promising opportunities.""",
-
-        'collaboration_mode': """
-## Hive Mind Mode
-
-For this complex request, I'm coordinating multiple agents:
-{agent_team}
-
-Each agent brings specialized expertise. I'll synthesize their insights.""",
-
-        'available_agents': """
-## Available Specialists
-
-For this task, these agents are ready:
-{agent_list}
-
-I'll coordinate them as needed to deliver the best result.""",
-
-        'user_preferences': """
-## Your Preferences
-
-I remember you prefer:
-{preferences}
-
-I'll tailor my response accordingly.""",
-    }
-
-    # Query-type specific intros
+    # Query-type specific intros - mapped from string keys to QueryType
     TYPE_INTROS = {
-        QueryType.QUESTION: "I'll answer using real-time intelligence from my spider network.",
-        QueryType.CREATION: "I'll create exactly what you need using my specialized agents.",
-        QueryType.WORKFLOW: "I'll orchestrate a multi-step workflow to deliver a complete package.",
-        QueryType.ANALYSIS: "I'll analyze this thoroughly using research and trend data.",
-        QueryType.MEMORY: "I'll search my Memory Palace for our past interactions.",
-        QueryType.COLLABORATION: "I'll convene the relevant agents for a collaborative solution.",
-        QueryType.OPPORTUNITY: "I'll scan for revenue opportunities matching your profile.",
-        QueryType.SYSTEM: "I'll provide information about my capabilities and status.",
-        QueryType.CONVERSATION: "I'm here to chat and help however I can.",
+        QueryType.QUESTION: QUERY_TYPE_INTROS.get('question', ''),
+        QueryType.CREATION: QUERY_TYPE_INTROS.get('creation', ''),
+        QueryType.WORKFLOW: QUERY_TYPE_INTROS.get('workflow', ''),
+        QueryType.ANALYSIS: QUERY_TYPE_INTROS.get('analysis', ''),
+        QueryType.MEMORY: QUERY_TYPE_INTROS.get('memory', ''),
+        QueryType.COLLABORATION: QUERY_TYPE_INTROS.get('collaboration', ''),
+        QueryType.OPPORTUNITY: QUERY_TYPE_INTROS.get('opportunity', ''),
+        QueryType.SYSTEM: QUERY_TYPE_INTROS.get('system', ''),
+        QueryType.CONVERSATION: QUERY_TYPE_INTROS.get('conversation', ''),
     }
 
     def __init__(self):

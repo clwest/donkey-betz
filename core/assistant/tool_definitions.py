@@ -7,6 +7,7 @@ These define the available tools/agents that the AI can invoke.
 
 Session 131: Refactored from 14+ individual tools to agent orchestrators.
 Session 184: Extracted from personal_ai_assistant_enhanced.py
+Session 266: Tool descriptions moved to core/prompts/tool_descriptions.py
 """
 
 from typing import List, Dict
@@ -23,6 +24,9 @@ from core.assistant.constants import (
     WORKFLOW_TYPES,
 )
 
+# Session 266: Import tool descriptions from central registry
+from core.prompts import get_tool_description
+
 
 def get_tool_definitions() -> List[Dict]:
     """
@@ -33,10 +37,11 @@ def get_tool_definitions() -> List[Dict]:
     Returns:
         List of tool definition dictionaries
     """
+    # Session 266: Reordered - most common tools first, workflow agent LAST
+    # GPT tends to prefer earlier tools in the list, so put image generation first
     return [
-        _get_workflow_orchestration_agent_definition(),  # Session 191: PRIORITY - multi-step workflows
-        _get_image_generation_agent_definition(),
-        _get_image_editing_agent_definition(),
+        _get_image_generation_agent_definition(),  # Most common - simple image creation
+        _get_image_editing_agent_definition(),     # Second most common - upscale, variations, etc.
         _get_video_generation_agent_definition(),
         _get_audio_generation_agent_definition(),
         _get_three_d_generation_agent_definition(),
@@ -46,61 +51,21 @@ def get_tool_definitions() -> List[Dict]:
         _get_talking_character_agent_definition(),
         _get_web_search_definition(),
         _get_create_brand_video_definition(),
-        _get_create_project_from_research_definition(),  # Session 189
-        _get_strategic_review_definition(),  # Session 189: Research → Review → Create workflow
+        _get_create_project_from_research_definition(),
+        _get_strategic_review_definition(),
+        _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
 
 def _get_workflow_orchestration_agent_definition() -> Dict:
     """
     Workflow orchestration agent for multi-step creative workflows.
-
-    Session 191: This agent ensures GPT cannot deviate from intended workflows.
-    Session 199: Added youtube_thumbnail_package, social_media_kit, logo_to_video
-    Instead of calling multiple tools, GPT calls this ONE agent which
-    internally executes the correct steps in order.
-
-    CRITICAL: This should be the FIRST tool GPT considers for any request
-    that involves RESEARCH + CREATION (multiple steps).
+    Session 266: Description moved to core/prompts/tool_descriptions.py
     """
     return {
         "type": "function",
         "name": "workflow_orchestration_agent",
-        "description": """CRITICAL: Use this agent for ANY multi-step request that involves RESEARCH + CREATION or ANIMATION workflows.
-
-AVAILABLE WORKFLOWS:
-
-1. research_and_create_logos - Research topic and create professional logos
-   - "Research X and create Y logos" → workflow='research_and_create_logos'
-   - Steps: research → executive review → generate logos (1024x1024) → create project
-
-2. youtube_thumbnail_package - Research and create YouTube thumbnail variations
-   - "Create YouTube thumbnails for X" → workflow='youtube_thumbnail_package'
-   - Steps: research CTR best practices → review → generate thumbnails (1280x720) → create project
-
-3. brand_identity_package - Research and create complete brand identity
-   - "Create a brand identity for X" → workflow='brand_identity_package'
-   - "Build brand package for X" → workflow='brand_identity_package'
-   - Steps: research brand trends → review → generate brand images → create project
-
-4. product_photography_kit - Research and create professional product images
-   - "Create product photos for X" → workflow='product_photography_kit'
-   - "Product photography for X" → workflow='product_photography_kit'
-   - Steps: research product photography → review → generate product images → create project
-
-5. video_thumbnail_series - Create consistent thumbnails for video series
-   - "Create thumbnail series for X" → workflow='video_thumbnail_series'
-   - "Make thumbnails for my X video series" → workflow='video_thumbnail_series'
-   - Steps: research series branding → review → generate consistent thumbnails (1280x720) → create project
-
-6. logo_to_video - Animate an existing logo into video
-   - "Animate logo 5 into a video" → workflow='logo_to_video', image_id='5'
-   - Steps: select logo → animate (Runway) → add audio (optional) → create project
-
-DO NOT try to call individual tools for these multi-step requests!
-The workflow agent ensures proper order and prevents errors.
-
-For SIMPLE single-step requests (just "create a logo" without research, "upscale image 3"), use the individual agents directly.""",
+        "description": get_tool_description("workflow_orchestration_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -141,11 +106,11 @@ For SIMPLE single-step requests (just "create a logo" without research, "upscale
 
 
 def _get_image_generation_agent_definition() -> Dict:
-    """Image generation agent tool definition."""
+    """Image generation agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "image_generation_agent",
-        "description": "Generate BRAND NEW images from scratch using text prompts. CRITICAL: Use this agent whenever user wants to CREATE/GENERATE/MAKE images that don't exist yet: 'create banner', 'generate logo', 'make social media post', 'design avatar', 'create profile picture', 'create images matching style', etc. This generates NEW images, not modifications of existing ones. Supports custom dimensions (width/height), quality levels, style preferences, and multiple images. Use this for ALL new image creation requests, even if they mention matching a style.",
+        "description": get_tool_description("image_generation_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -183,11 +148,11 @@ def _get_image_generation_agent_definition() -> Dict:
 
 
 def _get_image_editing_agent_definition() -> Dict:
-    """Image editing agent tool definition with batch support."""
+    """Image editing agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "image_editing_agent",
-        "description": "MODIFY EXISTING images only. Requires an existing image_id. Operations: upscale (4x resolution), remove_background (transparent PNG), create_variations (multiple styles), recolor (change colors), search_and_replace (REMOVE objects by omitting replace_prompt OR replace with something else), creative_upscale (4x upscale + add creative details with prompt). IMPORTANT: This agent modifies images that already exist. For creating NEW images from scratch, use image_generation_agent instead. Supports BATCH OPERATIONS - process multiple images at once using ranges or lists!",
+        "description": get_tool_description("image_editing_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -222,11 +187,11 @@ def _get_image_editing_agent_definition() -> Dict:
 
 
 def _get_video_generation_agent_definition() -> Dict:
-    """Video generation agent tool definition."""
+    """Video generation agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "video_generation_agent",
-        "description": "Handle video generation operations: generate (create video from text prompt), animate (transform image to moving video WITHOUT speech), extend (make video longer), chain (combine multiple videos), lip_sync (sync existing audio to existing video). NOTE: For 'make image talk' or 'create talking character', use talking_character_agent instead (it combines TTS + animation + lip sync). Use THIS agent for: video from text prompts, silent animation from images, video extension, video chaining, or manual lip sync when you already have separate audio and video files.",
+        "description": get_tool_description("video_generation_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -264,11 +229,11 @@ def _get_video_generation_agent_definition() -> Dict:
 
 
 def _get_audio_generation_agent_definition() -> Dict:
-    """Audio generation agent tool definition."""
+    """Audio generation agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "audio_generation_agent",
-        "description": "Handle all audio generation: generate_voice (text-to-speech), add_voiceover (add narration to video). Use this agent for ANY audio generation request.",
+        "description": get_tool_description("audio_generation_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -294,11 +259,11 @@ def _get_audio_generation_agent_definition() -> Dict:
 
 
 def _get_three_d_generation_agent_definition() -> Dict:
-    """3D generation agent tool definition."""
+    """3D generation agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "three_d_generation_agent",
-        "description": "Convert images to 3D models using Replicate TRELLIS. Creates downloadable GLB files for 3D printing. Use when users want: 'convert to 3D', 'make 3D model', '3D print', 'create 3D object'.",
+        "description": get_tool_description("three_d_generation_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -319,11 +284,11 @@ def _get_three_d_generation_agent_definition() -> Dict:
 
 
 def _get_video_editing_agent_definition() -> Dict:
-    """Video editing agent tool definition with all operations."""
+    """Video editing agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "video_editing_agent",
-        "description": "Handle all video editing: add_text_overlay (captions/titles with timing), apply_color_grading (DaVinci cinematic effects), upscale (2x or 4x quality enhancement with ffmpeg - FREE!), apply_effect (color grading: cinematic, vibrant, vintage, noir, warm, cool - FREE!), extract_frame (pull a still image from any timestamp - FREE!), reverse (play video backwards - FREE!), trim (cut video to specific time range - FREE!), speed_change (slow motion 0.5x or speed up 2x - FREE!), concatenate (combine multiple videos into one - FREE!), rotate_flip (rotate 90/180/270 degrees or flip horizontal/vertical - FREE!), fade (add fade in/out effects - FREE!), crop_resize (crop to region, resize dimensions, or change aspect ratio - FREE!), audio_control (adjust volume, mute, or extract audio - FREE!), picture_in_picture (overlay one video on another - FREE!), add_watermark (overlay logo/image on video with position and opacity - FREE!), blur_region (blur part of video for privacy/censoring - FREE!), render_professional (EXPORT TO ProRes 422/ProRes 4444/DNxHD - Professional broadcast codecs!), apply_lut (apply color LUT files), color_grade_professional (DaVinci-style lift/gamma/gain color grading). Use this agent for ANY video editing request. SUPPORTS BATCH OPERATIONS: Process multiple videos using ranges '1-3' or lists '1, 3, 5'. FOR PRORES: Say 'render video 1 in ProRes' or 'export video 2 as ProRes 4444'.",
+        "description": get_tool_description("video_editing_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -393,11 +358,11 @@ def _get_video_editing_agent_definition() -> Dict:
 
 
 def _get_character_training_agent_definition() -> Dict:
-    """Character training agent tool definition for FLUX LoRA."""
+    """Character training agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "character_training_agent",
-        "description": "Train a FLUX LoRA model to learn a consistent visual style from 4-10 example images. Creates reusable style model that can be applied to all future generations. Use when user wants to 'train project style', 'create custom style', 'learn my visual aesthetic', or 'make consistent style'. Perfect for brand consistency across all content.",
+        "description": get_tool_description("character_training_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -425,11 +390,11 @@ def _get_character_training_agent_definition() -> Dict:
 
 
 def _get_coleadership_agent_definition() -> Dict:
-    """Co-leadership agent tool definition for AI-Human collaboration."""
+    """Co-leadership agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "coleadership_agent",
-        "description": "Get collaborative opinions and recommendations from AI executive team (CTO, COO, Creative Director, CFO, Data Analyst) on creative decisions. Use when user asks 'what do you think', 'should we', 'get opinions', 'is this a good direction', 'thoughts on', 'feedback on', 'worth pursuing', 'ask the team', etc. Can reference specific images/content to get opinions on style, direction, or training decisions.",
+        "description": get_tool_description("coleadership_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -462,11 +427,11 @@ def _get_coleadership_agent_definition() -> Dict:
 
 
 def _get_talking_character_agent_definition() -> Dict:
-    """Talking character agent tool definition for TTS + animation + lip sync."""
+    """Talking character agent tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "talking_character_agent",
-        "description": "PREFERRED for 'make image talk' requests. Create complete talking character videos from a still image and text script in ONE STEP. This pipeline combines Text-to-Speech (ElevenLabs) + Image-to-Video (Runway) + Lip Sync to bring static characters to life with natural speech and mouth movements. NOW SUPPORTS CARTOON/STYLIZED CHARACTERS! Use when user wants: 'make image X talk and say...', 'create talking video', 'add speech to image', 'animate character with voice', 'talking character', 'AI spokesperson video', etc. IMPORTANT: When user says 'using [name] voice' or 'with [name] voice', extract that name as the voice parameter! This is the ONLY tool that generates speech + animation + lip sync automatically. Works great with both photorealistic AND cartoon/Pixar-style characters! Cost: ~$0.60-1.00 per 10-second video.",
+        "description": get_tool_description("talking_character_agent"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -523,11 +488,11 @@ def _get_talking_character_agent_definition() -> Dict:
 
 
 def _get_web_search_definition() -> Dict:
-    """Web search tool definition for research capabilities."""
+    """Web search tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "web_search",
-        "description": "Search the web using Google via Serper API. Use this when the user asks for current information, trends, research, competitor analysis, or needs to find something online. CRITICAL: Use this tool when user says 'research', 'find out about', 'search for', 'look up', 'what are the latest', etc. This enables the 'research and create' autonomous workflow where you can research a topic then generate content based on findings.",
+        "description": get_tool_description("web_search"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -542,11 +507,11 @@ def _get_web_search_definition() -> Dict:
 
 
 def _get_create_brand_video_definition() -> Dict:
-    """Brand video creation tool definition."""
+    """Brand video creation tool definition. Session 266: Description in registry."""
     return {
         "type": "function",
         "name": "create_brand_video",
-        "description": "Create a complete brand video from concept to finished product using automated workflow. Orchestrates Runway ML video generation with professional styling. Use when user wants a complete brand video, promotional video, or multiple video clips for a brand/project. Generates 2-5 video clips that can later be chained with transitions.",
+        "description": get_tool_description("create_brand_video"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -585,18 +550,11 @@ def _get_create_brand_video_definition() -> Dict:
 
 
 def _get_create_project_from_research_definition() -> Dict:
-    """
-    Session 189: Create a new project from research results and generated content.
-
-    This enables the "research → create → organize" workflow where the AI can:
-    1. Research a topic (web_search)
-    2. Generate starter images
-    3. Package everything into a new project
-    """
+    """Session 189/266: Create project from research. Description in registry."""
     return {
         "type": "function",
         "name": "create_project_from_research",
-        "description": "Create a new creative project from research results and generated images. Use this AFTER completing research (web_search) and generating starter images (image_generation_agent). This packages everything into an organized project that the user can continue working on. Use when: 1) Research has been completed, 2) Images have been generated, 3) User would benefit from having an organized project. DO NOT use this for simple one-off image generations.",
+        "description": get_tool_description("create_project_from_research"),
         "parameters": {
             "type": "object",
             "properties": {
@@ -631,22 +589,11 @@ def _get_create_project_from_research_definition() -> Dict:
 
 
 def _get_strategic_review_definition() -> Dict:
-    """
-    Session 189: Get executive team review of research before generating content.
-
-    This enables the "research → strategic review → create" workflow where:
-    1. Research is conducted (web_search)
-    2. Executive team (CTO, COO, Creative Director) reviews findings
-    3. They provide strategic direction and creative recommendations
-    4. THEN images/content are generated based on their guidance
-
-    This makes the co-leadership agents an integral part of the creative process,
-    not just reactive reviewers of finished work.
-    """
+    """Session 189/266: Strategic review. Description in registry."""
     return {
         "type": "function",
         "name": "strategic_review",
-        "description": "IMPORTANT: Call this AFTER web_search but BEFORE image_generation_agent. Get strategic review and creative direction from the executive team (CTO, COO, Creative Director) based on research findings. They will analyze the research and provide: 1) Key insights to incorporate, 2) Creative direction recommendations, 3) Technical considerations, 4) Specific prompt suggestions for image generation. This ensures the co-leadership agents guide the creative process rather than just reviewing finished work.",
+        "description": get_tool_description("strategic_review"),
         "parameters": {
             "type": "object",
             "properties": {
