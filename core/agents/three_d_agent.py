@@ -1,0 +1,248 @@
+"""
+3D Agent - Specialized for 3D Model Generation ONLY
+====================================================
+
+Session 268: Phase 2 - Creation Agents
+
+This agent creates 3D models. That's ALL it does.
+It has NO access to image, video, audio, or research tools.
+
+Tools Available:
+    - convert_to_3d: Convert 2D image to 3D model
+    - generate_3d_scene: Generate 3D scene from description
+
+Tools NOT Available (by design):
+    - image generation
+    - video generation
+    - audio generation
+    - web search
+"""
+
+import logging
+import time
+from typing import Dict, Any, List, Optional
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class ThreeDAgent(BaseAgent):
+    """
+    Agent specialized in 3D model generation. Cannot do anything else.
+
+    This agent:
+    1. Takes a task like "convert this image to a 3D model"
+    2. Uses Replicate API for 3D conversion
+    3. Returns the 3D model result
+
+    It CANNOT:
+    - Generate images
+    - Generate videos
+    - Generate audio
+    - Search the web
+    """
+
+    name = "ThreeDAgent"
+
+    system_prompt = """You are ThreeDAgent, a specialist in creating 3D models.
+
+Your ONLY job is to generate 3D content based on the task given to you.
+You have these tools:
+- convert_to_3d: Convert a 2D image into a 3D model
+- generate_3d_scene: Generate a 3D scene from a text description
+
+When given a task:
+1. If user has an existing image they want in 3D, use convert_to_3d
+2. For creating new 3D scenes from scratch, use generate_3d_scene
+
+Output formats supported:
+- GLB (default): Web-compatible format
+- OBJ: Standard 3D model format
+- STL: For 3D printing
+
+You CANNOT create images, videos, audio, or search the web. Just 3D models.
+If asked to do something outside 3D generation, politely explain you can only create 3D content."""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "convert_to_3d",
+                "description": "Convert a 2D image into a 3D model using AI",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image to convert to 3D (UUID or sequential number)"
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "description": "Output 3D format",
+                            "enum": ["glb", "obj", "stl"],
+                            "default": "glb"
+                        },
+                        "quality": {
+                            "type": "string",
+                            "description": "Model quality level",
+                            "enum": ["draft", "standard", "high"],
+                            "default": "standard"
+                        }
+                    },
+                    "required": ["image_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_3d_scene",
+                "description": "Generate a 3D scene from a text description",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Description of the 3D scene to generate"
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "description": "Output 3D format",
+                            "enum": ["glb", "obj", "stl"],
+                            "default": "glb"
+                        },
+                        "style": {
+                            "type": "string",
+                            "description": "Visual style of the 3D model",
+                            "enum": ["realistic", "stylized", "low_poly", "cartoon"],
+                            "default": "realistic"
+                        }
+                    },
+                    "required": ["prompt"]
+                }
+            }
+        }
+    ]
+
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> AgentResult:
+        """Execute 3D generation based on the task."""
+        start_time = time.time()
+        tool_calls_made = []
+
+        with self.time_travel_session("3d_generation", task, input_data=context):
+            try:
+                if not self._validate_task(task):
+                    return AgentResult(
+                        success=False,
+                        error="Invalid or empty task",
+                        agent_name=self.name
+                    )
+
+                self.record_decision(
+                    decision_type="task_analysis",
+                    action="Analyzing 3D generation request",
+                    reasoning=f"Received task: {task[:100]}",
+                    confidence=0.9
+                )
+
+                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                gpt_response = self._call_openai(full_prompt)
+
+                if gpt_response.get('tool_calls'):
+                    for tool_call in gpt_response['tool_calls']:
+                        tool_name = tool_call['name']
+                        arguments = tool_call['arguments']
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"Calling {tool_name}",
+                            reasoning=f"Selected {tool_name} for 3D operation",
+                            confidence=0.95
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, arguments)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': arguments,
+                            'result': tool_result
+                        })
+
+                        self.mark_decision_outcome(
+                            success=tool_result.get('success', False),
+                            result_summary=tool_result.get('message', '')[:100]
+                        )
+
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
+                    if successful_calls:
+                        return AgentResult(
+                            success=True,
+                            message=f"3D model generated",
+                            data=successful_calls[0]['result'],
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            decisions_made=self._tt_decision_count,
+                            tool_calls=tool_calls_made
+                        )
+                    else:
+                        return AgentResult(
+                            success=False,
+                            error="3D generation failed",
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            tool_calls=tool_calls_made
+                        )
+                else:
+                    return AgentResult(
+                        success=True,
+                        message=gpt_response.get('content', ''),
+                        data={'type': 'conversation'},
+                        agent_name=self.name,
+                        execution_time_ms=int((time.time() - start_time) * 1000)
+                    )
+
+            except Exception as e:
+                logger.error(f"ThreeDAgent error: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+    def _execute_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Execute a tool call for 3D generation."""
+
+        if tool_name == "convert_to_3d":
+            from core.views_image import _execute_convert_to_3d
+            parameters = {
+                'image_id': arguments.get('image_id'),
+                'output_format': arguments.get('output_format', 'glb'),
+                'quality': arguments.get('quality', 'standard'),
+            }
+            return _execute_convert_to_3d(self.user, parameters, session=None)
+
+        elif tool_name == "generate_3d_scene":
+            # Text-to-3D generation - may need implementation
+            return {
+                'success': False,
+                'error': 'Text-to-3D scene generation not yet implemented'
+            }
+
+        else:
+            return {
+                'success': False,
+                'error': f"Unknown tool: {tool_name}. ThreeDAgent only supports 3D tools."
+            }

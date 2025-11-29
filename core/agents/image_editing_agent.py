@@ -1,0 +1,351 @@
+"""
+Image Editing Agent - Specialized for Image EDITING ONLY
+=========================================================
+
+Session 268: Phase 2 - Editing Agents
+
+This agent EDITS existing images. That's ALL it does.
+It has NO access to creation, video, audio, or research tools.
+
+Tools Available:
+    - upscale: Upscale image resolution
+    - remove_background: Remove image background
+    - create_variations: Generate variations of an image
+    - recolor: Change colors in an image
+    - search_replace: Replace objects in an image
+
+Tools NOT Available (by design):
+    - image generation (that's ImageAgent)
+    - video generation/editing
+    - audio generation
+    - web search
+"""
+
+import logging
+import time
+from typing import Dict, Any, List, Optional
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class ImageEditingAgent(BaseAgent):
+    """
+    Agent specialized in editing existing images. Cannot create new ones.
+
+    This agent:
+    1. Takes a task like "upscale image 5" or "remove background from my logo"
+    2. Identifies the image to edit
+    3. Applies the appropriate edit operation
+    4. Returns the edited image
+
+    It CANNOT:
+    - Generate new images (use ImageAgent)
+    - Generate videos
+    - Generate audio
+    - Search the web
+    """
+
+    name = "ImageEditingAgent"
+
+    system_prompt = """You are ImageEditingAgent, a specialist in modifying existing images.
+
+Your ONLY job is to EDIT existing images. You do NOT create new images from scratch.
+You have these tools:
+- upscale: Increase image resolution (2x or 4x)
+- remove_background: Remove the background from an image
+- create_variations: Generate style variations of an existing image
+- recolor: Change colors in an image
+- search_replace: Find and replace objects within an image
+
+When given a task:
+1. Identify which image the user wants to edit (by ID or description)
+2. Determine which editing operation is needed
+3. Apply the operation with appropriate parameters
+
+Common operations:
+- "Make it bigger" / "Higher resolution" → upscale
+- "Remove the background" / "Transparent background" → remove_background
+- "Give me variations" / "Different versions" → create_variations
+- "Change the color to..." / "Make it blue" → recolor
+- "Replace the X with Y" → search_replace
+
+You CANNOT create new images, videos, or audio. Only edit existing images.
+If asked to create something new, explain you can only edit existing images."""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "upscale",
+                "description": "Upscale an image to higher resolution",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image to upscale (UUID or sequential number)"
+                        },
+                        "scale_factor": {
+                            "type": "integer",
+                            "description": "How much to scale (2 or 4)",
+                            "enum": [2, 4],
+                            "default": 2
+                        },
+                        "creative_upscale": {
+                            "type": "boolean",
+                            "description": "Use AI to add detail (true) or just resize (false)",
+                            "default": False
+                        }
+                    },
+                    "required": ["image_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "remove_background",
+                "description": "Remove the background from an image, making it transparent",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image to process"
+                        }
+                    },
+                    "required": ["image_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_variations",
+                "description": "Generate style variations of an existing image",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image to create variations from"
+                        },
+                        "count": {
+                            "type": "integer",
+                            "description": "Number of variations to generate (1-4)",
+                            "default": 3,
+                            "minimum": 1,
+                            "maximum": 4
+                        },
+                        "variation_strength": {
+                            "type": "number",
+                            "description": "How different the variations should be (0.0-1.0)",
+                            "default": 0.5
+                        }
+                    },
+                    "required": ["image_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "recolor",
+                "description": "Change colors in an image",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image to recolor"
+                        },
+                        "target_color": {
+                            "type": "string",
+                            "description": "Color to change (e.g., 'red', 'blue', '#FF5733')"
+                        },
+                        "new_color": {
+                            "type": "string",
+                            "description": "New color to apply"
+                        }
+                    },
+                    "required": ["image_id", "target_color", "new_color"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_replace",
+                "description": "Find and replace objects within an image using AI",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "image_id": {
+                            "type": "string",
+                            "description": "ID of the image to modify"
+                        },
+                        "search_prompt": {
+                            "type": "string",
+                            "description": "What to find/select in the image"
+                        },
+                        "replace_prompt": {
+                            "type": "string",
+                            "description": "What to replace it with"
+                        }
+                    },
+                    "required": ["image_id", "search_prompt", "replace_prompt"]
+                }
+            }
+        }
+    ]
+
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> AgentResult:
+        """Execute image editing based on the task."""
+        start_time = time.time()
+        tool_calls_made = []
+
+        with self.time_travel_session("image_editing", task, input_data=context):
+            try:
+                if not self._validate_task(task):
+                    return AgentResult(
+                        success=False,
+                        error="Invalid or empty task",
+                        agent_name=self.name
+                    )
+
+                self.record_decision(
+                    decision_type="task_analysis",
+                    action="Analyzing image editing request",
+                    reasoning=f"Received task: {task[:100]}",
+                    confidence=0.9
+                )
+
+                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                gpt_response = self._call_openai(full_prompt)
+
+                if gpt_response.get('tool_calls'):
+                    for tool_call in gpt_response['tool_calls']:
+                        tool_name = tool_call['name']
+                        arguments = tool_call['arguments']
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"Calling {tool_name}",
+                            reasoning=f"Selected {tool_name} for image editing",
+                            confidence=0.95
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, arguments)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': arguments,
+                            'result': tool_result
+                        })
+
+                        self.mark_decision_outcome(
+                            success=tool_result.get('success', False),
+                            result_summary=tool_result.get('message', '')[:100]
+                        )
+
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
+                    if successful_calls:
+                        return AgentResult(
+                            success=True,
+                            message=f"Image edited successfully",
+                            data=successful_calls[0]['result'],
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            decisions_made=self._tt_decision_count,
+                            tool_calls=tool_calls_made
+                        )
+                    else:
+                        return AgentResult(
+                            success=False,
+                            error="Image editing failed",
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            tool_calls=tool_calls_made
+                        )
+                else:
+                    return AgentResult(
+                        success=True,
+                        message=gpt_response.get('content', ''),
+                        data={'type': 'conversation'},
+                        agent_name=self.name,
+                        execution_time_ms=int((time.time() - start_time) * 1000)
+                    )
+
+            except Exception as e:
+                logger.error(f"ImageEditingAgent error: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+    def _execute_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Execute a tool call for image editing."""
+
+        if tool_name == "upscale":
+            from core.views_image import _execute_upscale
+            parameters = {
+                'image_id': arguments.get('image_id'),
+                'scale_factor': arguments.get('scale_factor', 2),
+                'creative_upscale': arguments.get('creative_upscale', False),
+            }
+            return _execute_upscale(self.user, parameters, session=None)
+
+        elif tool_name == "remove_background":
+            from core.views_image import _execute_remove_background
+            parameters = {
+                'image_id': arguments.get('image_id'),
+            }
+            return _execute_remove_background(self.user, parameters, session=None)
+
+        elif tool_name == "create_variations":
+            from core.views_image import _execute_create_variations
+            parameters = {
+                'image_id': arguments.get('image_id'),
+                'count': arguments.get('count', 3),
+                'variation_strength': arguments.get('variation_strength', 0.5),
+            }
+            return _execute_create_variations(self.user, parameters, session=None)
+
+        elif tool_name == "recolor":
+            from core.views_image import _execute_recolor
+            parameters = {
+                'image_id': arguments.get('image_id'),
+                'target_color': arguments.get('target_color'),
+                'new_color': arguments.get('new_color'),
+            }
+            return _execute_recolor(self.user, parameters, session=None)
+
+        elif tool_name == "search_replace":
+            from core.views_image import _execute_search_replace
+            parameters = {
+                'image_id': arguments.get('image_id'),
+                'search_prompt': arguments.get('search_prompt'),
+                'replace_prompt': arguments.get('replace_prompt'),
+            }
+            return _execute_search_replace(self.user, parameters, session=None)
+
+        else:
+            return {
+                'success': False,
+                'error': f"Unknown tool: {tool_name}. ImageEditingAgent only supports editing tools."
+            }

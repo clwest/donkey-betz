@@ -2,7 +2,7 @@
 Agent Router - Deterministic Routing to Specialized Agents
 ===========================================================
 
-Session 268: Phase 1 - Foundation
+Session 268: Phase 1 & 2 - Complete Agent Ecosystem
 
 This router provides DETERMINISTIC routing to specialized agents.
 No LLM is involved in routing decisions - it's a simple dictionary lookup.
@@ -28,15 +28,22 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Future Agents (Phase 2):
-    - VideoAgent
-    - AudioAgent
-    - ThreeDAgent
-    - ImageEditingAgent
-    - VideoEditingAgent
-    - ResearchAgent
-    - WorkflowAgent
-    - HiveMindAgent
+Available Agents:
+    Creation:
+    - ImageAgent: Image generation (logos, banners, illustrations)
+    - VideoAgent: Video generation (text-to-video, animations)
+    - AudioAgent: Audio generation (TTS, voiceovers)
+    - ThreeDAgent: 3D model generation
+
+    Editing:
+    - ImageEditingAgent: Image editing (upscale, remove bg, variations)
+    - VideoEditingAgent: Video editing (trim, effects, text)
+
+    Research:
+    - ResearchAgent: Web search + spider network queries
+
+    Orchestration:
+    - WorkflowAgent: Multi-step workflow coordination
 """
 
 import logging
@@ -44,6 +51,13 @@ from typing import Dict, Any, Optional, Type
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.image_agent import ImageAgent
+from core.agents.video_agent import VideoAgent
+from core.agents.audio_agent import AudioAgent
+from core.agents.three_d_agent import ThreeDAgent
+from core.agents.image_editing_agent import ImageEditingAgent
+from core.agents.video_editing_agent import VideoEditingAgent
+from core.agents.research_agent import ResearchAgent
+from core.agents.workflow_agent import WorkflowAgent
 
 logger = logging.getLogger(__name__)
 
@@ -68,23 +82,23 @@ class AgentRouter:
     """
 
     # Map agent names to agent classes
-    # Phase 1: Only ImageAgent
-    # Phase 2: All creation/editing/research agents
+    # Session 268: Complete agent ecosystem
     AGENT_MAP: Dict[str, Type[BaseAgent]] = {
+        # Creation Agents
         "ImageAgent": ImageAgent,
-        # Phase 2 agents (coming next session):
-        # "VideoAgent": VideoAgent,
-        # "AudioAgent": AudioAgent,
-        # "ThreeDAgent": ThreeDAgent,
-        # "ImageEditingAgent": ImageEditingAgent,
-        # "VideoEditingAgent": VideoEditingAgent,
-        # "ResearchAgent": ResearchAgent,
-        # "TrendAnalysisAgent": TrendAnalysisAgent,
-        # "WorkflowAgent": WorkflowAgent,
-        # "HiveMindAgent": HiveMindAgent,
-        # "ContentStrategyAgent": ContentStrategyAgent,
-        # "SEOOptimizerAgent": SEOOptimizerAgent,
-        # "BrandIdentityAgent": BrandIdentityAgent,
+        "VideoAgent": VideoAgent,
+        "AudioAgent": AudioAgent,
+        "ThreeDAgent": ThreeDAgent,
+
+        # Editing Agents
+        "ImageEditingAgent": ImageEditingAgent,
+        "VideoEditingAgent": VideoEditingAgent,
+
+        # Research Agents
+        "ResearchAgent": ResearchAgent,
+
+        # Orchestration Agents
+        "WorkflowAgent": WorkflowAgent,
     }
 
     def __init__(self, user=None):
