@@ -40659,6 +40659,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load Trending Topics
         async function loadTrendingTopics() {
             const container = document.getElementById('trending-topics-list');
+            if (!container) {
+                console.log('Trending topics container not found - skipping');
+                return;
+            }
             try {
                 const response = await fetch('/api/spider-intelligence/trends/?limit=10', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
@@ -40683,13 +40687,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             } catch (error) {
                 console.error('Error loading trending topics:', error);
-                container.innerHTML = '<p class="text-danger text-center">Failed to load trends</p>';
+                if (container) container.innerHTML = '<p class="text-danger text-center">Failed to load trends</p>';
             }
         }
 
         // Load Market Insights
         async function loadMarketInsights() {
             const container = document.getElementById('market-insights-list');
+            if (!container) {
+                console.log('Market insights container not found - skipping');
+                return;
+            }
             try {
                 const response = await fetch('/api/spider-intelligence/market/', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
@@ -40721,13 +40729,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             } catch (error) {
                 console.error('Error loading market insights:', error);
-                container.innerHTML = '<p class="text-danger text-center">Failed to load market data</p>';
+                if (container) container.innerHTML = '<p class="text-danger text-center">Failed to load market data</p>';
             }
         }
 
         // Load Tech Trends
         async function loadTechTrends() {
             const container = document.getElementById('tech-trends-list');
+            if (!container) {
+                console.log('Tech trends container not found - skipping');
+                return;
+            }
             try {
                 const response = await fetch('/api/spider-intelligence/tech/?limit=10', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
@@ -40768,13 +40780,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             } catch (error) {
                 console.error('Error loading tech trends:', error);
-                container.innerHTML = '<p class="text-danger text-center">Failed to load tech trends</p>';
+                if (container) container.innerHTML = '<p class="text-danger text-center">Failed to load tech trends</p>';
             }
         }
 
         // Load Job Market
         async function loadJobMarket() {
             const container = document.getElementById('job-market-list');
+            if (!container) {
+                console.log('Job market container not found - skipping');
+                return;
+            }
             try {
                 const response = await fetch('/api/spider-intelligence/jobs/?limit=10', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
@@ -40804,7 +40820,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             } catch (error) {
                 console.error('Error loading job market:', error);
-                container.innerHTML = '<p class="text-danger text-center">Failed to load jobs</p>';
+                if (container) container.innerHTML = '<p class="text-danger text-center">Failed to load jobs</p>';
             }
         }
 

@@ -39,9 +39,9 @@ Phase 6 (Autonomy Engine):
 Session 265: ALL 6 PHASES COMPLETE!
 """
 
-from .query_classifier import QueryClassifier
+from .query_classifier import QueryClassifier, ClassificationResult, QueryType
 from .prompt_builder import DynamicPromptBuilder
-from .context_aggregator import ContextAggregator
+from .context_aggregator import ContextAggregator, AggregatedContext
 from .coordinator import SuperPlatformCoordinator
 from .agent_context_service import AgentContextService, AgentContext, get_agent_context_service
 from .spider_context_mixin import SpiderContextMixin
@@ -81,8 +81,11 @@ from .autonomy_engine import (
 __all__ = [
     # Phase 1: Foundation
     'QueryClassifier',
+    'ClassificationResult',
+    'QueryType',
     'DynamicPromptBuilder',
     'ContextAggregator',
+    'AggregatedContext',
     'SuperPlatformCoordinator',
     # Phase 2: Spider-Agent Bridge
     'AgentContextService',

@@ -30,6 +30,7 @@ from core.personal_assistant_agent_integration import personal_assistant_agent_i
 # AI Provider imports
 from content.ai_providers import AIProviderManager
 from mythology.services import MythologyPreventionService
+from core.services.spider_intelligence import SpiderIntelligenceService
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -56,6 +57,7 @@ class UnifiedPersonalAssistant:
         self._memory_manager = None
         self._ai_provider = None
         self._mythology_service = None
+        self._spider_intelligence = None
 
         # Session state
         self.session_context = {}
@@ -119,6 +121,12 @@ class UnifiedPersonalAssistant:
             self._mythology_service = MythologyPreventionService()
         return self._mythology_service
 
+    @property
+    def spider_intelligence(self):
+        if not self._spider_intelligence:
+            self._spider_intelligence = SpiderIntelligenceService()
+        return self._spider_intelligence
+
     def process_message(self, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Process user message with full intelligence:
@@ -159,7 +167,7 @@ class UnifiedPersonalAssistant:
             return self._handle_direct_response(message, context)
 
     def _handle_direct_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle messages with direct AI response."""
+        """Handle messages with direct AI response, enhanced with spider intelligence."""
         try:
             # Get AI response using the working AI provider pattern
             from content.ai_providers import AIProviderManager
@@ -187,6 +195,19 @@ When users ask about agents, you should:
             # Get platform component knowledge
             platform_context = self._get_platform_component_knowledge()
 
+            # Session 262: Get spider intelligence for real-time data
+            spider_context = ""
+            spider_insights = None
+            try:
+                spider_insights = self.spider_intelligence.get_insights_for_prompt(message)
+                if spider_insights and (spider_insights.get('relevant_trends') or spider_insights.get('related_discussions')):
+                    spider_context = self._format_spider_context(spider_insights)
+                    logger.info(f"🕷️ Spider intelligence retrieved: {len(spider_insights.get('relevant_trends', []))} trends, "
+                               f"{len(spider_insights.get('related_discussions', []))} discussions")
+            except Exception as e:
+                logger.warning(f"Spider intelligence unavailable: {e}")
+                spider_context = ""
+
             # Check if user is asking about platform components
             message_lower = message.lower()
             is_platform_question = any(component in message_lower for component in [
@@ -205,16 +226,26 @@ User question: {message}
 
 CRITICAL: Answer about THEIR specific platform component, not generic concepts. For example, if they ask about "Neural Orchestra", explain THEIR real-time AI collaboration visualization system, not music AI."""
                 logger.info(f"🎯 Platform question detected! Using specialized prompt for: {message}")
-                logger.info(f"📝 Enhanced prompt (first 500 chars): {enhanced_prompt[:500]}")
             else:
                 logger.info(f"💬 General question detected: {message}")
+                # Build enhanced prompt with spider intelligence
                 enhanced_prompt = f"""You are a unified personal assistant for {self.user.username or 'the user'}.
 
 {agent_context}
 
 Context: {context.get('page', 'unknown')} page
 Task type: {self._detect_task_type(message)}
+"""
+                # Add spider intelligence if available
+                if spider_context:
+                    enhanced_prompt += f"""
+REAL-TIME INTELLIGENCE FROM SPIDER NETWORK:
+{spider_context}
 
+Use this real-time data to provide informed, data-driven responses. Reference specific sources when relevant.
+"""
+
+                enhanced_prompt += f"""
 User message: {message}
 
 Provide a helpful, personalized response. If this seems like it needs an agent, mention that you can recommend agents based on past performance."""
@@ -230,7 +261,8 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
             # Learn from this interaction
             self._learn_from_interaction(message, response, context)
 
-            return {
+            # Build response with spider metadata
+            result = {
                 'response': response.content if response.success else 'I encountered an issue generating a response.',
                 'suggestions': self._generate_contextual_suggestions(message, context),
                 'actions': self._determine_available_actions(context),
@@ -243,13 +275,109 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
                     'context_used': True,
                     'learning_applied': True,
                     'tokens_used': response.token_usage.get('total_tokens', 0) if response.token_usage else 0,
-                    'generation_time_ms': response.generation_time_ms
+                    'generation_time_ms': response.generation_time_ms,
+                    'spider_intelligence_used': bool(spider_context)
                 }
             }
+
+            # Add spider data to response if available
+            if spider_insights:
+                result['spider_data'] = {
+                    'trends_found': len(spider_insights.get('relevant_trends', [])),
+                    'discussions_found': len(spider_insights.get('related_discussions', [])),
+                    'sources': list(set(
+                        [t.get('source', 'unknown') for t in spider_insights.get('relevant_trends', [])] +
+                        [d.get('source', 'unknown') for d in spider_insights.get('related_discussions', [])]
+                    ))
+                }
+
+            return result
 
         except Exception as e:
             logger.error(f"Error in direct response: {e}")
             return self._create_error_response(str(e))
+
+    def _format_spider_context(self, spider_insights: Dict[str, Any]) -> str:
+        """Format spider intelligence data into a readable context string."""
+        parts = []
+
+        # Format trending topics (these are keywords/tags, not articles)
+        trends = spider_insights.get('relevant_trends', [])
+        if trends:
+            topic_list = []
+            for trend in trends[:10]:
+                # Handle both dict format and simple string format
+                if isinstance(trend, dict):
+                    topic = trend.get('topic', '')
+                    count = trend.get('count', trend.get('mentions', 0))
+                    if topic:
+                        topic_list.append(f"{topic} ({count})" if count else topic)
+                elif isinstance(trend, str):
+                    topic_list.append(trend)
+
+            if topic_list:
+                parts.append(f"📈 TRENDING TOPICS: {', '.join(topic_list)}")
+
+        # Format related discussions/articles (these have full titles and URLs)
+        discussions = spider_insights.get('related_discussions', [])
+        if discussions:
+            parts.append("\n📰 RECENT ARTICLES & DISCUSSIONS:")
+            for i, disc in enumerate(discussions[:5], 1):
+                title = disc.get('title', '')
+                if not title:
+                    continue  # Skip items without titles
+                source = disc.get('source', 'Unknown')
+                url = disc.get('url', '')
+                description = disc.get('description', '')
+                parts.append(f"  {i}. [{source}] {title}")
+                if url:
+                    parts.append(f"     URL: {url}")
+                if description:
+                    parts.append(f"     Summary: {description[:150]}...")
+
+        # Format related content from search (these are direct matches)
+        related_content = spider_insights.get('related_content', [])
+        if related_content:
+            parts.append("\n🔍 DIRECTLY RELEVANT CONTENT:")
+            for i, content in enumerate(related_content[:3], 1):
+                title = content.get('title', '')
+                if not title:
+                    continue
+                source = content.get('source', 'Unknown')
+                url = content.get('url', '')
+                parts.append(f"  {i}. [{source}] {title}")
+                if url:
+                    parts.append(f"     URL: {url}")
+
+        # Format job market data if present
+        job_market = spider_insights.get('job_market', {})
+        if job_market and job_market.get('total', 0) > 0:
+            parts.append(f"\n💼 JOB MARKET: {job_market['total']} remote jobs found")
+            sample_jobs = job_market.get('sample_jobs', [])
+            for job in sample_jobs[:3]:
+                title = job.get('title', '')
+                company = job.get('company', 'Unknown')
+                parts.append(f"  • {title} at {company}")
+
+        # Format market data if present
+        market_data = spider_insights.get('market_data', {})
+        if market_data and market_data.get('crypto'):
+            parts.append("\n💰 CRYPTO MARKET:")
+            for crypto in market_data['crypto'][:3]:
+                symbol = crypto.get('symbol', '')
+                price = crypto.get('price', 'N/A')
+                change = crypto.get('change_24h', 0)
+                if symbol and price:
+                    parts.append(f"  • {symbol}: ${price} ({change:+.1f}%)" if isinstance(change, (int, float)) else f"  • {symbol}: ${price}")
+
+        # Format suggestions if any
+        suggestions = spider_insights.get('suggestions', [])
+        if suggestions:
+            parts.append("\n💡 CONTEXT:")
+            for suggestion in suggestions[:3]:
+                parts.append(f"  • {suggestion}")
+
+        return "\n".join(parts) if parts else ""
 
     def get_agent_recommendations(self, message: str) -> List[Dict[str, Any]]:
         """
