@@ -8626,6 +8626,36 @@
                         <!-- ========== WORKFLOWS SUB-TAB ========== -->
                         <div class="tab-pane fade" id="agents-workflows" role="tabpanel">
 
+                            <!-- Workflows Nested Sub-Tab Navigation -->
+                            <ul class="nav nav-pills nav-fill mb-4" id="workflows-nested-tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="wf-analytics-tab" data-bs-toggle="pill" data-bs-target="#wf-analytics" type="button" role="tab" style="color: #4bc0c0;">
+                                        📊 Analytics
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="wf-training-tab" data-bs-toggle="pill" data-bs-target="#wf-training" type="button" role="tab" style="color: #22c55e;">
+                                        🎓 Training
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="wf-executions-tab" data-bs-toggle="pill" data-bs-target="#wf-executions" type="button" role="tab" style="color: #0ea5e9;">
+                                        ⚡ Executions
+                                    </button>
+                                </li>
+                            </ul>
+                            <style>
+                                #workflows-nested-tabs .nav-link { background: transparent; border: 1px solid #444; font-size: 12px; padding: 8px 16px; }
+                                #workflows-nested-tabs .nav-link:hover { background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; }
+                                #workflows-nested-tabs .nav-link.active { background: rgba(245, 158, 11, 0.2) !important; border-color: #f59e0b !important; color: #f59e0b !important; }
+                            </style>
+
+                            <!-- Workflows Nested Tab Content -->
+                            <div class="tab-content" id="workflows-nested-content">
+
+                                <!-- ===== ANALYTICS NESTED TAB ===== -->
+                                <div class="tab-pane fade show active" id="wf-analytics" role="tabpanel">
+
                     <!-- SESSION 217: ANALYTICS CHARTS SECTION -->
                     <hr style="border-color: #333; margin: 2rem 0;">
                     <h4 class="mb-4" style="color: #8b5cf6;">📊 Performance Analytics</h4>
@@ -8750,6 +8780,12 @@
                     </div>
                     <!-- END SESSION 217: ANALYTICS CHARTS -->
 
+                                </div>
+                                <!-- END ANALYTICS NESTED TAB -->
+
+                                <!-- ===== TRAINING NESTED TAB ===== -->
+                                <div class="tab-pane fade" id="wf-training" role="tabpanel">
+
                     <!-- SESSION 217B: AGENT TRAINING SECTION -->
                     <hr style="border-color: #333; margin: 2rem 0;">
                     <h4 class="mb-4" style="color: #22c55e;">🎓 Agent Training & Configuration</h4>
@@ -8855,6 +8891,12 @@
                         </div>
                     </div>
                     <!-- END SESSION 217B: AGENT TRAINING -->
+
+                                </div>
+                                <!-- END TRAINING NESTED TAB -->
+
+                                <!-- ===== EXECUTIONS NESTED TAB ===== -->
+                                <div class="tab-pane fade" id="wf-executions" role="tabpanel">
 
                     <!-- SESSION 217C: WORKFLOW ANALYTICS -->
                     <h5 class="text-warning mt-5 mb-4">📊 Workflow Analytics</h5>
@@ -8983,6 +9025,12 @@
                         </div>
                     </div>
                     <!-- END SESSION 217C: WORKFLOW ANALYTICS -->
+
+                                </div>
+                                <!-- END EXECUTIONS NESTED TAB -->
+
+                            </div>
+                            <!-- END Workflows Nested Tab Content -->
 
                         </div>
                         <!-- END WORKFLOWS SUB-TAB -->
