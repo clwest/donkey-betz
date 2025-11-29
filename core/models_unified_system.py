@@ -10792,3 +10792,160 @@ class LearningPattern(models.Model):
         if self.times_applied == 0:
             return 0.0
         return self.success_when_applied / self.times_applied
+
+
+# =====================================================
+# SESSION 265 PHASE 6: AUTONOMY ENGINE MODELS
+# =====================================================
+
+
+class AutonomyConfiguration(models.Model):
+    """
+    User's autonomy configuration settings.
+
+    Session 265 Phase 6: Autonomy Engine
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='autonomy_config'
+    )
+
+    # Autonomy level
+    AUTONOMY_LEVELS = [
+        ('observe', 'Observe Only'),
+        ('suggest', 'Suggest Actions'),
+        ('assisted', 'Assisted (Requires Approval)'),
+        ('autonomous', 'Autonomous (Within Limits)'),
+        ('full', 'Full Autonomy'),
+    ]
+    autonomy_level = models.CharField(
+        max_length=20,
+        choices=AUTONOMY_LEVELS,
+        default='assisted'
+    )
+
+    # Limits
+    max_daily_actions = models.IntegerField(default=10)
+    max_daily_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('100.00')
+    )
+
+    # Allowed actions
+    allowed_action_types = ArrayField(
+        models.CharField(max_length=50),
+        default=list,
+        blank=True
+    )
+
+    # Risk tolerance
+    RISK_LEVELS = [
+        ('minimal', 'Minimal Risk Only'),
+        ('low', 'Low Risk'),
+        ('medium', 'Medium Risk'),
+        ('high', 'High Risk'),
+        ('critical', 'Critical Risk'),
+    ]
+    risk_tolerance = models.CharField(
+        max_length=20,
+        choices=RISK_LEVELS,
+        default='low'
+    )
+
+    # Approval threshold
+    require_approval_above = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('50.00')
+    )
+
+    # Quiet hours
+    quiet_hours_start = models.IntegerField(null=True, blank=True)  # 0-23
+    quiet_hours_end = models.IntegerField(null=True, blank=True)  # 0-23
+
+    # Notifications
+    notify_on_action = models.BooleanField(default=True)
+    learn_from_feedback = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Autonomy Configuration"
+        verbose_name_plural = "Autonomy Configurations"
+
+    def __str__(self):
+        return f"{self.user.username}: {self.get_autonomy_level_display()}"
+
+
+class AutonomousActionLog(models.Model):
+    """
+    Log of all autonomous actions taken by the system.
+
+    Session 265 Phase 6: Autonomy Engine
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='autonomous_actions',
+        null=True, blank=True
+    )
+
+    # Action identification
+    action_id = models.CharField(max_length=100)
+    action_type = models.CharField(max_length=50)
+    risk_level = models.CharField(max_length=20)
+
+    # Description
+    description = models.TextField()
+    reasoning = models.TextField()
+
+    # Value
+    estimated_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True, blank=True
+    )
+    actual_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True, blank=True
+    )
+
+    # Execution
+    confidence = models.FloatField(default=0.0)
+    required_approval = models.BooleanField(default=True)
+    was_approved = models.BooleanField(default=False)
+    success = models.BooleanField(null=True, blank=True)
+    execution_result = models.JSONField(default=dict)
+
+    # Agents
+    agents_involved = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        blank=True
+    )
+
+    # Context
+    context = models.JSONField(default=dict)
+
+    # Timing
+    created_at = models.DateTimeField(auto_now_add=True)
+    executed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action_type', 'success']),
+        ]
+
+    def __str__(self):
+        status = "success" if self.success else ("failed" if self.success is False else "pending")
+        return f"{self.action_type}: {self.description[:50]}... ({status})"

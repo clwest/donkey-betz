@@ -28,7 +28,15 @@ Phase 5 (Learning Loop):
 - OutcomeRecord: Records coordinator execution outcomes
 - AgentPerformance: Agent performance metrics
 
-Session 265: Phase 1-5 (Foundation + Spider-Agent + Sci-Fi + Revenue + Learning Loop)
+Phase 6 (Autonomy Engine):
+- AutonomyEngine: Self-operating intelligence system
+- AutonomousAction: Represents autonomous actions
+- AutonomyConfig: User configuration for autonomy
+- AutonomyLevel: Levels of autonomous operation
+- ActionType: Types of autonomous actions
+- RiskLevel: Risk levels for actions
+
+Session 265: ALL 6 PHASES COMPLETE!
 """
 
 from .query_classifier import QueryClassifier
@@ -59,6 +67,15 @@ from .learning_loop import (
     OutcomeType,
     FeedbackType,
     get_learning_loop_service,
+)
+from .autonomy_engine import (
+    AutonomyEngine,
+    AutonomousAction,
+    AutonomyConfig,
+    AutonomyLevel,
+    ActionType,
+    RiskLevel,
+    get_autonomy_engine,
 )
 
 __all__ = [
@@ -92,4 +109,12 @@ __all__ = [
     'OutcomeType',
     'FeedbackType',
     'get_learning_loop_service',
+    # Phase 6: Autonomy Engine
+    'AutonomyEngine',
+    'AutonomousAction',
+    'AutonomyConfig',
+    'AutonomyLevel',
+    'ActionType',
+    'RiskLevel',
+    'get_autonomy_engine',
 ]

@@ -1,6 +1,8 @@
 """
 Celery Background Tasks for Unified Donkey Betz Platform
 Handles long-running operations like document isolation in the background
+
+Session 265 Phase 6: Added run_autonomy_cycle task for autonomous operation
 """
 
 from celery import shared_task
@@ -12,6 +14,120 @@ from typing import Dict, Any
 import os
 
 logger = logging.getLogger(__name__)
+
+
+# ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
+
+
+@shared_task
+def run_autonomy_cycle(user_id: int = None):
+    """
+    Run an autonomy cycle for a user or all users.
+
+    Session 265 Phase 6: Autonomy Engine
+
+    This task:
+    - Scans for actionable opportunities
+    - Assesses risk and value
+    - Executes approved autonomous actions
+    - Records outcomes for learning
+
+    Args:
+        user_id: Specific user ID, or None for all users with autonomy enabled
+    """
+    from django.contrib.auth import get_user_model
+    from core.super_platform.autonomy_engine import get_autonomy_engine, AutonomyLevel
+
+    User = get_user_model()
+
+    results = {
+        'users_processed': 0,
+        'total_actions': 0,
+        'successful_actions': 0,
+        'total_value': 0.0,
+    }
+
+    try:
+        if user_id:
+            users = User.objects.filter(id=user_id)
+        else:
+            # Get all users with autonomy enabled
+            from core.models_unified_system import AutonomyConfiguration
+            enabled_configs = AutonomyConfiguration.objects.exclude(
+                autonomy_level='observe'
+            ).values_list('user_id', flat=True)
+            users = User.objects.filter(id__in=enabled_configs)
+
+        for user in users:
+            try:
+                engine = get_autonomy_engine(user)
+
+                # Skip if observe-only
+                if engine.config.level == AutonomyLevel.OBSERVE:
+                    continue
+
+                # Run cycle
+                cycle_result = engine.run_autonomy_cycle()
+
+                results['users_processed'] += 1
+                results['total_actions'] += cycle_result.get('actions_executed', 0)
+                results['successful_actions'] += cycle_result.get('actions_succeeded', 0)
+                results['total_value'] += float(cycle_result.get('total_value_generated', 0))
+
+                logger.info(
+                    f"Autonomy cycle for {user.username}: "
+                    f"{cycle_result.get('actions_executed', 0)} actions, "
+                    f"${cycle_result.get('total_value_generated', 0)} value"
+                )
+
+            except Exception as user_error:
+                logger.error(f"Autonomy cycle failed for user {user.id}: {user_error}")
+
+        logger.info(
+            f"Autonomy cycle complete: {results['users_processed']} users, "
+            f"{results['total_actions']} actions, ${results['total_value']:.2f} value"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.exception(f"Autonomy cycle task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def run_spider_by_category(category: str):
+    """
+    Run spiders for a specific category.
+
+    Session 265 Phase 6: Used by autonomy engine for spider dispatch.
+    """
+    from ai_core.spiders.spider_registry import SpiderRegistry
+
+    try:
+        registry = SpiderRegistry()
+        spiders = registry.get_spiders_by_category(category)
+
+        results = []
+        for spider_name in spiders[:3]:  # Limit to 3 spiders per category
+            try:
+                spider_class = registry.get_spider(spider_name)
+                if spider_class:
+                    spider = spider_class()
+                    data = spider.fetch()
+                    results.append({
+                        'spider': spider_name,
+                        'items': len(data) if data else 0,
+                    })
+            except Exception as spider_error:
+                logger.debug(f"Spider {spider_name} failed: {spider_error}")
+
+        logger.info(f"Ran {len(results)} spiders for category {category}")
+        return {'category': category, 'results': results}
+
+    except Exception as e:
+        logger.error(f"Spider dispatch failed for {category}: {e}")
+        return {'error': str(e)}
 
 @shared_task(bind=True, max_retries=3)
 def isolate_documents_batch(self, batch_size: int = 50, max_batches: int = None):
