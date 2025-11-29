@@ -1538,10 +1538,11 @@
         <div class="tab-content" id="studioTabContent">
 
             <!-- Session 189: AI ASSISTANT TAB (Primary Interaction Point) -->
+            <!-- Session 272: Expanded chat area for better image visibility -->
             <div class="tab-pane fade show active" id="assistant" role="tabpanel">
                 <div class="row">
-                    <!-- Main Chat Area (Left - 8 cols) -->
-                    <div class="col-lg-8">
+                    <!-- Main Chat Area (Left - 9 cols) - Session 272: Wider for better images -->
+                    <div class="col-lg-9">
                         <div class="card mb-4" style="background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(251, 191, 36, 0.4);">
                             <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border-bottom: 2px solid rgba(251, 191, 36, 0.3);">
                                 <div>
@@ -1563,7 +1564,8 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="card-body p-0" style="display: flex; flex-direction: column; height: 60vh;">
+                            <!-- Session 272: Increased height from 60vh to 75vh for better image visibility -->
+                            <div class="card-body p-0" style="display: flex; flex-direction: column; height: 75vh;">
                                 <!-- Chat Messages Area -->
                                 <div id="tabChatMessages" class="p-4" style="flex: 1; overflow-y: auto; background: rgba(0, 0, 0, 0.2); scroll-behavior: smooth;">
                                     <div class="alert alert-info mb-3" style="background: rgba(6, 182, 212, 0.15); border: 1px solid var(--cyan);">
@@ -1636,8 +1638,9 @@
                         </div>
                     </div>
 
-                    <!-- Right Panel (4 cols) - Style Preferences & Project Context -->
-                    <div class="col-lg-4">
+                    <!-- Right Panel (3 cols) - Style Preferences & Project Context -->
+                    <!-- Session 272: Reduced from 4 to 3 cols to give more space to chat -->
+                    <div class="col-lg-3">
                         <!-- Project Selector Card -->
                         <div class="card mb-3" style="background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.4);">
                             <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
@@ -26121,11 +26124,27 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     const type = artifact.type || 'unknown';
 
                     if (type === 'image') {
+                        // Session 272: Enhanced image display - larger, clickable, with download button
                         html += `
-                            <div class="artifact-image" style="margin: 10px 0;">
-                                <img src="${artifact.url}" alt="Generated Image ${idx + 1}"
-                                     style="max-width: 100%; border-radius: 8px; border: 2px solid rgba(168, 85, 247, 0.3);">
-                                ${artifact.prompt ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 5px;">📝 ${artifact.prompt}</div>` : ''}
+                            <div class="artifact-image" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.15)); border-radius: 12px; border: 2px solid rgba(168, 85, 247, 0.4);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="color: #c4b5fd; font-weight: 600; font-size: 14px;">🎨 Generated Image ${idx + 1}</span>
+                                    <div style="display: flex; gap: 8px;">
+                                        <a href="${artifact.url}" download class="btn btn-sm" style="background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #86efac; font-size: 12px; padding: 4px 12px;">
+                                            ⬇️ Download
+                                        </a>
+                                        <a href="${artifact.url}" target="_blank" class="btn btn-sm" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #c4b5fd; font-size: 12px; padding: 4px 12px;">
+                                            🔍 Full Size
+                                        </a>
+                                    </div>
+                                </div>
+                                <a href="${artifact.url}" target="_blank" style="display: block; cursor: zoom-in;">
+                                    <img src="${artifact.url}" alt="Generated Image ${idx + 1}"
+                                         style="width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; border: 2px solid rgba(168, 85, 247, 0.3); background: rgba(0,0,0,0.3);"
+                                         onload="this.style.boxShadow='0 8px 32px rgba(168, 85, 247, 0.3)'">
+                                </a>
+                                ${artifact.prompt ? `<div style="font-size: 12px; color: #94a3b8; margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">📝 ${artifact.prompt}</div>` : ''}
+                                ${artifact.id ? `<div style="font-size: 10px; color: #64748b; margin-top: 5px;">ID: ${artifact.id}</div>` : ''}
                             </div>`;
                     } else if (type === 'video') {
                         html += `
