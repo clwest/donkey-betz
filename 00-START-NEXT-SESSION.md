@@ -1,177 +1,156 @@
-# Session 269: Clean Architecture Implementation - Phase 2
+# Session 269: Clean Architecture Implementation - Phase 3
 
 **Date:** November 29, 2025
-**Previous Session:** 268 (Phase 1 Complete - Foundation)
+**Previous Session:** 268 (Phases 1 & 2 Complete - Full Agent Ecosystem)
 **Session Type:** Major Architecture Overhaul
 **Status:** READY TO IMPLEMENT
 
 ---
 
-## Phase 1 Complete!
+## Phases 1 & 2 Complete!
 
-Session 268 successfully implemented the foundation:
+Session 268 successfully implemented:
 
+### Phase 1 - Foundation
 | File | Purpose | Status |
 |------|---------|--------|
-| `core/agents/__init__.py` | Package init | DONE |
+| `core/agents/__init__.py` | Package exports | DONE |
 | `core/agents/base_agent.py` | Abstract base with TimeTravelMixin | DONE |
 | `core/agents/image_agent.py` | Image generation ONLY | DONE |
 | `core/agent_router.py` | Deterministic routing | DONE |
-| `core/settings.py` | Added `USE_CLEAN_AGENT_ARCHITECTURE` flag | DONE |
+| `core/settings.py` | `USE_CLEAN_AGENT_ARCHITECTURE` flag | DONE |
+
+### Phase 2 - Complete Agent Ecosystem
+| Agent | Tools | Status |
+|-------|-------|--------|
+| `ImageAgent` | generate_image | DONE |
+| `VideoAgent` | generate_video, animate_image, extend_video, chain_videos | DONE |
+| `AudioAgent` | generate_voice, generate_sfx, add_voiceover | DONE |
+| `ThreeDAgent` | convert_to_3d, generate_3d_scene | DONE |
+| `ImageEditingAgent` | upscale, remove_background, create_variations, recolor, search_replace | DONE |
+| `VideoEditingAgent` | trim, add_text, add_effects, extract_frame, concatenate, speed_change | DONE |
+| `ResearchAgent` | web_search, spider_query, analyze_trends | DONE |
+| `WorkflowAgent` | delegate_to_agent (can call other agents) | DONE |
 
 All tests pass:
-- ImageAgent instantiation
-- AgentRouter routing
-- SciFi context injection
-- Spider context injection
-- TimeTravelMixin integration
-- Feature flag exists (False by default)
+- 8 agents instantiated correctly
+- Tool isolation verified (ImageAgent can't access video tools, etc.)
+- AgentRouter routes to all 8 agents
+- Context injection (SciFi + Spider) working
+- WorkflowAgent can delegate to 7 other agents
 
 ---
 
-## Phase 2 Tasks (This Session)
+## Phase 3 Tasks (This Session)
 
-### 1. Create All Creation Agents
+### Goal: Integrate with Super Platform Coordinator
 
-```python
-# core/agents/video_agent.py
-class VideoAgent(BaseAgent):
-    name = "VideoAgent"
-    system_prompt = "You create videos. That's all."
-    tools = [generate_video, animate_image, extend_video, chain_clips]
+The Super Platform Coordinator (`core/super_platform/coordinator.py`) needs to use the new agent architecture instead of the old tool-based system.
 
-# core/agents/audio_agent.py
-class AudioAgent(BaseAgent):
-    name = "AudioAgent"
-    system_prompt = "You create audio. That's all."
-    tools = [generate_voice, generate_sfx, add_voiceover]
+### 1. Create Personal Assistant Agent
 
-# core/agents/three_d_agent.py
-class ThreeDAgent(BaseAgent):
-    name = "ThreeDAgent"
-    system_prompt = "You create 3D models. That's all."
-    tools = [convert_to_3d, generate_3d_scene]
-```
-
-### 2. Create All Editing Agents
+This is the "traffic cop" that decides which agent to delegate to:
 
 ```python
-# core/agents/image_editing_agent.py
-class ImageEditingAgent(BaseAgent):
-    name = "ImageEditingAgent"
-    system_prompt = "You modify existing images. That's all."
-    tools = [upscale, remove_bg, recolor, create_variations, search_replace]
+# core/agents/personal_assistant_agent.py
+class PersonalAssistantAgent(BaseAgent):
+    """
+    The main entry point for user requests.
 
-# core/agents/video_editing_agent.py
-class VideoEditingAgent(BaseAgent):
-    name = "VideoEditingAgent"
-    system_prompt = "You modify existing videos. That's all."
-    tools = [trim, add_effects, add_text, concatenate, extract_frame, ...]
+    This agent:
+    1. Receives user messages
+    2. Classifies intent (question vs. creation request)
+    3. Delegates to appropriate specialized agent
+    4. Returns synthesized response
+    """
+
+    tools = [
+        {
+            "function": {
+                "name": "delegate_to_agent",
+                "description": "Delegate task to a specialized agent",
+                "parameters": {
+                    "properties": {
+                        "agent_name": {
+                            "enum": [
+                                "ImageAgent", "VideoAgent", "AudioAgent", "ThreeDAgent",
+                                "ImageEditingAgent", "VideoEditingAgent",
+                                "ResearchAgent", "WorkflowAgent"
+                            ]
+                        },
+                        "task": {"type": "string"},
+                        "context": {"type": "object"}
+                    }
+                }
+            }
+        }
+    ]
 ```
 
-### 3. Create Research Agents
+### 2. Update SuperPlatformCoordinator
+
+Modify to use AgentRouter when feature flag is enabled:
 
 ```python
-# core/agents/research_agent.py
-class ResearchAgent(BaseAgent):
-    name = "ResearchAgent"
-    system_prompt = "You search the web and spider network. That's all."
-    tools = [web_search, spider_query]
+# core/super_platform/coordinator.py
 
-# core/agents/trend_agent.py
-class TrendAnalysisAgent(BaseAgent):
-    name = "TrendAnalysisAgent"
-    system_prompt = "You analyze trends and patterns. That's all."
-    tools = [analyze_trends, predict_opportunities]
+def process_request(self, message, user):
+    if settings.USE_CLEAN_AGENT_ARCHITECTURE:
+        # Use new layered architecture
+        return self._process_with_agents(message, user)
+    else:
+        # Use old tool-based architecture
+        return self._process_legacy(message, user)
+
+def _process_with_agents(self, message, user):
+    # 1. Classify intent
+    intent = self.query_classifier.classify(message)
+
+    # 2. If question, answer directly
+    if intent.is_question:
+        return self._answer_question(message)
+
+    # 3. Route to appropriate agent
+    router = AgentRouter(user=user)
+    agent_name = self._determine_agent(intent)
+    result = router.route(agent_name, message)
+
+    return result
 ```
 
-### 4. Create Orchestration Agents
+### 3. Intent-to-Agent Mapping
 
-```python
-# core/agents/workflow_agent.py
-class WorkflowAgent(BaseAgent):
-    name = "WorkflowAgent"
-    system_prompt = "You coordinate multi-step workflows. You can delegate to other agents."
-    tools = [delegate_to_agent]  # Special: can call other agents
+Create mapping logic:
 
-# core/agents/hive_mind_agent.py
-class HiveMindAgent(BaseAgent):
-    name = "HiveMindAgent"
-    system_prompt = "You synthesize multi-agent intelligence."
-    tools = [gather_perspectives, synthesize, debate]
-```
+| Intent | Agent |
+|--------|-------|
+| create image/logo/banner | ImageAgent |
+| create video/animate | VideoAgent |
+| create audio/voiceover | AudioAgent |
+| create 3D model | ThreeDAgent |
+| upscale/edit image | ImageEditingAgent |
+| trim/edit video | VideoEditingAgent |
+| search/research/find | ResearchAgent |
+| multi-step workflow | WorkflowAgent |
+| question (no creation) | No agent (direct GPT response) |
 
-### 5. Update AgentRouter
+### 4. Testing Checklist
 
-Add all new agents to `AGENT_MAP`:
-
-```python
-AGENT_MAP = {
-    "ImageAgent": ImageAgent,
-    "VideoAgent": VideoAgent,
-    "AudioAgent": AudioAgent,
-    "ThreeDAgent": ThreeDAgent,
-    "ImageEditingAgent": ImageEditingAgent,
-    "VideoEditingAgent": VideoEditingAgent,
-    "ResearchAgent": ResearchAgent,
-    "TrendAnalysisAgent": TrendAnalysisAgent,
-    "WorkflowAgent": WorkflowAgent,
-    "HiveMindAgent": HiveMindAgent,
-    "ContentStrategyAgent": ContentStrategyAgent,
-    "SEOOptimizerAgent": SEOOptimizerAgent,
-    "BrandIdentityAgent": BrandIdentityAgent,
-}
-```
-
----
-
-## Reference: Existing Tool Functions
-
-Use these existing functions in the new agents:
-
-### Video Tools (core/views_video.py)
-- `_execute_generate_video(user, params, session)` - Text-to-video
-- `_execute_animate_image(user, params, session)` - Image-to-video
-- `_execute_extend_video(user, params, session)` - Extend duration
-- `_execute_chain_clips(user, params, session)` - Concatenate clips
-
-### Audio Tools (core/views_audio.py)
-- `generate_voice(user, params, session)` - Text-to-speech
-- `add_voiceover(user, params, session)` - Add voice to video
-
-### Image Editing (core/views_image.py)
-- `_execute_upscale(user, params, session)`
-- `_execute_remove_background(user, params, session)`
-- `_execute_recolor(user, params, session)`
-- `_execute_variations(user, params, session)`
-- `_execute_search_replace(user, params, session)`
-
-### Research Tools
-- `SpiderIntelligenceService.search_spider_data(query)`
-- `SpiderIntelligenceService.get_trending_topics()`
-- Web search via Serper API
-
----
-
-## Testing Checklist for Phase 2
-
-After implementing each agent:
-
-- [ ] Agent can be instantiated
-- [ ] Agent has correct tools (and ONLY those tools)
-- [ ] Agent.execute() works
-- [ ] AgentRouter.route() works with new agent
-- [ ] Agent cannot access tools from other domains
+- [ ] PersonalAssistantAgent can classify intents
+- [ ] Correct agent selected for each intent type
+- [ ] Feature flag controls architecture choice
+- [ ] End-to-end test: "create a logo" → ImageAgent
+- [ ] End-to-end test: "what is trending" → ResearchAgent or direct answer
+- [ ] End-to-end test: "research trends and create 3 logos" → WorkflowAgent
 
 ---
 
 ## What NOT To Do Yet
 
-- Do NOT modify Personal Assistant (Phase 4)
 - Do NOT modify frontend (Phase 5)
 - Do NOT remove old code (Phase 6)
 
-Focus on creating all agents and verifying isolation.
+Focus on integrating the agent router with the Super Platform Coordinator.
 
 ---
 
@@ -180,9 +159,9 @@ Focus on creating all agents and verifying isolation.
 | Phase | Focus | Status |
 |-------|-------|--------|
 | **1** | Base agent + ImageAgent + Router | **COMPLETE** |
-| **2** | All creation/editing/research agents | **THIS SESSION** |
-| 3 | Super Platform Coordinator integration | Pending |
-| 4 | Personal Assistant modification | Pending |
+| **2** | All creation/editing/research agents | **COMPLETE** |
+| **3** | Super Platform Coordinator integration | **THIS SESSION** |
+| 4 | Personal Assistant modification | Next |
 | 5 | Frontend updates | Pending |
 | 6 | Testing & cleanup | Pending |
 
@@ -195,13 +174,28 @@ Focus on creating all agents and verifying isolation.
 make start
 make celery
 
-# Test new agents
+# Test the agents
 python manage.py shell
->>> from core.agents import VideoAgent, AudioAgent
+>>> from core.agents import ImageAgent, VideoAgent, WorkflowAgent
 >>> from core.agent_router import AgentRouter
 >>> router = AgentRouter()
->>> router.is_valid_agent("VideoAgent")
+>>> router.get_available_agents()
+
+# Enable new architecture (for testing)
+export USE_CLEAN_AGENT_ARCHITECTURE=True
 ```
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `core/agents/*.py` | All 8 specialized agents |
+| `core/agent_router.py` | Deterministic routing |
+| `core/super_platform/coordinator.py` | Super Platform (to modify) |
+| `core/super_platform/query_classifier.py` | Intent classification |
+| `core/settings.py` | Feature flag |
 
 ---
 
@@ -211,10 +205,10 @@ python manage.py shell
 |--------|-------|
 | Total Spiders | 70 |
 | Real Data Sources | 24 |
-| Agents | 22 (+ 13 new clean agents) |
-| Sci-Fi Features | 15 |
+| Clean Agents | 8 |
+| Total Tools | 25 (isolated per agent) |
 | Development Sessions | 268 |
 
 ---
 
-**GOAL:** Create all specialized agents (video, audio, 3D, editing, research, orchestration) with isolated tool sets. Each agent must be unable to access tools from other domains.
+**GOAL:** Integrate the new agent architecture with Super Platform Coordinator. When `USE_CLEAN_AGENT_ARCHITECTURE=True`, requests should be routed through the AgentRouter to specialized agents instead of using the legacy tool-based system.
