@@ -1,0 +1,276 @@
+"""
+Agent Router - Deterministic Routing to Specialized Agents
+===========================================================
+
+Session 268: Phase 1 - Foundation
+
+This router provides DETERMINISTIC routing to specialized agents.
+No LLM is involved in routing decisions - it's a simple dictionary lookup.
+
+This prevents the current problem where GPT picks the wrong tool
+(e.g., video_generation_agent for a logo request).
+
+Architecture:
+    User → Personal Assistant → Agent Router → Specialized Agent → Tools
+
+The Personal Assistant calls delegate_to_agent("ImageAgent", task).
+The router looks up "ImageAgent" in the AGENT_MAP and executes it.
+
+Key Design Decisions:
+1. Routing is deterministic (string match on agent_name)
+2. Each agent is instantiated fresh per request
+3. Sci-Fi and Spider context are injected before execution
+4. Results are returned as AgentResult objects
+
+Usage:
+    from core.agent_router import AgentRouter
+
+    router = AgentRouter(user=request.user)
+    result = router.route("ImageAgent", "create a cyberpunk logo", context={})
+
+Future Agents (Phase 2):
+    - VideoAgent
+    - AudioAgent
+    - ThreeDAgent
+    - ImageEditingAgent
+    - VideoEditingAgent
+    - ResearchAgent
+    - WorkflowAgent
+    - HiveMindAgent
+"""
+
+import logging
+from typing import Dict, Any, Optional, Type
+
+from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.image_agent import ImageAgent
+
+logger = logging.getLogger(__name__)
+
+
+class AgentNotFoundError(Exception):
+    """Raised when an unknown agent is requested."""
+    pass
+
+
+class AgentRouter:
+    """
+    Simple deterministic router for specialized agents.
+
+    This router:
+    1. Receives an agent_name and task
+    2. Looks up the agent class in AGENT_MAP
+    3. Injects sci-fi and spider context
+    4. Executes the agent
+    5. Returns the result
+
+    No LLM involved in routing - just dictionary lookup.
+    """
+
+    # Map agent names to agent classes
+    # Phase 1: Only ImageAgent
+    # Phase 2: All creation/editing/research agents
+    AGENT_MAP: Dict[str, Type[BaseAgent]] = {
+        "ImageAgent": ImageAgent,
+        # Phase 2 agents (coming next session):
+        # "VideoAgent": VideoAgent,
+        # "AudioAgent": AudioAgent,
+        # "ThreeDAgent": ThreeDAgent,
+        # "ImageEditingAgent": ImageEditingAgent,
+        # "VideoEditingAgent": VideoEditingAgent,
+        # "ResearchAgent": ResearchAgent,
+        # "TrendAnalysisAgent": TrendAnalysisAgent,
+        # "WorkflowAgent": WorkflowAgent,
+        # "HiveMindAgent": HiveMindAgent,
+        # "ContentStrategyAgent": ContentStrategyAgent,
+        # "SEOOptimizerAgent": SEOOptimizerAgent,
+        # "BrandIdentityAgent": BrandIdentityAgent,
+    }
+
+    def __init__(self, user=None):
+        """
+        Initialize the router.
+
+        Args:
+            user: Django User object for agent execution
+        """
+        self.user = user
+        self._scifi_service = None
+        self._spider_service = None
+
+    @property
+    def scifi_service(self):
+        """Lazy-load SciFi integration service."""
+        if self._scifi_service is None:
+            from core.super_platform.scifi_integration import get_scifi_integration_service
+            self._scifi_service = get_scifi_integration_service()
+        return self._scifi_service
+
+    @property
+    def spider_service(self):
+        """Lazy-load Spider intelligence service."""
+        if self._spider_service is None:
+            from core.services.spider_intelligence import SpiderIntelligenceService
+            self._spider_service = SpiderIntelligenceService()
+        return self._spider_service
+
+    def route(
+        self,
+        agent_name: str,
+        task: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> AgentResult:
+        """
+        Route a task to the appropriate agent.
+
+        This is the main entry point. It:
+        1. Validates the agent name
+        2. Instantiates the agent
+        3. Gathers sci-fi and spider context
+        4. Executes the agent
+        5. Returns the result
+
+        Args:
+            agent_name: Name of the agent to route to (e.g., "ImageAgent")
+            task: The task to perform in natural language
+            context: Optional additional context (count, style, reference_id, etc.)
+
+        Returns:
+            AgentResult from the agent execution
+
+        Raises:
+            AgentNotFoundError: If agent_name is not in AGENT_MAP
+        """
+        context = context or {}
+
+        # Validate agent name
+        agent_class = self.AGENT_MAP.get(agent_name)
+        if not agent_class:
+            available = ", ".join(self.AGENT_MAP.keys())
+            raise AgentNotFoundError(
+                f"Unknown agent: '{agent_name}'. Available agents: {available}"
+            )
+
+        logger.info(f"Routing to {agent_name}: {task[:50]}...")
+
+        # Instantiate the agent
+        agent = agent_class(user=self.user)
+
+        # Gather context
+        scifi_context = self._get_scifi_context(agent_name, task)
+        spider_context = self._get_spider_context(task)
+
+        # Execute the agent
+        try:
+            result = agent.execute(
+                task=task,
+                context=context,
+                scifi_context=scifi_context,
+                spider_context=spider_context
+            )
+
+            logger.info(
+                f"{agent_name} completed: success={result.success}, "
+                f"time={result.execution_time_ms}ms"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Agent execution error ({agent_name}): {e}")
+            return AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=agent_name
+            )
+
+    def _get_scifi_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Get sci-fi context for an agent.
+
+        This includes:
+        - Mood (affects style and confidence)
+        - Evolution (level, XP, title)
+        - Relationships (allies, rivals)
+        - Memory (past successes, learned patterns)
+        - Dreams (recent creative insights)
+
+        Args:
+            agent_name: Agent to get context for
+            task: Task for context relevance
+
+        Returns:
+            Dict with sci-fi context
+        """
+        try:
+            context = self.scifi_service.get_scifi_context(
+                agent_name=agent_name,
+                task=task,
+                user=self.user
+            )
+            return context.to_dict() if hasattr(context, 'to_dict') else {}
+        except Exception as e:
+            logger.warning(f"Failed to get sci-fi context: {e}")
+            return {}
+
+    def _get_spider_context(self, task: str) -> Dict[str, Any]:
+        """
+        Get spider intelligence context for a task.
+
+        This includes:
+        - Relevant trends
+        - Market data (if applicable)
+        - Related discussions
+        - Creative trends (styles, colors)
+
+        Args:
+            task: Task to get context for
+
+        Returns:
+            Dict with spider context
+        """
+        try:
+            context = self.spider_service.get_insights_for_prompt(task)
+
+            # Also get creative trends for image/design tasks
+            if any(word in task.lower() for word in ['logo', 'image', 'design', 'banner', 'illustration']):
+                creative = self.spider_service.get_creative_trends(hours=48)
+                context['creative_trends'] = creative
+
+            return context
+        except Exception as e:
+            logger.warning(f"Failed to get spider context: {e}")
+            return {}
+
+    def get_available_agents(self) -> list:
+        """
+        Get list of available agents.
+
+        Returns:
+            List of agent names and descriptions
+        """
+        agents = []
+        for name, agent_class in self.AGENT_MAP.items():
+            agents.append({
+                'name': name,
+                'description': agent_class.system_prompt[:100] + "..." if len(agent_class.system_prompt) > 100 else agent_class.system_prompt
+            })
+        return agents
+
+    def is_valid_agent(self, agent_name: str) -> bool:
+        """
+        Check if an agent name is valid.
+
+        Args:
+            agent_name: Name to check
+
+        Returns:
+            True if agent exists
+        """
+        return agent_name in self.AGENT_MAP
+
+
+# Convenience function
+def get_agent_router(user=None) -> AgentRouter:
+    """Get an AgentRouter instance."""
+    return AgentRouter(user=user)

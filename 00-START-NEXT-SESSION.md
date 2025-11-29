@@ -1,286 +1,207 @@
-# Session 268: Clean Architecture Implementation - Phase 1
+# Session 269: Clean Architecture Implementation - Phase 2
 
 **Date:** November 29, 2025
-**Previous Session:** 267 (Clean Architecture Proposal)
+**Previous Session:** 268 (Phase 1 Complete - Foundation)
 **Session Type:** Major Architecture Overhaul
 **Status:** READY TO IMPLEMENT
 
 ---
 
-## CRITICAL CONTEXT: Why We're Doing This
+## Phase 1 Complete!
 
-### The Problem (Session 267)
-The Personal Assistant has 14+ tools available and GPT picks the wrong one:
-- "Create a cyberpunk logo" → GPT calls `video_generation_agent` (WRONG!)
-- Questions → GPT calls `workflow_orchestration_agent` (WRONG!)
-- We tried band-aid fixes (tool descriptions, ordering, safety redirects) - they don't work reliably
+Session 268 successfully implemented the foundation:
 
-### The Root Cause
-**The Assistant knows too much.** It sees all tools and makes bad choices.
+| File | Purpose | Status |
+|------|---------|--------|
+| `core/agents/__init__.py` | Package init | DONE |
+| `core/agents/base_agent.py` | Abstract base with TimeTravelMixin | DONE |
+| `core/agents/image_agent.py` | Image generation ONLY | DONE |
+| `core/agent_router.py` | Deterministic routing | DONE |
+| `core/settings.py` | Added `USE_CLEAN_AGENT_ARCHITECTURE` flag | DONE |
 
-### The Solution: Layered Architecture
-```
-User → Personal Assistant → Agent Router → Specialized Agents → Tools
-```
-
-- **Assistant** has ONLY `delegate_to_agent` - cannot misroute
-- **Each Agent** has ONLY its domain tools - ImageAgent cannot generate video
-- **Router** is deterministic string matching - no GPT guessing
-
----
-
-## APPROVED ARCHITECTURE
-
-Full proposal: `docs/SESSION_267_CLEAN_ARCHITECTURE_PROPOSAL.md`
-
-### Key Design Decisions:
-
-| Decision | Choice |
-|----------|--------|
-| Assistant Tools | ONLY: `delegate_to_agent`, `remember_preference`, `recall_memory` |
-| Agent Tool Isolation | Each agent sees ONLY its own tools |
-| Routing | Deterministic (string match on agent_name), NOT LLM-based |
-| Workflow Orchestration | Server-side WorkflowAgent, NOT frontend loop |
-| Sci-Fi Integration | All 15 features preserved via SciFiContext injection |
-| Spider Integration | SpiderIntelligenceService feeds ContextAggregator |
-| Migration | Feature flag `USE_CLEAN_AGENT_ARCHITECTURE` |
-
----
-
-## Phase 1 Tasks (This Session)
-
-### 1. Create Base Agent Class
-```
-core/agents/base_agent.py
-```
-- Abstract base class
+All tests pass:
+- ImageAgent instantiation
+- AgentRouter routing
+- SciFi context injection
+- Spider context injection
 - TimeTravelMixin integration
-- Standard execute() interface
-- Sci-Fi context injection point
-- Spider context injection point
-
-### 2. Create ImageAgent (Test Case)
-```
-core/agents/image_agent.py
-```
-- System prompt: "You create images. That's all."
-- Tools: ONLY `generate_image`, `batch_generate`
-- NO video, audio, 3D, or search tools
-- Connects to existing Stability AI integration
-
-### 3. Create Agent Router
-```
-core/agent_router.py
-```
-- Simple dictionary mapping: `agent_name` → `AgentClass`
-- Injects SciFiContext before execution
-- Injects SpiderContext before execution
-- Returns AgentResult
-
-### 4. Add Feature Flag
-```python
-# In settings or constants
-USE_CLEAN_AGENT_ARCHITECTURE = False  # Start disabled
-```
-
-### 5. Test ImageAgent in Isolation
-- Direct call to ImageAgent.execute()
-- Verify it can ONLY generate images
-- Verify sci-fi context is injected
-- Verify spider context is injected
+- Feature flag exists (False by default)
 
 ---
 
-## Files to Create
+## Phase 2 Tasks (This Session)
 
-```
-core/
-├── agents/
-│   ├── __init__.py
-│   ├── base_agent.py       # Abstract base with TimeTravelMixin
-│   └── image_agent.py      # Image generation ONLY
-├── agent_router.py         # Simple deterministic routing
-```
-
----
-
-## Reference: Existing Code to Leverage
-
-### Image Generation (use this)
-```python
-# core/views_image.py - _execute_generate_image()
-# This is the actual Stability AI integration - ImageAgent should call this
-```
-
-### TimeTravelMixin (inherit this)
-```python
-# agents/time_travel_mixin.py - TimeTravelMixin
-# Provides record_decision(), time_travel_session()
-```
-
-### SciFi Integration (use this)
-```python
-# core/super_platform/scifi_integration.py - SciFiIntegrationService
-# Provides get_context(agent_name) → SciFiContext
-```
-
-### Spider Intelligence (use this)
-```python
-# core/services/spider_intelligence.py - SpiderIntelligenceService
-# Provides get_insights_for_prompt(query) → context dict
-```
-
----
-
-## Implementation Pattern
+### 1. Create All Creation Agents
 
 ```python
-# core/agents/base_agent.py
-from abc import ABC, abstractmethod
-from agents.time_travel_mixin import TimeTravelMixin
+# core/agents/video_agent.py
+class VideoAgent(BaseAgent):
+    name = "VideoAgent"
+    system_prompt = "You create videos. That's all."
+    tools = [generate_video, animate_image, extend_video, chain_clips]
 
-class BaseAgent(ABC, TimeTravelMixin):
-    """Base class for all clean architecture agents."""
+# core/agents/audio_agent.py
+class AudioAgent(BaseAgent):
+    name = "AudioAgent"
+    system_prompt = "You create audio. That's all."
+    tools = [generate_voice, generate_sfx, add_voiceover]
 
-    name: str = "BaseAgent"
-    system_prompt: str = ""
-    tools: list = []
-
-    @abstractmethod
-    def execute(self, task: str, context: dict,
-                scifi_context: dict, spider_context: dict) -> dict:
-        """Execute the agent's task. Must be implemented by subclasses."""
-        pass
-
-    def _build_prompt(self, task: str, scifi_context: dict, spider_context: dict) -> str:
-        """Build the complete prompt with all context."""
-        prompt = self.system_prompt
-
-        # Add mood modifier if available
-        if scifi_context.get('mood'):
-            prompt += f"\n\nCurrent mood: {scifi_context['mood']['state']}"
-            prompt += f"\n{scifi_context['mood']['prompt_modifier']}"
-
-        # Add spider insights if available
-        if spider_context.get('trends'):
-            prompt += f"\n\nCurrent trends: {spider_context['trends']}"
-
-        prompt += f"\n\nTask: {task}"
-        return prompt
+# core/agents/three_d_agent.py
+class ThreeDAgent(BaseAgent):
+    name = "ThreeDAgent"
+    system_prompt = "You create 3D models. That's all."
+    tools = [convert_to_3d, generate_3d_scene]
 ```
 
+### 2. Create All Editing Agents
+
 ```python
-# core/agents/image_agent.py
-from core.agents.base_agent import BaseAgent
-from core.views_image import _execute_generate_image
+# core/agents/image_editing_agent.py
+class ImageEditingAgent(BaseAgent):
+    name = "ImageEditingAgent"
+    system_prompt = "You modify existing images. That's all."
+    tools = [upscale, remove_bg, recolor, create_variations, search_replace]
 
-class ImageAgent(BaseAgent):
-    """Agent specialized in image generation. Cannot do anything else."""
+# core/agents/video_editing_agent.py
+class VideoEditingAgent(BaseAgent):
+    name = "VideoEditingAgent"
+    system_prompt = "You modify existing videos. That's all."
+    tools = [trim, add_effects, add_text, concatenate, extract_frame, ...]
+```
 
-    name = "ImageAgent"
-    system_prompt = """You are ImageAgent, a specialist in creating images.
+### 3. Create Research Agents
 
-Your ONLY job is to generate images based on the task given to you.
-You have ONE tool: generate_image.
+```python
+# core/agents/research_agent.py
+class ResearchAgent(BaseAgent):
+    name = "ResearchAgent"
+    system_prompt = "You search the web and spider network. That's all."
+    tools = [web_search, spider_query]
 
-When given a task like "create a cyberpunk logo for a tech startup":
-1. Enhance the prompt for better results
-2. Call generate_image with appropriate parameters
-3. Return the result
+# core/agents/trend_agent.py
+class TrendAnalysisAgent(BaseAgent):
+    name = "TrendAnalysisAgent"
+    system_prompt = "You analyze trends and patterns. That's all."
+    tools = [analyze_trends, predict_opportunities]
+```
 
-You cannot create videos, audio, or anything else. Just images."""
+### 4. Create Orchestration Agents
 
-    tools = [
-        {
-            "type": "function",
-            "name": "generate_image",
-            "description": "Generate an image from a text prompt",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "Text description"},
-                    "count": {"type": "integer", "default": 1},
-                    "style": {"type": "string"},
-                    "size": {"type": "string", "default": "1024x1024"}
-                },
-                "required": ["prompt"]
-            }
-        }
-    ]
+```python
+# core/agents/workflow_agent.py
+class WorkflowAgent(BaseAgent):
+    name = "WorkflowAgent"
+    system_prompt = "You coordinate multi-step workflows. You can delegate to other agents."
+    tools = [delegate_to_agent]  # Special: can call other agents
 
-    def execute(self, task: str, context: dict,
-                scifi_context: dict, spider_context: dict) -> dict:
-        """Generate images based on the task."""
-        with self.time_travel_session("image_generation", task):
-            # Build prompt with context
-            prompt = self._build_prompt(task, scifi_context, spider_context)
+# core/agents/hive_mind_agent.py
+class HiveMindAgent(BaseAgent):
+    name = "HiveMindAgent"
+    system_prompt = "You synthesize multi-agent intelligence."
+    tools = [gather_perspectives, synthesize, debate]
+```
 
-            # Call GPT with ONLY image tools
-            # ... GPT call here ...
+### 5. Update AgentRouter
 
-            # Execute the tool call
-            # result = _execute_generate_image(user, params, session)
+Add all new agents to `AGENT_MAP`:
 
-            return result
+```python
+AGENT_MAP = {
+    "ImageAgent": ImageAgent,
+    "VideoAgent": VideoAgent,
+    "AudioAgent": AudioAgent,
+    "ThreeDAgent": ThreeDAgent,
+    "ImageEditingAgent": ImageEditingAgent,
+    "VideoEditingAgent": VideoEditingAgent,
+    "ResearchAgent": ResearchAgent,
+    "TrendAnalysisAgent": TrendAnalysisAgent,
+    "WorkflowAgent": WorkflowAgent,
+    "HiveMindAgent": HiveMindAgent,
+    "ContentStrategyAgent": ContentStrategyAgent,
+    "SEOOptimizerAgent": SEOOptimizerAgent,
+    "BrandIdentityAgent": BrandIdentityAgent,
+}
 ```
 
 ---
 
-## Testing Checklist
+## Reference: Existing Tool Functions
 
-After Phase 1 implementation:
+Use these existing functions in the new agents:
 
-- [ ] `ImageAgent` can be instantiated
-- [ ] `ImageAgent.execute()` generates images
-- [ ] `ImageAgent` has NO access to video tools
-- [ ] `AgentRouter.route("ImageAgent", task)` works
-- [ ] Sci-Fi context is injected into prompt
-- [ ] Spider context is injected into prompt
-- [ ] TimeTravelMixin records decisions
-- [ ] Feature flag controls old vs new path
+### Video Tools (core/views_video.py)
+- `_execute_generate_video(user, params, session)` - Text-to-video
+- `_execute_animate_image(user, params, session)` - Image-to-video
+- `_execute_extend_video(user, params, session)` - Extend duration
+- `_execute_chain_clips(user, params, session)` - Concatenate clips
+
+### Audio Tools (core/views_audio.py)
+- `generate_voice(user, params, session)` - Text-to-speech
+- `add_voiceover(user, params, session)` - Add voice to video
+
+### Image Editing (core/views_image.py)
+- `_execute_upscale(user, params, session)`
+- `_execute_remove_background(user, params, session)`
+- `_execute_recolor(user, params, session)`
+- `_execute_variations(user, params, session)`
+- `_execute_search_replace(user, params, session)`
+
+### Research Tools
+- `SpiderIntelligenceService.search_spider_data(query)`
+- `SpiderIntelligenceService.get_trending_topics()`
+- Web search via Serper API
+
+---
+
+## Testing Checklist for Phase 2
+
+After implementing each agent:
+
+- [ ] Agent can be instantiated
+- [ ] Agent has correct tools (and ONLY those tools)
+- [ ] Agent.execute() works
+- [ ] AgentRouter.route() works with new agent
+- [ ] Agent cannot access tools from other domains
 
 ---
 
 ## What NOT To Do Yet
 
-- Do NOT modify Personal Assistant yet (Phase 4)
-- Do NOT modify frontend yet (Phase 5)
-- Do NOT create all agents yet (Phase 2)
-- Do NOT remove old code yet (Phase 6)
+- Do NOT modify Personal Assistant (Phase 4)
+- Do NOT modify frontend (Phase 5)
+- Do NOT remove old code (Phase 6)
 
-Focus ONLY on Phase 1: base class, ImageAgent, router, feature flag, testing.
+Focus on creating all agents and verifying isolation.
 
 ---
 
-## Quick Reference Commands
+## Full Implementation Plan
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **1** | Base agent + ImageAgent + Router | **COMPLETE** |
+| **2** | All creation/editing/research agents | **THIS SESSION** |
+| 3 | Super Platform Coordinator integration | Pending |
+| 4 | Personal Assistant modification | Pending |
+| 5 | Frontend updates | Pending |
+| 6 | Testing & cleanup | Pending |
+
+---
+
+## Quick Reference
 
 ```bash
 # Start servers
 make start
 make celery
 
-# Test ImageAgent directly (after implementation)
+# Test new agents
 python manage.py shell
->>> from core.agents.image_agent import ImageAgent
+>>> from core.agents import VideoAgent, AudioAgent
 >>> from core.agent_router import AgentRouter
->>>
->>> agent = ImageAgent()
->>> result = agent.execute("create a cyberpunk logo", {}, {}, {})
->>> print(result)
+>>> router = AgentRouter()
+>>> router.is_valid_agent("VideoAgent")
 ```
-
----
-
-## Full Implementation Plan (All Phases)
-
-| Phase | Focus | Status |
-|-------|-------|--------|
-| **1** | Base agent + ImageAgent + Router | **THIS SESSION** |
-| 2 | All creation/editing/research agents | Pending |
-| 3 | Super Platform Coordinator integration | Pending |
-| 4 | Personal Assistant modification | Pending |
-| 5 | Frontend updates | Pending |
-| 6 | Testing & cleanup | Pending |
 
 ---
 
@@ -290,10 +211,10 @@ python manage.py shell
 |--------|-------|
 | Total Spiders | 70 |
 | Real Data Sources | 24 |
-| Agents | 22 |
+| Agents | 22 (+ 13 new clean agents) |
 | Sci-Fi Features | 15 |
-| Development Sessions | 267 |
+| Development Sessions | 268 |
 
 ---
 
-**GOAL:** Create the foundation (base agent, ImageAgent, router) that proves the clean architecture pattern works. Test in isolation before proceeding.
+**GOAL:** Create all specialized agents (video, audio, 3D, editing, research, orchestration) with isolated tool sets. Each agent must be unable to access tools from other domains.

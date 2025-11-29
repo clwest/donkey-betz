@@ -926,3 +926,15 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+# =============================================================================
+# Session 268: Clean Architecture Feature Flags
+# =============================================================================
+# When True, uses the new layered architecture:
+#   User → Personal Assistant → Agent Router → Specialized Agents → Tools
+# When False, uses the current architecture with all tools exposed to GPT
+#
+# Phase 1: Feature flag starts disabled, test ImageAgent in isolation
+# Phase 4: Enable flag after all agents migrated and tested
+# Phase 6: Remove flag after cleanup
+USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'False') == 'True'

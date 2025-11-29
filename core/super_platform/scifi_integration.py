@@ -313,9 +313,10 @@ class SciFiIntegrationService:
             from core.models_unified_system import AgentMood, Agent
 
             # Try to find mood by agent name via FK
+            # Note: AgentMood uses 'last_updated' not 'updated_at'
             mood = AgentMood.objects.filter(
                 agent__name=agent_name
-            ).select_related('agent').order_by('-updated_at').first()
+            ).select_related('agent').order_by('-last_updated').first()
 
             # Fallback: try direct agent_name field if exists
             if not mood:
@@ -324,7 +325,8 @@ class SciFiIntegrationService:
                 ).select_related('agent').first()
 
             if mood:
-                mood_type = mood.mood_type.lower()
+                # Note: Field is 'current_mood', not 'mood_type'
+                mood_type = getattr(mood, 'current_mood', 'focused').lower()
                 behavior = self.MOOD_BEHAVIORS.get(mood_type, self.MOOD_BEHAVIORS['focused'])
 
                 return MoodInfluence(
@@ -565,21 +567,22 @@ class SciFiIntegrationService:
             from core.models_unified_system import AgentDream
 
             # Try to find dreams by agent name via FK
+            # Note: AgentDream uses 'dreamed_at' not 'created_at'
             dreams = AgentDream.objects.filter(
                 agent__name=agent_name
-            ).select_related('agent').order_by('-created_at')[:limit]
+            ).select_related('agent').order_by('-dreamed_at')[:limit]
 
             # Fallback: try partial match
             if not dreams.exists():
                 dreams = AgentDream.objects.filter(
                     agent__name__icontains=agent_name.replace('Agent', '')
-                ).select_related('agent').order_by('-created_at')[:limit]
+                ).select_related('agent').order_by('-dreamed_at')[:limit]
 
             return [
                 {
                     'content': getattr(d, 'content', getattr(d, 'dream_content', ''))[:200],
-                    'theme': getattr(d, 'theme', 'creative'),
-                    'created_at': d.created_at.isoformat() if hasattr(d, 'created_at') else '',
+                    'theme': getattr(d, 'theme', getattr(d, 'dream_type', 'creative')),
+                    'created_at': d.dreamed_at.isoformat() if hasattr(d, 'dreamed_at') else '',
                 }
                 for d in dreams
             ]
