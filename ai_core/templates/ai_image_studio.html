@@ -23816,7 +23816,28 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 65: Format AI responses with proper paragraphs, bullet points, and numbered lists
                 // Session 189: Added markdown image support
                 // Session 195: Added markdown links, headers, bold, italic, blockquotes, hr
+                // Session 266: Added code block support with syntax highlighting hint
                 if (!text) return '';
+
+                // Session 266: Convert fenced code blocks ```language ... ``` to <pre><code>
+                // Must be done FIRST before any other processing to preserve code content
+                const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+                text = text.replace(codeBlockRegex, (match, language, code) => {
+                    const lang = language || 'text';
+                    // Escape HTML in code to prevent XSS and preserve formatting
+                    const escapedCode = code
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .trim();
+                    return `<div style="margin: 1em 0;">
+                        <div style="background: #1a1a2e; color: #6ee7b7; font-size: 0.75em; padding: 0.25em 0.5em; border-radius: 4px 4px 0 0; display: inline-block;">${lang}</div>
+                        <pre style="margin: 0; background: #0d1117; padding: 1em; border-radius: 0 4px 4px 4px; overflow-x: auto; border: 1px solid #30363d;"><code class="language-${lang}" style="color: #e6edf3; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.9em; line-height: 1.5;">${escapedCode}</code></pre>
+                    </div>`;
+                });
+
+                // Session 266: Convert inline code `text` to <code>
+                text = text.replace(/`([^`]+)`/g, '<code style="background: rgba(110, 118, 129, 0.4); padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #f0883e;">$1</code>');
 
                 // Session 189: Convert markdown images ![alt](url) to HTML img tags FIRST
                 // This ensures images are rendered before paragraph processing

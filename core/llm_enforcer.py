@@ -343,11 +343,19 @@ RESPONSE:"""
             total_tokens = 0
             cost = 0.0
 
+        # Session 266: Detect truncation - check if output_tokens hit the max limit
+        # If output tokens are >= max_tokens - 10, likely truncated
+        truncated = False
+        if usage and output_tokens >= (max_tokens - 10):
+            truncated = True
+            logger.warning(f"⚠️ Response likely truncated: {output_tokens} output tokens (max: {max_tokens})")
+
         # Build response dict
         result = {
             'content': content,
             'tokens': total_tokens,
-            'cost': cost
+            'cost': cost,
+            'truncated': truncated,  # Session 266: Flag for continuation handling
         }
 
         # Add response_id for chain of thought passing

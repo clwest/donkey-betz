@@ -5171,12 +5171,13 @@ Respond in a helpful, personalized way that:
                 logger.info(f"🔧 Calling LLM with {len(tools)} tools (mode: auto)...")
             # Session 184: Increased max_tokens from 500 to 1500 to prevent
             # truncation of tool call arguments (JSON can be longer than expected!)
+            # Session 266: Increased to 4000 for comprehensive responses (app skeletons, code examples)
             ai_result = self.llm_enforcer.enforce_real_ai(
                 prompt=message,
                 context=system_prompt,
                 agent_name="PersonalAssistant",
                 task_type="conversation",
-                max_tokens=1500,  # Session 184: Increased from 500 to prevent tool call truncation!
+                max_tokens=4000,  # Session 266: Increased from 1500 for longer code/skeleton responses
                 tools=tools,  # Enable tool calling
                 previous_response_id=previous_response_id,  # Session 129: Chain of thought
                 tool_choice=tool_choice  # Session 129: Allowed tools with auto mode
@@ -5223,6 +5224,11 @@ Respond in a helpful, personalized way that:
                     # Session 173 FIX: LLM enforcer returns 'content' not 'response'
                     response = ai_result.get('content', '') or ai_result.get('response', '')
                     logger.info(f"✅ Generated REAL AI response for {self.user.username}")
+
+                    # Session 266: Handle truncated responses - add continuation hint
+                    if ai_result.get('truncated', False):
+                        logger.warning(f"⚠️ Response was truncated - adding continuation hint")
+                        response += "\n\n---\n\n**(Response was truncated due to length. Say \"continue\" to see the rest.)**"
 
                     # Session 266: Record successful outcome without tool calls
                     execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
