@@ -6918,9 +6918,48 @@
             <!-- END PREFERENCES TAB -->
 
             <!-- SESSION 216: AGENT INTELLIGENCE TAB -->
+            <!-- SESSION 273: Reorganized with sub-tabs for cleaner navigation -->
             <div class="tab-pane fade" id="agents" role="tabpanel">
-                <h3 class="mb-4">🤝 Agent Collaboration & Intelligence</h3>
-                <p class="text-muted mb-4">Monitor agent collaborations, view collective intelligence, and track performance across your AI team.</p>
+                <h3 class="mb-3">🤝 Agent Collaboration & Intelligence</h3>
+
+                <!-- Sub-Tab Navigation -->
+                <ul class="nav nav-pills mb-4" id="agents-subtabs" role="tablist" style="border-bottom: 1px solid #333; padding-bottom: 10px;">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="agents-overview-tab" data-bs-toggle="pill" data-bs-target="#agents-overview" type="button" role="tab" style="color: #8b5cf6;">
+                            📊 Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="agents-social-tab" data-bs-toggle="pill" data-bs-target="#agents-social" type="button" role="tab" style="color: #ec4899;">
+                            💬 Social
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="agents-intelligence-tab" data-bs-toggle="pill" data-bs-target="#agents-intelligence" type="button" role="tab" style="color: #06b6d4;">
+                            🧠 Intelligence
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="agents-growth-tab" data-bs-toggle="pill" data-bs-target="#agents-growth" type="button" role="tab" style="color: #22c55e;">
+                            📈 Growth
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="agents-memory-tab" data-bs-toggle="pill" data-bs-target="#agents-memory" type="button" role="tab" style="color: #a855f7;">
+                            🏛️ Memory
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="agents-workflows-tab" data-bs-toggle="pill" data-bs-target="#agents-workflows" type="button" role="tab" style="color: #f59e0b;">
+                            ⚙️ Workflows
+                        </button>
+                    </li>
+                </ul>
+                <style>
+                    #agents-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
+                    #agents-subtabs .nav-link:hover { background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; }
+                    #agents-subtabs .nav-link.active { background: rgba(139, 92, 246, 0.2) !important; border-color: #8b5cf6 !important; color: #8b5cf6 !important; }
+                </style>
 
                 <!-- Loading State -->
                 <div id="agents-loading" class="text-center py-5">
@@ -6932,6 +6971,12 @@
 
                 <!-- Agents Container (hidden until loaded) -->
                 <div id="agents-container" style="display: none;">
+
+                    <!-- Sub-Tab Content -->
+                    <div class="tab-content" id="agents-subtabs-content">
+
+                        <!-- ========== OVERVIEW SUB-TAB ========== -->
+                        <div class="tab-pane fade show active" id="agents-overview" role="tabpanel">
 
                     <!-- Network Stats Row -->
                     <div class="row mb-4">
@@ -6996,6 +7041,12 @@
                             </div>
                         </div>
                     </div>
+
+                        </div>
+                        <!-- END OVERVIEW SUB-TAB -->
+
+                        <!-- ========== SOCIAL SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="agents-social" role="tabpanel">
 
                     <!-- Live Learning Feed -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #ec4899;">
@@ -7127,6 +7178,12 @@
                         .dream-type-observation { background: #6366f1; }
                         .dream-type-wild_thought { background: #ec4899; }
                     </style>
+
+                        </div>
+                        <!-- END SOCIAL SUB-TAB -->
+
+                        <!-- ========== INTELLIGENCE SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="agents-intelligence" role="tabpanel">
 
                     <!-- Session 250: Hive Mind Mode - Collective Intelligence -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4;">
@@ -7502,6 +7559,12 @@
                         </div>
                     </div>
 
+                        </div>
+                        <!-- END INTELLIGENCE SUB-TAB -->
+
+                        <!-- ========== GROWTH SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="agents-growth" role="tabpanel">
+
                     <!-- Session 254: Agent Evolution System - XP & Levels -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22c55e;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid #22c55e;">
@@ -7841,6 +7904,12 @@
                             </div>
                         </div>
                     </div>
+
+                        </div>
+                        <!-- END GROWTH SUB-TAB -->
+
+                        <!-- ========== MEMORY SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="agents-memory" role="tabpanel">
 
                     <!-- Session 257: Memory Clusters - Semantic Grouping of Agent Memories -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22d3ee;">
@@ -8551,6 +8620,12 @@
                         </div>
                     </div>
 
+                        </div>
+                        <!-- END MEMORY SUB-TAB -->
+
+                        <!-- ========== WORKFLOWS SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="agents-workflows" role="tabpanel">
+
                     <!-- SESSION 217: ANALYTICS CHARTS SECTION -->
                     <hr style="border-color: #333; margin: 2rem 0;">
                     <h4 class="mb-4" style="color: #8b5cf6;">📊 Performance Analytics</h4>
@@ -8908,6 +8983,12 @@
                         </div>
                     </div>
                     <!-- END SESSION 217C: WORKFLOW ANALYTICS -->
+
+                        </div>
+                        <!-- END WORKFLOWS SUB-TAB -->
+
+                    </div>
+                    <!-- END Sub-Tab Content Container -->
 
                 </div>
             </div>
