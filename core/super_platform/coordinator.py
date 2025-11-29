@@ -1108,12 +1108,29 @@ Try:
 
     def get_status(self) -> Dict[str, Any]:
         """Get current coordinator status."""
+        # Session 271: Add clean architecture info
+        clean_agents = []
+        if self.use_clean_architecture and self.agent_router:
+            for name, agent_class in self.agent_router.AGENT_MAP.items():
+                tools = getattr(agent_class, 'tools', [])
+                clean_agents.append({
+                    'name': name,
+                    'tool_count': len(tools),
+                    'description': getattr(agent_class, 'system_prompt', '')[:100] + '...'
+                })
+
         return {
             'user': self.user.username if self.user else 'Anonymous',
             'openai_connected': self.openai_client is not None,
             'agent_registry_loaded': self.agent_registry is not None,
             'available_agents': self.context_aggregator._get_available_agents()[:5],
             'timestamp': timezone.now().isoformat(),
+            # Session 271: Clean architecture info
+            'clean_architecture': {
+                'enabled': self.use_clean_architecture,
+                'agents': clean_agents,
+                'total_agents': len(clean_agents),
+            }
         }
 
 
