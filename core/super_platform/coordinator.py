@@ -14,6 +14,7 @@ The Coordinator:
 6. RECORDS outcomes for learning
 
 Session 264: Phase 1 Foundation + Phase 2 Spider-Agent Bridge + Phase 3 Sci-Fi Integration
+Session 268: Phase 3 - Clean Agent Architecture Integration (USE_CLEAN_AGENT_ARCHITECTURE flag)
 """
 
 import logging
@@ -133,6 +134,8 @@ class SuperPlatformCoordinator:
         self._scifi_service = None  # Session 264: Sci-Fi Integration
         self._revenue_service = None  # Session 264: Revenue Pipeline
         self._learning_service = None  # Session 265: Learning Loop
+        self._agent_router = None  # Session 268: Clean Agent Architecture
+        self._personal_assistant = None  # Session 268: Clean Agent Architecture
 
     @property
     def openai_client(self):
@@ -196,6 +199,33 @@ class SuperPlatformCoordinator:
                 logger.warning(f"Could not load learning service: {e}")
         return self._learning_service
 
+    @property
+    def agent_router(self):
+        """Session 268: Lazy load AgentRouter for clean architecture."""
+        if self._agent_router is None:
+            try:
+                from core.agent_router import AgentRouter
+                self._agent_router = AgentRouter(user=self.user)
+            except Exception as e:
+                logger.warning(f"Could not load agent router: {e}")
+        return self._agent_router
+
+    @property
+    def personal_assistant(self):
+        """Session 268: Lazy load PersonalAssistantAgent for clean architecture."""
+        if self._personal_assistant is None:
+            try:
+                from core.agents.personal_assistant_agent import PersonalAssistantAgent
+                self._personal_assistant = PersonalAssistantAgent(user=self.user)
+            except Exception as e:
+                logger.warning(f"Could not load personal assistant: {e}")
+        return self._personal_assistant
+
+    @property
+    def use_clean_architecture(self) -> bool:
+        """Check if clean agent architecture is enabled."""
+        return getattr(settings, 'USE_CLEAN_AGENT_ARCHITECTURE', False)
+
     def process(self, message: str, mode: str = 'interactive') -> CoordinatorResult:
         """
         Process a user message through the unified intelligence system.
@@ -210,6 +240,10 @@ class SuperPlatformCoordinator:
             CoordinatorResult with response and metadata
         """
         start_time = datetime.now()
+
+        # Session 268: Use clean agent architecture if enabled
+        if self.use_clean_architecture:
+            return self._process_with_clean_architecture(message, start_time)
 
         try:
             # Step 1: CLASSIFY - Understand what the user wants
@@ -901,6 +935,162 @@ Try:
 
         except Exception as e:
             logger.warning(f"Failed to record outcome: {e}")
+
+    def _process_with_clean_architecture(
+        self,
+        message: str,
+        start_time: datetime
+    ) -> CoordinatorResult:
+        """
+        Session 268: Process using the clean agent architecture.
+
+        This uses the PersonalAssistantAgent as the entry point, which then
+        routes to specialized agents via the AgentRouter.
+
+        Architecture:
+            User → PersonalAssistantAgent → AgentRouter → Specialized Agent → Tools
+        """
+        try:
+            if not self.personal_assistant:
+                logger.warning("PersonalAssistantAgent not available, falling back to legacy")
+                return self._process_legacy(message, start_time)
+
+            # Aggregate context for the agent
+            classification = self.classifier.classify(message)
+            context = self.context_aggregator.aggregate(classification, message)
+
+            logger.info(
+                f"[Clean Architecture] Processing: {message[:50]}... "
+                f"(classified as {classification.primary_type.value})"
+            )
+
+            # Get spider context
+            spider_context = {}
+            if context.spider_data:
+                spider_context = {
+                    'relevant_trends': context.spider_data.get('trends', []),
+                    'market_data': context.spider_data.get('market', {}),
+                    'creative_trends': context.spider_data.get('creative', {}),
+                }
+
+            # Get sci-fi context
+            scifi_context = {}
+            if self.scifi_service:
+                try:
+                    scifi_ctx = self.scifi_service.get_scifi_context(
+                        agent_name='PersonalAssistantAgent',
+                        task=message,
+                        user=self.user
+                    )
+                    scifi_context = scifi_ctx.to_dict() if hasattr(scifi_ctx, 'to_dict') else {}
+                except Exception as e:
+                    logger.warning(f"Could not get sci-fi context: {e}")
+
+            # Execute through PersonalAssistantAgent
+            result = self.personal_assistant.execute(
+                task=message,
+                context={
+                    'classification': classification.to_dict(),
+                    'sources_used': context.sources_used,
+                },
+                scifi_context=scifi_context,
+                spider_context=spider_context
+            )
+
+            execution_time = (datetime.now() - start_time).total_seconds() * 1000
+
+            # Build the response
+            agents_used = []
+            if result.data and result.data.get('delegated_to'):
+                agents_used.append(result.data['delegated_to'])
+
+            return CoordinatorResult(
+                success=result.success,
+                response=result.message or str(result.data),
+                execution_mode=ExecutionMode.AGENT_EXECUTION if agents_used else ExecutionMode.DIRECT_RESPONSE,
+                classification=classification,
+                context_used=context.to_dict(),
+                agents_used=agents_used,
+                artifacts=result.data.get('agent_result', {}).get('artifacts', []) if result.data else [],
+                execution_time_ms=execution_time,
+                metadata={
+                    'clean_architecture': True,
+                    'decisions_made': result.decisions_made,
+                    'tool_calls': result.tool_calls,
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Clean architecture processing failed: {e}", exc_info=True)
+            execution_time = (datetime.now() - start_time).total_seconds() * 1000
+
+            return CoordinatorResult(
+                success=False,
+                response=f"Error processing with clean architecture: {str(e)}",
+                execution_mode=ExecutionMode.DIRECT_RESPONSE,
+                classification=ClassificationResult(
+                    primary_type=QueryType.CONVERSATION,
+                    confidence=0.0,
+                    secondary_types=[],
+                    detected_keywords=[],
+                    detected_entities={},
+                    suggested_agents=[],
+                    requires_spider_data=False,
+                    requires_memory=False,
+                    requires_mood_check=False,
+                    is_urgent=False,
+                ),
+                context_used={},
+                execution_time_ms=execution_time,
+                metadata={'error': str(e), 'clean_architecture': True}
+            )
+
+    def _process_legacy(self, message: str, start_time: datetime) -> CoordinatorResult:
+        """Fallback to legacy processing if clean architecture fails."""
+        # This wraps the original process logic
+        try:
+            classification = self.classifier.classify(message)
+            context = self.context_aggregator.aggregate(classification, message)
+            execution_mode = self._determine_execution_mode(classification)
+            response, artifacts, agents_used = self._execute(
+                message=message,
+                classification=classification,
+                context=context,
+                execution_mode=execution_mode
+            )
+            execution_time = (datetime.now() - start_time).total_seconds() * 1000
+
+            return CoordinatorResult(
+                success=True,
+                response=response,
+                execution_mode=execution_mode,
+                classification=classification,
+                context_used=context.to_dict(),
+                agents_used=agents_used,
+                artifacts=artifacts,
+                execution_time_ms=execution_time,
+            )
+        except Exception as e:
+            execution_time = (datetime.now() - start_time).total_seconds() * 1000
+            return CoordinatorResult(
+                success=False,
+                response=f"Error: {str(e)}",
+                execution_mode=ExecutionMode.DIRECT_RESPONSE,
+                classification=ClassificationResult(
+                    primary_type=QueryType.CONVERSATION,
+                    confidence=0.0,
+                    secondary_types=[],
+                    detected_keywords=[],
+                    detected_entities={},
+                    suggested_agents=[],
+                    requires_spider_data=False,
+                    requires_memory=False,
+                    requires_mood_check=False,
+                    is_urgent=False,
+                ),
+                context_used={},
+                execution_time_ms=execution_time,
+            )
 
     # Convenience methods
     def ask(self, question: str) -> str:

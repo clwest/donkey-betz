@@ -50,6 +50,7 @@ from core.agents.image_editing_agent import ImageEditingAgent
 from core.agents.video_editing_agent import VideoEditingAgent
 from core.agents.research_agent import ResearchAgent
 from core.agents.workflow_agent import WorkflowAgent
+from core.agents.personal_assistant_agent import PersonalAssistantAgent
 
 __all__ = [
     # Base
@@ -71,4 +72,7 @@ __all__ = [
 
     # Orchestration Agents
     'WorkflowAgent',
+
+    # Entry Point Agent
+    'PersonalAssistantAgent',
 ]
