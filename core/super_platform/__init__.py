@@ -18,7 +18,12 @@ Phase 3 (Sci-Fi Integration):
 - SciFiIntegrationService: Mood, memory, evolution, relationships
 - SciFiContext: Complete sci-fi context for agents
 
-Session 264: Phase 1 Foundation + Phase 2 Spider-Agent Bridge + Phase 3 Sci-Fi Integration
+Phase 4 (Revenue Pipeline):
+- RevenueIntegrationService: Opportunity discovery, scoring, tracking
+- RevenueOpportunity: Scored opportunity with automation eligibility
+- RevenueSummary: Revenue metrics and attribution
+
+Session 264: Phase 1-4 (Foundation + Spider-Agent + Sci-Fi + Revenue Pipeline)
 """
 
 from .query_classifier import QueryClassifier
@@ -35,6 +40,12 @@ from .scifi_integration import (
     RelationshipInfluence,
     MemoryInfluence,
     get_scifi_integration_service,
+)
+from .revenue_integration import (
+    RevenueIntegrationService,
+    RevenueOpportunity,
+    RevenueSummary,
+    get_revenue_integration_service,
 )
 
 __all__ = [
@@ -56,4 +67,9 @@ __all__ = [
     'RelationshipInfluence',
     'MemoryInfluence',
     'get_scifi_integration_service',
+    # Phase 4: Revenue Pipeline
+    'RevenueIntegrationService',
+    'RevenueOpportunity',
+    'RevenueSummary',
+    'get_revenue_integration_service',
 ]

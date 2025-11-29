@@ -37,6 +37,9 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+# Session 264 Phase 4: Import SpiderContextMixin for spider intelligence
+from core.super_platform.spider_context_mixin import SpiderContextMixin
+
 logger = logging.getLogger(__name__)
 
 
@@ -111,7 +114,7 @@ class ScoringResult:
         }
 
 
-class OpportunityScoringAgent:
+class OpportunityScoringAgent(SpiderContextMixin):
     """
     AI agent that transforms spider data into scored opportunities.
 
@@ -120,6 +123,8 @@ class OpportunityScoringAgent:
     - Suggest content types that could capitalize on each opportunity
     - Estimate potential revenue and required effort
     - Consult advisors for strategic input
+
+    Session 264 Phase 4: Enhanced with SpiderContextMixin for real-time spider intelligence.
     """
 
     # Content type mappings based on opportunity characteristics
@@ -168,6 +173,7 @@ class OpportunityScoringAgent:
 
     def __init__(self):
         """Initialize OpportunityScoringAgent."""
+        super().__init__()  # Session 264: Initialize SpiderContextMixin
         self._spider_data_model = None
         self._opportunity_model = None
         self._opportunity_score_model = None
@@ -609,7 +615,10 @@ class OpportunityScoringAgent:
         topic: str,
         trend_data: Optional[Dict] = None
     ) -> Dict[str, Any]:
-        """Calculate scores for a trend topic."""
+        """Calculate scores for a trend topic.
+
+        Session 264 Phase 4: Enhanced with real-time spider context.
+        """
         trend_data = trend_data or {}
 
         # Base scores
@@ -617,6 +626,37 @@ class OpportunityScoringAgent:
         competition = 50
         effort = 40
         timing = 70
+
+        # Session 264: Get spider context for enhanced scoring
+        spider_context = self.get_spider_context(f"opportunity scoring for {topic}")
+        spider_boost = 0
+        spider_insights = []
+
+        if spider_context:
+            # Check if topic matches current trends
+            current_trends = spider_context.get('trends', [])
+            trend_match = sum(
+                1 for t in current_trends
+                if topic.lower() in str(t).lower() or any(
+                    kw in str(t).lower() for kw in topic.lower().split()[:3]
+                )
+            )
+            if trend_match > 0:
+                spider_boost += trend_match * 5
+                timing += 10
+                spider_insights.append(f"Matches {trend_match} current trends")
+
+            # Check style recommendations
+            styles = spider_context.get('style_recommendations', [])
+            if styles:
+                spider_insights.append(f"Trending styles: {', '.join(styles[:3])}")
+
+            # Check job market data
+            job_market = spider_context.get('job_market', {})
+            if job_market:
+                if job_market.get('high_demand'):
+                    profit += 15
+                    spider_insights.append("High demand in job market")
 
         # Adjust based on trend characteristics
         mentions = trend_data.get('mentions', 1)
@@ -641,17 +681,21 @@ class OpportunityScoringAgent:
         if any(kw in topic_lower for kw in ['tutorial', 'guide', 'how to']):
             effort += 10  # More effort for educational content
 
+        # Apply spider boost
+        profit += spider_boost
+
         # Cap scores
         scores = {
             'profit_potential': min(100, max(1, profit)),
             'competition_level': min(100, max(1, competition)),
             'effort_required': min(100, max(1, effort)),
             'time_sensitivity': min(100, max(1, timing)),
-            'profit_reasoning': f"Based on {mentions} mentions and topic relevance",
+            'profit_reasoning': f"Based on {mentions} mentions and topic relevance. {' '.join(spider_insights) if spider_insights else ''}",
             'competition_reasoning': f"Market saturation assessment for '{topic}'",
             'effort_reasoning': f"Content creation effort estimate",
-            'timing_reasoning': f"Time sensitivity based on trend growth: {growth:.0%}",
-            'confidence': min(95, 50 + mentions * 3),
+            'timing_reasoning': f"Time sensitivity based on trend growth: {growth:.0%}" + (f" + {len(spider_insights)} spider signals" if spider_insights else ""),
+            'confidence': min(95, 50 + mentions * 3 + (len(spider_insights) * 5)),
+            'spider_insights': spider_insights,  # Session 264: Track spider insights
         }
 
         # Calculate overall

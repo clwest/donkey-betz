@@ -30,6 +30,7 @@ from .prompt_builder import DynamicPromptBuilder, PromptContext
 from .context_aggregator import ContextAggregator, AggregatedContext
 from .agent_context_service import get_agent_context_service
 from .scifi_integration import get_scifi_integration_service
+from .revenue_integration import get_revenue_integration_service
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class ExecutionMode(Enum):
     WORKFLOW_ORCHESTRATION = "workflow"  # Multi-step workflow
     HIVE_MIND = "hive"              # Multi-agent collaboration
     MEMORY_RECALL = "memory"        # Memory Palace query
+    OPPORTUNITY = "opportunity"     # Revenue/opportunity handling (Phase 4)
 
 
 @dataclass
@@ -128,6 +130,7 @@ class SuperPlatformCoordinator:
         self._workflow_agent = None
         self._agent_context_service = None  # Session 264: Spider-Agent Bridge
         self._scifi_service = None  # Session 264: Sci-Fi Integration
+        self._revenue_service = None  # Session 264: Revenue Pipeline
 
     @property
     def openai_client(self):
@@ -170,6 +173,16 @@ class SuperPlatformCoordinator:
             except Exception as e:
                 logger.warning(f"Could not load sci-fi service: {e}")
         return self._scifi_service
+
+    @property
+    def revenue_service(self):
+        """Session 264 Phase 4: Lazy load revenue integration service."""
+        if self._revenue_service is None:
+            try:
+                self._revenue_service = get_revenue_integration_service(self.user)
+            except Exception as e:
+                logger.warning(f"Could not load revenue service: {e}")
+        return self._revenue_service
 
     def process(self, message: str, mode: str = 'interactive') -> CoordinatorResult:
         """
@@ -273,7 +286,7 @@ class SuperPlatformCoordinator:
             QueryType.ANALYSIS: ExecutionMode.AGENT_EXECUTION,
             QueryType.MEMORY: ExecutionMode.MEMORY_RECALL,
             QueryType.COLLABORATION: ExecutionMode.HIVE_MIND,
-            QueryType.OPPORTUNITY: ExecutionMode.DIRECT_RESPONSE,
+            QueryType.OPPORTUNITY: ExecutionMode.OPPORTUNITY,  # Session 264 Phase 4
             QueryType.SYSTEM: ExecutionMode.DIRECT_RESPONSE,
             QueryType.CONVERSATION: ExecutionMode.DIRECT_RESPONSE,
         }
@@ -299,6 +312,7 @@ class SuperPlatformCoordinator:
             ExecutionMode.WORKFLOW_ORCHESTRATION: self._handle_workflow,
             ExecutionMode.HIVE_MIND: self._handle_hive_mind,
             ExecutionMode.MEMORY_RECALL: self._handle_memory_recall,
+            ExecutionMode.OPPORTUNITY: self._handle_opportunity,  # Session 264 Phase 4
         }
 
         handler = handlers.get(execution_mode, self._handle_direct_response)
@@ -688,6 +702,134 @@ This could mean:
 Would you like to tell me more about what you're looking for?"""
 
         return (response, [], ['MemoryPalace'])
+
+    def _handle_opportunity(
+        self,
+        message: str,
+        classification: ClassificationResult,
+        context: AggregatedContext
+    ) -> Tuple[str, List[Dict[str, Any]], List[str]]:
+        """
+        Handle opportunity and revenue queries.
+
+        Session 264 Phase 4: Revenue Pipeline integration.
+        """
+        if not self.revenue_service:
+            return self._handle_direct_response(message, classification, context)
+
+        try:
+            message_lower = message.lower()
+
+            # Determine what kind of opportunity query
+            if any(kw in message_lower for kw in ['revenue', 'earnings', 'money', 'income']):
+                # Revenue summary request
+                summary = self.revenue_service.get_revenue_summary(days=30)
+                response = self._format_revenue_summary(summary)
+                return (response, [summary.to_dict()], ['RevenueIntegrationService'])
+
+            elif any(kw in message_lower for kw in ['forecast', 'predict', 'projection']):
+                # Revenue forecast
+                forecast = self.revenue_service.get_revenue_forecast(days=30)
+                response = self._format_revenue_forecast(forecast)
+                return (response, [forecast], ['RevenueIntegrationService'])
+
+            else:
+                # Opportunity discovery (default)
+                opportunities = self.revenue_service.discover_opportunities(
+                    hours=48,
+                    min_score=50,
+                    limit=10
+                )
+                response = self._format_opportunities(opportunities)
+                artifacts = [o.to_dict() for o in opportunities]
+                return (response, artifacts, ['OpportunityScoringAgent', 'RevenueIntegrationService'])
+
+        except Exception as e:
+            logger.error(f"Error handling opportunity query: {e}")
+            return self._handle_direct_response(message, classification, context)
+
+    def _format_revenue_summary(self, summary) -> str:
+        """Format revenue summary for display."""
+        parts = [
+            "## Revenue Summary (Last 30 Days)\n",
+            f"**Total Revenue:** ${summary.total_revenue:.2f}",
+            f"**Completed:** ${summary.completed_revenue:.2f}",
+            f"**Pending:** ${summary.pending_revenue:.2f}",
+            f"**Opportunities:** {summary.opportunity_count}",
+            f"**Conversion Rate:** {summary.conversion_rate:.1f}%",
+        ]
+
+        if summary.top_sources:
+            parts.append("\n**Top Revenue Sources:**")
+            for source in summary.top_sources[:3]:
+                parts.append(f"- {source.get('source_type', 'Unknown')}: ${source.get('total', 0):.2f}")
+
+        if summary.top_agents:
+            parts.append("\n**Top Contributing Agents:**")
+            for agent in summary.top_agents[:3]:
+                parts.append(f"- {agent.get('agent', 'Unknown')}: ${agent.get('total', 0):.2f}")
+
+        return "\n".join(parts)
+
+    def _format_revenue_forecast(self, forecast: Dict) -> str:
+        """Format revenue forecast for display."""
+        parts = [
+            f"## Revenue Forecast ({forecast.get('forecast_period_days', 30)} Days)\n",
+            f"**Predicted Revenue:** ${forecast.get('predicted_revenue', 0):.2f}",
+            f"**High Confidence:** ${forecast.get('high_confidence_revenue', 0):.2f}",
+            f"**Low Confidence:** ${forecast.get('low_confidence_revenue', 0):.2f}",
+            "",
+            f"**Active Opportunities:** {forecast.get('opportunity_count', 0)}",
+            f"**High-Value Opportunities:** {forecast.get('high_value_opportunities', 0)}",
+        ]
+
+        historical = forecast.get('historical_comparison', {})
+        if historical:
+            parts.append(f"\n**Previous Period:** ${historical.get('previous_period', 0):.2f}")
+
+        return "\n".join(parts)
+
+    def _format_opportunities(self, opportunities) -> str:
+        """Format opportunities list for display."""
+        if not opportunities:
+            return """No high-value opportunities found in the last 48 hours.
+
+Try:
+- Expanding your search criteria
+- Checking back later as spiders collect more data
+- Asking me to analyze a specific trend or topic"""
+
+        parts = [
+            f"## Top {len(opportunities)} Opportunities\n",
+        ]
+
+        for i, opp in enumerate(opportunities[:5], 1):
+            # Status indicators
+            indicators = []
+            if opp.auto_apply_eligible:
+                indicators.append("🚀 Auto-apply ready")
+            if opp.overall_score >= 80:
+                indicators.append("🔥 High value")
+            if opp.time_sensitivity >= 80:
+                indicators.append("⏰ Urgent")
+
+            parts.append(f"### {i}. {opp.title[:60]}")
+            parts.append(f"**Score:** {opp.overall_score}/100 | **Est. Revenue:** ${opp.potential_revenue}")
+            if indicators:
+                parts.append(" | ".join(indicators))
+
+            if opp.suggested_actions:
+                parts.append(f"**Actions:** {', '.join(opp.suggested_actions[:2])}")
+
+            if opp.spider_insights.get('hot_skills_matched'):
+                parts.append(f"**Hot Skills:** {', '.join(opp.spider_insights['hot_skills_matched'][:3])}")
+
+            parts.append("")
+
+        if len(opportunities) > 5:
+            parts.append(f"*...and {len(opportunities) - 5} more opportunities*")
+
+        return "\n".join(parts)
 
     def _record_outcome(
         self,
