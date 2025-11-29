@@ -1012,12 +1012,13 @@ Try:
                 agent_result = result.data.get('agent_result', {})
 
                 # Handle images from ImageAgent
+                # Session 272: ImageAgent returns image_url/image_id keys
                 if agent_result.get('images'):
                     for img in agent_result['images']:
                         artifacts.append({
                             'type': 'image',
-                            'url': img.get('url'),
-                            'id': img.get('id'),
+                            'url': img.get('image_url') or img.get('url'),
+                            'id': img.get('image_id') or img.get('id'),
                             'prompt': img.get('prompt', '')
                         })
 
