@@ -8020,11 +8020,11 @@ def _execute_generate_image(user, parameters, session=None):
 
         # Session 182: Get project for association
         # Session 267: Validate UUID before querying to avoid ValidationError
+        # Session 272: uuid is imported at module level - don't re-import locally
         project = None
         project_id = parameters.get('project_id')
         if project_id:
             from content.models import CreativeProject
-            import uuid
             # Validate that project_id is a valid UUID before querying
             try:
                 uuid.UUID(str(project_id))  # This will raise ValueError if invalid
@@ -8095,8 +8095,10 @@ def _execute_generate_image(user, parameters, session=None):
             image_url = image_data if isinstance(image_data, str) else image_data.get('url')
 
             # Save image to storage
+            # Session 272: Handle anonymous users (use 'anonymous' folder)
             image_id = str(uuid.uuid4())
-            filename = f"generated_images/{user.id}/{image_id}.png"
+            user_folder = user.id if user else 'anonymous'
+            filename = f"generated_images/{user_folder}/{image_id}.png"
 
             # Handle base64 data URIs vs regular URLs
             try:
@@ -8122,22 +8124,27 @@ def _execute_generate_image(user, parameters, session=None):
                 # Save to ImageHistory for tracking
                 # Session 96 Weekend Project: Link to AI conversation session
                 # Session 182: Link to project for Social Media Kit workflow
-                history_record = save_to_history(
-                    user=user,
-                    file_path=file_path,
-                    image_type='generated',
-                    prompt=prompt,
-                    parameters={'model': model, 'style': style, 'quality': quality, 'batch_index': i + 1},
-                    model_used=model,
-                    style=style,
-                    parent_image=None,
-                    session=session,  # Session 96: Link to AI conversation
-                    project=project   # Session 182: Link to project
-                )
+                # Session 272: Only save to history if user is authenticated
+                history_record = None
+                if user:
+                    history_record = save_to_history(
+                        user=user,
+                        file_path=file_path,
+                        image_type='generated',
+                        prompt=prompt,
+                        parameters={'model': model, 'style': style, 'quality': quality, 'batch_index': i + 1},
+                        model_used=model,
+                        style=style,
+                        parent_image=None,
+                        session=session,  # Session 96: Link to AI conversation
+                        project=project   # Session 182: Link to project
+                    )
+                else:
+                    logger.info(f"📷 Image generated for anonymous user (no history record)")
 
                 generated_images.append({
                     'image_url': saved_url,
-                    'image_id': str(history_record.id) if history_record else None,
+                    'image_id': str(history_record.id) if history_record else image_id,
                     'file_path': file_path,
                     'batch_index': i + 1
                 })
