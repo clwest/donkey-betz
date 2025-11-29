@@ -52,12 +52,13 @@ import json
 from content.models import ImageHistory
 from content.image_generation import ImageGenerationService
 from agents.time_travel_mixin import TimeTravelMixin
+from core.super_platform.spider_context_mixin import SpiderContextMixin
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class ImageAgent(TimeTravelMixin):
+class ImageAgent(SpiderContextMixin, TimeTravelMixin):
     """
     Unified agent for all image operations.
     Session 202: Consolidates ImageEditingAgent, LogoAgent, SocialMediaAgent, EditingOrchestratorAgent.
@@ -220,6 +221,21 @@ class ImageAgent(TimeTravelMixin):
                             alternatives=["Use default style", "Ask user for style"],
                             context={'learned_style': parameters.get('style')},
                             confidence=0.85
+                        )
+
+                # Session 264: Spider Context - Get trending style recommendations
+                if not parameters.get('style'):
+                    spider_styles = self.get_style_recommendations()
+                    if spider_styles:
+                        parameters['style'] = spider_styles[0]
+                        logger.info(f"   Applied trending style from spider data: {spider_styles[0]}")
+                        self.record_decision(
+                            decision_type="spider_intelligence",
+                            action=f"Applied trending style: {spider_styles[0]}",
+                            reasoning="Using current visual trends from spider network",
+                            alternatives=spider_styles[1:4] if len(spider_styles) > 1 else [],
+                            context={'all_recommendations': spider_styles},
+                            confidence=0.75
                         )
 
                 # Session 255: Record model selection decision

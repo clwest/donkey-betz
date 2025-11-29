@@ -37,6 +37,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from dataclasses import dataclass
 from agents.time_travel_mixin import TimeTravelMixin
+from core.super_platform.spider_context_mixin import SpiderContextMixin
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class ResearchResult:
         }
 
 
-class ResearchAgent(TimeTravelMixin):
+class ResearchAgent(SpiderContextMixin, TimeTravelMixin):
     """
     Unified research specialist that combines web search with spider intelligence.
 
@@ -73,6 +74,7 @@ class ResearchAgent(TimeTravelMixin):
     for research and get comprehensive, multi-source results.
 
     Session 255: Inherits TimeTravelMixin for decision tracking.
+    Session 264: Added SpiderContextMixin for automatic spider intelligence injection.
     """
 
     # Spider categories mapped to research domains
@@ -120,6 +122,7 @@ class ResearchAgent(TimeTravelMixin):
             user: Django user object
             project_id: Optional project ID for context
         """
+        super().__init__()  # Session 264: Initialize mixins
         self.user = user
         self.project_id = project_id
         self.agent_name = 'ResearchAgent'  # Session 255: Required for TimeTravelMixin
@@ -182,17 +185,26 @@ class ResearchAgent(TimeTravelMixin):
             spider_results = []
             sources_used = []
 
+            # Session 264: Get spider context for trend-aware research
+            spider_context = self.get_spider_context(query)
+            trending_topics = spider_context.trends[:5] if spider_context.trends else []
+
             # Session 255: Record query analysis decision
             self.record_decision(
                 decision_type="analysis",
                 action=f"Analyzing research query: {query[:50]}...",
                 reasoning="Parsing query to determine relevant sources",
-                context={'query_length': len(query), 'sources_requested': sources},
+                context={
+                    'query_length': len(query),
+                    'sources_requested': sources,
+                    'trending_topics': [t.get('topic', str(t)) for t in trending_topics]
+                },
                 confidence=0.9,
                 thoughts=[
                     f"User wants to research: {query[:30]}...",
                     f"Sources to use: {sources}",
-                    f"Max results: web={max_web_results}, spider={max_spider_results}"
+                    f"Max results: web={max_web_results}, spider={max_spider_results}",
+                    f"Current trends: {', '.join([t.get('topic', str(t))[:20] for t in trending_topics[:3]])}" if trending_topics else "No trending data"
                 ]
             )
 
@@ -302,6 +314,15 @@ class ResearchAgent(TimeTravelMixin):
                 web_results=results.get('web_results', []),
                 spider_results=results.get('spider_results', [])
             )
+
+        # Session 264: Add spider context enrichment
+        spider_context = self.get_spider_context(topic)
+        results['spider_context'] = {
+            'current_trends': [t.get('topic', str(t)) for t in spider_context.trends[:5]],
+            'market_data': spider_context.market_data,
+            'style_recommendations': spider_context.style_recommendations,
+            'fetch_time': spider_context.fetch_time.isoformat() if spider_context.fetch_time else None,
+        }
 
         return results
 

@@ -26,16 +26,19 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from core.super_platform.spider_context_mixin import SpiderContextMixin
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class ContentStrategyAgent:
+class ContentStrategyAgent(SpiderContextMixin):
     """
     Analyzes trends and recommends content creation strategies.
 
     Connects spider intelligence → actionable content recommendations.
+
+    Session 264: Added SpiderContextMixin for automatic spider intelligence injection.
     """
 
     # Content types this agent can recommend
@@ -115,6 +118,7 @@ class ContentStrategyAgent:
             user: User to generate recommendations for
             project_id: Optional project context
         """
+        super().__init__()  # Session 264: Initialize SpiderContextMixin
         self.user = user
         self.project_id = project_id
         self.agent_name = 'ContentStrategyAgent'
@@ -316,6 +320,23 @@ class ContentStrategyAgent:
     def _get_trending_data(self) -> Dict[str, Any]:
         """Get trending topics from spider intelligence."""
         try:
+            # Session 264: Use SpiderContextMixin for unified spider access
+            spider_context = self.get_spider_context()
+            if spider_context.trends:
+                return {
+                    'topics': [
+                        {
+                            'topic': t.get('topic', '') if isinstance(t, dict) else str(t),
+                            'score': t.get('count', 0) if isinstance(t, dict) else 50,
+                            'mentions': t.get('count', 0) if isinstance(t, dict) else 50
+                        }
+                        for t in spider_context.trends
+                    ],
+                    'style_recommendations': spider_context.style_recommendations,
+                    'platform_insights': spider_context.platform_insights,
+                }
+
+            # Fallback to direct service if mixin returns empty
             if self.spider_service:
                 insights = self.spider_service.get_trending_topics(limit=20)
                 return {
