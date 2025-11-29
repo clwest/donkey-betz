@@ -338,8 +338,13 @@ class SpiderIntelligenceService:
         """
         since = timezone.now() - timedelta(hours=hours)
 
+        # Session 272: For design queries, also include creative spiders (Behance, Dribbble)
+        spider_sources = list(self.CATEGORY_MAPPINGS['tech'])
+        if topic_filter == 'design':
+            spider_sources.extend(['dribbble', 'behance', 'figma', 'canva', 'unsplash'])
+
         tech_data = self.SpiderData.objects.filter(
-            spider_name__in=self.CATEGORY_MAPPINGS['tech'],
+            spider_name__in=spider_sources,
             created_at__gte=since
         ).order_by('-created_at')
 
@@ -356,10 +361,13 @@ class SpiderIntelligenceService:
                         'encryption', 'privacy', 'authentication', 'cybersecurity'],
             'cloud': ['aws', 'azure', 'gcp', 'kubernetes', 'docker', 'serverless', 'cloud',
                      'devops', 'infrastructure', 'microservices'],
-            'design': ['design', 'designer', 'ui ', 'ux ', 'ui/ux', 'figma', 'sketch', 'adobe',
-                      'illustration', 'typography', 'branding', 'logo', 'graphic', 'visual',
-                      'creative', 'dribbble', 'behance', 'color palette', 'layout', 'mockup',
-                      'prototype', 'user interface', 'user experience', 'photoshop', 'canva'],
+            'design': [' design', 'design ', 'designer', 'ui design', 'ux design', 'ui/ux',
+                      'figma', 'sketch app', 'adobe xd', 'illustrator', 'illustration',
+                      'typography', 'branding', 'logo design', 'graphic design', 'visual design',
+                      'web design', 'product design', 'interaction design', 'motion design',
+                      'dribbble', 'behance', 'color palette', 'layout', 'mockup', 'wireframe',
+                      'prototype', 'user interface', 'user experience', 'photoshop', 'canva',
+                      'iconography', 'infographic', 'brand identity', 'style guide'],
         }
 
         # Words to filter OUT (shopping/deals content)

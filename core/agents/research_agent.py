@@ -338,7 +338,12 @@ If asked to create content, explain you can only research and suggest using the 
                 if category == 'tech':
                     results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter)
                 elif category == 'creative':
-                    results = self.spider_service.get_creative_trends(hours=hours, limit=limit)
+                    # Session 272: For design queries, use get_tech_trends with design filter
+                    # since it has topic filtering logic; fallback to creative_trends otherwise
+                    if topic_filter == 'design':
+                        results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter='design')
+                    else:
+                        results = self.spider_service.get_creative_trends(hours=hours, limit=limit)
                 elif category == 'jobs':
                     results = self.spider_service.get_job_market_summary(hours=hours, limit=limit)
                 elif category == 'financial':
