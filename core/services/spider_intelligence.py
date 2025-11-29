@@ -356,6 +356,10 @@ class SpiderIntelligenceService:
                         'encryption', 'privacy', 'authentication', 'cybersecurity'],
             'cloud': ['aws', 'azure', 'gcp', 'kubernetes', 'docker', 'serverless', 'cloud',
                      'devops', 'infrastructure', 'microservices'],
+            'design': ['design', 'designer', 'ui ', 'ux ', 'ui/ux', 'figma', 'sketch', 'adobe',
+                      'illustration', 'typography', 'branding', 'logo', 'graphic', 'visual',
+                      'creative', 'dribbble', 'behance', 'color palette', 'layout', 'mockup',
+                      'prototype', 'user interface', 'user experience', 'photoshop', 'canva'],
         }
 
         # Words to filter OUT (shopping/deals content)
