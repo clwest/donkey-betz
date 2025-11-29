@@ -32,6 +32,31 @@ except ImportError:
         def __init__(self):
             pass
 
+# Session 266: Super Platform Integration - Dynamic Prompting System
+try:
+    from core.super_platform import (
+        QueryClassifier,
+        ClassificationResult,
+        ContextAggregator,
+        AggregatedContext,
+        get_learning_loop_service,
+        get_scifi_integration_service,
+    )
+    SUPER_PLATFORM_AVAILABLE = True
+except ImportError as e:
+    SUPER_PLATFORM_AVAILABLE = False
+    # Provide fallback classes for graceful degradation
+    class QueryClassifier:
+        def classify(self, query):
+            return None
+    class ContextAggregator:
+        def __init__(self, user=None):
+            pass
+        def aggregate(self, classification, query):
+            return None
+    ClassificationResult = None
+    AggregatedContext = None
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -60,7 +85,17 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             'last_updated': None
         }
 
-        logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, and Asset Tracking for {user.username}")
+        # Session 266: Super Platform Integration - Dynamic Prompting
+        self.query_classifier = QueryClassifier() if SUPER_PLATFORM_AVAILABLE else None
+        self.context_aggregator = ContextAggregator(user) if SUPER_PLATFORM_AVAILABLE else None
+        self._learning_service = None  # Lazy loaded
+        self._scifi_service = None  # Lazy loaded
+        self._last_classification = None  # Store for learning loop
+
+        if SUPER_PLATFORM_AVAILABLE:
+            logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, Asset Tracking, AND Super Platform Integration for {user.username}")
+        else:
+            logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, and Asset Tracking for {user.username}")
 
     # Session 131: Agent-Based Tool Definitions
     def get_tool_definitions(self) -> List[Dict]:
@@ -4787,6 +4822,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         """
         Generate real AI response using LLMEnforcer.
 
+        Session 266: Now integrates Super Platform for dynamic prompting:
+        - QueryClassifier: Understands user intent (9 types)
+        - ContextAggregator: Gathers spider data, memories, mood
+        - Injects relevant context into prompts
+
         Args:
             message: User's message
             context: Context including user profile, memories, etc.
@@ -4795,6 +4835,30 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             AI-generated response string
         """
         logger.debug("_generate_ai_response() ENTERED")
+
+        # Session 266: Super Platform Integration - Classify the query
+        classification = None
+        aggregated_context = None
+        start_time = timezone.now()
+
+        if self.query_classifier and SUPER_PLATFORM_AVAILABLE:
+            try:
+                classification = self.query_classifier.classify(message)
+                self._last_classification = classification  # Store for learning loop
+                logger.info(f"🎯 Query classified as {classification.primary_type.value} "
+                           f"(confidence: {classification.confidence:.2f}, "
+                           f"requires_spider: {classification.requires_spider_data})")
+            except Exception as e:
+                logger.warning(f"⚠️ Query classification failed: {e}")
+
+        # Session 266: Aggregate context from Super Platform
+        if classification and self.context_aggregator:
+            try:
+                aggregated_context = self.context_aggregator.aggregate(classification, message)
+                logger.info(f"📊 Context aggregated from: {', '.join(aggregated_context.sources_used)}")
+            except Exception as e:
+                logger.warning(f"⚠️ Context aggregation failed: {e}")
+
         # Build comprehensive context using UnifiedMemoryManager
         recent_memories = self.memory_manager.retrieve_memories(
             user=self.user,
@@ -5018,6 +5082,11 @@ Respond in a helpful, personalized way that:
 7. Uses their preferred communication style ({self.enhanced_profile.communication_style or 'balanced'})
 """
 
+        # Session 266: Inject Spider Intelligence from Super Platform
+        spider_intelligence_section = self._build_spider_intelligence_section(aggregated_context, classification)
+        if spider_intelligence_section:
+            system_prompt = system_prompt + spider_intelligence_section
+
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
             logger.debug(f"Starting LLM call for message: {message[:50]}...")
@@ -5130,6 +5199,18 @@ Respond in a helpful, personalized way that:
                     response = ai_result.get('content', '') or ai_result.get('response', '')
                     logger.info(f"✅ Returning {len(ai_result['tool_calls'])} tool_calls to frontend for execution")
 
+                    # Session 266: Record successful outcome with tool calls
+                    execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
+                    agents_used = [tc['function']['name'] for tc in ai_result['tool_calls'] if 'function' in tc]
+                    self._record_learning_outcome(
+                        message=message,
+                        classification=classification,
+                        response=response,
+                        success=True,
+                        agents_used=agents_used,
+                        execution_time_ms=execution_time_ms
+                    )
+
                     # Return dict with both response and tool_calls
                     return {
                         'text': response,
@@ -5140,10 +5221,34 @@ Respond in a helpful, personalized way that:
                     # Session 173 FIX: LLM enforcer returns 'content' not 'response'
                     response = ai_result.get('content', '') or ai_result.get('response', '')
                     logger.info(f"✅ Generated REAL AI response for {self.user.username}")
+
+                    # Session 266: Record successful outcome without tool calls
+                    execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
+                    self._record_learning_outcome(
+                        message=message,
+                        classification=classification,
+                        response=response,
+                        success=True,
+                        agents_used=[],
+                        execution_time_ms=execution_time_ms
+                    )
+
                     return response
             else:
                 # Fallback if AI fails
                 logger.warning(f"⚠️ AI generation failed, using intelligent fallback")
+
+                # Session 266: Record failed outcome
+                execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
+                self._record_learning_outcome(
+                    message=message,
+                    classification=classification,
+                    response="",
+                    success=False,
+                    agents_used=[],
+                    execution_time_ms=execution_time_ms
+                )
+
                 return self._generate_intelligent_fallback(message, context)
 
         except Exception as e:
@@ -5153,6 +5258,228 @@ Respond in a helpful, personalized way that:
             logger.warning(f"⚠️ LLM not available (likely no API keys configured): {e}")
             logger.info("📋 Using intelligent fallback response with conversation context")
             return self._generate_intelligent_fallback(message, context)
+
+    def _build_spider_intelligence_section(self, aggregated_context, classification) -> str:
+        """
+        Session 266: Build spider intelligence section for system prompt.
+
+        This injects real-time data from the spider network into the GPT prompt,
+        giving the AI access to current trends, news, market data, and opportunities.
+
+        Args:
+            aggregated_context: AggregatedContext from ContextAggregator
+            classification: ClassificationResult from QueryClassifier
+
+        Returns:
+            Formatted string section to append to system prompt
+        """
+        if not aggregated_context or not SUPER_PLATFORM_AVAILABLE:
+            return ""
+
+        sections = []
+
+        # Spider Intelligence Header
+        spider_data = aggregated_context.spider_data
+        if spider_data:
+            sections.append("\n\n--- SPIDER INTELLIGENCE (Session 266 - Real-Time Data) ---")
+
+            # Trending Topics
+            if spider_data.get('trends'):
+                trends = spider_data['trends'][:5]
+                if trends:
+                    trend_lines = []
+                    for t in trends:
+                        if isinstance(t, dict):
+                            trend_lines.append(f"- {t.get('title', t.get('name', str(t)))}")
+                        else:
+                            trend_lines.append(f"- {t}")
+                    sections.append(f"\n🔥 TRENDING NOW:\n" + "\n".join(trend_lines))
+                    sections.append("*Use these trends to make content more relevant and timely.*")
+
+            # Latest News
+            if spider_data.get('news'):
+                news = spider_data['news'][:3]
+                if news:
+                    news_lines = []
+                    for n in news:
+                        if isinstance(n, dict):
+                            news_lines.append(f"- {n.get('title', n.get('headline', str(n)))}")
+                        else:
+                            news_lines.append(f"- {n}")
+                    sections.append(f"\n📰 LATEST NEWS:\n" + "\n".join(news_lines))
+
+            # Market Data
+            if spider_data.get('market') or spider_data.get('crypto'):
+                market = spider_data.get('market', spider_data)
+                crypto = market.get('crypto', [])[:3] if isinstance(market, dict) else []
+                if crypto:
+                    crypto_parts = []
+                    for c in crypto:
+                        if isinstance(c, dict):
+                            symbol = c.get('symbol', c.get('name', '?'))
+                            price = c.get('price', c.get('current_price', 0))
+                            if isinstance(price, (int, float)):
+                                crypto_parts.append(f"{symbol}: ${price:,.2f}")
+                        else:
+                            crypto_parts.append(str(c))
+                    if crypto_parts:
+                        sections.append(f"\n💹 MARKET SNAPSHOT: {', '.join(crypto_parts)}")
+
+            # Hot Skills/Jobs
+            if spider_data.get('jobs'):
+                jobs = spider_data['jobs']
+                if isinstance(jobs, dict) and jobs.get('hot_skills'):
+                    skills = jobs['hot_skills'][:5]
+                    sections.append(f"\n🎯 HOT SKILLS IN DEMAND: {', '.join(skills)}")
+
+        # Query Classification Context
+        if classification:
+            if classification.detected_entities:
+                entities = classification.detected_entities
+                if entities.get('topics'):
+                    sections.append(f"\n🏷️ DETECTED TOPICS: {', '.join(entities['topics'][:3])}")
+                if entities.get('styles'):
+                    sections.append(f"🎨 DETECTED STYLES: {', '.join(entities['styles'][:3])}")
+
+            # Suggested agents based on classification
+            if classification.suggested_agents:
+                agents = classification.suggested_agents[:3]
+                sections.append(f"\n🤖 RECOMMENDED AGENTS: {', '.join(agents)}")
+
+                # Session 266: Add Sci-Fi personality for primary suggested agent
+                if agents:
+                    primary_agent = agents[0]
+                    scifi_context = self._get_agent_scifi_context(primary_agent, "handling user request")
+                    if scifi_context:
+                        sections.append(f"\n🌟 {primary_agent} STATUS:\n{scifi_context}")
+
+        # Active Opportunities (for revenue-focused queries)
+        if aggregated_context.active_opportunities:
+            opps = aggregated_context.active_opportunities[:3]
+            if opps:
+                sections.append("\n💰 ACTIVE OPPORTUNITIES:")
+                for opp in opps:
+                    if isinstance(opp, dict):
+                        title = opp.get('title', opp.get('name', 'Opportunity'))
+                        value = opp.get('estimated_value', opp.get('value', ''))
+                        if value:
+                            sections.append(f"- {title} (Est. ${value})")
+                        else:
+                            sections.append(f"- {title}")
+
+        if len(sections) > 1:  # More than just the header
+            sections.append("\n--- END SPIDER INTELLIGENCE ---\n")
+            return "\n".join(sections)
+
+        return ""
+
+    def _record_learning_outcome(
+        self,
+        message: str,
+        classification,
+        response: str,
+        success: bool,
+        agents_used: List[str],
+        execution_time_ms: int
+    ) -> None:
+        """
+        Session 266: Record outcome to the Learning Loop service.
+
+        This enables the platform to learn from every interaction:
+        - Which query types succeed most
+        - Which agents perform best
+        - How execution time varies
+        - Pattern detection for optimization
+
+        Args:
+            message: Original user message
+            classification: QueryClassifier result
+            response: Generated response
+            success: Whether the response was successful
+            agents_used: List of agents/tools used
+            execution_time_ms: Time taken in milliseconds
+        """
+        if not SUPER_PLATFORM_AVAILABLE or not classification:
+            return
+
+        # Lazy load learning service
+        if self._learning_service is None:
+            try:
+                self._learning_service = get_learning_loop_service(self.user)
+            except Exception as e:
+                logger.warning(f"⚠️ Could not load learning service: {e}")
+                return
+
+        if not self._learning_service:
+            return
+
+        try:
+            outcome_id = self._learning_service.record_outcome(
+                query_type=classification.primary_type.value,
+                query_text=message[:500],  # Truncate for storage
+                execution_mode='assistant',
+                agents_used=agents_used,
+                response=response[:500] if response else "",
+                execution_time_ms=execution_time_ms,
+                success=success,
+                classification_confidence=classification.confidence,
+                spider_data_used=classification.requires_spider_data,
+            )
+            if outcome_id:
+                logger.info(f"📚 Learning outcome recorded: {outcome_id[:8]}...")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to record learning outcome: {e}")
+
+    def _get_agent_scifi_context(self, agent_name: str, task: str) -> str:
+        """
+        Session 266: Get Sci-Fi context for an agent (mood, evolution, personality).
+
+        This makes agent responses feel more alive by incorporating:
+        - Current mood state
+        - Evolution level and title
+        - Personality traits
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Formatted context string for the agent
+        """
+        if not SUPER_PLATFORM_AVAILABLE:
+            return ""
+
+        # Lazy load sci-fi service
+        if self._scifi_service is None:
+            try:
+                self._scifi_service = get_scifi_integration_service()
+            except Exception as e:
+                logger.warning(f"⚠️ Could not load sci-fi service: {e}")
+                return ""
+
+        if not self._scifi_service:
+            return ""
+
+        try:
+            scifi_ctx = self._scifi_service.get_scifi_context(agent_name, task, self.user)
+            parts = []
+
+            if scifi_ctx and hasattr(scifi_ctx, 'mood') and scifi_ctx.mood:
+                mood = scifi_ctx.mood
+                if hasattr(mood, 'mood_type') and mood.mood_type:
+                    parts.append(f"🎭 Mood: {mood.mood_type}")
+                if hasattr(mood, 'description') and mood.description:
+                    parts.append(f"   {mood.description}")
+
+            if scifi_ctx and hasattr(scifi_ctx, 'evolution') and scifi_ctx.evolution:
+                evo = scifi_ctx.evolution
+                if hasattr(evo, 'level') and hasattr(evo, 'title'):
+                    parts.append(f"⭐ Level {evo.level}: {evo.title}")
+
+            return "\n".join(parts) if parts else ""
+        except Exception as e:
+            logger.debug(f"Sci-Fi context not available for {agent_name}: {e}")
+            return ""
 
     def _generate_intelligent_fallback(self, message: str, context: Dict[str, Any]) -> str:
         """
