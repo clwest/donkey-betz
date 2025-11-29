@@ -148,8 +148,8 @@ If asked to create content, explain you can only research and suggest using the 
                         },
                         "topic_filter": {
                             "type": "string",
-                            "description": "Filter results to specific topic: 'ai' for AI/ML, 'web' for web dev, 'security' for cybersecurity, 'cloud' for cloud/devops",
-                            "enum": ["ai", "web", "security", "cloud"],
+                            "description": "Filter results to specific topic: 'ai' for AI/ML, 'web' for web dev, 'security' for cybersecurity, 'cloud' for cloud/devops, 'design' for UI/UX/graphic design",
+                            "enum": ["ai", "web", "security", "cloud", "design"],
                             "default": None
                         },
                         "hours": {

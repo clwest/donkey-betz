@@ -101,7 +101,7 @@ INTENT_KEYWORDS = {
     ],
     'ResearchAgent': [
         'search', 'find', 'research', 'trending', 'what is', 'analyze', 'compare',
-        'market', 'competition', 'insights'
+        'market', 'competition', 'insights', 'hot in', 'hot right now', 'whats hot'
     ],
     'WorkflowAgent': [
         'research and create', 'brand identity', 'package', 'complete', 'full',
@@ -318,10 +318,12 @@ Available agents:
 
         # Session 272: Questions about trends/market/research should go to ResearchAgent
         # These need spider data, not just GPT knowledge
+        # "hot" added for "what's hot in design" type queries
         research_indicators = [
             'trending', 'trends', 'market', 'news', 'latest',
-            'what\'s hot', 'popular', 'current events', 'black friday',
-            'deals', 'happening', 'going on'
+            'what\'s hot', "what's hot", 'whats hot', 'popular',
+            'current events', 'black friday', 'deals', 'happening',
+            'going on', 'hot in', 'hot right now'
         ]
         if any(indicator in task_lower for indicator in research_indicators):
             # Let this fall through to agent routing (ResearchAgent)
