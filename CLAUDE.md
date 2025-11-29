@@ -1,10 +1,10 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 29, 2025 - Session 268 (Clean Architecture Phase 1 Complete)
+**Last Updated:** November 29, 2025 - Session 272 (Smart Topic Filtering + Clickable Research Links)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Clean Architecture Implementation - Layered Agent System
 **Built-in Styles:** 80+ professional style presets
-**Spider Network:** 70 spiders | 20 categories | 24 real data sources
+**Spider Network:** 70 spiders | 20 categories | 24 real data sources | **Topic Filtering!**
 **Agent Ecosystem:** 22 agents | 70 spider connections | Time Travel Debugging | Real-time conversations
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
 
@@ -133,6 +133,19 @@ The 6-phase plan to transform spider data into revenue:
 - News (4), Design (3), Education (3), Legal (4), Innovation (3)
 - Content (5), Remote Work (2), Sports Betting (2), Market (1)
 - Social (1), Community (1), Visual Trends (1), Jobs (1)
+
+### Smart Topic Filtering (Session 272)
+Ask about specific topics and get relevant, clickable article links:
+- **"What's trending in AI?"** → AI/ML-specific articles (OpenAI, Anthropic, LLMs, etc.)
+- **"What's trending in web dev?"** → React, Vue, TypeScript, frontend/backend
+- **"What's trending in security?"** → Cybersecurity, vulnerabilities, privacy
+- **"What's trending in cloud?"** → AWS, Docker, Kubernetes, DevOps
+
+**Features:**
+- Topic-specific keyword filtering
+- Shopping/deals content blacklisted (no Black Friday spam!)
+- Source diversity (interleaved from multiple sources)
+- Clickable links to original articles
 
 ### Available Workflows
 - `research_and_create_logos` - Research + logos (1024x1024)
@@ -336,6 +349,8 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 272:** Smart Topic Filtering + Clickable Links - AI/web/security/cloud topic filters, source diversity, shopping blacklist, clickable research links
+- **Session 271:** Clean Architecture Phase 5 - Frontend updates, artifact extraction fixes, UI improvements
 - **Session 268:** Clean Architecture Phase 1 - BaseAgent, ImageAgent, AgentRouter, feature flag, full test suite
 - **Session 267:** Clean Architecture Proposal - Complete design for layered agent system
 - **Session 266:** Central Prompt Registry + Tool Routing Fix - All prompts in `core/prompts/`, question detection, tool ordering
@@ -345,9 +360,6 @@ Built-in style library in `content/image_generation.py`:
 - **Session 255:** Time Travel Debugging - Replay agent decisions, TimeTravelMixin
 - **Session 254:** Agent Evolution System - XP, levels, progression tracking
 - **Session 253:** Mood System + Rivalries/Alliances - Emotional states, agent relationships
-- **Session 251-252:** Memory Palace - Persistent agent memory with embedding retrieval
-- **Session 248-250:** Hive Mind Mode - Collective agent problem-solving
-- **Session 247:** Agent Dreams - Idle creative thought generation
 
 ---
 

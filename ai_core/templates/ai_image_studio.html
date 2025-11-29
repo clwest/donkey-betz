@@ -26180,32 +26180,102 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 </div>
                             </div>`;
                     } else if (type === 'research') {
-                        // Session 272: Enhanced research display with spider data
+                        // Session 272: Enhanced research display with clickable article titles
                         let researchContent = '';
+
+                        // Helper function to render a list of articles with clickable links
+                        const renderArticleList = (items, headerText) => {
+                            if (!items || items.length === 0) return '';
+                            let html = `<div style="margin-bottom: 12px;">`;
+                            if (headerText) {
+                                html += `<div style="color: #a5b4fc; font-size: 12px; margin-bottom: 6px; font-weight: 500;">${headerText}</div>`;
+                            }
+                            items.slice(0, 10).forEach((item) => {
+                                const title = item.title || item.name || item.topic || item.headline || 'Untitled';
+                                const url = item.url || item.link || '';
+                                const score = item.score || item.relevance || item.popularity || 0;
+                                const itemSource = item.source || '';
+                                const description = item.description || '';
+
+                                html += `
+                                    <div style="padding: 10px; background: rgba(0,0,0,0.25); border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #22d3ee;">
+                                        ${url ?
+                                            `<a href="${url}" target="_blank" style="color: #fbbf24; text-decoration: none; font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">${title} ↗</a>` :
+                                            `<span style="color: #e2e8f0; font-weight: 600; font-size: 13px;">${title}</span>`
+                                        }
+                                        ${description ? `<div style="font-size: 12px; color: #cbd5e1; margin-top: 4px; line-height: 1.4;">${description.substring(0, 150)}${description.length > 150 ? '...' : ''}</div>` : ''}
+                                        <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+                                            ${score ? `⬆️ ${typeof score === 'number' ? (score > 10 ? score + ' points' : score.toFixed(2)) : score}` : ''} ${itemSource ? `• from ${itemSource}` : ''}
+                                        </div>
+                                    </div>`;
+                            });
+                            html += `</div>`;
+                            return html;
+                        };
+
+                        // Helper function to render topic tags
+                        const renderTopicTags = (topics) => {
+                            if (!topics || topics.length === 0) return '';
+                            let html = `<div style="margin-top: 10px;">`;
+                            html += `<div style="color: #a5b4fc; font-size: 12px; margin-bottom: 6px; font-weight: 500;">🔥 Trending Topics:</div>`;
+                            html += `<div style="display: flex; flex-wrap: wrap; gap: 6px;">`;
+                            topics.slice(0, 10).forEach((topic) => {
+                                const topicName = topic.topic || topic;
+                                const topicScore = topic.score || '';
+                                html += `
+                                    <span style="background: rgba(34, 211, 238, 0.2); color: #67e8f9; padding: 4px 10px; border-radius: 12px; font-size: 12px; border: 1px solid rgba(34, 211, 238, 0.3);">
+                                        ${topicName}${topicScore ? ` (${Math.round(topicScore)})` : ''}
+                                    </span>`;
+                            });
+                            html += `</div></div>`;
+                            return html;
+                        };
+
                         if (artifact.data && Array.isArray(artifact.data)) {
-                            // Handle array of sources
+                            // Handle array of sources from ResearchAgent
                             artifact.data.forEach((source, sourceIdx) => {
                                 const sourceData = source.data || source;
-                                researchContent += `<div style="margin-bottom: 12px;">`;
-                                researchContent += `<div style="color: #67e8f9; font-weight: 600; margin-bottom: 6px;">📡 ${source.source || 'Spider Data'}</div>`;
+                                const sourceName = source.source || 'Spider Data';
 
-                                // Handle discussions array
-                                const items = sourceData.discussions || sourceData.trends || sourceData.results || (Array.isArray(sourceData) ? sourceData : []);
-                                if (items.length > 0) {
-                                    items.slice(0, 5).forEach((item, i) => {
-                                        const title = item.title || item.topic || item.headline || 'Unknown';
-                                        const url = item.url || item.link || '';
-                                        const score = item.score || item.popularity || '';
-                                        const itemSource = item.source || '';
+                                researchContent += `<div style="margin-bottom: 15px;">`;
+                                researchContent += `<div style="color: #67e8f9; font-weight: 600; margin-bottom: 8px; font-size: 14px;">📡 ${sourceName}</div>`;
 
-                                        researchContent += `
-                                            <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 6px; border-left: 3px solid #22d3ee;">
-                                                ${url ? `<a href="${url}" target="_blank" style="color: #e2e8f0; text-decoration: none; font-weight: 500;">${title}</a>` : `<span style="color: #e2e8f0;">${title}</span>`}
-                                                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
-                                                    ${score ? `⬆️ ${score}` : ''} ${itemSource ? `• ${itemSource}` : ''}
-                                                </div>
-                                            </div>`;
-                                    });
+                                // Session 272: Check if sourceData is directly an array (from spider_query)
+                                if (Array.isArray(sourceData)) {
+                                    // Direct array of search results from spider_query
+                                    researchContent += renderArticleList(sourceData, '📰 Search Results:');
+                                } else if (typeof sourceData === 'object') {
+                                    // Dict with discussions/topics (from analyze_trends)
+                                    const discussions = sourceData.discussions || [];
+                                    const topics = sourceData.topics || [];
+                                    const projects = sourceData.projects || [];
+                                    const jobs = sourceData.jobs || [];
+
+                                    // Show discussions (articles)
+                                    if (discussions.length > 0) {
+                                        researchContent += renderArticleList(discussions, '📰 Recent Articles:');
+                                    }
+
+                                    // Show projects (GitHub, ProductHunt)
+                                    if (projects.length > 0) {
+                                        researchContent += renderArticleList(projects, '🚀 Projects:');
+                                    }
+
+                                    // Show jobs
+                                    if (jobs.length > 0) {
+                                        researchContent += renderArticleList(jobs, '💼 Jobs:');
+                                    }
+
+                                    // Show topic tags
+                                    if (topics.length > 0) {
+                                        researchContent += renderTopicTags(topics);
+                                    }
+
+                                    // Fallback for other structures
+                                    const fallbackItems = sourceData.trends || sourceData.results || [];
+                                    if (fallbackItems.length > 0 && discussions.length === 0 && topics.length === 0) {
+                                        researchContent += renderArticleList(fallbackItems, '📋 Results:');
+                                    }
                                 }
                                 researchContent += `</div>`;
                             });
