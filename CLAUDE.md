@@ -1,11 +1,11 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 28, 2025 - Session 255 (Time Travel Debugging)
-**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 9 Sci-Fi Features
-**Current Focus:** AI Content Creation (images, videos, audio, 3D)
+**Last Updated:** November 28, 2025 - Session 263 (Super Platform Integration Blueprint)
+**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
+**Current Focus:** AI Content Creation (images, videos, audio, 3D) + Super Platform Unification
 **Built-in Styles:** 80+ professional style presets
-**Spider Network:** 67 spiders | 12 categories | 21 real data sources
-**Agent Ecosystem:** 20 agents | 57 spider connections | Time Travel Debugging | Real-time conversations
+**Spider Network:** 70 spiders | 20 categories | 24 real data sources
+**Agent Ecosystem:** 22 agents | 70 spider connections | Time Travel Debugging | Real-time conversations
 
 ---
 
@@ -57,6 +57,7 @@ The 6-phase plan to transform spider data into revenue:
 
 **DO:**
 - AI content creation (images, videos, audio, 3D)
+- Super Platform Unification (see `docs/SESSION_263_SUPER_PLATFORM_INTEGRATION_BLUEPRINT.md`)
 - Learning systems (agents learning from users)
 - Workflow orchestration improvements
 - Spider network data collection
@@ -79,7 +80,7 @@ The 6-phase plan to transform spider data into revenue:
 | 3D Generation | Complete |
 | Character Training | 3/3 features |
 | Workflow Orchestration | 6 workflows |
-| Spider Network | 67 spiders + 21 real sources |
+| Spider Network | **70 spiders + 24 real sources** |
 | **Opportunity Engine** | **Phase 1 Complete** |
 | **Revenue Reality** | **Phase 2 Complete** |
 | **Team Power** | **Phase 3 Complete** |
@@ -99,18 +100,26 @@ The 6-phase plan to transform spider data into revenue:
 | **Rivalries/Alliances** | **Agent relationship dynamics** |
 | **Evolution System** | **XP, levels, progression** |
 | **Time Travel Debugging** | **Replay agent decision-making** |
+| **Personality Profiles** | **Distinct agent personalities** |
+| **Memory Clusters** | **Grouped related memories** |
+| **Prophecies/Predictions** | **Agent outcome predictions** |
+| **Time Capsules** | **Messages to future selves** |
+| **Spider Integration** | **Personal Assistant uses spider data** |
 
-### Spider Network - REAL DATA
-**21 Real Data Sources:**
+### Spider Network - REAL DATA (70 SPIDERS!)
+**24 Real Data Sources:**
 - **Tech News:** TechCrunch, The Verge, Wired, MIT Tech Review, Axios, HackerNews API, Dev.to API
-- **Jobs:** RemoteOK (JSON API), WeWorkRemotely (RSS)
+- **Jobs:** RemoteOK (JSON API), WeWorkRemotely (RSS), Adzuna API (global job aggregator)
 - **Financial:** CoinGecko API, Yahoo Finance API
-- **Creative:** Dribbble, Behance, Indiegogo, Kickstarter
+- **Creative:** Dribbble, Behance, Indiegogo, Kickstarter, Unsplash API
+- **Community:** Reddit (20+ subreddits - no API key needed!)
 
-**67 Registered Spiders across 17 categories:**
-- Financial (8), Tech (9), Freelance (5), Creative Assets (5)
+**70 Registered Spiders across 20 categories:**
+- Tech (9), Financial (8), Freelance (5), Creative Assets (5)
 - AI/Creative Tools (4), Digital Products (5), Content Creation (3)
-- Plus 28 more across News, Design, Education, Legal, etc.
+- News (4), Design (3), Education (3), Legal (4), Innovation (3)
+- Content (5), Remote Work (2), Sports Betting (2), Market (1)
+- Social (1), Community (1), Visual Trends (1), Jobs (1)
 
 ### Available Workflows
 - `research_and_create_logos` - Research + logos (1024x1024)
@@ -120,7 +129,7 @@ The 6-phase plan to transform spider data into revenue:
 - `video_thumbnail_series` - Consistent thumbnail series
 - `logo_to_video` - Animate logo into video
 
-### Agent Ecosystem (20 Real Agents)
+### Agent Ecosystem (22 Real Agents)
 
 All agents have actual Python implementations in `agents/` directory:
 
@@ -156,6 +165,10 @@ All agents have actual Python implementations in `agents/` directory:
 - `COOAgent` - Operations oversight
 - `MeetingCoordinatorAgent` - Team coordination
 
+**Specialized:**
+- `MemoryIsolationAgent` - Memory namespace management
+- `BookmakerAgent` - Sports/financial analysis
+
 ---
 
 ## Key File Locations
@@ -174,13 +187,22 @@ All agents have actual Python implementations in `agents/` directory:
 - `content/models.py` - Database models
 - `core/models_unified_system.py` - All Phase 1-6 + Sci-Fi models
 
+### Spider Network
+- `ai_core/spiders/spider_registry.py` - Central spider registry (70 spiders)
+- `ai_core/spiders/specialized/` - Individual spider implementations
+- `core/services/spider_intelligence.py` - Spider Intelligence Service
+
 ### Frontend
-- `ai_core/templates/ai_image_studio.html` - Main UI (~45k lines)
+- `ai_core/templates/ai_image_studio.html` - Main UI (~55k lines)
 
 ### Configuration
 - `core/assistant/tool_definitions.py` - GPT tool schemas
 - `core/assistant/constants.py` - System constants
 - `core/celery.py` - Celery Beat schedules
+
+### Key Documentation
+- `docs/SESSION_263_SUPER_PLATFORM_INTEGRATION_BLUEPRINT.md` - **CRITICAL: Master integration plan**
+- `docs/SESSION_262_COMPLETE_SYSTEM_REVIEW.md` - Complete system documentation
 
 ---
 
@@ -209,6 +231,11 @@ make celery-status
 >>> UserGoal.objects.count()
 ```
 
+### Spider count verification
+```bash
+python -c "from ai_core.spiders.spider_registry import SpiderRegistry; r = SpiderRegistry(); print(f'Total: {r.get_spider_count()[\"total\"]} spiders')"
+```
+
 ---
 
 ## Style System (80+ Presets)
@@ -234,6 +261,8 @@ Built-in style library in `content/image_generation.py`:
 ## Documentation
 
 - **Current Priorities:** `00-START-NEXT-SESSION.md`
+- **Super Platform Blueprint:** `docs/SESSION_263_SUPER_PLATFORM_INTEGRATION_BLUEPRINT.md`
+- **System Review:** `docs/SESSION_262_COMPLETE_SYSTEM_REVIEW.md`
 - **Prompting System:** `docs/architecture/PROMPTING_SYSTEM.md` (Session 238)
 - **Feature Docs:** `docs/features/`
 - **API Docs:** `docs/apis/`
@@ -244,15 +273,16 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
-- **Session 255:** Time Travel Debugging - Replay agent decisions, TimeTravelMixin for ImageAgent/ResearchAgent, 16 API endpoints, thought bubbles, bookmarks
+- **Session 263:** Super Platform Integration Blueprint + 3 new spiders (Reddit, Unsplash, Adzuna) to reach 70 total
+- **Session 262:** Spider Intelligence Integration - Personal Assistant now uses real-time spider data
+- **Session 261:** Conversation Upgrade - Outcome-driven agent discussions with tension/grounding requirements
+- **Session 255:** Time Travel Debugging - Replay agent decisions, TimeTravelMixin
 - **Session 254:** Agent Evolution System - XP, levels, progression tracking
 - **Session 253:** Mood System + Rivalries/Alliances - Emotional states, agent relationships
 - **Session 251-252:** Memory Palace - Persistent agent memory with embedding retrieval
 - **Session 248-250:** Hive Mind Mode - Collective agent problem-solving
 - **Session 247:** Agent Dreams - Idle creative thought generation
 - **Session 246:** Real-Time Agent Conversations - WebSocket streaming for live AI-to-AI chat
-- **Session 244-245:** Agent Conversations - Inter-agent communication models, GPT-4o-mini chat generation
-- **Session 243:** Agent Learning System - Autonomous knowledge sharing, synthesized insights
 
 ---
 

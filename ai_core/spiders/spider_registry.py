@@ -104,6 +104,11 @@ from .specialized.convertkit_spider import ConvertKitSpider
 from .specialized.notion_spider import NotionSpider
 from .specialized.figma_spider import FigmaSpider
 
+# Session 263: NEW SPIDERS TO REACH 70 TOTAL
+from .specialized.reddit_spider import RedditSpider
+from .specialized.unsplash_spider import UnsplashSpider
+from .specialized.adzuna_spider import AdzunaSpider
+
 # Import base spider for fallbacks
 from .base_spider import BaseIntelligenceSpider
 
@@ -611,6 +616,44 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['figma.com/blog/']
+        })
+
+        # === SESSION 263: NEW SPIDERS TO REACH 70 TOTAL (3) ===
+
+        # Reddit - Community intelligence from 20+ subreddits
+        # NO API KEY REQUIRED - uses public JSON endpoints
+        self.register_spider('reddit', RedditSpider, {
+            'category': 'community',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': [
+                'reddit.com/r/webdev',
+                'reddit.com/r/programming',
+                'reddit.com/r/MachineLearning',
+                'reddit.com/r/graphic_design',
+                'reddit.com/r/forhire',
+                'reddit.com/r/freelance',
+                'reddit.com/r/SideProject',
+                'reddit.com/r/StableDiffusion',
+            ]
+        })
+
+        # Unsplash - Visual trends and photography intelligence
+        # Requires UNSPLASH_ACCESS_KEY env variable (free tier: 50 req/hour)
+        self.register_spider('unsplash', UnsplashSpider, {
+            'category': 'visual_trends',
+            'priority': 1,
+            'rate_limit': 2.0,  # Conservative due to rate limits
+            'targets': ['api.unsplash.com']
+        })
+
+        # Adzuna - Global job market intelligence with salary data
+        # Requires ADZUNA_APP_ID and ADZUNA_APP_KEY env variables
+        self.register_spider('adzuna', AdzunaSpider, {
+            'category': 'jobs',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['api.adzuna.com/v1/api/jobs']
         })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")
