@@ -58,6 +58,7 @@ from core.agents.image_editing_agent import ImageEditingAgent
 from core.agents.video_editing_agent import VideoEditingAgent
 from core.agents.research_agent import ResearchAgent
 from core.agents.workflow_agent import WorkflowAgent
+from core.agents.personal_assistant_agent import PersonalAssistantAgent
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,9 @@ class AgentRouter:
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,
+
+        # Entry Point Agent
+        "PersonalAssistantAgent": PersonalAssistantAgent,
     }
 
     def __init__(self, user=None):
