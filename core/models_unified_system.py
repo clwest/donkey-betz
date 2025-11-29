@@ -10595,3 +10595,200 @@ class TimeCapsuleStats(models.Model):
         self.capsules_this_month = capsules.filter(created_at__gte=month_start).count()
 
         self.save()
+
+
+# ============================================================================
+# Session 265: Phase 5 - Learning Loop Models
+# ============================================================================
+
+
+class CoordinatorOutcome(models.Model):
+    """
+    Records outcomes from SuperPlatformCoordinator executions for learning.
+
+    Session 265 Phase 5: Learning Loop
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    outcome_id = models.CharField(max_length=100, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='coordinator_outcomes',
+        null=True, blank=True
+    )
+
+    # Query details
+    query_type = models.CharField(max_length=50)  # question, creation, analysis, etc.
+    query_text = models.TextField()
+    execution_mode = models.CharField(max_length=50)
+
+    # Execution details
+    agents_used = ArrayField(
+        models.CharField(max_length=100),
+        default=list
+    )
+    response_length = models.IntegerField(default=0)
+    execution_time_ms = models.IntegerField(default=0)
+
+    # Outcome
+    outcome_type = models.CharField(max_length=20, choices=[
+        ('success', 'Success'),
+        ('partial', 'Partial Success'),
+        ('failure', 'Failure'),
+        ('timeout', 'Timeout'),
+    ])
+    confidence = models.FloatField(default=0.0)
+
+    # Context used
+    spider_data_used = models.BooleanField(default=False)
+    scifi_context_used = models.BooleanField(default=False)
+
+    # User feedback
+    user_feedback = models.CharField(max_length=30, null=True, blank=True)
+
+    # Revenue attribution
+    revenue_generated = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        null=True, blank=True
+    )
+
+    # Metadata
+    metadata = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['query_type', 'outcome_type']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.query_type} - {self.outcome_type} ({self.created_at.date()})"
+
+
+class AgentQueryPerformance(models.Model):
+    """
+    Tracks agent performance per query type for adaptive selection.
+
+    Session 265 Phase 5: Learning Loop
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='query_performances')
+    query_type = models.CharField(max_length=50)
+
+    # Performance metrics
+    total_executions = models.IntegerField(default=0)
+    successful_executions = models.IntegerField(default=0)
+    failed_executions = models.IntegerField(default=0)
+
+    # Timing
+    avg_execution_time_ms = models.FloatField(default=0.0)
+    min_execution_time_ms = models.IntegerField(default=0)
+    max_execution_time_ms = models.IntegerField(default=0)
+
+    # Quality metrics
+    avg_response_length = models.FloatField(default=0.0)
+    positive_feedback_count = models.IntegerField(default=0)
+    negative_feedback_count = models.IntegerField(default=0)
+
+    # Calculated score
+    performance_score = models.FloatField(default=50.0)  # 0-100
+
+    # Trend tracking
+    last_7_days_success_rate = models.FloatField(default=0.0)
+    last_30_days_success_rate = models.FloatField(default=0.0)
+    trend = models.CharField(max_length=20, default='stable')  # improving, stable, declining
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['agent', 'query_type']
+        ordering = ['-performance_score']
+
+    def __str__(self):
+        return f"{self.agent.name} - {self.query_type}: {self.success_rate():.0%}"
+
+    def success_rate(self) -> float:
+        if self.total_executions == 0:
+            return 0.0
+        return self.successful_executions / self.total_executions
+
+    def update_performance_score(self):
+        """Recalculate performance score."""
+        # Weighted score: success rate (60%) + feedback (20%) + speed (20%)
+        success_component = self.success_rate() * 60
+
+        # Feedback component
+        total_feedback = self.positive_feedback_count + self.negative_feedback_count
+        if total_feedback > 0:
+            feedback_ratio = self.positive_feedback_count / total_feedback
+            feedback_component = feedback_ratio * 20
+        else:
+            feedback_component = 10  # Neutral if no feedback
+
+        # Speed component (faster = better, capped at 3000ms)
+        if self.avg_execution_time_ms > 0:
+            speed_ratio = max(0, 1 - (self.avg_execution_time_ms / 5000))
+            speed_component = speed_ratio * 20
+        else:
+            speed_component = 10  # Neutral if no data
+
+        self.performance_score = success_component + feedback_component + speed_component
+        self.save()
+
+
+class LearningPattern(models.Model):
+    """
+    Discovered patterns from the learning loop.
+
+    Session 265 Phase 5: Learning Loop
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='learning_patterns',
+        null=True, blank=True
+    )
+
+    # Pattern details
+    pattern_type = models.CharField(max_length=50)  # agent_specialization, spider_impact, etc.
+    description = models.TextField()
+    confidence = models.FloatField(default=0.0)
+
+    # Pattern data
+    pattern_data = models.JSONField(default=dict)
+
+    # Applicability
+    applies_to_agents = ArrayField(
+        models.CharField(max_length=100),
+        default=list
+    )
+    applies_to_query_types = ArrayField(
+        models.CharField(max_length=50),
+        default=list
+    )
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    times_applied = models.IntegerField(default=0)
+    success_when_applied = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-confidence', '-created_at']
+
+    def __str__(self):
+        return f"{self.pattern_type}: {self.description[:50]}..."
+
+    def effectiveness_rate(self) -> float:
+        if self.times_applied == 0:
+            return 0.0
+        return self.success_when_applied / self.times_applied

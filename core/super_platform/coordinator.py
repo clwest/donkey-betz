@@ -31,6 +31,7 @@ from .context_aggregator import ContextAggregator, AggregatedContext
 from .agent_context_service import get_agent_context_service
 from .scifi_integration import get_scifi_integration_service
 from .revenue_integration import get_revenue_integration_service
+from .learning_loop import get_learning_loop_service  # Session 265 Phase 5
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,7 @@ class SuperPlatformCoordinator:
         self._agent_context_service = None  # Session 264: Spider-Agent Bridge
         self._scifi_service = None  # Session 264: Sci-Fi Integration
         self._revenue_service = None  # Session 264: Revenue Pipeline
+        self._learning_service = None  # Session 265: Learning Loop
 
     @property
     def openai_client(self):
@@ -184,6 +186,16 @@ class SuperPlatformCoordinator:
                 logger.warning(f"Could not load revenue service: {e}")
         return self._revenue_service
 
+    @property
+    def learning_service(self):
+        """Session 265 Phase 5: Lazy load learning loop service."""
+        if self._learning_service is None:
+            try:
+                self._learning_service = get_learning_loop_service(self.user)
+            except Exception as e:
+                logger.warning(f"Could not load learning service: {e}")
+        return self._learning_service
+
     def process(self, message: str, mode: str = 'interactive') -> CoordinatorResult:
         """
         Process a user message through the unified intelligence system.
@@ -223,15 +235,18 @@ class SuperPlatformCoordinator:
                 execution_mode=execution_mode
             )
 
-            # Step 5: RECORD - Log for learning (async, non-blocking)
+            execution_time = (datetime.now() - start_time).total_seconds() * 1000
+
+            # Step 5: RECORD - Log for learning (Session 265 Phase 5)
             self._record_outcome(
                 message=message,
                 classification=classification,
                 response=response,
-                success=True
+                success=True,
+                agents_used=agents_used,
+                execution_time_ms=int(execution_time),
+                execution_mode=execution_mode.value
             )
-
-            execution_time = (datetime.now() - start_time).total_seconds() * 1000
 
             return CoordinatorResult(
                 success=True,
@@ -387,6 +402,18 @@ class SuperPlatformCoordinator:
         if not suggested_agents:
             # Fall back to direct response if no agents suggested
             return self._handle_direct_response(message, classification, context)
+
+        # Session 265 Phase 5: Use learning service for adaptive agent selection
+        if self.learning_service:
+            try:
+                suggested_agents = self.learning_service.recommend_agents(
+                    query_type=classification.primary_type.value,
+                    default_agents=suggested_agents,
+                    limit=3
+                )
+                logger.info(f"Learning-optimized agents: {suggested_agents}")
+            except Exception as e:
+                logger.debug(f"Could not get learning recommendations: {e}")
 
         agents_to_use = suggested_agents[:3]  # Limit to top 3
 
@@ -836,23 +863,41 @@ Try:
         message: str,
         classification: ClassificationResult,
         response: str,
-        success: bool
+        success: bool,
+        agents_used: List[str] = None,
+        execution_time_ms: int = 0,
+        execution_mode: str = 'direct'
     ) -> None:
         """
         Record the outcome for the learning loop.
 
-        This runs asynchronously and doesn't block the response.
+        Session 265 Phase 5: Full learning loop integration.
         """
         try:
-            # For now, just log. Full learning loop in Phase 5.
+            # Log for debugging
             logger.info(
                 f"Outcome recorded: type={classification.primary_type.value}, "
                 f"success={success}, response_length={len(response)}"
             )
 
-            # TODO: Phase 5 - Store in learning database
-            # TODO: Phase 5 - Update agent performance metrics
-            # TODO: Phase 5 - Feed into pattern detection
+            # Session 265: Record to learning loop service
+            if self.learning_service:
+                self.learning_service.record_outcome(
+                    query_type=classification.primary_type.value,
+                    query_text=message,
+                    execution_mode=execution_mode,
+                    agents_used=agents_used or [],
+                    response=response,
+                    execution_time_ms=execution_time_ms,
+                    success=success,
+                    classification_confidence=classification.confidence,
+                    spider_data_used=classification.requires_spider_data,
+                    scifi_context_used=classification.requires_mood_check,
+                    metadata={
+                        'secondary_types': [t.value for t in classification.secondary_types],
+                        'detected_entities': classification.detected_entities,
+                    }
+                )
 
         except Exception as e:
             logger.warning(f"Failed to record outcome: {e}")
