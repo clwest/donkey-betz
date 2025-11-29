@@ -23,7 +23,12 @@ Phase 4 (Revenue Pipeline):
 - RevenueOpportunity: Scored opportunity with automation eligibility
 - RevenueSummary: Revenue metrics and attribution
 
-Session 264: Phase 1-4 (Foundation + Spider-Agent + Sci-Fi + Revenue Pipeline)
+Phase 5 (Learning Loop):
+- LearningLoopService: Outcome recording, pattern detection, adaptive selection
+- OutcomeRecord: Records coordinator execution outcomes
+- AgentPerformance: Agent performance metrics
+
+Session 265: Phase 1-5 (Foundation + Spider-Agent + Sci-Fi + Revenue + Learning Loop)
 """
 
 from .query_classifier import QueryClassifier
@@ -46,6 +51,14 @@ from .revenue_integration import (
     RevenueOpportunity,
     RevenueSummary,
     get_revenue_integration_service,
+)
+from .learning_loop import (
+    LearningLoopService,
+    OutcomeRecord,
+    AgentPerformance,
+    OutcomeType,
+    FeedbackType,
+    get_learning_loop_service,
 )
 
 __all__ = [
@@ -72,4 +85,11 @@ __all__ = [
     'RevenueOpportunity',
     'RevenueSummary',
     'get_revenue_integration_service',
+    # Phase 5: Learning Loop
+    'LearningLoopService',
+    'OutcomeRecord',
+    'AgentPerformance',
+    'OutcomeType',
+    'FeedbackType',
+    'get_learning_loop_service',
 ]
