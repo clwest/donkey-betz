@@ -316,6 +316,17 @@ Available agents:
         """
         task_lower = task.lower().strip()
 
+        # Session 272: Questions about trends/market/research should go to ResearchAgent
+        # These need spider data, not just GPT knowledge
+        research_indicators = [
+            'trending', 'trends', 'market', 'news', 'latest',
+            'what\'s hot', 'popular', 'current events', 'black friday',
+            'deals', 'happening', 'going on'
+        ]
+        if any(indicator in task_lower for indicator in research_indicators):
+            # Let this fall through to agent routing (ResearchAgent)
+            return False, ''
+
         # Question indicators
         question_starters = [
             'what is', 'what are', 'what does', 'what do',
@@ -340,14 +351,6 @@ Available agents:
             action_indicators = ['create', 'make', 'generate', 'design', 'build']
             if not any(word in task_lower for word in action_indicators):
                 return True, 'direct_question'
-
-        # Check for pure information requests
-        info_patterns = [
-            'what is trending', 'what are the trends',
-            'show me', 'list', 'get me'
-        ]
-        # These could be research requests, not pure questions
-        # Let them fall through to agent routing
 
         return False, ''
 

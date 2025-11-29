@@ -26180,10 +26180,45 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 </div>
                             </div>`;
                     } else if (type === 'research') {
+                        // Session 272: Enhanced research display with spider data
+                        let researchContent = '';
+                        if (artifact.data && Array.isArray(artifact.data)) {
+                            // Handle array of sources
+                            artifact.data.forEach((source, sourceIdx) => {
+                                const sourceData = source.data || source;
+                                researchContent += `<div style="margin-bottom: 12px;">`;
+                                researchContent += `<div style="color: #67e8f9; font-weight: 600; margin-bottom: 6px;">📡 ${source.source || 'Spider Data'}</div>`;
+
+                                // Handle discussions array
+                                const items = sourceData.discussions || sourceData.trends || sourceData.results || (Array.isArray(sourceData) ? sourceData : []);
+                                if (items.length > 0) {
+                                    items.slice(0, 5).forEach((item, i) => {
+                                        const title = item.title || item.topic || item.headline || 'Unknown';
+                                        const url = item.url || item.link || '';
+                                        const score = item.score || item.popularity || '';
+                                        const itemSource = item.source || '';
+
+                                        researchContent += `
+                                            <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 6px; border-left: 3px solid #22d3ee;">
+                                                ${url ? `<a href="${url}" target="_blank" style="color: #e2e8f0; text-decoration: none; font-weight: 500;">${title}</a>` : `<span style="color: #e2e8f0;">${title}</span>`}
+                                                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                                                    ${score ? `⬆️ ${score}` : ''} ${itemSource ? `• ${itemSource}` : ''}
+                                                </div>
+                                            </div>`;
+                                    });
+                                }
+                                researchContent += `</div>`;
+                            });
+                        } else if (artifact.summary) {
+                            researchContent = artifact.summary;
+                        } else {
+                            researchContent = `<pre style="font-size: 11px; overflow-x: auto;">${JSON.stringify(artifact.data, null, 2)}</pre>`;
+                        }
+
                         html += `
-                            <div class="artifact-research" style="margin: 10px 0; padding: 12px; background: rgba(34, 211, 238, 0.1); border-radius: 8px;">
-                                <h5 style="color: #22d3ee; margin: 0 0 8px 0;">🔍 Research Results</h5>
-                                <div style="color: #cbd5e1; font-size: 13px;">${artifact.summary || JSON.stringify(artifact.data)}</div>
+                            <div class="artifact-research" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(6, 182, 212, 0.15)); border-radius: 12px; border: 2px solid rgba(34, 211, 238, 0.4);">
+                                <h5 style="color: #22d3ee; margin: 0 0 12px 0; font-size: 16px;">🔍 Spider Intelligence Results</h5>
+                                <div style="color: #cbd5e1; font-size: 13px;">${researchContent}</div>
                             </div>`;
                     } else {
                         // Generic artifact display
