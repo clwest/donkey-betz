@@ -1611,6 +1611,10 @@
                                         <small style="color: #fcd34d;">
                                             <span id="tabVoiceStatus"></span>
                                             GPT-5.1 • Press Enter to send
+                                            <!-- Session 271: Clean Architecture Indicator -->
+                                            <span id="cleanArchIndicator" style="display: none; margin-left: 8px; background: rgba(168, 85, 247, 0.3); color: #c4b5fd; padding: 2px 8px; border-radius: 12px; font-size: 10px; vertical-align: middle;" title="Clean Architecture Mode">
+                                                🏗️ Clean
+                                            </span>
                                         </small>
                                         <small style="color: var(--text-secondary);">
                                             Tip: Click 🎤 to use voice commands!
@@ -22692,6 +22696,11 @@
                 this.recordingStartTime = null;
                 this.audioStream = null;
 
+                // Session 271: Clean Architecture Support
+                this.useCleanArchitecture = false;
+                this.cleanAgents = [];
+                this.checkCleanArchitectureStatus();
+
                 this.setupUI();
                 this.setupEventListeners();
             }
@@ -22704,6 +22713,33 @@
                     return tabId;
                 }
                 return 'general';
+            }
+
+            // Session 271: Check if clean architecture is enabled
+            async checkCleanArchitectureStatus() {
+                try {
+                    const response = await authenticatedFetch('/api/super-platform/status/');
+                    const data = await response.json();
+                    if (data.success && data.clean_architecture) {
+                        this.useCleanArchitecture = data.clean_architecture.enabled;
+                        this.cleanAgents = data.clean_architecture.agents || [];
+                        if (this.useCleanArchitecture) {
+                            console.log('🏗️ Session 271: Clean Architecture ENABLED with', this.cleanAgents.length, 'agents');
+                            this.updateCleanArchitectureIndicator(true);
+                        }
+                    }
+                } catch (e) {
+                    console.log('Could not check clean architecture status:', e);
+                }
+            }
+
+            // Session 271: Update UI indicator for clean architecture
+            updateCleanArchitectureIndicator(enabled) {
+                const indicator = document.getElementById('cleanArchIndicator');
+                if (indicator) {
+                    indicator.style.display = enabled ? 'inline-flex' : 'none';
+                    indicator.title = `Clean Architecture: ${this.cleanAgents.length} agents`;
+                }
             }
 
             setupUI() {
@@ -24581,7 +24617,48 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 191: Create AbortController for cancellable requests
                 this.abortController = new AbortController();
 
-                // Call the GPT-5-mini assistant chat endpoint with function calling
+                // Session 271: Use Clean Architecture endpoint if enabled
+                if (this.useCleanArchitecture) {
+                    console.log('🏗️ Session 271: Using Clean Architecture endpoint');
+                    const cleanResponse = await authenticatedFetch('/api/super-platform/process/', {
+                        method: 'POST',
+                        body: JSON.stringify({ message: message }),
+                        signal: this.abortController.signal
+                    });
+                    const cleanData = await cleanResponse.json();
+                    console.log('📡 Clean Architecture response:', cleanData);
+
+                    // Format response with agent info
+                    let responseHtml = cleanData.response || cleanData.message || '';
+
+                    // Add agent execution info if available
+                    if (cleanData.agents_used && cleanData.agents_used.length > 0) {
+                        const agentBadges = cleanData.agents_used.map(a =>
+                            `<span style="background: rgba(168, 85, 247, 0.2); color: #c4b5fd; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-right: 4px;">🤖 ${a}</span>`
+                        ).join('');
+                        responseHtml = `<div style="margin-bottom: 8px;">${agentBadges}</div>` + responseHtml;
+                    }
+
+                    // Add execution metadata if available
+                    if (cleanData.metadata && cleanData.metadata.clean_architecture) {
+                        const meta = cleanData.metadata;
+                        if (meta.decisions_made > 0 || meta.tool_calls?.length > 0) {
+                            responseHtml += `<div style="margin-top: 10px; font-size: 11px; color: #94a3b8;">` +
+                                `⚡ ${meta.decisions_made || 0} decisions | ` +
+                                `🔧 ${meta.tool_calls?.length || 0} tool calls | ` +
+                                `⏱️ ${Math.round(cleanData.execution_time_ms)}ms</div>`;
+                        }
+                    }
+
+                    // Handle artifacts (generated images, videos, etc.)
+                    if (cleanData.artifacts && cleanData.artifacts.length > 0) {
+                        responseHtml += this.formatCleanArchitectureArtifacts(cleanData.artifacts);
+                    }
+
+                    return { message: responseHtml };
+                }
+
+                // Legacy: Call the GPT-5-mini assistant chat endpoint with function calling
                 const response = await authenticatedFetch('/api/assistant/chat/', {
                         method: 'POST',
                         body: JSON.stringify(requestBody),
@@ -26032,6 +26109,76 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
 
                 return message;
+            }
+
+            // Session 271: Format artifacts from Clean Architecture agents
+            formatCleanArchitectureArtifacts(artifacts) {
+                if (!artifacts || artifacts.length === 0) return '';
+
+                let html = `<div class="clean-arch-artifacts" style="margin-top: 15px;">`;
+
+                artifacts.forEach((artifact, idx) => {
+                    const type = artifact.type || 'unknown';
+
+                    if (type === 'image') {
+                        html += `
+                            <div class="artifact-image" style="margin: 10px 0;">
+                                <img src="${artifact.url}" alt="Generated Image ${idx + 1}"
+                                     style="max-width: 100%; border-radius: 8px; border: 2px solid rgba(168, 85, 247, 0.3);">
+                                ${artifact.prompt ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 5px;">📝 ${artifact.prompt}</div>` : ''}
+                            </div>`;
+                    } else if (type === 'video') {
+                        html += `
+                            <div class="artifact-video" style="margin: 10px 0; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 24px;">🎬</span>
+                                    <div>
+                                        <div style="color: #93c5fd; font-weight: 600;">Video Generated</div>
+                                        <div style="font-size: 12px; color: #94a3b8;">ID: ${artifact.id || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                    } else if (type === 'audio') {
+                        html += `
+                            <div class="artifact-audio" style="margin: 10px 0; padding: 12px; background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 24px;">🎤</span>
+                                    <div>
+                                        <div style="color: #86efac; font-weight: 600;">Audio Generated</div>
+                                        ${artifact.url ? `<audio controls src="${artifact.url}" style="margin-top: 8px;"></audio>` : ''}
+                                    </div>
+                                </div>
+                            </div>`;
+                    } else if (type === '3d') {
+                        html += `
+                            <div class="artifact-3d" style="margin: 10px 0; padding: 12px; background: rgba(251, 146, 60, 0.1); border-radius: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 24px;">🎮</span>
+                                    <div>
+                                        <div style="color: #fed7aa; font-weight: 600;">3D Model Generated</div>
+                                        <div style="font-size: 12px; color: #94a3b8;">Format: ${artifact.format || 'GLB'}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                    } else if (type === 'research') {
+                        html += `
+                            <div class="artifact-research" style="margin: 10px 0; padding: 12px; background: rgba(34, 211, 238, 0.1); border-radius: 8px;">
+                                <h5 style="color: #22d3ee; margin: 0 0 8px 0;">🔍 Research Results</h5>
+                                <div style="color: #cbd5e1; font-size: 13px;">${artifact.summary || JSON.stringify(artifact.data)}</div>
+                            </div>`;
+                    } else {
+                        // Generic artifact display
+                        html += `
+                            <div class="artifact-generic" style="margin: 10px 0; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                                <div style="color: #e2e8f0; font-size: 13px;">
+                                    <strong>${type}:</strong> ${JSON.stringify(artifact).substring(0, 200)}...
+                                </div>
+                            </div>`;
+                    }
+                });
+
+                html += `</div>`;
+                return html;
             }
 
             // Session 73: DaVinci execution functions for voice commands
