@@ -136,7 +136,7 @@ If asked to create content, explain you can only research and suggest using the 
             "type": "function",
             "function": {
                 "name": "analyze_trends",
-                "description": "Analyze trending topics from spider data",
+                "description": "Analyze trending topics from spider data. Use topic_filter to focus on specific areas like 'ai' for AI/ML content.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -145,6 +145,12 @@ If asked to create content, explain you can only research and suggest using the 
                             "description": "Category to analyze",
                             "enum": ["tech", "financial", "jobs", "creative", "all"],
                             "default": "all"
+                        },
+                        "topic_filter": {
+                            "type": "string",
+                            "description": "Filter results to specific topic: 'ai' for AI/ML, 'web' for web dev, 'security' for cybersecurity, 'cloud' for cloud/devops",
+                            "enum": ["ai", "web", "security", "cloud"],
+                            "default": None
                         },
                         "hours": {
                             "type": "integer",
@@ -326,9 +332,11 @@ If asked to create content, explain you can only research and suggest using the 
                 category = arguments.get('category', 'all')
                 hours = arguments.get('hours', 24)
                 limit = arguments.get('limit', 10)
+                # Session 272: Extract topic filter from arguments or query
+                topic_filter = arguments.get('topic_filter')
 
                 if category == 'tech':
-                    results = self.spider_service.get_tech_trends(hours=hours, limit=limit)
+                    results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter)
                 elif category == 'creative':
                     results = self.spider_service.get_creative_trends(hours=hours, limit=limit)
                 elif category == 'jobs':
@@ -336,7 +344,18 @@ If asked to create content, explain you can only research and suggest using the 
                 elif category == 'financial':
                     results = self.spider_service.get_market_insights()
                 else:
-                    results = self.spider_service.get_trending_topics(hours=hours, limit=limit)
+                    # Session 272: For 'all' category, get trending topics AND tech discussions
+                    # This provides both topic summaries AND clickable article links
+                    trending_topics = self.spider_service.get_trending_topics(hours=hours, limit=limit)
+                    tech_trends = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter)
+
+                    results = {
+                        'topics': trending_topics,
+                        'discussions': tech_trends.get('discussions', []),
+                        'projects': tech_trends.get('projects', []),
+                        'sources': tech_trends.get('sources', {}),
+                        'last_updated': tech_trends.get('last_updated')
+                    }
 
                 return {
                     'success': True,

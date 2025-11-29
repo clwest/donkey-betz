@@ -35,7 +35,8 @@ class SpiderIntelligenceService:
     # Session 222: Updated to include real data collector spider names
     CATEGORY_MAPPINGS = {
         'tech': ['hackernews', 'devto', 'github_trending', 'producthunt', 'huggingface', 'kaggle',
-                 'techcrunch', 'theverge', 'wired', 'mit_tech_review', 'axios', 'hashnode'],
+                 'techcrunch', 'theverge', 'wired', 'mit_tech_review', 'axios', 'hashnode',
+                 'medium', 'substack'],
         'financial': ['coingecko', 'yahoo_finance', 'etherscan', 'financial', 'seekingalpha'],
         'jobs': ['weworkremotely', 'remote_jobs', 'github_jobs', 'stackoverflow_jobs', 'flexjobs',
                  'remoteok', 'weworkremotely'],
@@ -323,9 +324,14 @@ class SpiderIntelligenceService:
 
         return insights
 
-    def get_tech_trends(self, hours: int = 24, limit: int = 15) -> dict:
+    def get_tech_trends(self, hours: int = 24, limit: int = 15, topic_filter: str = None) -> dict:
         """
         Get technology trends from HackerNews, DevTo, TechCrunch, etc.
+
+        Args:
+            hours: Look back period
+            limit: Max results per category
+            topic_filter: Optional filter like 'ai', 'web', 'security' to focus results
 
         Returns:
             Dict with tech topics, discussions, and projects
@@ -336,6 +342,26 @@ class SpiderIntelligenceService:
             spider_name__in=self.CATEGORY_MAPPINGS['tech'],
             created_at__gte=since
         ).order_by('-created_at')
+
+        # Session 272: Topic-specific keywords for filtering (all lowercase for matching)
+        topic_keywords = {
+            'ai': [' ai ', ' ai,', ' ai.', 'artificial intelligence', 'machine learning', ' ml ',
+                   'llm', 'gpt-', 'gpt4', 'gpt 4', 'claude', 'openai', 'anthropic', 'neural',
+                   'deep learning', 'chatgpt', 'chat gpt', 'gemini', 'copilot', 'diffusion',
+                   'transformer', 'language model', 'hugging face', 'huggingface', 'langchain',
+                   'vector database', 'embedding', 'rag ', 'llama', 'mistral', 'ollama'],
+            'web': ['javascript', 'typescript', 'react', 'vue', 'angular', 'nextjs', 'frontend',
+                    'backend', 'fullstack', 'api', 'rest', 'graphql', 'html', 'css', 'nodejs'],
+            'security': ['security', 'vulnerability', 'hack', 'breach', 'exploit', 'malware',
+                        'encryption', 'privacy', 'authentication', 'cybersecurity'],
+            'cloud': ['aws', 'azure', 'gcp', 'kubernetes', 'docker', 'serverless', 'cloud',
+                     'devops', 'infrastructure', 'microservices'],
+        }
+
+        # Words to filter OUT (shopping/deals content)
+        blacklist_words = ['black friday', 'cyber monday', 'deal', 'deals', 'sale', 'discount',
+                          'coupon', 'promo', 'shopping', 'buy now', 'price drop', 'save $',
+                          'off today', '% off', 'limited time']
 
         trends = {
             'discussions': [],  # Tech articles and discussions
@@ -364,17 +390,31 @@ class SpiderIntelligenceService:
                 title = item.get('title', '')
                 url = item.get('url', '') or item.get('link', '')
                 score = item.get('score', 0) or item.get('points', 0) or 0
+                description = (item.get('description', '') or '')[:200]
 
                 if title:
                     # Session 222: Deduplicate by normalized title
                     title_key = title.lower().strip()
                     if title_key in seen_titles:
                         continue
+
+                    # Session 272: Filter out shopping/deals content
+                    combined_text = (title + ' ' + description).lower()
+                    if any(blacklist in combined_text for blacklist in blacklist_words):
+                        continue
+
+                    # Session 272: Apply topic filter if specified
+                    if topic_filter and topic_filter in topic_keywords:
+                        filter_keywords = topic_keywords[topic_filter]
+                        if not any(kw in combined_text for kw in filter_keywords):
+                            continue  # Skip items that don't match the topic
+
                     seen_titles.add(title_key)
 
-                    # Session 222: Include more sources as discussions (tech news)
+                    # Session 272: Include all tech news sources as discussions
                     discussion_sources = ['hackernews', 'devto', 'techcrunch', 'theverge',
-                                          'wired', 'mit_tech_review', 'axios', 'hashnode']
+                                          'wired', 'mit_tech_review', 'axios', 'hashnode',
+                                          'medium', 'substack', 'huggingface', 'kaggle']
                     project_sources = ['github_trending', 'producthunt']
 
                     if source in discussion_sources:
@@ -384,12 +424,12 @@ class SpiderIntelligenceService:
                             'score': score,
                             'source': source,
                             'tags': item.get('tags', []),
-                            'description': (item.get('description', '') or '')[:200]
+                            'description': description
                         })
                     elif source in project_sources:
                         trends['projects'].append({
                             'name': title,
-                            'description': item.get('description', ''),
+                            'description': description,
                             'url': url,
                             'stars': item.get('stars', 0),
                             'source': source
@@ -403,12 +443,30 @@ class SpiderIntelligenceService:
             if not trends['last_updated']:
                 trends['last_updated'] = entry.created_at.isoformat()
 
-        # Sort discussions by score (if available), then by recency
-        trends['discussions'] = sorted(
-            trends['discussions'],
-            key=lambda x: (x.get('score', 0) or 0, x.get('title', '')),
-            reverse=True
-        )[:limit]
+        # Session 272: Sort discussions with source diversity
+        # Group by source, then interleave to get variety
+        from collections import defaultdict
+        by_source = defaultdict(list)
+        for d in trends['discussions']:
+            by_source[d['source']].append(d)
+
+        # Sort each source's items by score (if available)
+        for source in by_source:
+            by_source[source].sort(key=lambda x: x.get('score', 0) or 0, reverse=True)
+
+        # Interleave sources to ensure diversity
+        interleaved = []
+        source_keys = list(by_source.keys())
+        idx = 0
+        while len(interleaved) < len(trends['discussions']) and source_keys:
+            source = source_keys[idx % len(source_keys)]
+            if by_source[source]:
+                interleaved.append(by_source[source].pop(0))
+            else:
+                source_keys.remove(source)
+            idx += 1
+
+        trends['discussions'] = interleaved[:limit]
 
         trends['projects'] = sorted(
             trends['projects'],
