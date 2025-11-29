@@ -13,7 +13,7 @@ The Coordinator:
 5. EXECUTES using agents, spiders, or direct response
 6. RECORDS outcomes for learning
 
-Session 264: Phase 1 Foundation + Phase 2 Spider-Agent Bridge
+Session 264: Phase 1 Foundation + Phase 2 Spider-Agent Bridge + Phase 3 Sci-Fi Integration
 """
 
 import logging
@@ -29,6 +29,7 @@ from .query_classifier import QueryClassifier, QueryType, ClassificationResult
 from .prompt_builder import DynamicPromptBuilder, PromptContext
 from .context_aggregator import ContextAggregator, AggregatedContext
 from .agent_context_service import get_agent_context_service
+from .scifi_integration import get_scifi_integration_service
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,7 @@ class SuperPlatformCoordinator:
         self._agent_registry = None
         self._workflow_agent = None
         self._agent_context_service = None  # Session 264: Spider-Agent Bridge
+        self._scifi_service = None  # Session 264: Sci-Fi Integration
 
     @property
     def openai_client(self):
@@ -158,6 +160,16 @@ class SuperPlatformCoordinator:
             except Exception as e:
                 logger.warning(f"Could not load agent context service: {e}")
         return self._agent_context_service
+
+    @property
+    def scifi_service(self):
+        """Session 264: Lazy load sci-fi integration service."""
+        if self._scifi_service is None:
+            try:
+                self._scifi_service = get_scifi_integration_service()
+            except Exception as e:
+                logger.warning(f"Could not load sci-fi service: {e}")
+        return self._scifi_service
 
     def process(self, message: str, mode: str = 'interactive') -> CoordinatorResult:
         """
@@ -354,7 +366,7 @@ class SuperPlatformCoordinator:
         """
         Handle requests that need agent execution (creation, analysis).
 
-        Session 264: Now injects spider context into agents via AgentContextService.
+        Session 264: Now injects spider context and sci-fi context into agents.
         """
         suggested_agents = classification.suggested_agents
 
@@ -382,6 +394,30 @@ class SuperPlatformCoordinator:
                 except Exception as e:
                     logger.warning(f"Could not get spider context for {agent_name}: {e}")
 
+        # Session 264 Phase 3: Get sci-fi context for each agent
+        scifi_contexts = {}
+        if self.scifi_service:
+            for agent_name in agents_to_use:
+                try:
+                    scifi_ctx = self.scifi_service.get_scifi_context(
+                        agent_name=agent_name,
+                        task=message,
+                        user=self.user
+                    )
+                    scifi_contexts[agent_name] = scifi_ctx
+                    logger.info(
+                        f"Injected sci-fi context for {agent_name}: "
+                        f"mood={scifi_ctx.mood.mood_type if scifi_ctx.mood else 'none'}, "
+                        f"level={scifi_ctx.evolution.level if scifi_ctx.evolution else 1}"
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not get sci-fi context for {agent_name}: {e}")
+
+            # Calculate collaboration bonus for the team
+            if len(agents_to_use) > 1:
+                collab_bonus, collab_details = self.scifi_service.get_collaboration_bonus(agents_to_use)
+                logger.info(f"Team collaboration bonus: {collab_bonus:.2f}x - {collab_details}")
+
         # Build response describing what we would do
         response_parts = [
             f"I'll use the following agents to help with your request:",
@@ -390,10 +426,25 @@ class SuperPlatformCoordinator:
 
         for agent in agents_to_use:
             agent_ctx = agent_contexts.get(agent)
+            scifi_ctx = scifi_contexts.get(agent)
+
+            agent_info = f"- **{agent}**"
+
+            # Add sci-fi personality info
+            extras = []
+            if scifi_ctx:
+                if scifi_ctx.mood:
+                    extras.append(f"mood: {scifi_ctx.mood.mood_type}")
+                if scifi_ctx.evolution:
+                    extras.append(f"level {scifi_ctx.evolution.level}")
+
             if agent_ctx and agent_ctx.style_recommendations:
-                response_parts.append(f"- **{agent}** (using styles: {', '.join(agent_ctx.style_recommendations[:2])})")
-            else:
-                response_parts.append(f"- **{agent}**")
+                extras.append(f"styles: {', '.join(agent_ctx.style_recommendations[:2])}")
+
+            if extras:
+                agent_info += f" ({', '.join(extras)})"
+
+            response_parts.append(agent_info)
 
         # Add spider context if available - from aggregated context or agent-specific
         trends_to_show = []
@@ -438,13 +489,30 @@ class SuperPlatformCoordinator:
                         if trend_names:
                             spider_context_text += f"- Current trends: {', '.join(trend_names)}\n"
 
+        # Session 264 Phase 3: Add sci-fi context to prompt
+        scifi_context_text = ""
+        if scifi_contexts:
+            for agent_name, scifi_ctx in scifi_contexts.items():
+                scifi_context_text += f"\n### {agent_name} Personality:\n"
+                if scifi_ctx.mood:
+                    scifi_context_text += f"- Mood: {scifi_ctx.mood.mood_type} - {scifi_ctx.mood.description}\n"
+                    scifi_context_text += f"- Style tendency: {scifi_ctx.mood.style_modifier}\n"
+                if scifi_ctx.evolution:
+                    scifi_context_text += f"- Level: {scifi_ctx.evolution.level} ({scifi_ctx.evolution.title})\n"
+                    if scifi_ctx.evolution.specializations:
+                        scifi_context_text += f"- Specializations: {', '.join(scifi_ctx.evolution.specializations[:3])}\n"
+                if scifi_ctx.relationships and scifi_ctx.relationships.allies:
+                    scifi_context_text += f"- Works well with: {', '.join(scifi_ctx.relationships.allies[:3])}\n"
+
         system_prompt += f"""
 
 ## Agent Execution Mode
 You are coordinating these agents: {', '.join(agents_to_use)}
 
 {spider_context_text if spider_context_text else ''}
-Use the spider intelligence above to inform your decisions and recommendations.
+{scifi_context_text if scifi_context_text else ''}
+Use the spider intelligence and agent personalities above to inform your decisions.
+Let each agent's mood and experience level influence their recommendations.
 Provide a detailed plan or execute the creation request.
 If this is a creation request, describe what you would create with specific details.
 """
@@ -533,20 +601,51 @@ Which workflow would you like to run? Just describe what you need."""
     ) -> Tuple[str, List[Dict[str, Any]], List[str]]:
         """
         Handle Hive Mind collaboration requests.
+
+        Session 264 Phase 3: Now includes actual sci-fi context for agents.
         """
         agents = classification.suggested_agents or [
             'CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'ContentStrategyAgent'
         ]
 
+        # Session 264 Phase 3: Get actual sci-fi context for each agent
+        agent_details = []
+        collab_info = ""
+
+        if self.scifi_service:
+            for agent in agents:
+                try:
+                    scifi_ctx = self.scifi_service.get_scifi_context(agent, message, self.user)
+                    mood = scifi_ctx.mood.mood_type if scifi_ctx.mood else "focused"
+                    level = scifi_ctx.evolution.level if scifi_ctx.evolution else 1
+                    title = scifi_ctx.evolution.title if scifi_ctx.evolution else "Agent"
+                    agent_details.append(f"- **{agent}** ({title}, Level {level}, {mood})")
+                except Exception:
+                    agent_details.append(f"- **{agent}**")
+
+            # Calculate team synergy
+            collab_bonus, collab_details = self.scifi_service.get_collaboration_bonus(agents)
+            synergies = collab_details.get('synergies', [])
+            conflicts = collab_details.get('conflicts', [])
+
+            if synergies:
+                collab_info += f"\n**Team Synergies:** {', '.join(synergies[:3])}"
+            if conflicts:
+                collab_info += f"\n**Team Tensions:** {', '.join(conflicts[:2])}"
+            collab_info += f"\n**Overall Team Bonus:** {collab_bonus:.1f}x"
+        else:
+            agent_details = [f"- {agent}" for agent in agents]
+
         response = f"""Activating **Hive Mind Mode** for collaborative intelligence.
 
 Convening agents:
-{chr(10).join(f'- {agent}' for agent in agents)}
+{chr(10).join(agent_details)}
 
 Each agent will analyze your request from their unique perspective, considering:
 - Their current mood and expertise
 - Their relationships with other agents
 - Past successful collaborations
+{collab_info}
 
 The collective will synthesize insights into a unified recommendation.
 
