@@ -978,6 +978,14 @@ from core.views_diagnostics import (
 # Session 240: New Workflow Engine (user-vision-first philosophy)
 from core.views_workflow_engine import execute_workflow_v2, parse_intent
 
+# Session 264: Super Platform Coordinator (Phase 1 - Unified Intelligence)
+from core.views_super_platform import (
+    SuperPlatformProcessView,
+    SuperPlatformClassifyView,
+    SuperPlatformStatusView,
+    SuperPlatformQuickAskView,
+)
+
 urlpatterns = [
     # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
     # Removed duplicate /v2/ namespace - see docs/debugging-sessions/SESSION_31_URL_CONSOLIDATION_PLAN.md
@@ -1226,6 +1234,12 @@ urlpatterns = [
     path('api/ab-testing/tests/<uuid:test_id>/variants/', add_variant, name='ab-testing-add-variant'),
     path('api/ab-testing/variants/<uuid:variant_id>/', variant_detail, name='ab-testing-variant-detail'),
     path('api/ab-testing/variants/<uuid:variant_id>/event/', record_event, name='ab-testing-record-event'),
+
+    # Session 264: Super Platform Coordinator API (Phase 1 - Unified Intelligence)
+    path('api/super-platform/process/', SuperPlatformProcessView.as_view(), name='super-platform-process'),
+    path('api/super-platform/classify/', SuperPlatformClassifyView.as_view(), name='super-platform-classify'),
+    path('api/super-platform/status/', SuperPlatformStatusView.as_view(), name='super-platform-status'),
+    path('api/super-platform/ask/', SuperPlatformQuickAskView.as_view(), name='super-platform-ask'),
 
     # Goals API
     path('api/goals/', list_goals, name='goals-list'),
