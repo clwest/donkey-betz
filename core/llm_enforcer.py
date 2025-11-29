@@ -27,6 +27,14 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Session 266: Import from central prompt registry
+try:
+    from core.prompts import get_task_prompt
+    PROMPT_REGISTRY_AVAILABLE = True
+except ImportError:
+    PROMPT_REGISTRY_AVAILABLE = False
+    logger.warning("Prompt registry not available, using fallback prompts")
+
 
 class LLMEnforcer:
     """
@@ -217,36 +225,19 @@ class LLMEnforcer:
         if context:
             system_msg = context
         else:
-            # Fallback to task-specific system messages
-            system_messages = {
-                'cover_letter': """You are an expert cover letter writer creating personalized, compelling applications.
-
-After analyzing the job and candidate information, write your cover letter below:
-
-COVER LETTER:""",
-                'content': """You are a professional content creator producing high-quality, engaging content.
-
-After considering all requirements and context, write your content below:
-
-FINAL CONTENT:""",
-            'analysis': """You are an expert analyst providing detailed, accurate insights.
-
-After analyzing all available data, provide your findings below:
-
-ANALYSIS:""",
-            'code': """You are an expert programmer writing clean, efficient, well-documented code.
-
-After planning the implementation, write your code below:
-
-CODE:""",
-            'general': """You are a helpful AI assistant providing accurate and useful information.
-
-After thinking through the request, provide your response below:
-
-RESPONSE:"""
-            }
-
-            system_msg = system_messages.get(task_type, system_messages['general'])
+            # Session 266: Use central prompt registry for task-specific prompts
+            if PROMPT_REGISTRY_AVAILABLE:
+                system_msg = get_task_prompt(task_type)
+            else:
+                # Fallback prompts if registry unavailable
+                fallback_prompts = {
+                    'cover_letter': "You are an expert cover letter writer.",
+                    'content': "You are a professional content creator.",
+                    'analysis': "You are an expert analyst.",
+                    'code': "You are an expert programmer.",
+                    'general': "You are a helpful AI assistant."
+                }
+                system_msg = fallback_prompts.get(task_type, fallback_prompts['general'])
 
         # Combine system message and user prompt for Responses API input
         full_input = f"{system_msg}\n\nUser request: {prompt}"

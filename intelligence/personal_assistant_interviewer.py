@@ -16,6 +16,9 @@ from enum import Enum
 from datetime import datetime, timedelta
 from channels.db import database_sync_to_async
 
+# Session 266: Central prompt registry (for future use when AI interview is re-enabled)
+from core.prompts import get_interview_prompt
+
 logger = logging.getLogger(__name__)
 
 

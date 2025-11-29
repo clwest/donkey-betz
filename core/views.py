@@ -17,6 +17,9 @@ from datetime import datetime, timedelta
 import uuid
 import logging
 
+# Session 266: Central prompt registry
+from core.prompts import get_self_awareness_prompt
+
 User = get_user_model()
 
 
@@ -873,38 +876,26 @@ def assistant_chat(request):
                     logger.error(f"RAG integration failed: {e}")
                     # Continue without RAG if it fails
             
-            # Create system prompt for personal assistant with self-awareness
-            system_prompt = f"""You are {user.username if hasattr(user, 'username') else user.email}'s personal AI assistant with System Self-Awareness.
-
-CRITICAL RESPONSE GUIDELINES:
-1. Be EXTREMELY CONCISE - default to 1-3 sentences unless specifically asked for details
-2. Answer the question directly without preamble or excessive explanation
-3. Only provide detailed breakdowns when explicitly requested
-4. Don't list all available features/options unless asked
-5. Avoid bullet points and numbered lists unless essential
-6. Match the brevity of the user's question with your response
-
-For simple questions like "What's going on?" - give a ONE sentence overview.
-For complex requests - provide the essential answer first, then ask if they need more detail.
-
-You are a general-purpose AI assistant who can help with any topic - coding, research, analysis, creative tasks, problem-solving, conversations, and more. You have access to a comprehensive knowledge base and can orchestrate specialized AI agents when needed for complex tasks.
-
-"""
+            # Session 266: Use central prompt registry for system prompt
+            user_name = user.username if hasattr(user, 'username') else user.email
+            system_prompt = get_self_awareness_prompt(
+                "personal_assistant",
+                user_name=user_name,
+                rag_context=""  # Will be added by RAG integration if enabled
+            )
 
             # Add system awareness context if available
             if system_context:
                 awareness = system_context.get('system_awareness', {})
                 if awareness:
-                    system_prompt += f"""
-SYSTEM AWARENESS:
-- Platform is {awareness.get('operational_percentage', 0)}% operational
-- Real Components: {', '.join(awareness.get('real_components', [])[:3]) if awareness.get('real_components') else 'None'}
-- Issues: {', '.join(awareness.get('broken_flows', [])[:2]) if awareness.get('broken_flows') else 'None'}
-
-When relevant to the user's question, briefly mention system status.
-"""
-
-            system_prompt += "\nRemember: BREVITY IS KEY. Most responses should be 1-3 sentences maximum."
+                    real_components = ', '.join(awareness.get('real_components', [])[:3]) if awareness.get('real_components') else 'None'
+                    issues = ', '.join(awareness.get('broken_flows', [])[:2]) if awareness.get('broken_flows') else 'None'
+                    system_prompt += get_self_awareness_prompt(
+                        "system_awareness_context",
+                        operational_percentage=awareness.get('operational_percentage', 0),
+                        real_components=real_components,
+                        issues=issues
+                    )
 
             # Generate AI response
             # Use different config for GPT-5 models (no temperature parameter)
@@ -1066,10 +1057,10 @@ def personal_knowledge_list(request):
     try:
         # Connect to ai_unified_platform database
         conn = psycopg2.connect(
-            host='localhost',
-            database='ai_unified_platform',
-            user='ai_unified_user',
-            password='ai_unified_pass_2025'
+            host=os.environ.get('DB_HOST', 'localhost'),
+            database=os.environ.get('DB_NAME', 'ai_unified_platform'),
+            user=os.environ.get('DB_USER', 'ai_unified_user'),
+            password=os.environ.get('DB_PASSWORD', '')
         )
         cursor = conn.cursor()
         

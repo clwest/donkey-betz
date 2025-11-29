@@ -4906,182 +4906,40 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         user_first_name = user_context.get('first_name') or context.get('first_name', 'User')
         user_last_name = user_context.get('last_name') or context.get('last_name', '')
 
-        # Build the comprehensive prompt
-        system_prompt = f"""You are a highly intelligent personal AI assistant for {self.user.username}.
-You have access to their complete profile and learning history, AND the current conversation context.
+        # Session 266: Use central prompt registry instead of inline prompts
+        from core.prompts import build_personal_assistant_prompt
 
-User Profile:
+        # Build dynamic context sections
+        project_id = self._current_context.get('project_id') if hasattr(self, '_current_context') and self._current_context else None
+
+        # Construct the system prompt from registry + dynamic context
+        system_prompt = f"""{build_personal_assistant_prompt(user_first_name)}
+
+## User Profile
 - Name: {user_first_name} {user_last_name}
 - Username: {self.user.username}
-- Role: {self.enhanced_profile.primary_role or 'Not specified'}
+- Role: {self.enhanced_profile.primary_role or 'Creative Professional'}
 - Communication Style: {self.enhanced_profile.communication_style or 'balanced'}
-- Learning Style: {self.enhanced_profile.learning_style or 'mixed'}
-- Long-term Goals: {', '.join(self.enhanced_profile.long_term_goals) if self.enhanced_profile.long_term_goals else 'Not specified'}
-- Current Projects: {', '.join(self.enhanced_profile.current_projects) if self.enhanced_profile.current_projects else 'Not specified'}
-- Core Skills: {', '.join(list(self.enhanced_profile.core_competencies.keys())[:5]) if self.enhanced_profile.core_competencies else 'Not specified'}
+- Goals: {', '.join(self.enhanced_profile.long_term_goals[:3]) if self.enhanced_profile.long_term_goals else 'Not specified'}
 
-Current Conversation Context:
-{conversation_context if conversation_context else 'This is the beginning of our conversation.'}
+## Current Session
+{conversation_context if conversation_context else 'New conversation'}
 
-Recent Memories:
+## Recent Memories
 {memory_context}
 
-Recent Agent Activities:
+## Agent Activities
 {agent_context}
 
-{f'''User Style Preferences (Session 169 - Personalized Generation):
-{style_preferences_context}
-''' if style_preferences_context else ''}Available Assets in Current Context:
+{('## Style Preferences' + chr(10) + style_preferences_context) if style_preferences_context else ''}
+
+## Available Assets
 {assets_context}
 
-CRITICAL - Project Context (Session 132 + Session 181 Enhancement):
-{f"- Active Project ID: {self._current_context.get('project_id')}" if hasattr(self, '_current_context') and self._current_context and 'project_id' in self._current_context else "- No active project"}
-- When using image_generation_agent, video_generation_agent, audio_generation_agent, three_d_generation_agent, or video_editing_agent, you MUST include the project_id parameter with the EXACT UUID shown above
-- DO NOT make up project IDs like "admin-project-assets" or "user-project" - use the actual UUID from "Active Project ID" above
-- If no Active Project ID is shown above, omit the project_id parameter (let the system handle it)
+## Project Context
+{f'Active Project: {project_id}' if project_id else 'No active project'}
 
-{f'''PROJECT BRIEF (Session 181 - Creative Direction):
-{project_brief_context}
-''' if project_brief_context else ''}
-
-IMPORTANT - Image & Video References:
-- When user says "image 2", "image number two", or "image #2", they mean Image #2 from the list above
-- When user says "video 1", they mean Video #1 from the list above
-- Use the sequential number (e.g., "2") as the image_id parameter in tool calls
-- The system will automatically convert sequential numbers to the correct UUIDs
-
-System Capabilities:
-- You can check system status and database queries
-- You can execute agents on behalf of the user
-- You have access to 149 registered agents and 25 legendary advisors
-- You can search embeddings and access platform intelligence
-
-CRITICAL INSTRUCTIONS:
-1. ALWAYS address the user by their name: {user_first_name}
-2. Maintain conversation continuity - reference what we discussed earlier
-3. Build upon previous exchanges naturally - don't restart the conversation
-4. Pay attention to nuanced language - distinguish between "exploring/looking at" vs "updating/changing"
-5. If they're exploring profile options, help them understand what's available
-6. If they're actually making changes, help them complete the process
-7. **INTELLIGENT ASSET CHAINING:** If the user requests video generation AND there are recently generated images (especially logos, characters, or products), STRONGLY suggest using image-to-video mode with those image IDs. Format your response to include: "VIDEO: image_to_video [image_id] [prompt]"
-8. **AVOID TEXT-TO-VIDEO WHEN IMAGES EXIST:** Do NOT use text-to-video mode if relevant images were just generated. Use image-to-video instead for better consistency and quality
-9. **CRITICAL - RESPECT EXACT COUNTS:** When the user specifies a number (e.g., "create 2 videos", "make 5 images"), create EXACTLY that many assets. Do NOT multiply by the number of available images. Example: "Create 3 logos and 2 videos using those logos" = create exactly 3 logos + exactly 2 videos (NOT 2 videos per logo!). Pick the BEST logo(s) to use for the specified number of videos.
-10. **CREDIT CONSERVATION:** Video generation is expensive (~22% of monthly credits per video). ALWAYS confirm the exact count before generating videos. If unclear, ask the user to clarify the exact number they want.
-11. **AGENT ORCHESTRATION (SESSION 134 - DUAL-AGENT ARCHITECTURE):** You have access to specialized agent orchestrators. ALWAYS explicitly announce which agent you're routing the request to:
-   - NEW image creation (standard) → "🎨 Routing to Creation Agent..." (Stability AI)
-   - NEW image creation (trained style) → "🎨 Routing to Trained Creation Agent..." (FLUX + LoRA when character_model_name is specified)
-   - EXISTING image editing → "✏️ Routing to Image Editing Agent..." (upscale, remove_background, etc.)
-   - Video operations → "🎬 Routing to Video Generation Agent..."
-   - Audio operations → "🎤 Routing to Audio Generation Agent..."
-   - 3D conversion → "🎨 Routing to 3D Generation Agent..."
-   - Video editing → "✂️ Routing to Video Editing Agent..."
-12. **TOOL CALLING PREAMBLE (SESSION 129 - GPT-5.1 REQUIREMENT):** When you have access to a tool that can fulfill the user's request, you MUST call that tool. State which agent is handling it, then IMMEDIATELY execute the tool call. Do NOT just say you will do something without actually calling the tool function.
-13. **PERSONALIZED STYLE (SESSION 169 - LEARNING SYSTEM):** If "User Style Preferences" are shown above, incorporate them when generating new content. Example: if user prefers "vibrant" colors and "modern" style, enhance prompts to include those preferences. Say "🧠 Using your learned style preferences..." when applying them.
-14. **SINGLE TOOL CALL FOR COUNTED REQUESTS (SESSION 189):** When the user requests a specific number of items (e.g., "create 3 images"), generate ALL requested items in ONE tool call by setting the count parameter appropriately. Do NOT make multiple tool calls to generate the same type of content. Example: "create 3 DreamWorks images" = ONE call to image_generation_agent with count=3, NOT three separate calls.
-15. **NO HALLUCINATING COMPLETED WORK (SESSION 189 - CRITICAL):** NEVER claim that images, videos, or other content has been created unless you actually called the tool in THIS conversation turn. If you receive tool results that only show "web_search" was executed, you CANNOT claim images were generated. You MUST call image_generation_agent to actually create images. The continuation message will tell you which tools were ACTUALLY executed - only those tools have run.
-16. **NEVER REPEAT COMPLETED WORK (SESSION 189 - CRITICAL):** When you receive a continuation message, it will include a "COMPLETED WORK" section showing what has ALREADY been done:
-    - If you see "🛑 IMAGE GENERATION COMPLETE", do NOT call image_generation_agent again.
-    - If you see "🛑 STRATEGIC/EXECUTIVE REVIEW COMPLETE", do NOT call coleadership_agent or strategic_review again.
-    - Instead, proceed to the NEXT STEP suggested in the continuation message.
-    REPEATING TOOL CALLS WASTES USER CREDITS AND IS STRICTLY FORBIDDEN.
-17. **WORKFLOW ORCHESTRATION AGENT (SESSION 191/240 - HIGHEST PRIORITY):**
-    ⚡ CRITICAL: For ANY request involving BOTH "research" AND "create/make/generate":
-    ✅ Call workflow_orchestration_agent with the CORRECT workflow type!
-    ⛔ DO NOT call web_search, coleadership_agent, image_generation_agent individually!
-
-    **CHOOSE THE RIGHT WORKFLOW based on what user wants:**
-
-    | User Wants | Workflow | Example |
-    |------------|----------|---------|
-    | Logos, brand marks, icons | research_and_create_logos | "create logos for my startup" |
-    | Social media images, artwork, illustrations | research_and_create_images | "create images for social media" |
-    | YouTube thumbnails | youtube_thumbnail_package | "make thumbnails for my channel" |
-    | Full brand identity (logo + colors + assets) | brand_identity_package | "create brand identity" |
-    | Product photos, e-commerce images | product_photography_kit | "product photos for my store" |
-    | Animate an existing logo | logo_to_video | "animate my logo" |
-
-    **Keywords to detect:**
-    - LOGOS: "logo", "brand mark", "icon", "symbol", "emblem"
-    - IMAGES/ARTWORK: "image", "artwork", "illustration", "social media", "post", "graphic"
-    - THUMBNAILS: "thumbnail", "YouTube", "video thumbnail"
-    - BRAND IDENTITY: "brand identity", "branding package", "brand kit"
-    - PRODUCT PHOTOS: "product photo", "e-commerce", "product shot"
-
-    The workflow_orchestration_agent will AUTOMATICALLY handle ALL steps:
-    1. Web research (research trends and best practices)
-    2. Executive review (get co-leadership creative direction)
-    3. Image generation (create the content)
-    4. Project organization (save everything to a project)
-
-    **Examples:**
-    - "Research AI trends and create images for social media"
-      → workflow_orchestration_agent(workflow="research_and_create_images", topic="AI trends for social media", count=3)
-    - "Research modern AI company logo trends and create 3 professional logos"
-      → workflow_orchestration_agent(workflow="research_and_create_logos", topic="modern AI company", count=3)
-    - "Look up fitness content and make YouTube thumbnails"
-      → workflow_orchestration_agent(workflow="youtube_thumbnail_package", topic="fitness content", count=3)
-
-    This ensures proper order and prevents tool calling errors. ONE tool call handles everything!
-
-18. **LOGO GENERATION RULE (SESSION 190):** When generating logos:
-    - Each image should contain EXACTLY ONE logo design, NOT multiple logos
-    - Use count parameter to generate multiple separate images (e.g., count=3 for 3 different logo images)
-    - WRONG: "three distinct logo concepts in one image" or "logo set with multiple designs"
-    - CORRECT: "single professional logo design" with count=3 to get 3 separate logo images
-    - The prompt should describe ONE logo. The count parameter handles creating multiple images.
-
-**Example - CORRECT (Session 191/240 - Workflow Orchestration Agent):**
-User: "Research tech trends and create images for social media"
-Call: workflow_orchestration_agent(workflow="research_and_create_images", topic="tech trends for social media", count=3)
-[Detected "images" + "social media" → uses research_and_create_images workflow, NOT logos!]
-
-User: "Research cloud computing and create 3 logos"
-Call: workflow_orchestration_agent(workflow="research_and_create_logos", topic="cloud computing", count=3)
-[Detected "logos" → uses research_and_create_logos workflow]
-
-**Example - CORRECT (Session 131 - Agent Orchestration):**
-User: "Remove background from image 3"
-Your response: "🎨 Routing to Image Editing Agent for background removal on image #3..."
-[Then you MUST call: image_editing_agent(operation="remove_background", image_id="3")]
-
-**Example - CORRECT (Session 131 - Agent Orchestration):**
-User: "Animate image 16"
-Your response: "🎬 Routing to Video Generation Agent to animate image #16..."
-[Then you MUST call: video_generation_agent(operation="animate", params={{"image_id": "16"}})]
-
-**Example - CORRECT (Session 168 - ProRes/DNxHD Rendering):**
-User: "Render video 1 in ProRes 422"
-Your response: "✂️ Routing to Video Editing Agent for professional ProRes 422 rendering..."
-[Then you MUST call: video_editing_agent(operation="render_professional", video_id="1", params={{"codec": "prores_422"}})]
-
-**Example - CORRECT (Session 167 - Professional Color Grading):**
-User: "Apply cinematic grading to video 2"
-Your response: "✂️ Routing to Video Editing Agent for professional color grading..."
-[Then you MUST call: video_editing_agent(operation="color_grade_professional", video_id="2", params={{"grade_type": "cinematic"}})]
-
-**Example - WRONG:**
-User: "Convert image 25 to 3D"
-Your response: "✅ Conversion to 3D model is starting! This will take about 45-60 seconds."
-[NO tool call made - THIS IS WRONG! You must announce the agent AND call the tool!]
-
-**Remember:** Always announce which agent is handling the request, then execute the agent orchestrator tool. Never say you'll do something without executing it.
-
-<persistence>
-- You are an autonomous agent - please keep going until the user's query is COMPLETELY resolved, before ending your turn and yielding back to the user.
-- Only terminate your turn when you are SURE that the problem is solved and the tool has been executed.
-- Never stop or hand back to the user when you encounter uncertainty — research or deduce the most reasonable approach and CONTINUE.
-- Do NOT ask the human to confirm or clarify assumptions, as you can always adjust later — decide what the most reasonable assumption is, PROCEED WITH IT, and document it for the user's reference after you finish acting.
-- When you identify a tool that can fulfill the user's request, EXECUTE IT IMMEDIATELY after your brief explanation. Do not wait for confirmation.
-</persistence>
-
-Respond in a helpful, personalized way that:
-1. Starts by addressing {user_first_name} by name
-2. References the current conversation context and continues the discussion naturally
-3. If they mentioned updating their profile, acknowledge and build on that
-4. References relevant past interactions and learned preferences
-5. Mentions recent agent activities when relevant
-6. Suggests next actions based on their goals and current conversation
-7. Uses their preferred communication style ({self.enhanced_profile.communication_style or 'balanced'})
+{('## Project Brief' + chr(10) + project_brief_context) if project_brief_context else ''}
 """
 
         # Session 266: Inject Spider Intelligence from Super Platform
@@ -5152,6 +5010,31 @@ Respond in a helpful, personalized way that:
                 'cyberpunk', 'cinematic style', 'modern style', 'playful style'
             ]
             is_operation = any(keyword in message.lower() for keyword in operation_keywords)
+
+            # Session 266: Detect QUESTIONS - these should NOT force tool execution
+            # Even if they contain keywords like "logo", questions are consultative
+            question_indicators = [
+                'what style', 'which style', 'best style', 'what works best',
+                'what would work', 'what should i', 'what do you recommend',
+                'what colors', 'which colors', 'what fonts', 'which fonts',
+                'ideas for', 'suggestions for', 'recommend for',
+                'how should', 'how would', 'how do i',
+                'what are trending', 'what is trending', "what's trending",
+                'advice on', 'advice for', 'help me decide', 'help me choose',
+            ]
+            message_lower = message.lower()
+            is_question = any(q in message_lower for q in question_indicators)
+
+            # Questions ending with ? are also consultative
+            if message.strip().endswith('?') and not any(
+                cmd in message_lower for cmd in ['create', 'make', 'generate', 'upscale', 'remove background']
+            ):
+                is_question = True
+
+            # Questions override operations - don't force tool calls for questions
+            if is_question:
+                is_operation = False
+                logger.info(f"🤔 Detected QUESTION - will not force tool execution")
 
             if is_operation:
                 # FORCE tool execution for operations
@@ -6750,45 +6633,75 @@ Respond in a helpful, personalized way that:
 
     def _get_style_preferences_context(self) -> str:
         """
-        Session 169 Phase 3 + Session 179 Enhancement:
+        Session 169 Phase 3 + Session 179 Enhancement + Session 266 Creative Trends:
         Get user's learned style preferences for personalized generation.
 
         Session 179: Now also includes semantic style context from embeddings
         when available, enabling more sophisticated preference matching.
 
+        Session 266: Now includes trending creative styles from the spider network
+        to encourage variety and alignment with current design trends.
+
         Returns:
             Formatted string of style preferences, or empty string if no preferences.
         """
+        lines = []
+
+        # Session 266: Get trending creative styles from spider network FIRST
+        # This provides fresh, varied style suggestions
+        try:
+            from core.services.spider_intelligence import get_spider_intelligence
+            spider_intel = get_spider_intelligence()
+            creative_trends = spider_intel.get_creative_trends(hours=48, limit=5)
+
+            if creative_trends.get('has_live_data') or creative_trends.get('trending_styles'):
+                lines.append("🎨 TRENDING DESIGN STYLES (from spider network):")
+                lines.append("IMPORTANT: Vary styles based on the specific request! Don't always use the same style.")
+
+                if creative_trends.get('trending_styles'):
+                    style_names = [s['style'] for s in creative_trends['trending_styles'][:5]]
+                    lines.append(f"- Hot styles: {', '.join(style_names)}")
+
+                if creative_trends.get('trending_colors'):
+                    color_names = [c['palette'] for c in creative_trends['trending_colors'][:5]]
+                    lines.append(f"- Trending palettes: {', '.join(color_names)}")
+
+                if creative_trends.get('keywords'):
+                    lines.append(f"- Design keywords: {', '.join(creative_trends['keywords'][:8])}")
+
+                lines.append("")
+        except Exception as spider_err:
+            logger.debug(f"Creative trends not available: {spider_err}")
+
+        # Original style learning from user interactions
         try:
             from style_memory.models import StyleMemory, StylePattern
 
             # Get interaction counts
             total_interactions = StyleMemory.objects.filter(user=self.user).count()
-            if total_interactions == 0:
-                return ""
 
-            loved_count = StyleMemory.objects.filter(user=self.user, interaction_type='love').count()
-            liked_count = StyleMemory.objects.filter(user=self.user, interaction_type='like').count()
-            disliked_count = StyleMemory.objects.filter(user=self.user, interaction_type='dislike').count()
+            if total_interactions > 0:
+                loved_count = StyleMemory.objects.filter(user=self.user, interaction_type='love').count()
+                liked_count = StyleMemory.objects.filter(user=self.user, interaction_type='like').count()
+                disliked_count = StyleMemory.objects.filter(user=self.user, interaction_type='dislike').count()
 
-            # Get detected patterns
-            patterns = StylePattern.objects.filter(user=self.user).order_by('-confidence', '-frequency')[:10]
+                # Get detected patterns
+                patterns = StylePattern.objects.filter(user=self.user).order_by('-confidence', '-frequency')[:10]
 
-            if not patterns.exists() and total_interactions < 3:
-                return ""  # Not enough data yet
+                if patterns.exists() or total_interactions >= 3:
+                    lines.append(f"📊 User Style Learning (based on {total_interactions} ratings: {loved_count}❤️, {liked_count}👍, {disliked_count}👎):")
 
-            # Build the preferences context
-            lines = [f"Style Learning (based on {total_interactions} ratings: {loved_count} loved, {liked_count} liked, {disliked_count} disliked):"]
+                    if patterns.exists():
+                        pattern_groups = {}
+                        for p in patterns:
+                            if p.pattern_type not in pattern_groups:
+                                pattern_groups[p.pattern_type] = []
+                            pattern_groups[p.pattern_type].append(p.pattern_value)
 
-            if patterns.exists():
-                pattern_groups = {}
-                for p in patterns:
-                    if p.pattern_type not in pattern_groups:
-                        pattern_groups[p.pattern_type] = []
-                    pattern_groups[p.pattern_type].append(p.pattern_value)
+                        for ptype, values in pattern_groups.items():
+                            lines.append(f"- User likes {ptype}: {', '.join(values[:3])}")
 
-                for ptype, values in pattern_groups.items():
-                    lines.append(f"- Preferred {ptype}: {', '.join(values[:3])}")
+                    lines.append("")
 
             # Session 179: Try to add semantic context from embeddings
             try:
@@ -6798,17 +6711,26 @@ Respond in a helpful, personalized way that:
                 if current_context:
                     semantic_context = get_style_context_for_user(self.user, current_context)
                     if semantic_context:
-                        lines.append("\nSemantic style match:")
+                        lines.append("🔗 Semantic style match:")
                         lines.append(semantic_context)
             except Exception as embed_err:
                 # Embeddings not available or not populated - that's fine
                 logger.debug(f"Semantic style context not available: {embed_err}")
 
-            return "\n".join(lines)
-
         except Exception as e:
             logger.debug(f"Error getting style preferences: {e}")
-            return ""
+
+        # Session 266: Add instruction to vary styles
+        if lines:
+            lines.append("")
+            lines.append("💡 STYLE VARIATION GUIDELINE: Match styles to the specific platform/use case:")
+            lines.append("   - Etsy prints: botanical, watercolor, boho, line-art, abstract")
+            lines.append("   - Tech/SaaS: geometric, minimalist, gradient, modern, clean")
+            lines.append("   - Luxury brands: elegant, art-deco, gold accents, monochrome")
+            lines.append("   - Kids/playful: colorful, hand-drawn, whimsical, vibrant")
+            lines.append("   - Do NOT always default to the same style palette!")
+
+        return "\n".join(lines) if lines else ""
 
     def _format_conversation_context(self, conversations: List[Dict[str, Any]]) -> str:
         """

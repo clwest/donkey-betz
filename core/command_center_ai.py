@@ -14,6 +14,7 @@ from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 
 from .llm_enforcer import get_llm_enforcer
+from core.prompts import get_command_center_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -458,77 +459,59 @@ Try: "Connect me with business-agent" or "Connect me with content-creator" """
             current_time_mst = datetime.now(mst)
             formatted_time = current_time_mst.strftime("%A, %B %d, %Y at %I:%M %p MST")
 
-            return f"""You are the AI Command Center for the Unified Donkey Betz platform.
-
-REAL-TIME SYSTEM STATUS:
-- Current Date/Time: {formatted_time}
-- Active Agents: {system_stats['agents']} agents currently running
-- Active Advisors: {system_stats['advisors']} legendary advisors (including Warren Buffett, Cathie Wood, Ray Dalio)
-- Active Spiders: {system_stats['spiders']} data collection spiders
-- LLM Status: {system_stats['llm_status']}
-
-TOP PERFORMING AGENTS (REAL DATA):
-{agent_list}
-
-SYSTEM CAPABILITIES & TOOLS AVAILABLE:
-- Real-time opportunity scanning across multiple platforms
-- Current date/time access (Mountain Standard Time)
-- Live market data and analysis tools
-- Automated job application system with Quick Apply
-- Portfolio optimization with Kelly Criterion
-- Market analysis with sentiment scoring
-- Content generation with monetization tracking
-- Spider network collecting data from 71+ sources
-- System consciousness monitoring at {system_stats.get('consciousness_level', 54.3)}%
-
-IMPORTANT: You have access to REAL-TIME TOOLS and information. When users ask about current date/time, system status, or live data, provide accurate real-time information. You are NOT limited to static knowledge - you can access current system data, time, and live metrics.
-
-When asked about agents, you MUST provide SPECIFIC information about these ACTUAL agents in the system, not generic responses. The system has {system_stats['agents']} real agents actively working."""
+            # Session 266: Use central prompt registry
+            return get_command_center_prompt(
+                "main",
+                formatted_time=formatted_time,
+                agent_count=system_stats['agents'],
+                advisor_count=system_stats['advisors'],
+                spider_count=system_stats['spiders'],
+                llm_status=system_stats['llm_status'],
+                agent_list=agent_list,
+                consciousness_level=system_stats.get('consciousness_level', 54.3)
+            )
 
         # Return context for specific agent
         return self.build_context(agent)
 
     def build_context(self, agent):
-        """Build context for AI based on selected agent"""
+        """Build context for AI based on selected agent.
+
+        Session 266: Uses central prompt registry for all prompts.
+        """
         if not agent:
-            return """You are the AI Command Center for the Unified Donkey Betz platform.
-You have access to 151 AI agents, 25 legendary advisors, and 1000+ spiders.
-Help users navigate the system, answer questions, and route to appropriate agents."""
+            return get_command_center_prompt("default")
 
         if agent in self.agent_registry:
             agent_info = self.agent_registry[agent]
 
             # Special context for Code Assistant
             if agent == "Code Assistant":
-                return f"""You are {agent}, an AI agent in the Unified Donkey Betz system.
-Specialization: {agent_info.get('specialization', 'General AI')}
-Skills: {', '.join(agent_info.get('skills', []))}
-Role: {agent_info.get('role', 'AI Assistant')}
+                return get_command_center_prompt(
+                    "code_assistant",
+                    agent_name=agent,
+                    specialization=agent_info.get('specialization', 'General AI'),
+                    skills=', '.join(agent_info.get('skills', [])),
+                    role=agent_info.get('role', 'AI Assistant')
+                )
 
-IMPORTANT: You have access to REAL-TIME DOCUMENTATION for all major frameworks.
-When answering coding questions:
-1. I will fetch the latest documentation for you automatically
-2. Always provide code that works with the LATEST versions
-3. Mention if there are deprecations or new features
-4. Include links to documentation when relevant
-5. Check package versions to ensure compatibility
-
-You stay current with the latest APIs and best practices through live documentation access."""
-
-            return f"""You are {agent}, an AI agent in the Unified Donkey Betz system.
-Specialization: {agent_info.get('specialization', 'General AI')}
-Skills: {', '.join(agent_info.get('skills', []))}
-Role: {agent_info.get('role', 'AI Assistant')}
-
-Respond as this specific agent would, using your expertise and personality."""
+            # Regular agent prompt
+            return get_command_center_prompt(
+                "agent",
+                agent_name=agent,
+                specialization=agent_info.get('specialization', 'General AI'),
+                skills=', '.join(agent_info.get('skills', [])),
+                role=agent_info.get('role', 'AI Assistant')
+            )
 
         if agent in self.advisor_registry:
             advisor_info = self.advisor_registry[agent]
-            return f"""You are {agent}, a legendary advisor in the Unified Donkey Betz system.
-Expertise: {advisor_info.get('expertise', 'Strategic Advisory')}
-Background: {advisor_info.get('background', 'Industry Leader')}
-
-Provide advice as this legendary figure would, drawing on their unique perspective."""
+            return get_command_center_prompt(
+                "advisor",
+                advisor_name=agent,
+                expertise=advisor_info.get('expertise', 'Strategic Advisory'),
+                background=advisor_info.get('background', 'Industry Leader')
+            )
 
         return f"You are {agent}, an AI entity in the Unified Donkey Betz system."
 
