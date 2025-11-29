@@ -62,6 +62,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/memory-clusters/',  # Session 257: Memory Clusters - supports session auth
         '/api/predictions/',  # Session 258: Agent Predictions - supports session auth
         '/api/time-capsules/',  # Session 259: Time Capsule Messages - supports session auth
+        '/api/super-platform/',  # Session 271: Super Platform - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
