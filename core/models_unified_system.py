@@ -10949,3 +10949,271 @@ class AutonomousActionLog(models.Model):
     def __str__(self):
         status = "success" if self.success else ("failed" if self.success is False else "pending")
         return f"{self.action_type}: {self.description[:50]}... ({status})"
+
+
+# =============================================================================
+# SESSION 266: Learning Companion
+# =============================================================================
+
+class LearningCompanion(models.Model):
+    """
+    Session 266: Persistent Learning Companion State
+
+    Stores the user's learning companion configuration, charter, active tracks,
+    and progress through learning content. Enables personalized, continuous
+    learning experiences that remember context across sessions.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='learning_companion'
+    )
+
+    # The Learning Companion Charter - the user's one-sentence job description
+    charter = models.TextField(
+        blank=True,
+        help_text="User's one-sentence description of their ideal learning companion"
+    )
+    charter_set_at = models.DateTimeField(null=True, blank=True)
+
+    # Active learning tracks
+    TRACK_CHOICES = [
+        ('tech_trends', 'Tech Trends → Shippable Experiments'),
+        ('ai_design', 'AI + Design for Branding'),
+        ('agentic_ai', 'Agentic AI Systems'),
+        ('creative_ops', 'Creative Operations'),
+        ('custom', 'Custom Track'),
+    ]
+    active_track = models.CharField(
+        max_length=50,
+        choices=TRACK_CHOICES,
+        default='tech_trends'
+    )
+    custom_track_description = models.TextField(
+        blank=True,
+        help_text="Description for custom tracks"
+    )
+
+    # Learning preferences
+    session_format = models.CharField(
+        max_length=50,
+        default='micro_lesson',
+        help_text="Preferred format: micro_lesson, deep_dive, action_focused"
+    )
+    preferred_length = models.CharField(
+        max_length=20,
+        default='medium',
+        help_text="Preferred content length: short, medium, long"
+    )
+
+    # Timing preferences
+    learning_frequency = models.CharField(
+        max_length=20,
+        default='daily',
+        help_text="How often: daily, weekly, on_demand"
+    )
+
+    # Current state
+    current_topic = models.CharField(max_length=200, blank=True)
+    current_trend_index = models.PositiveIntegerField(default=0)
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_session_at = models.DateTimeField(null=True, blank=True)
+    total_sessions = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Learning Companion"
+        verbose_name_plural = "Learning Companions"
+
+    def __str__(self):
+        return f"Learning Companion for {self.user.username} - Track: {self.active_track}"
+
+    def set_charter(self, charter_text):
+        """Set the learning companion charter."""
+        self.charter = charter_text
+        self.charter_set_at = timezone.now()
+        self.save(update_fields=['charter', 'charter_set_at', 'updated_at'])
+
+    def start_session(self):
+        """Mark a learning session as started."""
+        self.last_session_at = timezone.now()
+        self.total_sessions += 1
+        self.save(update_fields=['last_session_at', 'total_sessions', 'updated_at'])
+
+
+class LearningProgress(models.Model):
+    """
+    Session 266: Track learning progress through topics and trends.
+
+    Records which topics have been covered, actions taken, and user engagement.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    companion = models.ForeignKey(
+        LearningCompanion,
+        on_delete=models.CASCADE,
+        related_name='progress_entries'
+    )
+
+    # What was covered
+    topic = models.CharField(max_length=200)
+    trend_category = models.CharField(max_length=100, blank=True)
+    content_summary = models.TextField(blank=True)
+
+    # Progress status
+    STATUS_CHOICES = [
+        ('introduced', 'Introduced'),
+        ('explored', 'Explored'),
+        ('applied', 'Applied'),
+        ('mastered', 'Mastered'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='introduced'
+    )
+
+    # Actions taken
+    action_suggested = models.TextField(blank=True)
+    action_completed = models.BooleanField(default=False)
+    action_result = models.TextField(blank=True)
+
+    # Engagement metrics
+    time_spent_seconds = models.PositiveIntegerField(default=0)
+    follow_up_questions = models.PositiveIntegerField(default=0)
+    user_rating = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="User rating 1-5"
+    )
+
+    # Connections
+    related_project_id = models.UUIDField(null=True, blank=True)
+    spider_categories_used = ArrayField(
+        models.CharField(max_length=50),
+        default=list,
+        blank=True
+    )
+
+    # Timing
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['companion', '-started_at']),
+            models.Index(fields=['topic']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"{self.topic} ({self.status})"
+
+    def mark_completed(self, result=None):
+        """Mark this learning item as completed."""
+        self.completed_at = timezone.now()
+        if result:
+            self.action_result = result
+        self.save(update_fields=['completed_at', 'action_result'])
+
+    def advance_status(self):
+        """Advance to the next status level."""
+        status_order = ['introduced', 'explored', 'applied', 'mastered']
+        current_idx = status_order.index(self.status)
+        if current_idx < len(status_order) - 1:
+            self.status = status_order[current_idx + 1]
+            self.save(update_fields=['status'])
+
+
+class TrackSpiderMapping(models.Model):
+    """
+    Session 266: Map learning tracks to relevant spider categories.
+
+    When a user selects a track, this determines which spiders provide context.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    track = models.CharField(max_length=50)
+    spider_category = models.CharField(max_length=50)
+    relevance_weight = models.FloatField(
+        default=1.0,
+        help_text="How relevant this spider is for this track (0-2)"
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Is this a primary spider for this track?"
+    )
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['track', 'spider_category']
+        ordering = ['track', '-relevance_weight']
+
+    def __str__(self):
+        primary = " (primary)" if self.is_primary else ""
+        return f"{self.track} → {self.spider_category}{primary}"
+
+    @classmethod
+    def get_spiders_for_track(cls, track):
+        """Get spider categories for a track, ordered by relevance."""
+        mappings = cls.objects.filter(track=track).order_by('-relevance_weight')
+        return [m.spider_category for m in mappings]
+
+    @classmethod
+    def seed_default_mappings(cls):
+        """Seed default track-to-spider mappings."""
+        defaults = {
+            'tech_trends': [
+                ('techcrunch', 1.5, True),
+                ('theverge', 1.3, True),
+                ('hackernews', 1.4, True),
+                ('mit_tech_review', 1.2, False),
+                ('wired', 1.0, False),
+                ('producthunt', 0.8, False),
+            ],
+            'ai_design': [
+                ('dribbble', 1.5, True),
+                ('behance', 1.4, True),
+                ('midjourney', 1.3, True),
+                ('civitai', 1.2, False),
+                ('runwayml', 1.1, False),
+                ('figma', 1.0, False),
+                ('canva', 0.9, False),
+            ],
+            'agentic_ai': [
+                ('hackernews', 1.5, True),
+                ('huggingface', 1.4, True),
+                ('github_jobs', 1.2, False),
+                ('kaggle', 1.1, False),
+                ('devto', 1.0, False),
+            ],
+            'creative_ops': [
+                ('notion', 1.3, True),
+                ('figma', 1.2, True),
+                ('producthunt', 1.1, False),
+                ('dribbble', 1.0, False),
+                ('behance', 0.9, False),
+            ],
+        }
+
+        created_count = 0
+        for track, spiders in defaults.items():
+            for spider_cat, weight, is_primary in spiders:
+                obj, created = cls.objects.get_or_create(
+                    track=track,
+                    spider_category=spider_cat,
+                    defaults={
+                        'relevance_weight': weight,
+                        'is_primary': is_primary,
+                    }
+                )
+                if created:
+                    created_count += 1
+
+        return created_count

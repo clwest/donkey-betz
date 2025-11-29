@@ -37,6 +37,9 @@ Phase 6 (Autonomy Engine):
 - RiskLevel: Risk levels for actions
 
 Session 265: ALL 6 PHASES COMPLETE!
+
+Session 266 (Learning Companion):
+- LearningCompanionService: Charter persistence, track context, progress tracking
 """
 
 from .query_classifier import QueryClassifier, ClassificationResult, QueryType
@@ -76,6 +79,10 @@ from .autonomy_engine import (
     ActionType,
     RiskLevel,
     get_autonomy_engine,
+)
+from .learning_companion_service import (
+    LearningCompanionService,
+    get_learning_companion_service,
 )
 
 __all__ = [
@@ -120,4 +127,7 @@ __all__ = [
     'ActionType',
     'RiskLevel',
     'get_autonomy_engine',
+    # Session 266: Learning Companion
+    'LearningCompanionService',
+    'get_learning_companion_service',
 ]
