@@ -1001,22 +1001,81 @@ Try:
 
             # Build the response
             agents_used = []
-            if result.data and result.data.get('delegated_to'):
-                agents_used.append(result.data['delegated_to'])
+            artifacts = []
+
+            if result.data:
+                # Track which agent was used
+                if result.data.get('delegated_to'):
+                    agents_used.append(result.data['delegated_to'])
+
+                # Session 271: Extract artifacts from agent_result
+                agent_result = result.data.get('agent_result', {})
+
+                # Handle images from ImageAgent
+                if agent_result.get('images'):
+                    for img in agent_result['images']:
+                        artifacts.append({
+                            'type': 'image',
+                            'url': img.get('url'),
+                            'id': img.get('id'),
+                            'prompt': img.get('prompt', '')
+                        })
+
+                # Handle videos from VideoAgent
+                if agent_result.get('video_url') or agent_result.get('task_id'):
+                    artifacts.append({
+                        'type': 'video',
+                        'url': agent_result.get('video_url'),
+                        'id': agent_result.get('task_id'),
+                        'status': agent_result.get('status', 'processing')
+                    })
+
+                # Handle audio from AudioAgent
+                if agent_result.get('audio_url'):
+                    artifacts.append({
+                        'type': 'audio',
+                        'url': agent_result.get('audio_url'),
+                        'id': agent_result.get('audio_id')
+                    })
+
+                # Handle 3D from ThreeDAgent
+                if agent_result.get('model_url'):
+                    artifacts.append({
+                        'type': '3d',
+                        'url': agent_result.get('model_url'),
+                        'format': agent_result.get('format', 'glb')
+                    })
+
+                # Handle research results from ResearchAgent
+                if agent_result.get('results'):
+                    artifacts.append({
+                        'type': 'research',
+                        'data': agent_result.get('results'),
+                        'summary': agent_result.get('summary', '')
+                    })
+
+            # Session 271: Build a better response message
+            response_message = result.message
+            if not response_message and artifacts:
+                artifact_types = [a['type'] for a in artifacts]
+                response_message = f"Generated {len(artifacts)} artifact(s): {', '.join(set(artifact_types))}"
+            elif not response_message:
+                response_message = str(result.data) if result.data else "Request processed"
 
             return CoordinatorResult(
                 success=result.success,
-                response=result.message or str(result.data),
+                response=response_message,
                 execution_mode=ExecutionMode.AGENT_EXECUTION if agents_used else ExecutionMode.DIRECT_RESPONSE,
                 classification=classification,
                 context_used=context.to_dict(),
                 agents_used=agents_used,
-                artifacts=result.data.get('agent_result', {}).get('artifacts', []) if result.data else [],
+                artifacts=artifacts,
                 execution_time_ms=execution_time,
                 metadata={
                     'clean_architecture': True,
                     'decisions_made': result.decisions_made,
                     'tool_calls': result.tool_calls,
+                    'agent_result': result.data.get('agent_result', {}) if result.data else {},
                 }
             )
 
