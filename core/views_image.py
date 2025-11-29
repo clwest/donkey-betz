@@ -13812,3 +13812,624 @@ Include specific prompt suggestions that incorporate the research insights."""
             'success': False,
             'error': str(e)
         }
+
+
+# =============================================================================
+# CLEAN ARCHITECTURE AGENT WRAPPERS
+# Session 269: Phase 4 - Internal functions for agent tool execution
+# These functions are called by the clean architecture agents (not views)
+# =============================================================================
+
+def _execute_upscale(user, parameters, session=None):
+    """
+    Internal function for upscaling images.
+    Called by ImageEditingAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with image_id, scale_factor, creative_upscale
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, image_id, image_url
+    """
+    try:
+        image_id = parameters.get('image_id')
+        if not image_id:
+            return {'success': False, 'error': 'image_id required'}
+
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=user)
+        except ImageHistory.DoesNotExist:
+            return {'success': False, 'error': 'Image not found'}
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"📈 Agent upscaling image {image_id} (sequential #{seq_num})")
+
+        # Get image data
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI upscale API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return {'success': False, 'error': 'Stability AI API key not configured'}
+
+        url = "https://api.stability.ai/v2beta/stable-image/upscale/conservative"
+        files = {"image": image_data}
+        data_params = {
+            "prompt": "high quality upscale",
+            "output_format": "png"
+        }
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI upscale failed: {api_response.text}")
+            return {'success': False, 'error': f'Upscale failed: {api_response.text}'}
+
+        # Save the upscaled image
+        upscaled_image_data = api_response.content
+        filename = f'upscaled_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(upscaled_image_data))
+        image_url = default_storage.url(saved_path)
+
+        # Create new image history entry
+        new_image = ImageHistory.objects.create(
+            user=user,
+            prompt=f"Upscaled from image #{seq_num}",
+            file_path=saved_path,
+            filename=filename,
+            model_used="stability-upscale-4x",
+        )
+
+        logger.info(f"✅ Agent upscaled image: {new_image.id}")
+
+        return {
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': image_url,
+            'sequential_number': new_image.get_sequential_number(),
+            'message': f"Image upscaled successfully (#{new_image.get_sequential_number()})"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent upscale error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_remove_background(user, parameters, session=None):
+    """
+    Internal function for removing image backgrounds.
+    Called by ImageEditingAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with image_id
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, image_id, image_url
+    """
+    try:
+        image_id = parameters.get('image_id')
+        if not image_id:
+            return {'success': False, 'error': 'image_id required'}
+
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=user)
+        except ImageHistory.DoesNotExist:
+            return {'success': False, 'error': 'Image not found'}
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎭 Agent removing background from image {image_id} (#{seq_num})")
+
+        # Get image data
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI remove-background API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return {'success': False, 'error': 'Stability AI API key not configured'}
+
+        url = "https://api.stability.ai/v2beta/stable-image/edit/remove-background"
+        files = {"image": image_data}
+        data_params = {"output_format": "png"}
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI remove-bg failed: {api_response.text}")
+            return {'success': False, 'error': f'Remove background failed: {api_response.text}'}
+
+        # Save the processed image
+        processed_image_data = api_response.content
+        filename = f'nobg_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(processed_image_data))
+        image_url = default_storage.url(saved_path)
+
+        # Create new image history entry
+        new_image = ImageHistory.objects.create(
+            user=user,
+            prompt=f"Background removed from image #{seq_num}",
+            file_path=saved_path,
+            filename=filename,
+            model_used="stability-remove-bg",
+        )
+
+        logger.info(f"✅ Agent removed background: {new_image.id}")
+
+        return {
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': image_url,
+            'sequential_number': new_image.get_sequential_number(),
+            'message': f"Background removed successfully (#{new_image.get_sequential_number()})"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent remove-bg error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_create_variations(user, parameters, session=None):
+    """
+    Internal function for creating image variations.
+    Called by ImageEditingAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with image_id, count, variation_strength
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, images list
+    """
+    try:
+        image_id = parameters.get('image_id')
+        count = parameters.get('count', 3)
+        strength = parameters.get('variation_strength', 0.5)
+
+        if not image_id:
+            return {'success': False, 'error': 'image_id required'}
+
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=user)
+        except ImageHistory.DoesNotExist:
+            return {'success': False, 'error': 'Image not found'}
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎨 Agent creating {count} variations from image {image_id} (#{seq_num})")
+
+        # For now, use image-to-image with variation prompts
+        # This would use the Stability AI img2img endpoint
+        return {
+            'success': False,
+            'error': 'Image variations not yet implemented in clean architecture'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent variations error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_recolor(user, parameters, session=None):
+    """
+    Internal function for recoloring images.
+    Called by ImageEditingAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with image_id, target_color, new_color
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, image_id, image_url
+    """
+    try:
+        image_id = parameters.get('image_id')
+        target_color = parameters.get('target_color')
+        new_color = parameters.get('new_color')
+
+        if not image_id or not target_color or not new_color:
+            return {'success': False, 'error': 'image_id, target_color, and new_color required'}
+
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=user)
+        except ImageHistory.DoesNotExist:
+            return {'success': False, 'error': 'Image not found'}
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎨 Agent recoloring image {image_id} (#{seq_num}): {target_color} → {new_color}")
+
+        # Get image data
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI search-and-recolor API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return {'success': False, 'error': 'Stability AI API key not configured'}
+
+        url = "https://api.stability.ai/v2beta/stable-image/edit/search-and-recolor"
+        files = {"image": image_data}
+        data_params = {
+            "prompt": f"Change {target_color} to {new_color}",
+            "select_prompt": target_color,
+            "output_format": "png"
+        }
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI recolor failed: {api_response.text}")
+            return {'success': False, 'error': f'Recolor failed: {api_response.text}'}
+
+        # Save the recolored image
+        recolored_image_data = api_response.content
+        filename = f'recolor_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(recolored_image_data))
+        image_url = default_storage.url(saved_path)
+
+        # Create new image history entry
+        new_image = ImageHistory.objects.create(
+            user=user,
+            prompt=f"Recolored from image #{seq_num}: {target_color} → {new_color}",
+            file_path=saved_path,
+            filename=filename,
+            model_used="stability-recolor",
+        )
+
+        logger.info(f"✅ Agent recolored image: {new_image.id}")
+
+        return {
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': image_url,
+            'sequential_number': new_image.get_sequential_number(),
+            'message': f"Image recolored successfully (#{new_image.get_sequential_number()})"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent recolor error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_search_replace(user, parameters, session=None):
+    """
+    Internal function for search-and-replace in images.
+    Called by ImageEditingAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with image_id, search_prompt, replace_prompt
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, image_id, image_url
+    """
+    try:
+        image_id = parameters.get('image_id')
+        search_prompt = parameters.get('search_prompt')
+        replace_prompt = parameters.get('replace_prompt')
+
+        if not image_id or not search_prompt or not replace_prompt:
+            return {'success': False, 'error': 'image_id, search_prompt, and replace_prompt required'}
+
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=user)
+        except ImageHistory.DoesNotExist:
+            return {'success': False, 'error': 'Image not found'}
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🔄 Agent search-replace on image {image_id} (#{seq_num}): {search_prompt} → {replace_prompt}")
+
+        # Get image data
+        if image.file_path.startswith('data:'):
+            image_data = base64.b64decode(image.file_path.split(',')[1])
+        else:
+            file_full_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+            with open(file_full_path, 'rb') as f:
+                image_data = f.read()
+
+        # Call Stability AI search-and-replace API
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+        if not stability_key:
+            return {'success': False, 'error': 'Stability AI API key not configured'}
+
+        url = "https://api.stability.ai/v2beta/stable-image/edit/search-and-replace"
+        files = {"image": image_data}
+        data_params = {
+            "prompt": replace_prompt,
+            "search_prompt": search_prompt,
+            "output_format": "png"
+        }
+
+        headers = {
+            "Authorization": f"Bearer {stability_key}",
+            "Accept": "image/*"
+        }
+
+        api_response = requests.post(url, headers=headers, files=files, data=data_params, timeout=60)
+
+        if api_response.status_code != 200:
+            logger.error(f"❌ Stability AI search-replace failed: {api_response.text}")
+            return {'success': False, 'error': f'Search-replace failed: {api_response.text}'}
+
+        # Save the modified image
+        modified_image_data = api_response.content
+        filename = f'edited_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(modified_image_data))
+        image_url = default_storage.url(saved_path)
+
+        # Create new image history entry
+        new_image = ImageHistory.objects.create(
+            user=user,
+            prompt=f"Edited from image #{seq_num}: replaced {search_prompt} with {replace_prompt}",
+            file_path=saved_path,
+            filename=filename,
+            model_used="stability-search-replace",
+        )
+
+        logger.info(f"✅ Agent search-replace complete: {new_image.id}")
+
+        return {
+            'success': True,
+            'image_id': str(new_image.id),
+            'image_url': image_url,
+            'sequential_number': new_image.get_sequential_number(),
+            'message': f"Image edited successfully (#{new_image.get_sequential_number()})"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent search-replace error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_convert_to_3d(user, parameters, session=None):
+    """
+    Internal function for converting images to 3D models.
+    Called by ThreeDAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with image_id, output_format, quality
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, model_url
+    """
+    try:
+        image_id = parameters.get('image_id')
+        output_format = parameters.get('output_format', 'glb')
+        quality = parameters.get('quality', 'standard')
+
+        if not image_id:
+            return {'success': False, 'error': 'image_id required'}
+
+        from content.models import ImageHistory
+        try:
+            image = ImageHistory.objects.get(id=image_id, user=user)
+        except ImageHistory.DoesNotExist:
+            return {'success': False, 'error': 'Image not found'}
+
+        seq_num = image.get_sequential_number()
+        logger.info(f"🎮 Agent converting image {image_id} (#{seq_num}) to 3D ({output_format})")
+
+        # Get image URL for Replicate API
+        if image.file_path.startswith('data:'):
+            # Data URI - would need to upload first
+            return {'success': False, 'error': 'Data URI images not supported for 3D conversion'}
+        else:
+            image_url = f"{settings.MEDIA_URL}{image.file_path}"
+
+        # Call Replicate API for 3D conversion
+        import replicate
+        replicate_key = os.getenv('REPLICATE_API_TOKEN') or settings.EXTERNAL_API_KEYS.get('REPLICATE_API_TOKEN')
+        if not replicate_key:
+            return {'success': False, 'error': 'Replicate API key not configured'}
+
+        os.environ['REPLICATE_API_TOKEN'] = replicate_key
+
+        # Use TripoSR or similar model
+        output = replicate.run(
+            "stability-ai/stable-fast-3d:5ddcbc15a0c1e0154cfe0969f9ae1e06f3d5e0bcc44119f7c7e29f23b7a04a05",
+            input={
+                "image": image_url,
+            }
+        )
+
+        if output:
+            return {
+                'success': True,
+                'model_url': str(output),
+                'format': output_format,
+                'message': f"3D model generated from image #{seq_num}"
+            }
+        else:
+            return {'success': False, 'error': '3D conversion returned no output'}
+
+    except Exception as e:
+        logger.error(f"❌ Agent 3D conversion error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_generate_voice(user, parameters, session=None):
+    """
+    Internal function for text-to-speech generation.
+    Called by AudioAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with text, voice, stability, similarity_boost
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, audio_url
+    """
+    try:
+        text = parameters.get('text')
+        voice = parameters.get('voice', 'Rachel')
+        stability = parameters.get('stability', 0.5)
+        similarity_boost = parameters.get('similarity_boost', 0.75)
+
+        if not text:
+            return {'success': False, 'error': 'text required'}
+
+        logger.info(f"🎙️ Agent generating voice: '{text[:50]}...' with voice {voice}")
+
+        # Get ElevenLabs API key
+        elevenlabs_key = os.getenv('ELEVENLABS_API_KEY') or settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY')
+        if not elevenlabs_key:
+            return {'success': False, 'error': 'ElevenLabs API key not configured'}
+
+        # Voice ID mapping
+        voice_ids = {
+            'Rachel': '21m00Tcm4TlvDq8ikWAM',
+            'Antoni': 'ErXwobaYiN019PkySvjV',
+            'Bella': 'EXAVITQu4vr4xnSDxMaL',
+            'Callum': 'N2lVS1w4EtoT3dr4eOWO',
+            'Charlotte': 'XB0fDUnXU5powFXDhCwa',
+            'Daniel': 'onwK4e9ZLuTAKqWW03F9',
+            'Domi': 'AZnzlk1XvdvUeBnXmlld',
+            'Elli': 'MF3mGyEYCl7XYWbV9V6O',
+            'Emily': 'LcfcDJNUP1GQjkzn1xUU',
+            'George': 'JBFqnCBsd6RMkjVDRZzb',
+            'Matilda': 'XrExE9yKIg1WjnnlVkGX',
+            'Sam': 'yoZ06aMxZJJ28mfd3POQ'
+        }
+
+        voice_id = voice_ids.get(voice, voice_ids['Rachel'])
+
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": elevenlabs_key
+        }
+        data = {
+            "text": text,
+            "model_id": "eleven_monolingual_v1",
+            "voice_settings": {
+                "stability": stability,
+                "similarity_boost": similarity_boost
+            }
+        }
+
+        response = requests.post(url, json=data, headers=headers, timeout=60)
+
+        if response.status_code != 200:
+            logger.error(f"❌ ElevenLabs TTS failed: {response.text}")
+            return {'success': False, 'error': f'TTS failed: {response.text}'}
+
+        # Save audio file
+        audio_data = response.content
+        filename = f'voice_{uuid.uuid4().hex[:8]}.mp3'
+        filepath = os.path.join('generated_audio', user.username, filename)
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        saved_path = default_storage.save(filepath, ContentFile(audio_data))
+        audio_url = default_storage.url(saved_path)
+
+        logger.info(f"✅ Agent generated voice: {saved_path}")
+
+        return {
+            'success': True,
+            'audio_url': audio_url,
+            'voice': voice,
+            'message': f"Voice generated with {voice}"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent TTS error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _execute_add_voiceover(user, parameters, session=None):
+    """
+    Internal function for adding voiceover to video.
+    Called by AudioAgent.
+
+    Args:
+        user: Django user object
+        parameters: Dict with video_id, text, voice, background_volume
+        session: Optional session for tracking
+
+    Returns:
+        Dict with success, video_url
+    """
+    try:
+        video_id = parameters.get('video_id')
+        text = parameters.get('text')
+        voice = parameters.get('voice', 'Rachel')
+        background_volume = parameters.get('background_volume', 0.3)
+
+        if not video_id or not text:
+            return {'success': False, 'error': 'video_id and text required'}
+
+        logger.info(f"🎬 Agent adding voiceover to video {video_id}")
+
+        # First generate the voice
+        voice_result = _execute_generate_voice(user, {
+            'text': text,
+            'voice': voice
+        }, session)
+
+        if not voice_result.get('success'):
+            return voice_result
+
+        # TODO: Mix audio with video using FFmpeg
+        return {
+            'success': False,
+            'error': 'Video voiceover mixing not yet implemented in clean architecture',
+            'audio_url': voice_result.get('audio_url')
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Agent voiceover error: {e}")
+        return {'success': False, 'error': str(e)}
