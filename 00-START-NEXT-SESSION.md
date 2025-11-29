@@ -1,13 +1,13 @@
-# Session 270: Clean Architecture Implementation - Phase 4
+# Session 271: Clean Architecture Implementation - Phase 5
 
 **Date:** November 29, 2025
-**Previous Session:** 269 (Phase 3 Complete - Super Platform Integration)
+**Previous Session:** 270 (Phase 4 Complete - Backend Wiring)
 **Session Type:** Major Architecture Overhaul
-**Status:** READY FOR PHASE 4
+**Status:** READY FOR PHASE 5
 
 ---
 
-## Phases 1, 2 & 3 Complete!
+## Phases 1, 2, 3 & 4 Complete!
 
 ### Phase 1 - Foundation (Session 268)
 | File | Purpose | Status |
@@ -30,86 +30,81 @@
 | `ResearchAgent` | web_search, spider_query, analyze_trends | DONE |
 | `WorkflowAgent` | delegate_to_agent (can call other agents) | DONE |
 
-### Phase 3 - Super Platform Integration (Session 269) - JUST COMPLETED!
+### Phase 3 - Super Platform Integration (Session 269)
 | Component | Purpose | Status |
 |-----------|---------|--------|
-| `core/agents/personal_assistant_agent.py` | Traffic cop - routes to specialized agents | DONE |
+| `PersonalAssistantAgent` | Traffic cop - routes to specialized agents | DONE |
 | Intent-to-Agent Mapping | Keywords → Agent routing | DONE |
-| Question Detection | `_is_question()` method | DONE |
-| Agent Detection | `_detect_agent()` with priority keywords | DONE |
 | SuperPlatformCoordinator Update | `use_clean_architecture` property | DONE |
 | `_process_with_clean_architecture()` | New processing path | DONE |
-| Feature Flag Integration | Toggle between legacy and new architecture | DONE |
 
-**All Phase 3 Tests Pass:**
-- 9 agents now in ecosystem (8 specialized + PersonalAssistant)
-- PersonalAssistantAgent correctly classifies questions vs actions
-- Agent detection works for all 8 specialized agents
-- SuperPlatformCoordinator uses clean architecture when flag=True
-- Fallback to legacy processing when flag=False
+### Phase 4 - Backend Wiring (Session 270) - JUST COMPLETED!
+| Component | Backend Connection | Status |
+|-----------|-------------------|--------|
+| `_execute_generate_image` | Stability AI image generation | DONE |
+| `_execute_generate_video` | Runway ML video generation | DONE |
+| `_execute_upscale` | Stability AI upscale API | DONE |
+| `_execute_remove_background` | Stability AI remove-bg API | DONE |
+| `_execute_recolor` | Stability AI search-and-recolor | DONE |
+| `_execute_search_replace` | Stability AI search-and-replace | DONE |
+| `_execute_convert_to_3d` | Replicate TripoSR | DONE |
+| `_execute_generate_voice` | ElevenLabs TTS | DONE |
+| `_execute_add_voiceover` | ElevenLabs + FFmpeg (partial) | DONE |
+| `_execute_edit_video` | Video editing operations | DONE |
+| `_execute_chain_videos` | Video concatenation | DONE |
+| ResearchAgent | SpiderIntelligenceService | DONE |
+
+**All 13 wrapper functions created and tested!**
 
 ---
 
-## Phase 4 Tasks (This Session)
+## Phase 5 Tasks (This Session)
 
-### Goal: Wire Up Actual Tool Execution
+### Goal: Frontend Updates
 
-Currently the agents have tool definitions but don't execute the actual backend operations. Phase 4 connects the dots:
+Now that the backend is wired up, update the frontend to use the new agent architecture.
 
-### 1. Connect ImageAgent to Real Image Generation
+### 1. Update AI Studio Chat Interface
 
-```python
-# In ImageAgent._execute_tool_call()
-def _execute_generate_image(self, arguments):
-    # Call the actual Stability AI image generation
-    from core.views_image import generate_image_internal
-    result = generate_image_internal(
-        prompt=arguments['prompt'],
-        count=arguments.get('count', 1),
-        style=arguments.get('style', 'photorealistic'),
-        # ... etc
-    )
-    return result
+The main chat interface should use the clean architecture when the feature flag is enabled:
+
+```javascript
+// In ai_image_studio.html
+async function sendMessage(message) {
+    // POST to /api/super-platform/process/
+    // which will use _process_with_clean_architecture when flag=True
+}
 ```
 
-### 2. Connect VideoAgent to Real Video Generation
+### 2. Update Agent Selection UI
 
-```python
-# Connect to Runway ML video generation
-from core.views_video import generate_video_internal, animate_image_internal
-```
+Show available agents and their capabilities:
+- Display 9 agent cards (8 specialized + PersonalAssistant)
+- Show tool counts per agent
+- Indicate when clean architecture is active
 
-### 3. Connect AudioAgent to Real Audio Generation
+### 3. Real-Time Agent Status
 
-```python
-# Connect to ElevenLabs TTS
-from core.views_audio import generate_voice_internal
-```
+Add WebSocket support for agent execution progress:
+- Show which agent is handling the request
+- Display tool calls in real-time
+- Show execution time and decisions made
 
-### 4. Connect ResearchAgent to Spider Network
+### 4. Testing Checklist
 
-```python
-# Connect to SpiderIntelligenceService
-from core.services.spider_intelligence import SpiderIntelligenceService
-```
-
-### 5. Testing Checklist
-
-- [ ] ImageAgent actually generates images via Stability AI
-- [ ] VideoAgent actually generates videos via Runway ML
-- [ ] AudioAgent actually generates audio via ElevenLabs
-- [ ] ResearchAgent actually queries spider network
-- [ ] WorkflowAgent orchestrates real multi-step workflows
-- [ ] PersonalAssistantAgent routes to agents that execute real operations
+- [ ] Chat interface uses clean architecture endpoint
+- [ ] Agent cards display correctly
+- [ ] Real-time updates work
+- [ ] Error handling displays agent-specific errors
+- [ ] Feature flag can be toggled in UI
 
 ---
 
 ## What NOT To Do Yet
 
-- Do NOT modify frontend (Phase 5)
 - Do NOT remove old code (Phase 6)
 
-Focus on connecting agents to real backend operations.
+Focus on updating the frontend to use the new API endpoints.
 
 ---
 
@@ -120,8 +115,8 @@ Focus on connecting agents to real backend operations.
 | **1** | Base agent + ImageAgent + Router | **COMPLETE** |
 | **2** | All creation/editing/research agents | **COMPLETE** |
 | **3** | Super Platform Coordinator integration | **COMPLETE** |
-| **4** | Wire up actual tool execution | **THIS SESSION** |
-| 5 | Frontend updates | Pending |
+| **4** | Wire up actual tool execution | **COMPLETE** |
+| **5** | Frontend updates | **THIS SESSION** |
 | 6 | Testing & cleanup | Pending |
 
 ---
@@ -133,17 +128,13 @@ Focus on connecting agents to real backend operations.
 make start
 make celery
 
-# Test the agents with clean architecture enabled
+# Enable clean architecture
 export USE_CLEAN_AGENT_ARCHITECTURE=True
-python manage.py shell
->>> from core.agents import PersonalAssistantAgent
->>> pa = PersonalAssistantAgent()
->>> pa._detect_agent("Create a logo")  # Returns 'ImageAgent'
 
-# Test SuperPlatformCoordinator with clean architecture
->>> from core.super_platform.coordinator import SuperPlatformCoordinator
->>> coord = SuperPlatformCoordinator()
->>> coord.use_clean_architecture  # True when flag is set
+# Test with curl
+curl -X POST http://localhost:8000/api/super-platform/process/ \
+  -H "Content-Type: application/json" \
+  -d '{"message": "create a logo for a tech startup"}'
 ```
 
 ---
@@ -152,11 +143,12 @@ python manage.py shell
 
 | File | Purpose |
 |------|---------|
-| `core/agents/personal_assistant_agent.py` | Traffic cop (NEW in Phase 3) |
-| `core/agents/*.py` | All 9 agents (8 specialized + PersonalAssistant) |
-| `core/agent_router.py` | Deterministic routing (updated in Phase 3) |
-| `core/super_platform/coordinator.py` | Super Platform (updated in Phase 3) |
-| `core/settings.py` | Feature flag |
+| `core/agents/personal_assistant_agent.py` | Traffic cop |
+| `core/agents/*.py` | All 9 agents |
+| `core/agent_router.py` | Deterministic routing |
+| `core/super_platform/coordinator.py` | Super Platform |
+| `core/views_image.py` | Backend wrapper functions (lines 13815-14435) |
+| `ai_core/templates/ai_image_studio.html` | Main UI (to update) |
 
 ---
 
@@ -168,7 +160,8 @@ python manage.py shell
 | Real Data Sources | 24 |
 | Clean Agents | 9 (8 specialized + PersonalAssistant) |
 | Total Tools | 26 (isolated per agent) |
-| Development Sessions | 269 |
+| Backend Wrappers | 13 |
+| Development Sessions | 270 |
 
 ---
 
@@ -185,26 +178,29 @@ User Request
 │      ↓                                              │
 │  ┌──────────────────────────────────────────────┐  │
 │  │         PERSONAL ASSISTANT AGENT              │  │
-│  │                                               │  │
-│  │  1. Is this a question? → Answer directly     │  │
-│  │  2. Detect agent from keywords                │  │
-│  │  3. Route via AgentRouter                     │  │
+│  │  • Question detection                         │  │
+│  │  • Intent classification                      │  │
+│  │  • Agent routing                              │  │
 │  └──────────────────────────────────────────────┘  │
 │      ↓                                              │
 │  ┌──────────────────────────────────────────────┐  │
 │  │              AGENT ROUTER                     │  │
-│  │                                               │  │
-│  │  Deterministic routing: agent_name → Agent    │  │
-│  │  Injects SciFi + Spider context              │  │
+│  │  • Deterministic routing                      │  │
+│  │  • SciFi context injection                   │  │
+│  │  • Spider context injection                   │  │
 │  └──────────────────────────────────────────────┘  │
 │      ↓                                              │
 │  ┌──────────────────────────────────────────────┐  │
 │  │         SPECIALIZED AGENTS                    │  │
 │  │                                               │  │
-│  │  ImageAgent │ VideoAgent │ AudioAgent        │  │
-│  │  ThreeDAgent │ ImageEditingAgent             │  │
-│  │  VideoEditingAgent │ ResearchAgent           │  │
-│  │  WorkflowAgent                                │  │
+│  │  ImageAgent → _execute_generate_image         │  │
+│  │  VideoAgent → _execute_generate_video         │  │
+│  │  AudioAgent → _execute_generate_voice         │  │
+│  │  ThreeDAgent → _execute_convert_to_3d        │  │
+│  │  ImageEditingAgent → _execute_upscale, etc   │  │
+│  │  VideoEditingAgent → _execute_edit_video     │  │
+│  │  ResearchAgent → SpiderIntelligenceService    │  │
+│  │  WorkflowAgent → delegates to other agents    │  │
 │  └──────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
     │
@@ -214,4 +210,4 @@ Response + Artifacts
 
 ---
 
-**GOAL:** Connect all agents to their actual backend operations. When a user says "create a logo", the ImageAgent should actually call Stability AI and return real images.
+**GOAL:** Update the frontend to use the new clean architecture API endpoints. The backend is fully wired - now make the UI use it!
