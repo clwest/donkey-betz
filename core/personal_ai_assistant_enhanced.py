@@ -41,6 +41,7 @@ try:
         AggregatedContext,
         get_learning_loop_service,
         get_scifi_integration_service,
+        get_learning_companion_service,
     )
     SUPER_PLATFORM_AVAILABLE = True
 except ImportError as e:
@@ -90,6 +91,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         self.context_aggregator = ContextAggregator(user) if SUPER_PLATFORM_AVAILABLE else None
         self._learning_service = None  # Lazy loaded
         self._scifi_service = None  # Lazy loaded
+        self._learning_companion_service = None  # Lazy loaded - Session 266
         self._last_classification = None  # Store for learning loop
 
         if SUPER_PLATFORM_AVAILABLE:
@@ -5367,6 +5369,11 @@ Respond in a helpful, personalized way that:
                         else:
                             sections.append(f"- {title}")
 
+        # Session 266: Learning Companion Context
+        learning_context = self._get_learning_companion_context()
+        if learning_context:
+            sections.append(learning_context)
+
         if len(sections) > 1:  # More than just the header
             sections.append("\n--- END SPIDER INTELLIGENCE ---\n")
             return "\n".join(sections)
@@ -5479,6 +5486,40 @@ Respond in a helpful, personalized way that:
             return "\n".join(parts) if parts else ""
         except Exception as e:
             logger.debug(f"Sci-Fi context not available for {agent_name}: {e}")
+            return ""
+
+    def _get_learning_companion_context(self) -> str:
+        """
+        Session 266: Get Learning Companion context for system prompt.
+
+        Injects:
+        - User's charter (their ideal learning style)
+        - Active learning track
+        - Relevant spider categories for the track
+        - Recently covered topics
+        - Pending actions
+
+        Returns:
+            Formatted context string for the system prompt
+        """
+        if not SUPER_PLATFORM_AVAILABLE:
+            return ""
+
+        # Lazy load learning companion service
+        if self._learning_companion_service is None:
+            try:
+                self._learning_companion_service = get_learning_companion_service(self.user)
+            except Exception as e:
+                logger.warning(f"⚠️ Could not load learning companion service: {e}")
+                return ""
+
+        if not self._learning_companion_service:
+            return ""
+
+        try:
+            return self._learning_companion_service.get_learning_context_for_prompt()
+        except Exception as e:
+            logger.debug(f"Learning Companion context not available: {e}")
             return ""
 
     def _generate_intelligent_fallback(self, message: str, context: Dict[str, Any]) -> str:
