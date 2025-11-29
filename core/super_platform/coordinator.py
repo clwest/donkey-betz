@@ -13,7 +13,7 @@ The Coordinator:
 5. EXECUTES using agents, spiders, or direct response
 6. RECORDS outcomes for learning
 
-Session 264: Phase 1 Foundation
+Session 264: Phase 1 Foundation + Phase 2 Spider-Agent Bridge
 """
 
 import logging
@@ -28,6 +28,7 @@ from django.conf import settings
 from .query_classifier import QueryClassifier, QueryType, ClassificationResult
 from .prompt_builder import DynamicPromptBuilder, PromptContext
 from .context_aggregator import ContextAggregator, AggregatedContext
+from .agent_context_service import get_agent_context_service
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,7 @@ class SuperPlatformCoordinator:
         self._openai_client = None
         self._agent_registry = None
         self._workflow_agent = None
+        self._agent_context_service = None  # Session 264: Spider-Agent Bridge
 
     @property
     def openai_client(self):
@@ -146,6 +148,16 @@ class SuperPlatformCoordinator:
             except Exception as e:
                 logger.warning(f"Could not load agent registry: {e}")
         return self._agent_registry
+
+    @property
+    def agent_context_service(self):
+        """Session 264: Lazy load agent context service for spider-agent bridge."""
+        if self._agent_context_service is None:
+            try:
+                self._agent_context_service = get_agent_context_service()
+            except Exception as e:
+                logger.warning(f"Could not load agent context service: {e}")
+        return self._agent_context_service
 
     def process(self, message: str, mode: str = 'interactive') -> CoordinatorResult:
         """
@@ -341,6 +353,8 @@ class SuperPlatformCoordinator:
     ) -> Tuple[str, List[Dict[str, Any]], List[str]]:
         """
         Handle requests that need agent execution (creation, analysis).
+
+        Session 264: Now injects spider context into agents via AgentContextService.
         """
         suggested_agents = classification.suggested_agents
 
@@ -348,10 +362,25 @@ class SuperPlatformCoordinator:
             # Fall back to direct response if no agents suggested
             return self._handle_direct_response(message, classification, context)
 
-        # For now, we'll prepare the agent execution context
-        # Full agent execution will be implemented in Phase 2
-
         agents_to_use = suggested_agents[:3]  # Limit to top 3
+
+        # Session 264: Get spider context for each agent
+        agent_contexts = {}
+        if self.agent_context_service:
+            for agent_name in agents_to_use:
+                try:
+                    agent_ctx = self.agent_context_service.get_context_for_agent(
+                        agent_name=agent_name,
+                        task=message,
+                        user=self.user
+                    )
+                    agent_contexts[agent_name] = agent_ctx
+                    logger.info(
+                        f"Injected spider context for {agent_name}: "
+                        f"{len(agent_ctx.trends)} trends, {len(agent_ctx.style_recommendations)} styles"
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not get spider context for {agent_name}: {e}")
 
         # Build response describing what we would do
         response_parts = [
@@ -360,17 +389,28 @@ class SuperPlatformCoordinator:
         ]
 
         for agent in agents_to_use:
-            response_parts.append(f"- **{agent}**")
+            agent_ctx = agent_contexts.get(agent)
+            if agent_ctx and agent_ctx.style_recommendations:
+                response_parts.append(f"- **{agent}** (using styles: {', '.join(agent_ctx.style_recommendations[:2])})")
+            else:
+                response_parts.append(f"- **{agent}**")
 
-        # Add spider context if available
+        # Add spider context if available - from aggregated context or agent-specific
+        trends_to_show = []
         if context.spider_data.get('trends'):
-            trends = context.spider_data['trends'][:3]
+            trends_to_show = context.spider_data['trends'][:3]
+        elif agent_contexts and agents_to_use:
+            first_agent_ctx = agent_contexts.get(agents_to_use[0])
+            if first_agent_ctx and first_agent_ctx.trends:
+                trends_to_show = first_agent_ctx.trends[:3]
+
+        if trends_to_show:
             response_parts.extend([
                 "",
                 "Current trending context I'll consider:",
             ])
-            for trend in trends:
-                title = trend.get('title', str(trend)) if isinstance(trend, dict) else str(trend)
+            for trend in trends_to_show:
+                title = trend.get('title', trend.get('topic', str(trend))) if isinstance(trend, dict) else str(trend)
                 response_parts.append(f"- {title[:80]}")
 
         # For now, fall back to GPT response with agent context
@@ -385,11 +425,26 @@ class SuperPlatformCoordinator:
 
         system_prompt = self.prompt_builder.build(prompt_context)
 
-        # Add agent execution context
+        # Add agent execution context with spider intelligence
+        spider_context_text = ""
+        if agent_contexts:
+            for agent_name, agent_ctx in agent_contexts.items():
+                if agent_ctx.style_recommendations or agent_ctx.trends:
+                    spider_context_text += f"\n### {agent_name} Spider Intelligence:\n"
+                    if agent_ctx.style_recommendations:
+                        spider_context_text += f"- Recommended styles: {', '.join(agent_ctx.style_recommendations[:3])}\n"
+                    if agent_ctx.trends:
+                        trend_names = [t.get('topic', str(t))[:30] for t in agent_ctx.trends[:3] if isinstance(t, dict)]
+                        if trend_names:
+                            spider_context_text += f"- Current trends: {', '.join(trend_names)}\n"
+
         system_prompt += f"""
 
 ## Agent Execution Mode
 You are coordinating these agents: {', '.join(agents_to_use)}
+
+{spider_context_text if spider_context_text else ''}
+Use the spider intelligence above to inform your decisions and recommendations.
 Provide a detailed plan or execute the creation request.
 If this is a creation request, describe what you would create with specific details.
 """
