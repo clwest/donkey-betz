@@ -1,0 +1,127 @@
+{% comment %}
+Session 277: Campaign Planner Modal
+Campaign Planner Modal (Session 62: Phase C.3)
+Extracted from ai_image_studio.html lines 5751-5871
+{% endcomment %}
+
+<!-- Campaign Planner Modal (Session 62: Phase C.3) -->
+<div class="modal fade" id="campaign-planner-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #667eea;">
+            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                <h5 class="modal-title">&#127919; Campaign Planner</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Choose a campaign template to create a project with pre-configured workflow recommendations:</p>
+
+                <div class="row g-4">
+                    <!-- Brand Launch Campaign -->
+                    <div class="col-md-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; cursor: pointer;" onclick="selectCampaign('brand-launch')">
+                            <div class="card-body text-white">
+                                <h4 class="card-title">&#128640; Brand Launch</h4>
+                                <p class="card-text mb-3">Complete branding package for new business launches</p>
+                                <h6>Recommended Workflows:</h6>
+                                <ul class="small">
+                                    <li>Logo Creator (2-3 variations)</li>
+                                    <li>Social Media Pack (profile images)</li>
+                                    <li>Product Mockup (branding materials)</li>
+                                </ul>
+                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 3-5 days</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Client Portfolio Campaign -->
+                    <div class="col-md-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; cursor: pointer;" onclick="selectCampaign('client-portfolio')">
+                            <div class="card-body text-white">
+                                <h4 class="card-title">&#128100; Client Portfolio</h4>
+                                <p class="card-text mb-3">Professional portrait series with consistent quality</p>
+                                <h6>Recommended Workflows:</h6>
+                                <ul class="small">
+                                    <li>Portrait Enhancer (multiple shots)</li>
+                                    <li>Creative Upscale (4K quality)</li>
+                                    <li>Style Explorer (variations)</li>
+                                </ul>
+                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 2-3 days</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Series Campaign -->
+                    <div class="col-md-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; cursor: pointer;" onclick="selectCampaign('content-series')">
+                            <div class="card-body text-white">
+                                <h4 class="card-title">&#128248; Content Series</h4>
+                                <p class="card-text mb-3">Cohesive content collection for social media</p>
+                                <h6>Recommended Workflows:</h6>
+                                <ul class="small">
+                                    <li>Style Explorer (theme variations)</li>
+                                    <li>Social Media Pack (consistent style)</li>
+                                    <li>Creative Upscale (polish)</li>
+                                </ul>
+                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 1 week</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Marketing Materials Campaign -->
+                    <div class="col-md-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border: none; cursor: pointer;" onclick="selectCampaign('marketing-materials')">
+                            <div class="card-body text-white">
+                                <h4 class="card-title">&#128226; Marketing Materials</h4>
+                                <p class="card-text mb-3">Complete marketing asset package</p>
+                                <h6>Recommended Workflows:</h6>
+                                <ul class="small">
+                                    <li>Product Mockup (ads & banners)</li>
+                                    <li>Social Media Pack (campaigns)</li>
+                                    <li>Logo Creator (brand elements)</li>
+                                </ul>
+                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 4-6 days</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product Launch Campaign -->
+                    <div class="col-md-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border: none; cursor: pointer;" onclick="selectCampaign('product-launch')">
+                            <div class="card-body text-white">
+                                <h4 class="card-title">&#127873; Product Launch</h4>
+                                <p class="card-text mb-3">Product introduction with marketing visuals</p>
+                                <h6>Recommended Workflows:</h6>
+                                <ul class="small">
+                                    <li>Product Mockup (showcase)</li>
+                                    <li>Social Media Pack (announcements)</li>
+                                    <li>Creative Upscale (hero images)</li>
+                                </ul>
+                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 3-4 days</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Campaign -->
+                    <div class="col-md-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border: none; cursor: pointer;" onclick="selectCampaign('custom')">
+                            <div class="card-body text-white">
+                                <h4 class="card-title">&#9889; Custom Campaign</h4>
+                                <p class="card-text mb-3">Build your own workflow sequence</p>
+                                <h6>You Choose:</h6>
+                                <ul class="small">
+                                    <li>Select your own workflows</li>
+                                    <li>Set custom goals</li>
+                                    <li>Define your timeline</li>
+                                </ul>
+                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> Flexible</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #333;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>

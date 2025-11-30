@@ -1,0 +1,91 @@
+# Coverage configuration for pytest-cov
+# Run with: pytest --cov --cov-config=.coveragerc
+
+[run]
+# Measure coverage for these packages
+source =
+    core
+    content
+    agents
+
+# Exclude these from coverage
+omit =
+    */migrations/*
+    */tests/*
+    */__pycache__/*
+    */venv/*
+    */.venv/*
+    */admin.py
+    */apps.py
+    */manage.py
+    */wsgi.py
+    */asgi.py
+    */celery.py
+    */settings.py
+    */settings_*.py
+    */urls.py
+
+# Branch coverage
+branch = True
+
+# Parallel mode for multi-process
+parallel = True
+
+# Context for understanding which tests cover what
+dynamic_context = test_function
+
+[report]
+# Exclude lines from coverage report
+exclude_lines =
+    # Standard exclusions
+    pragma: no cover
+
+    # Debug-only code
+    def __repr__
+    def __str__
+
+    # Defensive assertions
+    raise AssertionError
+    raise NotImplementedError
+
+    # Main blocks
+    if __name__ == .__main__.:
+
+    # Type checking
+    if TYPE_CHECKING:
+    if typing.TYPE_CHECKING:
+
+    # Abstract methods
+    @abstractmethod
+    @abc.abstractmethod
+
+    # Unreachable code
+    pass
+    \.\.\.
+
+# Fail if coverage drops below this
+fail_under = 40
+
+# Show missing lines
+show_missing = True
+
+# Precision for percentages
+precision = 1
+
+# Skip files with no executable code
+skip_empty = True
+
+[html]
+# Output directory for HTML report
+directory = htmlcov
+
+# Title for report
+title = AI Content Studio Coverage Report
+
+[xml]
+# Output file for CI/CD
+output = coverage.xml
+
+[json]
+# Output file for programmatic access
+output = coverage.json

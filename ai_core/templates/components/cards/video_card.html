@@ -1,0 +1,70 @@
+{% comment %}
+Session 275: Video Card Component
+Reusable card for displaying generated videos in galleries
+Extracted from ai_image_studio.html as part of Frontend Componentization
+
+Usage:
+{% include "components/cards/video_card.html" with video=video show_actions=True %}
+
+Required context:
+- video: VideoHistory object with id, video_url, prompt, created_at, is_favorite, duration
+- show_actions: Boolean to show/hide action buttons (default True)
+{% endcomment %}
+
+<div class="unified-gallery-card video-card card {% if video.is_favorite %}is-favorite{% endif %}" data-id="{{ video.id }}" data-type="video">
+    <!-- Selection checkbox -->
+    <div class="position-absolute top-0 start-0 p-2" style="z-index: 10;">
+        <label class="unified-checkbox-label">
+            <input type="checkbox" class="unified-item-checkbox"
+                   data-id="{{ video.id }}"
+                   data-type="video"
+                   onchange="toggleUnifiedSelection(this, {{ video.id }}, 'video')">
+        </label>
+    </div>
+
+    <!-- Video thumbnail/preview -->
+    <div class="card-img-top position-relative" style="background: #000;">
+        <video class="w-100" style="max-height: 200px; object-fit: cover;"
+               muted
+               preload="metadata"
+               onclick="openUnifiedModal({{ video.id }}, 'video')"
+               onmouseenter="this.play()"
+               onmouseleave="this.pause(); this.currentTime=0;">
+            <source src="{{ video.video_url }}" type="video/mp4">
+        </video>
+        {% if video.duration %}
+        <span class="position-absolute bottom-0 end-0 badge bg-dark m-2">
+            {{ video.duration|floatformat:1 }}s
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Card body -->
+    <div class="card-body p-2">
+        <p class="mb-1 small text-truncate" title="{{ video.prompt }}">
+            {{ video.prompt|truncatechars:60 }}
+        </p>
+        <small class="text-muted">{{ video.created_at|timesince }} ago</small>
+    </div>
+
+    {% if show_actions|default:True %}
+    <!-- Action buttons -->
+    <div class="unified-card-actions">
+        <button class="btn btn-action-favorite {% if video.is_favorite %}is-favorite{% endif %}"
+                onclick="toggleFavorite({{ video.id }}, 'video')"
+                title="{% if video.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}">
+            {% if video.is_favorite %}&#9733;{% else %}&#9734;{% endif %}
+        </button>
+        <button class="btn btn-action-download"
+                onclick="downloadContent('{{ video.video_url }}', 'video_{{ video.id }}.mp4')"
+                title="Download">
+            &#8595;
+        </button>
+        <button class="btn btn-action-delete"
+                onclick="deleteContent({{ video.id }}, 'video')"
+                title="Delete">
+            &#128465;
+        </button>
+    </div>
+    {% endif %}
+</div>

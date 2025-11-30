@@ -336,12 +336,14 @@ If asked to create content, explain you can only research and suggest using the 
                 topic_filter = arguments.get('topic_filter')
 
                 if category == 'tech':
-                    results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter)
+                    # Session 274: Exclude ProductHunt from research (shown separately in Trending Now cards)
+                    results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter, include_producthunt=False)
                 elif category == 'creative':
                     # Session 272: For design queries, use get_tech_trends with design filter
                     # since it has topic filtering logic; fallback to creative_trends otherwise
                     if topic_filter == 'design':
-                        results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter='design')
+                        # Session 274: Exclude ProductHunt from research
+                        results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter='design', include_producthunt=False)
                     else:
                         results = self.spider_service.get_creative_trends(hours=hours, limit=limit)
                 elif category == 'jobs':
@@ -351,13 +353,14 @@ If asked to create content, explain you can only research and suggest using the 
                 else:
                     # Session 272: For 'all' category, get trending topics AND tech discussions
                     # This provides both topic summaries AND clickable article links
+                    # Session 274: Exclude ProductHunt from research (shown separately in Trending Now cards)
                     trending_topics = self.spider_service.get_trending_topics(hours=hours, limit=limit)
-                    tech_trends = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter)
+                    tech_trends = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter, include_producthunt=False)
 
                     results = {
                         'topics': trending_topics,
                         'discussions': tech_trends.get('discussions', []),
-                        'projects': tech_trends.get('projects', []),
+                        'projects': tech_trends.get('projects', []),  # Now only GitHub, no ProductHunt
                         'sources': tech_trends.get('sources', {}),
                         'last_updated': tech_trends.get('last_updated')
                     }

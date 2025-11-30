@@ -1,0 +1,71 @@
+{% comment %}
+Session 275: Intelligence Trending Sub-Tab
+Trending topics and category filters
+{% endcomment %}
+
+<!-- ========== TRENDING SUB-TAB ========== -->
+<div class="tab-pane fade show active" id="intel-trending" role="tabpanel">
+    <div class="row">
+        <!-- Trending Topics Column (Main) -->
+        <div class="col-md-8">
+            <div class="card" style="background: #1a1a1a; border: 1px solid rgba(236, 72, 153, 0.3);">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                    <div class="d-flex align-items-center gap-2">
+                        <h5 class="mb-0" style="color: #ec4899;">&#128200; Trending Now</h5>
+                        <span id="trending-filter-indicator" class="badge" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9; font-size: 10px; display: none;">Filtering: All</span>
+                    </div>
+                    <button class="btn btn-sm" onclick="loadTrendingTab()" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
+                        &#128260; Refresh
+                    </button>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <div id="trending-list">
+                        <!-- Trends will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Filters Column -->
+        <div class="col-md-4">
+            <div class="card" style="background: #1a1a1a; border: 1px solid rgba(6, 182, 212, 0.3);">
+                <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                    <h5 class="mb-0" style="color: #22d3ee;">&#127991; Filter by Category</h5>
+                </div>
+                <div class="card-body">
+                    <div id="trending-categories" class="d-flex flex-wrap gap-2">
+                        <span class="badge" onclick="filterTrendsByCategory('all', this)" style="background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">All</span>
+                        <span class="badge" onclick="filterTrendsByCategory('tech', this)" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">&#128187; Tech</span>
+                        <span class="badge" onclick="filterTrendsByCategory('creative', this)" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">&#127912; Creative</span>
+                        <span class="badge" onclick="filterTrendsByCategory('financial', this)" style="background: rgba(34, 197, 94, 0.2); color: #86efac; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">&#128176; Finance</span>
+                        <span class="badge" onclick="filterTrendsByCategory('jobs', this)" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">&#128188; Jobs</span>
+                        <span class="badge" onclick="filterTrendsByCategory('news', this)" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">&#128240; News</span>
+                        <span class="badge" onclick="filterTrendsByCategory('crypto', this)" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; cursor: pointer; transition: all 0.2s; padding: 8px 12px;">&#8383; Crypto</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card mt-3" style="background: #1a1a1a; border: 1px solid #333;">
+                <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                    <h6 class="mb-0" style="color: #a78bfa;">&#128202; Quick Stats</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Last Updated</span>
+                        <span style="color: #22c55e;" id="intel-last-updated">Just now</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Active Sources</span>
+                        <span style="color: #f97316;">24</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Data Freshness</span>
+                        <span style="color: #22c55e;">&#9679; Live</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- END TRENDING SUB-TAB -->

@@ -857,7 +857,7 @@ from core.views_davinci import (
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
-    image_history, toggle_favorite, delete_image, batch_download_images,
+    image_history, toggle_favorite, delete_image, batch_download_images, serve_image,
     control_sketch, control_structure, control_unified, execute_workflow_step, unified_gallery, session_gallery, list_sessions, get_project_sessions, get_session_analytics, get_session_assets, delete_session, promote_session_to_project, unified_batch_download, unified_toggle_favorite,
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
@@ -1849,6 +1849,7 @@ urlpatterns = [
     path('api/v1/images/upload/', lambda r: __import__('core.views_image', fromlist=['upload_image']).upload_image(r), name='upload-image'),  # Session 197
     path('api/images/<uuid:image_id>/favorite/', toggle_favorite, name='toggle-favorite'),
     path('api/images/<uuid:image_id>/delete/', delete_image, name='delete-image'),
+    path('api/images/<uuid:image_id>/view/', serve_image, name='serve-image'),  # Session 293: Serve image data
     path('api/images/view/<uuid:image_id>/', track_image_view, name='track-image-view'),  # Session 53: Track views
     path('api/images/download/<uuid:image_id>/', track_image_download, name='track-image-download'),  # Session 53: Track downloads
 

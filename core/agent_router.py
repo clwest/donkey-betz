@@ -3,6 +3,8 @@ Agent Router - Deterministic Routing to Specialized Agents
 ===========================================================
 
 Session 268: Phase 1 & 2 - Complete Agent Ecosystem
+Session 280: Phase 2 - Added Strategy and Executive Agents
+Session 280: Phase 3 - Added Analysis, Training, and Security Agents
 
 This router provides DETERMINISTIC routing to specialized agents.
 No LLM is involved in routing decisions - it's a simple dictionary lookup.
@@ -42,6 +44,29 @@ Available Agents:
     Research:
     - ResearchAgent: Web search + spider network queries
 
+    Strategy (Session 280):
+    - ContentStrategyAgent: Content recommendations based on trends
+    - BrandIdentityAgent: Brand consistency management
+    - SEOOptimizerAgent: Hashtags, keywords, metadata
+    - SocialMediaAgent: Platform-specific content strategy
+
+    Executive (Session 280):
+    - CTOAgent: Technical planning and analysis
+    - COOAgent: Operations planning and risk analysis
+    - CreativeDirectorAgent: Creative guidance and prompt enhancement
+    - MeetingCoordinatorAgent: Coordinates meetings between agents
+
+    Analysis (Session 280 Phase 3):
+    - TrendAnalysisAgent: Spider intelligence analysis
+    - OpportunityScoringAgent: Opportunity scoring engine
+
+    Training (Session 280 Phase 3):
+    - CharacterTrainingAgent: FLUX LoRA character training
+    - TrainedCreationAgent: LoRA image generation
+
+    Security (Session 280 Phase 3):
+    - MemoryIsolationAgent: Memory isolation and security
+
     Orchestration:
     - WorkflowAgent: Multi-step workflow coordination
 """
@@ -59,6 +84,39 @@ from core.agents.video_editing_agent import VideoEditingAgent
 from core.agents.research_agent import ResearchAgent
 from core.agents.workflow_agent import WorkflowAgent
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
+
+# Session 280: Strategy Agents
+from core.agents.strategy import (
+    ContentStrategyAgent,
+    BrandIdentityAgent,
+    SEOOptimizerAgent,
+    SocialMediaAgent,
+)
+
+# Session 280: Executive Agents
+from core.agents.executive import (
+    CTOAgent,
+    COOAgent,
+    CreativeDirectorAgent,
+    MeetingCoordinatorAgent,
+)
+
+# Session 280 Phase 3: Analysis Agents
+from core.agents.analysis import (
+    TrendAnalysisAgent,
+    OpportunityScoringAgent,
+)
+
+# Session 280 Phase 3: Training Agents
+from core.agents.training import (
+    CharacterTrainingAgent,
+    TrainedCreationAgent,
+)
+
+# Session 280 Phase 3: Security Agents
+from core.agents.security import (
+    MemoryIsolationAgent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +142,7 @@ class AgentRouter:
 
     # Map agent names to agent classes
     # Session 268: Complete agent ecosystem
+    # Session 280: Added Strategy and Executive agents
     AGENT_MAP: Dict[str, Type[BaseAgent]] = {
         # Creation Agents
         "ImageAgent": ImageAgent,
@@ -97,6 +156,29 @@ class AgentRouter:
 
         # Research Agents
         "ResearchAgent": ResearchAgent,
+
+        # Strategy Agents (Session 280)
+        "ContentStrategyAgent": ContentStrategyAgent,
+        "BrandIdentityAgent": BrandIdentityAgent,
+        "SEOOptimizerAgent": SEOOptimizerAgent,
+        "SocialMediaAgent": SocialMediaAgent,
+
+        # Executive Agents (Session 280)
+        "CTOAgent": CTOAgent,
+        "COOAgent": COOAgent,
+        "CreativeDirectorAgent": CreativeDirectorAgent,
+        "MeetingCoordinatorAgent": MeetingCoordinatorAgent,
+
+        # Analysis Agents (Session 280 Phase 3)
+        "TrendAnalysisAgent": TrendAnalysisAgent,
+        "OpportunityScoringAgent": OpportunityScoringAgent,
+
+        # Training Agents (Session 280 Phase 3)
+        "CharacterTrainingAgent": CharacterTrainingAgent,
+        "TrainedCreationAgent": TrainedCreationAgent,
+
+        # Security Agents (Session 280 Phase 3)
+        "MemoryIsolationAgent": MemoryIsolationAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,

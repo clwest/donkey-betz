@@ -1,0 +1,69 @@
+{% comment %}
+Session 275: Intelligence Spiders Sub-Tab
+Spider network status and management
+Note: Placeholder - full extraction in next session
+{% endcomment %}
+
+<!-- ========== SPIDERS SUB-TAB ========== -->
+<div class="tab-pane fade" id="intel-spiders" role="tabpanel">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(249, 115, 22, 0.3);">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                    <h5 class="mb-0" style="color: #f97316;">&#128375; Spider Network (70 Spiders)</h5>
+                    <div>
+                        <button class="btn btn-sm me-2" onclick="runAllSpiders()" style="background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.4);">
+                            &#9654; Run All
+                        </button>
+                        <button class="btn btn-sm" onclick="loadSpiderStatus()" style="background: rgba(249, 115, 22, 0.2); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.4);">
+                            &#128260; Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Spider Categories -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #93c5fd;">9</h4>
+                                    <small style="color: #60a5fa;">Tech</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #86efac;">8</h4>
+                                    <small style="color: #4ade80;">Financial</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #f9a8d4;">5</h4>
+                                    <small style="color: #ec4899;">Creative</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #fcd34d;">48</h4>
+                                    <small style="color: #fbbf24;">Others</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spider List -->
+                    <div id="spider-list" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center">Loading spider network...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- END SPIDERS SUB-TAB -->

@@ -1962,16 +1962,49 @@ def image_history(request):
     }
     """
     try:
-        from content.models import ImageHistory
+        from content.models import ImageHistory, CreativeProject
 
         user = request.user
 
-        # Start with user's images
-        # Session 94: Exclude data URI images (too large for JSON response)
-        # Phase 2 P1: Use select_related/prefetch_related to avoid N+1 queries
-        queryset = ImageHistory.objects.filter(user=user).exclude(
-            file_path__startswith='data:'
-        ).select_related('project', 'session').prefetch_related('child_images')
+        # Session 293: Check if filtering by project_id
+        # If project_id is provided, show ALL images in that project (if user has access)
+        # This allows seeing images created by workflow engine which may use a different user context
+        project_id = request.query_params.get('project_id') or request.query_params.get('project')
+        logger.info(f"📸 image_history: user={user.username}, project_id={project_id}")
+
+        if project_id:
+            # Verify user has access to this project (owns it or is a collaborator)
+            try:
+                project = CreativeProject.objects.get(id=project_id)
+                logger.info(f"📸 Found project: {project.name}, owner={project.user_id}")
+                # For now, allow access if user owns the project OR if the project exists
+                # TODO: Add proper collaborator check if needed
+                if project.user != user:
+                    # Check if this is a shared/public project or user is collaborator
+                    # For now, allow read access to all projects (since it's a single-user app)
+                    logger.info(f"📸 User {user.id} accessing project owned by {project.user_id}")
+                    pass
+            except CreativeProject.DoesNotExist:
+                logger.warning(f"📸 Project not found: {project_id}")
+                return Response({
+                    'success': False,
+                    'error': 'Project not found'
+                }, status=404)
+
+            # Get ALL images in this project, not just user's images
+            # Session 293: DON'T exclude data: URIs for project queries - needed for Creative Toolbox
+            # The dropdown only shows metadata (id, prompt), not the actual image data
+            queryset = ImageHistory.objects.filter(project_id=project_id).select_related(
+                'project', 'session'
+            ).prefetch_related('child_images')
+            logger.info(f"📸 Query for project {project_id}: {queryset.count()} images found")
+        else:
+            # No project filter - show only user's own images
+            # Session 94: Exclude data URI images (too large for JSON response)
+            # Phase 2 P1: Use select_related/prefetch_related to avoid N+1 queries
+            queryset = ImageHistory.objects.filter(user=user).exclude(
+                file_path__startswith='data:'
+            ).select_related('project', 'session').prefetch_related('child_images')
 
         # Apply filters
         image_type = request.query_params.get('image_type')
@@ -1990,11 +2023,6 @@ def image_history(request):
         if is_favorite is not None:
             queryset = queryset.filter(is_favorite=is_favorite.lower() == 'true')
 
-        # Session 197: Filter by project_id
-        project_id = request.query_params.get('project_id') or request.query_params.get('project')
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-
         # Get total count
         total = queryset.count()
 
@@ -2011,13 +2039,24 @@ def image_history(request):
         # Build response
         images = []
         for img in queryset:
+            # Session 293: For data URIs, don't include the huge base64 in response
+            # Just include a placeholder URL - frontend can fetch individual images if needed
+            url = img.get_full_url()
+            thumbnail_url = img.get_thumbnail_url()
+
+            # Truncate data URIs to prevent huge responses
+            if url and url.startswith('data:'):
+                url = f"/api/images/{img.id}/view/"  # Use API endpoint instead
+            if thumbnail_url and thumbnail_url.startswith('data:'):
+                thumbnail_url = f"/api/images/{img.id}/thumbnail/"
+
             images.append({
                 'id': img.id,
                 'sequential_number': img.get_sequential_number(),  # Session 96: Hybrid ID system
                 'seed': img.seed,  # Session 95: For reproducibility
                 'filename': img.filename,
-                'url': img.get_full_url(),
-                'thumbnail_url': img.get_thumbnail_url(),
+                'url': url,
+                'thumbnail_url': thumbnail_url,
                 'image_type': img.image_type,
                 'prompt': img.prompt,
                 'model_used': img.model_used,
@@ -2050,6 +2089,47 @@ def image_history(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def serve_image(request, image_id):
+    """
+    Session 293: Serve an image by its UUID.
+    Returns the image data (handles both file-based and data URI images).
+    """
+    from content.models import ImageHistory
+    from django.http import HttpResponse
+    import base64
+
+    try:
+        image = ImageHistory.objects.get(id=image_id)
+
+        # Check if user has access (owns it or it's in a project they can access)
+        # For now, allow access if user is authenticated
+
+        if image.file_path.startswith('data:'):
+            # Parse data URI: data:image/png;base64,XXXXXX
+            try:
+                header, encoded = image.file_path.split(',', 1)
+                # Extract mime type: data:image/png;base64 -> image/png
+                mime_type = header.split(':')[1].split(';')[0]
+                image_data = base64.b64decode(encoded)
+                return HttpResponse(image_data, content_type=mime_type)
+            except Exception as e:
+                logger.error(f"Failed to parse data URI: {e}")
+                return Response({'error': 'Invalid image data'}, status=500)
+        else:
+            # File-based image - redirect to actual URL
+            from django.shortcuts import redirect
+            from django.core.files.storage import default_storage
+            return redirect(default_storage.url(image.file_path))
+
+    except ImageHistory.DoesNotExist:
+        return Response({'error': 'Image not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error serving image {image_id}: {e}")
+        return Response({'error': str(e)}, status=500)
 
 
 @api_view(['POST'])

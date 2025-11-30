@@ -1,0 +1,60 @@
+{% comment %}
+Session 275: Image Card Component
+Reusable card for displaying generated images in galleries
+Extracted from ai_image_studio.html as part of Frontend Componentization
+
+Usage:
+{% include "components/cards/image_card.html" with image=image show_actions=True %}
+
+Required context:
+- image: ImageHistory object with id, image_url, prompt, created_at, is_favorite
+- show_actions: Boolean to show/hide action buttons (default True)
+{% endcomment %}
+
+<div class="image-card unified-gallery-card {% if image.is_favorite %}is-favorite{% endif %}" data-id="{{ image.id }}" data-type="image">
+    <!-- Selection checkbox -->
+    <div class="position-absolute top-0 start-0 p-2" style="z-index: 10;">
+        <label class="unified-checkbox-label">
+            <input type="checkbox" class="unified-item-checkbox image-select-checkbox"
+                   data-id="{{ image.id }}"
+                   data-type="image"
+                   onchange="toggleUnifiedSelection(this, {{ image.id }}, 'image')">
+        </label>
+    </div>
+
+    <!-- Image -->
+    <img src="{{ image.image_url }}"
+         alt="{{ image.prompt|truncatechars:50 }}"
+         class="card-img-top"
+         loading="lazy"
+         onclick="openUnifiedModal({{ image.id }}, 'image')">
+
+    <!-- Overlay with prompt -->
+    <div class="image-overlay">
+        <p class="mb-1 small text-truncate" title="{{ image.prompt }}">
+            {{ image.prompt|truncatechars:80 }}
+        </p>
+        <small class="text-muted">{{ image.created_at|timesince }} ago</small>
+    </div>
+
+    {% if show_actions|default:True %}
+    <!-- Action buttons -->
+    <div class="unified-card-actions">
+        <button class="btn btn-action-favorite {% if image.is_favorite %}is-favorite{% endif %}"
+                onclick="toggleFavorite({{ image.id }}, 'image')"
+                title="{% if image.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}">
+            {% if image.is_favorite %}&#9733;{% else %}&#9734;{% endif %}
+        </button>
+        <button class="btn btn-action-download"
+                onclick="downloadContent('{{ image.image_url }}', 'image_{{ image.id }}.png')"
+                title="Download">
+            &#8595;
+        </button>
+        <button class="btn btn-action-delete"
+                onclick="deleteContent({{ image.id }}, 'image')"
+                title="Delete">
+            &#128465;
+        </button>
+    </div>
+    {% endif %}
+</div>

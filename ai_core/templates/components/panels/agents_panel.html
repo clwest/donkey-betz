@@ -1,0 +1,91 @@
+{% comment %}
+Session 275: Agents Panel - Main Container
+Agent Collaboration & Intelligence Dashboard with 6 sub-tabs
+Extracted from ai_image_studio.html as part of Frontend Componentization
+
+Sub-tabs:
+1. Overview - Network stats and learning activity
+2. Social - Live learning feed, agent conversations, dreams
+3. Intelligence - Hive mind, consultations
+4. Growth - Evolution, mood, relationships
+5. Memory - Memory palace, time travel
+6. Workflows - Workflow analytics, training, executions
+{% endcomment %}
+
+<div class="tab-pane fade" id="agents" role="tabpanel">
+    <h3 class="mb-3">&#129309; Agent Collaboration & Intelligence</h3>
+
+    <!-- Sub-Tab Navigation -->
+    <ul class="nav nav-pills mb-4" id="agents-subtabs" role="tablist" style="border-bottom: 1px solid #333; padding-bottom: 10px;">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="agents-overview-tab" data-bs-toggle="pill" data-bs-target="#agents-overview" type="button" role="tab" style="color: #8b5cf6;">
+                &#128202; Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="agents-social-tab" data-bs-toggle="pill" data-bs-target="#agents-social" type="button" role="tab" style="color: #ec4899;">
+                &#128172; Social
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="agents-intelligence-tab" data-bs-toggle="pill" data-bs-target="#agents-intelligence" type="button" role="tab" style="color: #06b6d4;">
+                &#129504; Intelligence
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="agents-growth-tab" data-bs-toggle="pill" data-bs-target="#agents-growth" type="button" role="tab" style="color: #22c55e;">
+                &#128200; Growth
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="agents-memory-tab" data-bs-toggle="pill" data-bs-target="#agents-memory" type="button" role="tab" style="color: #a855f7;">
+                &#127963; Memory
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="agents-workflows-tab" data-bs-toggle="pill" data-bs-target="#agents-workflows" type="button" role="tab" style="color: #f59e0b;">
+                &#9881; Workflows
+            </button>
+        </li>
+    </ul>
+    <style>
+        #agents-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
+        #agents-subtabs .nav-link:hover { background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; }
+        #agents-subtabs .nav-link.active { background: rgba(139, 92, 246, 0.2) !important; border-color: #8b5cf6 !important; color: #8b5cf6 !important; }
+    </style>
+
+    <!-- Loading State -->
+    <div id="agents-loading" class="text-center py-5">
+        <div class="spinner-border" style="color: #8b5cf6;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading agent intelligence...</p>
+    </div>
+
+    <!-- Agents Container (hidden until loaded) -->
+    <div id="agents-container" style="display: none;">
+
+        <!-- Sub-Tab Content -->
+        <div class="tab-content" id="agents-subtabs-content">
+
+            <!-- Overview Sub-Tab -->
+            {% include "components/panels/agents/agents_overview.html" %}
+
+            <!-- Social Sub-Tab -->
+            {% include "components/panels/agents/agents_social.html" %}
+
+            <!-- Intelligence Sub-Tab -->
+            {% include "components/panels/agents/agents_intelligence.html" %}
+
+            <!-- Growth Sub-Tab -->
+            {% include "components/panels/agents/agents_growth.html" %}
+
+            <!-- Memory Sub-Tab -->
+            {% include "components/panels/agents/agents_memory.html" %}
+
+            <!-- Workflows Sub-Tab -->
+            {% include "components/panels/agents/agents_workflows.html" %}
+
+        </div>
+    </div>
+</div>

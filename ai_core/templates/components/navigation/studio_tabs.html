@@ -1,0 +1,166 @@
+{% comment %}
+Session 275: Studio Tabs Navigation Component
+Main navigation tabs for the AI Studio interface
+Extracted from ai_image_studio.html as part of Frontend Componentization
+
+NOTE: Many tabs are hidden (style="display: none;") as per Session 197 streamlining.
+The visible tabs are: Assistant, Projects, Portfolio, Leadership, Preferences, Agents,
+Intelligence, Marketplace, Collaborate, Analytics, Opportunities, Teams, Distribute
+{% endcomment %}
+
+<ul class="nav nav-tabs" id="studioTabs" role="tablist">
+    <!-- AI Assistant Tab (Primary Interaction Point) -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="assistant-tab" data-bs-toggle="tab" data-bs-target="#assistant" type="button" role="tab" title="Your AI Assistant - Voice & Text Commands">
+            &#129302; Assistant
+        </button>
+    </li>
+
+    <!-- Images tab HIDDEN - Tools now in Project Creative Toolbox -->
+    <li class="nav-item" role="presentation" style="display: none;">
+        <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab" title="AI Image Generation & Editing">
+            &#127912; Images
+        </button>
+    </li>
+
+    <!-- Characters tab HIDDEN - Tools now in Project Creative Toolbox -->
+    <li class="nav-item" role="presentation" style="display: none;">
+        <button class="nav-link" id="character-training-tab" data-bs-toggle="tab" data-bs-target="#character-training" type="button" role="tab" title="Train custom character models">
+            &#129489;&#8205;&#127912; Characters
+        </button>
+    </li>
+
+    <!-- Video tab HIDDEN -->
+    <li class="nav-item" role="presentation" style="display: none;">
+        <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" title="AI Video Generation">
+            &#127916; Video
+        </button>
+    </li>
+
+    <!-- Audio tab HIDDEN -->
+    <li class="nav-item" role="presentation" style="display: none;">
+        <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" title="AI Audio Generation">
+            &#127925; Audio
+        </button>
+    </li>
+
+    <!-- Gallery tab HIDDEN -->
+    <li class="nav-item" role="presentation" style="display: none;">
+        <button class="nav-link" id="all-gallery-tab" data-bs-toggle="tab" data-bs-target="#all-gallery" type="button" role="tab" title="Browse all content">
+            &#128202; All Gallery
+        </button>
+    </li>
+
+    <!-- Projects - NOW THE MAIN WORKSPACE -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button" role="tab" title="Your creative workspace - all tools in one place!">
+            &#128193; Projects
+        </button>
+    </li>
+
+    <!-- Sessions HIDDEN (integrated into Projects) -->
+    <li class="nav-item" role="presentation" style="display: none;">
+        <button class="nav-link" id="sessions-tab" data-bs-toggle="tab" data-bs-target="#sessions" type="button" role="tab" title="View and manage all AI sessions">
+            &#128221; Sessions
+        </button>
+    </li>
+
+    <!-- Portfolio -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="portfolio-tab" data-bs-toggle="tab" data-bs-target="#portfolio" type="button" role="tab" title="Showcase your best work">
+            &#127912; Portfolio
+        </button>
+    </li>
+
+    <!-- Leadership Dashboard -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="leadership-tab" data-bs-toggle="tab" data-bs-target="#leadership" type="button" role="tab" title="Your AI-Human Co-Leadership Dashboard">
+            &#127919; Leadership
+        </button>
+    </li>
+
+    <!-- Preferences Dashboard -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" title="Your AI Learning Preferences">
+            &#129504; Preferences
+        </button>
+    </li>
+
+    <!-- Agent Intelligence Dashboard -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="agents-tab" data-bs-toggle="tab" data-bs-target="#agents" type="button" role="tab" title="Agent Collaboration & Intelligence">
+            &#129309; Agents
+        </button>
+    </li>
+
+    <!-- Unified Intelligence Hub -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="trending-tab" data-bs-toggle="tab" data-bs-target="#trending" type="button" role="tab" title="Intelligence Hub - Spiders & Data">
+            &#128302; Intelligence
+        </button>
+    </li>
+
+    <!-- Workflow Marketplace -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="marketplace-tab" data-bs-toggle="tab" data-bs-target="#marketplace" type="button" role="tab" title="Community Workflow Marketplace">
+            &#127978; Marketplace
+        </button>
+    </li>
+
+    <!-- Real-Time Collaboration -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="collaborate-tab" data-bs-toggle="tab" data-bs-target="#collaborate" type="button" role="tab" title="Real-Time Project Collaboration">
+            &#128101; Collaborate
+        </button>
+    </li>
+
+    <!-- Advanced Analytics -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab" title="Analytics & Performance Monitoring">
+            &#128202; Analytics
+        </button>
+    </li>
+
+    <!-- Opportunities -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="opportunities-tab" data-bs-toggle="tab" data-bs-target="#opportunities" type="button" role="tab" title="Discover and Act on Opportunities">
+            &#127919; Opportunities
+        </button>
+    </li>
+
+    <!-- Teams -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" title="Multi-Agent Team Collaboration">
+            &#128101; Teams
+        </button>
+    </li>
+
+    <!-- Distribution -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="distribution-tab" data-bs-toggle="tab" data-bs-target="#distribution" type="button" role="tab" title="Smart Content Distribution">
+            &#128640; Distribute
+        </button>
+    </li>
+
+    <!-- Notification Bell (positioned to the right) -->
+    <li class="nav-item ms-auto" role="presentation">
+        <div class="dropdown">
+            <button class="btn position-relative" type="button" id="notificationBellDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; border: none; color: #f9a8d4; padding: 8px 12px;" title="Notifications">
+                <span style="font-size: 1.2rem;">&#128276;</span>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none; font-size: 0.65rem;">
+                    0
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationBellDropdown" style="width: 350px; max-height: 400px; overflow-y: auto; background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(236, 72, 153, 0.4);">
+                <li class="dropdown-header d-flex justify-content-between align-items-center" style="color: #ec4899;">
+                    <strong>Notifications</strong>
+                    <button class="btn btn-sm btn-link text-decoration-none" style="color: #f9a8d4;" onclick="markAllNotificationsRead()">Mark all read</button>
+                </li>
+                <li><hr class="dropdown-divider" style="border-color: rgba(236, 72, 153, 0.2);"></li>
+                <li id="notificationList" class="px-3 py-2 text-center text-muted">
+                    No new notifications
+                </li>
+            </ul>
+        </div>
+    </li>
+</ul>

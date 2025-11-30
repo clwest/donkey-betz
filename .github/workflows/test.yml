@@ -1,0 +1,153 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, master, develop, feature/* ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'ci_test_only' }}
+          POSTGRES_DB: test_unified_donkey_betz
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-django pytest-asyncio factory_boy
+
+      - name: Create pgvector extension
+        env:
+          PGPASSWORD: ${{ secrets.CI_DB_PASSWORD || 'ci_test_only' }}
+        run: |
+          psql -h localhost -U ci_user -d test_unified_donkey_betz -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      - name: Run tests with coverage
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_unified_donkey_betz
+          DB_USER: ci_user
+          DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+          DJANGO_SETTINGS_MODULE: tests.django_test_settings
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'ci-test-secret-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          STABILITY_API_KEY: ${{ secrets.STABILITY_API_KEY }}
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          pytest tests/ \
+            --cov=core \
+            --cov=content \
+            --cov=agents \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-config=.coveragerc \
+            --ignore=tests/e2e \
+            --ignore=tests/frontend \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+
+      - name: Check code formatting with Black
+        run: |
+          black --check --diff core/ agents/ content/ tests/ || true
+
+      - name: Check import sorting with isort
+        run: |
+          isort --check-only --diff core/ agents/ content/ tests/ || true
+
+      - name: Lint with flake8
+        run: |
+          flake8 core/ agents/ content/ \
+            --count \
+            --select=E9,F63,F7,F82 \
+            --show-source \
+            --statistics
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Run Bandit security scan
+        run: |
+          bandit -r core/ agents/ content/ -ll -ii || true
+
+      - name: Check for known vulnerabilities
+        run: |
+          pip install -r requirements.txt
+          safety check || true
