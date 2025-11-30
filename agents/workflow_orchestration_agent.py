@@ -545,6 +545,103 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     'description': 'Organize into product launch kit'
                 }
             ]
+        },
+
+        # =========================================================================
+        # SESSION 293: BUSINESS RESEARCH WORKFLOWS - No Image/Video API Calls
+        # =========================================================================
+
+        # Full Business Research - Competitor + Customer + Market Analysis
+        'business_research': {
+            'description': 'Comprehensive business research: competitors, customers, market sizing',
+            'content_type': 'business_research',
+            'no_image_generation': True,  # Flag to skip image generation steps
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'market_research',
+                    'agent': 'research_agent',
+                    'description': 'Research market trends and industry landscape'
+                },
+                {
+                    'step': 2,
+                    'name': 'competitor_analysis',
+                    'agent': 'competitor_analysis_agent',
+                    'description': 'Analyze competitors, features, pricing, positioning'
+                },
+                {
+                    'step': 3,
+                    'name': 'customer_research',
+                    'agent': 'customer_research_agent',
+                    'description': 'Research customer pain points, personas, sentiment'
+                },
+                {
+                    'step': 4,
+                    'name': 'synthesize_findings',
+                    'agent': 'strategic_synthesis',
+                    'description': 'Synthesize all research into actionable insights'
+                }
+            ]
+        },
+
+        # Competitor Deep Dive
+        'competitor_analysis': {
+            'description': 'Deep dive into competitors in a specific market',
+            'content_type': 'competitor_research',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'identify_competitors',
+                    'agent': 'research_agent',
+                    'description': 'Identify key competitors in the market'
+                },
+                {
+                    'step': 2,
+                    'name': 'analyze_competitors',
+                    'agent': 'competitor_analysis_agent',
+                    'description': 'Deep analysis of each competitor'
+                },
+                {
+                    'step': 3,
+                    'name': 'generate_swot',
+                    'agent': 'competitor_analysis_agent',
+                    'description': 'Generate SWOT analysis and positioning map'
+                }
+            ]
+        },
+
+        # Customer Persona Development
+        'customer_personas': {
+            'description': 'Research and build detailed customer personas',
+            'content_type': 'customer_research',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'gather_discussions',
+                    'agent': 'customer_research_agent',
+                    'description': 'Search Reddit, forums for customer discussions'
+                },
+                {
+                    'step': 2,
+                    'name': 'extract_pain_points',
+                    'agent': 'customer_research_agent',
+                    'description': 'Extract and rank customer pain points'
+                },
+                {
+                    'step': 3,
+                    'name': 'build_personas',
+                    'agent': 'customer_research_agent',
+                    'description': 'Build 2-3 detailed customer personas'
+                },
+                {
+                    'step': 4,
+                    'name': 'extract_quotes',
+                    'agent': 'customer_research_agent',
+                    'description': 'Extract powerful customer quotes for messaging'
+                }
+            ]
         }
     }
 

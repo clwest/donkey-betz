@@ -67,6 +67,10 @@ Available Agents:
     Security (Session 280 Phase 3):
     - MemoryIsolationAgent: Memory isolation and security
 
+    Business Research (Session 293):
+    - CompetitorAnalysisAgent: Competitor analysis and SWOT
+    - CustomerResearchAgent: Customer personas and pain points
+
     Orchestration:
     - WorkflowAgent: Multi-step workflow coordination
 """
@@ -116,6 +120,12 @@ from core.agents.training import (
 # Session 280 Phase 3: Security Agents
 from core.agents.security import (
     MemoryIsolationAgent,
+)
+
+# Session 293: Business Research Agents
+from core.agents.business import (
+    CompetitorAnalysisAgent,
+    CustomerResearchAgent,
 )
 
 logger = logging.getLogger(__name__)
@@ -179,6 +189,10 @@ class AgentRouter:
 
         # Security Agents (Session 280 Phase 3)
         "MemoryIsolationAgent": MemoryIsolationAgent,
+
+        # Business Research Agents (Session 293)
+        "CompetitorAnalysisAgent": CompetitorAnalysisAgent,
+        "CustomerResearchAgent": CustomerResearchAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,
