@@ -383,10 +383,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             },
 
             # Session 173: Co-Leadership Agent (Conversational AI-Human collaboration)
+            # Session 293: Updated to defer to workflow_orchestration_agent for research+create
             {
                 "type": "function",
                 "name": "coleadership_agent",
-                "description": "Get collaborative opinions and recommendations from AI executive team (CTO, COO, Creative Director, CFO, Data Analyst) on creative decisions. Use when user asks 'what do you think', 'should we', 'get opinions', 'is this a good direction', 'thoughts on', 'feedback on', 'worth pursuing', 'ask the team', etc. Can reference specific images/content to get opinions on style, direction, or training decisions.",
+                "description": "Get opinions from AI executive team on EXISTING content or decisions. Use when user asks 'what do you think about X', 'get feedback on image 5', 'is this style good'. IMPORTANT: If user wants research AND creation (e.g., 'research X and create Y'), use workflow_orchestration_agent instead - it includes executive review automatically. Only use this for standalone opinion requests on existing work.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -477,10 +478,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             },
 
             # Session 184: Web Search Tool - RESTORED from Session 65!
+            # Session 293: Updated to defer to workflow_orchestration_agent for research+create
             {
                 "type": "function",
                 "name": "web_search",
-                "description": "Search the web using Google via Serper API. Use this when the user asks for current information, trends, research, competitor analysis, or needs to find something online. CRITICAL: Use this tool when user says 'research', 'find out about', 'search for', 'look up', 'what are the latest', etc. This enables the 'research and create' autonomous workflow where you can research a topic then generate content based on findings.",
+                "description": "Search the web for information ONLY. Use for pure research requests like 'what's trending', 'look up X', 'find information about Y'. IMPORTANT: If user wants BOTH research AND creation (e.g., 'research X and create/generate Y'), use workflow_orchestration_agent instead - it handles the complete workflow internally. Only use web_search for standalone research with no creation request.",
                 "parameters": {
                     "type": "object",
                     "properties": {
