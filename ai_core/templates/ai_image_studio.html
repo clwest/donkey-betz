@@ -24089,7 +24089,16 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 189: Added markdown image support
                 // Session 195: Added markdown links, headers, bold, italic, blockquotes, hr
                 // Session 266: Added code block support with syntax highlighting hint
+                // Session 293: Added raw HTML preservation for research results
                 if (!text) return '';
+
+                // Session 293: Preserve raw HTML blocks (marked with <!-- RAW_HTML --> ... <!-- /RAW_HTML -->)
+                // Extract and store them, replace with placeholders, then restore after processing
+                const rawHtmlBlocks = [];
+                text = text.replace(/<!-- RAW_HTML -->([\s\S]*?)<!-- \/RAW_HTML -->/g, (match, htmlContent) => {
+                    rawHtmlBlocks.push(htmlContent);
+                    return `__RAW_HTML_PLACEHOLDER_${rawHtmlBlocks.length - 1}__`;
+                });
 
                 // Session 266: Convert fenced code blocks ```language ... ``` to <pre><code>
                 // Must be done FIRST before any other processing to preserve code content
@@ -24223,6 +24232,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     formatted += '<p style="margin: 0.75em 0;">' + currentParagraph + '</p>';
                 }
 
+                // Session 293: Restore raw HTML blocks from placeholders
+                rawHtmlBlocks.forEach((html, index) => {
+                    formatted = formatted.replace(`__RAW_HTML_PLACEHOLDER_${index}__`, html);
+                });
+
                 return formatted;
             }
 
@@ -24324,19 +24338,31 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const isReflection = originalContent.includes('🧠 **Reflection:**') ||
                                     originalContent.includes('**Learning Insight:**');
 
+                // Session 293: Check if content contains raw HTML that should NOT be formatted
+                const hasRawHtml = originalContent.includes('<!-- RAW_HTML -->') ||
+                                   originalContent.includes('class="research-results"');
+
                 // Session 64: Format assistant messages for readability
                 // Session 201: Also format temporary messages (thinking indicators) so markdown renders properly
-                if (role === 'assistant') {
+                // Session 293: Skip formatting for raw HTML content (research results)
+                if (role === 'assistant' && !hasRawHtml) {
                     content = this.formatMessage(content);
+                } else if (role === 'assistant' && hasRawHtml) {
+                    // For raw HTML, just strip the markers but don't process
+                    content = content.replace(/<!-- RAW_HTML -->/g, '').replace(/<!-- \/RAW_HTML -->/g, '');
                 }
 
                 // Session 65: Skip prompt detection for temporary/progress messages AND tool result messages
                 // Tool results already show executed content - no need to offer buttons to re-execute
-                const isToolResult = originalContent.includes('✅ **Image Generated!**') ||
+                // Session 293: Also skip for raw HTML research results
+                const isToolResult = hasRawHtml ||
+                                   originalContent.includes('✅ **Image Generated!**') ||
                                    originalContent.includes('✅ **Video Generation Started!**') ||
                                    originalContent.includes('✅ **Search Results') ||
                                    originalContent.includes('✅ **Scraped:') ||
-                                   originalContent.includes('✅ **Email Sent!**');
+                                   originalContent.includes('✅ **Email Sent!**') ||
+                                   originalContent.includes('<!-- RAW_HTML -->') ||
+                                   originalContent.includes('class="research-results"');
 
                 const detectedPrompts = (isTemporary || isToolResult) ?
                     { hasImagePrompts: false, hasVideoPrompts: false, hasAudioPrompts: false, imagePrompts: [], videoPrompts: [], audioPrompts: [] } :
@@ -24891,6 +24917,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     // Handle artifacts (generated images, videos, etc.)
                     if (cleanData.artifacts && cleanData.artifacts.length > 0) {
                         responseHtml += this.formatCleanArchitectureArtifacts(cleanData.artifacts);
+                    }
+
+                    // Session 293: Handle business research results (CompetitorAnalysisAgent, CustomerResearchAgent)
+                    if (cleanData.metadata?.agent_result?.raw_data) {
+                        const rawData = cleanData.metadata.agent_result.raw_data;
+                        const agentName = cleanData.agents_used?.[0] || '';
+
+                        // Check if this is a research agent with data
+                        if ((agentName.includes('Competitor') || agentName.includes('Customer') || agentName.includes('Research')) && rawData.length > 0) {
+                            responseHtml += this.formatResearchResults(rawData, agentName);
+                        }
                     }
 
                     return { message: responseHtml };
@@ -26347,6 +26384,145 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
 
                 return message;
+            }
+
+            // Session 293: Format research results from business research agents
+            formatResearchResults(rawData, agentName) {
+                if (!rawData || rawData.length === 0) return '';
+
+                // Flatten nested data structure: [{source: 'tool', data: [...items]}] -> [...items]
+                let items = [];
+                rawData.forEach(sourceData => {
+                    if (sourceData.data && Array.isArray(sourceData.data)) {
+                        // Nested structure from agent: {source: 'web_search', data: [...]}
+                        sourceData.data.forEach(item => {
+                            items.push({...item, toolSource: sourceData.source});
+                        });
+                    } else if (sourceData.title || sourceData.url) {
+                        // Already flat structure
+                        items.push(sourceData);
+                    }
+                });
+
+                if (items.length === 0) return '';
+
+                // Determine theme based on agent
+                let theme = {
+                    gradient: 'rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.15)',
+                    border: 'rgba(59, 130, 246, 0.4)',
+                    accent: '#93c5fd',
+                    icon: '🔍'
+                };
+
+                if (agentName.includes('Competitor')) {
+                    theme = {
+                        gradient: 'rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.15)',
+                        border: 'rgba(239, 68, 68, 0.4)',
+                        accent: '#fca5a5',
+                        icon: '🎯'
+                    };
+                } else if (agentName.includes('Customer')) {
+                    theme = {
+                        gradient: 'rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.15)',
+                        border: 'rgba(34, 197, 94, 0.4)',
+                        accent: '#86efac',
+                        icon: '👥'
+                    };
+                }
+
+                let html = `
+                    <div class="research-results" style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, ${theme.gradient}); border-radius: 12px; border: 2px solid ${theme.border};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <span style="color: ${theme.accent}; font-weight: 700; font-size: 16px;">${theme.icon} Research Results (${items.length} articles)</span>
+                            <span style="color: #64748b; font-size: 12px;">Semantic Search</span>
+                        </div>
+                        <div style="display: grid; gap: 12px;">`;
+
+                // Session 293: Helper to strip ALL HTML and extract only text content
+                const stripHtml = (str) => {
+                    if (!str) return '';
+                    // Use DOM parser to properly extract text from HTML
+                    const temp = document.createElement('div');
+                    temp.innerHTML = String(str);
+                    // Get text content (strips all HTML)
+                    let text = temp.textContent || temp.innerText || '';
+                    // Clean up whitespace
+                    return text.replace(/\s+/g, ' ').trim();
+                };
+
+                // Session 293: Helper to escape HTML entities for safe insertion
+                const safeHtml = (str) => {
+                    if (!str) return '';
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+                };
+
+                items.forEach((item, idx) => {
+                    // Strip HTML from all user data using DOM parser (handles malformed HTML)
+                    const title = safeHtml(stripHtml(item.title) || 'Untitled');
+                    const description = safeHtml(stripHtml(item.description || item.snippet || ''));
+                    const source = safeHtml(stripHtml(item.source || item.category || item.toolSource || 'Unknown'));
+                    const url = item.url || '';
+                    const similarity = item.similarity ? (item.similarity * 100).toFixed(0) : null;
+
+                    // Truncate description
+                    const truncatedDesc = description.length > 200
+                        ? description.substring(0, 200) + '...'
+                        : description;
+
+                    // Safely get hostname - skip if no URL
+                    let hostname = '';
+                    let hasValidUrl = url && url.length > 5 && url.startsWith('http');
+                    let safeUrl = '';
+                    try {
+                        if (hasValidUrl) {
+                            const urlObj = new URL(url);
+                            hostname = urlObj.hostname;
+                            // Sanitize URL - only allow http/https
+                            if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+                                safeUrl = url;
+                            } else {
+                                hasValidUrl = false;
+                            }
+                        }
+                    } catch (e) {
+                        hasValidUrl = false;
+                    }
+
+                    // Title - either a link or plain text depending on URL availability
+                    const titleHtml = hasValidUrl
+                        ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color: ${theme.accent}; font-weight: 600; font-size: 14px; text-decoration: none; flex: 1; margin-right: 10px;">${title}</a>`
+                        : `<span style="color: ${theme.accent}; font-weight: 600; font-size: 14px; flex: 1; margin-right: 10px;">${title}</span>`;
+
+                    // Source link at bottom - only show if URL exists
+                    const sourceLinkHtml = hasValidUrl
+                        ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 8px; color: #64748b; font-size: 11px; text-decoration: none;">🔗 ${safeHtml(hostname)}</a>`
+                        : '';
+
+                    html += `
+                        <div class="research-item" style="padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; border-left: 3px solid ${theme.border};">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                ${titleHtml}
+                                <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                                    <span style="background: rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${source}</span>
+                                    ${similarity ? `<span style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 2px 8px; border-radius: 4px; font-size: 11px;">${similarity}% match</span>` : ''}
+                                </div>
+                            </div>
+                            <p style="color: #cbd5e1; font-size: 13px; line-height: 1.5; margin: 0;">${truncatedDesc}</p>
+                            ${sourceLinkHtml}
+                        </div>`;
+                });
+
+                html += `
+                        </div>
+                    </div>`;
+
+                // Wrap in RAW_HTML markers so formatMessage doesn't escape it
+                return `<!-- RAW_HTML -->${html}<!-- /RAW_HTML -->`;
             }
 
             // Session 271: Format artifacts from Clean Architecture agents

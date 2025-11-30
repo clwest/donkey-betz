@@ -149,12 +149,20 @@ app.conf.beat_schedule = {
             'expires': 25,  # Expire after 25 seconds if not executed (just before next run)
         }
     },
-    # Session 207: Spider Network Execution
+    # Session 207: Spider Network Execution (Updated Session 293: 15 min interval)
     'run-spider-network': {
         'task': 'core.tasks.run_spider_network',
-        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes (was 30)
         'options': {
-            'expires': 1800,  # Expire after 30 minutes
+            'expires': 900,  # Expire after 15 minutes
+        }
+    },
+    # Session 293: Spider Embedding Backfill
+    'backfill-spider-embeddings': {
+        'task': 'core.tasks.backfill_spider_embeddings',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'options': {
+            'expires': 600,  # Expire after 10 minutes
         }
     },
     # Session 210: Style Evolution Tracking

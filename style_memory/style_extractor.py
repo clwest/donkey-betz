@@ -309,7 +309,7 @@ class StyleExtractor:
 
         try:
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",
@@ -328,8 +328,8 @@ Example response:
                         "content": f"Extract style elements from this prompt: {prompt}"
                     }
                 ],
-                temperature=0.3,
-                max_tokens=200
+                max_completion_tokens=200,
+                reasoning_effort="low",
             )
 
             content = response.choices[0].message.content.strip()

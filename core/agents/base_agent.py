@@ -249,12 +249,12 @@ class BaseAgent(ABC, TimeTravelMixin):
         # Make API call
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",  # Use GPT-4o for best tool use
+                model="gpt-5-mini",
                 messages=messages,
                 tools=self.tools if self.tools else None,
                 tool_choice="auto" if self.tools else None,
-                temperature=0.7,
-                max_tokens=2000,
+                max_completion_tokens=2000,
+                reasoning_effort="medium",
             )
 
             choice = response.choices[0]

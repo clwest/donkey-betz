@@ -578,6 +578,69 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["workflow", "topic", "user_message"]
                 }
+            },
+
+            # Session 293: Business Research Agents (NO image/video API credits!)
+            # These agents provide competitor analysis, customer research, and market intelligence
+            {
+                "type": "function",
+                "name": "competitor_analysis_agent",
+                "description": "⭐ BUSINESS RESEARCH - NO API CREDITS! Comprehensive competitor and market analysis. Use for: 'Research the X market for my startup', 'Analyze competitors in X', 'Who are the competitors in X?', 'SWOT analysis for X market', 'What's the competitive landscape for X?'. This agent provides: market research with trends, competitor identification and deep analysis, SWOT analysis, feature comparison, pricing analysis, market positioning recommendations. IMPORTANT: This is PURE RESEARCH - no image/video generation. Uses spider network + web search for real data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "market": {
+                            "type": "string",
+                            "description": "The market or industry to research (e.g., 'AI writing assistants', 'coffee subscription services', 'fitness apps')"
+                        },
+                        "focus_areas": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional specific areas to focus on (e.g., ['pricing', 'features', 'target_audience']). Defaults to comprehensive analysis."
+                        },
+                        "competitor_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional specific competitors to analyze. If not provided, agent will discover top competitors."
+                        },
+                        "user_context": {
+                            "type": "string",
+                            "description": "Additional context about the user's business idea or goals to make analysis more relevant"
+                        }
+                    },
+                    "required": ["market"]
+                }
+            },
+
+            {
+                "type": "function",
+                "name": "customer_research_agent",
+                "description": "⭐ CUSTOMER RESEARCH - NO API CREDITS! Customer persona and pain point research. Use for: 'Build customer personas for X', 'What are customer pain points for X?', 'Research customer needs for X market', 'Who buys X products?', 'Customer sentiment analysis for X'. This agent provides: 2-3 detailed customer personas with demographics, pain point extraction from Reddit/forums/reviews, customer motivations and goals, sentiment analysis, direct customer quotes and examples, buying behavior insights. IMPORTANT: This is PURE RESEARCH - no image/video generation. Uses spider network (especially Reddit) for real customer data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "market": {
+                            "type": "string",
+                            "description": "The market or product category to research customers for (e.g., 'AI writing tools', 'home fitness equipment')"
+                        },
+                        "persona_count": {
+                            "type": "integer",
+                            "default": 3,
+                            "description": "Number of customer personas to build (1-5)"
+                        },
+                        "focus_on": {
+                            "type": "string",
+                            "enum": ["pain_points", "desires", "buying_behavior", "all"],
+                            "default": "all",
+                            "description": "What aspect of customer research to focus on"
+                        },
+                        "user_context": {
+                            "type": "string",
+                            "description": "Additional context about the user's product or service to make personas more relevant"
+                        }
+                    },
+                    "required": ["market"]
+                }
             }
         ]
 
@@ -610,6 +673,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             # Session 204: Try router-based execution first for supported tools
             # This integrates preference learning and unified agent architecture
+            # Session 293: Added business research agents
             ROUTER_ENABLED_TOOLS = {
                 # Research operations
                 'web_search', 'research_topic', 'research',
@@ -622,6 +686,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 # Workflow operations
                 'workflow_orchestration_agent', 'create_brand_video',
                 'create_project_from_research',
+                # Business research (Session 293) - no image/video credits
+                'competitor_analysis_agent', 'customer_research_agent',
             }
 
             if function_name in ROUTER_ENABLED_TOOLS:
@@ -676,6 +742,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Session 189: Create project from research workflow
             elif function_name == 'create_project_from_research':
                 result = self._handle_create_project_from_research(arguments)
+            # Session 293: Business research agents (no image/video API credits)
+            elif function_name == 'competitor_analysis_agent':
+                result = self._handle_competitor_analysis_agent(arguments)
+            elif function_name == 'customer_research_agent':
+                result = self._handle_customer_research_agent(arguments)
             else:
                 result = {
                     'success': False,
@@ -2641,6 +2712,138 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return {
                 'success': False,
                 'error': f"Failed to create project: {str(e)}"
+            }
+
+    # Session 293: Business Research Agents (no image/video API credits)
+    def _handle_competitor_analysis_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle competitor_analysis_agent tool - Session 293.
+
+        Comprehensive competitor and market analysis WITHOUT image/video generation.
+        Uses spider network and web search for real data.
+        """
+        logger.info(f"🏢 COMPETITOR_ANALYSIS_AGENT TOOL CALLED!")
+
+        try:
+            from core.agents.business import CompetitorAnalysisAgent
+
+            market = arguments.get('market', '').strip()
+            focus_areas = arguments.get('focus_areas', [])
+            competitor_names = arguments.get('competitor_names', [])
+            user_context = arguments.get('user_context', '')
+
+            if not market:
+                return {'success': False, 'error': 'Market is required for competitor analysis'}
+
+            logger.info(f"🏢 Analyzing competitors in: {market}")
+
+            # Instantiate and execute the agent
+            agent = CompetitorAnalysisAgent(user=self.user)
+
+            # Build task description
+            task = f"Analyze the {market} market"
+            if focus_areas:
+                task += f" focusing on: {', '.join(focus_areas)}"
+            if competitor_names:
+                task += f". Specifically analyze: {', '.join(competitor_names)}"
+            if user_context:
+                task += f". Context: {user_context}"
+
+            # Execute the agent
+            result = agent.execute(
+                task=task,
+                context={
+                    'market': market,
+                    'focus_areas': focus_areas,
+                    'competitor_names': competitor_names,
+                    'user_context': user_context
+                }
+            )
+
+            if result.success:
+                return {
+                    'success': True,
+                    'message': result.content,
+                    'agent': 'CompetitorAnalysisAgent',
+                    'market': market,
+                    'data': result.data if hasattr(result, 'data') else {}
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.error or 'Competitor analysis failed'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Competitor analysis error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Competitor analysis failed: {str(e)}"
+            }
+
+    def _handle_customer_research_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle customer_research_agent tool - Session 293.
+
+        Customer persona and pain point research WITHOUT image/video generation.
+        Uses spider network (especially Reddit) for real customer data.
+        """
+        logger.info(f"👥 CUSTOMER_RESEARCH_AGENT TOOL CALLED!")
+
+        try:
+            from core.agents.business import CustomerResearchAgent
+
+            market = arguments.get('market', '').strip()
+            persona_count = arguments.get('persona_count', 3)
+            focus_on = arguments.get('focus_on', 'all')
+            user_context = arguments.get('user_context', '')
+
+            if not market:
+                return {'success': False, 'error': 'Market is required for customer research'}
+
+            logger.info(f"👥 Researching customers for: {market}")
+
+            # Instantiate and execute the agent
+            agent = CustomerResearchAgent(user=self.user)
+
+            # Build task description
+            task = f"Research customers for {market}"
+            if focus_on != 'all':
+                task += f" focusing on {focus_on}"
+            task += f". Build {persona_count} customer personas."
+            if user_context:
+                task += f" Context: {user_context}"
+
+            # Execute the agent
+            result = agent.execute(
+                task=task,
+                context={
+                    'market': market,
+                    'persona_count': persona_count,
+                    'focus_on': focus_on,
+                    'user_context': user_context
+                }
+            )
+
+            if result.success:
+                return {
+                    'success': True,
+                    'message': result.content,
+                    'agent': 'CustomerResearchAgent',
+                    'market': market,
+                    'data': result.data if hasattr(result, 'data') else {}
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.error or 'Customer research failed'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Customer research error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Customer research failed: {str(e)}"
             }
 
     # Session 184: Restored create_brand_video handler from Session 67

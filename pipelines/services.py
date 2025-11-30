@@ -193,13 +193,13 @@ def execute_gpt_expansion_step(run: CreativePipelineRun, step: Dict):
     user_prompt = f"Creative idea: {idea}\n\nGenerate {num_prompts} detailed image prompts:"
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        temperature=0.8,
-        max_tokens=1000
+        max_completion_tokens=1000,
+        reasoning_effort="medium",
     )
 
     # Parse response
@@ -351,13 +351,13 @@ def execute_gpt_script_step(run: CreativePipelineRun, step: Dict):
     user_prompt = f"Promo concept: {idea}\n\nCreate a {duration}s video script with shot list:"
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        temperature=0.7,
-        max_tokens=800
+        max_completion_tokens=800,
+        reasoning_effort="medium",
     )
 
     # Parse response

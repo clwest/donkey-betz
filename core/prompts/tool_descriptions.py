@@ -249,6 +249,54 @@ Use when user asks for:
 Enables the 'research and create' workflow where you can research a topic then generate content based on findings.""",
 
 
+    # -------------------------------------------------------------------------
+    # BUSINESS RESEARCH TOOLS (Session 293)
+    # -------------------------------------------------------------------------
+
+    "competitor_analysis_agent": """Comprehensive competitor and market analysis WITHOUT image/video generation.
+
+Use this for BUSINESS RESEARCH requests like:
+- "Research the X market for my startup"
+- "Analyze competitors in X industry"
+- "Who are the main competitors in X?"
+- "Do a competitive analysis of X"
+- "What's the competitive landscape for X?"
+- "SWOT analysis for X market"
+
+This agent provides:
+- Market research with trends and insights
+- Competitor identification and deep analysis
+- SWOT analysis (Strengths, Weaknesses, Opportunities, Threats)
+- Feature comparison across competitors
+- Pricing analysis when available
+- Market positioning recommendations
+
+IMPORTANT: This is for PURE RESEARCH - no image/video generation.
+Uses spider network + web search for real data.""",
+
+
+    "customer_research_agent": """Customer persona and pain point research WITHOUT image/video generation.
+
+Use this for CUSTOMER RESEARCH requests like:
+- "Build customer personas for X"
+- "What are customer pain points for X?"
+- "Research customer needs for X market"
+- "Who buys X products?"
+- "What do customers complain about in X?"
+- "Customer sentiment analysis for X"
+
+This agent provides:
+- 2-3 detailed customer personas with demographics
+- Pain point extraction from Reddit, forums, reviews
+- Customer motivations and goals
+- Sentiment analysis
+- Direct customer quotes and examples
+- Buying behavior insights
+
+IMPORTANT: This is for PURE RESEARCH - no image/video generation.
+Uses spider network (especially Reddit) for real customer data.""",
+
+
     "strategic_review": """IMPORTANT: Call this AFTER web_search but BEFORE image_generation_agent.
 
 Get strategic review and creative direction from the executive team (CTO, COO, Creative Director) based on research findings.
