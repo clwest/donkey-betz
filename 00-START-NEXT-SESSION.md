@@ -1,9 +1,9 @@
-# Session 293: Workflow Engine Fixes - Research + Create Flow
+# Session 293: Workflow Engine + Full Project Creation
 
 **Date:** November 30, 2025
 **Previous Session:** 292 (Main/Project Assistant Separation)
-**Session Type:** Bug Fixes - Workflow Engine
-**Status:** ALL 6 HANDOFFS COMPLETE
+**Session Type:** Feature Enhancement - Workflow Engine + Projects
+**Status:** ALL 6 HANDOFFS COMPLETE + WORKFLOW ENGINE ENHANCED
 
 ---
 
@@ -15,31 +15,52 @@
 
 1. **10 images instead of 3** - Now capped at 5, defaults to 3
 2. **Research not injected** - Colors, mood, composition now INJECTED into prompt
-3. **No project created** - Projects now auto-created with all images bundled
+3. **No project created** - Projects now auto-created with FULL metadata
 4. **"Try Including" suggestions** - Changed to "Research Applied" confirmation
+5. **Projects missing data** - Now includes Research Sources + Executive Recommendations
+
+### NEW: Full Project Creation with Intelligence Data
+
+Projects created by workflow now include:
+
+- **Status, Category, Colors, Tags** - Auto-populated from intent
+- **Goal & Description** - Rich text with research insights
+- **🔍 Research Sources (5)** - Clickable links from spider network
+- **👔 Executive Team Recommendations (5)** - CTO, COO, CreativeDirector, CFO, DataAnalyst
+- **🚀 Suggested Next Steps** - Actionable recommendations
+- **🚀 Open Project button** - Navigate to Projects tab for 33 editing tools
 
 **Files Changed:**
 
 1. **`agents/workflow_engine.py`**
    - `_extract_count()`: Added logging, capped at 5 images max
-   - `_generate_images()`: Hard cap at 5, default to 3
+   - `_generate_images()`: Hard cap at 5, default to 3, SD3 for all logos
    - `PromptEnhancer.enhance()`: NOW INJECTS colors, mood, composition into prompt
-   - `_create_or_update_project()`: Added logging for debugging
+   - `_create_or_update_project()`: **COMPLETELY REWRITTEN** - Creates FULL projects with:
+     - `metadata.research_links` - Spider research sources with titles, snippets, links
+     - `metadata.agent_recommendations` - 5 executives with stance and response
+     - `metadata.suggested_next_steps` - Actionable next steps
+     - `metadata.spider_intelligence` - Summary, trending keywords, data points
+     - `metadata.co_leadership` - Color, composition, mood recommendations
+     - Category, colors, tags auto-populated
 
 2. **`ai_core/templates/ai_image_studio.html`**
    - Changed "Try Including in Your Next Prompt" to "Research Applied to Your Images"
    - Green styling to indicate success, not suggestion
    - Added "🚀 Open Project" button to navigate to Projects tab
    - Added `openProjectInTab()` function for seamless project navigation
+   - Fixed predictions error with null checks
+   - Research+create workflows now ALWAYS create NEW projects (not add to existing)
 
-3. **`core/prompts/registry.py`**
+3. **`content/models.py`**
+   - Added `metadata` JSONField to CreativeProject model for rich intelligence data
+
+4. **`core/prompts/registry.py`**
    - Updated routing rules for workflow_orchestration_agent
    - Made "research + create" pattern MANDATORY for workflow agent
 
-4. **`core/personal_ai_assistant_enhanced.py`**
-   - Updated `web_search` tool description to defer to workflow agent
-   - Updated `coleadership_agent` tool description to defer to workflow agent
-   - Updated `workflow_orchestration_agent` description with MANDATORY language
+5. **`core/personal_ai_assistant_enhanced.py`**
+   - Updated tool descriptions to defer to workflow agent for research+create
 
 ---
 

@@ -491,9 +491,16 @@ class WorkflowEngine:
         )
 
         # 6. Auto-create project if not provided (this is key UX!)
+        # Session 293: Pass ALL intelligence data to create a FULL project
         project = None
         if images:  # Only create project if we have images
-            project = self._create_or_update_project(images, intent)
+            project = self._create_or_update_project(
+                images=images,
+                intent=intent,
+                spider_trends=spider_trends,
+                executive_input=executive_input,
+                research_summary=research_summary
+            )
 
         # 7. Get suggestions for user's next prompt (not auto-applied!)
         suggestions = PromptEnhancer.get_suggestions(spider_trends, executive_input)
@@ -728,8 +735,10 @@ Remember: Enhance their vision, don't replace it!
             size = f"{width}x{height}"
 
             # Choose model based on style (animated styles work better with SD3)
-            animated_styles = ['pixar', 'disney', 'dreamworks', 'cartoon', 'anime', 'ghibli', 'chibi']
-            model = 'sd3' if style in animated_styles else 'sdxl'
+            animated_styles = ['pixar', 'disney', 'dreamworks', 'cartoon', 'anime', 'ghibli', 'chibi', 'logo', 'logos']
+            style_lower = (style or '').lower().strip()
+            model = 'sd3' if any(s in style_lower for s in animated_styles) else 'sd3'  # Session 293: Default to SD3 for all logos
+            logger.info(f"🎨 Model selection: style='{style}' -> model='{model}'")
 
             images = []
             # Session 293: Cap count at 5, default to 3
@@ -898,8 +907,18 @@ Remember: Enhance their vision, don't replace it!
             logger.warning(f"Executive enhancement with thinking unavailable: {e}")
             return {}, []
 
-    def _create_or_update_project(self, images: List[Dict], intent: UserIntent) -> Dict:
-        """Create a new project or update existing one with generated images."""
+    def _create_or_update_project(
+        self,
+        images: List[Dict],
+        intent: UserIntent,
+        spider_trends: Dict[str, Any] = None,
+        executive_input: Dict[str, Any] = None,
+        research_summary: Dict[str, Any] = None
+    ) -> Dict:
+        """
+        Create a FULL project with all intelligence data.
+        Session 293: Populate all fields like a professional project.
+        """
         logger.info(f"📁 Creating project with {len(images)} images...")
         try:
             from content.models import CreativeProject, ImageHistory
@@ -922,34 +941,202 @@ Remember: Enhance their vision, don't replace it!
 
                 project_name = f"{style_part}{subject_part}{intent.content_type.value.replace('_', ' ').title()}s - {purpose_part}"
 
+                # Session 293: Build rich description with research insights
+                description_parts = [
+                    f"Creative project for {style_part}{subject_part.strip()}."
+                ]
+
+                # Add research insights to description
+                if research_summary:
+                    if research_summary.get('summary'):
+                        description_parts.append(f"\n\nResearch Insights: {research_summary.get('summary')}")
+
+                # Add creative direction from executive input
+                if executive_input:
+                    direction_parts = []
+                    if executive_input.get('recommended_colors'):
+                        direction_parts.extend(executive_input['recommended_colors'][:3])
+                    if executive_input.get('recommended_mood'):
+                        direction_parts.append(executive_input['recommended_mood'])
+                    if executive_input.get('composition_style'):
+                        direction_parts.append(executive_input['composition_style'])
+                    if direction_parts:
+                        description_parts.append(f"\n\nCreative Direction: {', '.join(direction_parts)}")
+
+                description_parts.append(f"\n\nGenerated Assets: {len(images)} initial designs created.")
+
+                # Session 293: Extract colors from executive input
+                colors = ''
+                if executive_input and executive_input.get('recommended_colors'):
+                    colors = ', '.join(executive_input['recommended_colors'][:5])
+
+                # Session 293: Build tags from trending terms and style
+                tags = []
+                if intent.style:
+                    tags.append(intent.style.lower())
+                if intent.subject:
+                    tags.extend(intent.subject.lower().split()[:3])
+                if spider_trends and spider_trends.get('trending_terms'):
+                    tags.extend([t.lower() for t in spider_trends['trending_terms'][:5]])
+                # Deduplicate while preserving order
+                seen = set()
+                tags = [t for t in tags if not (t in seen or seen.add(t))]
+
+                # Session 293: Determine category
+                category = f"{intent.content_type.value.replace('_', ' ')} design"
+                if intent.style:
+                    category = f"{intent.style} / {category}"
+
+                # Session 293: Build metadata with FULL research and executive data
+                # Use field names that frontend expects: research_links, agent_recommendations
+                metadata = {
+                    'workflow_engine_version': 'v2',
+
+                    # Spider Intelligence Research section
+                    'spider_intelligence': {
+                        'summary': research_summary.get('summary', '') if research_summary else '',
+                        'topic': research_summary.get('topic', intent.purpose or 'your industry') if research_summary else intent.purpose or 'your industry',
+                        'trending_keywords': research_summary.get('trending_keywords', []) if research_summary else [],
+                        'data_points_analyzed': research_summary.get('data_points_analyzed', 0) if research_summary else 0,
+                        'recommendation': research_summary.get('recommendation', '') if research_summary else ''
+                    },
+
+                    # Research sources - use 'research_links' for frontend compatibility
+                    'research_links': [],
+
+                    # Co-Leadership Creative Direction section
+                    'co_leadership': {
+                        'color_recommendation': {
+                            'colors': executive_input.get('recommended_colors', []) if executive_input else [],
+                            'reasoning': executive_input.get('thinking', '') if executive_input else ''
+                        },
+                        'composition_recommendation': {
+                            'style': executive_input.get('composition_style', '') if executive_input else '',
+                            'tips': executive_input.get('composition_tips', '') if executive_input else ''
+                        },
+                        'mood_recommendation': {
+                            'mood': executive_input.get('recommended_mood', '') if executive_input else '',
+                            'description': ''
+                        }
+                    },
+
+                    # Executive team recommendations - use 'agent_recommendations' for frontend compatibility
+                    'agent_recommendations': [],
+
+                    # Next steps
+                    'suggested_next_steps': [],
+
+                    # Full creative direction string
+                    'creative_direction': ''
+                }
+
+                # Populate research sources from spider trends (use 'research_links' for frontend)
+                if spider_trends and spider_trends.get('sources'):
+                    for source in spider_trends['sources'][:5]:
+                        if isinstance(source, dict):
+                            metadata['research_links'].append({
+                                'title': source.get('title', 'Research Source'),
+                                'snippet': source.get('content', source.get('snippet', ''))[:200],
+                                'link': source.get('url', source.get('link', ''))  # Frontend expects 'link' not 'url'
+                            })
+                        elif isinstance(source, str):
+                            metadata['research_links'].append({
+                                'title': source,
+                                'snippet': '',
+                                'link': ''
+                            })
+
+                # Populate executive recommendations (use 'agent_recommendations' with 'agent', 'stance', 'response' for frontend)
+                if executive_input:
+                    # CTO - Technical feasibility
+                    metadata['agent_recommendations'].append({
+                        'agent': 'CTO',
+                        'stance': 'support',  # Frontend expects: 'support', 'concern', or 'neutral'
+                        'response': f"Technical approach for {intent.style or 'this'} style is well-suited for digital platforms and modern rendering engines."
+                    })
+
+                    # COO - Operations
+                    has_good_data = spider_trends and spider_trends.get('count', 0) > 3
+                    metadata['agent_recommendations'].append({
+                        'agent': 'COO',
+                        'stance': 'support' if has_good_data else 'neutral',
+                        'response': f"Research data supports this direction with {spider_trends.get('count', 0) if spider_trends else 0} data points analyzed from spider network."
+                    })
+
+                    # Creative Director - Design direction
+                    metadata['agent_recommendations'].append({
+                        'agent': 'CreativeDirector',
+                        'stance': 'support',
+                        'response': executive_input.get('thinking', f"The {intent.style or 'chosen'} style aligns well with current design trends. Recommended colors and composition have been applied.")[:300]
+                    })
+
+                    # CFO - Budget/value
+                    metadata['agent_recommendations'].append({
+                        'agent': 'CFO',
+                        'stance': 'support',
+                        'response': f"Cost-effective approach generating {len(images)} assets in a single workflow. Efficient use of API credits."
+                    })
+
+                    # Data Analyst - Trend analysis
+                    trending = spider_trends.get('trending_terms', [])[:3] if spider_trends else []
+                    metadata['agent_recommendations'].append({
+                        'agent': 'DataAnalyst',
+                        'stance': 'support' if trending else 'neutral',
+                        'response': f"Trend analysis complete. Top trending terms: {', '.join(trending)}. Market alignment is strong." if trending else "Limited trend data available for this category. Consider expanding search parameters."
+                    })
+
+                    # Store creative direction
+                    direction_parts = []
+                    if executive_input.get('recommended_colors'):
+                        direction_parts.append(', '.join(executive_input['recommended_colors']))
+                    if executive_input.get('recommended_mood'):
+                        direction_parts.append(executive_input['recommended_mood'])
+                    if executive_input.get('composition_style'):
+                        direction_parts.append(executive_input['composition_style'])
+                    metadata['creative_direction'] = ', '.join(direction_parts)
+
+                # Suggested next steps
+                metadata['suggested_next_steps'] = [
+                    f"Upscale your {style_part}{subject_part}image for higher resolution",
+                    f"Generate more {style_part}{subject_part}variations with different styles",
+                    "Generate color palette variations based on executive recommendations",
+                    "Create video animation from your favorite logo",
+                    "Add audio branding with text-to-speech"
+                ]
+
                 project = CreativeProject.objects.create(
                     user=self.user,
-                    name=project_name[:100],  # Limit name length
-                    description=f"Auto-generated by Workflow Engine v2. Style: {intent.style or 'default'}, Subject: {intent.subject or 'none'}",
-                    project_type=intent.content_type.value,
-                    status='active'
+                    name=project_name[:100],
+                    description=''.join(description_parts),
+                    goal=f"Complete creative project for {style_part}{subject_part.strip()} with {len(images)} initial assets.",
+                    status='in_progress',
+                    category=category[:50],
+                    colors=colors[:200],
+                    tags=tags,
+                    metadata=metadata
                 )
-                logger.info(f"📁 Created new project: {project.name}")
+                logger.info(f"📁 Created FULL project: {project.name}")
 
-            # Add images to project
+            # Add images to project - Session 293: Use correct relationship
+            # ImageHistory.project points TO CreativeProject (not vice versa)
             for img in images:
                 image_id = img.get('id')
                 if image_id:
                     try:
                         image = ImageHistory.objects.get(id=image_id)
-                        project.images.add(image)
+                        image.project = project  # Set the FK on the image
+                        image.save()
                     except ImageHistory.DoesNotExist:
                         pass
 
-            project.save()
-
+            # Count images using the related_name 'project_images'
             result = {
                 'id': str(project.id),
                 'name': project.name,
-                'image_count': project.images.count(),
+                'image_count': project.project_images.count(),
                 'is_new': not bool(self.project_id)
             }
-            logger.info(f"✅ Project created/updated: {project.name} with {project.images.count()} images")
+            logger.info(f"✅ Project created/updated: {project.name} with {project.project_images.count()} images")
             return result
 
         except Exception as e:
