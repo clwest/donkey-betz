@@ -1,6 +1,6 @@
 # Platform Architecture
 
-**Last Updated:** Session 273 (November 29, 2025)
+**Last Updated:** Session 293 (November 30, 2025)
 
 ---
 
@@ -28,11 +28,21 @@ User Request
 |  | PromptBuilder    |  | AgentRouter      |               |
 |  | (Dynamic prompts)|  | (Deterministic)  |               |
 |  +------------------+  +------------------+               |
+|                                                           |
+|  +------------------+  +------------------+               |
+|  | SemanticRouting  |  | MemoryEmbedding  |               |
+|  | (Embedding-based)|  | (Memory search)  |               |
+|  +------------------+  +------------------+               |
 +----------------------------------------------------------+
     |
     v
 +----------------------------------------------------------+
 |               PERSONAL ASSISTANT AGENT                    |
+|                                                           |
+|  3-Tier Routing:                                          |
+|  Tier 0: Workflow patterns (checked first)                |
+|  Tier 1: Semantic routing (embeddings, 0.45 threshold)    |
+|  Tier 2: Keyword fallback                                 |
 |                                                           |
 |  Role: Traffic cop - routes to specialized agents         |
 |                                                           |
@@ -73,6 +83,9 @@ The unified brain that orchestrates everything.
 | QueryClassifier | `query_classifier.py` | Detect user intent |
 | ContextAggregator | `context_aggregator.py` | Gather spider data, memories, mood |
 | DynamicPromptBuilder | `prompt_builder.py` | Build agent-specific prompts |
+| SemanticRoutingService | `semantic_routing.py` | Embedding-based agent routing |
+| MemoryEmbeddingService | `memory_embedding_service.py` | Semantic memory search |
+| SpiderSemanticSearch | `spider_semantic_search.py` | Semantic spider data search |
 
 ### Query Types
 - `QUESTION` - User asking for information
@@ -160,6 +173,84 @@ service.get_market_insights()  # Crypto, stocks
 # Get job market
 service.get_job_market_summary()
 ```
+
+### SpiderSemanticSearch (Session 293)
+
+**Location:** `core/services/spider_semantic_search.py`
+
+Embedding-based search across spider data using OpenAI `text-embedding-3-small`.
+
+```python
+from core.services.spider_semantic_search import get_spider_semantic_search
+
+search = get_spider_semantic_search()
+
+# Fast search using pre-computed DB embeddings
+results = search.semantic_search_with_db_embeddings("AI writing tools", limit=10)
+
+# Backfill embeddings for existing data
+stats = search.backfill_embeddings(batch_size=100)
+
+# Get embedding coverage stats
+stats = search.get_embedding_stats()
+# Returns: {total_entries, with_embedding, coverage_percent}
+
+# Enhance agent context with relevant spider data
+context = search.enhance_agent_context("machine learning trends", max_items=3)
+```
+
+---
+
+## Layer 3.5: Semantic Services (Session 293)
+
+**Location:** `core/services/`
+
+Three embedding-based services for semantic intelligence.
+
+### SemanticRoutingService
+
+Routes user queries to appropriate agents using cosine similarity.
+
+```python
+from core.services.semantic_routing import SemanticRoutingService
+
+router = SemanticRoutingService()
+router.initialize()  # Pre-compute agent embeddings
+
+result = router.route_query("Create a logo for my tech startup")
+# Returns: RoutingResult(agent_name="ImageAgent", confidence=0.62, method="semantic")
+```
+
+**Embedded Agents (12):** ImageAgent, VideoAgent, AudioAgent, ThreeDAgent, ImageEditingAgent, VideoEditingAgent, ResearchAgent, CompetitorAnalysisAgent, CustomerResearchAgent, WorkflowAgent, ContentStrategyAgent, BrandIdentityAgent
+
+### MemoryEmbeddingService
+
+Semantic search across agent memories (Memory Palace).
+
+```python
+from core.services.memory_embedding_service import get_memory_embedding_service
+
+service = get_memory_embedding_service()
+
+# Create memory with auto-embedding
+memory = service.create_memory(
+    agent=my_agent,
+    title="User prefers minimalist logos",
+    content="When creating logos, user consistently chooses...",
+    memory_type="preference"
+)
+
+# Search memories semantically
+results = service.search_memories(agent, "What does the user like?", top_k=5)
+
+# Get memory context for agent prompts
+context = service.get_memory_context(agent, "logo design preferences")
+```
+
+**Features:**
+- Auto-connects related memories (similarity > 0.7)
+- Supports backfill for existing memories
+- Memory types: success, failure, preference, technique, insight, interaction, feedback
 
 ---
 
@@ -346,7 +437,7 @@ REPLICATE_API_TOKEN=...  # For 3D
 - `ImageHistory` - Generated images
 - `VideoHistory` - Generated videos
 - `AudioHistory` - Generated audio
-- `SpiderData` - Spider-collected data
+- `SpiderData` - Spider-collected data (+ embedding, item_embeddings, embedding_text - Session 293)
 
 ### Sci-Fi Models
 - `AgentMood` - Emotional states
