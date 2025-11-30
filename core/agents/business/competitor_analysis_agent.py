@@ -206,6 +206,7 @@ If asked to create content, explain you can only research and suggest using the 
     def __init__(self, user=None):
         super().__init__(user)
         self._spider_service = None
+        self._semantic_search = None
 
     @property
     def spider_service(self):
@@ -214,6 +215,14 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.spider_intelligence import SpiderIntelligenceService
             self._spider_service = SpiderIntelligenceService()
         return self._spider_service
+
+    @property
+    def semantic_search(self):
+        """Lazy-load Spider Semantic Search Service."""
+        if self._semantic_search is None:
+            from core.services.spider_semantic_search import get_spider_semantic_search
+            self._semantic_search = get_spider_semantic_search()
+        return self._semantic_search
 
     def execute(
         self,
@@ -356,15 +365,30 @@ Return a comprehensive competitive landscape analysis."""
 
         elif tool_name == "spider_query":
             try:
-                results = self.spider_service.search_spider_data(
+                # Use semantic search for better results
+                results = self.semantic_search.semantic_search(
                     query=arguments.get('query', ''),
                     category=arguments.get('category'),
                     hours=arguments.get('hours', 168),
-                    limit=arguments.get('limit', 30)
+                    limit=arguments.get('limit', 30),
+                    min_similarity=0.3
                 )
+                # Convert SemanticSearchResult objects to dicts
+                data = [
+                    {
+                        'title': r.title,
+                        'description': r.description,
+                        'url': r.url,
+                        'source': r.source,
+                        'similarity': r.similarity,
+                        'category': r.category
+                    }
+                    for r in results
+                ]
                 return {
                     'success': True,
-                    'data': results
+                    'data': data,
+                    'search_type': 'semantic'
                 }
             except Exception as e:
                 return {
@@ -393,17 +417,32 @@ Return a comprehensive competitive landscape analysis."""
             }
 
     def _spider_fallback(self, query: str) -> Dict[str, Any]:
-        """Fallback to spider data when web search fails."""
+        """Fallback to spider data when web search fails - uses SEMANTIC search."""
         try:
-            results = self.spider_service.search_spider_data(
+            # Use semantic search for better results
+            results = self.semantic_search.semantic_search(
                 query=query,
                 hours=168,
-                limit=20
+                limit=20,
+                min_similarity=0.3
             )
+            # Convert SemanticSearchResult objects to dicts
+            data = [
+                {
+                    'title': r.title,
+                    'description': r.description,
+                    'url': r.url,
+                    'source': r.source,
+                    'similarity': r.similarity,
+                    'category': r.category
+                }
+                for r in results
+            ]
             return {
                 'success': True,
-                'data': results,
-                'fallback': True
+                'data': data,
+                'fallback': True,
+                'search_type': 'semantic'
             }
         except Exception as e:
             return {
@@ -426,12 +465,24 @@ Return a comprehensive competitive landscape analysis."""
         }
 
         try:
-            # Search spider data for competitor mentions
-            spider_results = self.spider_service.search_spider_data(
+            # Search spider data for competitor mentions using semantic search
+            semantic_results = self.semantic_search.semantic_search(
                 query=competitor_name,
                 hours=720,  # Last 30 days
-                limit=50
+                limit=50,
+                min_similarity=0.3
             )
+            # Convert to list of dicts
+            spider_results = [
+                {
+                    'title': r.title,
+                    'description': r.description,
+                    'url': r.url,
+                    'source': r.source,
+                    'content': r.description  # For sentiment analysis
+                }
+                for r in semantic_results
+            ]
 
             # Extract relevant information
             mentions = []
@@ -529,10 +580,10 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": swot_prompt}],
-                temperature=0.7,
-                max_tokens=1500,
+                max_completion_tokens=1500,
+                reasoning_effort="medium",
             )
 
             content = response.choices[0].message.content
