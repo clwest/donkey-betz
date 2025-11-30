@@ -400,13 +400,13 @@ class SuperPlatformCoordinator:
 
         try:
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=2000,
-                temperature=0.7,
+                max_completion_tokens=2000,
+                reasoning_effort="medium",
             )
 
             response_text = response.choices[0].message.content
@@ -595,13 +595,13 @@ If this is a creation request, describe what you would create with specific deta
         try:
             if self.openai_client:
                 response = self.openai_client.chat.completions.create(
-                    model="gpt-4o",
+                    model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": message}
                     ],
-                    max_tokens=2000,
-                    temperature=0.7,
+                    max_completion_tokens=2000,
+                    reasoning_effort="medium",
                 )
                 response_text = response.choices[0].message.content
             else:

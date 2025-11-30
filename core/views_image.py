@@ -7961,7 +7961,7 @@ def _verify_image_with_vision(image_url, expected_text):
 
         # Build Vision API request
         response = client.chat.completions.create(
-            model="gpt-4o",  # GPT-4 with vision
+            model="gpt-5-mini",
             messages=[
                 {
                     "role": "system",
@@ -7998,7 +7998,8 @@ Be specific and accurate. This is for autonomous text correction."""
                     ]
                 }
             ],
-            max_tokens=300
+            max_completion_tokens=300,
+            reasoning_effort="medium",
         )
 
         # Parse Vision response

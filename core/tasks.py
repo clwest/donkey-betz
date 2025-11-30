@@ -659,6 +659,43 @@ def run_spider_network():
 
 
 @shared_task
+def backfill_spider_embeddings(batch_size: int = 100):
+    """
+    Session 293: Generate embeddings for SpiderData entries that don't have them.
+
+    Runs every 10 minutes via Celery Beat to gradually build embedding coverage.
+    Uses the SpiderSemanticSearch service.
+    """
+    logger.info("🧠 Starting spider embedding backfill...")
+
+    try:
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        search = get_spider_semantic_search()
+        stats = search.backfill_embeddings(batch_size=batch_size, hours=168)  # Last 7 days
+
+        logger.info(
+            f"✅ Embedding backfill complete: "
+            f"{stats['processed']} processed, {stats['succeeded']} succeeded, "
+            f"{stats['failed']} failed, {stats['skipped']} skipped"
+        )
+
+        # Get current coverage stats
+        coverage = search.get_embedding_stats()
+        logger.info(f"📊 Embedding coverage: {coverage['coverage_percent']:.1f}% ({coverage['with_embedding']}/{coverage['total_entries']})")
+
+        return {
+            'success': True,
+            'batch_stats': stats,
+            'coverage': coverage
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Embedding backfill failed: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
 def execute_single_spider(spider_name: str):
     """
     Session 207: Execute a single spider on-demand.
@@ -3620,14 +3657,14 @@ Guidelines:
 
                 try:
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             *history,
                             {"role": "user", "content": user_content}
                         ],
-                        max_tokens=150,
-                        temperature=0.8
+                        max_completion_tokens=150,
+                        reasoning_effort="medium",
                     )
 
                     content = response.choices[0].message.content.strip()
@@ -3683,13 +3720,14 @@ Guidelines:
                 # Generate a conclusion
                 try:
                     conclusion_response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": "Summarize the key insights from this agent discussion in 1-2 sentences."},
                             {"role": "user", "content": f"Discussion between {initiator.name} and {responder.name} about {topic}:\n\n" +
                                 "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
                         ],
-                        max_tokens=100
+                        max_completion_tokens=100,
+                        reasoning_effort="low",
                     )
                     conclusion = conclusion_response.choices[0].message.content.strip()
                 except:
@@ -4019,13 +4057,13 @@ Guidelines:
 
                 try:
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        max_tokens=200,
-                        temperature=0.95  # High temperature for creative dreams
+                        max_completion_tokens=200,
+                        reasoning_effort="medium",
                     )
 
                     dream_content = response.choices[0].message.content.strip()
@@ -4038,13 +4076,13 @@ Guidelines:
 
                     # Generate a catchy title
                     title_response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
                             {"role": "user", "content": dream_content}
                         ],
-                        max_tokens=20,
-                        temperature=0.7
+                        max_completion_tokens=20,
+                        reasoning_effort="low",
                     )
 
                     title = title_response.choices[0].message.content.strip().strip('"\'')[:200]
@@ -4245,13 +4283,13 @@ NEXT_STEPS:
 
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=800,
-                temperature=0.85
+                max_completion_tokens=800,
+                reasoning_effort="medium",
             )
 
             full_response = response.choices[0].message.content.strip()
@@ -4424,9 +4462,9 @@ End with 3-5 key bullet points summarizing your main contributions.
 
 Respond as {agent.name}:"""
 
-                # Call GPT-4o-mini for the contribution
+                # Call GPT-5-mini for the contribution
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-mini",
                     messages=[
                         {
                             "role": "system",
@@ -4434,8 +4472,8 @@ Respond as {agent.name}:"""
                         },
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0.7,
-                    max_tokens=600
+                    max_completion_tokens=600,
+                    reasoning_effort="medium",
                 )
 
                 contribution_text = response.choices[0].message.content.strip()
@@ -4550,7 +4588,7 @@ The synthesis should read as a cohesive document, not just a collection of separ
 
         # Generate synthesis
         synthesis_response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             messages=[
                 {
                     "role": "system",
@@ -4558,8 +4596,8 @@ The synthesis should read as a cohesive document, not just a collection of separ
                 },
                 {"role": "user", "content": synthesis_prompt}
             ],
-            temperature=0.6,
-            max_tokens=1500
+            max_completion_tokens=1500,
+            reasoning_effort="medium",
         )
 
         synthesis = synthesis_response.choices[0].message.content.strip()

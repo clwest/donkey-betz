@@ -29,7 +29,7 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 LLM_DEFAULTS = {
     "chat": {
         "ollama": os.getenv("OLLAMA_CHAT_MODEL", "qwen2.5:14b-instruct"),
-        "openai": os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+        "openai": os.getenv("OPENAI_CHAT_MODEL", "gpt-5-mini"),
     },
     "embed": {
         "ollama": os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text:latest"),

@@ -65,7 +65,7 @@ class ConversationOrchestrator:
     - Retry logic for contract violations
     """
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-5-mini"):
         """
         Initialize the orchestrator.
 
@@ -358,15 +358,15 @@ Approach: Examine data, consider implications, draw conclusions."""
     ) -> str:
         """Generate a message with retry logic for contract compliance."""
 
-        max_tokens = 600 if is_final_turn else 250
+        max_completion_tokens = 600 if is_final_turn else 250
 
         for attempt in range(max_retries + 1):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=max_tokens,
-                    temperature=0.85  # Slightly high for creativity
+                    max_completion_tokens=max_completion_tokens,
+                    reasoning_effort="medium",
                 )
 
                 content = response.choices[0].message.content.strip()

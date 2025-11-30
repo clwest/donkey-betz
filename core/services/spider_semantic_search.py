@@ -209,8 +209,11 @@ class SpiderSemanticSearch:
                 if not title:
                     continue
 
+                # Session 293: Get URL from either 'url' or 'link' field
+                item_url = item.get('url') or item.get('link') or ''
+
                 # Deduplicate
-                item_key = f"{title}:{item.get('url', '')}".lower()[:100]
+                item_key = f"{title}:{item_url}".lower()[:100]
                 if item_key in seen:
                     continue
                 seen.add(item_key)
@@ -233,8 +236,8 @@ class SpiderSemanticSearch:
                 if similarity >= min_similarity:
                     results.append(SemanticSearchResult(
                         title=title,
-                        description=(item.get('description') or '')[:300],
-                        url=item.get('url', ''),
+                        description=(item.get('description') or item.get('snippet') or '')[:300],
+                        url=item_url,
                         source=entry.spider_name,
                         similarity=round(similarity, 4),
                         category=entry.data_type,
@@ -470,16 +473,19 @@ class SpiderSemanticSearch:
                 if not title:
                     continue
 
+                # Session 293: Get URL from either 'url' or 'link' field
+                item_url = item.get('url') or item.get('link') or ''
+
                 # Deduplicate
-                item_key = f"{title}:{item.get('url', '')}".lower()[:100]
+                item_key = f"{title}:{item_url}".lower()[:100]
                 if item_key in seen:
                     continue
                 seen.add(item_key)
 
                 results.append(SemanticSearchResult(
                     title=title,
-                    description=(item.get('description') or '')[:300],
-                    url=item.get('url', ''),
+                    description=(item.get('description') or item.get('snippet') or '')[:300],
+                    url=item_url,
                     source=entry.spider_name,
                     similarity=round(similarity, 4),
                     category=entry.data_type,

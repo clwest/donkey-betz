@@ -634,10 +634,10 @@ Return as JSON with these keys."""
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": persona_prompt}],
-                temperature=0.8,
-                max_tokens=1000,
+                max_completion_tokens=1000,
+                reasoning_effort="medium",
             )
 
             content = response.choices[0].message.content

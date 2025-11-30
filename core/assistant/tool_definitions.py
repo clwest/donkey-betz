@@ -38,6 +38,7 @@ def get_tool_definitions() -> List[Dict]:
         List of tool definition dictionaries
     """
     # Session 266: Reordered - most common tools first, workflow agent LAST
+    # Session 293: Added business research agents (no API credits needed)
     # GPT tends to prefer earlier tools in the list, so put image generation first
     return [
         _get_image_generation_agent_definition(),  # Most common - simple image creation
@@ -53,6 +54,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_create_brand_video_definition(),
         _get_create_project_from_research_definition(),
         _get_strategic_review_definition(),
+        _get_competitor_analysis_agent_definition(),  # Session 293: Business research
+        _get_customer_research_agent_definition(),    # Session 293: Customer research
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -617,5 +620,82 @@ def _get_strategic_review_definition() -> Dict:
                 }
             },
             "required": ["research_topic", "research_findings"]
+        }
+    }
+
+
+# =============================================================================
+# BUSINESS RESEARCH AGENTS (Session 293)
+# =============================================================================
+
+def _get_competitor_analysis_agent_definition() -> Dict:
+    """
+    Session 293: Competitor analysis agent for business research.
+    Does NOT use Stability AI or Runway ML credits.
+    """
+    return {
+        "type": "function",
+        "name": "competitor_analysis_agent",
+        "description": get_tool_description("competitor_analysis_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "market": {
+                    "type": "string",
+                    "description": "The market or industry to research (e.g., 'AI writing assistants', 'coffee subscription services', 'fitness apps')"
+                },
+                "focus_areas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional specific areas to focus on (e.g., ['pricing', 'features', 'target_audience']). Defaults to comprehensive analysis."
+                },
+                "competitor_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional specific competitors to analyze. If not provided, agent will discover top competitors."
+                },
+                "user_context": {
+                    "type": "string",
+                    "description": "Additional context about the user's business idea or goals to make analysis more relevant"
+                }
+            },
+            "required": ["market"]
+        }
+    }
+
+
+def _get_customer_research_agent_definition() -> Dict:
+    """
+    Session 293: Customer research agent for persona building and pain point discovery.
+    Does NOT use Stability AI or Runway ML credits.
+    """
+    return {
+        "type": "function",
+        "name": "customer_research_agent",
+        "description": get_tool_description("customer_research_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "market": {
+                    "type": "string",
+                    "description": "The market or product category to research customers for (e.g., 'AI writing tools', 'home fitness equipment')"
+                },
+                "persona_count": {
+                    "type": "integer",
+                    "default": 3,
+                    "description": "Number of customer personas to build (1-5)"
+                },
+                "focus_on": {
+                    "type": "string",
+                    "enum": ["pain_points", "desires", "buying_behavior", "all"],
+                    "default": "all",
+                    "description": "What aspect of customer research to focus on"
+                },
+                "user_context": {
+                    "type": "string",
+                    "description": "Additional context about the user's product or service to make personas more relevant"
+                }
+            },
+            "required": ["market"]
         }
     }
