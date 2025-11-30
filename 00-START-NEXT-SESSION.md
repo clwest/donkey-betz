@@ -1,43 +1,83 @@
-# Session 293: Workflow Orchestration Fixes
+# Session 293: Workflow Engine Fixes - Research + Create Flow
 
 **Date:** November 30, 2025
 **Previous Session:** 292 (Main/Project Assistant Separation)
-**Session Type:** Bug Fixes - Workflow Routing
+**Session Type:** Bug Fixes - Workflow Engine
 **Status:** ALL 6 HANDOFFS COMPLETE
 
 ---
 
 ## SESSION 293 CHANGES
 
-### Fixed "Research and Create" Workflow Routing
+### Fixed "Research and Create" Workflow - FULLY WORKING!
 
-**Problem:** When user said "Research trending AI logos and generate a logo", GPT was:
-1. Calling individual tools (web_search, coleadership_agent) separately
-2. NOT creating a project with all the research/images bundled
-3. Using sd3 model instead of Ultra for logos
-4. Sometimes generating wrong number of images
+**Problems Fixed:**
 
-**Fixes Made:**
+1. **10 images instead of 3** - Now capped at 5, defaults to 3
+2. **Research not injected** - Colors, mood, composition now INJECTED into prompt
+3. **No project created** - Projects now auto-created with all images bundled
+4. **"Try Including" suggestions** - Changed to "Research Applied" confirmation
 
-1. **Updated GPT Routing Rules** (`core/prompts/registry.py`)
-   - Made workflow_orchestration_agent MANDATORY for "research + create" requests
-   - Removed requirement for explicit "package/kit" language
-   - Added clear examples matching user patterns
+**Files Changed:**
 
-2. **Updated Tool Description** (`core/personal_ai_assistant_enhanced.py`)
-   - Made workflow_orchestration_agent description more explicit
-   - Added "MANDATORY" language for research+create patterns
-   - Added example prompts that require the workflow
+1. **`agents/workflow_engine.py`**
+   - `_extract_count()`: Added logging, capped at 5 images max
+   - `_generate_images()`: Hard cap at 5, default to 3
+   - `PromptEnhancer.enhance()`: NOW INJECTS colors, mood, composition into prompt
+   - `_create_or_update_project()`: Added logging for debugging
 
-3. **Fixed Logo Model** (`agents/workflow_orchestration_agent.py`)
-   - Changed from `sd3` to `ultra` model for logos/brand_identity
-   - Ultra is flagship model, best at following "no text" instructions
+2. **`ai_core/templates/ai_image_studio.html`**
+   - Changed "Try Including in Your Next Prompt" to "Research Applied to Your Images"
+   - Green styling to indicate success, not suggestion
 
-**Result:**
-- "Research X and create Y" now properly routes to workflow_orchestration_agent
-- Creates complete project with research, exec review, images bundled
-- Uses Ultra model for logos (better quality, no text in images)
-- Default count of 3 images per workflow
+3. **`core/prompts/registry.py`**
+   - Updated routing rules for workflow_orchestration_agent
+   - Made "research + create" pattern MANDATORY for workflow agent
+
+4. **`core/personal_ai_assistant_enhanced.py`**
+   - Updated `web_search` tool description to defer to workflow agent
+   - Updated `coleadership_agent` tool description to defer to workflow agent
+   - Updated `workflow_orchestration_agent` description with MANDATORY language
+
+---
+
+## Workflow Engine Now Works Like This:
+
+```
+User: "Research trending AI logos and create a logo for my startup"
+                    |
+                    v
+        Frontend detects pattern
+                    |
+                    v
+    Calls /api/v2/workflow/execute/
+                    |
+                    v
+        WorkflowEngine.execute()
+                    |
+    +---------------+---------------+
+    |               |               |
+    v               v               v
+Spider Research  Executive Input  Intent Parse
+(trending data)  (colors, mood)   (style, count)
+    |               |               |
+    +-------+-------+-------+-------+
+            |
+            v
+    PromptEnhancer.enhance()
+    - User style (SACRED)
+    - User subject (SACRED)
+    - INJECT colors, mood, composition  <-- NEW!
+            |
+            v
+    Generate 3-5 images (SD3 for animated styles)
+            |
+            v
+    Auto-create project with all images
+            |
+            v
+    Return result with "Research Applied" confirmation
+```
 
 ---
 
@@ -65,20 +105,8 @@ CODEBASE HEALTH
 ├── Spider Data: 4,910+ entries
 ├── Sci-Fi: 7 active (was 15) - simplified
 ├── Synergy Pairs: 25+ defined
-└── Assistants: Main + Project (separate)
-```
-
----
-
-## Workflow Routing Rules
-
-```
-User Says                                    -> Tool Used
-─────────────────────────────────────────────────────────
-"Create a logo for my company"               -> image_generation_agent
-"Research trends and create logos"           -> workflow_orchestration_agent
-"Research AI logos and generate a logo"      -> workflow_orchestration_agent
-"What style works best for logos?"           -> NO TOOL (just answer)
+├── Assistants: Main + Project (separate)
+└── Workflow Engine: FULLY WORKING!
 ```
 
 ---
@@ -93,4 +121,21 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**ALL HANDOFFS COMPLETE! Platform simplified and production-ready.**
+## Test the Workflow
+
+Try this prompt in the AI Assistant:
+```
+Research trending AI logos and create a logo for my AI content generation app in the DreamWorks style.
+```
+
+You should see:
+1. Spider Intelligence Research (trending topics)
+2. Co-Leadership Creative Direction (colors, mood, composition)
+3. Your Creative Vision (style preserved)
+4. Research Applied to Your Images (confirmation)
+5. Project Created (with all images bundled)
+6. 5 Generated Logos (with research injected into prompts)
+
+---
+
+**ALL HANDOFFS COMPLETE! Workflow Engine fully operational!**

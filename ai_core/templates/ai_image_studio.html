@@ -24697,21 +24697,19 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 </div>
                             `;
 
-                            // === SECTION 4: Suggestions for Next Prompt ===
+                            // === SECTION 4: Session 293 - Show APPLIED enhancements (not suggestions) ===
                             const suggestions = result.suggestions || {};
-                            if (suggestions.trending_topics?.length || suggestions.recommended_colors?.length || suggestions.recommended_mood) {
+                            if (suggestions.recommended_colors?.length || suggestions.recommended_mood || suggestions.composition_tips) {
                                 responseHtml += `
-                                    <div class="suggestions-section" style="background: rgba(251, 146, 60, 0.1); border-left: 3px solid #fb923c; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
-                                        <h5 style="color: #fb923c; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
-                                            <span>💡</span> Try Including in Your Next Prompt
+                                    <div class="enhancements-section" style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
+                                        <h5 style="color: #22c55e; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                                            <span>✨</span> Research Applied to Your Images
                                         </h5>
-                                        <div style="color: #fed7aa; font-size: 13px;">
-                                            ${suggestions.trending_topics?.length ? `<p style="margin: 4px 0;"><strong>Trending Topics:</strong> ${suggestions.trending_topics.join(', ')}</p>` : ''}
-                                            ${suggestions.recommended_colors?.length ? `<p style="margin: 4px 0;"><strong>Popular Colors:</strong> ${suggestions.recommended_colors.join(', ')}</p>` : ''}
-                                            ${suggestions.recommended_mood ? `<p style="margin: 4px 0;"><strong>Trending Mood:</strong> ${suggestions.recommended_mood}</p>` : ''}
-                                            ${suggestions.composition_tips ? `<p style="margin: 4px 0;"><strong>Composition Tips:</strong> ${suggestions.composition_tips}</p>` : ''}
+                                        <div style="color: #bbf7d0; font-size: 13px;">
+                                            ${suggestions.recommended_colors?.length ? `<p style="margin: 4px 0;"><strong>Colors Used:</strong> ${suggestions.recommended_colors.slice(0,2).join(' & ')}</p>` : ''}
+                                            ${suggestions.recommended_mood ? `<p style="margin: 4px 0;"><strong>Mood Applied:</strong> ${suggestions.recommended_mood}</p>` : ''}
+                                            ${suggestions.composition_tips ? `<p style="margin: 4px 0;"><strong>Composition:</strong> ${suggestions.composition_tips}</p>` : ''}
                                         </div>
-                                        ${suggestions.suggestion_text ? `<p style="margin: 8px 0 0 0; color: #fbbf24; font-size: 12px; font-style: italic;">${suggestions.suggestion_text}</p>` : ''}
                                     </div>
                                 `;
                             }

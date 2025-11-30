@@ -301,10 +301,12 @@ class IntentParser:
     @classmethod
     def _extract_count(cls, lower: str) -> int:
         """Extract how many items they want."""
-        # Check for digits
+        # Check for digits followed by content keywords
         match = re.search(r'(\d+)\s*(?:logo|image|thumbnail|banner|photo|illustration)', lower)
         if match:
-            return min(int(match.group(1)), 10)  # Cap at 10
+            count = min(int(match.group(1)), 5)  # Session 293: Cap at 5, not 10
+            logger.info(f"🔢 Extracted count from digits: {count}")
+            return count
 
         # Check for word numbers
         word_numbers = {
@@ -313,9 +315,12 @@ class IntentParser:
         }
         for word, num in word_numbers.items():
             if word in lower:
-                return num
+                logger.info(f"🔢 Extracted count from word: {num}")
+                return min(num, 5)  # Session 293: Cap at 5
 
-        return 3  # Default
+        # Session 293: Default to 3 images
+        logger.info("🔢 Using default count: 3")
+        return 3
 
 
 class PromptEnhancer:
@@ -329,7 +334,7 @@ class PromptEnhancer:
         1. Preserves user's style choice (SACRED)
         2. Preserves user's subject (SACRED)
         3. Adds content type requirements
-        4. Suggests trending topics (user can include in next request)
+        4. Session 293: INJECTS executive recommendations (colors, mood, composition)
         """
         config = CONTENT_CONFIGS[intent.content_type]
 
@@ -353,6 +358,28 @@ class PromptEnhancer:
 
         # 5. Content type requirements (NO TEXT for logos, etc.)
         prompt_parts.append(config.prompt_suffix)
+
+        # 6. Session 293: INJECT executive recommendations into prompt
+        # These are the researched enhancements that should be USED, not just suggested
+        if executive_input:
+            # Add recommended colors
+            colors = executive_input.get('recommended_colors', [])
+            if colors:
+                color_str = ' and '.join(colors[:2])
+                prompt_parts.append(f"{color_str} color palette")
+                logger.info(f"🎨 Injecting colors: {color_str}")
+
+            # Add recommended mood
+            mood = executive_input.get('recommended_mood')
+            if mood:
+                prompt_parts.append(f"{mood} aesthetic")
+                logger.info(f"🎭 Injecting mood: {mood}")
+
+            # Add composition tips
+            composition = executive_input.get('composition_style')
+            if composition:
+                prompt_parts.append(f"{composition} composition")
+                logger.info(f"📐 Injecting composition: {composition}")
 
         final_prompt = ", ".join(prompt_parts)
         logger.info(f"✨ Enhanced prompt: {final_prompt[:100]}...")
@@ -705,7 +732,11 @@ Remember: Enhance their vision, don't replace it!
             model = 'sd3' if style in animated_styles else 'sdxl'
 
             images = []
-            for i in range(count):
+            # Session 293: Cap count at 5, default to 3
+            actual_count = min(count, 5) if count else 3
+            logger.info(f"🖼️ Generating {actual_count} images (requested: {count})")
+
+            for i in range(actual_count):
                 try:
                     result = service.generate_image(
                         prompt=prompt,
@@ -869,6 +900,7 @@ Remember: Enhance their vision, don't replace it!
 
     def _create_or_update_project(self, images: List[Dict], intent: UserIntent) -> Dict:
         """Create a new project or update existing one with generated images."""
+        logger.info(f"📁 Creating project with {len(images)} images...")
         try:
             from content.models import CreativeProject, ImageHistory
 
@@ -911,13 +943,15 @@ Remember: Enhance their vision, don't replace it!
 
             project.save()
 
-            return {
+            result = {
                 'id': str(project.id),
                 'name': project.name,
                 'image_count': project.images.count(),
                 'is_new': not bool(self.project_id)
             }
+            logger.info(f"✅ Project created/updated: {project.name} with {project.images.count()} images")
+            return result
 
         except Exception as e:
-            logger.error(f"Failed to create/update project: {e}")
+            logger.error(f"❌ Failed to create/update project: {e}", exc_info=True)
             return None
