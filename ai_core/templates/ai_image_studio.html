@@ -24639,8 +24639,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     if (v2Workflows.includes(workflowParams.workflow)) {
                         console.log('🚀 Session 240: Using v2 workflow engine for:', workflowParams.workflow);
 
-                        // Call v2 API with the original message (it does its own parsing)
-                        const result = await executeWorkflowV2(message, projectId);
+                        // Session 293: For research+create workflows, ALWAYS create a NEW project
+                        // Don't pass projectId - let the workflow engine create a fresh project
+                        // This ensures "new session" actually creates new projects
+                        const result = await executeWorkflowV2(message, null);
 
                         if (result.success) {
                             // Format v2 response with FULL INTELLIGENCE LAYER display
@@ -24716,6 +24718,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                             // === SECTION 5: Project Created - Session 293: Added "Open Project" button ===
                             const project = result.project;
+                            console.log('📁 Session 293 DEBUG - result.project:', project);
+                            console.log('📁 Session 293 DEBUG - full result keys:', Object.keys(result));
                             if (project) {
                                 responseHtml += `
                                     <div class="project-section" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
@@ -44208,23 +44212,33 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const response = await fetch('/api/predictions/');
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success) {
+                    // Session 293: Add null check for overview data
+                    if (data.success && data.overview) {
                         // Update badges
-                        document.getElementById('predictions-total-badge').textContent = `${data.overview.total_predictions} predictions`;
-                        document.getElementById('predictions-accuracy-badge').textContent = `${Math.round(data.overview.overall_accuracy * 100)}% accuracy`;
+                        const totalBadge = document.getElementById('predictions-total-badge');
+                        const accuracyBadge = document.getElementById('predictions-accuracy-badge');
+                        if (totalBadge) totalBadge.textContent = `${data.overview.total_predictions || 0} predictions`;
+                        if (accuracyBadge) accuracyBadge.textContent = `${Math.round((data.overview.overall_accuracy || 0) * 100)}% accuracy`;
 
                         // Update stats
-                        document.getElementById('predictions-total-count').textContent = data.overview.total_predictions;
-                        document.getElementById('predictions-pending-count').textContent = data.overview.pending_predictions;
-                        document.getElementById('predictions-verified-count').textContent = data.overview.verified_predictions;
-                        document.getElementById('predictions-overall-accuracy').textContent = `${Math.round(data.overview.overall_accuracy * 100)}%`;
+                        const totalCount = document.getElementById('predictions-total-count');
+                        const pendingCount = document.getElementById('predictions-pending-count');
+                        const verifiedCount = document.getElementById('predictions-verified-count');
+                        const overallAccuracy = document.getElementById('predictions-overall-accuracy');
+                        if (totalCount) totalCount.textContent = data.overview.total_predictions || 0;
+                        if (pendingCount) pendingCount.textContent = data.overview.pending_predictions || 0;
+                        if (verifiedCount) verifiedCount.textContent = data.overview.verified_predictions || 0;
+                        if (overallAccuracy) overallAccuracy.textContent = `${Math.round((data.overview.overall_accuracy || 0) * 100)}%`;
 
                         // Render timeline
-                        renderPredictionsTimeline(data.recent_predictions);
+                        if (data.recent_predictions) {
+                            renderPredictionsTimeline(data.recent_predictions);
+                        }
                     }
                 }
             } catch (error) {
-                console.error('Error loading predictions overview:', error);
+                // Session 293: Silently ignore predictions errors (feature may be disabled)
+                // console.error('Error loading predictions overview:', error);
             }
         }
 

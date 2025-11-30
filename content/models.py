@@ -2759,6 +2759,13 @@ class CreativeProject(UnifiedBaseModel):
         help_text="Special project for ad-hoc/spontaneous work"
     )
 
+    # Session 293: Store rich intelligence data from workflow engine
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Rich metadata: research_sources, executive_recommendations, creative_direction, suggested_next_steps"
+    )
+
     class Meta:
         verbose_name = "Creative Project"
         verbose_name_plural = "Creative Projects"
