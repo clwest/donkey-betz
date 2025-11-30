@@ -1,0 +1,447 @@
+"""
+Semantic Routing Service - Embedding-Based Agent Routing
+=========================================================
+
+Session 293: Finally connecting the RAG/embedding system to agent routing!
+
+This service uses semantic similarity (embeddings) instead of keyword matching
+to route user queries to the most appropriate agent.
+
+Key Features:
+1. Pre-computed agent capability embeddings
+2. Real-time query embedding
+3. Cosine similarity matching
+4. Confidence scoring
+5. Fallback to keyword matching if embeddings fail
+
+Usage:
+    from core.services.semantic_routing import SemanticRoutingService
+
+    router = SemanticRoutingService()
+    result = router.route_query("Research the AI market for my startup idea")
+    print(result.agent_name)  # "CompetitorAnalysisAgent"
+    print(result.confidence)  # 0.87
+"""
+
+import logging
+import json
+import hashlib
+from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass
+from functools import lru_cache
+
+import numpy as np
+from django.conf import settings
+from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
+
+# Try to import OpenAI for embeddings
+try:
+    import openai
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+    logger.warning("OpenAI not available for semantic routing")
+
+
+@dataclass
+class RoutingResult:
+    """Result of semantic routing."""
+    agent_name: str
+    confidence: float
+    method: str  # 'semantic' or 'keyword_fallback'
+    all_matches: List[Tuple[str, float]]  # All agents with scores
+    query_embedding_time_ms: int = 0
+    match_time_ms: int = 0
+
+
+# Agent capability descriptions - these get embedded for semantic matching
+AGENT_CAPABILITIES = {
+    "ImageAgent": {
+        "description": "Generate images, logos, banners, illustrations, graphics, icons, avatars, and visual content from text descriptions",
+        "examples": [
+            "create a logo for my tech startup",
+            "generate a cyberpunk city illustration",
+            "make a banner for my YouTube channel",
+            "design an icon for my app",
+            "create a watercolor portrait",
+        ],
+        "keywords": ["image", "logo", "banner", "illustration", "graphic", "icon", "picture", "design", "create", "generate"],
+    },
+    "VideoAgent": {
+        "description": "Create videos, animations, motion graphics, and animate still images into video content",
+        "examples": [
+            "create a video showing a sunset over mountains",
+            "animate this logo into a video",
+            "make a motion graphic for my intro",
+            "generate a promotional video",
+        ],
+        "keywords": ["video", "animate", "animation", "motion", "clip", "movie"],
+    },
+    "AudioAgent": {
+        "description": "Generate audio content including text-to-speech, voiceovers, narration, and sound effects",
+        "examples": [
+            "create a voiceover for my video",
+            "generate text-to-speech narration",
+            "make an audio introduction",
+            "create sound effects for my game",
+        ],
+        "keywords": ["audio", "voice", "speech", "voiceover", "narration", "sound", "tts"],
+    },
+    "ThreeDAgent": {
+        "description": "Create 3D models, convert images to 3D objects for printing or rendering",
+        "examples": [
+            "convert this image to a 3D model",
+            "create a 3D object from this logo",
+            "make a 3D printable version",
+            "generate a 3D mesh",
+        ],
+        "keywords": ["3d", "three-dimensional", "model", "mesh", "print"],
+    },
+    "ImageEditingAgent": {
+        "description": "Edit existing images - upscale, remove background, recolor, create variations, search and replace objects",
+        "examples": [
+            "upscale image 5 to 4x resolution",
+            "remove the background from this image",
+            "make the logo blue instead of red",
+            "create 3 variations of this design",
+        ],
+        "keywords": ["upscale", "remove background", "recolor", "variations", "edit"],
+    },
+    "VideoEditingAgent": {
+        "description": "Edit existing videos - trim, add effects, slow motion, add text overlays, concatenate clips",
+        "examples": [
+            "trim this video to 30 seconds",
+            "add slow motion effect",
+            "add text overlay to the video",
+            "combine these video clips",
+        ],
+        "keywords": ["trim", "cut", "slow motion", "effects", "edit video"],
+    },
+    "ResearchAgent": {
+        "description": "Search the web and spider network for trending topics, news, and general information",
+        "examples": [
+            "what's trending in design right now",
+            "find the latest AI news",
+            "search for web development trends",
+            "what's hot in cybersecurity",
+        ],
+        "keywords": ["search", "find", "trending", "news", "latest", "whats hot"],
+    },
+    "CompetitorAnalysisAgent": {
+        "description": "Research business markets, analyze competitors, create SWOT analysis, evaluate startup ideas and business landscapes",
+        "examples": [
+            "research the AI writing assistant market for my startup idea",
+            "analyze competitors in the coffee subscription space",
+            "do a SWOT analysis for project management tools",
+            "who are the main competitors in ed-tech",
+            "research the competitive landscape for my business idea",
+        ],
+        "keywords": ["market", "competitor", "startup", "business idea", "swot", "landscape", "industry"],
+    },
+    "CustomerResearchAgent": {
+        "description": "Build customer personas, research pain points, analyze customer sentiment and needs from forums and social media",
+        "examples": [
+            "build customer personas for fitness apps",
+            "what are the pain points for project management users",
+            "research customer needs for food delivery",
+            "who are the target customers for online education",
+        ],
+        "keywords": ["customer", "persona", "pain point", "sentiment", "target audience"],
+    },
+    "WorkflowAgent": {
+        "description": "Execute multi-step workflows that combine research and creation, like research-and-create logo packages or brand identity kits",
+        "examples": [
+            "research and create 3 logos for my AI startup",
+            "create a complete brand identity package",
+            "make a YouTube thumbnail package with research",
+            "research trending styles and create banners",
+        ],
+        "keywords": ["research and create", "package", "workflow", "brand identity", "complete"],
+    },
+    "ContentStrategyAgent": {
+        "description": "Develop content strategy, recommend what to create, plan content calendars based on trends",
+        "examples": [
+            "what content should I create for my tech blog",
+            "develop a content strategy for my YouTube channel",
+            "recommend topics for my newsletter",
+        ],
+        "keywords": ["content strategy", "what should I create", "recommend", "plan"],
+    },
+    "BrandIdentityAgent": {
+        "description": "Develop brand identity including colors, typography, style guidelines, and visual consistency",
+        "examples": [
+            "help me develop my brand colors",
+            "what typography should my brand use",
+            "create brand guidelines for consistency",
+        ],
+        "keywords": ["brand", "colors", "typography", "identity", "style guide"],
+    },
+}
+
+
+class SemanticRoutingService:
+    """
+    Routes user queries to agents using semantic similarity.
+
+    Uses OpenAI embeddings to find the most semantically similar agent
+    based on their capability descriptions and example queries.
+    """
+
+    CACHE_KEY_PREFIX = "semantic_routing:"
+    EMBEDDING_MODEL = "text-embedding-3-small"
+    EMBEDDING_DIMENSION = 1536
+    CACHE_TTL = 3600 * 24  # 24 hours for agent embeddings
+
+    def __init__(self):
+        self._client = None
+        self._agent_embeddings: Dict[str, np.ndarray] = {}
+        self._initialized = False
+
+    @property
+    def client(self):
+        """Lazy-load OpenAI client."""
+        if self._client is None and HAS_OPENAI:
+            api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY')
+            if api_key:
+                self._client = openai.OpenAI(api_key=api_key)
+        return self._client
+
+    def initialize(self) -> bool:
+        """
+        Initialize the service by pre-computing agent embeddings.
+
+        Returns:
+            True if initialization succeeded
+        """
+        if self._initialized:
+            return True
+
+        if not self.client:
+            logger.warning("OpenAI client not available, semantic routing disabled")
+            return False
+
+        try:
+            # Load or generate agent embeddings
+            for agent_name in AGENT_CAPABILITIES.keys():
+                embedding = self._get_agent_embedding(agent_name)
+                if embedding is not None:
+                    self._agent_embeddings[agent_name] = embedding
+
+            if len(self._agent_embeddings) >= len(AGENT_CAPABILITIES) * 0.8:
+                self._initialized = True
+                logger.info(f"Semantic routing initialized with {len(self._agent_embeddings)} agents")
+                return True
+            else:
+                logger.warning(f"Only {len(self._agent_embeddings)} agent embeddings available")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to initialize semantic routing: {e}")
+            return False
+
+    def _get_agent_embedding(self, agent_name: str) -> Optional[np.ndarray]:
+        """
+        Get or generate embedding for an agent's capabilities.
+
+        Uses cache to avoid regenerating embeddings on every startup.
+        """
+        cache_key = f"{self.CACHE_KEY_PREFIX}agent:{agent_name}"
+
+        # Try cache first
+        cached = cache.get(cache_key)
+        if cached is not None:
+            try:
+                return np.array(cached)
+            except:
+                pass
+
+        # Generate embedding
+        capability = AGENT_CAPABILITIES.get(agent_name)
+        if not capability:
+            return None
+
+        # Build text representation of agent capabilities
+        text_parts = [
+            f"Agent: {agent_name}",
+            f"Description: {capability['description']}",
+            "Example queries this agent handles:",
+        ]
+        text_parts.extend([f"- {ex}" for ex in capability['examples']])
+        text_parts.append(f"Keywords: {', '.join(capability['keywords'])}")
+
+        text = "\n".join(text_parts)
+
+        try:
+            embedding = self._generate_embedding(text)
+            if embedding is not None:
+                # Cache for future use
+                cache.set(cache_key, embedding.tolist(), self.CACHE_TTL)
+                return embedding
+        except Exception as e:
+            logger.error(f"Failed to generate embedding for {agent_name}: {e}")
+
+        return None
+
+    def _generate_embedding(self, text: str) -> Optional[np.ndarray]:
+        """Generate embedding for text using OpenAI."""
+        if not self.client:
+            return None
+
+        try:
+            response = self.client.embeddings.create(
+                input=text,
+                model=self.EMBEDDING_MODEL
+            )
+            return np.array(response.data[0].embedding)
+        except Exception as e:
+            logger.error(f"Embedding generation failed: {e}")
+            return None
+
+    def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
+        """Calculate cosine similarity between two vectors."""
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return float(np.dot(a, b) / (norm_a * norm_b))
+
+    def route_query(self, query: str, top_k: int = 3) -> RoutingResult:
+        """
+        Route a user query to the most appropriate agent.
+
+        Args:
+            query: The user's input text
+            top_k: Number of top matches to return
+
+        Returns:
+            RoutingResult with agent name, confidence, and all matches
+        """
+        import time
+
+        # Initialize if needed
+        if not self._initialized:
+            self.initialize()
+
+        # If no embeddings available, fall back to keyword matching
+        if not self._agent_embeddings:
+            return self._keyword_fallback(query)
+
+        # Generate query embedding
+        start_time = time.time()
+        query_embedding = self._generate_embedding(query)
+        embedding_time = int((time.time() - start_time) * 1000)
+
+        if query_embedding is None:
+            return self._keyword_fallback(query)
+
+        # Calculate similarity to each agent
+        start_time = time.time()
+        scores = {}
+        for agent_name, agent_embedding in self._agent_embeddings.items():
+            similarity = self._cosine_similarity(query_embedding, agent_embedding)
+            scores[agent_name] = similarity
+        match_time = int((time.time() - start_time) * 1000)
+
+        # Sort by similarity
+        sorted_matches = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top_matches = sorted_matches[:top_k]
+
+        if top_matches:
+            best_agent, best_score = top_matches[0]
+            return RoutingResult(
+                agent_name=best_agent,
+                confidence=best_score,
+                method='semantic',
+                all_matches=top_matches,
+                query_embedding_time_ms=embedding_time,
+                match_time_ms=match_time,
+            )
+
+        return self._keyword_fallback(query)
+
+    def _keyword_fallback(self, query: str) -> RoutingResult:
+        """Fall back to keyword matching if semantic routing fails."""
+        query_lower = query.lower()
+
+        scores = {}
+        for agent_name, capability in AGENT_CAPABILITIES.items():
+            score = 0
+            for keyword in capability['keywords']:
+                if keyword in query_lower:
+                    score += 1
+            if score > 0:
+                scores[agent_name] = score / len(capability['keywords'])
+
+        if scores:
+            sorted_matches = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            best_agent, best_score = sorted_matches[0]
+            return RoutingResult(
+                agent_name=best_agent,
+                confidence=best_score,
+                method='keyword_fallback',
+                all_matches=sorted_matches[:3],
+            )
+
+        # Default to ResearchAgent
+        return RoutingResult(
+            agent_name="ResearchAgent",
+            confidence=0.3,
+            method='keyword_fallback',
+            all_matches=[("ResearchAgent", 0.3)],
+        )
+
+    def get_agent_similarity(self, query: str, agent_name: str) -> float:
+        """Get similarity score between query and specific agent."""
+        if not self._initialized:
+            self.initialize()
+
+        if agent_name not in self._agent_embeddings:
+            return 0.0
+
+        query_embedding = self._generate_embedding(query)
+        if query_embedding is None:
+            return 0.0
+
+        return self._cosine_similarity(query_embedding, self._agent_embeddings[agent_name])
+
+    def explain_routing(self, query: str) -> Dict[str, Any]:
+        """
+        Explain why a query was routed to a particular agent.
+
+        Useful for debugging and understanding the routing decision.
+        """
+        result = self.route_query(query, top_k=5)
+
+        explanation = {
+            'query': query,
+            'selected_agent': result.agent_name,
+            'confidence': result.confidence,
+            'method': result.method,
+            'all_scores': {name: round(score, 4) for name, score in result.all_matches},
+            'timing': {
+                'embedding_ms': result.query_embedding_time_ms,
+                'matching_ms': result.match_time_ms,
+            },
+        }
+
+        # Add agent description
+        if result.agent_name in AGENT_CAPABILITIES:
+            cap = AGENT_CAPABILITIES[result.agent_name]
+            explanation['agent_description'] = cap['description']
+            explanation['agent_examples'] = cap['examples'][:3]
+
+        return explanation
+
+
+# Global instance
+_semantic_router: Optional[SemanticRoutingService] = None
+
+
+def get_semantic_router() -> SemanticRoutingService:
+    """Get the global semantic routing service instance."""
+    global _semantic_router
+    if _semantic_router is None:
+        _semantic_router = SemanticRoutingService()
+    return _semantic_router

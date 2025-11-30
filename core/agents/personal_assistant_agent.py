@@ -3,6 +3,7 @@ Personal Assistant Agent - The Traffic Cop
 ===========================================
 
 Session 268: Phase 3 - Super Platform Integration
+Session 293: Added business research agents + semantic routing
 
 This agent is the main entry point for user requests in the clean architecture.
 It receives messages, classifies intent, and delegates to specialized agents.
@@ -16,6 +17,10 @@ handles the TOP-LEVEL routing decision:
 
 Architecture:
     User → PersonalAssistantAgent → AgentRouter → Specialized Agent → Tools
+
+Routing Strategy (Session 293):
+    1. Semantic Routing (embeddings) - uses cosine similarity to match query to agents
+    2. Keyword Fallback - if semantic confidence is low
 """
 
 import logging
@@ -25,6 +30,23 @@ from typing import Dict, Any, List, Optional, Tuple
 from core.agents.base_agent import BaseAgent, AgentResult
 
 logger = logging.getLogger(__name__)
+
+# Semantic routing service (lazy loaded)
+_semantic_router = None
+
+def get_semantic_router():
+    """Lazy-load the semantic routing service."""
+    global _semantic_router
+    if _semantic_router is None:
+        try:
+            from core.services.semantic_routing import SemanticRoutingService
+            _semantic_router = SemanticRoutingService()
+            _semantic_router.initialize()
+            logger.info("Semantic routing service initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize semantic routing: {e}")
+            _semantic_router = False  # Mark as failed, don't retry
+    return _semantic_router if _semantic_router else None
 
 
 # Intent-to-Agent Mapping
@@ -62,12 +84,21 @@ INTENT_AGENT_MAP = {
     'add_text_to_video': 'VideoEditingAgent',
     'video_effects': 'VideoEditingAgent',
 
-    # Research intents → Research agent
+    # Research intents → Research agent (for general searches)
     'search': 'ResearchAgent',
-    'research': 'ResearchAgent',
     'find': 'ResearchAgent',
     'trending': 'ResearchAgent',
     'analyze_trends': 'ResearchAgent',
+
+    # Business Research intents → Business Research agents (Session 293)
+    'market_research': 'CompetitorAnalysisAgent',
+    'competitor_analysis': 'CompetitorAnalysisAgent',
+    'swot_analysis': 'CompetitorAnalysisAgent',
+    'business_research': 'CompetitorAnalysisAgent',
+    'startup_research': 'CompetitorAnalysisAgent',
+    'customer_research': 'CustomerResearchAgent',
+    'customer_personas': 'CustomerResearchAgent',
+    'pain_points': 'CustomerResearchAgent',
 
     # Multi-step intents → Workflow agent
     'research_and_create': 'WorkflowAgent',
@@ -100,8 +131,17 @@ INTENT_KEYWORDS = {
         'speed up', 'concatenate', 'merge videos'
     ],
     'ResearchAgent': [
-        'search', 'find', 'research', 'trending', 'what is', 'analyze', 'compare',
-        'market', 'competition', 'insights', 'hot in', 'hot right now', 'whats hot'
+        'search', 'find', 'trending', 'what is', 'insights', 'hot in', 'hot right now', 'whats hot'
+    ],
+    # Session 293: Business Research Agents (no API credits!)
+    'CompetitorAnalysisAgent': [
+        'market', 'competition', 'competitors', 'competitor', 'startup', 'business idea',
+        'swot', 'analyze market', 'research market', 'competitive', 'landscape',
+        'who are the competitors', 'market analysis', 'industry analysis', 'for my startup'
+    ],
+    'CustomerResearchAgent': [
+        'customer', 'customers', 'personas', 'persona', 'pain points', 'customer needs',
+        'who buys', 'target audience', 'user research', 'customer research', 'sentiment'
     ],
     'WorkflowAgent': [
         'research and create', 'brand identity', 'package', 'complete', 'full',
@@ -141,7 +181,9 @@ For EDITING requests (upscale, remove background, trim, edit):
 - Delegate to the appropriate editing agent
 
 For RESEARCH requests (search, find, trending, analyze):
-- Delegate to ResearchAgent for information gathering
+- For general trending/news: use ResearchAgent
+- For BUSINESS/MARKET/STARTUP research: use CompetitorAnalysisAgent (SWOT, competitors)
+- For CUSTOMER research: use CustomerResearchAgent (personas, pain points)
 
 For COMPLEX MULTI-STEP requests (research and create, brand package):
 - Delegate to WorkflowAgent for orchestration
@@ -158,7 +200,9 @@ Available agents:
 - ThreeDAgent: Create 3D models
 - ImageEditingAgent: Edit images (upscale, remove bg, recolor)
 - VideoEditingAgent: Edit videos (trim, effects, text)
-- ResearchAgent: Search web and spider network
+- ResearchAgent: Search web and spider network (general trending)
+- CompetitorAnalysisAgent: Business/market/startup research, SWOT, competitor analysis
+- CustomerResearchAgent: Customer personas, pain points, sentiment
 - WorkflowAgent: Multi-step workflows"""
 
     tools = [
@@ -172,7 +216,7 @@ Available agents:
                     "properties": {
                         "agent_name": {
                             "type": "string",
-                            "description": "Which agent to delegate to",
+                            "description": "Which agent to delegate to. For business/market/startup research, use CompetitorAnalysisAgent. For customer/persona research, use CustomerResearchAgent.",
                             "enum": [
                                 "ImageAgent",
                                 "VideoAgent",
@@ -181,7 +225,9 @@ Available agents:
                                 "ImageEditingAgent",
                                 "VideoEditingAgent",
                                 "ResearchAgent",
-                                "WorkflowAgent"
+                                "WorkflowAgent",
+                                "CompetitorAnalysisAgent",
+                                "CustomerResearchAgent"
                             ]
                         },
                         "task": {
@@ -358,14 +404,20 @@ Available agents:
 
     def _detect_agent(self, task: str) -> Optional[str]:
         """
-        Detect which agent should handle this task based on keywords.
+        Detect which agent should handle this task.
+
+        Session 293: Uses a two-tier approach:
+        1. Semantic routing (embeddings) - higher accuracy for natural language
+        2. Keyword fallback - for cases where semantic routing fails or low confidence
 
         Returns:
             Agent name or None if can't determine
         """
         task_lower = task.lower()
 
-        # Check for workflow patterns first (highest priority)
+        # =========================================================================
+        # TIER 0: Workflow patterns (highest priority - must check before semantic)
+        # =========================================================================
         workflow_patterns = [
             'research and create', 'research then create',
             'brand identity package', 'brand package',
@@ -380,6 +432,69 @@ Available agents:
         has_creation = any(w in task_lower for w in ['create', 'make', 'generate', 'design'])
         if has_research and has_creation:
             return 'WorkflowAgent'
+
+        # =========================================================================
+        # TIER 1: Semantic Routing (embeddings-based)
+        # =========================================================================
+        semantic_router = get_semantic_router()
+        if semantic_router:
+            try:
+                result = semantic_router.route_query(task)
+
+                # Log semantic routing result
+                logger.info(
+                    f"Semantic routing: {result.agent_name} "
+                    f"(confidence={result.confidence:.3f}, method={result.method})"
+                )
+
+                # High confidence semantic match - use it
+                # But apply business research guard for creation intent
+                SEMANTIC_CONFIDENCE_THRESHOLD = 0.45
+
+                if result.confidence >= SEMANTIC_CONFIDENCE_THRESHOLD:
+                    selected_agent = result.agent_name
+
+                    # Session 293: Business Research agents ONLY when NO creation intent
+                    # "Create a logo for my startup" should go to ImageAgent, not CompetitorAnalysisAgent
+                    if has_creation and selected_agent in ('CompetitorAnalysisAgent', 'CustomerResearchAgent'):
+                        # Fall through to keyword matching which handles this correctly
+                        logger.info(f"Semantic chose {selected_agent} but creation intent detected, using keyword fallback")
+                    else:
+                        self.record_decision(
+                            decision_type="semantic_routing",
+                            action=f"Semantic routing selected {selected_agent}",
+                            reasoning=f"Confidence: {result.confidence:.3f}, Top matches: {result.all_matches[:3]}",
+                            confidence=result.confidence
+                        )
+                        return selected_agent
+
+            except Exception as e:
+                logger.warning(f"Semantic routing failed, using keyword fallback: {e}")
+
+        # =========================================================================
+        # TIER 2: Keyword Fallback
+        # =========================================================================
+
+        # Session 293: Business Research agents ONLY when NO creation intent
+        # "Research AI market for my startup" -> CompetitorAnalysisAgent
+        # "Create a logo for my startup" -> ImageAgent (has creation intent)
+        if not has_creation:
+            business_research_checks = [
+                ('CompetitorAnalysisAgent', [
+                    'for my startup', 'startup idea', 'business idea', 'market research',
+                    'competitor analysis', 'competitive landscape', 'swot analysis',
+                    'analyze competitors', 'research the market', 'market for my',
+                    'research market', 'industry analysis'
+                ]),
+                ('CustomerResearchAgent', [
+                    'customer personas', 'build personas', 'pain points', 'customer research',
+                    'who are my customers', 'target audience', 'customer sentiment'
+                ]),
+            ]
+            for agent, keywords in business_research_checks:
+                for kw in keywords:
+                    if kw in task_lower:
+                        return agent
 
         # Priority keywords that override other matches
         # Ordered from most specific to least specific
@@ -403,8 +518,13 @@ Available agents:
                     return agent
 
         # Check each agent's keywords with scoring
+        # Session 293: Exclude business research agents if there's creation intent
+        business_research_agents = {'CompetitorAnalysisAgent', 'CustomerResearchAgent'}
         scores = {}
         for agent, keywords in INTENT_KEYWORDS.items():
+            # Skip business research agents when user wants to CREATE something
+            if has_creation and agent in business_research_agents:
+                continue
             score = sum(1 for kw in keywords if kw in task_lower)
             if score > 0:
                 scores[agent] = score
@@ -444,13 +564,13 @@ Available agents:
             prompt = "\n".join(prompt_parts)
 
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": task}
                 ],
-                max_tokens=1500,
-                temperature=0.7,
+                max_completion_tokens=1500,
+                reasoning_effort="medium",
             )
 
             answer = response.choices[0].message.content

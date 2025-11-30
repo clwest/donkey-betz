@@ -1587,7 +1587,9 @@ class AgentLearning(models.Model):
 
 class SpiderData(models.Model):
     """
-    Data collected by spider network for intelligence gathering
+    Data collected by spider network for intelligence gathering.
+
+    Session 293: Added embedding support for semantic search.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -1604,6 +1606,25 @@ class SpiderData(models.Model):
     relevance_score = models.IntegerField(default=0)  # 0-100
     insights = models.JSONField(default=list)
 
+    # Session 293: Embeddings for semantic search
+    # Aggregate embedding of all items in this spider data entry
+    embedding = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding for semantic search across all items"
+    )
+    # Individual item embeddings stored as dict: {item_index: embedding}
+    item_embeddings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Individual embeddings for each item: {index: embedding}"
+    )
+    # Text used to generate the embedding (for debugging/verification)
+    embedding_text = models.TextField(
+        blank=True,
+        help_text="The combined text used to generate the aggregate embedding"
+    )
+
     # Status
     is_processed = models.BooleanField(default=False)
     is_actionable = models.BooleanField(default=False)
@@ -1613,6 +1634,27 @@ class SpiderData(models.Model):
 
     def __str__(self):
         return f"Spider Data: {self.spider_name} - {self.data_type}"
+
+    def get_searchable_text(self) -> str:
+        """Build searchable text from all items for embedding generation."""
+        if not self.raw_data:
+            return ""
+
+        texts = []
+        items = self.raw_data.get('items', [])
+        for item in items[:20]:  # Limit to 20 items to avoid huge embeddings
+            title = item.get('title') or item.get('name') or ''
+            description = item.get('description') or item.get('summary') or ''
+            tags = item.get('tags', [])
+            if isinstance(tags, list):
+                tags = ', '.join(tags[:5])
+            elif not isinstance(tags, str):
+                tags = ''
+
+            if title:
+                texts.append(f"{title}. {description[:200]} {tags}")
+
+        return "\n".join(texts)[:4000]  # Limit total text length
 
     class Meta:
         app_label = 'core'
@@ -8020,10 +8062,10 @@ Respond in JSON format:
         try:
             client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=200
+                max_completion_tokens=200,
+                reasoning_effort="low",
             )
             import json
             result = json.loads(response.choices[0].message.content)
