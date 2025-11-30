@@ -1,16 +1,30 @@
 """
-Sci-Fi Integration Service - Mood, Memory, Evolution, Relationships
+Sci-Fi Integration Service - Mood, Memory, Evolution, Synergy
 
-This service bridges all 15 sci-fi features into agent actions:
+Session 290: SIMPLIFIED from 15 features to 7 core features.
 
-1. Mood System - Agent emotional states affect decisions
+This service bridges sci-fi features into agent actions:
+
+ACTIVE FEATURES:
+1. Mood System - Agent emotional states affect decisions (3 simplified states)
 2. Memory Palace - Past interactions influence current actions
-3. Evolution System - XP and levels affect confidence
-4. Relationships - Rivalries and alliances affect collaboration
-5. Dreams - Idle creative thoughts inform suggestions
-6. Time Travel - Decision replay for debugging
+3. Evolution System - XP and levels affect confidence (simplified to stats)
+4. Synergy System - Static bonuses for agent team collaboration
+5. Time Travel - Decision replay for debugging (separate module)
+6. Hive Mind Mode - Multi-agent collaboration (separate module)
+7. Spider Integration - Real data feeding (separate module)
+
+DEPRECATED FEATURES (Session 284-290):
+- Agent Dreams - Returns empty list, no new records
+- Agent Conversations - Merged into Hive Mind
+- Prophecies/Predictions - Removed
+- Time Capsules - Removed
+- Memory Clusters - Use simple tags instead
+- Rivalries/Alliances - Replaced by static Synergy system
 
 Session 264: Phase 3 - Sci-Fi Integration
+Session 284: Deprecated Dreams, Prophecies, Time Capsules
+Session 290: Simplified Relationships to Synergy, updated service
 """
 
 import logging
@@ -422,57 +436,29 @@ class SciFiIntegrationService:
         )
 
     def _get_relationship_influence(self, agent_name: str) -> Optional[RelationshipInfluence]:
-        """Get relationship influence for an agent."""
+        """
+        Get relationship influence for an agent.
+
+        Session 290: Simplified to use static synergy mapping instead of
+        database queries. This replaces the complex AgentRelationship,
+        Rivalry, and Alliance system with a simple, fast lookup.
+        """
         try:
-            from core.models_unified_system import AgentRelationship
+            # Use the new synergy system instead of database queries
+            from core.agents.synergy import get_relationship_influence_simple
 
-            # Try to find relationships by agent name via FK
-            relationships = AgentRelationship.objects.filter(
-                agent_from__name=agent_name
-            ).select_related('agent_from', 'agent_to')
-
-            # Fallback: try partial match
-            if not relationships.exists():
-                relationships = AgentRelationship.objects.filter(
-                    agent_from__name__icontains=agent_name.replace('Agent', '')
-                ).select_related('agent_from', 'agent_to')
-
-            allies = []
-            rivals = []
-            neutral = []
-            collaboration_bonus = {}
-
-            for rel in relationships:
-                related = rel.agent_to.name if hasattr(rel.agent_to, 'name') else str(rel.agent_to)
-                rel_type = rel.relationship_type.lower()
-                strength = float(getattr(rel, 'strength', 0.5))
-
-                if rel_type in ['ally', 'friend', 'mentor', 'student']:
-                    allies.append(related)
-                    collaboration_bonus[related] = 1.0 + (strength * 0.5)  # Up to 1.5x
-                elif rel_type in ['rival', 'competitor']:
-                    rivals.append(related)
-                    collaboration_bonus[related] = 1.0 - (strength * 0.2)  # Down to 0.8x
-                else:
-                    neutral.append(related)
-                    collaboration_bonus[related] = 1.0
-
-            # Calculate team synergy
-            total_allies = len(allies)
-            total_rivals = len(rivals)
-            synergy = 1.0 + (total_allies * 0.1) - (total_rivals * 0.05)
-            synergy = max(0.5, min(synergy, 2.0))
+            synergy_data = get_relationship_influence_simple(agent_name)
 
             return RelationshipInfluence(
-                allies=allies[:10],
-                rivals=rivals[:10],
-                neutral=neutral[:10],
-                collaboration_bonus=collaboration_bonus,
-                team_synergy=synergy,
+                allies=synergy_data['allies'],
+                rivals=synergy_data['rivals'],  # Always empty now
+                neutral=synergy_data['neutral'],
+                collaboration_bonus=synergy_data['collaboration_bonus'],
+                team_synergy=synergy_data['team_synergy'],
             )
 
         except Exception as e:
-            logger.warning(f"Error getting relationships for {agent_name}: {e}")
+            logger.warning(f"Error getting synergy for {agent_name}: {e}")
 
         return RelationshipInfluence(
             allies=[],
@@ -562,34 +548,18 @@ class SciFiIntegrationService:
         )
 
     def _get_recent_dreams(self, agent_name: str, limit: int = 3) -> List[Dict[str, Any]]:
-        """Get recent dreams/creative thoughts for an agent."""
-        try:
-            from core.models_unified_system import AgentDream
+        """
+        Get recent dreams/creative thoughts for an agent.
 
-            # Try to find dreams by agent name via FK
-            # Note: AgentDream uses 'dreamed_at' not 'created_at'
-            dreams = AgentDream.objects.filter(
-                agent__name=agent_name
-            ).select_related('agent').order_by('-dreamed_at')[:limit]
+        DEPRECATED (Session 284): Agent Dreams feature is deprecated.
+        This method now returns an empty list. Dreams are no longer
+        fetched or included in sci-fi context.
 
-            # Fallback: try partial match
-            if not dreams.exists():
-                dreams = AgentDream.objects.filter(
-                    agent__name__icontains=agent_name.replace('Agent', '')
-                ).select_related('agent').order_by('-dreamed_at')[:limit]
-
-            return [
-                {
-                    'content': getattr(d, 'content', getattr(d, 'dream_content', ''))[:200],
-                    'theme': getattr(d, 'theme', getattr(d, 'dream_type', 'creative')),
-                    'created_at': d.dreamed_at.isoformat() if hasattr(d, 'dreamed_at') else '',
-                }
-                for d in dreams
-            ]
-
-        except Exception as e:
-            logger.warning(f"Error getting dreams for {agent_name}: {e}")
-
+        The method signature is preserved for API compatibility.
+        """
+        # Session 284: AgentDream is deprecated - return empty list
+        # Dreams added complexity without clear user value
+        logger.debug(f"Dreams feature deprecated - skipping dream fetch for {agent_name}")
         return []
 
     def get_collaboration_bonus(
@@ -598,6 +568,9 @@ class SciFiIntegrationService:
     ) -> Tuple[float, Dict[str, Any]]:
         """
         Calculate collaboration bonus for a team of agents.
+
+        Session 290: Simplified to use the new static synergy system
+        instead of database queries. This is faster and more predictable.
 
         Args:
             agent_names: List of agents working together
@@ -608,62 +581,31 @@ class SciFiIntegrationService:
         if len(agent_names) < 2:
             return (1.0, {'reason': 'Single agent, no collaboration bonus'})
 
-        total_bonus = 1.0
-        details = {
-            'team_size': len(agent_names),
-            'synergies': [],
-            'conflicts': [],
-        }
-
         try:
-            from core.models_unified_system import AgentRelationship
+            # Use the new synergy system
+            from core.agents.synergy import get_team_synergy
 
-            for i, agent1 in enumerate(agent_names):
-                for agent2 in agent_names[i+1:]:
-                    # Check relationship both ways using FK pattern
-                    rel = AgentRelationship.objects.filter(
-                        agent_from__name=agent1,
-                        agent_to__name=agent2
-                    ).select_related('agent_from', 'agent_to').first()
+            total_bonus, details = get_team_synergy(agent_names)
 
-                    if not rel:
-                        rel = AgentRelationship.objects.filter(
-                            agent_from__name=agent2,
-                            agent_to__name=agent1
-                        ).select_related('agent_from', 'agent_to').first()
+            # Convert to the expected format
+            formatted_details = {
+                'team_size': details['team_size'],
+                'synergies': details['synergy_details'],
+                'conflicts': [],  # No longer tracking conflicts
+                'final_multiplier': details['final_multiplier'],
+            }
 
-                    # Try partial match if no exact match
-                    if not rel:
-                        rel = AgentRelationship.objects.filter(
-                            agent_from__name__icontains=agent1.replace('Agent', ''),
-                            agent_to__name__icontains=agent2.replace('Agent', '')
-                        ).select_related('agent_from', 'agent_to').first()
-
-                    if rel:
-                        rel_type = rel.relationship_type.lower()
-                        strength = float(getattr(rel, 'strength', 0.5))
-
-                        if rel_type in ['ally', 'friend', 'mentor']:
-                            bonus = 1.0 + (strength * 0.15)
-                            total_bonus *= bonus
-                            details['synergies'].append(
-                                f"{agent1} + {agent2}: {rel_type} (+{int((bonus-1)*100)}%)"
-                            )
-                        elif rel_type == 'rival':
-                            penalty = 1.0 - (strength * 0.1)
-                            total_bonus *= penalty
-                            details['conflicts'].append(
-                                f"{agent1} vs {agent2}: rivalry (-{int((1-penalty)*100)}%)"
-                            )
+            return (total_bonus, formatted_details)
 
         except Exception as e:
             logger.warning(f"Error calculating collaboration bonus: {e}")
 
-        # Cap the bonus
-        total_bonus = max(0.5, min(total_bonus, 2.0))
-        details['final_multiplier'] = total_bonus
-
-        return (total_bonus, details)
+        return (1.0, {
+            'team_size': len(agent_names),
+            'synergies': [],
+            'conflicts': [],
+            'final_multiplier': 1.0,
+        })
 
     def get_prompt_injection(
         self,

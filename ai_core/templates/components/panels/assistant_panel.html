@@ -1,0 +1,126 @@
+{% comment %}
+Session 275: AI Assistant Panel
+Main chat interface for the AI Assistant - Primary interaction point
+Extracted from ai_image_studio.html as part of Frontend Componentization
+
+This panel contains:
+- Main chat area with message history
+- Voice and text input
+- Project selector
+- Style insights card
+- Intelligence feed card
+- Quick actions card
+{% endcomment %}
+
+<!-- Session 189: AI ASSISTANT TAB (Primary Interaction Point) -->
+<!-- Session 272: Expanded chat area for better image visibility -->
+<div class="tab-pane fade show active" id="assistant" role="tabpanel">
+    <div class="row">
+        <!-- Main Chat Area (Left - 9 cols) - Session 272: Wider for better images -->
+        <div class="col-lg-9">
+            <div class="card mb-4" style="background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(251, 191, 36, 0.4);">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border-bottom: 2px solid rgba(251, 191, 36, 0.3);">
+                    <div>
+                        <h4 class="mb-0" style="color: #fbbf24;">&#129302; AI Assistant</h4>
+                        <small style="color: #fcd34d;">Voice & text commands for all your creative needs</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Session Indicator (Tab Version) -->
+                        <div id="tabSessionIndicator" style="display: none; padding: 6px 12px; background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 11px; color: #86efac; font-weight: 700;">&#128221;</span>
+                                <span id="tabSessionTitle" style="font-size: 11px; color: #d1fae5; font-weight: 600;">Session</span>
+                                <span id="tabSessionCounters" style="font-size: 10px; color: #86efac;"></span>
+                            </div>
+                        </div>
+                        <!-- New Session Button -->
+                        <button id="tabNewSessionBtn" onclick="window.aiAssistant.startNewSession()" class="btn btn-sm" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: 1px solid #fbbf24; color: white; font-weight: 600;">
+                            &#10024; New Session
+                        </button>
+                    </div>
+                </div>
+                <!-- Session 272: Increased height from 60vh to 75vh for better image visibility -->
+                <div class="card-body p-0" style="display: flex; flex-direction: column; height: 75vh;">
+                    <!-- Chat Messages Area -->
+                    <div id="tabChatMessages" class="p-4" style="flex: 1; overflow-y: auto; background: rgba(0, 0, 0, 0.2); scroll-behavior: smooth;">
+                        <div class="alert alert-info mb-3" style="background: rgba(6, 182, 212, 0.15); border: 1px solid var(--cyan);">
+                            &#128075; <strong>Welcome!</strong> I'm your AI assistant. I can help you:
+                            <ul class="mb-0 mt-2">
+                                <li>Generate images, videos, and audio content</li>
+                                <li>Execute professional AI workflows</li>
+                                <li>Edit and enhance your content</li>
+                                <li>Manage projects and view your history</li>
+                            </ul>
+                        </div>
+                        <div class="text-muted mb-3" style="font-size: 14px;">
+                            <strong>&#128161; Try saying or typing:</strong>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <button class="btn btn-sm btn-outline-light example-command" onclick="window.aiAssistant.useExampleCommand(this.dataset.cmd)" data-cmd="Create a logo for my coffee shop">
+                                    "Create a logo for my coffee shop"
+                                </button>
+                                <button class="btn btn-sm btn-outline-light example-command" onclick="window.aiAssistant.useExampleCommand(this.dataset.cmd)" data-cmd="Show me artistic styles of a mountain">
+                                    "Show me artistic styles of a mountain"
+                                </button>
+                                <button class="btn btn-sm btn-outline-light example-command" onclick="window.aiAssistant.useExampleCommand(this.dataset.cmd)" data-cmd="Create an anthropomorphic donkey in Pixar style">
+                                    "Create an anthropomorphic donkey"
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="p-3 border-top" style="border-color: rgba(251, 191, 36, 0.3) !important; background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));">
+                        <div class="input-group">
+                            <input type="text" id="tabAssistantInput" class="form-control"
+                                   placeholder="Ask me anything... (or use voice &#127908;)"
+                                   style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.4); color: white; font-size: 15px;">
+                            <button class="btn btn-outline-light" id="tabAssistantVoice" type="button" title="Voice input (Whisper)" style="font-size: 18px; padding: 0 15px;">
+                                &#127908;
+                            </button>
+                            <button class="btn btn-primary" id="tabAssistantSend" type="button" style="padding: 0 20px; font-weight: 700;">
+                                Send &#10148;
+                            </button>
+                            <button class="btn btn-danger" id="tabAssistantStop" type="button" style="padding: 0 20px; font-weight: 700; display: none;" title="Stop current workflow">
+                                &#9209; Stop
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small style="color: #fcd34d;">
+                                <span id="tabVoiceStatus"></span>
+                                GPT-5.1 - Press Enter to send
+                                <!-- Session 271: Clean Architecture Indicator -->
+                                <span id="cleanArchIndicator" style="display: none; margin-left: 8px; background: rgba(168, 85, 247, 0.3); color: #c4b5fd; padding: 2px 8px; border-radius: 12px; font-size: 10px; vertical-align: middle;" title="Clean Architecture Mode">
+                                    &#127959; Clean
+                                </span>
+                            </small>
+                            <small style="color: var(--text-secondary);">
+                                Tip: Click &#127908; to use voice commands!
+                            </small>
+                        </div>
+                        <!-- Session 189: Workflow Status Indicator -->
+                        <div id="workflowStatusContainer" class="mt-2" style="display: none;">
+                            <div class="d-flex align-items-center gap-2 p-2 rounded" style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="spinner-border spinner-border-sm text-success" role="status" style="width: 16px; height: 16px;">
+                                    <span class="visually-hidden">Working...</span>
+                                </div>
+                                <small id="workflowStatusText" style="color: #4ade80; font-weight: 500;">
+                                    &#129302; Analyzing your request...
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel (3 cols) - Style Preferences & Project Context -->
+        <!-- Session 272: Reduced from 4 to 3 cols to give more space to chat -->
+        <div class="col-lg-3">
+            {% include "components/panels/assistant_project_selector.html" %}
+            {% include "components/panels/assistant_style_insights.html" %}
+            {% include "components/panels/assistant_intelligence_feed.html" %}
+            {% include "components/panels/assistant_quick_actions.html" %}
+        </div>
+    </div>
+</div>
+<!-- END AI ASSISTANT TAB -->

@@ -1,0 +1,28 @@
+{% comment %}
+Session 275: Intelligence Opportunities Sub-Tab
+Jobs, freelance, and business opportunities
+Note: Placeholder - full extraction in next session
+{% endcomment %}
+
+<!-- ========== OPPORTUNITIES SUB-TAB ========== -->
+<div class="tab-pane fade" id="intel-opportunities" role="tabpanel">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                    <h5 class="mb-0" style="color: #22c55e;">&#128188; Job & Freelance Opportunities</h5>
+                    <button class="btn btn-sm" onclick="loadTrendingTab()" style="background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.4);">
+                        &#128260; Refresh
+                    </button>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <div id="trending-jobs-list">
+                        <!-- Jobs will be loaded here -->
+                        <p class="text-muted text-center">Loading opportunities...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- END OPPORTUNITIES SUB-TAB -->

@@ -1,0 +1,111 @@
+{% comment %}
+Session 275: WebSocket Handler - Real-time communication utilities
+Extracted from ai_image_studio.html as part of Frontend Componentization
+{% endcomment %}
+<script>
+/**
+ * WebSocket Manager for AI Studio
+ * Handles real-time communication with automatic reconnection
+ */
+const WebSocketManager = {
+    connections: {},
+    reconnectAttempts: {},
+    maxReconnectAttempts: 5,
+    reconnectDelay: 1000,
+
+    /**
+     * Connect to a WebSocket channel
+     * @param {string} channel - The channel name (e.g., 'generation', 'chat')
+     * @param {function} onMessage - Callback for received messages
+     * @param {function} onError - Optional error callback
+     * @returns {WebSocket}
+     */
+    connect(channel, onMessage, onError = null) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/${channel}/`;
+
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            console.log(`WebSocket connected: ${channel}`);
+            this.reconnectAttempts[channel] = 0;
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                onMessage(data);
+            } catch (e) {
+                console.error('Failed to parse WebSocket message:', e);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error(`WebSocket error on ${channel}:`, error);
+            if (onError) onError(error);
+        };
+
+        ws.onclose = (event) => {
+            console.log(`WebSocket closed: ${channel}`, event.code, event.reason);
+            delete this.connections[channel];
+
+            // Attempt reconnection
+            if (this.reconnectAttempts[channel] < this.maxReconnectAttempts) {
+                this.reconnectAttempts[channel] = (this.reconnectAttempts[channel] || 0) + 1;
+                const delay = this.reconnectDelay * this.reconnectAttempts[channel];
+                console.log(`Reconnecting ${channel} in ${delay}ms...`);
+                setTimeout(() => this.connect(channel, onMessage, onError), delay);
+            }
+        };
+
+        this.connections[channel] = ws;
+        return ws;
+    },
+
+    /**
+     * Disconnect from a channel
+     * @param {string} channel
+     */
+    disconnect(channel) {
+        if (this.connections[channel]) {
+            this.reconnectAttempts[channel] = this.maxReconnectAttempts; // Prevent reconnect
+            this.connections[channel].close();
+            delete this.connections[channel];
+        }
+    },
+
+    /**
+     * Send a message on a channel
+     * @param {string} channel
+     * @param {object} message
+     */
+    send(channel, message) {
+        const ws = this.connections[channel];
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(message));
+        } else {
+            console.error(`WebSocket ${channel} is not connected`);
+        }
+    },
+
+    /**
+     * Check if a channel is connected
+     * @param {string} channel
+     * @returns {boolean}
+     */
+    isConnected(channel) {
+        const ws = this.connections[channel];
+        return ws && ws.readyState === WebSocket.OPEN;
+    },
+
+    /**
+     * Disconnect all channels
+     */
+    disconnectAll() {
+        Object.keys(this.connections).forEach(channel => this.disconnect(channel));
+    }
+};
+
+// Make it globally available
+window.WebSocketManager = WebSocketManager;
+</script>

@@ -324,7 +324,7 @@ class SpiderIntelligenceService:
 
         return insights
 
-    def get_tech_trends(self, hours: int = 24, limit: int = 15, topic_filter: str = None) -> dict:
+    def get_tech_trends(self, hours: int = 24, limit: int = 15, topic_filter: str = None, include_producthunt: bool = True) -> dict:
         """
         Get technology trends from HackerNews, DevTo, TechCrunch, etc.
 
@@ -332,6 +332,8 @@ class SpiderIntelligenceService:
             hours: Look back period
             limit: Max results per category
             topic_filter: Optional filter like 'ai', 'web', 'security' to focus results
+            include_producthunt: Whether to include ProductHunt in projects (default True).
+                                 Set to False for research results where ProductHunt is less useful.
 
         Returns:
             Dict with tech topics, discussions, and projects
@@ -427,7 +429,11 @@ class SpiderIntelligenceService:
                     discussion_sources = ['hackernews', 'devto', 'techcrunch', 'theverge',
                                           'wired', 'mit_tech_review', 'axios', 'hashnode',
                                           'medium', 'substack', 'huggingface', 'kaggle']
-                    project_sources = ['github_trending', 'producthunt']
+                    # Session 274: Optionally exclude ProductHunt for cleaner research results
+                    if include_producthunt:
+                        project_sources = ['github_trending', 'producthunt']
+                    else:
+                        project_sources = ['github_trending']
 
                     if source in discussion_sources:
                         trends['discussions'].append({

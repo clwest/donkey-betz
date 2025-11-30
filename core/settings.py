@@ -937,4 +937,9 @@ SPECTACULAR_SETTINGS = {
 # Phase 1: Feature flag starts disabled, test ImageAgent in isolation
 # Phase 4: Enable flag after all agents migrated and tested
 # Phase 6: Remove flag after cleanup
-USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'False') == 'True'
+#
+# Session 280: ENABLED by default (was 'False')
+# - All 10 core agents are working
+# - Compatibility shim in agents/__init__.py redirects with deprecation warnings
+# - Can still disable via: USE_CLEAN_AGENT_ARCHITECTURE=False make start
+USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'True') == 'True'

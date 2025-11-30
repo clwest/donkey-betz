@@ -258,3 +258,50 @@ def spider_data_stats(request):
         return JsonResponse({
             'error': str(e)
         }, status=500)
+
+
+@require_http_methods(["GET"])
+def spider_health_check(request):
+    """
+    Session 290: Spider network health check endpoint for HANDOFF_06.
+
+    Returns:
+        - Overall health status (healthy/degraded)
+        - Total vs working spiders
+        - Last verification timestamp
+        - Category breakdown
+    """
+    try:
+        from ai_core.spiders.spider_registry import get_spider_registry
+
+        registry = get_spider_registry()
+        health = registry.get_health_status()
+
+        # Add database connectivity check
+        try:
+            from core.models_unified_system import SpiderData
+            recent_data = SpiderData.objects.filter(
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).count()
+            health['database_status'] = 'connected'
+            health['data_last_24h'] = recent_data
+        except Exception as e:
+            health['database_status'] = 'error'
+            health['database_error'] = str(e)
+
+        # Check Redis connectivity (for real-time distribution)
+        try:
+            import redis
+            r = redis.Redis(host='localhost', port=6379, db=0)
+            r.ping()
+            health['redis_status'] = 'connected'
+        except Exception:
+            health['redis_status'] = 'disconnected'
+
+        return JsonResponse(health)
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e),
+        }, status=500)

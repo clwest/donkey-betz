@@ -1,9 +1,9 @@
-# Session 293: Workflow Engine + Full Project Creation
+# Session 293: Workflow Engine + Full Project Creation + Creative Toolbox Fix
 
 **Date:** November 30, 2025
 **Previous Session:** 292 (Main/Project Assistant Separation)
-**Session Type:** Feature Enhancement - Workflow Engine + Projects
-**Status:** ALL 6 HANDOFFS COMPLETE + WORKFLOW ENGINE ENHANCED
+**Session Type:** Feature Enhancement - Workflow Engine + Projects + Bug Fix
+**Status:** ALL 6 HANDOFFS COMPLETE + WORKFLOW ENGINE ENHANCED + CREATIVE TOOLBOX FIXED
 
 ---
 
@@ -18,6 +18,29 @@
 3. **No project created** - Projects now auto-created with FULL metadata
 4. **"Try Including" suggestions** - Changed to "Research Applied" confirmation
 5. **Projects missing data** - Now includes Research Sources + Executive Recommendations
+
+### Fixed Creative Toolbox Image Selection - WORKING!
+
+**Problem:** When using Creative Toolbox (Upscale, Inpaint, etc.) from the Projects tab, the image dropdown showed "No images available" even though the project had images.
+
+**Root Causes:**
+1. API was filtering by `user=request.user` but workflow images were created by admin
+2. All images were stored as data URIs (`data:image/png;base64,...`) and the API had `.exclude(file_path__startswith='data:')` filter
+3. `_add_to_project` function was using wrong FK relationship
+
+**Fixes Applied:**
+1. **`core/views_image.py`**:
+   - Modified `image_history` to not filter by user when `project_id` is provided
+   - Removed data URI exclusion for project-based queries
+   - Added URL replacement to use `/api/images/{id}/view/` instead of huge base64 strings
+   - Added new `serve_image` endpoint to serve actual image data from data URIs
+
+2. **`core/urls.py`**:
+   - Added `path('api/images/<uuid:image_id>/view/', serve_image, name='serve-image')`
+
+3. **`agents/workflow_engine.py`**:
+   - Fixed `_add_to_project` to use `image.project = project; image.save()` instead of `project.images.add(image)`
+   - Changed from `project.images.count()` to `project.project_images.count()`
 
 ### NEW: Full Project Creation with Intelligence Data
 
@@ -43,6 +66,7 @@ Projects created by workflow now include:
      - `metadata.spider_intelligence` - Summary, trending keywords, data points
      - `metadata.co_leadership` - Color, composition, mood recommendations
      - Category, colors, tags auto-populated
+   - `_add_to_project()`: Fixed FK relationship for adding images to projects
 
 2. **`ai_core/templates/ai_image_studio.html`**
    - Changed "Try Including in Your Next Prompt" to "Research Applied to Your Images"
@@ -51,6 +75,7 @@ Projects created by workflow now include:
    - Added `openProjectInTab()` function for seamless project navigation
    - Fixed predictions error with null checks
    - Research+create workflows now ALWAYS create NEW projects (not add to existing)
+   - Added debug logging to `populateImageDropdown` function
 
 3. **`content/models.py`**
    - Added `metadata` JSONField to CreativeProject model for rich intelligence data
@@ -61,6 +86,14 @@ Projects created by workflow now include:
 
 5. **`core/personal_ai_assistant_enhanced.py`**
    - Updated tool descriptions to defer to workflow agent for research+create
+
+6. **`core/views_image.py`**
+   - Fixed `image_history` API for project-based queries (no user filter, no data URI exclusion)
+   - Added URL truncation for data URIs to prevent huge JSON responses
+   - Added new `serve_image` endpoint to serve actual image data from data URIs
+
+7. **`core/urls.py`**
+   - Added `serve_image` URL pattern for `/api/images/<uuid:image_id>/view/`
 
 ---
 

@@ -1,0 +1,347 @@
+"""
+CTO Agent - Clean Architecture
+===============================
+
+Session 280: Phase 2 - Agent Architecture Unification
+
+The CTO Agent provides technical analysis and planning capabilities.
+Phase 1 is READ-ONLY - it provides analysis and plans but does not execute changes.
+
+Tools Available:
+    - analyze_feature: Analyze a feature request
+    - plan_implementation: Create an implementation plan
+    - review_architecture: Review system architecture
+
+Usage:
+    from core.agents.executive import CTOAgent
+
+    agent = CTOAgent(user=request.user)
+    result = agent.execute(
+        task="Analyze the authentication system",
+        context={},
+        scifi_context={},
+        spider_context={}
+    )
+"""
+
+import logging
+import time
+from typing import Dict, Any, List, Optional
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class CTOAgent(BaseAgent):
+    """
+    CTO Agent - Technical Planning and Analysis (Read-Only).
+
+    This agent:
+    1. Analyzes feature requests
+    2. Creates implementation plans
+    3. Reviews architecture decisions
+
+    It CANNOT:
+    - Write or modify code
+    - Execute file operations
+    - Make destructive changes
+    """
+
+    name = "CTOAgent"
+
+    system_prompt = """You are CTOAgent, the Chief Technology Officer AI assistant.
+
+Your job is to provide technical analysis, planning, and architectural guidance.
+You are in READ-ONLY mode - you analyze and plan but do NOT execute changes.
+
+When given a task:
+1. Analyze the technical requirements
+2. Consider the existing architecture
+3. Provide implementation recommendations
+4. Identify potential risks and dependencies
+
+Analysis areas:
+- Feature analysis: Break down requirements, estimate complexity
+- Architecture review: Evaluate system design, identify improvements
+- Implementation planning: Create step-by-step plans
+- Risk assessment: Identify technical risks and mitigations
+
+You work with other agents:
+- COOAgent: For operational planning and roadmaps
+- CreativeDirectorAgent: For creative/design decisions
+- MeetingCoordinatorAgent: To facilitate executive discussions
+
+You CANNOT execute code or make changes - only analyze and plan."""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "analyze_feature",
+                "description": "Analyze a feature request and provide technical assessment",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "feature_description": {
+                            "type": "string",
+                            "description": "Description of the feature to analyze"
+                        },
+                        "scope": {
+                            "type": "string",
+                            "description": "Scope of analysis",
+                            "enum": ["quick", "detailed", "comprehensive"],
+                            "default": "detailed"
+                        }
+                    },
+                    "required": ["feature_description"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "plan_implementation",
+                "description": "Create an implementation plan for a feature or change",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "feature": {
+                            "type": "string",
+                            "description": "Feature to plan"
+                        },
+                        "approach": {
+                            "type": "string",
+                            "description": "Implementation approach",
+                            "enum": ["incremental", "big_bang", "parallel"]
+                        }
+                    },
+                    "required": ["feature"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "review_architecture",
+                "description": "Review system architecture and provide recommendations",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "area": {
+                            "type": "string",
+                            "description": "Area to review",
+                            "enum": ["agents", "database", "api", "frontend", "infrastructure", "overall"]
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    ]
+
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> AgentResult:
+        """Execute technical analysis based on the task."""
+        start_time = time.time()
+        tool_calls_made = []
+
+        with self.time_travel_session("cto_analysis", task, input_data=context):
+            try:
+                if not self._validate_task(task):
+                    return AgentResult(
+                        success=False,
+                        error="Invalid or empty task",
+                        agent_name=self.name
+                    )
+
+                self.record_decision(
+                    decision_type="task_analysis",
+                    action="Analyzing technical request",
+                    reasoning=f"Received task: {task[:100]}",
+                    alternatives=["delegate_to_coo", "request_more_info"],
+                    confidence=0.9
+                )
+
+                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                logger.info(f"CTOAgent executing: {task[:50]}...")
+
+                gpt_response = self._call_openai(full_prompt)
+
+                if gpt_response.get('tool_calls'):
+                    for tool_call in gpt_response['tool_calls']:
+                        tool_name = tool_call['name']
+                        arguments = tool_call['arguments']
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"Calling {tool_name}",
+                            reasoning=f"Technical analysis: {arguments}",
+                            alternatives=[],
+                            confidence=0.95
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, arguments)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': arguments,
+                            'result': tool_result
+                        })
+
+                        self.mark_decision_outcome(
+                            success=tool_result.get('success', False),
+                            result_summary=str(tool_result)[:100]
+                        )
+
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    return AgentResult(
+                        success=True,
+                        message="Technical analysis completed",
+                        data={
+                            'task': task,
+                            'tool_results': tool_calls_made,
+                        },
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                        decisions_made=self._tt_decision_count,
+                        tool_calls=tool_calls_made
+                    )
+
+                else:
+                    return AgentResult(
+                        success=True,
+                        message=gpt_response.get('content', ''),
+                        data={'type': 'conversation'},
+                        agent_name=self.name,
+                        execution_time_ms=int((time.time() - start_time) * 1000)
+                    )
+
+            except Exception as e:
+                logger.error(f"CTOAgent error: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+    def _execute_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Execute a CTO tool call."""
+        if tool_name == "analyze_feature":
+            return self._analyze_feature(
+                feature_description=arguments.get('feature_description', ''),
+                scope=arguments.get('scope', 'detailed')
+            )
+
+        elif tool_name == "plan_implementation":
+            return self._plan_implementation(
+                feature=arguments.get('feature', ''),
+                approach=arguments.get('approach', 'incremental')
+            )
+
+        elif tool_name == "review_architecture":
+            return self._review_architecture(
+                area=arguments.get('area', 'overall')
+            )
+
+        else:
+            return {
+                'success': False,
+                'error': f"Unknown tool: {tool_name}"
+            }
+
+    def _analyze_feature(
+        self,
+        feature_description: str,
+        scope: str
+    ) -> Dict[str, Any]:
+        """Analyze a feature request."""
+        logger.info(f"Analyzing feature: {feature_description[:50]}")
+
+        # Provide structured analysis
+        analysis = {
+            'feature': feature_description,
+            'scope': scope,
+            'complexity': 'medium',  # Would be computed in full implementation
+            'estimated_effort': 'TBD',
+            'dependencies': [],
+            'risks': [],
+            'recommendations': [
+                'Break into smaller tasks',
+                'Create unit tests first',
+                'Review with team before implementation'
+            ]
+        }
+
+        return {
+            'success': True,
+            'analysis': analysis
+        }
+
+    def _plan_implementation(
+        self,
+        feature: str,
+        approach: str
+    ) -> Dict[str, Any]:
+        """Create an implementation plan."""
+        logger.info(f"Planning implementation for: {feature[:50]}")
+
+        plan = {
+            'feature': feature,
+            'approach': approach,
+            'phases': [
+                {'phase': 1, 'name': 'Research & Design', 'tasks': ['Analyze requirements', 'Design architecture']},
+                {'phase': 2, 'name': 'Implementation', 'tasks': ['Build core functionality', 'Write tests']},
+                {'phase': 3, 'name': 'Integration', 'tasks': ['Integrate with existing code', 'End-to-end testing']},
+                {'phase': 4, 'name': 'Deployment', 'tasks': ['Deploy to staging', 'Monitor & iterate']}
+            ],
+            'notes': 'This is a read-only plan - no execution'
+        }
+
+        return {
+            'success': True,
+            'plan': plan
+        }
+
+    def _review_architecture(self, area: str) -> Dict[str, Any]:
+        """Review system architecture."""
+        logger.info(f"Reviewing architecture area: {area}")
+
+        review = {
+            'area': area,
+            'status': 'reviewed',
+            'strengths': [
+                'Clean separation of concerns',
+                'Well-defined agent boundaries',
+                'Good use of composition'
+            ],
+            'improvements': [
+                'Consider adding caching layer',
+                'Document API contracts',
+                'Add integration tests'
+            ],
+            'recommendations': [
+                'Continue with incremental refactoring',
+                'Prioritize test coverage',
+                'Document architectural decisions'
+            ]
+        }
+
+        return {
+            'success': True,
+            'review': review
+        }
+
+    def _validate_task(self, task: str) -> bool:
+        """Validate the task is appropriate for CTO analysis."""
+        return bool(task and task.strip())

@@ -1,0 +1,17 @@
+{% comment %}
+Session 275: Assistant Project Selector Card
+Allows switching between active projects
+{% endcomment %}
+
+<!-- Project Selector Card -->
+<div class="card mb-3" style="background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.4);">
+    <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+        <h6 class="mb-0" style="color: #c4b5fd;">&#128193; Active Project</h6>
+    </div>
+    <div class="card-body py-3">
+        <select id="tabActiveProjectSelect" class="form-select mb-2" onchange="window.aiAssistant.switchProject(this.value)" style="background: rgba(139, 92, 246, 0.15); border-color: #8b5cf6; color: #e9d5ff;">
+            <option value="">Loading projects...</option>
+        </select>
+        <small style="color: #a78bfa; font-size: 11px;">New sessions create projects automatically</small>
+    </div>
+</div>

@@ -806,6 +806,7 @@ Remember: Enhance their vision, don't replace it!
             from content.models import CreativeProject, ImageHistory
 
             project = CreativeProject.objects.get(id=self.project_id)
+            added_count = 0
 
             for img in images:
                 # The image ID is now stored as 'id' not 'image_id'
@@ -813,16 +814,19 @@ Remember: Enhance their vision, don't replace it!
                 if image_id:
                     try:
                         image = ImageHistory.objects.get(id=image_id)
-                        project.images.add(image)
+                        # Session 293: Use correct FK relationship
+                        # ImageHistory.project -> CreativeProject (not vice versa)
+                        image.project = project
+                        image.save()
+                        added_count += 1
                     except ImageHistory.DoesNotExist:
                         logger.warning(f"Image {image_id} not found when adding to project")
 
-            project.save()
-
+            # Use related_name 'project_images' for count
             return {
                 'id': str(project.id),
                 'name': project.name,
-                'image_count': project.images.count()
+                'image_count': project.project_images.count()
             }
 
         except Exception as e:

@@ -1,0 +1,79 @@
+{% comment %}
+Session 275: Style Selector Widget
+Dropdown/grid selector for image generation styles
+Extracted from ai_image_studio.html as part of Frontend Componentization
+
+Usage:
+{% include "components/widgets/style_selector.html" with select_id="imageStyle" label="Style" %}
+
+Parameters:
+- select_id: Unique ID for the select element (required)
+- select_name: Form field name (defaults to select_id)
+- label: Label text
+- show_preview: Show style preview on hover (default: True)
+{% endcomment %}
+
+<div class="style-selector-container mb-3">
+    {% if label %}
+    <label for="{{ select_id }}" class="form-label">{{ label }}</label>
+    {% endif %}
+
+    <select id="{{ select_id }}" name="{{ select_name|default:select_id }}" class="form-select">
+        <optgroup label="Animation Styles">
+            <option value="pixar">Pixar Animation</option>
+            <option value="disney">Disney Classic</option>
+            <option value="dreamworks">DreamWorks</option>
+            <option value="ghibli">Studio Ghibli</option>
+            <option value="anime">Anime</option>
+            <option value="manga">Manga</option>
+            <option value="cartoon">Cartoon</option>
+            <option value="chibi">Chibi</option>
+        </optgroup>
+
+        <optgroup label="Art Styles">
+            <option value="watercolor">Watercolor</option>
+            <option value="oil_painting">Oil Painting</option>
+            <option value="pencil">Pencil Sketch</option>
+            <option value="charcoal">Charcoal</option>
+            <option value="pastel">Pastel</option>
+            <option value="impressionist">Impressionist</option>
+            <option value="surreal">Surrealist</option>
+            <option value="cubist">Cubist</option>
+            <option value="pop_art">Pop Art</option>
+            <option value="art_deco">Art Deco</option>
+        </optgroup>
+
+        <optgroup label="Genre Styles">
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="steampunk">Steampunk</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="scifi">Science Fiction</option>
+            <option value="gothic">Gothic</option>
+            <option value="horror">Horror</option>
+        </optgroup>
+
+        <optgroup label="Photography Styles">
+            <option value="photorealistic">Photorealistic</option>
+            <option value="cinematic">Cinematic</option>
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+            <option value="macro">Macro</option>
+            <option value="product">Product Photography</option>
+        </optgroup>
+
+        <optgroup label="Special Styles">
+            <option value="neon">Neon Glow</option>
+            <option value="vintage">Vintage</option>
+            <option value="retro">Retro</option>
+            <option value="minimalist">Minimalist</option>
+            <option value="abstract">Abstract</option>
+            <option value="geometric">Geometric</option>
+        </optgroup>
+    </select>
+
+    {% if show_preview|default:True %}
+    <div id="{{ select_id }}Preview" class="style-preview mt-2 p-2 rounded d-none" style="background: rgba(0,0,0,0.3);">
+        <small class="text-muted">Style preview will appear here</small>
+    </div>
+    {% endif %}
+</div>

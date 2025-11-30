@@ -295,6 +295,49 @@ stop-all: ## Stop all services (Daphne + Flutter + optional Redis)
 	@$(MAKE) stop
 	@echo "✓ All services stopped."
 
+# ---------- Testing (Session 289) ----------
+.PHONY: test test-unit test-integration test-api test-fast test-coverage test-ci
+
+test: ## Run all tests
+	@echo "==> Running all tests..."
+	@.venv/bin/pytest tests/ -v
+	@echo "✓ Tests complete."
+
+test-unit: ## Run unit tests only (fast)
+	@echo "==> Running unit tests..."
+	@.venv/bin/pytest tests/unit tests/models tests/agents_tests -v
+	@echo "✓ Unit tests complete."
+
+test-integration: ## Run integration tests only
+	@echo "==> Running integration tests..."
+	@.venv/bin/pytest tests/integration -v -m "integration"
+	@echo "✓ Integration tests complete."
+
+test-api: ## Run API tests only
+	@echo "==> Running API tests..."
+	@.venv/bin/pytest tests/api tests/views -v
+	@echo "✓ API tests complete."
+
+test-fast: ## Run fast tests (exclude slow and external API tests)
+	@echo "==> Running fast tests..."
+	@.venv/bin/pytest tests/ -v -m "not slow and not external_api" --ignore=tests/e2e --ignore=tests/frontend
+	@echo "✓ Fast tests complete."
+
+test-coverage: ## Run tests with coverage report
+	@echo "==> Running tests with coverage..."
+	@.venv/bin/pytest tests/ --cov=core --cov=content --cov=agents --cov-report=html --cov-report=term-missing --cov-config=.coveragerc
+	@echo "✓ Coverage report generated at htmlcov/index.html"
+
+test-ci: ## Run tests for CI (with XML output)
+	@echo "==> Running CI tests..."
+	@.venv/bin/pytest tests/ -v --cov=core --cov=content --cov=agents --cov-report=xml --cov-config=.coveragerc --ignore=tests/e2e --ignore=tests/frontend
+	@echo "✓ CI tests complete."
+
+test-collect: ## Collect tests without running (verify structure)
+	@echo "==> Collecting tests..."
+	@.venv/bin/pytest tests/ --collect-only -q
+	@echo "✓ Test collection complete."
+
 # ---------- Utility / help ----------
 help:
 	@echo "Usage: make <target>"

@@ -35962,21 +35962,30 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         /**
          * Session 197 Phase 2: Helper function to populate image dropdowns in modals
+         * Session 293: Added debug logging
          */
         async function populateImageDropdown(projectId, selectId) {
+            console.log(`📸 populateImageDropdown called: projectId=${projectId}, selectId=${selectId}`);
             const select = document.getElementById(selectId);
-            if (!select) return;
+            if (!select) {
+                console.warn(`📸 Select element NOT FOUND: ${selectId}`);
+                return;
+            }
 
             select.innerHTML = '<option value="">Loading images...</option>';
 
             try {
                 // Use /api/images/history/ with project_id filter (Session 197)
-                const response = await fetch(`/api/images/history/?project_id=${projectId}&limit=100`, {
+                const url = `/api/images/history/?project_id=${projectId}&limit=100`;
+                console.log(`📸 Fetching: ${url}`);
+                const response = await fetch(url, {
                     headers: {'X-CSRFToken': getCsrfToken()}
                 });
                 const data = await response.json();
+                console.log(`📸 API response:`, data);
 
                 if (data.success && data.images && data.images.length > 0) {
+                    console.log(`📸 Found ${data.images.length} images for project ${projectId}`);
                     select.innerHTML = '<option value="">Select an image...</option>';
                     data.images.forEach(img => {
                         const seqNum = img.sequential_number || img.id.toString().substring(0, 8);
@@ -35984,10 +35993,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         select.innerHTML += `<option value="${img.id}">Image #${seqNum} - ${prompt}</option>`;
                     });
                 } else {
+                    console.log(`📸 No images found or error: success=${data.success}, images=${data.images?.length || 0}`);
                     select.innerHTML = '<option value="">No images in this project</option>';
                 }
             } catch (error) {
-                console.error('Error loading images:', error);
+                console.error('📸 Error loading images:', error);
                 select.innerHTML = '<option value="">Error loading images</option>';
             }
         }

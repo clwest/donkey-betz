@@ -1,0 +1,208 @@
+{% comment %}
+Session 275: Base Styles - Core element styling
+Extracted from ai_image_studio.html as part of Frontend Componentization
+{% endcomment %}
+<style>
+/* Body and page setup */
+body {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* Typography */
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+small {
+    color: var(--text-secondary);
+}
+
+/* Form elements */
+.form-label {
+    color: #fcd34d;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.75rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.form-control, .form-select {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(251, 191, 36, 0.3);
+    color: var(--text-primary);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 0.2rem rgba(251, 191, 36, 0.25);
+    color: var(--text-primary);
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary);
+}
+
+.form-select option {
+    background: var(--dark);
+    color: var(--text-primary);
+}
+
+/* Buttons - Primary */
+.btn-primary {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border: 2px solid #fcd34d;
+    color: #000;
+    padding: 12px 30px;
+    font-weight: 800;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.5);
+    border-radius: 10px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(251, 191, 36, 0.7);
+    background: linear-gradient(135deg, #fcd34d, #fbbf24);
+    border-color: #fbbf24;
+    color: #000;
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(251, 191, 36, 0.5);
+}
+
+/* Buttons - Outline Light */
+.btn-outline-light {
+    border: 2px solid #fbbf24;
+    color: #fcd34d;
+    background: rgba(251, 191, 36, 0.1);
+    font-weight: 700;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-color: #fcd34d;
+    color: #000;
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Buttons - Secondary */
+.btn-secondary {
+    background: rgba(6, 182, 212, 0.2);
+    border: 2px solid var(--cyan);
+    color: var(--cyan-bright);
+    font-weight: 700;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--cyan);
+    border-color: var(--cyan-bright);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.5);
+}
+
+/* Alerts */
+.alert {
+    border-radius: 10px;
+    border: 2px solid;
+}
+
+.alert-info {
+    background: rgba(6, 182, 212, 0.2);
+    border-color: var(--cyan);
+    color: var(--cyan-bright);
+}
+
+.alert-success {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: var(--success);
+    color: #86efac;
+}
+
+.alert-danger {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--danger);
+    color: #fca5a5;
+}
+
+/* Badges */
+.badge {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.badge.bg-primary {
+    background: var(--cyan) !important;
+    color: #000;
+}
+
+.badge.bg-success {
+    background: var(--success) !important;
+    color: #000;
+}
+
+.badge.bg-info {
+    background: var(--cyan-bright) !important;
+    color: #000;
+}
+
+.badge.bg-warning {
+    background: var(--goldenrod) !important;
+    color: #000;
+}
+
+.badge.bg-danger {
+    background: var(--danger) !important;
+}
+
+.badge.bg-secondary {
+    background: rgba(203, 213, 225, 0.3) !important;
+    color: var(--text-primary);
+}
+
+/* Spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+    border-color: var(--goldenrod);
+    border-right-color: transparent;
+}
+
+/* Scrollbar for chat messages */
+#aiChatMessages::-webkit-scrollbar {
+    width: 10px;
+}
+
+#aiChatMessages::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+}
+
+#aiChatMessages::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.6), rgba(245, 158, 11, 0.6));
+    border-radius: 10px;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+#aiChatMessages::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.9));
+}
+</style>

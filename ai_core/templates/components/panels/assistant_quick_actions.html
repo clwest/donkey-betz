@@ -1,0 +1,26 @@
+{% comment %}
+Session 275: Assistant Quick Actions Card
+Quick action buttons and recent assets
+{% endcomment %}
+
+<!-- Quick Actions Card -->
+<div class="card" style="background: rgba(6, 182, 212, 0.1); border: 2px solid rgba(6, 182, 212, 0.4);">
+    <div class="card-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+        <h6 class="mb-0" style="color: var(--cyan-bright);">&#9889; Quick Actions</h6>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-sm btn-outline-light tab-quick-action" data-action="help">&#10067; Help</button>
+            <button class="btn btn-sm btn-outline-light tab-quick-action" data-action="logo">&#127912; Logo</button>
+            <button class="btn btn-sm btn-outline-light tab-quick-action" data-action="social">&#128241; Social</button>
+            <button class="btn btn-sm btn-outline-light tab-quick-action" data-action="upscale">&#11014;&#65039; Upscale</button>
+            <button class="btn btn-sm btn-outline-light tab-quick-action" data-action="history">&#128220; History</button>
+            <button class="btn btn-sm btn-outline-light" id="tabStartMeetingBtn" title="Start executive boardroom meeting">&#127970; Meeting</button>
+        </div>
+        <hr style="border-color: rgba(6, 182, 212, 0.3); margin: 15px 0;">
+        <small style="color: var(--cyan-bright); font-weight: 600;">&#128204; Recent Assets:</small>
+        <div id="tabRecentAssets" class="mt-2" style="max-height: 150px; overflow-y: auto;">
+            <small style="color: var(--text-secondary);">No recent assets</small>
+        </div>
+    </div>
+</div>

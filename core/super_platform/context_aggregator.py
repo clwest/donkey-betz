@@ -33,7 +33,7 @@ class AggregatedContext:
 
     # Memory data
     memories: List[Dict[str, Any]] = field(default_factory=list)
-    memory_clusters: List[Dict[str, Any]] = field(default_factory=list)
+    memory_tags: List[str] = field(default_factory=list)  # Session 284: Replaced memory_clusters with tags
 
     # Mood data
     agent_mood: Dict[str, Any] = field(default_factory=dict)
@@ -131,7 +131,7 @@ class ContextAggregator:
         if classification.requires_memory:
             memories = self._get_memory_context(query, classification)
             context.memories = memories.get('memories', [])
-            context.memory_clusters = memories.get('clusters', [])
+            context.memory_tags = memories.get('tags', [])  # Session 284: Use tags instead of clusters
             context.sources_used.append('memory_palace')
 
         # Get mood data if needed
@@ -216,12 +216,17 @@ class ContextAggregator:
         query: str,
         classification: ClassificationResult
     ) -> Dict[str, Any]:
-        """Get relevant memories from the Memory Palace."""
+        """
+        Get relevant memories from the Memory Palace.
+
+        Session 284: Updated to use tags instead of MemoryCluster.
+        MemoryCluster is deprecated - use AgentMemory.tags for grouping.
+        """
         try:
-            from core.models_unified_system import AgentMemory, MemoryCluster
+            from core.models_unified_system import AgentMemory
 
             memories = []
-            clusters = []
+            tags = []
 
             # Get recent relevant memories
             if self.user:
@@ -231,37 +236,32 @@ class ContextAggregator:
 
                 memories = [
                     {
-                        'id': m.id,
+                        'id': str(m.id),
                         'content': m.content[:200] if hasattr(m, 'content') else str(m),
-                        'summary': getattr(m, 'summary', '')[:100],
+                        'title': getattr(m, 'title', '')[:100],
                         'created_at': m.created_at.isoformat() if hasattr(m, 'created_at') else '',
-                        'agent': getattr(m, 'agent_name', 'Unknown'),
+                        'agent': m.agent.name if hasattr(m, 'agent') and m.agent else 'Unknown',
+                        'tags': getattr(m, 'tags', []),  # Session 284: Use tags instead of clusters
                     }
                     for m in memory_qs
                 ]
 
-                # Get related clusters
-                cluster_qs = MemoryCluster.objects.filter(
-                    user=self.user
-                ).order_by('-created_at')[:5]
-
-                clusters = [
-                    {
-                        'id': c.id,
-                        'name': getattr(c, 'name', f'Cluster {c.id}'),
-                        'memory_count': getattr(c, 'memories', []).count() if hasattr(c, 'memories') else 0,
-                    }
-                    for c in cluster_qs
-                ]
+                # Session 284: Get unique tags instead of clusters
+                # This is more efficient than MemoryCluster queries
+                all_tags = set()
+                for m in memory_qs:
+                    if hasattr(m, 'tags') and m.tags:
+                        all_tags.update(m.tags)
+                tags = sorted(all_tags)[:10]
 
             return {
                 'memories': memories,
-                'clusters': clusters,
+                'tags': tags,  # Session 284: Renamed from 'clusters' to 'tags'
             }
 
         except Exception as e:
             logger.error(f"Error getting memory context: {e}")
-            return {'memories': [], 'clusters': [], 'error': str(e)}
+            return {'memories': [], 'tags': [], 'error': str(e)}
 
     def _get_mood_context(self, agents: List[str]) -> Dict[str, Any]:
         """Get mood data for relevant agents."""

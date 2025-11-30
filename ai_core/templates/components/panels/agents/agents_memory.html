@@ -1,0 +1,390 @@
+{% comment %}
+Session 278: Agents Memory Sub-Tab
+Contains: Memory Clusters, Agent Prophecies, Time Capsules, Memory Palace, Collaboration Health
+Extracted from ai_image_studio.html lines 8005-8718
+{% endcomment %}
+
+<!-- ========== MEMORY SUB-TAB ========== -->
+<div class="tab-pane fade" id="agents-memory" role="tabpanel">
+
+    <!-- Session 257: Memory Clusters - Semantic Grouping of Agent Memories -->
+    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22d3ee;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 211, 238, 0.2); border-bottom: 1px solid #22d3ee;">
+            <h5 class="mb-0" style="color: #22d3ee;">
+                <span style="display: inline-block;">&#129513;</span>
+                Memory Clusters
+            </h5>
+            <div>
+                <span class="badge" id="memory-clusters-total-badge" style="background: #22d3ee; color: #000;">0 clusters</span>
+                <span class="badge bg-secondary" id="memory-clusters-agents-badge">0 agents</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Overview Stats -->
+            <div class="row mb-3">
+                <div class="col-4 text-center">
+                    <div class="small text-muted">Total Clusters</div>
+                    <div class="fs-4" id="clusters-total-count" style="color: #22d3ee;">0</div>
+                </div>
+                <div class="col-4 text-center">
+                    <div class="small text-muted">Agents Clustered</div>
+                    <div class="fs-4" id="clusters-agents-count" style="color: #22d3ee;">0</div>
+                </div>
+                <div class="col-4 text-center">
+                    <div class="small text-muted">Avg Coherence</div>
+                    <div class="fs-4" id="clusters-avg-coherence" style="color: #22d3ee;">0%</div>
+                </div>
+            </div>
+
+            <!-- Agent Selector for Cluster View -->
+            <div class="mb-3">
+                <label class="form-label small text-muted">Select Agent</label>
+                <select id="cluster-agent-select" class="form-select form-select-sm"
+                        style="background: #2a2a2a; border: 1px solid #22d3ee; color: white;"
+                        onchange="loadAgentClusters()">
+                    <option value="">All Agents</option>
+                </select>
+            </div>
+
+            <!-- Cluster Visualization Canvas -->
+            <div class="mb-3 p-3 rounded" style="background: #0d1117; border: 1px solid #22d3ee; min-height: 300px;">
+                <div id="clusters-visualization" style="width: 100%; height: 280px; position: relative;">
+                    <div class="text-center text-muted pt-5">
+                        <div style="font-size: 48px;">&#129513;</div>
+                        <div>Select an agent to view memory clusters</div>
+                        <div class="small">Or generate clusters for all agents</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clusters List -->
+            <div id="clusters-list" class="mb-3" style="max-height: 300px; overflow-y: auto;">
+                <!-- Clusters will be rendered here -->
+            </div>
+
+            <!-- Generate Clusters Button -->
+            <div class="mt-3 pt-3 border-top" style="border-color: #333 !important;">
+                <button class="btn btn-sm w-100" onclick="generateAllMemoryClusters()" style="background: #22d3ee; color: #000;">
+                    &#129513; Generate Clusters for All Agents
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session 258: Agent Predictions / Prophecies -->
+    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+            <h5 class="mb-0" style="color: #8b5cf6;">
+                <span style="display: inline-block;">&#128302;</span>
+                Agent Prophecies
+            </h5>
+            <div>
+                <span class="badge" id="predictions-total-badge" style="background: #8b5cf6;">0 predictions</span>
+                <span class="badge bg-success" id="predictions-accuracy-badge">0% accuracy</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3" style="font-style: italic;">
+                "Agents gaze into the future, making timestamped predictions tracked for accuracy over time."
+            </p>
+
+            <!-- Overview Stats -->
+            <div class="row mb-3" id="predictions-overview">
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Total</div>
+                    <div class="fs-4" id="predictions-total-count" style="color: #8b5cf6;">0</div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Pending</div>
+                    <div class="fs-4" id="predictions-pending-count" style="color: #fbbf24;">0</div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Verified</div>
+                    <div class="fs-4" id="predictions-verified-count" style="color: #22c55e;">0</div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Accuracy</div>
+                    <div class="fs-4" id="predictions-overall-accuracy" style="color: #8b5cf6;">0%</div>
+                </div>
+            </div>
+
+            <!-- Agent Selector for Predictions -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #8b5cf6; color: #8b5cf6;">&#129302;</span>
+                    <select id="predictions-agent-select" class="form-select"
+                            style="background: #2a2a2a; border: 1px solid #8b5cf6; color: white;"
+                            onchange="loadAgentPredictions()">
+                        <option value="">All Agents - View All Predictions</option>
+                    </select>
+                    <button class="btn btn-outline-violet" onclick="loadPredictionsOverview()" style="border-color: #8b5cf6; color: #8b5cf6;">
+                        &#128260; Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Predictions Timeline -->
+            <div id="predictions-timeline" style="max-height: 400px; overflow-y: auto;">
+                <div class="text-muted text-center py-3">
+                    <span style="color: #8b5cf6;">&#128302;</span> Loading predictions...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session 259: Time Capsule Messages -->
+    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+            <h5 class="mb-0" style="color: #06b6d4;">
+                <span style="display: inline-block;">&#8987;</span>
+                Time Capsules
+            </h5>
+            <div>
+                <span class="badge" id="capsules-total-badge" style="background: #06b6d4;">0 capsules</span>
+                <span class="badge bg-warning" id="capsules-ready-badge">0 ready</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3" style="font-style: italic;">
+                "Agents write messages to their future selves - sealed until time reveals their wisdom."
+            </p>
+
+            <!-- Overview Stats -->
+            <div class="row mb-3" id="capsules-overview">
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Total</div>
+                    <div class="fs-4" id="capsules-total-count" style="color: #06b6d4;">0</div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Sealed</div>
+                    <div class="fs-4" id="capsules-sealed-count" style="color: #fbbf24;">0</div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Revealed</div>
+                    <div class="fs-4" id="capsules-revealed-count" style="color: #22c55e;">0</div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="small text-muted">Ready</div>
+                    <div class="fs-4" id="capsules-ready-count" style="color: #f97316;">0</div>
+                </div>
+            </div>
+
+            <!-- Agent Selector for Time Capsules -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #06b6d4; color: #06b6d4;">&#129302;</span>
+                    <select id="capsules-agent-select" class="form-select"
+                            style="background: #2a2a2a; border: 1px solid #06b6d4; color: white;"
+                            onchange="loadAgentCapsules()">
+                        <option value="">All Agents - View All Capsules</option>
+                    </select>
+                    <button class="btn btn-outline-cyan" onclick="loadCapsulesOverview()" style="border-color: #06b6d4; color: #06b6d4;">
+                        &#128260; Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mb-3 text-center">
+                <button class="btn btn-sm" onclick="showReadyToReveal()" style="background: rgba(6, 182, 212, 0.3); color: #06b6d4; border: 1px solid #06b6d4;">
+                    &#128275; Ready to Open
+                </button>
+                <button class="btn btn-sm" onclick="generateTimeCapsules()" style="background: rgba(6, 182, 212, 0.3); color: #06b6d4; border: 1px solid #06b6d4;">
+                    &#10024; Generate Capsules
+                </button>
+            </div>
+
+            <!-- Capsules Timeline -->
+            <div id="capsules-timeline" style="max-height: 400px; overflow-y: auto;">
+                <div class="text-muted text-center py-3">
+                    <span style="color: #06b6d4;">&#8987;</span> Loading time capsules...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session 251: Memory Palace - Agent Memory Visualization -->
+    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a855f7;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.2); border-bottom: 1px solid #a855f7;">
+            <h5 class="mb-0" style="color: #a855f7;">
+                <span style="display: inline-block;">&#127963;&#65039;</span>
+                Memory Palace
+            </h5>
+            <div>
+                <span class="badge" id="memory-palace-total-badge" style="background: #a855f7;">0 memories</span>
+                <span class="badge bg-secondary" id="memory-palace-agents-badge">0 agents</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3" style="font-style: italic;">
+                "Explore the halls of agent memory - where past experiences shape future wisdom."
+            </p>
+
+            <!-- Agent Selector -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #a855f7; color: #a855f7;">&#129302;</span>
+                    <select id="memory-palace-agent-select" class="form-select"
+                            style="background: #2a2a2a; border: 1px solid #a855f7; color: white;"
+                            onchange="loadAgentMemoryPalace()">
+                        <option value="">Select an agent to explore memories...</option>
+                    </select>
+                    <button class="btn btn-outline-purple" onclick="loadMemoryPalaceAgents()" style="border-color: #a855f7; color: #a855f7;">
+                        &#128260; Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Memory Palace Overview (shown when no agent selected) -->
+            <div id="memory-palace-overview" class="mb-3">
+                <div class="row">
+                    <div class="col-md-4 text-center p-3" style="background: rgba(168, 85, 247, 0.1); border-radius: 12px; margin: 0 auto;">
+                        <h2 id="memory-palace-total-memories" style="color: #a855f7; font-size: 48px; font-weight: bold;">0</h2>
+                        <p class="mb-0 text-muted">Total Memories</p>
+                    </div>
+                </div>
+                <div id="memory-palace-type-breakdown" class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
+                    <!-- Memory type badges will appear here -->
+                </div>
+            </div>
+
+            <!-- Memory Palace Rooms (shown when agent selected) -->
+            <div id="memory-palace-rooms" style="display: none;" class="mb-3">
+                <h6 style="color: #a855f7;">&#127963;&#65039; Memory Rooms:</h6>
+                <div id="memory-palace-rooms-grid" class="row g-3">
+                    <!-- Room cards will appear here -->
+                </div>
+            </div>
+
+            <!-- Memory Search -->
+            <div id="memory-palace-search" style="display: none;" class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #a855f7; color: #a855f7;">&#128269;</span>
+                    <input type="text" id="memory-search-query" class="form-control"
+                           placeholder="Search agent memories semantically..."
+                           style="background: #2a2a2a; border: 1px solid #a855f7; color: white;"
+                           onkeypress="if(event.key==='Enter') searchAgentMemories()">
+                    <button class="btn btn-outline-purple" onclick="searchAgentMemories()" style="border-color: #a855f7; color: #a855f7;">
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collaboration Health Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div id="collaboration-health-banner" class="alert alert-success d-flex align-items-center" role="alert" style="background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e;">
+                <span style="font-size: 24px; margin-right: 12px;">&#9989;</span>
+                <div>
+                    <strong>Collaboration Health: <span id="health-status">Healthy</span></strong>
+                    <div class="small" id="health-details">All systems operational</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Collaborations & Recent Activity -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                    <h5 class="mb-0" style="color: #8b5cf6;">&#9889; Active Collaborations</h5>
+                    <span class="badge bg-primary" id="active-collab-badge">0</span>
+                </div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    <div id="active-collaborations-list">
+                        <p class="text-muted text-center">No active collaborations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                    <h5 class="mb-0" style="color: #22c55e;">&#9989; Recent Completions</h5>
+                    <button class="btn btn-sm btn-outline-success" onclick="refreshAgentDashboard()">&#128260; Refresh</button>
+                </div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    <div id="recent-completions-list">
+                        <p class="text-muted text-center">Loading recent completions...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collective Intelligence Search -->
+    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+        <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+            <h5 class="mb-0" style="color: #8b5cf6;">&#129504; Collective Intelligence Search</h5>
+        </div>
+        <div class="card-body">
+            <div class="input-group mb-3">
+                <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #444; color: #8b5cf6;">&#128269;</span>
+                <input type="text" id="collective-search-input" class="form-control"
+                       placeholder="Search agent insights (e.g., 'logo design', 'video editing', 'brand identity')"
+                       style="background: #2a2a2a; border: 1px solid #444; color: white;"
+                       onkeypress="if(event.key==='Enter') searchCollectiveIntelligence()">
+                <button class="btn btn-outline-primary" onclick="searchCollectiveIntelligence()">Search Insights</button>
+            </div>
+            <div id="collective-search-results" style="display: none;">
+                <!-- Search results will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Session 227: Team Power Visualization -->
+    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a78bfa;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(167, 139, 250, 0.2); border-bottom: 1px solid #a78bfa;">
+            <h5 class="mb-0" style="color: #a78bfa;">&#128101; Team Power - Active Teams</h5>
+            <button class="btn btn-sm btn-outline-light" onclick="loadAgentTabTeams()">&#128260; Refresh</button>
+        </div>
+        <div class="card-body">
+            <div id="agentTabTeamsContainer">
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2 text-muted">Loading teams...</span>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn btn-primary" onclick="document.getElementById('teams-tab').click();">
+                    &#128101; Go to Teams Tab
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- END MEMORY SUB-TAB -->
+
+<style>
+    .memory-room-card {
+        background: rgba(168, 85, 247, 0.1);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+    .memory-room-card:hover {
+        background: rgba(168, 85, 247, 0.2);
+        border-color: #a855f7;
+        transform: translateY(-2px);
+    }
+    .memory-room-icon { font-size: 32px; margin-bottom: 8px; }
+    .memory-room-name { color: #a855f7; font-weight: 600; }
+    .memory-room-count { color: #888; font-size: 12px; }
+    .memory-card {
+        background: rgba(168, 85, 247, 0.1);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .memory-card:hover { background: rgba(168, 85, 247, 0.2); }
+</style>

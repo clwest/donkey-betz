@@ -1,0 +1,999 @@
+<script>
+        class PromptAssistant {
+            constructor() {
+                this.promptField = document.getElementById('prompt');
+                this.assistantPanel = document.getElementById('promptAssistant');
+                this.qualityIndicator = document.getElementById('promptQuality');
+                this.templates = {
+                    portrait: "Professional portrait of [subject], studio lighting, sharp focus, detailed facial features, warm colors, shallow depth of field",
+                    landscape: "Stunning landscape photograph of [location], golden hour lighting, vibrant colors, dramatic clouds, wide angle, highly detailed",
+                    logo: "Minimalist modern logo design for [brand name], clean lines, professional, memorable, vector graphics, simple color palette",
+                    product: "Product photography of [product], clean white background, studio lighting, professional commercial photo, high resolution, centered",
+                    character: "Full body character design of [character description], dynamic pose, detailed costume, fantasy art style, dramatic lighting"
+                };
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Show assistant when user starts typing
+                this.promptField.addEventListener('input', () => {
+                    this.onPromptChange();
+                });
+
+                // Focus event - show assistant
+                this.promptField.addEventListener('focus', () => {
+                    if (this.promptField.value.trim().length > 0) {
+                        this.show();
+                    }
+                });
+
+                // Template buttons
+                document.querySelectorAll('.prompt-template').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const template = e.target.dataset.template;
+                        this.applyTemplate(template);
+                    });
+                });
+
+                // Close button
+                document.getElementById('closePromptAssistant')?.addEventListener('click', () => {
+                    this.hide();
+                });
+
+                // Improve prompt button
+                document.getElementById('improvePromptBtn')?.addEventListener('click', () => {
+                    this.improvePrompt();
+                });
+            }
+
+            onPromptChange() {
+                const prompt = this.promptField.value.trim();
+
+                if (prompt.length === 0) {
+                    this.hide();
+                    this.hideQualityIndicator();
+                    return;
+                }
+
+                // Show assistant
+                this.show();
+
+                // Analyze prompt quality
+                this.analyzePromptQuality(prompt);
+
+                // Generate suggestions
+                this.generateSuggestions(prompt);
+            }
+
+            analyzePromptQuality(prompt) {
+                const length = prompt.length;
+                const wordCount = prompt.split(/\s+/).length;
+
+                let quality = 'poor';
+                let badge = 'bg-danger';
+                let text = '';
+
+                if (length < 20) {
+                    quality = 'poor';
+                    badge = 'bg-danger';
+                    text = 'Too short - add more details!';
+                } else if (length < 50) {
+                    quality = 'fair';
+                    badge = 'bg-warning';
+                    text = 'Could use more detail';
+                } else if (length < 100) {
+                    quality = 'good';
+                    badge = 'bg-info';
+                    text = 'Good prompt!';
+                } else {
+                    quality = 'excellent';
+                    badge = 'bg-success';
+                    text = 'Excellent detail!';
+                }
+
+                const qualityBadge = document.getElementById('promptQualityBadge');
+                const qualityText = document.getElementById('promptQualityText');
+
+                if (qualityBadge && qualityText) {
+                    qualityBadge.className = `badge ${badge}`;
+                    qualityBadge.textContent = quality.toUpperCase();
+                    qualityText.textContent = `${wordCount} words, ${length} characters - ${text}`;
+                    this.qualityIndicator.classList.remove('d-none');
+                }
+            }
+
+            generateSuggestions(prompt) {
+                const suggestions = [];
+                const lower = prompt.toLowerCase();
+
+                // Check for common missing elements
+                if (!lower.match(/\b(lighting|light|lit)\b/)) {
+                    suggestions.push("• Consider adding lighting details (e.g., 'studio lighting', 'natural light', 'dramatic lighting')");
+                }
+
+                if (!lower.match(/\b(detailed|sharp|focus|quality|resolution)\b/)) {
+                    suggestions.push("• Add quality descriptors (e.g., 'highly detailed', 'sharp focus', 'high quality')");
+                }
+
+                if (!lower.match(/\b(color|colours|tone|hue)\b/) && !lower.match(/\b(black and white|monochrome)\b/)) {
+                    suggestions.push("• Specify colors or tones (e.g., 'vibrant colors', 'warm tones', 'cool palette')");
+                }
+
+                if (!lower.match(/\b(style|art|artistic)\b/)) {
+                    suggestions.push("• Choose an art style from the dropdown above or mention it (e.g., 'photorealistic', 'digital art')");
+                }
+
+                if (lower.length < 30) {
+                    suggestions.push("• Add more descriptive details about your subject");
+                }
+
+                // Display suggestions
+                const suggestionsList = document.getElementById('suggestionsList');
+                if (suggestionsList) {
+                    if (suggestions.length === 0) {
+                        suggestionsList.innerHTML = '<small style="color: #10b981;">✅ Your prompt looks great!</small>';
+                    } else {
+                        suggestionsList.innerHTML = suggestions.slice(0, 3).join('<br>');
+                    }
+                }
+            }
+
+            applyTemplate(templateName) {
+                const template = this.templates[templateName];
+                if (template) {
+                    // If prompt is empty or very short, replace it
+                    if (this.promptField.value.trim().length < 10) {
+                        this.promptField.value = template;
+                    } else {
+                        // Otherwise, ask if they want to replace
+                        if (confirm('Replace your current prompt with this template?')) {
+                            this.promptField.value = template;
+                        }
+                    }
+
+                    // Trigger change event
+                    this.promptField.dispatchEvent(new Event('input'));
+
+                    // Focus and select placeholder text
+                    this.promptField.focus();
+                    const placeholderMatch = template.match(/\[([^\]]+)\]/);
+                    if (placeholderMatch) {
+                        const placeholderStart = template.indexOf('[');
+                        const placeholderEnd = template.indexOf(']') + 1;
+                        this.promptField.setSelectionRange(placeholderStart, placeholderEnd);
+                    }
+                }
+            }
+
+            async improvePrompt() {
+                const prompt = this.promptField.value.trim();
+
+                if (prompt.length === 0) {
+                    alert('Please enter a prompt first!');
+                    return;
+                }
+
+                const spinner = document.getElementById('improvePromptSpinner');
+                const btn = document.getElementById('improvePromptBtn');
+                const originalText = btn.innerHTML;
+
+                // Show loading state
+                spinner.style.display = 'inline-block';
+                btn.disabled = true;
+                btn.innerHTML = spinner.outerHTML + ' Improving...';
+
+                try {
+                    // Get selected style for context
+                    const style = document.getElementById('style')?.value || 'photorealistic';
+
+                    // Call AI to improve prompt
+                    const response = await authenticatedFetch('/api/v1/gallery/optimize-prompt/', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            style: style,
+                            quality: 'balanced',
+                            ai_mode: 'enhance'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.enhanced_prompt) {
+                        // Show before/after
+                        const improvement = data.enhanced_prompt;
+
+                        // Ask user if they want to use improved version
+                        const useIt = confirm(
+                            `Original:\n"${prompt}"\n\n` +
+                            `Improved:\n"${improvement}"\n\n` +
+                            `Use the improved version?`
+                        );
+
+                        if (useIt) {
+                            this.promptField.value = improvement;
+                            this.promptField.dispatchEvent(new Event('input'));
+                        }
+                    } else {
+                        alert('Sorry, could not improve prompt. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Prompt improvement error:', error);
+                    alert('Error improving prompt: ' + error.message);
+                } finally {
+                    // Reset button
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+
+            show() {
+                this.assistantPanel.style.display = 'block';
+            }
+
+            hide() {
+                this.assistantPanel.style.display = 'none';
+            }
+
+            hideQualityIndicator() {
+                this.qualityIndicator.classList.add('d-none');
+            }
+        }
+
+        // Initialize Prompt Assistant when page loads
+        let promptAssistant;
+        window.addEventListener('DOMContentLoaded', () => {
+            promptAssistant = new PromptAssistant();
+            console.log('✨ Prompt Assistant initialized!');
+        });
+
+        // ====================================================================
+        // END PROMPT ASSISTANT
+        // ====================================================================
+
+        // ====================================================================
+        // UNIFIED GALLERY (Session 53: Phase 3)
+        // ====================================================================
+
+        // Unified Gallery State
+        let unifiedGalleryState = {
+            offset: 0,
+            limit: 20,
+            total: 0,
+            nextUrl: null,
+            previousUrl: null,
+            selectedItems: new Map()  // Map of itemId -> {id, type} for cross-page selection
+        };
+
+        // Load Unified Gallery
+        async function loadUnifiedGallery() {
+            try {
+                const mediaType = document.getElementById('unifiedFilterType').value;
+                const sortBy = document.getElementById('unifiedSortBy').value;
+                const searchTerm = document.getElementById('unifiedSearchInput').value.trim();
+                const favoritesOnly = document.getElementById('unifiedFilterFavorites').checked;
+
+                // Build query params
+                const params = new URLSearchParams({
+                    type: mediaType,
+                    sort_by: sortBy,
+                    limit: unifiedGalleryState.limit,
+                    offset: unifiedGalleryState.offset
+                });
+
+                if (searchTerm) {
+                    params.append('search', searchTerm);
+                }
+
+                if (favoritesOnly) {
+                    params.append('favorite', 'true');
+                }
+
+                const response = await fetch(`/api/v1/gallery/all/?${params}`, {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    unifiedGalleryState.total = data.count;
+                    unifiedGalleryState.nextUrl = data.next;
+                    unifiedGalleryState.previousUrl = data.previous;
+
+                    renderUnifiedGallery(data.results);
+                    updateUnifiedGalleryStats(data.results);
+                    updateUnifiedPagination();
+                } else {
+                    console.error('❌ Failed to load unified gallery:', data);
+                    showUnifiedGalleryError('Failed to load gallery: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('❌ Unified gallery error:', error);
+                showUnifiedGalleryError('Failed to load gallery: ' + error.message);
+            }
+        }
+
+        // Render Unified Gallery Items
+        function renderUnifiedGallery(items) {
+            const grid = document.getElementById('unifiedGalleryGrid');
+            const emptyState = document.getElementById('unifiedGalleryEmpty');
+
+            if (items.length === 0) {
+                // Session 96: Show dedicated empty state instead of inline message
+                grid.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            grid.innerHTML = '';
+            grid.style.display = 'flex';
+            emptyState.style.display = 'none';
+
+            items.forEach(item => {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 col-sm-6';
+                col.innerHTML = renderUnifiedGalleryCard(item);
+                grid.appendChild(col);
+            });
+        }
+
+        // Render Individual Card
+        function renderUnifiedGalleryCard(item) {
+            const mediaTypeEmoji = {
+                'image': '🖼️',
+                'video': '🎬',
+                'audio': '🎵'
+            };
+
+            const typeEmoji = mediaTypeEmoji[item.type] || '📄';
+            const promptPreview = item.prompt ? (item.prompt.substring(0, 50) + '...') : 'No prompt';
+            const favoriteIcon = item.is_favorite ? '⭐' : '☆';
+            const isSelected = unifiedGalleryState.selectedItems.has(item.id);
+            const selectedClass = isSelected ? 'unified-gallery-card-selected' : '';
+
+            let mediaElement = '';
+            if (item.type === 'image') {
+                mediaElement = `<img src="${item.url}" class="card-img-top" alt="Image" loading="lazy">`;
+            } else if (item.type === 'video') {
+                mediaElement = `
+                    <video class="card-img-top" controls>
+                        <source src="${item.url}" type="video/mp4">
+                    </video>
+                `;
+            } else if (item.type === 'audio') {
+                mediaElement = `
+                    <div class="card-img-top bg-dark d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <div class="text-center">
+                            <h1>🎵</h1>
+                            <audio controls class="w-100">
+                                <source src="${item.url}">
+                            </audio>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="card h-100 unified-gallery-card ${selectedClass}" data-item-id="${item.id}">
+                    <!-- Selection Checkbox with Larger Clickable Area -->
+                    <label class="position-absolute top-0 start-0 m-2 unified-checkbox-label" style="z-index: 100; cursor: pointer;">
+                        <input type="checkbox" class="form-check-input unified-item-checkbox"
+                               data-item-id="${item.id}"
+                               data-item-type="${item.type}"
+                               data-item-url="${item.url}"
+                               ${isSelected ? 'checked' : ''}
+                               style="width: 24px; height: 24px; cursor: pointer;">
+                    </label>
+
+                    <!-- Media Type Badge -->
+                    <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                        <span class="badge bg-dark">${typeEmoji} ${item.type}</span>
+                    </div>
+
+                    <!-- Media Element -->
+                    ${mediaElement}
+
+                    <!-- Card Body -->
+                    <div class="card-body p-2">
+                        <p class="card-text small text-muted mb-1" style="line-height: 1.3;">${promptPreview}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                👁️ ${item.view_count || 0} · 📥 ${item.download_count || 0}
+                            </small>
+                            <small class="text-muted" style="font-size: 0.7rem; opacity: 0.7;">
+                                #${item.id.substring(0, 8)}
+                            </small>
+                        </div>
+                        <!-- Session 172: Consistent Action Buttons -->
+                        <div class="unified-card-actions">
+                            <button class="btn btn-action-favorite unified-favorite-btn ${item.is_favorite ? 'is-favorite' : ''}"
+                                    data-item-id="${item.id}"
+                                    data-item-type="${item.type}"
+                                    title="Favorite">
+                                ${item.is_favorite ? '⭐' : '☆'}
+                            </button>
+                            <a href="${item.url}" download class="btn btn-action-download" title="Download">
+                                📥
+                            </a>
+                            <button class="btn btn-action-delete unified-delete-btn"
+                                    data-item-id="${item.id}"
+                                    data-item-type="${item.type}"
+                                    title="Delete">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update Gallery Stats
+        function updateUnifiedGalleryStats(items) {
+            const imageCount = items.filter(i => i.type === 'image').length;
+            const videoCount = items.filter(i => i.type === 'video').length;
+            const audioCount = items.filter(i => i.type === 'audio').length;
+
+            document.getElementById('unifiedTotalItems').textContent = unifiedGalleryState.total;
+            document.getElementById('unifiedImagesCount').textContent = imageCount;
+            document.getElementById('unifiedVideosCount').textContent = videoCount;
+            document.getElementById('unifiedAudioCount').textContent = audioCount;
+            document.getElementById('unifiedGalleryStats').style.display = 'block';
+        }
+
+        // Update Pagination
+        function updateUnifiedPagination() {
+            const prevBtn = document.getElementById('unifiedPrevBtn');
+            const nextBtn = document.getElementById('unifiedNextBtn');
+            const pageInfo = document.getElementById('unifiedPageInfo');
+            const pagination = document.getElementById('unifiedPagination');
+
+            const currentPage = Math.floor(unifiedGalleryState.offset / unifiedGalleryState.limit) + 1;
+            const totalPages = Math.ceil(unifiedGalleryState.total / unifiedGalleryState.limit);
+
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${unifiedGalleryState.total} items)`;
+
+            prevBtn.disabled = !unifiedGalleryState.previousUrl;
+            nextBtn.disabled = !unifiedGalleryState.nextUrl;
+
+            pagination.style.display = unifiedGalleryState.total > unifiedGalleryState.limit ? 'block' : 'none';
+        }
+
+        // Show Error
+        function showUnifiedGalleryError(message) {
+            const grid = document.getElementById('unifiedGalleryGrid');
+            grid.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        <strong>❌ Error:</strong> ${message}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Handle Selection Changes (preserves selections across pages)
+        function updateUnifiedSelection() {
+            // DON'T clear the Map - we want to preserve selections across pages
+            // Instead, sync the Map with the current page's checkboxes
+            const currentPageCheckboxes = document.querySelectorAll('.unified-item-checkbox');
+
+            currentPageCheckboxes.forEach(cb => {
+                const itemId = cb.dataset.itemId;
+                const itemType = cb.dataset.itemType;
+                if (cb.checked) {
+                    unifiedGalleryState.selectedItems.set(itemId, {id: itemId, type: itemType});
+                } else {
+                    unifiedGalleryState.selectedItems.delete(itemId);
+                }
+            });
+
+            const count = unifiedGalleryState.selectedItems.size;
+
+            // Update count span (might not exist if button is showing "Downloaded!" message)
+            const countSpan = document.getElementById('unifiedSelectedCount');
+            if (countSpan) {
+                countSpan.textContent = count;
+            }
+
+            const downloadBtn = document.getElementById('unifiedDownloadSelectedBtn');
+            downloadBtn.disabled = count === 0;
+
+            const hint = document.getElementById('unifiedSelectionHint');
+            if (hint) {
+                hint.style.display = count > 0 ? 'inline' : 'none';
+            }
+
+            // Update card highlighting for currently visible cards
+            document.querySelectorAll('.unified-gallery-card').forEach(card => {
+                const itemId = card.dataset.itemId;
+                if (unifiedGalleryState.selectedItems.has(itemId)) {
+                    card.classList.add('unified-gallery-card-selected');
+                } else {
+                    card.classList.remove('unified-gallery-card-selected');
+                }
+            });
+        }
+
+        // Event Listeners - Unified Gallery
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load gallery when All Gallery tab is shown
+            document.getElementById('all-gallery-tab').addEventListener('click', () => {
+                loadUnifiedGallery();
+            });
+
+            // Search
+            document.getElementById('unifiedSearchBtn').addEventListener('click', () => {
+                unifiedGalleryState.offset = 0;
+                loadUnifiedGallery();
+            });
+
+            document.getElementById('unifiedSearchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    unifiedGalleryState.offset = 0;
+                    loadUnifiedGallery();
+                }
+            });
+
+            document.getElementById('unifiedClearSearchBtn').addEventListener('click', () => {
+                document.getElementById('unifiedSearchInput').value = '';
+                unifiedGalleryState.offset = 0;
+                loadUnifiedGallery();
+            });
+
+            // Filters
+            document.getElementById('unifiedFilterType').addEventListener('change', () => {
+                unifiedGalleryState.offset = 0;
+                loadUnifiedGallery();
+            });
+
+            document.getElementById('unifiedSortBy').addEventListener('change', () => {
+                unifiedGalleryState.offset = 0;
+                loadUnifiedGallery();
+            });
+
+            document.getElementById('unifiedFilterFavorites').addEventListener('change', () => {
+                unifiedGalleryState.offset = 0;
+                loadUnifiedGallery();
+            });
+
+            // Pagination
+            document.getElementById('unifiedPrevBtn').addEventListener('click', () => {
+                if (unifiedGalleryState.offset > 0) {
+                    unifiedGalleryState.offset -= unifiedGalleryState.limit;
+                    loadUnifiedGallery();
+                }
+            });
+
+            document.getElementById('unifiedNextBtn').addEventListener('click', () => {
+                if (unifiedGalleryState.nextUrl) {
+                    unifiedGalleryState.offset += unifiedGalleryState.limit;
+                    loadUnifiedGallery();
+                }
+            });
+
+            // Batch Selection
+            document.getElementById('unifiedSelectAllBtn').addEventListener('click', () => {
+                document.querySelectorAll('.unified-item-checkbox').forEach(cb => cb.checked = true);
+                updateUnifiedSelection();
+            });
+
+            document.getElementById('unifiedDeselectAllBtn').addEventListener('click', () => {
+                document.querySelectorAll('.unified-item-checkbox').forEach(cb => cb.checked = false);
+                updateUnifiedSelection();
+            });
+
+            // Checkbox changes (using event delegation)
+            document.getElementById('unifiedGalleryGrid').addEventListener('change', (e) => {
+                if (e.target.classList.contains('unified-item-checkbox')) {
+                    updateUnifiedSelection();
+                }
+            });
+
+            // Download Selected
+            document.getElementById('unifiedDownloadSelectedBtn').addEventListener('click', async () => {
+                if (unifiedGalleryState.selectedItems.size === 0) {
+                    alert('Please select items to download');
+                    return;
+                }
+
+                // Build items array from Map (works across all pages!)
+                const items = Array.from(unifiedGalleryState.selectedItems.values());
+
+                // Store button reference and original text BEFORE try block
+                const btn = document.getElementById('unifiedDownloadSelectedBtn');
+                const originalText = btn.innerHTML;
+
+                try {
+                    // Show loading state
+                    btn.disabled = true;
+                    btn.innerHTML = '⏳ Creating ZIP...';
+
+                    // Call batch download API
+                    const response = await fetch('/api/v1/gallery/batch-download/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({ items })
+                    });
+
+                    if (response.ok) {
+                        // Download the ZIP file
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `donkey_betz_content_${new Date().getTime()}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        // Show success
+                        btn.innerHTML = '✅ Downloaded!';
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }, 2000);
+
+                        // Clear ALL selections (across all pages) since we just downloaded everything
+                        unifiedGalleryState.selectedItems.clear();
+                        document.querySelectorAll('.unified-item-checkbox').forEach(cb => cb.checked = false);
+                        updateUnifiedSelection();
+
+                    } else {
+                        const data = await response.json();
+                        alert('Download failed: ' + (data.error || 'Unknown error'));
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+
+                } catch (error) {
+                    console.error('❌ Batch download error:', error);
+                    alert('Download failed: ' + error.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            });
+
+            // Favorite buttons (using event delegation)
+            document.getElementById('unifiedGalleryGrid').addEventListener('click', async (e) => {
+                if (e.target.classList.contains('unified-favorite-btn')) {
+                    const itemId = e.target.dataset.itemId;
+                    const itemType = e.target.dataset.itemType;
+                    const button = e.target;
+
+                    try {
+                        // Optimistic UI update
+                        const currentIcon = button.textContent.trim();
+                        const newIcon = currentIcon === '⭐' ? '☆' : '⭐';
+                        button.textContent = newIcon;
+
+                        // Call API
+                        const response = await fetch('/api/v1/gallery/toggle-favorite/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                id: itemId,
+                                type: itemType
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Update button to reflect actual state
+                            button.textContent = data.is_favorite ? '⭐' : '☆';
+                            console.log(`✅ Favorite toggled: ${itemType} ${itemId} -> ${data.is_favorite}`);
+
+                            // If favorites filter is active, reload gallery
+                            if (document.getElementById('unifiedFilterFavorites').checked) {
+                                loadUnifiedGallery();
+                            }
+                        } else {
+                            // Revert on error
+                            button.textContent = currentIcon;
+                            console.error('❌ Favorite toggle failed:', data.error);
+                        }
+
+                    } catch (error) {
+                        // Revert on error
+                        const currentIcon = button.textContent.trim();
+                        button.textContent = currentIcon === '⭐' ? '☆' : '⭐';
+                        console.error('❌ Favorite toggle error:', error);
+                    }
+                }
+
+                // DELETE BUTTON HANDLER
+                if (e.target.classList.contains('unified-delete-btn')) {
+                    const itemId = e.target.dataset.itemId;
+                    const itemType = e.target.dataset.itemType;
+
+                    if (!confirm(`Are you sure you want to delete this ${itemType}?`)) {
+                        return;
+                    }
+
+                    try {
+                        const endpoint = itemType === 'image'
+                            ? `/api/images/${itemId}/delete/`
+                            : `/api/v1/video/history/${itemId}/`;
+
+                        const response = await fetch(endpoint, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRFToken': getCsrfToken()
+                            }
+                        });
+
+                        if (response.ok) {
+                            console.log(`✅ ${itemType} deleted: ${itemId}`);
+                            // Reload gallery to remove the deleted item
+                            loadUnifiedGallery();
+                        } else {
+                            const data = await response.json();
+                            alert(`Delete failed: ${data.error || 'Unknown error'}`);
+                        }
+                    } catch (error) {
+                        console.error('❌ Delete error:', error);
+                        alert('Delete failed: ' + error.message);
+                    }
+                }
+            });
+
+            // MODAL VIEWER: Click on image/video to open fullsize (not on buttons/checkboxes)
+            document.getElementById('unifiedGalleryGrid').addEventListener('click', async (e) => {
+                // Don't open modal if clicking on buttons, checkboxes, or their labels
+                if (e.target.classList.contains('unified-favorite-btn') ||
+                    e.target.classList.contains('unified-item-checkbox') ||
+                    e.target.classList.contains('btn') ||
+                    e.target.closest('.unified-checkbox-label') ||
+                    e.target.closest('.btn') ||
+                    e.target.tagName === 'A') {
+                    return;
+                }
+
+                // Find the card that was clicked
+                const card = e.target.closest('.unified-gallery-card');
+                if (!card) return;
+
+                const itemId = card.dataset.itemId;
+
+                // Find the item data from the current page
+                try {
+                    const mediaType = document.getElementById('unifiedFilterType').value;
+                    const sortBy = document.getElementById('unifiedSortBy').value;
+                    const searchTerm = document.getElementById('unifiedSearchInput').value.trim();
+                    const favoritesOnly = document.getElementById('unifiedFilterFavorites').checked;
+
+                    const params = new URLSearchParams({
+                        type: mediaType,
+                        sort_by: sortBy,
+                        limit: unifiedGalleryState.limit,
+                        offset: unifiedGalleryState.offset
+                    });
+
+                    if (searchTerm) params.append('search', searchTerm);
+                    if (favoritesOnly) params.append('favorite', 'true');
+
+                    const response = await fetch(`/api/v1/gallery/all/?${params}`, {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    });
+
+                    const data = await response.json();
+                    const item = data.results.find(i => i.id === itemId);
+
+                    if (item) {
+                        openUnifiedModal(item);
+                        // Track view
+                        trackItemView(itemId, item.type);
+                    }
+                } catch (error) {
+                    console.error('❌ Error opening modal:', error);
+                }
+            });
+        });
+
+        // Store current modal item for download/favorite actions
+        let currentUnifiedModalItem = null;
+
+        // Open Unified Content Modal
+        function openUnifiedModal(item) {
+            currentUnifiedModalItem = item;
+
+            const modal = document.getElementById('unifiedContentModal');
+            const contentArea = document.getElementById('unifiedModalContent');
+
+            // Set icon and title
+            const icons = { 'image': '🖼️', 'video': '🎬', 'audio': '🎵' };
+            document.getElementById('unifiedModalIcon').textContent = icons[item.type] || '📄';
+            document.getElementById('unifiedModalTitle').textContent = item.type.charAt(0).toUpperCase() + item.type.slice(1) + ' Viewer';
+
+            // Render media content
+            if (item.type === 'image') {
+                contentArea.innerHTML = `<img src="${item.url}" style="width: 100%; height: auto; display: block;">`;
+            } else if (item.type === 'video') {
+                contentArea.innerHTML = `
+                    <video controls autoplay style="width: 100%; max-height: 70vh; display: block;">
+                        <source src="${item.url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                `;
+            } else if (item.type === 'audio') {
+                contentArea.innerHTML = `
+                    <div style="padding: 40px; text-align: center;">
+                        <h1>🎵</h1>
+                        <audio controls autoplay style="width: 100%;">
+                            <source src="${item.url}">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </div>
+                `;
+            }
+
+            // Set info
+            document.getElementById('unifiedModalPrompt').textContent = item.prompt || 'No prompt';
+            document.getElementById('unifiedModalType').textContent = item.type;
+            document.getElementById('unifiedModalModel').textContent = item.model_used || 'Unknown';
+            document.getElementById('unifiedModalDate').textContent = new Date(item.created_at).toLocaleString();
+
+            // Show/hide type-specific fields
+            if (item.type === 'image' && item.width && item.height) {
+                document.getElementById('unifiedModalSizeContainer').style.display = 'block';
+                document.getElementById('unifiedModalSize').textContent = `${item.width}x${item.height}`;
+                document.getElementById('unifiedModalDurationContainer').style.display = 'none';
+            } else if (item.type === 'video' && item.duration) {
+                document.getElementById('unifiedModalDurationContainer').style.display = 'block';
+                document.getElementById('unifiedModalDuration').textContent = item.duration;
+                document.getElementById('unifiedModalSizeContainer').style.display = 'none';
+            } else {
+                document.getElementById('unifiedModalSizeContainer').style.display = 'none';
+                document.getElementById('unifiedModalDurationContainer').style.display = 'none';
+            }
+
+            // Update favorite button
+            const favoriteBtn = document.getElementById('unifiedModalFavoriteBtn');
+            favoriteBtn.textContent = item.is_favorite ? '⭐ Unfavorite' : '☆ Favorite';
+
+            // Show modal
+            modal.style.display = 'block';
+        }
+
+        // Close Unified Modal
+        function closeUnifiedModal() {
+            const modal = document.getElementById('unifiedContentModal');
+            const contentArea = document.getElementById('unifiedModalContent');
+
+            // Stop any playing media
+            const video = contentArea.querySelector('video');
+            const audio = contentArea.querySelector('audio');
+            if (video) video.pause();
+            if (audio) audio.pause();
+
+            modal.style.display = 'none';
+            currentUnifiedModalItem = null;
+        }
+
+        // Download from Modal
+        async function downloadUnifiedModalItem() {
+            if (!currentUnifiedModalItem) return;
+
+            const item = currentUnifiedModalItem;
+
+            try {
+                // Track download
+                await trackItemDownload(item.id, item.type);
+
+                // Trigger download
+                const a = document.createElement('a');
+                a.href = item.url;
+                a.download = `donkey_betz_${item.type}_${item.id}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                console.log(`✅ Downloaded ${item.type}: ${item.id}`);
+            } catch (error) {
+                console.error('❌ Download error:', error);
+                alert('Download failed: ' + error.message);
+            }
+        }
+
+        // Toggle Favorite from Modal
+        async function toggleUnifiedModalFavorite() {
+            if (!currentUnifiedModalItem) return;
+
+            const item = currentUnifiedModalItem;
+            const btn = document.getElementById('unifiedModalFavoriteBtn');
+            const originalText = btn.textContent;
+
+            try {
+                btn.disabled = true;
+                btn.textContent = '⏳ Updating...';
+
+                const response = await fetch('/api/v1/gallery/toggle-favorite/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        id: item.id,
+                        type: item.type
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    item.is_favorite = data.is_favorite;
+                    btn.textContent = data.is_favorite ? '⭐ Unfavorite' : '☆ Favorite';
+                    console.log(`✅ Favorite toggled: ${item.type} ${item.id} -> ${data.is_favorite}`);
+
+                    // Reload gallery to update the card
+                    loadUnifiedGallery();
+                } else {
+                    btn.textContent = originalText;
+                    alert('Failed to update favorite');
+                }
+
+                btn.disabled = false;
+            } catch (error) {
+                console.error('❌ Favorite toggle error:', error);
+                btn.textContent = originalText;
+                btn.disabled = false;
+                alert('Failed to update favorite: ' + error.message);
+            }
+        }
+
+        // Track Item View
+        async function trackItemView(itemId, itemType) {
+            try {
+                const endpoint = itemType === 'image'
+                    ? `/api/images/view/${itemId}/`
+                    : `/api/v1/video/history/${itemId}/view/`;
+
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                console.log(`✅ View tracked: ${itemType} ${itemId}`);
+            } catch (error) {
+                console.error('❌ View tracking error:', error);
+            }
+        }
+
+        // Track Item Download
+        async function trackItemDownload(itemId, itemType) {
+            try {
+                const endpoint = itemType === 'image'
+                    ? `/api/images/download/${itemId}/`
+                    : `/api/v1/video/history/${itemId}/download/`;
+
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                console.log(`✅ Download tracked: ${itemType} ${itemId}`);
+            } catch (error) {
+                console.error('❌ Download tracking error:', error);
+            }
+        }
+
+        // ====================================================================
+        // END UNIFIED GALLERY
+        // ====================================================================
+
+        // ====================================================================
+        // ONBOARDING SYSTEM
+        // ====================================================================
+
+</script>

@@ -13,7 +13,10 @@ from decimal import Decimal
 import json
 import uuid
 import logging
+import warnings
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 # Import base models
 from .models.base.models import UnifiedBaseModel
@@ -379,6 +382,11 @@ class AgentAssignment(models.Model):
 
 class AgentExecution(models.Model):
     """
+    DEPRECATED: Use agents.models.AgentExecution instead.
+
+    This model is deprecated as of Session 287 (HANDOFF_04).
+    Use agents.models.AgentExecution which is linked to UnifiedAgentTemplate.
+
     Tracks every execution of an agent
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -411,6 +419,15 @@ class AgentExecution(models.Model):
 
     def __str__(self):
         return f"{self.agent.name} - {self.task[:50]}"
+
+    def save(self, *args, **kwargs):
+        warnings.warn(
+            "core.AgentExecution is deprecated. Use agents.models.AgentExecution instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        logger.warning("DEPRECATED: core.AgentExecution used - migrate to agents.models.AgentExecution")
+        super().save(*args, **kwargs)
 
 
 class Collaboration(models.Model):
@@ -3084,8 +3101,12 @@ class CustomWorkflowStep(models.Model):
 
 class WorkflowExecution(models.Model):
     """
-    Track workflow execution history.
+    DEPRECATED: Use content.models.WorkflowExecution instead.
 
+    This model is deprecated as of Session 287 (HANDOFF_04).
+    Use content.models.WorkflowExecution which is linked to ContentWorkflow.
+
+    Track workflow execution history.
     Session 212: Records each time a workflow (built-in or custom) is executed.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -3137,6 +3158,15 @@ class WorkflowExecution(models.Model):
 
     def __str__(self):
         return f"{self.workflow_name} ({self.status}) - {self.topic[:50]}"
+
+    def save(self, *args, **kwargs):
+        warnings.warn(
+            "core.WorkflowExecution is deprecated. Use content.models.WorkflowExecution instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        logger.warning("DEPRECATED: core.WorkflowExecution used - migrate to content.models.WorkflowExecution")
+        super().save(*args, **kwargs)
 
     def complete(self, success: bool, error: str = None):
         """Mark workflow as complete."""
@@ -6182,14 +6212,28 @@ class UserGoal(models.Model):
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # Agents discuss topics with each other, share insights, and debate ideas
 # =============================================================================
+# DEPRECATED: Session 284 - Merged into HiveMindSession with session_mode='conversation'
+# Existing data (2,919 records) preserved but no new records should be created.
+# =============================================================================
 
 class AgentConversation(models.Model):
     """
-    A conversation between two or more agents discussing a topic.
+    DEPRECATED - Session 284: Merged into HiveMindSession
 
+    This model is deprecated. Use HiveMindSession with session_mode='conversation' instead.
+    Existing 2,919 records are preserved for historical reference.
+
+    Original Purpose (Session 244):
+    A conversation between two or more agents discussing a topic.
     This is where the magic happens - agents talking to each other,
     sharing knowledge, asking questions, and forming new insights.
+
+    Migration Path:
+    Use HiveMindSession with session_mode='conversation' for new conversations.
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Conversation metadata
@@ -6290,6 +6334,21 @@ class AgentConversation(models.Model):
 
     def __str__(self):
         return f"{self.initiator.name}: {self.topic[:50]}"
+
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "AgentConversation is deprecated (Session 284). "
+                "Use HiveMindSession with session_mode='conversation' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                "DEPRECATED: Creating new AgentConversation. "
+                "Use HiveMindSession with session_mode='conversation' instead."
+            )
+        super().save(*args, **kwargs)
 
     def add_message(self, agent, content, message_type='statement'):
         """Add a message to this conversation."""
@@ -6539,17 +6598,29 @@ class ConversationArtifact(models.Model):
 # =============================================================================
 # Session 247: Agent Dreams - Sci-Fi Feature
 # =============================================================================
+# DEPRECATED: Session 284 - This feature adds complexity without clear user value.
+# Existing data is preserved, but no new dreams should be created.
+# =============================================================================
 
 class AgentDream(models.Model):
     """
-    Session 247: Agent Dreams - Idle Thoughts & Creative Ideas
+    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
 
+    This model is deprecated and will be removed in a future version.
+    No new AgentDream records should be created.
+
+    Original Purpose (Session 247):
     When agents are idle, they "dream" - generating creative ideas,
     speculative concepts, and "what if" scenarios unprompted.
 
-    This creates a sense that agents are alive and thinking even
-    when the user isn't actively using them.
+    Reason for Deprecation:
+    - Unclear user value
+    - Adds complexity to SciFiIntegrationService
+    - 534 records exist but feature rarely surfaced in UI
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='dreams')
 
@@ -6617,6 +6688,22 @@ class AgentDream(models.Model):
 
     def __str__(self):
         return f"{self.agent.name}'s dream: {self.title}"
+
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "AgentDream is deprecated (Session 284). "
+                "This model will be removed in a future version. "
+                "Do not create new dreams.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                f"DEPRECATED: Creating new AgentDream for agent {self.agent_id}. "
+                "AgentDream is deprecated and should not be used."
+            )
+        super().save(*args, **kwargs)
 
     def mark_as_shown(self):
         """Mark this dream as shown to the user."""
@@ -6839,11 +6926,24 @@ class DreamFeedbackPreference(models.Model):
 
 class DreamExploration(models.Model):
     """
-    Session 249: Dream Exploration Tracking
+    DEPRECATED - Session 290: Sci-Fi Feature Rationalization
 
+    This model is deprecated because its parent (AgentDream) is deprecated.
+    No new DreamExploration records should be created.
+
+    Original Purpose (Session 249):
     When a user clicks "Explore" on a dream, we create a deeper exploration
     of that topic. This model tracks those explorations and their outcomes.
+
+    Reason for Deprecation:
+    - Parent AgentDream is deprecated (Session 284)
+    - Only 4 records ever created (minimal usage)
+    - Feature never surfaced in active UI
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Link to the original dream
@@ -6896,12 +6996,30 @@ class DreamExploration(models.Model):
 class HiveMindSession(models.Model):
     """
     Session 250: Hive Mind Mode
+    Session 284: Extended to support conversation mode (merging AgentConversation)
 
     All agents work on a problem simultaneously, each contributing their specialty.
     Creates a "collective intelligence" experience where multiple AI perspectives
     combine to solve complex problems.
+
+    Session 284 Update:
+    Now supports two modes:
+    - 'hive_mind': Original collective problem-solving mode
+    - 'conversation': Agent-to-agent conversation mode (replaces AgentConversation)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Session 284: Mode selector to support different interaction patterns
+    SESSION_MODE_CHOICES = [
+        ('hive_mind', 'Hive Mind'),       # Original mode - collective problem solving
+        ('conversation', 'Conversation'),  # Agent-to-agent conversation (merged from AgentConversation)
+    ]
+    session_mode = models.CharField(
+        max_length=20,
+        choices=SESSION_MODE_CHOICES,
+        default='hive_mind',
+        help_text="Session 284: Mode of interaction (hive_mind or conversation)"
+    )
 
     # The question/task posed to the hive
     question = models.TextField(
@@ -6912,6 +7030,13 @@ class HiveMindSession(models.Model):
         help_text="Additional context provided by the user"
     )
 
+    # Session 284: Conversation-specific fields
+    conversation_topic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Topic for conversation mode sessions"
+    )
+
     # Session status
     STATUS_CHOICES = [
         ('initializing', 'Initializing'),
@@ -6919,6 +7044,7 @@ class HiveMindSession(models.Model):
         ('synthesizing', 'Synthesizing'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
+        ('active', 'Active'),  # Session 284: For ongoing conversations
     ]
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='initializing')
 
@@ -7203,6 +7329,13 @@ class AgentMemory(models.Model):
         help_text="ID of the source event/task/conversation"
     )
 
+    # Tags for simple grouping (Session 284: Replaces MemoryCluster)
+    tags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of tags for memory grouping (replaces MemoryCluster)"
+    )
+
     # Usage tracking
     access_count = models.PositiveIntegerField(
         default=0,
@@ -7230,6 +7363,43 @@ class AgentMemory(models.Model):
 
     def __str__(self):
         return f"{self.agent.name}: {self.title[:50]} ({self.memory_type})"
+
+    def add_tag(self, tag: str) -> None:
+        """Add a tag to this memory (Session 284: Replaces MemoryCluster)."""
+        if not self.tags:
+            self.tags = []
+        tag = tag.lower().strip()
+        if tag and tag not in self.tags:
+            self.tags.append(tag)
+            self.save(update_fields=['tags'])
+
+    def remove_tag(self, tag: str) -> None:
+        """Remove a tag from this memory."""
+        if self.tags and tag.lower().strip() in self.tags:
+            self.tags.remove(tag.lower().strip())
+            self.save(update_fields=['tags'])
+
+    def has_tag(self, tag: str) -> bool:
+        """Check if memory has a specific tag."""
+        return self.tags and tag.lower().strip() in self.tags
+
+    @classmethod
+    def get_by_tag(cls, agent, tag: str, limit: int = 50):
+        """Get memories with a specific tag (Session 284: Replaces MemoryCluster queries)."""
+        return cls.objects.filter(
+            agent=agent,
+            tags__contains=[tag.lower().strip()]
+        ).order_by('-importance_score', '-created_at')[:limit]
+
+    @classmethod
+    def get_all_tags(cls, agent) -> list:
+        """Get all unique tags for an agent's memories."""
+        memories = cls.objects.filter(agent=agent).exclude(tags=[]).values_list('tags', flat=True)
+        all_tags = set()
+        for tags in memories:
+            if tags:
+                all_tags.update(tags)
+        return sorted(all_tags)
 
     def record_access(self):
         """Record that this memory was accessed/retrieved."""
@@ -7452,15 +7622,32 @@ class MemoryPalaceRoom(models.Model):
 # =============================================================================
 # Session 257: Agent Memory Clusters
 # =============================================================================
+# DEPRECATED: Session 284 - Zero records exist. Memory Clusters never used.
+# Use Memory Palace with tags instead for memory grouping.
+# =============================================================================
 
 class MemoryCluster(models.Model):
     """
-    Session 257: Memory Clusters - Semantic Grouping of Memories.
+    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
 
+    This model is deprecated and will be removed in a future version.
+    No new MemoryCluster records should be created.
+
+    Original Purpose (Session 257):
     Unlike MemoryPalaceRoom (manual organization by theme), MemoryCluster uses
     embedding-based clustering to automatically discover related memories.
-    This creates an emergent, AI-discovered organization of knowledge.
+
+    Reason for Deprecation:
+    - Zero records ever created (feature never used)
+    - Over-engineered solution for memory grouping
+    - Use AgentMemory with tags field instead (simpler)
+
+    Migration Path:
+    Add a 'tags' JSONField to AgentMemory for simple grouping.
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Cluster can be agent-specific or cross-agent (global insights)
@@ -7569,6 +7756,21 @@ class MemoryCluster(models.Model):
     def __str__(self):
         agent_name = self.agent.name if self.agent else "Cross-Agent"
         return f"{agent_name}: {self.name} ({self.memories.count()} memories)"
+
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "MemoryCluster is deprecated (Session 284). "
+                "Use AgentMemory with tags instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                "DEPRECATED: Creating new MemoryCluster. "
+                "Use AgentMemory with tags field instead."
+            )
+        super().save(*args, **kwargs)
 
     def get_cluster_emoji(self):
         """Get an emoji based on cluster characteristics."""
@@ -8434,10 +8636,22 @@ class RelationshipEvent(models.Model):
 
 class Alliance(models.Model):
     """
-    Session 253: Named alliances between multiple agents.
+    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
 
-    Groups of agents that work together frequently and have synergies.
+    This model is deprecated and will be removed in a future version.
+    Use AgentRelationship directly instead.
+
+    Original Purpose (Session 253):
+    Named alliances between multiple agents - groups that work together.
+
+    Reason for Deprecation:
+    - Zero records ever created (feature never used)
+    - AgentRelationship already tracks agent collaboration
+    - Over-engineered abstraction layer
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -8487,6 +8701,21 @@ class Alliance(models.Model):
         member_count = self.members.count() if self.pk else 0
         return f"{self.name} ({member_count} members)"
 
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "Alliance is deprecated (Session 284). "
+                "Use AgentRelationship instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                "DEPRECATED: Creating new Alliance. "
+                "Use AgentRelationship with 'ally' type instead."
+            )
+        super().save(*args, **kwargs)
+
     def get_alliance_emoji(self):
         """Get emoji for alliance purpose."""
         emoji_map = {
@@ -8528,10 +8757,22 @@ class Alliance(models.Model):
 
 class Rivalry(models.Model):
     """
-    Session 253: Named rivalries between agents or alliances.
+    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
 
-    Competitive dynamics that push agents to perform better.
+    This model is deprecated and will be removed in a future version.
+    Use AgentRelationship with 'rival' type instead.
+
+    Original Purpose (Session 253):
+    Named rivalries between agents or alliances - competitive dynamics.
+
+    Reason for Deprecation:
+    - Zero records ever created (feature never used)
+    - AgentRelationship already tracks agent competition
+    - Over-engineered abstraction layer
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -8610,6 +8851,21 @@ class Rivalry(models.Model):
         challenger = self.get_challenger_name()
         defender = self.get_defender_name()
         return f"{self.name}: {challenger} vs {defender}"
+
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "Rivalry is deprecated (Session 284). "
+                "Use AgentRelationship with 'rival' type instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                "DEPRECATED: Creating new Rivalry. "
+                "Use AgentRelationship with 'rival' type instead."
+            )
+        super().save(*args, **kwargs)
 
     def get_challenger_name(self):
         """Get challenger name based on scope."""
@@ -9730,22 +9986,30 @@ class AgentPersonality(models.Model):
 # =============================================================================
 # SESSION 258: AGENT PROPHECIES / PREDICTIONS - SCI-FI FEATURE #12
 # =============================================================================
-# Agents make predictions about trends, opportunities, and future events.
-# System tracks accuracy over time to build trust in agent insights.
-# - Predictions with confidence scores and deadlines
-# - Automated and manual verification
-# - Accuracy tracking per agent
-# - Creates compelling "TrendAgent predicted X 3 months ago!" moments
+# DEPRECATED: Session 284 - This feature was never populated (0 records).
+# Model is preserved for schema compatibility but should not be used.
 # =============================================================================
 
 
 class AgentPrediction(models.Model):
     """
-    Session 258: Agent Prophecies/Predictions.
+    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
 
+    This model is deprecated and will be removed in a future version.
+    No new AgentPrediction records should be created.
+
+    Original Purpose (Session 258):
     Agents make timestamped predictions about trends, opportunities, markets,
     creative directions, etc. System tracks whether predictions come true.
+
+    Reason for Deprecation:
+    - Zero records ever created (feature never used)
+    - Complex schema with no demonstrated value
+    - Adds maintenance burden without benefit
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -9893,6 +10157,22 @@ class AgentPrediction(models.Model):
 
     def __str__(self):
         return f"{self.agent.name}: {self.title} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "AgentPrediction is deprecated (Session 284). "
+                "This model will be removed in a future version. "
+                "Do not create new predictions.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                f"DEPRECATED: Creating new AgentPrediction for agent {self.agent_id}. "
+                "AgentPrediction is deprecated and should not be used."
+            )
+        super().save(*args, **kwargs)
 
     def get_status_emoji(self):
         """Return emoji for prediction status."""
@@ -10340,15 +10620,30 @@ class PredictionFollowUp(models.Model):
 # =============================================================================
 # Session 259: Time Capsule Messages
 # Sci-Fi Feature #13 - The Final Feature!
-# Agents write messages to their future selves, revealed on a schedule
+# =============================================================================
+# DEPRECATED: Session 284 - Only 7 records exist, minimal user engagement.
+# Model is preserved for data but should not be used for new records.
 # =============================================================================
 
 class TimeCapsule(models.Model):
     """
-    Session 259: Time Capsule Messages.
+    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
+
+    This model is deprecated and will be removed in a future version.
+    No new TimeCapsule records should be created.
+
+    Original Purpose (Session 259):
     Agents write messages to their "future selves" to be revealed later.
     Creates sense of continuity, growth, and reflection.
+
+    Reason for Deprecation:
+    - Only 7 records ever created (minimal usage)
+    - Novelty feature without practical value
+    - Adds complexity without demonstrated benefit
     """
+
+    # Deprecation flag - set True to completely disable
+    _deprecated = True
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     agent = models.ForeignKey(
@@ -10420,6 +10715,22 @@ class TimeCapsule(models.Model):
 
     def __str__(self):
         return f"[{self.agent.name}] {self.title} - reveals {self.reveal_at.strftime('%Y-%m-%d')}"
+
+    def save(self, *args, **kwargs):
+        """Override save to log deprecation warning."""
+        if not self.pk:  # Only warn on new records
+            warnings.warn(
+                "TimeCapsule is deprecated (Session 284). "
+                "This model will be removed in a future version. "
+                "Do not create new time capsules.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            logger.warning(
+                f"DEPRECATED: Creating new TimeCapsule for agent {self.agent_id}. "
+                "TimeCapsule is deprecated and should not be used."
+            )
+        super().save(*args, **kwargs)
 
     @property
     def is_ready_to_reveal(self):
