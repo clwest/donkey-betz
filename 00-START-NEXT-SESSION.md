@@ -1,28 +1,43 @@
-# Session 292: Main Assistant / Project Assistant Separation
+# Session 293: Workflow Orchestration Fixes
 
 **Date:** November 30, 2025
-**Previous Session:** 291 (Sci-Fi Feature Rationalization)
-**Session Type:** UI Cleanup & Assistant Separation
+**Previous Session:** 292 (Main/Project Assistant Separation)
+**Session Type:** Bug Fixes - Workflow Routing
 **Status:** ALL 6 HANDOFFS COMPLETE
 
 ---
 
-## SESSION 292 CHANGES
+## SESSION 293 CHANGES
 
-### Main Assistant & Project Assistant Separation
+### Fixed "Research and Create" Workflow Routing
 
-**Decision:** Keep Main Assistant and Project Assistant completely separate to avoid overloading either one.
+**Problem:** When user said "Research trending AI logos and generate a logo", GPT was:
+1. Calling individual tools (web_search, coleadership_agent) separately
+2. NOT creating a project with all the research/images bundled
+3. Using sd3 model instead of Ultra for logos
+4. Sometimes generating wrong number of images
 
-**Changes Made:**
-1. **Removed Active Project dropdown** from Main Assistant tab
-2. **Removed Project Selector** from Main Assistant sidebar
-3. **Removed project loading** on Assistant startup
-4. **Cleaned up JavaScript** - removed `loadProjects()` calls
+**Fixes Made:**
+
+1. **Updated GPT Routing Rules** (`core/prompts/registry.py`)
+   - Made workflow_orchestration_agent MANDATORY for "research + create" requests
+   - Removed requirement for explicit "package/kit" language
+   - Added clear examples matching user patterns
+
+2. **Updated Tool Description** (`core/personal_ai_assistant_enhanced.py`)
+   - Made workflow_orchestration_agent description more explicit
+   - Added "MANDATORY" language for research+create patterns
+   - Added example prompts that require the workflow
+
+3. **Fixed Logo Model** (`agents/workflow_orchestration_agent.py`)
+   - Changed from `sd3` to `ultra` model for logos/brand_identity
+   - Ultra is flagship model, best at following "no text" instructions
 
 **Result:**
-- Main Assistant: General-purpose, no project context
-- Project Assistant: Project-specific, lives on project detail pages
-- Each assistant has its own focused purpose
+- "Research X and create Y" now properly routes to workflow_orchestration_agent
+- Creates complete project with research, exec review, images bundled
+- Uses Ultra model for logos (better quality, no text in images)
+- Default count of 3 images per workflow
 
 ---
 
@@ -32,7 +47,7 @@
 |---|---------|----------|--------|
 | 01 | Frontend Componentization | CRITICAL | **COMPLETE (60% reduction)** |
 | 02 | Agent Architecture Unification | HIGH | **COMPLETE** |
-| 03 | Sci-Fi Feature Rationalization | MEDIUM | **COMPLETE (15→7 features)** |
+| 03 | Sci-Fi Feature Rationalization | MEDIUM | **COMPLETE (15->7 features)** |
 | 04 | Database Model Consolidation | MEDIUM-HIGH | **COMPLETE** |
 | 05 | Test Infrastructure Overhaul | HIGH | **COMPLETE** |
 | 06 | Spider Network Wiring | MEDIUM | **COMPLETE** |
@@ -55,20 +70,15 @@ CODEBASE HEALTH
 
 ---
 
-## Assistant Architecture
+## Workflow Routing Rules
 
 ```
-Main Assistant (AI Tab)
-├── General-purpose chat
-├── Style learning
-├── No project context
-└── Creates sessions independently
-
-Project Assistant (Project Detail Pages)
-├── Project-specific context
-├── Knows project goal, colors, category
-├── Has project assets visible
-└── Independent from Main Assistant
+User Says                                    -> Tool Used
+─────────────────────────────────────────────────────────
+"Create a logo for my company"               -> image_generation_agent
+"Research trends and create logos"           -> workflow_orchestration_agent
+"Research AI logos and generate a logo"      -> workflow_orchestration_agent
+"What style works best for logos?"           -> NO TOOL (just answer)
 ```
 
 ---
