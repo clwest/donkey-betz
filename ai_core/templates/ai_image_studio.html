@@ -24714,16 +24714,29 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 `;
                             }
 
-                            // === SECTION 5: Project Created ===
+                            // === SECTION 5: Project Created - Session 293: Added "Open Project" button ===
                             const project = result.project;
                             if (project) {
                                 responseHtml += `
                                     <div class="project-section" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 12px; margin-bottom: 15px; border-radius: 0 8px 8px 0;">
-                                        <h5 style="color: #3b82f6; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
-                                            <span>📁</span> ${project.is_new ? 'New Project Created' : 'Added to Project'}
-                                        </h5>
-                                        <p style="color: #93c5fd; margin: 0; font-size: 14px;">
-                                            <strong>${project.name}</strong> • ${project.image_count} images
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                            <div>
+                                                <h5 style="color: #3b82f6; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+                                                    <span>📁</span> ${project.is_new ? 'New Project Created' : 'Added to Project'}
+                                                </h5>
+                                                <p style="color: #93c5fd; margin: 0; font-size: 14px;">
+                                                    <strong>${project.name}</strong> • ${project.image_count} images
+                                                </p>
+                                            </div>
+                                            <button onclick="openProjectInTab('${project.id}')"
+                                                    style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: transform 0.2s;"
+                                                    onmouseover="this.style.transform='scale(1.05)'"
+                                                    onmouseout="this.style.transform='scale(1)'">
+                                                🚀 Open Project
+                                            </button>
+                                        </div>
+                                        <p style="color: #60a5fa; margin: 8px 0 0 0; font-size: 12px;">
+                                            Use all 33 tools: upscale, animate, add audio, create variations, and more!
                                         </p>
                                     </div>
                                 `;
@@ -39611,6 +39624,37 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         window.executeNewWorkflow = executeNewWorkflow;  // Session 62: Phase C.4
         window.executeWorkflowFromProject = executeWorkflowFromProject;  // Session 62: Phase C.4
         window.executeAllWorkflows = executeAllWorkflows;  // Session 62: Phase C.4
+
+        // Session 293: Open project from workflow result
+        window.openProjectInTab = async function(projectId) {
+            console.log('🚀 Session 293: Opening project in tab:', projectId);
+
+            // 1. Switch to Projects tab
+            const projectsTab = document.getElementById('projects-tab');
+            if (projectsTab) {
+                projectsTab.click();
+
+                // 2. Wait for tab switch and load projects
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // 3. Load projects if not already loaded
+                if (typeof loadProjects === 'function') {
+                    await loadProjects();
+                }
+
+                // 4. Wait a bit more for projects to render
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                // 5. Open the specific project
+                if (typeof viewProjectDetails === 'function') {
+                    await viewProjectDetails(projectId);
+                }
+
+                console.log('✅ Session 293: Project opened successfully');
+            } else {
+                console.error('❌ Projects tab not found');
+            }
+        };
 
         // ====================================================================
         // END PROJECT MANAGEMENT SYSTEM
