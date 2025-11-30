@@ -1641,18 +1641,7 @@
                     <!-- Right Panel (3 cols) - Style Preferences & Project Context -->
                     <!-- Session 272: Reduced from 4 to 3 cols to give more space to chat -->
                     <div class="col-lg-3">
-                        <!-- Project Selector Card -->
-                        <div class="card mb-3" style="background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.4);">
-                            <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
-                                <h6 class="mb-0" style="color: #c4b5fd;">📁 Active Project</h6>
-                            </div>
-                            <div class="card-body py-3">
-                                <select id="tabActiveProjectSelect" class="form-select mb-2" onchange="window.aiAssistant.switchProject(this.value)" style="background: rgba(139, 92, 246, 0.15); border-color: #8b5cf6; color: #e9d5ff;">
-                                    <option value="">Loading projects...</option>
-                                </select>
-                                <small style="color: #a78bfa; font-size: 11px;">New sessions create projects automatically</small>
-                            </div>
-                        </div>
+                        <!-- Session 292: Removed Project Selector Card - Main Assistant no longer uses project context -->
 
                         <!-- Style Preferences Card -->
                         <div class="card mb-3" id="tabStyleInsightsCard" style="background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.4);">
@@ -11938,18 +11927,7 @@
                             </div>
                         </div>
 
-                        <!-- Session 97: Project Selector -->
-                        <div id="projectSelector" style="margin-top: 8px; padding: 6px 10px; background: rgba(139, 92, 246, 0.15); border-left: 3px solid #8b5cf6; border-radius: 4px;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                <span style="font-size: 11px; color: #c4b5fd; font-weight: 700;">📁 PROJECT:</span>
-                                <select id="activeProjectSelect" class="form-select form-select-sm"
-                                        style="flex: 1; background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #e9d5ff; font-size: 11px; padding: 4px 8px;"
-                                        onchange="window.aiAssistant.switchProject(this.value)">
-                                    <option value="">Loading projects...</option>
-                                </select>
-                            </div>
-                            <small style="font-size: 9px; color: #c4b5fd;">Reference only - new sessions create their own projects automatically</small>
-                        </div>
+                        <!-- Session 97: Project Selector - REMOVED in Session 292 (Main Assistant no longer uses project context) -->
 
                         <!-- Session 117: New Session Button -->
                         <button
@@ -22995,8 +22973,7 @@
                 console.log('✨ AI Assistant tab ready');
                 // Load style insights on startup
                 this.loadStyleInsights();
-                // Load projects for dropdown
-                this.loadProjects();
+                // Session 292: Removed loadProjects() - Main Assistant no longer uses project dropdown
             }
 
             setupEventListeners() {
@@ -23601,9 +23578,7 @@
 
                 if (this.isOpen) {
                     // Session 97: Load projects when opening sidebar
-                    if (!this.activeProjectId) {
-                        this.loadProjects();
-                    }
+                    // Session 292: Removed - Main Assistant no longer uses project dropdown
 
                     // Open sidebar
                     sidebar.style.width = '450px';
@@ -24785,7 +24760,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             if (project && project.is_new) {
                                 this.activeProjectId = project.id;
                                 this.activeProjectName = project.name;
-                                await this.loadProjects();
+                                // Session 292: Removed loadProjects() - dropdown no longer exists
                             }
 
                             return { message: responseHtml };
