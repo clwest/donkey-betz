@@ -1,9 +1,9 @@
-# Session 293: Workflow Engine + Full Project Creation + Creative Toolbox Fix
+# Session 293: Workflow Engine + Creative Toolbox + Business Research Agents
 
 **Date:** November 30, 2025
 **Previous Session:** 292 (Main/Project Assistant Separation)
-**Session Type:** Feature Enhancement - Workflow Engine + Projects + Bug Fix
-**Status:** ALL 6 HANDOFFS COMPLETE + WORKFLOW ENGINE ENHANCED + CREATIVE TOOLBOX FIXED
+**Session Type:** Feature Enhancement - Workflow Engine + Projects + Bug Fix + Business Intelligence
+**Status:** ALL 6 HANDOFFS COMPLETE + WORKFLOW ENGINE ENHANCED + CREATIVE TOOLBOX FIXED + BUSINESS RESEARCH AGENTS ADDED
 
 ---
 
@@ -41,6 +41,33 @@
 3. **`agents/workflow_engine.py`**:
    - Fixed `_add_to_project` to use `image.project = project; image.save()` instead of `project.images.add(image)`
    - Changed from `project.images.count()` to `project.project_images.count()`
+
+### NEW: Business Research Agents (No Image/Video API Calls!)
+
+Added 2 new specialized agents for business intelligence:
+
+1. **CompetitorAnalysisAgent** (`core/agents/business/competitor_analysis_agent.py`)
+   - Analyzes competitors in a given market
+   - Generates SWOT analysis
+   - Tracks features, pricing, positioning
+   - Uses web search + spider data (no Stability AI needed)
+
+2. **CustomerResearchAgent** (`core/agents/business/customer_research_agent.py`)
+   - Researches customer pain points from Reddit/forums
+   - Builds detailed customer personas
+   - Extracts sentiment and customer quotes
+   - Uses spider network (especially Reddit) - no APIs needed
+
+**New Workflows Added:**
+- `business_research` - Full business intelligence (market + competitors + customers)
+- `competitor_analysis` - Deep dive into competitors
+- `customer_personas` - Build customer personas from research
+
+**Usage Example:**
+```
+"Research the AI writing assistant market for my startup idea"
+→ Market trends + Competitor analysis + Customer personas + SWOT
+```
 
 ### NEW: Full Project Creation with Intelligence Data
 
