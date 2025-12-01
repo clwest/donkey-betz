@@ -657,6 +657,10 @@ def _get_competitor_analysis_agent_definition() -> Dict:
                 "user_context": {
                     "type": "string",
                     "description": "Additional context about the user's business idea or goals to make analysis more relevant"
+                },
+                "project_id": {
+                    "type": "string",
+                    "description": "Optional project ID to use context from. If user says 'for this project' or 'for the current project', extract the project ID from conversation context."
                 }
             },
             "required": ["market"]
@@ -694,6 +698,10 @@ def _get_customer_research_agent_definition() -> Dict:
                 "user_context": {
                     "type": "string",
                     "description": "Additional context about the user's product or service to make personas more relevant"
+                },
+                "project_id": {
+                    "type": "string",
+                    "description": "Optional project ID to use context from. If user says 'for this project' or 'for the current project', extract the project ID from conversation context."
                 }
             },
             "required": ["market"]
