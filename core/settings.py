@@ -317,6 +317,11 @@ AI_PROVIDERS = {
 RUNWAY_API_KEY = os.environ.get('RUNWAY_API_KEY', '')
 RUNWAY_MOCK_MODE = os.environ.get('RUNWAY_MOCK_MODE', 'True') == 'True'  # Enable mock mode by default
 
+# DaVinci Resolve Bridge Configuration
+# The bridge server runs alongside DaVinci Resolve and provides REST API access
+DAVINCI_BRIDGE_URL = os.environ.get('DAVINCI_BRIDGE_URL', 'http://localhost:9090')
+DAVINCI_BRIDGE_API_KEY = os.environ.get('DAVINCI_BRIDGE_API_KEY', 'dev-key-change-in-production')
+
 # External Service API Keys (for non-LLM services)
 EXTERNAL_API_KEYS = {
     'STABILITY_API_KEY': os.environ.get('STABILITY_API_KEY', ''),

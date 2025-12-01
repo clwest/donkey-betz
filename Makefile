@@ -23,7 +23,7 @@ MOBILE_DIR ?= mobile
 # Export common env for child processes if you want (safe; read-only for checks)
 export HOST PORT
 
-.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all celery celery-stop celery-status
+.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all celery celery-stop celery-status davinci-bridge davinci-bridge-stop davinci-bridge-status davinci-bridge-logs
 
 # ---------- Core service lifecycle ----------
 start: ## Start Redis (if needed) and Daphne (background). Wait for health endpoint.
@@ -157,6 +157,56 @@ dev-health: ## Health checks: Redis + Daphne health endpoint + Django LLM endpoi
 # ---------- Run specific helpers ----------
 runworker: ## Run a channels runworker (foreground)
 	$(DJANGO_MANAGE) runworker
+
+# ---------- DaVinci Bridge helpers (Session 298) ----------
+DAVINCI_BRIDGE_PIDFILE ?= .davinci-bridge.pid
+DAVINCI_BRIDGE_LOG ?= davinci-bridge.log
+DAVINCI_BRIDGE_PORT ?= 9090
+
+davinci-bridge: ## Start DaVinci Bridge Server (requires DaVinci Resolve running)
+	@echo "==> Starting DaVinci Bridge Server..."
+	@if pgrep -f "uvicorn.*server:app" >/dev/null 2>&1; then \
+		echo "-> DaVinci Bridge already running"; \
+	else \
+		echo "-> Starting DaVinci Bridge (port $(DAVINCI_BRIDGE_PORT))..."; \
+		cd davinci_bridge && \
+		export RESOLVE_SCRIPT_API="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting" && \
+		export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so" && \
+		export PYTHONPATH="$$PYTHONPATH:$$RESOLVE_SCRIPT_API/Modules/" && \
+		nohup ../.venv/bin/uvicorn server:app --host 0.0.0.0 --port $(DAVINCI_BRIDGE_PORT) > ../$(DAVINCI_BRIDGE_LOG) 2>&1 & echo $$! > ../$(DAVINCI_BRIDGE_PIDFILE); \
+		sleep 2; \
+	fi
+	@echo "✓ DaVinci Bridge started on http://localhost:$(DAVINCI_BRIDGE_PORT)"
+	@echo "  - API Docs: http://localhost:$(DAVINCI_BRIDGE_PORT)/docs"
+	@echo "  - Log: $(DAVINCI_BRIDGE_LOG)"
+
+davinci-bridge-stop: ## Stop DaVinci Bridge Server
+	@echo "==> Stopping DaVinci Bridge..."
+	@if [ -f $(DAVINCI_BRIDGE_PIDFILE) ]; then \
+		PID=$$(cat $(DAVINCI_BRIDGE_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing DaVinci Bridge (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(DAVINCI_BRIDGE_PIDFILE); \
+	else \
+		pkill -f "uvicorn.*server:app.*9090" 2>/dev/null || true; \
+	fi
+	@echo "✓ DaVinci Bridge stopped."
+
+davinci-bridge-status: ## Check DaVinci Bridge status
+	@echo "==> DaVinci Bridge status"
+	@if curl -sf "http://localhost:$(DAVINCI_BRIDGE_PORT)/api/health" >/dev/null 2>&1; then \
+		echo "✓ DaVinci Bridge UP (port $(DAVINCI_BRIDGE_PORT))"; \
+		curl -sf "http://localhost:$(DAVINCI_BRIDGE_PORT)/api/status" 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "  (status endpoint returned no data)"; \
+	else \
+		echo "✗ DaVinci Bridge DOWN"; \
+	fi
+
+davinci-bridge-logs: ## Tail DaVinci Bridge logs
+	@echo "==> Tailing $(DAVINCI_BRIDGE_LOG) (ctrl-c to stop)"
+	@touch $(DAVINCI_BRIDGE_LOG)
+	@tail -f $(DAVINCI_BRIDGE_LOG)
 
 # ---------- Celery helpers (Session 207) ----------
 celery: ## Start Celery worker + beat (background) for spider scheduling

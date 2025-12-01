@@ -23930,6 +23930,20 @@
                 if (sendBtn) sendBtn.style.display = show ? 'none' : 'inline-block';
             }
 
+            // Session 299: Send a prefilled message (used by action buttons in research reports)
+            // This enables the cumulative intelligence pipeline: research -> create content
+            sendPrefilledMessage(message, source = 'tab') {
+                const inputId = source === 'tab' ? 'tabAssistantInput' : 'aiAssistantInput';
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.value = message;
+                    // Focus the input so user can see and modify if needed
+                    input.focus();
+                    // Auto-send after a brief delay to show the user what's happening
+                    setTimeout(() => this.sendMessage(source), 200);
+                }
+            }
+
             async sendMessage(source = 'tab') {
                 // Session 191: Reset stop flag and show stop button
                 this.workflowStopped = false;
@@ -26821,6 +26835,58 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             </div>
                         </div>`;
                 }
+
+                // Session 299: Add "Create Content from Research" action buttons
+                // This enables the cumulative intelligence pipeline: research -> create
+                const researchId = 'research_' + Date.now();
+
+                // Extract a clean market name from the title for project naming
+                const marketName = title.replace(/^(Competitive Analysis|Customer Research|Market Analysis)$/i, '').trim() || 'Research';
+
+                html += `
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
+                        <div style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">💡 <strong>Next Steps:</strong> Create content informed by this research</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Create a project for ${marketName} with all the research we have done')"
+                                    style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3)); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))'">
+                                📁 Create Project
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title.toLowerCase()} and create 3 professional logos')"
+                                    style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3)); border: 1px solid rgba(168, 85, 247, 0.4); color: #c4b5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3))'">
+                                🎨 Create Logos
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title.toLowerCase()} and create a YouTube thumbnail package')"
+                                    style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3)); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))'">
+                                📺 Create Thumbnails
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title.toLowerCase()} and create a brand identity package')"
+                                    style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3)); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))'">
+                                🏢 Create Brand Identity
+                            </button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research customer pain points for ${marketName}')"
+                                    style="background: rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(100, 116, 139, 0.25)'"
+                                    onmouseout="this.style.background='rgba(100, 116, 139, 0.15)'">
+                                👥 + Add Customer Research
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Analyze competitors in the ${marketName} market')"
+                                    style="background: rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 8px; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(100, 116, 139, 0.25)'"
+                                    onmouseout="this.style.background='rgba(100, 116, 139, 0.15)'">
+                                🎯 + Add Competitor Analysis
+                            </button>
+                        </div>
+                    </div>`;
 
                 html += `</div>`;
 

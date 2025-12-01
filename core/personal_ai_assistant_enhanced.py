@@ -2675,12 +2675,52 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 except Exception as e:
                     logger.warning(f"   ⚠️ Could not link image {img_id}: {e}")
 
+            # Session 299: Link stored BusinessResearchResult records to this project
+            research_linked = 0
+            try:
+                from core.models_unified_system import BusinessResearchResult
+
+                # Extract market/topic from project name for matching
+                # Clean common words to get the core topic
+                topic_words = project_name.lower().replace('research', '').replace('project', '').replace('for', '').strip()
+                topic_words = ' '.join(topic_words.split()[:4])  # First 4 meaningful words
+
+                if topic_words:
+                    # Find unlinked research that matches this topic
+                    for research in BusinessResearchResult.objects.filter(
+                        project__isnull=True,  # Only unlinked research
+                        market_topic__icontains=topic_words.split()[0] if topic_words else ''
+                    ).order_by('-created_at')[:5]:
+                        research.project = project
+                        research.save(update_fields=['project'])
+                        research_linked += 1
+                        logger.info(f"   ✅ Linked {research.research_type} research to project")
+
+                    # Also try to link by query content match
+                    if research_linked == 0:
+                        for research in BusinessResearchResult.objects.filter(
+                            project__isnull=True,
+                            query__icontains=topic_words.split()[0] if topic_words else ''
+                        ).order_by('-created_at')[:5]:
+                            research.project = project
+                            research.save(update_fields=['project'])
+                            research_linked += 1
+                            logger.info(f"   ✅ Linked {research.research_type} research (by query) to project")
+
+                if research_linked > 0:
+                    logger.info(f"📊 Session 299: Linked {research_linked} research reports to project")
+            except Exception as e:
+                logger.warning(f"Session 299: Could not link research to project: {e}")
+
             # Build response message
             response_parts = [
                 f"## 📁 Project Created: **{project_name}**\n",
                 f"**Category:** {category.replace('_', ' ').title()}",
                 f"**Images Included:** {images_linked}",
             ]
+
+            if research_linked > 0:
+                response_parts.append(f"**Research Reports Linked:** {research_linked}")
 
             if research_summary:
                 response_parts.append(f"\n### 📋 Research Summary\n{research_summary[:300]}{'...' if len(research_summary) > 300 else ''}")
@@ -2704,6 +2744,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'project_id': str(project.id),
                 'project_name': project_name,
                 'images_linked': images_linked,
+                'research_linked': research_linked,
                 'linked_images': linked_image_details
             }
 
