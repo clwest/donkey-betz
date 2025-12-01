@@ -331,15 +331,16 @@ This ensures co-leadership agents guide the creative process rather than just re
     # PROJECT TOOLS
     # -------------------------------------------------------------------------
 
-    "create_project_from_research": """Create a new creative project from research results and generated images.
+    "create_project_from_research": """⭐ SAVE RESEARCH TO PROJECT - Use this to bundle business research into a project.
 
-Use this AFTER completing:
-1. Research (web_search)
-2. Image generation (image_generation_agent)
+Use this AFTER completing ANY of these:
+1. Business research (competitor_analysis_agent, customer_research_agent)
+2. Image generation workflow (research + image generation)
 
-This packages everything into an organized project.
+This packages research, analysis, and any images into an organized project.
+Images are OPTIONAL - this works for business research without any images.
 
-DO NOT use for simple one-off image generations.""",
+TRIGGERS: 'save to project', 'create project from research', 'organize research', 'bundle research'""",
 
 
     "create_brand_video": """Create a complete brand video from concept to finished product.

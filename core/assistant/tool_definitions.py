@@ -586,7 +586,7 @@ def _get_create_project_from_research_definition() -> Dict:
                     "description": "3-5 suggested next steps for the user (e.g., 'Upscale favorite images', 'Create video animations', 'Train a character model')"
                 }
             },
-            "required": ["project_name", "research_summary", "image_ids"]
+            "required": ["project_name", "research_summary"]
         }
     }
 
