@@ -48597,7 +48597,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }, 300);
         }
 
-        // Submit create project from research
+        // Submit create project from research - Direct API call (Session 302)
         function submitCreateProjectFromResearch() {
             const projectName = document.getElementById('researchProjectName').value.trim();
             if (!projectName) {
@@ -48608,8 +48608,44 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             // Close modal
             bootstrap.Modal.getInstance(document.getElementById('createProjectFromResearchModal')).hide();
 
-            // Send to AI assistant - simple and clear instruction
-            window.aiAssistant?.sendPrefilledMessage(`Create a project called "${projectName}" and save the research analysis to it.`);
+            // Get research summary from current chat context if available
+            let researchSummary = '';
+            const lastMessage = document.querySelector('.assistant-message:last-of-type .message-content');
+            if (lastMessage) {
+                researchSummary = lastMessage.innerText.substring(0, 2000);
+            }
+
+            // Direct API call - bypasses GPT routing entirely (Session 302)
+            showToast('📁 Creating project...', 'info');
+
+            fetch('/api/projects/from-research/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    project_name: projectName,
+                    research_summary: researchSummary,
+                    research_type: 'business_research'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`✅ ${data.data.message}`, 'success');
+                    // Add confirmation to chat
+                    if (window.aiAssistant?.addMessage) {
+                        window.aiAssistant.addMessage('assistant', `📁 Project "${projectName}" created successfully! Your research has been saved.`);
+                    }
+                } else {
+                    showToast(`❌ Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Error creating project:', err);
+                showToast(`❌ Error creating project: ${err.message}`, 'error');
+            });
         }
 
         // Show create team modal

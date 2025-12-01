@@ -57,7 +57,8 @@ from core.views_projects import (
 )
 # Import project API views (Phase 3: Frontend Reality Fix)
 from core.views_projects_api import (
-    projects_list, project_detail, project_agents, assign_agent_to_project
+    projects_list, project_detail, project_agents, assign_agent_to_project,
+    create_project_from_research  # Session 302: Direct API endpoint
 )
 
 # Import agent tracking API views (Session 120)
@@ -1054,6 +1055,7 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/', project_detail, name='project-detail'),
     path('api/projects/<uuid:project_id>/agents/', project_agents, name='project-agents'),
     path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
+    path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),

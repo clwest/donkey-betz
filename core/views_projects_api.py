@@ -494,3 +494,81 @@ def assign_agent_to_project(request, project_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_project_from_research(request):
+    """
+    Create a new project from business research data.
+
+    Session 302: Direct API endpoint that bypasses GPT routing.
+    This allows the Create Project button to work reliably without
+    being misrouted to WorkflowAgent.
+
+    POST /api/projects/from-research/
+
+    Body:
+    {
+        "project_name": "Coffee Shop Analysis",
+        "research_summary": "Competitive analysis of the coffee shop market...",
+        "research_type": "competitor_analysis" | "customer_research" | "business_research"
+    }
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "project_id": "uuid",
+            "project_name": "Coffee Shop Analysis",
+            "message": "Project created successfully with research data"
+        }
+    }
+    """
+    try:
+        user = request.user
+        data = request.data
+
+        project_name = data.get('project_name', 'Business Research')
+        research_summary = data.get('research_summary', '')
+        research_type = data.get('research_type', 'business_research')
+
+        # Create the project
+        project = PartnershipProject.objects.create(
+            user=user,
+            project_name=project_name,
+            project_type=research_type,
+            description=research_summary or f"Business research project: {project_name}",
+            status='in_progress',
+            ai_contribution_percent=80,
+            human_contribution_percent=20,
+            ai_contributions=[{
+                'agent': 'Business Research Agent',
+                'task': f'{research_type.replace("_", " ").title()} analysis',
+                'timestamp': datetime.now().isoformat(),
+                'output': research_summary[:500] if research_summary else 'Research data saved'
+            }],
+            workflow_steps=[{
+                'step': 'Research Analysis',
+                'status': 'completed',
+                'description': research_summary[:200] if research_summary else 'Initial research gathered'
+            }]
+        )
+
+        logger.info(f"📁 Created project from research: {project_name} (ID: {project.id})")
+
+        return Response({
+            'success': True,
+            'data': {
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'message': f'Project "{project_name}" created successfully with research data. You can now continue adding research or create content for this project.'
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error creating project from research: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
