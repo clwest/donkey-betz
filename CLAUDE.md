@@ -1,8 +1,8 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** November 30, 2025 - Session 293 (Workflow Engine + Creative Toolbox Fix + Business Research Agents)
+**Last Updated:** November 30, 2025 - Session 293 (Competitive Analysis Report UI Fix + HTML Stripping)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
-**Current Focus:** Research → Creation Flow (Seamless handoff between research and content creation)
+**Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 70 spiders | 20 categories | 24 real data sources | **Topic Filtering (ai/web/security/cloud/design)!**
 **Agent Ecosystem:** 24 clean agents (including 2 Business Research) + 22 legacy | Time Travel Debugging | Real-time conversations
@@ -355,7 +355,8 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
-- **Session 293:** Workflow Engine + Creative Toolbox + Business Research - Full project creation with intelligence data, fixed Creative Toolbox image selection, added CompetitorAnalysisAgent + CustomerResearchAgent (no Stability AI needed!), 3 new business research workflows
+- **Session 293:** Competitive Analysis Report UI Fix - Fixed CompetitorAnalysisAgent to display GPT-generated analysis with 6 sections (Market Overview, Competitors, Trends, Opportunities, Threats, Recommendations), fixed gpt-5-mini token allocation (6000 for reasoning models), HTML stripping for RSS feeds, frontend data path fixes. Handoff: `docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md`
+- **Session 293 (earlier):** Workflow Engine + Creative Toolbox + Business Research - Full project creation with intelligence data, fixed Creative Toolbox image selection, added CompetitorAnalysisAgent + CustomerResearchAgent (no Stability AI needed!), 3 new business research workflows
 - **Session 273:** Documentation Overhaul - Consolidated 923 files into 6 reference docs, archived 255 session files, updated CLAUDE.md + fixed design topic filter
 - **Session 272:** Smart Topic Filtering - AI/web/security/cloud/design topic filters, source diversity, shopping blacklist, clickable links
 - **Session 271:** Clean Architecture Phase 5 - Frontend updates, artifact extraction, UI improvements
@@ -363,6 +364,31 @@ Built-in style library in `content/image_generation.py`:
 - **Session 267:** Clean Architecture Proposal - Layered agent system design
 - **Session 264-266:** Super Platform + Prompting - SuperPlatformCoordinator, central prompt registry
 - **Session 251-260:** 10 Sci-Fi Features - Memory Palace, Mood, Evolution, Time Travel, etc.
+
+---
+
+## Key Technical Notes
+
+### gpt-5-mini Token Allocation (Session 293)
+Reasoning models (gpt-5-mini, o1, o3) allocate tokens differently than standard models:
+- Standard models: All tokens go to visible output
+- Reasoning models: Tokens split between **internal reasoning** + visible output
+
+**Solution:** Set `max_completion_tokens` high (4000-6000) to ensure room for both reasoning AND output.
+
+```python
+response = self.client.chat.completions.create(
+    model="gpt-5-mini",
+    messages=messages,
+    max_completion_tokens=6000,  # High enough for reasoning + output
+)
+```
+
+### Business Research Agents (No Stability AI Credits!)
+- `CompetitorAnalysisAgent` - Market analysis, SWOT, competitor tracking
+- `CustomerResearchAgent` - Personas, pain points, Reddit research
+
+These agents use spider data + GPT analysis only - no image/video API calls needed!
 
 ---
 
