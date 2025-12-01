@@ -135,4 +135,9 @@ WORKFLOW_TYPES = [
     'product_photography_kit',     # Research + create product photography
     'video_thumbnail_series',      # Research + create consistent thumbnail series (1280x720)
     'logo_to_video',               # Animate existing logo into video with audio
+    # Session 297: Business research workflows (no image generation, uses spider data + GPT)
+    'competitor_analysis',         # Deep competitor analysis, SWOT, market positioning
+    'customer_personas',           # Customer pain points, personas, Reddit research
+    'business_research',           # Full business research: competitors + customers + market
+    'startup_validation',          # Validate startup idea with comprehensive research
 ]
