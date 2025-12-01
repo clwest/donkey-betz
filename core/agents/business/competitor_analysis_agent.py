@@ -239,6 +239,69 @@ If asked to create content, explain you can only research and suggest using the 
             self._semantic_search = get_spider_semantic_search()
         return self._semantic_search
 
+    def _get_project_context(self, project_id: str) -> Dict[str, Any]:
+        """
+        Session 302: Fetch project context when project_id is provided.
+
+        This enables users to say "Analyze competitors for this project"
+        and have the agent automatically use the project's topic/description.
+
+        Args:
+            project_id: UUID of the PartnershipProject
+
+        Returns:
+            Dict with project context (name, description, type) or empty dict
+        """
+        if not project_id:
+            return {}
+
+        try:
+            from core.models_partnership import PartnershipProject
+            project = PartnershipProject.objects.get(id=project_id)
+            return {
+                'project_name': project.project_name,
+                'project_description': project.description,
+                'project_type': project.project_type,
+                'project_id': str(project.id)
+            }
+        except Exception as e:
+            logger.warning(f"Failed to fetch project context: {e}")
+            return {}
+
+    def _enhance_task_with_project(self, task: str, project_context: Dict[str, Any]) -> str:
+        """
+        Session 302: Enhance the task with project context.
+
+        If user says "Analyze competitors" and we have project context,
+        enhance it to "Analyze competitors for [project name]: [description]"
+
+        Args:
+            task: Original task
+            project_context: Dict from _get_project_context()
+
+        Returns:
+            Enhanced task with project context
+        """
+        if not project_context:
+            return task
+
+        project_name = project_context.get('project_name', '')
+        project_description = project_context.get('project_description', '')
+
+        # If task is vague (doesn't specify what to research), add project context
+        vague_indicators = ['competitor', 'competitors', 'market analysis', 'competitive', 'swot']
+        is_vague = any(indicator in task.lower() for indicator in vague_indicators) and \
+                   len(task.split()) < 15  # Short task likely needs context
+
+        if is_vague and project_name:
+            enhanced = f"{task} for '{project_name}'"
+            if project_description and len(project_description) < 200:
+                enhanced += f": {project_description}"
+            logger.info(f"Enhanced task with project context: {enhanced[:100]}...")
+            return enhanced
+
+        return task
+
     def execute(
         self,
         task: str,
@@ -259,6 +322,13 @@ If asked to create content, explain you can only research and suggest using the 
                         error="Invalid or empty task",
                         agent_name=self.name
                     )
+
+                # Session 302: Check for project_id in context and fetch project data
+                project_id = context.get('project_id')
+                project_context = self._get_project_context(project_id) if project_id else {}
+
+                # Session 302: Enhance task with project context if available
+                task = self._enhance_task_with_project(task, project_context)
 
                 self.record_decision(
                     decision_type="task_analysis",
