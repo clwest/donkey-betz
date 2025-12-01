@@ -347,6 +347,168 @@
             color: var(--cyan-bright);
         }
 
+        /* Session 296: Originality & Bias Indicators */
+        .originality-indicator {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.15));
+            border: 2px solid rgba(139, 92, 246, 0.4);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-top: 10px;
+        }
+        .originality-indicator.high-originality {
+            border-color: rgba(34, 197, 94, 0.6);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(21, 128, 61, 0.15));
+        }
+        .originality-indicator.medium-originality {
+            border-color: rgba(251, 191, 36, 0.6);
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
+        }
+        .originality-indicator.low-originality {
+            border-color: rgba(239, 68, 68, 0.6);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(185, 28, 28, 0.15));
+        }
+        .originality-score {
+            font-size: 1.5rem;
+            font-weight: 800;
+            min-width: 60px;
+            text-align: center;
+        }
+        .originality-score.high { color: #22c55e; }
+        .originality-score.medium { color: #fbbf24; }
+        .originality-score.low { color: #ef4444; }
+        .originality-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+        .originality-verdict {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .originality-tip {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .bias-warning {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(185, 28, 28, 0.15));
+            border: 2px solid rgba(239, 68, 68, 0.5);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-top: 10px;
+        }
+        .bias-warning .bias-icon {
+            font-size: 1.3rem;
+            margin-right: 8px;
+        }
+        .bias-warning .bias-message {
+            color: #fca5a5;
+            font-weight: 600;
+        }
+        .bias-warning .bias-categories {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .bias-warning .bias-suggestions {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+        .bias-warning .suggestion-item {
+            font-size: 0.85rem;
+            color: #86efac;
+            padding: 2px 0;
+        }
+
+        /* Provenance Badge for Gallery */
+        .provenance-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(21, 128, 61, 0.9));
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .provenance-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 10px rgba(34, 197, 94, 0.5);
+        }
+        .provenance-badge .badge-icon {
+            font-size: 0.8rem;
+        }
+
+        /* Marketplace Insights Panel */
+        .marketplace-insights {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .marketplace-insights .insights-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+        .marketplace-insights .insights-title {
+            color: #60a5fa;
+            font-weight: 700;
+            margin: 0;
+        }
+        .marketplace-insights .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .marketplace-insights .platform-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .marketplace-insights .platform-card:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+        }
+        .marketplace-insights .platform-name {
+            font-weight: 600;
+            color: white;
+            margin-bottom: 4px;
+        }
+        .marketplace-insights .platform-score {
+            font-size: 0.8rem;
+            color: #86efac;
+        }
+        .marketplace-insights .hashtags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .marketplace-insights .hashtag {
+            background: rgba(96, 165, 250, 0.2);
+            color: #93c5fd;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
         .alert-success {
             background: rgba(74, 222, 128, 0.2);
             border-color: var(--success);
@@ -1864,6 +2026,60 @@
                                     <small id="promptQualityText" style="color: #fcd34d;"></small>
                                 </div>
                             </div>
+
+                            <!-- Session 296: Originality Indicator -->
+                            <div id="originalityIndicator" class="originality-indicator d-none">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="text-center">
+                                        <div class="originality-score" id="originalityScore">--</div>
+                                        <div class="originality-label">Originality</div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="originality-verdict" id="originalityVerdict">Analyzing...</div>
+                                        <div class="originality-tip" id="originalityTip"></div>
+                                    </div>
+                                    <div id="originalityAltBtn" class="d-none">
+                                        <button type="button" class="btn btn-sm btn-outline-light" onclick="showAlternativePrompts()" title="Get unique prompt ideas">
+                                            💡
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Session 296: Bias Warning Banner -->
+                            <div id="biasWarning" class="bias-warning d-none">
+                                <div class="d-flex align-items-start">
+                                    <span class="bias-icon">⚠️</span>
+                                    <div class="flex-grow-1">
+                                        <div class="bias-message" id="biasMessage">Potential bias detected</div>
+                                        <div class="bias-categories" id="biasCategories"></div>
+                                        <div class="bias-suggestions d-none" id="biasSuggestions">
+                                            <small style="color: #fcd34d; font-weight: 600;">Suggestions:</small>
+                                            <div id="biasSuggestionsList"></div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link" style="color: #86efac;" onclick="toggleBiasSuggestions()">
+                                        See tips
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Session 296: Marketplace Insights Panel -->
+                            <div id="marketplaceInsights" class="marketplace-insights d-none">
+                                <div class="insights-header" onclick="toggleMarketplaceDetails()">
+                                    <h6 class="insights-title">📊 Where to Share This Content</h6>
+                                    <span id="marketplaceToggleIcon" style="color: #60a5fa;">▼</span>
+                                </div>
+                                <div id="marketplaceDetails" style="display: none;">
+                                    <div class="platform-grid" id="platformGrid">
+                                        <!-- Platforms will be populated here -->
+                                    </div>
+                                    <div id="hashtagSection" class="mt-3" style="display: none;">
+                                        <small style="color: #60a5fa; font-weight: 600;">Suggested Hashtags:</small>
+                                        <div class="hashtags" id="hashtagList"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- ✨ PROMPT ASSISTANT ✨ -->
@@ -2877,6 +3093,76 @@
 
                 <!-- Status Messages -->
                 <div id="compareStatus" class="mt-3"></div>
+
+                <!-- Session 296: Certificate of Authenticity Modal -->
+                <div id="certificateModal" class="modal" tabindex="-1" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 9999;">
+                    <div class="modal-dialog modal-lg" style="margin: 30px auto; max-width: 700px;">
+                        <div class="modal-content" style="background: linear-gradient(135deg, #1a1a2e, #16213e); border: 2px solid #22c55e; border-radius: 16px;">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(34, 197, 94, 0.3); padding: 20px;">
+                                <h5 class="modal-title" style="color: #22c55e; font-weight: 700;">
+                                    <span style="margin-right: 8px;">✓</span> Certificate of Authenticity
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" onclick="closeCertificateModal()"></button>
+                            </div>
+                            <div class="modal-body" style="padding: 24px;">
+                                <!-- Certificate Content -->
+                                <div id="certificateContent" style="text-align: center;">
+                                    <div id="certificateLoading" style="padding: 40px;">
+                                        <div class="spinner-border text-success" role="status"></div>
+                                        <p style="color: #86efac; margin-top: 12px;">Loading certificate...</p>
+                                    </div>
+                                    <div id="certificateData" style="display: none;">
+                                        <!-- Thumbnail -->
+                                        <div id="certThumbnail" style="margin-bottom: 20px;"></div>
+
+                                        <!-- Certificate Details -->
+                                        <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; text-align: left;">
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <p style="color: #86efac; font-size: 0.8rem; margin-bottom: 4px;">Content Type</p>
+                                                    <p id="certContentType" style="color: white; font-weight: 600;"></p>
+                                                </div>
+                                                <div class="col-6">
+                                                    <p style="color: #86efac; font-size: 0.8rem; margin-bottom: 4px;">Created</p>
+                                                    <p id="certCreatedAt" style="color: white; font-weight: 600;"></p>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-3">
+                                                <div class="col-12">
+                                                    <p style="color: #86efac; font-size: 0.8rem; margin-bottom: 4px;">Content Hash (SHA-256)</p>
+                                                    <p id="certHash" style="color: white; font-family: monospace; font-size: 0.75rem; word-break: break-all;"></p>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-3">
+                                                <div class="col-12">
+                                                    <p style="color: #86efac; font-size: 0.8rem; margin-bottom: 4px;">Digital Signature</p>
+                                                    <p id="certSignature" style="color: white; font-family: monospace; font-size: 0.75rem; word-break: break-all;"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Originality Score (if available) -->
+                                        <div id="certOriginalitySection" style="display: none; margin-top: 20px; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 10px; padding: 16px;">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <p style="color: #a78bfa; font-size: 0.8rem; margin-bottom: 4px;">Originality Score</p>
+                                                    <p id="certOriginalityScore" style="color: white; font-weight: 700; font-size: 1.5rem; margin: 0;"></p>
+                                                </div>
+                                                <div id="certOriginalityVerdict" style="color: #c4b5fd; font-size: 0.9rem;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid rgba(34, 197, 94, 0.3); padding: 16px 24px;">
+                                <button type="button" class="btn btn-outline-light" onclick="closeCertificateModal()">Close</button>
+                                <button type="button" class="btn btn-success" id="downloadCertBtn" style="display: none;">
+                                    📥 Download PDF Certificate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <!-- END COMPARE PANE -->
 
@@ -24122,10 +24408,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 // Session 189: Convert markdown images ![alt](url) to HTML img tags FIRST
                 // This ensures images are rendered before paragraph processing
+                // Session 296: Changed onclick to use showImageModal instead of window.open
                 text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
                     console.log('🖼️ Converting markdown image:', alt, url);
+                    // Escape quotes for safe embedding in onclick
+                    const escapedUrl = url.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const escapedAlt = (alt || 'Generated Image').replace(/'/g, "\\'").replace(/"/g, "&quot;");
                     return `<div class="generated-image-preview" style="margin: 10px 0;">
-                        <img src="${url}" alt="${alt}" style="max-width: 100%; border-radius: 8px; cursor: pointer;" onclick="window.open('${url}', '_blank')" title="Click to view full size">
+                        <img src="${url}" alt="${alt}" style="max-width: 100%; border-radius: 8px; cursor: pointer;" onclick="showImageModal('${escapedUrl}', '${escapedAlt}')" title="Click to view full size">
                         <div style="font-size: 0.85em; color: #6c757d; margin-top: 5px;">${alt || 'Generated Image'}</div>
                     </div>`;
                 });
@@ -24241,7 +24531,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             // Session 64: Detect prompts in GPT-5 responses and categorize them
-            // SIMPLIFIED FOR 7-YEAR-OLDS: If AI talks about creating, show buttons!
+            // Session 296: Fixed to be MUCH more selective - only actual creative prompts, max 3 buttons
             detectPromptsInMessage(message) {
                 const result = {
                     hasImagePrompts: false,
@@ -24253,19 +24543,58 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 };
 
                 const lower = message.toLowerCase();
+
+                // Session 296: Only detect prompts if the message is EXPLICITLY about creating content
+                // Look for specific phrases that indicate the AI is suggesting prompts to use
+                const isPromptSuggestion = lower.includes('try this prompt') ||
+                                          lower.includes('suggested prompt') ||
+                                          lower.includes('use this prompt') ||
+                                          lower.includes('here\'s a prompt') ||
+                                          lower.includes('prompt suggestion') ||
+                                          lower.includes('recommended prompt') ||
+                                          (lower.includes('prompt:') && lower.includes('create'));
+
+                // If not explicitly suggesting prompts, don't create buttons
+                if (!isPromptSuggestion) {
+                    console.log('🔍 Message does not contain explicit prompt suggestions, skipping button creation');
+                    return result;
+                }
+
                 console.log('🔍 Detecting prompts in message...', message.substring(0, 100) + '...');
 
-                // Extract ALL quoted text (prompts are usually in quotes)
+                // Extract quoted text that looks like creative prompts
                 const quotedTextRegex = /"([^"]+)"/g;
                 const matches = [...message.matchAll(quotedTextRegex)];
                 console.log(`📝 Found ${matches.length} quoted sections`);
 
+                // Session 296: Maximum 3 buttons to avoid clutter
+                const MAX_BUTTONS = 3;
+
                 matches.forEach(match => {
+                    // Stop if we have enough prompts
+                    if (result.imagePrompts.length + result.videoPrompts.length + result.audioPrompts.length >= MAX_BUTTONS) {
+                        return;
+                    }
+
                     const prompt = match[1].trim();
 
-                    // Skip very short matches (likely not prompts)
-                    if (prompt.length < 10) {
+                    // Skip short matches (< 20 chars) - real prompts are descriptive
+                    if (prompt.length < 20) {
                         console.log('⏭️ Skipping short quote:', prompt);
+                        return;
+                    }
+
+                    // Skip if it looks like a technical term, not a creative prompt
+                    const technicalPatterns = [
+                        /^(the|a|an)\s+\w+$/i,  // "the image", "a video"
+                        /^\w+\.\w+$/,            // file extensions
+                        /^https?:\/\//,          // URLs
+                        /^\d+/,                  // starts with number
+                        /^(error|warning|success|failed)/i  // status messages
+                    ];
+
+                    if (technicalPatterns.some(p => p.test(prompt))) {
+                        console.log('⏭️ Skipping technical text:', prompt);
                         return;
                     }
 
@@ -24295,19 +24624,6 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         console.log('🎨 Categorized as IMAGE (default)');
                     }
                 });
-
-                // SIMPLE FALLBACK: If AI mentions image/logo/generate but no quotes found,
-                // show button anyway that just opens the Images tab (7-year-old friendly!)
-                if (result.imagePrompts.length === 0 && result.videoPrompts.length === 0 && result.audioPrompts.length === 0) {
-                    if (lower.includes('image') || lower.includes('logo') || lower.includes('generate') ||
-                        lower.includes('create') || lower.includes('prompt') || lower.includes('model:') ||
-                        lower.includes('style:')) {
-                        // Add a generic "Start Creating" button
-                        result.imagePrompts.push(''); // Empty prompt = just open tab
-                        result.hasImagePrompts = true;
-                        console.log('🎨 No quotes found, but AI is talking about creation - showing button!');
-                    }
-                }
 
                 console.log('🎯 Detection result:', {
                     images: result.imagePrompts.length,
@@ -28099,6 +28415,531 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // ====================================================================
+        // SESSION 296: ORIGINALITY & BIAS ANALYSIS
+        // ====================================================================
+
+        // Debounce timer for API calls
+        let originalityDebounceTimer = null;
+        let lastAnalyzedPrompt = '';
+
+        // Analyze prompt for originality and bias (called on prompt change)
+        async function analyzePromptOriginality(prompt) {
+            if (prompt.length < 10 || prompt === lastAnalyzedPrompt) {
+                return;
+            }
+
+            // Debounce: wait 800ms after user stops typing
+            clearTimeout(originalityDebounceTimer);
+            originalityDebounceTimer = setTimeout(async () => {
+                lastAnalyzedPrompt = prompt;
+
+                try {
+                    // Call originality API (using authenticatedFetch for @login_required endpoints)
+                    const origResponse = await authenticatedFetch('/api/provenance/originality/analyze/', {
+                        method: 'POST',
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (origResponse.ok) {
+                        const origData = await origResponse.json();
+                        updateOriginalityIndicator(origData);
+                    }
+                } catch (error) {
+                    console.log('Originality API not available:', error.message);
+                }
+
+                try {
+                    // Call bias audit API (using authenticatedFetch for @login_required endpoints)
+                    const biasResponse = await authenticatedFetch('/api/provenance/audit/prompt/', {
+                        method: 'POST',
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (biasResponse.ok) {
+                        const biasData = await biasResponse.json();
+                        updateBiasWarning(biasData);
+                    }
+                } catch (error) {
+                    console.log('Bias API not available:', error.message);
+                }
+            }, 800);
+        }
+
+        // Update originality indicator UI
+        function updateOriginalityIndicator(data) {
+            const container = document.getElementById('originalityIndicator');
+            const scoreEl = document.getElementById('originalityScore');
+            const verdictEl = document.getElementById('originalityVerdict');
+            const tipEl = document.getElementById('originalityTip');
+            const altBtn = document.getElementById('originalityAltBtn');
+
+            if (!container) return;
+
+            const score = data.overall_score || data.prompt_score || 50;
+            const verdict = data.verdict || 'Analyzing...';
+
+            // Update score and styling
+            scoreEl.textContent = score;
+            verdictEl.textContent = verdict;
+
+            // Color coding based on score
+            container.classList.remove('high-originality', 'medium-originality', 'low-originality');
+            scoreEl.classList.remove('high', 'medium', 'low');
+
+            if (score >= 70) {
+                container.classList.add('high-originality');
+                scoreEl.classList.add('high');
+                tipEl.textContent = 'Your prompt is unique and creative!';
+            } else if (score >= 40) {
+                container.classList.add('medium-originality');
+                scoreEl.classList.add('medium');
+                tipEl.textContent = 'Consider adding more unique elements to stand out.';
+                altBtn.classList.remove('d-none');
+            } else {
+                container.classList.add('low-originality');
+                scoreEl.classList.add('low');
+                tipEl.textContent = 'This prompt uses very common patterns. Try being more specific.';
+                altBtn.classList.remove('d-none');
+            }
+
+            // Show generic patterns if detected (API returns 'generic_patterns')
+            const patterns = data.generic_patterns || data.patterns_detected || [];
+            if (patterns.length > 0) {
+                tipEl.textContent += ' Detected: ' + patterns.slice(0, 2).join(', ');
+            }
+
+            container.classList.remove('d-none');
+        }
+
+        // Update bias warning UI
+        function updateBiasWarning(data) {
+            const container = document.getElementById('biasWarning');
+            const messageEl = document.getElementById('biasMessage');
+            const categoriesEl = document.getElementById('biasCategories');
+            const suggestionsContainer = document.getElementById('biasSuggestions');
+            const suggestionsList = document.getElementById('biasSuggestionsList');
+
+            if (!container) return;
+
+            const biasDetected = data.bias_detected || false;
+            const categories = data.bias_categories || [];
+            // API returns 'prompt_suggestions' or 'recommendations'
+            const suggestions = data.prompt_suggestions || data.suggestions || data.recommendations || [];
+
+            if (!biasDetected) {
+                container.classList.add('d-none');
+                return;
+            }
+
+            // Show warning
+            messageEl.textContent = 'Potential bias detected in your prompt';
+            categoriesEl.textContent = 'Categories: ' + categories.join(', ');
+
+            // Show suggestions if available
+            if (suggestions.length > 0) {
+                suggestionsList.innerHTML = suggestions.map(s =>
+                    `<div class="suggestion-item">• ${s}</div>`
+                ).join('');
+            }
+
+            container.classList.remove('d-none');
+        }
+
+        // Toggle bias suggestions visibility
+        function toggleBiasSuggestions() {
+            const container = document.getElementById('biasSuggestions');
+            if (container) {
+                container.classList.toggle('d-none');
+            }
+        }
+
+        // Show alternative prompt suggestions
+        async function showAlternativePrompts() {
+            const prompt = document.getElementById('prompt')?.value?.trim();
+            if (!prompt) return;
+
+            try {
+                const response = await authenticatedFetch('/api/provenance/originality/alternatives/', {
+                    method: 'POST',
+                    body: JSON.stringify({ prompt: prompt, count: 3 })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const alternatives = data.alternatives || [];
+
+                    if (alternatives.length > 0) {
+                        const selected = prompt('Alternative prompts:\n\n' +
+                            alternatives.map((alt, i) => `${i+1}. ${alt}`).join('\n\n') +
+                            '\n\nEnter number to use (1-' + alternatives.length + ') or leave empty to cancel:');
+
+                        const index = parseInt(selected) - 1;
+                        if (index >= 0 && index < alternatives.length) {
+                            document.getElementById('prompt').value = alternatives[index];
+                            document.getElementById('prompt').dispatchEvent(new Event('input'));
+                        }
+                    } else {
+                        alert('No alternative suggestions available.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching alternatives:', error);
+            }
+        }
+
+        // Hide originality/bias indicators when prompt is cleared
+        function hideOriginalityIndicators() {
+            const origContainer = document.getElementById('originalityIndicator');
+            const biasContainer = document.getElementById('biasWarning');
+            if (origContainer) origContainer.classList.add('d-none');
+            if (biasContainer) biasContainer.classList.add('d-none');
+            lastAnalyzedPrompt = '';
+        }
+
+        // Hook into the existing prompt input listener
+        document.addEventListener('DOMContentLoaded', () => {
+            const promptField = document.getElementById('prompt');
+            if (promptField) {
+                promptField.addEventListener('input', (e) => {
+                    const prompt = e.target.value.trim();
+                    if (prompt.length === 0) {
+                        hideOriginalityIndicators();
+                    } else if (prompt.length >= 10) {
+                        analyzePromptOriginality(prompt);
+                    }
+                });
+                console.log('🔍 Originality & Bias analysis initialized!');
+            }
+        });
+
+        // ====================================================================
+        // END ORIGINALITY & BIAS ANALYSIS
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION 296: PROVENANCE CERTIFICATE MODAL
+        // ====================================================================
+
+        let currentProvenanceId = null;
+
+        // Show provenance certificate modal
+        async function showProvenanceCertificate(itemId, itemType) {
+            const modal = document.getElementById('certificateModal');
+            const loadingEl = document.getElementById('certificateLoading');
+            const dataEl = document.getElementById('certificateData');
+            const downloadBtn = document.getElementById('downloadCertBtn');
+
+            if (!modal) return;
+
+            // Show modal with loading state
+            modal.style.display = 'block';
+            loadingEl.style.display = 'block';
+            dataEl.style.display = 'none';
+            downloadBtn.style.display = 'none';
+
+            try {
+                // First, get provenance ID for this item (using authenticatedFetch)
+                const provenanceResponse = await authenticatedFetch(`/api/provenance/verify/?${itemType}_id=${itemId}`);
+
+                if (!provenanceResponse.ok) {
+                    throw new Error('No provenance record found for this item');
+                }
+
+                const provenanceData = await provenanceResponse.json();
+                currentProvenanceId = provenanceData.provenance_id || provenanceData.id;
+
+                // Now get the certificate (using authenticatedFetch)
+                const certResponse = await authenticatedFetch(`/api/provenance/${currentProvenanceId}/certificate/`);
+
+                if (!certResponse.ok) {
+                    throw new Error('Could not load certificate');
+                }
+
+                const certData = await certResponse.json();
+
+                // Populate certificate data
+                document.getElementById('certContentType').textContent = certData.content_type || itemType;
+                document.getElementById('certCreatedAt').textContent = new Date(certData.created_at || certData.issued_at).toLocaleDateString();
+                document.getElementById('certHash').textContent = certData.content_hash || 'N/A';
+                document.getElementById('certSignature').textContent = certData.signature || 'N/A';
+
+                // Thumbnail (if available)
+                if (certData.thumbnail_url) {
+                    document.getElementById('certThumbnail').innerHTML =
+                        `<img src="${certData.thumbnail_url}" style="max-width: 200px; border-radius: 8px; border: 2px solid #22c55e;">`;
+                }
+
+                // Originality score (if available)
+                if (certData.originality_score !== undefined) {
+                    document.getElementById('certOriginalitySection').style.display = 'block';
+                    document.getElementById('certOriginalityScore').textContent = certData.originality_score + '/100';
+                    document.getElementById('certOriginalityVerdict').textContent = certData.originality_verdict || '';
+                }
+
+                // Show download button
+                downloadBtn.style.display = 'inline-block';
+                downloadBtn.onclick = () => downloadProvenanceCertificate(currentProvenanceId);
+
+                // Show data, hide loading
+                loadingEl.style.display = 'none';
+                dataEl.style.display = 'block';
+
+            } catch (error) {
+                console.error('Certificate error:', error);
+                loadingEl.innerHTML = `
+                    <div style="color: #ef4444;">
+                        <p style="font-size: 1.5rem; margin-bottom: 8px;">⚠️</p>
+                        <p>${error.message}</p>
+                        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 12px;">
+                            This content may not have provenance tracking enabled.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Close certificate modal
+        function closeCertificateModal() {
+            const modal = document.getElementById('certificateModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            currentProvenanceId = null;
+        }
+
+        // Download PDF certificate
+        async function downloadProvenanceCertificate(provenanceId) {
+            if (!provenanceId) return;
+
+            try {
+                const response = await authenticatedFetch(`/api/provenance/${provenanceId}/certificate/download/`);
+
+                if (!response.ok) {
+                    throw new Error('Could not download certificate');
+                }
+
+                // Create blob and download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `certificate-${provenanceId.substring(0, 8)}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Could not download certificate: ' + error.message);
+            }
+        }
+
+        // Close modal on escape key or click outside
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeCertificateModal();
+        });
+
+        document.getElementById('certificateModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'certificateModal') closeCertificateModal();
+        });
+
+        // ====================================================================
+        // END PROVENANCE CERTIFICATE MODAL
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION 296: MARKETPLACE INSIGHTS
+        // ====================================================================
+
+        let marketplaceDebounceTimer = null;
+
+        // Platform icons mapping
+        const PLATFORM_ICONS = {
+            'instagram': 'IG',
+            'twitter': 'X',
+            'deviantart': 'DA',
+            'artstation': 'AS',
+            'behance': 'Be',
+            'dribbble': 'Dr',
+            'pinterest': 'Pi',
+            'etsy': 'Etsy',
+            'redbubble': 'RB',
+            'society6': 'S6'
+        };
+
+        // Analyze prompt for marketplace opportunities
+        async function analyzeMarketplaceOpportunities(prompt) {
+            if (prompt.length < 20) return;
+
+            clearTimeout(marketplaceDebounceTimer);
+            marketplaceDebounceTimer = setTimeout(async () => {
+                try {
+                    // Detect style from prompt for suggestions
+                    const style = detectStyleFromPrompt(prompt);
+
+                    // Get platform suggestions based on style
+                    const platforms = getRecommendedPlatforms(style);
+
+                    // Update UI
+                    updateMarketplacePanel(platforms, style);
+
+                } catch (error) {
+                    console.log('Marketplace insights error:', error.message);
+                }
+            }, 1000);
+        }
+
+        // Detect style from prompt text
+        function detectStyleFromPrompt(prompt) {
+            const lower = prompt.toLowerCase();
+            if (lower.includes('logo') || lower.includes('brand') || lower.includes('icon')) return 'logo';
+            if (lower.includes('anime') || lower.includes('manga') || lower.includes('chibi')) return 'anime';
+            if (lower.includes('cyberpunk') || lower.includes('neon') || lower.includes('futuristic')) return 'cyberpunk';
+            if (lower.includes('fantasy') || lower.includes('dragon') || lower.includes('magic')) return 'fantasy';
+            if (lower.includes('portrait') || lower.includes('face') || lower.includes('headshot')) return 'portrait';
+            if (lower.includes('landscape') || lower.includes('nature') || lower.includes('mountain')) return 'landscape';
+            if (lower.includes('product') || lower.includes('packaging') || lower.includes('mockup')) return 'product';
+            if (lower.includes('illustration') || lower.includes('cartoon') || lower.includes('character')) return 'illustration';
+            if (lower.includes('photorealistic') || lower.includes('8k') || lower.includes('cinematic')) return 'photorealistic';
+            return 'digital_art';
+        }
+
+        // Get recommended platforms based on style
+        function getRecommendedPlatforms(style) {
+            const platformScores = {
+                'logo': [
+                    { name: 'Dribbble', score: 95, icon: 'Dr' },
+                    { name: 'Behance', score: 90, icon: 'Be' },
+                    { name: 'Instagram', score: 75, icon: 'IG' }
+                ],
+                'anime': [
+                    { name: 'DeviantArt', score: 95, icon: 'DA' },
+                    { name: 'ArtStation', score: 85, icon: 'AS' },
+                    { name: 'Twitter/X', score: 80, icon: 'X' }
+                ],
+                'cyberpunk': [
+                    { name: 'ArtStation', score: 95, icon: 'AS' },
+                    { name: 'DeviantArt', score: 85, icon: 'DA' },
+                    { name: 'Instagram', score: 75, icon: 'IG' }
+                ],
+                'fantasy': [
+                    { name: 'ArtStation', score: 95, icon: 'AS' },
+                    { name: 'DeviantArt', score: 90, icon: 'DA' },
+                    { name: 'Redbubble', score: 70, icon: 'RB' }
+                ],
+                'portrait': [
+                    { name: 'Instagram', score: 90, icon: 'IG' },
+                    { name: 'Behance', score: 85, icon: 'Be' },
+                    { name: 'Pinterest', score: 80, icon: 'Pi' }
+                ],
+                'landscape': [
+                    { name: 'Instagram', score: 90, icon: 'IG' },
+                    { name: 'Pinterest', score: 85, icon: 'Pi' },
+                    { name: 'Redbubble', score: 75, icon: 'RB' }
+                ],
+                'product': [
+                    { name: 'Behance', score: 90, icon: 'Be' },
+                    { name: 'Dribbble', score: 85, icon: 'Dr' },
+                    { name: 'Etsy', score: 80, icon: 'Etsy' }
+                ],
+                'illustration': [
+                    { name: 'Instagram', score: 85, icon: 'IG' },
+                    { name: 'DeviantArt', score: 85, icon: 'DA' },
+                    { name: 'Society6', score: 75, icon: 'S6' }
+                ],
+                'photorealistic': [
+                    { name: 'ArtStation', score: 90, icon: 'AS' },
+                    { name: 'Instagram', score: 85, icon: 'IG' },
+                    { name: 'Behance', score: 80, icon: 'Be' }
+                ],
+                'digital_art': [
+                    { name: 'ArtStation', score: 85, icon: 'AS' },
+                    { name: 'DeviantArt', score: 80, icon: 'DA' },
+                    { name: 'Instagram', score: 75, icon: 'IG' }
+                ]
+            };
+            return platformScores[style] || platformScores['digital_art'];
+        }
+
+        // Update marketplace panel UI
+        function updateMarketplacePanel(platforms, style) {
+            const container = document.getElementById('marketplaceInsights');
+            const grid = document.getElementById('platformGrid');
+            const hashtagSection = document.getElementById('hashtagSection');
+            const hashtagList = document.getElementById('hashtagList');
+
+            if (!container || !grid) return;
+
+            // Build platform cards
+            grid.innerHTML = platforms.map(p => `
+                <div class="platform-card">
+                    <div class="platform-name">${p.icon} ${p.name}</div>
+                    <div class="platform-score">${p.score}% match</div>
+                </div>
+            `).join('');
+
+            // Generate hashtags based on style
+            const hashtags = generateHashtags(style);
+            hashtagList.innerHTML = hashtags.map(h => `<span class="hashtag">${h}</span>`).join('');
+            hashtagSection.style.display = 'block';
+
+            // Show the panel
+            container.classList.remove('d-none');
+        }
+
+        // Generate hashtags based on style
+        function generateHashtags(style) {
+            const styleHashtags = {
+                'logo': ['#logodesign', '#branding', '#graphicdesign', '#logo', '#brandidentity'],
+                'anime': ['#anime', '#animeart', '#manga', '#animestyle', '#animeartist'],
+                'cyberpunk': ['#cyberpunk', '#cyberpunkart', '#neon', '#futureart', '#scifi'],
+                'fantasy': ['#fantasyart', '#digitalart', '#fantasy', '#conceptart', '#illustration'],
+                'portrait': ['#portrait', '#portraitart', '#digitalportrait', '#faceArt', '#aiart'],
+                'landscape': ['#landscape', '#nature', '#scenery', '#digitalart', '#natureart'],
+                'product': ['#productdesign', '#packaging', '#mockup', '#design', '#branding'],
+                'illustration': ['#illustration', '#digitalillustration', '#art', '#artwork', '#drawing'],
+                'photorealistic': ['#photorealistic', '#hyperrealistic', '#digitalart', '#art', '#aiart'],
+                'digital_art': ['#digitalart', '#art', '#artwork', '#aiart', '#artistsoninstagram']
+            };
+            return styleHashtags[style] || styleHashtags['digital_art'];
+        }
+
+        // Toggle marketplace details visibility
+        function toggleMarketplaceDetails() {
+            const details = document.getElementById('marketplaceDetails');
+            const icon = document.getElementById('marketplaceToggleIcon');
+            if (details && icon) {
+                if (details.style.display === 'none') {
+                    details.style.display = 'block';
+                    icon.textContent = '▲';
+                } else {
+                    details.style.display = 'none';
+                    icon.textContent = '▼';
+                }
+            }
+        }
+
+        // Hook marketplace analysis into prompt input
+        document.addEventListener('DOMContentLoaded', () => {
+            const promptField = document.getElementById('prompt');
+            if (promptField) {
+                promptField.addEventListener('input', (e) => {
+                    const prompt = e.target.value.trim();
+                    if (prompt.length >= 20) {
+                        analyzeMarketplaceOpportunities(prompt);
+                    } else {
+                        document.getElementById('marketplaceInsights')?.classList.add('d-none');
+                    }
+                });
+            }
+        });
+
+        // ====================================================================
+        // END MARKETPLACE INSIGHTS
+        // ====================================================================
+
+        // ====================================================================
         // END PROMPT ASSISTANT
         // ====================================================================
 
@@ -28242,6 +29083,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
                         <span class="badge bg-dark">${typeEmoji} ${item.type}</span>
                     </div>
+
+                    <!-- Session 296: Provenance Badge (if verified) -->
+                    ${item.has_provenance ? `
+                        <div class="provenance-badge" onclick="showProvenanceCertificate('${item.id}', '${item.type}')" title="View certificate of authenticity">
+                            <span class="badge-icon">✓</span> Verified
+                        </div>
+                    ` : ''}
 
                     <!-- Media Element -->
                     ${mediaElement}

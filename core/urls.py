@@ -1034,6 +1034,9 @@ urlpatterns = [
     # Agent Deployment System for AI Building Products
     path('api/agent-deployment/', include('agents.urls_deployment')),
 
+    # Session 295: Content Provenance, Audit, Originality & Marketplace APIs
+    path('api/provenance/', include('core.urls_provenance')),
+
     # AI Agents Visualization page
     path('visualization/', ai_agents_visualization, name='ai-agents-visualization'),
 

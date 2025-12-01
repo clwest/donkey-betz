@@ -11570,3 +11570,739 @@ class TrackSpiderMapping(models.Model):
                     created_count += 1
 
         return created_count
+
+
+# =============================================================================
+# BUSINESS RESEARCH RESULT MODEL
+# =============================================================================
+
+class BusinessResearchResult(models.Model):
+    """
+    Session 294: Stores business research results from CustomerResearchAgent
+    and CompetitorAnalysisAgent.
+
+    Persists the GPT-synthesized reports so users can:
+    - View historical research
+    - Compare research across time
+    - Export reports
+    - Build upon previous research
+    """
+
+    RESEARCH_TYPE_CHOICES = [
+        ('customer', 'Customer Research'),
+        ('competitor', 'Competitor Analysis'),
+        ('market', 'Market Research'),
+        ('trend', 'Trend Analysis'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Research metadata
+    research_type = models.CharField(
+        max_length=20,
+        choices=RESEARCH_TYPE_CHOICES,
+        default='customer',
+        help_text="Type of business research"
+    )
+    query = models.TextField(
+        help_text="The original research query/request"
+    )
+    agent_name = models.CharField(
+        max_length=100,
+        help_text="Name of the agent that generated this research"
+    )
+
+    # The synthesized report (GPT-generated analysis)
+    analysis = models.TextField(
+        help_text="GPT-synthesized research report (markdown)"
+    )
+
+    # Structured data from the research
+    data_points_analyzed = models.IntegerField(
+        default=0,
+        help_text="Number of data points analyzed"
+    )
+    sources_used = models.JSONField(
+        default=list,
+        help_text="List of data sources used (e.g., reddit, youtube, bluesky)"
+    )
+
+    # Raw data for reference
+    raw_data = models.JSONField(
+        default=list,
+        help_text="Raw data points that were analyzed"
+    )
+
+    # Additional structured findings
+    pain_points = models.JSONField(
+        default=list,
+        help_text="Extracted pain points"
+    )
+    personas = models.JSONField(
+        default=list,
+        help_text="Customer personas identified"
+    )
+    quotes = models.JSONField(
+        default=list,
+        help_text="Notable customer quotes"
+    )
+    recommendations = models.JSONField(
+        default=list,
+        help_text="Strategic recommendations"
+    )
+
+    # Execution metrics
+    execution_time_ms = models.IntegerField(
+        default=0,
+        help_text="Time taken to generate this research (ms)"
+    )
+
+    # Embedding for semantic search
+    embedding = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding of analysis for semantic search"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = "Business Research Result"
+        verbose_name_plural = "Business Research Results"
+        indexes = [
+            models.Index(fields=['research_type', 'created_at']),
+            models.Index(fields=['agent_name']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_research_type_display()}: {self.query[:50]}... ({self.created_at.strftime('%Y-%m-%d')})"
+
+    def generate_embedding(self):
+        """Generate embedding for semantic search of this research."""
+        try:
+            from openai import OpenAI
+            import os
+
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+            # Create searchable text from query + analysis
+            text_to_embed = f"{self.research_type}: {self.query}\n\n{self.analysis[:4000]}"
+
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text_to_embed
+            )
+
+            self.embedding = response.data[0].embedding
+            self.save(update_fields=['embedding'])
+            return True
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to generate embedding: {e}")
+            return False
+
+    @classmethod
+    def save_customer_research(cls, query: str, synthesis: dict, execution_time_ms: int = 0):
+        """Helper to save CustomerResearchAgent results with embedding."""
+        instance = cls.objects.create(
+            research_type='customer',
+            query=query,
+            agent_name='CustomerResearchAgent',
+            analysis=synthesis.get('analysis', ''),
+            data_points_analyzed=synthesis.get('data_points_analyzed', 0),
+            sources_used=synthesis.get('sources_used', []),
+            raw_data=synthesis.get('raw_data', []),
+            pain_points=synthesis.get('pain_points', []),
+            personas=synthesis.get('personas', []),
+            quotes=synthesis.get('customer_quotes', []),
+            execution_time_ms=execution_time_ms,
+        )
+        # Generate embedding for semantic search
+        instance.generate_embedding()
+        return instance
+
+    @classmethod
+    def save_competitor_analysis(cls, query: str, synthesis: dict, execution_time_ms: int = 0):
+        """Helper to save CompetitorAnalysisAgent results with embedding."""
+        instance = cls.objects.create(
+            research_type='competitor',
+            query=query,
+            agent_name='CompetitorAnalysisAgent',
+            analysis=synthesis.get('analysis', ''),
+            data_points_analyzed=synthesis.get('data_points_analyzed', 0),
+            sources_used=list(set(
+                item.get('source', '')
+                for item in synthesis.get('raw_data', [])
+                if item.get('source')
+            )),
+            raw_data=synthesis.get('raw_data', []),
+            execution_time_ms=execution_time_ms,
+        )
+        # Generate embedding for semantic search
+        instance.generate_embedding()
+        return instance
+
+    @classmethod
+    def semantic_search(cls, query: str, limit: int = 10, research_type: str = None):
+        """Search research results using semantic similarity."""
+        try:
+            from openai import OpenAI
+            import os
+            import numpy as np
+
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+            # Generate embedding for query
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=query
+            )
+            query_embedding = np.array(response.data[0].embedding)
+
+            # Get all research with embeddings
+            qs = cls.objects.exclude(embedding__isnull=True)
+            if research_type:
+                qs = qs.filter(research_type=research_type)
+
+            # Calculate similarities
+            results = []
+            for research in qs:
+                if research.embedding:
+                    research_embedding = np.array(research.embedding)
+                    # Cosine similarity
+                    similarity = np.dot(query_embedding, research_embedding) / (
+                        np.linalg.norm(query_embedding) * np.linalg.norm(research_embedding)
+                    )
+                    results.append((research, float(similarity)))
+
+            # Sort by similarity and return top results
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results[:limit]
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Semantic search failed: {e}")
+            return []
+
+
+# =============================================================================
+# Session 295: Content Provenance, Ethics Audit & Originality System
+# =============================================================================
+# Addresses customer pain points:
+# - Gap #3: Provenance & Attribution (HIGH PRIORITY)
+# - Gap #4: Bias & Ethics Transparency (MEDIUM PRIORITY)
+# - Gap #2: AI Slop Differentiation (ENHANCEMENT)
+# =============================================================================
+
+class ContentProvenance(models.Model):
+    """
+    Session 295: Provenance & Attribution System
+
+    Provides cryptographic proof of content creation, enabling:
+    - Creator verification and ownership claims
+    - Derivative tracking (who created variations)
+    - Exportable certificates for licensing/legal purposes
+    - Content fingerprinting for plagiarism detection
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to content
+    content_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('image', 'Image'),
+            ('video', 'Video'),
+            ('audio', 'Audio'),
+            ('3d_model', '3D Model'),
+            ('text', 'Text/Document'),
+        ],
+        help_text="Type of content this provenance record covers"
+    )
+
+    # Foreign keys to actual content (nullable - only one will be set)
+    image_history_id = models.PositiveBigIntegerField(
+        null=True, blank=True,
+        help_text="Link to ImageHistory if content_type is image"
+    )
+    video_history_id = models.PositiveBigIntegerField(
+        null=True, blank=True,
+        help_text="Link to VideoHistory if content_type is video"
+    )
+    audio_history_id = models.PositiveBigIntegerField(
+        null=True, blank=True,
+        help_text="Link to AudioHistory if content_type is audio"
+    )
+
+    # Creator information
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='provenance_records',
+        help_text="User who created this content"
+    )
+
+    # Cryptographic fingerprints
+    content_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="SHA-256 hash of the content bytes"
+    )
+
+    perceptual_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Perceptual hash for similar-image detection (pHash)"
+    )
+
+    # Creation metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    generation_params = models.JSONField(
+        default=dict,
+        help_text="Complete generation parameters (prompt, model, style, seed)"
+    )
+
+    # Cryptographic signature
+    signature = models.TextField(
+        blank=True,
+        help_text="Digital signature proving creation timestamp"
+    )
+
+    signature_algorithm = models.CharField(
+        max_length=20,
+        default='sha256_hmac',
+        help_text="Algorithm used for signature"
+    )
+
+    # Derivative tracking
+    parent_provenance = models.ForeignKey(
+        'self',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='derivatives',
+        help_text="Parent provenance if this is a derivative work"
+    )
+
+    derivative_type = models.CharField(
+        max_length=30,
+        blank=True,
+        choices=[
+            ('original', 'Original Creation'),
+            ('edit', 'Edited Version'),
+            ('upscale', 'Upscaled Version'),
+            ('variation', 'Style Variation'),
+            ('composite', 'Composite/Mashup'),
+        ],
+        default='original',
+        help_text="Type of derivative relationship"
+    )
+
+    # Verification status
+    is_verified = models.BooleanField(
+        default=True,
+        help_text="Whether this provenance record has been verified"
+    )
+
+    verification_timestamp = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the verification was performed"
+    )
+
+    # Certificate metadata
+    certificate_issued = models.BooleanField(default=False)
+    certificate_issued_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Content Provenance"
+        verbose_name_plural = "Content Provenance Records"
+        indexes = [
+            models.Index(fields=['content_hash']),
+            models.Index(fields=['creator', 'created_at']),
+            models.Index(fields=['content_type', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.content_type} by {self.creator.username} ({self.content_hash[:12]}...)"
+
+    @classmethod
+    def create_for_image(cls, image_history, user, image_bytes: bytes, generation_params: dict = None):
+        """
+        Create a provenance record for an image.
+
+        Args:
+            image_history: The ImageHistory instance
+            user: The creator user
+            image_bytes: Raw bytes of the image for hashing
+            generation_params: Dict with prompt, model, style, etc.
+        """
+        import hashlib
+        import hmac
+        import os
+        from django.utils import timezone
+
+        # Generate SHA-256 hash
+        content_hash = hashlib.sha256(image_bytes).hexdigest()
+
+        # Generate perceptual hash if imagehash available
+        perceptual_hash = ''
+        try:
+            import imagehash
+            from PIL import Image
+            import io
+            img = Image.open(io.BytesIO(image_bytes))
+            perceptual_hash = str(imagehash.phash(img))
+        except ImportError:
+            pass  # imagehash not installed
+
+        # Create signature
+        secret_key = os.getenv('PROVENANCE_SECRET_KEY', 'default-secret-key')
+        timestamp = timezone.now().isoformat()
+        message = f"{content_hash}:{user.id}:{timestamp}"
+        signature = hmac.new(
+            secret_key.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        # Check for parent (if image has parent_image)
+        parent_provenance = None
+        derivative_type = 'original'
+        if hasattr(image_history, 'parent_image') and image_history.parent_image:
+            parent_prov = cls.objects.filter(
+                image_history_id=image_history.parent_image.id
+            ).first()
+            if parent_prov:
+                parent_provenance = parent_prov
+                derivative_type = 'edit'
+
+        return cls.objects.create(
+            content_type='image',
+            image_history_id=image_history.id,
+            creator=user,
+            content_hash=content_hash,
+            perceptual_hash=perceptual_hash,
+            generation_params=generation_params or {},
+            signature=signature,
+            signature_algorithm='sha256_hmac',
+            parent_provenance=parent_provenance,
+            derivative_type=derivative_type,
+            is_verified=True,
+            verification_timestamp=timezone.now()
+        )
+
+    def generate_certificate(self) -> dict:
+        """
+        Generate an exportable certificate of provenance.
+
+        Returns a dict that can be exported as JSON or PDF.
+        """
+        from django.utils import timezone
+
+        certificate = {
+            'certificate_id': str(self.id),
+            'certificate_type': 'AI Content Provenance Certificate',
+            'version': '1.0',
+            'issued_at': timezone.now().isoformat(),
+            'issued_by': 'Unified Donkey Betz AI Studio',
+
+            'content': {
+                'type': self.content_type,
+                'sha256_hash': self.content_hash,
+                'perceptual_hash': self.perceptual_hash or None,
+                'created_at': self.created_at.isoformat(),
+            },
+
+            'creator': {
+                'username': self.creator.username,
+                'user_id': str(self.creator.id),
+            },
+
+            'generation': {
+                'prompt': self.generation_params.get('prompt', ''),
+                'model': self.generation_params.get('model', ''),
+                'style': self.generation_params.get('style', ''),
+                'parameters': {k: v for k, v in self.generation_params.items()
+                              if k not in ['prompt', 'model', 'style']}
+            },
+
+            'lineage': {
+                'derivative_type': self.derivative_type,
+                'parent_certificate': str(self.parent_provenance.id) if self.parent_provenance else None,
+            },
+
+            'verification': {
+                'signature': self.signature,
+                'algorithm': self.signature_algorithm,
+                'verified': self.is_verified,
+                'verified_at': self.verification_timestamp.isoformat() if self.verification_timestamp else None,
+            }
+        }
+
+        # Mark certificate as issued
+        self.certificate_issued = True
+        self.certificate_issued_at = timezone.now()
+        self.save(update_fields=['certificate_issued', 'certificate_issued_at'])
+
+        return certificate
+
+    @classmethod
+    def find_by_hash(cls, content_hash: str):
+        """Find provenance records by content hash (exact match)."""
+        return cls.objects.filter(content_hash=content_hash)
+
+    @classmethod
+    def find_similar(cls, perceptual_hash: str, threshold: int = 10):
+        """
+        Find similar images by perceptual hash.
+
+        Uses Hamming distance - images with distance < threshold are similar.
+        Requires imagehash library.
+        """
+        try:
+            import imagehash
+            target_hash = imagehash.hex_to_hash(perceptual_hash)
+
+            similar = []
+            for prov in cls.objects.exclude(perceptual_hash=''):
+                try:
+                    prov_hash = imagehash.hex_to_hash(prov.perceptual_hash)
+                    distance = target_hash - prov_hash
+                    if distance < threshold:
+                        similar.append((prov, distance))
+                except Exception:
+                    continue
+
+            similar.sort(key=lambda x: x[1])
+            return similar
+        except ImportError:
+            return []
+
+
+class ContentAuditResult(models.Model):
+    """
+    Session 295: Bias & Ethics Transparency System
+
+    Records audit results for generated content, including:
+    - Bias detection (gender, racial, cultural)
+    - Safety/ethics checks
+    - Transparency cards for users
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to provenance
+    provenance = models.ForeignKey(
+        ContentProvenance,
+        on_delete=models.CASCADE,
+        related_name='audits',
+        help_text="Provenance record being audited"
+    )
+
+    # Audit metadata
+    audited_at = models.DateTimeField(auto_now_add=True)
+    audit_version = models.CharField(max_length=10, default='1.0')
+
+    # Safety scores (0-100, higher = safer)
+    overall_safety_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Overall safety score (0-100)"
+    )
+
+    # Bias detection
+    bias_detected = models.BooleanField(default=False)
+    bias_categories = models.JSONField(
+        default=list,
+        help_text="List of detected bias categories"
+    )
+    bias_details = models.TextField(
+        blank=True,
+        help_text="Detailed explanation of detected biases"
+    )
+
+    # Ethics flags
+    ethics_flags = models.JSONField(
+        default=list,
+        help_text="Ethical concerns flagged"
+    )
+
+    # Representation analysis
+    representation_analysis = models.JSONField(
+        default=dict,
+        help_text="Analysis of representation in content"
+    )
+
+    # Prompt analysis
+    prompt_safety_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=100,
+        help_text="Safety score of the input prompt"
+    )
+    prompt_suggestions = models.JSONField(
+        default=list,
+        help_text="Suggested prompt modifications for less bias"
+    )
+
+    # Model transparency
+    model_known_biases = models.JSONField(
+        default=list,
+        help_text="Known biases of the model used"
+    )
+
+    # Recommendations
+    recommendations = models.JSONField(
+        default=list,
+        help_text="Recommendations for creator"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Content Audit Result"
+        verbose_name_plural = "Content Audit Results"
+        ordering = ['-audited_at']
+
+    def __str__(self):
+        return f"Audit for {self.provenance_id} (score: {self.overall_safety_score})"
+
+    def generate_transparency_card(self) -> dict:
+        """Generate a user-friendly transparency card."""
+        return {
+            'safety_score': self.overall_safety_score,
+            'safety_level': 'high' if self.overall_safety_score >= 80 else
+                           'medium' if self.overall_safety_score >= 50 else 'low',
+            'bias_detected': self.bias_detected,
+            'bias_summary': self.bias_categories if self.bias_detected else [],
+            'ethics_concerns': len(self.ethics_flags),
+            'prompt_quality': self.prompt_safety_score,
+            'suggestions': self.prompt_suggestions[:3],  # Top 3 suggestions
+            'recommendations': self.recommendations[:3],
+            'model_notes': self.model_known_biases[:2] if self.model_known_biases else [],
+        }
+
+
+class OriginalityScore(models.Model):
+    """
+    Session 295: AI Slop Differentiation System
+
+    Helps creators stand out by:
+    - Comparing against trending patterns
+    - Scoring uniqueness vs generic AI output
+    - Suggesting differentiation strategies
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to provenance
+    provenance = models.ForeignKey(
+        ContentProvenance,
+        on_delete=models.CASCADE,
+        related_name='originality_scores',
+        help_text="Provenance record being scored"
+    )
+
+    # Scoring
+    scored_at = models.DateTimeField(auto_now_add=True)
+
+    overall_originality = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Overall originality score (0-100, higher = more original)"
+    )
+
+    # Breakdown scores
+    prompt_originality = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=50,
+        help_text="How unique is the prompt compared to common prompts"
+    )
+
+    style_originality = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=50,
+        help_text="How unique is the style choice"
+    )
+
+    composition_originality = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=50,
+        help_text="How unique is the composition/layout"
+    )
+
+    # Trend comparison
+    trend_similarity = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=50,
+        help_text="How similar to current trending content (higher = more similar)"
+    )
+
+    trending_elements_used = models.JSONField(
+        default=list,
+        help_text="List of trending elements found in this content"
+    )
+
+    # Anti-patterns detected
+    generic_patterns_detected = models.JSONField(
+        default=list,
+        help_text="Generic AI patterns detected (e.g., 'smooth skin', 'perfect lighting')"
+    )
+
+    # Recommendations
+    differentiation_suggestions = models.JSONField(
+        default=list,
+        help_text="Suggestions to make content more unique"
+    )
+
+    alternative_prompts = models.JSONField(
+        default=list,
+        help_text="Alternative prompt suggestions for more originality"
+    )
+
+    # Market comparison
+    similar_content_count = models.IntegerField(
+        default=0,
+        help_text="Estimated number of similar AI-generated content"
+    )
+
+    uniqueness_percentile = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=50,
+        help_text="Percentile ranking (100 = most unique)"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Originality Score"
+        verbose_name_plural = "Originality Scores"
+        ordering = ['-scored_at']
+
+    def __str__(self):
+        return f"Originality {self.overall_originality}/100 for {self.provenance_id}"
+
+    def get_summary(self) -> dict:
+        """Get a summary of originality analysis."""
+        return {
+            'overall_score': self.overall_originality,
+            'breakdown': {
+                'prompt': self.prompt_originality,
+                'style': self.style_originality,
+                'composition': self.composition_originality,
+            },
+            'trend_similarity': self.trend_similarity,
+            'uniqueness_percentile': self.uniqueness_percentile,
+            'issues': self.generic_patterns_detected[:5],
+            'suggestions': self.differentiation_suggestions[:5],
+            'verdict': self._get_verdict()
+        }
+
+    def _get_verdict(self) -> str:
+        """Generate a human-readable verdict."""
+        if self.overall_originality >= 80:
+            return "Highly Original - Your content stands out!"
+        elif self.overall_originality >= 60:
+            return "Moderately Original - Some unique elements"
+        elif self.overall_originality >= 40:
+            return "Average - Consider differentiation suggestions"
+        else:
+            return "Generic - High risk of 'AI slop' perception"
