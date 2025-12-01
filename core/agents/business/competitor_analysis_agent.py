@@ -321,13 +321,27 @@ Return a comprehensive competitive landscape analysis."""
                     # Synthesize the competitive analysis
                     synthesis = self._synthesize_analysis(task, all_competitor_data)
 
+                    # Session 294: Save to database with embedding for semantic search
+                    saved_result = None
+                    try:
+                        from core.models_unified_system import BusinessResearchResult
+                        saved_result = BusinessResearchResult.save_competitor_analysis(
+                            query=task,
+                            synthesis=synthesis,
+                            execution_time_ms=execution_time
+                        )
+                        logger.info(f"Saved competitor analysis to database: {saved_result.id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to save competitor analysis: {e}")
+
                     return AgentResult(
                         success=True,
                         message=f"Competitive analysis completed with {len(all_competitor_data)} data sources",
                         data={
                             'analysis': synthesis,
                             'raw_data': all_competitor_data,
-                            'query': task
+                            'query': task,
+                            'saved_id': str(saved_result.id) if saved_result else None
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
