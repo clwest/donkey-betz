@@ -25,20 +25,37 @@ TOOL_DESCRIPTIONS: Dict[str, str] = {
     # WORKFLOW & ORCHESTRATION
     # -------------------------------------------------------------------------
 
-    "workflow_orchestration_agent": """Use this agent ONLY when user explicitly requests a COMPLETE PACKAGE that requires both research AND creation.
+    "workflow_orchestration_agent": """Use this agent for COMPLETE PACKAGES requiring research + creation, OR for BUSINESS RESEARCH workflows.
 
 DO NOT USE FOR:
 - Questions asking for advice: "What style would work best?" -> Just answer, don't call any tool
 - Simple creation requests: "Create a logo" -> Use image_generation_agent instead
 - Single-step operations: "Upscale image 3" -> Use image_editing_agent instead
 
-ONLY USE FOR explicit package requests like:
+=== CREATIVE WORKFLOWS (research + images) ===
 - "Research and create 3 logos for X" -> workflow='research_and_create_logos'
 - "Create a complete brand identity package for X" -> workflow='brand_identity_package'
 - "Make a YouTube thumbnail package for X" -> workflow='youtube_thumbnail_package'
 - "Animate logo 5 into a video" -> workflow='logo_to_video', image_id='5'
 
-Keywords that trigger this: "research and create", "complete package", "brand identity package", "thumbnail package".
+=== BUSINESS RESEARCH WORKFLOWS (no images, uses spider data + GPT) ===
+These are FREE - no Stability AI credits used!
+
+- "Analyze my competitors in the X market" -> workflow='competitor_analysis'
+  Deep competitor analysis with SWOT and positioning maps
+
+- "Research customer personas for X" -> workflow='customer_personas'
+  Find pain points from Reddit, build personas, extract quotes
+
+- "Do business research for starting a X company" -> workflow='business_research'
+  Full research: market trends + competitors + customers + synthesis
+
+- "Validate my startup idea for X" -> workflow='startup_validation'
+  Comprehensive validation: market opportunity, competitors, customer validation, differentiation, go/no-go
+
+Keywords that trigger this:
+- Creative: "research and create", "complete package", "brand identity", "thumbnail package"
+- Business: "competitor analysis", "customer personas", "business research", "validate idea", "startup validation", "market research"
 
 For regular creation like "create 2 cyberpunk logos", use image_generation_agent directly.""",
 

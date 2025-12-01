@@ -642,6 +642,45 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     'description': 'Extract powerful customer quotes for messaging'
                 }
             ]
+        },
+
+        # Session 297: Startup Validation - Comprehensive idea validation
+        'startup_validation': {
+            'description': 'Validate startup idea with market research, competitor analysis, and customer insights',
+            'content_type': 'startup_validation',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'market_opportunity',
+                    'agent': 'research_agent',
+                    'description': 'Research market size, growth trends, and industry landscape'
+                },
+                {
+                    'step': 2,
+                    'name': 'competitor_landscape',
+                    'agent': 'competitor_analysis_agent',
+                    'description': 'Identify and analyze existing competitors and alternatives'
+                },
+                {
+                    'step': 3,
+                    'name': 'customer_validation',
+                    'agent': 'customer_research_agent',
+                    'description': 'Validate customer pain points and willingness to pay'
+                },
+                {
+                    'step': 4,
+                    'name': 'differentiation_strategy',
+                    'agent': 'competitor_analysis_agent',
+                    'description': 'Define unique value proposition and competitive moat'
+                },
+                {
+                    'step': 5,
+                    'name': 'validation_summary',
+                    'agent': 'strategic_synthesis',
+                    'description': 'Synthesize findings into go/no-go recommendation with action items'
+                }
+            ]
         }
     }
 
