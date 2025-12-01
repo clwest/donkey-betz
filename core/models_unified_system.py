@@ -11597,6 +11597,23 @@ class BusinessResearchResult(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Link to project (optional - research can exist independently)
+    project = models.ForeignKey(
+        'content.CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='research_reports',
+        help_text="Project this research is linked to"
+    )
+
+    # Market/topic for grouping related research
+    market_topic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Market or topic for grouping (e.g., 'AI content generation')"
+    )
+
     # Research metadata
     research_type = models.CharField(
         max_length=20,
@@ -11707,12 +11724,17 @@ class BusinessResearchResult(models.Model):
             return False
 
     @classmethod
-    def save_customer_research(cls, query: str, synthesis: dict, execution_time_ms: int = 0):
+    def save_customer_research(cls, query: str, synthesis: dict, execution_time_ms: int = 0, market_topic: str = ''):
         """Helper to save CustomerResearchAgent results with embedding."""
+        # Extract market topic from query if not provided
+        if not market_topic:
+            market_topic = cls._extract_market_topic(query)
+
         instance = cls.objects.create(
             research_type='customer',
             query=query,
             agent_name='CustomerResearchAgent',
+            market_topic=market_topic,
             analysis=synthesis.get('analysis', ''),
             data_points_analyzed=synthesis.get('data_points_analyzed', 0),
             sources_used=synthesis.get('sources_used', []),
@@ -11720,19 +11742,43 @@ class BusinessResearchResult(models.Model):
             pain_points=synthesis.get('pain_points', []),
             personas=synthesis.get('personas', []),
             quotes=synthesis.get('customer_quotes', []),
+            recommendations=synthesis.get('recommendations', []),
             execution_time_ms=execution_time_ms,
         )
         # Generate embedding for semantic search
         instance.generate_embedding()
         return instance
 
+    @staticmethod
+    def _extract_market_topic(query: str) -> str:
+        """Extract market/topic from research query for grouping."""
+        import re
+        # Common patterns: "in the X market", "for X", "about X industry"
+        patterns = [
+            r'(?:in the|in|for|about|regarding)\s+(?:the\s+)?([^,\.]+?)(?:\s+market|\s+industry|\s+space|\s+sector)?(?:\s|$|,|\.)',
+            r'(?:competitors|competition|market|customers|pain points)\s+(?:in|for|of)\s+([^,\.]+)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, query.lower())
+            if match:
+                topic = match.group(1).strip()
+                # Clean up common words
+                topic = re.sub(r'^(the|a|an)\s+', '', topic)
+                return topic[:200]  # Limit length
+        return ''
+
     @classmethod
-    def save_competitor_analysis(cls, query: str, synthesis: dict, execution_time_ms: int = 0):
+    def save_competitor_analysis(cls, query: str, synthesis: dict, execution_time_ms: int = 0, market_topic: str = ''):
         """Helper to save CompetitorAnalysisAgent results with embedding."""
+        # Extract market topic from query if not provided
+        if not market_topic:
+            market_topic = cls._extract_market_topic(query)
+
         instance = cls.objects.create(
             research_type='competitor',
             query=query,
             agent_name='CompetitorAnalysisAgent',
+            market_topic=market_topic,
             analysis=synthesis.get('analysis', ''),
             data_points_analyzed=synthesis.get('data_points_analyzed', 0),
             sources_used=list(set(
@@ -11741,11 +11787,57 @@ class BusinessResearchResult(models.Model):
                 if item.get('source')
             )),
             raw_data=synthesis.get('raw_data', []),
+            recommendations=synthesis.get('recommendations', []),
             execution_time_ms=execution_time_ms,
         )
         # Generate embedding for semantic search
         instance.generate_embedding()
         return instance
+
+    @classmethod
+    def get_related_research(cls, market_topic: str, limit: int = 5):
+        """Get all research related to a market topic."""
+        return cls.objects.filter(
+            market_topic__icontains=market_topic
+        ).order_by('-created_at')[:limit]
+
+    @classmethod
+    def get_research_context_for_prompt(cls, query: str, limit: int = 3) -> str:
+        """
+        Get relevant research as context for image generation prompts.
+        Uses semantic search to find the most relevant research.
+        """
+        results = cls.semantic_search(query, limit=limit)
+        if not results:
+            return ""
+
+        context_parts = []
+        for research, score in results:
+            if score < 0.4:  # Skip low-relevance results
+                continue
+
+            context = f"\n### {research.get_research_type_display()} (relevance: {score:.0%})\n"
+
+            if research.research_type == 'customer':
+                if research.pain_points:
+                    context += f"**Customer Pain Points:** {', '.join(research.pain_points[:5])}\n"
+                if research.personas:
+                    personas = research.personas[:2]
+                    for p in personas:
+                        if isinstance(p, dict):
+                            context += f"**Target Customer:** {p.get('name', 'Unknown')} - {p.get('description', '')[:100]}\n"
+            elif research.research_type == 'competitor':
+                if research.recommendations:
+                    context += f"**Market Gaps:** {', '.join(research.recommendations[:3])}\n"
+                # Extract competitor names from analysis
+                if 'differentiate' in research.analysis.lower():
+                    context += f"**Differentiation Needed:** Stand out from existing players\n"
+
+            context_parts.append(context)
+
+        if context_parts:
+            return "\n## Stored Research Intelligence\n" + "\n".join(context_parts)
+        return ""
 
     @classmethod
     def semantic_search(cls, query: str, limit: int = 10, research_type: str = None):

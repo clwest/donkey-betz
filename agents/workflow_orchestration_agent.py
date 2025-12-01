@@ -1476,6 +1476,74 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             # Include both positive (what we want) and negative (what to avoid) guidance
             prompt += ", clean negative space, strong yet simple mark, limited vibrant palette, symbol only, icon design, NO TEXT, no letters, no words, no typography, abstract mark"
 
+        # =====================================================================
+        # SESSION 299: INJECT STORED RESEARCH INTELLIGENCE
+        # Query BusinessResearchResult for relevant competitor/customer research
+        # and extract key insights to inform the image generation prompt
+        # =====================================================================
+        try:
+            from core.models_unified_system import BusinessResearchResult
+
+            # Use semantic search to find research relevant to this topic
+            research_insights = BusinessResearchResult.get_research_context_for_prompt(topic, limit=3)
+
+            if research_insights:
+                # Extract actionable design guidance from research
+                # We don't add the full context to the image prompt (too verbose)
+                # Instead, extract key differentiators and pain points
+
+                # Parse pain points for design cues
+                pain_point_cues = []
+                differentiation_cues = []
+
+                # Search for customer pain points
+                customer_research = BusinessResearchResult.objects.filter(
+                    research_type='customer',
+                    market_topic__icontains=topic.split()[0] if topic else ''
+                ).order_by('-created_at').first()
+
+                if customer_research and customer_research.pain_points:
+                    # Convert pain points to design concepts
+                    pain_points = customer_research.pain_points[:3]
+                    for pp in pain_points:
+                        if isinstance(pp, str):
+                            # Map common pain points to visual cues
+                            if 'trust' in pp.lower() or 'reliable' in pp.lower():
+                                pain_point_cues.append('trustworthy stable')
+                            elif 'simple' in pp.lower() or 'complex' in pp.lower():
+                                pain_point_cues.append('simple approachable')
+                            elif 'expensive' in pp.lower() or 'cost' in pp.lower():
+                                pain_point_cues.append('value premium quality')
+                            elif 'confus' in pp.lower() or 'overwhelm' in pp.lower():
+                                pain_point_cues.append('clear organized')
+
+                # Search for competitor insights for differentiation
+                competitor_research = BusinessResearchResult.objects.filter(
+                    research_type='competitor',
+                    market_topic__icontains=topic.split()[0] if topic else ''
+                ).order_by('-created_at').first()
+
+                if competitor_research and competitor_research.recommendations:
+                    # Extract differentiation concepts
+                    for rec in competitor_research.recommendations[:2]:
+                        if isinstance(rec, str):
+                            if 'stand out' in rec.lower() or 'differentiate' in rec.lower():
+                                differentiation_cues.append('distinctive unique bold')
+                            elif 'modern' in rec.lower() or 'innovative' in rec.lower():
+                                differentiation_cues.append('modern innovative cutting-edge')
+
+                # Add research-informed cues to prompt (subtle, design-focused)
+                research_cues = pain_point_cues + differentiation_cues
+                if research_cues:
+                    research_modifier = ', '.join(list(set(research_cues))[:3])
+                    prompt += f", {research_modifier}"
+                    logger.info(f"📊 Session 299: Enhanced prompt with research insights: {research_modifier}")
+                    context['research_context_used'] = True
+                    context['research_cues'] = research_cues
+
+        except Exception as e:
+            logger.warning(f"Session 299: Could not inject research context: {e}")
+
         logger.info(f"🎨 Image generation prompt ({content_type}): {prompt[:100]}...")
         logger.info(f"🎨 Generating {count} images at {width}x{height}")
 
@@ -1774,6 +1842,42 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             }
 
             result = assistant._handle_create_project_from_research(parameters)
+
+            # =====================================================================
+            # SESSION 299: LINK STORED RESEARCH TO PROJECT
+            # After creating the project, link any relevant BusinessResearchResult
+            # records to enable the cumulative intelligence pipeline
+            # =====================================================================
+            if result.get('success') and result.get('project_id'):
+                try:
+                    from core.models_unified_system import BusinessResearchResult
+                    from content.models import CreativeProject
+
+                    project = CreativeProject.objects.get(id=result['project_id'])
+
+                    # Find research related to this project's topic using semantic search
+                    # or market_topic matching
+                    topic_words = clean_topic.lower().split()[:3]  # First 3 words
+                    topic_query = ' '.join(topic_words)
+
+                    # Link by market_topic match first
+                    linked_count = 0
+                    for research in BusinessResearchResult.objects.filter(
+                        project__isnull=True,  # Only unlinked research
+                        market_topic__icontains=topic_query
+                    ).order_by('-created_at')[:5]:
+                        research.project = project
+                        research.save(update_fields=['project'])
+                        linked_count += 1
+                        logger.info(f"📊 Session 299: Linked {research.research_type} research to project {project.name}")
+
+                    if linked_count > 0:
+                        result['linked_research_count'] = linked_count
+                        logger.info(f"📊 Session 299: Linked {linked_count} research reports to project")
+
+                except Exception as e:
+                    logger.warning(f"Session 299: Could not link research to project: {e}")
+
             return result
 
         except Exception as e:
