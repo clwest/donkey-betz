@@ -1,9 +1,32 @@
-# Session 301: Ready for Next Features
+# Session 302: Ready for Next Features
 
 **Date:** December 1, 2025
-**Previous Session:** 300 (Cumulative Intelligence Pipeline Fix)
+**Previous Session:** 301 (Create Project Button Fix)
 **Session Type:** Ready for New Work
-**Status:** ALL 6 HANDOFFS COMPLETE + DAVINCI BRIDGE + CUMULATIVE INTELLIGENCE FIXED!
+**Status:** ALL 6 HANDOFFS COMPLETE + DAVINCI BRIDGE + CUMULATIVE INTELLIGENCE + PROJECT CREATION FIXED!
+
+---
+
+## SESSION 301: Create Project Button Fix
+
+### What Was Fixed
+Fixed the "Create Project" button in research reports - it was being mis-routed to WorkflowAgent instead of using the `create_project_from_research` tool.
+
+### The Bug
+- **Before:** Button sent `'Create a project for ${marketName} with all the research we have done'`
+- **Issue:** This got routed to WorkflowAgent due to keyword matching on "create"
+- **Result:** "Workflow completed: 4 successful, 2 failed" because WorkflowAgent lacks project creation capability
+
+### Fix Applied
+Changed button message to:
+```javascript
+'Organize our research into a project for ${marketName}. Use the create_project_from_research tool to save everything.'
+```
+
+This explicitly tells GPT to use the correct tool rather than delegating to WorkflowAgent.
+
+### Handoff Document
+See `docs/handoffs/SESSION_301_CREATE_PROJECT_BUTTON_FIX.md`
 
 ---
 
