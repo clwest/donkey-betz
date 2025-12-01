@@ -349,13 +349,29 @@ Return comprehensive customer research with personas and pain points."""
                     # Synthesize the customer research
                     synthesis = self._synthesize_research(task, all_research_data)
 
+                    # Session 294: Save to database with embedding for semantic search
+                    saved_result = None
+                    try:
+                        from core.models_unified_system import BusinessResearchResult
+                        saved_result = BusinessResearchResult.save_customer_research(
+                            query=task,
+                            synthesis=synthesis,
+                            execution_time_ms=execution_time
+                        )
+                        logger.info(f"Saved customer research to database: {saved_result.id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to save customer research: {e}")
+
+                    # Session 294: Return analysis at top level for frontend compatibility
+                    # Frontend checks agentResult.analysis and agentResult.data?.analysis
                     return AgentResult(
                         success=True,
                         message=f"Customer research completed with {len(all_research_data)} data sources",
                         data={
-                            'research': synthesis,
+                            'analysis': synthesis,  # Match CompetitorAnalysisAgent pattern
                             'raw_data': all_research_data,
-                            'query': task
+                            'query': task,
+                            'saved_id': str(saved_result.id) if saved_result else None
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
@@ -477,9 +493,9 @@ Return comprehensive customer research with personas and pain points."""
             for pq in pain_queries[:3]:  # Limit queries
                 results = self.spider_service.search_spider_data(
                     query=pq,
-                    category='social',  # Reddit, forums
+                    category='social',  # Reddit, BlueSky, forums
                     hours=hours,
-                    limit=limit // 3
+                    limit=limit // 4
                 )
                 all_results.extend(results)
 
@@ -488,9 +504,27 @@ Return comprehensive customer research with personas and pain points."""
                 query=query,
                 category='tech',
                 hours=hours,
-                limit=limit // 3
+                limit=limit // 4
             )
             all_results.extend(tech_results)
+
+            # Session 294: Search video category for YouTube content
+            video_results = self.spider_service.search_spider_data(
+                query=query,
+                category='video',
+                hours=hours,
+                limit=limit // 4
+            )
+            all_results.extend(video_results)
+
+            # Session 294: Search community category (includes reddit, bluesky, discord)
+            community_results = self.spider_service.search_spider_data(
+                query=query,
+                category='community',
+                hours=hours,
+                limit=limit // 4
+            )
+            all_results.extend(community_results)
 
             # Deduplicate by title
             seen_titles = set()
@@ -716,13 +750,19 @@ Return as JSON with these keys."""
         task: str,
         all_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Synthesize all gathered data into coherent customer research."""
+        """Synthesize all gathered data into coherent customer research using GPT.
 
-        # Collect all pain points and personas
+        Session 294: Added GPT synthesis like CompetitorAnalysisAgent to generate
+        a proper Customer Research Report instead of just returning raw data.
+        """
+
+        # Collect all discussion content for GPT analysis
+        all_discussions = []
         all_pain_points = []
         all_personas = []
         all_quotes = []
         discussion_count = 0
+        sources_used = set()
 
         for source in all_data:
             data = source.get('data', {})
@@ -731,6 +771,14 @@ Return as JSON with these keys."""
             if source_name == 'spider_query':
                 discussions = data.get('discussions', [])
                 discussion_count += len(discussions)
+                for d in discussions[:20]:  # Limit per source
+                    sources_used.add(d.get('source', 'unknown'))
+                    all_discussions.append({
+                        'title': d.get('title', ''),
+                        'content': d.get('content', '')[:300],
+                        'source': d.get('source', ''),
+                        'url': d.get('url', '')
+                    })
 
             elif source_name == 'analyze_pain_points':
                 pain_points = data.get('pain_points', [])
@@ -745,12 +793,81 @@ Return as JSON with these keys."""
                 quotes = data.get('quotes', [])
                 all_quotes.extend(quotes)
 
-        return {
-            'query': task,
-            'discussions_analyzed': discussion_count,
-            'pain_points': all_pain_points[:10],
-            'personas': all_personas,
-            'customer_quotes': all_quotes[:10],
-            'data_sources': len(all_data),
-            'summary': f"Analyzed {discussion_count} discussions, identified {len(all_pain_points)} pain points, built {len(all_personas)} personas"
-        }
+        # Limit total discussions to avoid token limits
+        all_discussions = all_discussions[:40]
+
+        # Build discussion summary for GPT
+        discussions_text = "\n".join([
+            f"- [{d['source']}] {d['title']}: {d['content'][:150]}..."
+            for d in all_discussions if d['title']
+        ])
+
+        # Build GPT synthesis prompt
+        synthesis_prompt = f"""You are a customer research analyst. Analyze the following customer discussions and community data to provide actionable customer insights.
+
+RESEARCH QUERY: {task}
+
+CUSTOMER DISCUSSIONS COLLECTED ({len(all_discussions)} from {', '.join(sources_used)}):
+{discussions_text}
+
+Based on this data, provide a comprehensive CUSTOMER RESEARCH REPORT with:
+
+1. **TARGET MARKET OVERVIEW** (2-3 sentences about who these customers are)
+
+2. **TOP PAIN POINTS** (5-7 specific pain points with examples from the data)
+   - Be specific about what customers are struggling with
+   - Include quotes or paraphrased examples where possible
+
+3. **CUSTOMER DESIRES & GOALS** (4-5 things customers want but can't find)
+   - What are they trying to achieve?
+   - What features/solutions are they asking for?
+
+4. **CUSTOMER PERSONAS** (2-3 distinct customer types you see in the data)
+   - Give each a name and brief description
+   - What motivates them? What frustrates them?
+
+5. **ACTIONABLE QUOTES** (3-5 powerful quotes from customers that could be used for marketing/copy)
+   - Direct quotes that express pain or desire
+
+6. **RECOMMENDATIONS** (3-4 actionable recommendations for product/marketing)
+   - Based on the pain points and desires, what should a business do?
+
+Be specific and reference actual data points. This analysis will be used for product development and marketing."""
+
+        try:
+            # Session 294: gpt-5-mini uses tokens for internal reasoning first
+            # Need 6000+ tokens to ensure room for reasoning + visible output
+            response = self.client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[{"role": "user", "content": synthesis_prompt}],
+                max_completion_tokens=6000,  # High enough for reasoning + output
+            )
+
+            analysis_text = response.choices[0].message.content
+
+            return {
+                'query': task,
+                'analysis': analysis_text,  # GPT-generated report
+                'discussions_analyzed': discussion_count,
+                'data_points_analyzed': len(all_discussions),
+                'sources_used': list(sources_used),
+                'pain_points': all_pain_points[:10],
+                'personas': all_personas,
+                'customer_quotes': all_quotes[:10],
+                'data_sources': len(all_data),
+                'raw_data': all_discussions  # Include for reference
+            }
+
+        except Exception as e:
+            logger.error(f"GPT customer research synthesis failed: {e}")
+            # Fallback to basic summary
+            return {
+                'query': task,
+                'analysis': f"Analyzed {discussion_count} discussions from {', '.join(sources_used)}. Synthesis generation failed.",
+                'discussions_analyzed': discussion_count,
+                'pain_points': all_pain_points[:10],
+                'personas': all_personas,
+                'customer_quotes': all_quotes[:10],
+                'data_sources': len(all_data),
+                'error': str(e)
+            }

@@ -115,6 +115,12 @@ from .specialized.reddit_spider import RedditSpider
 from .specialized.unsplash_spider import UnsplashSpider
 from .specialized.adzuna_spider import AdzunaSpider
 
+# Session 294: CUSTOMER RESEARCH SPIDERS (4 new)
+from .specialized.indiehackers_spider import IndieHackersSpider
+from .specialized.bluesky_spider import BlueSkySpider
+from .specialized.youtube_spider import YouTubeSpider
+from .specialized.discord_spider import DiscordSpider
+
 # Import base spider for fallbacks
 from .base_spider import BaseIntelligenceSpider
 
@@ -676,6 +682,44 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['api.adzuna.com/v1/api/jobs']
+        })
+
+        # === SESSION 294: CUSTOMER RESEARCH SPIDERS (4) ===
+
+        # Indie Hackers - Maker/founder community discussions
+        # NO API KEY REQUIRED - uses RSS feeds
+        self.register_spider('indiehackers', IndieHackersSpider, {
+            'category': 'community',
+            'priority': 1,
+            'rate_limit': 2.0,
+            'targets': ['indiehackers.com/feed.xml']
+        })
+
+        # BlueSky - Twitter/X alternative social network
+        # Requires BLUESKY_IDENTIFIER and BLUESKY_PASSWORD env variables
+        self.register_spider('bluesky', BlueSkySpider, {
+            'category': 'social',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['bsky.social/xrpc']
+        })
+
+        # YouTube - Video comments and creator discussions
+        # Requires GOOGLE_API_KEY env variable
+        self.register_spider('youtube', YouTubeSpider, {
+            'category': 'video',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['googleapis.com/youtube/v3']
+        })
+
+        # Discord - Community server discussions
+        # Requires DISCORD_BOT_TOKEN env variable
+        self.register_spider('discord', DiscordSpider, {
+            'category': 'community',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['discord.com/api/v10']
         })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")

@@ -42,9 +42,13 @@ class SpiderIntelligenceService:
                  'remoteok', 'weworkremotely'],
         'news': ['news_harvester', 'reuters', 'bbc', 'techcrunch', 'axios', 'theverge', 'wired',
                  'mit_tech_review'],
-        'social': ['reddit', 'twitter_trends', 'social_sentiment'],
+        # Session 294: Added bluesky and youtube for customer research
+        'social': ['reddit', 'bluesky', 'twitter_trends', 'social_sentiment'],
+        'video': ['youtube'],
         'creative': ['dribbble', 'behance', 'medium', 'substack'],
         'crypto': ['coingecko', 'etherscan', 'nft_tracker', 'defi_tracker'],
+        # Session 294: Community category for customer research spiders
+        'community': ['reddit', 'bluesky', 'discord', 'indiehackers'],
     }
 
     def __init__(self):
@@ -619,6 +623,12 @@ class SpiderIntelligenceService:
         """
         Full-text search across spider data.
 
+        Session 294: Enhanced to handle multi-word queries better.
+        - Strips boolean operators (OR, AND, quotes)
+        - Splits query into individual terms
+        - Matches if ANY term is found (OR logic)
+        - Scores by number of matching terms
+
         Args:
             query: Search query
             category: Optional category filter
@@ -629,7 +639,22 @@ class SpiderIntelligenceService:
             List of matching items
         """
         since = timezone.now() - timedelta(hours=hours)
-        query_lower = query.lower()
+
+        # Session 294: Clean up complex queries from GPT
+        # Remove boolean operators and quotes
+        clean_query = query.lower()
+        for operator in [' or ', ' and ', '"', "'", '(', ')']:
+            clean_query = clean_query.replace(operator, ' ')
+
+        # Split into individual search terms (min 2 chars)
+        search_terms = [term.strip() for term in clean_query.split() if len(term.strip()) >= 2]
+
+        # Filter out common words that are too generic
+        stopwords = {'the', 'for', 'and', 'with', 'that', 'this', 'from', 'are', 'was', 'were'}
+        search_terms = [t for t in search_terms if t not in stopwords]
+
+        if not search_terms:
+            return []
 
         # Build queryset
         queryset = self.SpiderData.objects.filter(created_at__gte=since)
@@ -651,25 +676,32 @@ class SpiderIntelligenceService:
                 # Search in title, description, tags
                 title = item.get('title', '') or item.get('name', '')
                 description = item.get('description', '') or item.get('summary', '')
-                tags = ' '.join(item.get('tags', []))
+                tags = ' '.join(item.get('tags', []) if isinstance(item.get('tags'), list) else [])
 
                 searchable = f"{title} {description} {tags}".lower()
 
-                if query_lower in searchable:
+                # Session 294: Match if ANY term is found
+                matching_terms = [term for term in search_terms if term in searchable]
+                if matching_terms:
                     # Deduplicate
                     item_key = f"{title}:{item.get('url', '')}".lower()
                     if item_key in seen:
                         continue
+
+                    # Calculate relevance based on matching term count
+                    term_relevance = len(matching_terms) / len(search_terms)
                     seen.add(item_key)
 
                     results.append({
                         'title': title,
                         'description': description[:200] if description else '',
+                        'content': description,  # Full content for pain point analysis
                         'url': item.get('url', ''),
                         'source': entry.spider_name,
                         'category': entry.data_type,
                         'found_at': entry.created_at.isoformat(),
-                        'relevance': self._calculate_relevance(query_lower, searchable)
+                        'matching_terms': matching_terms,
+                        'relevance': term_relevance
                     })
 
                     if len(results) >= limit:
