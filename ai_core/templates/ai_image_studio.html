@@ -26885,7 +26885,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
                         <div style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">💡 <strong>Next Steps:</strong> Create content informed by this research</div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Save this analysis to a project. Call create_project_from_research with project_name: ${projectName}')"
+                            <button onclick="showCreateProjectFromResearchModal('${projectName}')"
                                     style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3)); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
                                     onmouseover="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.4))'"
                                     onmouseout="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))'">
@@ -27118,7 +27118,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
                         <div style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">💡 <strong>Next Steps:</strong> Create content informed by this research</div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Save this analysis to a project. Call create_project_from_research with project_name: ${projectName}')"
+                            <button onclick="showCreateProjectFromResearchModal('${projectName}')"
                                     style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3)); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
                                     onmouseover="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.4))'"
                                     onmouseout="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))'">
@@ -48548,6 +48548,68 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } catch (error) {
                 showToast(`Error loading team: ${error.message}`, 'error');
             }
+        }
+
+        // Session 302: Show Create Project modal for business research
+        function showCreateProjectFromResearchModal(defaultName = 'Business Research') {
+            const modalHtml = `
+                <div class="modal fade" id="createProjectFromResearchModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1e293b; color: #e2e8f0;">
+                            <div class="modal-header" style="border-color: rgba(251, 191, 36, 0.3); background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1));">
+                                <h5 class="modal-title" style="color: #fcd34d;">📁 Create Project from Research</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Project Name</label>
+                                    <input type="text" class="form-control" id="researchProjectName" value="${defaultName}" placeholder="Enter project name..." style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                </div>
+                                <p style="color: #94a3b8; font-size: 13px; margin-top: 12px;">
+                                    This will save your research analysis to a project. Future conversations can reference this research data.
+                                </p>
+                            </div>
+                            <div class="modal-footer" style="border-color: rgba(71, 85, 105, 0.5);">
+                                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button class="btn" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1e293b; font-weight: 600;" onclick="submitCreateProjectFromResearch()">Create Project</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('createProjectFromResearchModal');
+            if (existingModal) existingModal.remove();
+
+            // Add and show modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('createProjectFromResearchModal'));
+            modal.show();
+
+            // Focus the input
+            setTimeout(() => {
+                const input = document.getElementById('researchProjectName');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 300);
+        }
+
+        // Submit create project from research
+        function submitCreateProjectFromResearch() {
+            const projectName = document.getElementById('researchProjectName').value.trim();
+            if (!projectName) {
+                showToast('Please enter a project name', 'warning');
+                return;
+            }
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('createProjectFromResearchModal')).hide();
+
+            // Send to AI assistant - simple and clear instruction
+            window.aiAssistant?.sendPrefilledMessage(`Create a project called "${projectName}" and save the research analysis to it.`);
         }
 
         // Show create team modal
