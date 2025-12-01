@@ -24920,13 +24920,86 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     }
 
                     // Session 293: Handle business research results (CompetitorAnalysisAgent, CustomerResearchAgent)
-                    if (cleanData.metadata?.agent_result?.raw_data) {
-                        const rawData = cleanData.metadata.agent_result.raw_data;
-                        const agentName = cleanData.agents_used?.[0] || '';
+                    const agentResult = cleanData.metadata?.agent_result;
+                    const agentName = cleanData.agents_used?.[0] || '';
 
-                        // Check if this is a research agent with data
-                        if ((agentName.includes('Competitor') || agentName.includes('Customer') || agentName.includes('Research')) && rawData.length > 0) {
+                    if (agentResult && (agentName.includes('Competitor') || agentName.includes('Customer') || agentName.includes('Research'))) {
+                        // Check if there's an analysis (GPT-generated insights)
+                        // Session 293: Structure can be at multiple locations:
+                        //   1. agentResult.analysis = {query, analysis: "text", raw_data, data_points_analyzed} (direct)
+                        //   2. agentResult.data.analysis = {...} (nested under data)
+                        //   3. agentResult.data.analysis = "text" (string - less common)
+                        // Check both locations for the analysis object
+                        let analysisData = agentResult.analysis || agentResult.data?.analysis;
+                        let analysisText = null;
+                        let rawDataFromAnalysis = [];
+
+                        // Handle the case where analysis is an object containing the text
+                        if (analysisData && typeof analysisData === 'object') {
+                            // It's the synthesis dict: {query, analysis, data_points_analyzed, raw_data, sources_used}
+                            analysisText = analysisData.analysis;  // The actual text
+                            rawDataFromAnalysis = analysisData.raw_data || [];
+                        } else if (analysisData && typeof analysisData === 'string') {
+                            // It's directly the text
+                            analysisText = analysisData;
+                        }
+
+                        // Also get raw_data from multiple possible locations as fallback
+                        const rawData = agentResult.raw_data || agentResult.data?.raw_data || rawDataFromAnalysis || [];
+
+                        console.log('📊 Analysis check:', {
+                            hasAnalysisData: !!analysisData,
+                            analysisDataType: typeof analysisData,
+                            hasAnalysisText: !!analysisText,
+                            analysisTextLength: analysisText?.length,
+                            rawDataCount: rawData.length
+                        });
+
+                        if (analysisText && typeof analysisText === 'string' && analysisText.length > 50) {
+                            // Session 293: Flatten nested raw_data structure
+                            // raw_data can be [{source: "spider_query", data: [...items]}, ...]
+                            // Or already flat: [{title, description, url, ...}, ...]
+                            let flattenedItems = [];
+
+                            // Prefer raw_data from the analysis object (it's already items)
+                            if (rawDataFromAnalysis.length > 0 && rawDataFromAnalysis[0]?.title) {
+                                // Already flat structure from synthesis
+                                flattenedItems = rawDataFromAnalysis;
+                            } else {
+                                // Need to flatten the nested structure
+                                for (const entry of rawData) {
+                                    if (Array.isArray(entry.data)) {
+                                        // Add source info to each item
+                                        for (const item of entry.data) {
+                                            flattenedItems.push({
+                                                ...item,
+                                                toolSource: entry.source
+                                            });
+                                        }
+                                    } else if (entry.title || entry.url) {
+                                        // Already flat structure
+                                        flattenedItems.push(entry);
+                                    }
+                                }
+                            }
+
+                            console.log('📊 Flattened items:', flattenedItems.length);
+
+                            // Format the analysis report with the text and flattened raw data
+                            responseHtml += this.formatAnalysisReport({
+                                analysis: analysisText,
+                                raw_data: flattenedItems,
+                                data_points_analyzed: analysisData?.data_points_analyzed || flattenedItems.length,
+                                sources_used: analysisData?.sources_used || [...new Set(flattenedItems.map(r => r.source || r.toolSource || 'unknown'))].length
+                            }, agentName);
+                        }
+                        // Fallback: show raw data if no analysis but data available
+                        else if (rawData.length > 0) {
                             responseHtml += this.formatResearchResults(rawData, agentName);
+                        }
+                        // Legacy fallback
+                        else if (agentResult.raw_data && agentResult.raw_data.length > 0) {
+                            responseHtml += this.formatResearchResults(agentResult.raw_data, agentName);
                         }
                     }
 
@@ -26386,6 +26459,92 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return message;
             }
 
+            // Session 293: Format GPT-analyzed research report
+            formatAnalysisReport(analysisData, agentName) {
+                if (!analysisData || !analysisData.analysis) return '';
+
+                const analysis = analysisData.analysis;
+                const dataPoints = analysisData.data_points_analyzed || 0;
+                const sources = analysisData.sources_used || 0;
+                const rawData = analysisData.raw_data || [];
+
+                // Determine icon based on agent
+                let icon = '📊';
+                let title = 'Market Analysis';
+                if (agentName.includes('Competitor')) {
+                    icon = '🎯';
+                    title = 'Competitive Analysis';
+                } else if (agentName.includes('Customer')) {
+                    icon = '👥';
+                    title = 'Customer Research';
+                }
+
+                // Generate unique ID for collapsible
+                const collapseId = 'rawData_' + Date.now();
+
+                let html = `
+                    <div class="analysis-report" style="margin-top: 20px; padding: 20px; background: rgba(15, 23, 42, 0.8); border-radius: 12px; border: 1px solid rgba(100, 116, 139, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid rgba(100, 116, 139, 0.2);">
+                            <span style="color: #c4b5fd; font-weight: 700; font-size: 16px;">${icon} ${title}</span>
+                            <span style="color: #64748b; font-size: 12px;">Analyzed ${dataPoints} data points from ${sources} sources</span>
+                        </div>
+                        <div class="analysis-content" style="color: #e2e8f0; font-size: 14px; line-height: 1.7;">
+                            ${this.formatMarkdownContent(analysis)}
+                        </div>`;
+
+                // Add collapsible raw data section if available
+                if (rawData.length > 0) {
+                    html += `
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
+                            <button onclick="document.getElementById('${collapseId}').style.display = document.getElementById('${collapseId}').style.display === 'none' ? 'block' : 'none'"
+                                    style="background: rgba(100, 116, 139, 0.2); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                                📚 View Source Data (${rawData.length} articles)
+                            </button>
+                            <div id="${collapseId}" style="display: none; margin-top: 15px;">
+                                ${this.formatResearchResults(rawData, agentName)}
+                            </div>
+                        </div>`;
+                }
+
+                html += `</div>`;
+
+                return `<!-- RAW_HTML -->${html}<!-- /RAW_HTML -->`;
+            }
+
+            // Session 293: Format markdown content for display
+            formatMarkdownContent(text) {
+                if (!text) return '';
+
+                // Escape HTML first
+                let html = text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                // Convert markdown headers
+                html = html.replace(/^### (.+)$/gm, '<h4 style="color: #a78bfa; margin-top: 16px; margin-bottom: 8px; font-size: 15px;">$1</h4>');
+                html = html.replace(/^## (.+)$/gm, '<h3 style="color: #c4b5fd; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">$1</h3>');
+                html = html.replace(/^# (.+)$/gm, '<h2 style="color: #e9d5ff; margin-top: 24px; margin-bottom: 12px; font-size: 18px;">$1</h2>');
+
+                // Convert bold with **
+                html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #f0abfc;">$1</strong>');
+
+                // Convert bullet points
+                html = html.replace(/^- (.+)$/gm, '<li style="margin-left: 20px; margin-bottom: 6px;">$1</li>');
+                html = html.replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left: 20px; margin-bottom: 6px;"><strong>$1.</strong> $2</li>');
+
+                // Wrap consecutive li elements in ul
+                html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, '<ul style="list-style: none; padding: 0; margin: 10px 0;">$&</ul>');
+
+                // Convert line breaks to paragraphs
+                html = html.split('\n\n').map(p => {
+                    if (p.startsWith('<h') || p.startsWith('<ul')) return p;
+                    return `<p style="margin-bottom: 12px;">${p}</p>`;
+                }).join('');
+
+                return html;
+            }
+
             // Session 293: Format research results from business research agents
             formatResearchResults(rawData, agentName) {
                 if (!rawData || rawData.length === 0) return '';
@@ -26522,6 +26681,131 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     </div>`;
 
                 // Wrap in RAW_HTML markers so formatMessage doesn't escape it
+                return `<!-- RAW_HTML -->${html}<!-- /RAW_HTML -->`;
+            }
+
+            // Session 293: Format GPT-generated analysis report from business research agents
+            formatAnalysisReport(analysisData, agentName) {
+                if (!analysisData || !analysisData.analysis) return '';
+
+                const analysisText = analysisData.analysis;
+                const dataPoints = analysisData.data_points_analyzed || 0;
+                const sourcesUsed = analysisData.sources_used || 0;
+                const rawData = analysisData.raw_data || [];
+
+                // Convert markdown-like text to HTML
+                const formatMarkdown = (text) => {
+                    if (!text) return '';
+
+                    // Escape HTML first
+                    let html = text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+
+                    // Convert markdown formatting
+                    // Headers
+                    html = html.replace(/^### (.+)$/gm, '<h4 style="color: #c4b5fd; margin: 16px 0 8px 0; font-size: 14px;">$1</h4>');
+                    html = html.replace(/^## (.+)$/gm, '<h3 style="color: #c4b5fd; margin: 20px 0 10px 0; font-size: 16px;">$1</h3>');
+                    html = html.replace(/^# (.+)$/gm, '<h2 style="color: #c4b5fd; margin: 24px 0 12px 0; font-size: 18px;">$1</h2>');
+
+                    // Numbered section headers like "1) MARKET OVERVIEW"
+                    html = html.replace(/^(\d+)\)\s+\*\*(.+?)\*\*\s*(\(.+?\))?$/gm,
+                        '<h3 style="color: #a78bfa; margin: 24px 0 10px 0; font-size: 16px; border-bottom: 1px solid rgba(139, 92, 246, 0.3); padding-bottom: 8px;">$1. $2 $3</h3>');
+
+                    // Bold
+                    html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #e2e8f0;">$1</strong>');
+
+                    // Italic
+                    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+                    // Bullet points
+                    html = html.replace(/^- (.+)$/gm, '<li style="margin: 6px 0; color: #cbd5e1; line-height: 1.6;">$1</li>');
+
+                    // Wrap consecutive <li> in <ul>
+                    html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, '<ul style="margin: 10px 0 10px 20px; padding: 0;">$&</ul>');
+
+                    // Paragraphs - convert double newlines
+                    html = html.replace(/\n\n/g, '</p><p style="color: #cbd5e1; line-height: 1.7; margin: 12px 0;">');
+
+                    // Single newlines inside paragraphs
+                    html = html.replace(/\n/g, '<br>');
+
+                    // Wrap in paragraph
+                    html = '<p style="color: #cbd5e1; line-height: 1.7; margin: 12px 0;">' + html + '</p>';
+
+                    // Clean up empty paragraphs
+                    html = html.replace(/<p[^>]*><\/p>/g, '');
+                    html = html.replace(/<p[^>]*><br><\/p>/g, '');
+
+                    return html;
+                };
+
+                // Determine theme based on agent
+                let theme = {
+                    gradient: 'rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.12)',
+                    border: 'rgba(168, 85, 247, 0.5)',
+                    accent: '#c4b5fd',
+                    headerBg: 'rgba(139, 92, 246, 0.2)',
+                    icon: '📊',
+                    title: 'Competitive Analysis Report'
+                };
+
+                if (agentName.includes('Customer')) {
+                    theme = {
+                        gradient: 'rgba(34, 197, 94, 0.08), rgba(22, 163, 74, 0.12)',
+                        border: 'rgba(34, 197, 94, 0.5)',
+                        accent: '#86efac',
+                        headerBg: 'rgba(22, 163, 74, 0.2)',
+                        icon: '👥',
+                        title: 'Customer Research Report'
+                    };
+                }
+
+                // Generate unique ID for collapsible raw data section
+                const collapseId = `raw-data-${Date.now()}`;
+
+                let html = `
+                    <div class="analysis-report" style="margin-top: 20px; background: linear-gradient(135deg, ${theme.gradient}); border-radius: 16px; border: 2px solid ${theme.border}; overflow: hidden;">
+                        <!-- Header -->
+                        <div style="background: ${theme.headerBg}; padding: 20px; border-bottom: 1px solid ${theme.border};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h2 style="color: ${theme.accent}; margin: 0 0 8px 0; font-size: 20px; font-weight: 700;">
+                                        ${theme.icon} ${theme.title}
+                                    </h2>
+                                    <p style="color: #94a3b8; margin: 0; font-size: 13px;">
+                                        Analyzed ${dataPoints} data points from ${sourcesUsed} source${sourcesUsed !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                                <div style="background: rgba(0, 0, 0, 0.3); padding: 8px 16px; border-radius: 8px;">
+                                    <span style="color: #22c55e; font-size: 14px; font-weight: 600;">✓ AI Analysis Complete</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Content -->
+                        <div style="padding: 24px;">
+                            <div class="analysis-content" style="font-size: 14px;">
+                                ${formatMarkdown(analysisText)}
+                            </div>
+                        </div>
+
+                        <!-- Raw Data Section (Collapsible) -->
+                        ${rawData.length > 0 ? `
+                        <div style="border-top: 1px solid ${theme.border}; padding: 16px 24px;">
+                            <button onclick="document.getElementById('${collapseId}').style.display = document.getElementById('${collapseId}').style.display === 'none' ? 'block' : 'none'; this.querySelector('span').textContent = document.getElementById('${collapseId}').style.display === 'none' ? '▶' : '▼';"
+                                    style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+                                <span>▶</span> View Source Data (${rawData.length} articles)
+                            </button>
+                            <div id="${collapseId}" style="display: none; margin-top: 15px;">
+                                ${this.formatResearchResults(rawData, agentName)}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>`;
+
+                // Wrap in RAW_HTML markers
                 return `<!-- RAW_HTML -->${html}<!-- /RAW_HTML -->`;
             }
 

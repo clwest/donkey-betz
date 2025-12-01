@@ -93,26 +93,54 @@ async def fetch_url(session: aiohttp.ClientSession, url: str, timeout: int = 30)
         return None
 
 
+def strip_html_tags(text: str) -> str:
+    """Strip HTML tags and clean up text content.
+
+    Session 293: RSS feeds (especially Medium) often contain full HTML in descriptions.
+    Use BeautifulSoup to properly extract just the text content.
+    """
+    if not text:
+        return ''
+    try:
+        # Use BeautifulSoup to extract text from HTML
+        soup = BeautifulSoup(text, 'html.parser')
+        # Get text and clean up whitespace
+        clean_text = soup.get_text(separator=' ', strip=True)
+        # Collapse multiple spaces/newlines
+        clean_text = ' '.join(clean_text.split())
+        return clean_text
+    except Exception:
+        # Fallback: simple regex strip
+        import re
+        return re.sub(r'<[^>]+>', '', text).strip()
+
+
 def parse_rss_feed(data: str, source: str) -> List[Dict[str, Any]]:
     """Parse RSS/Atom feed into structured items"""
     items = []
     try:
         feed = feedparser.parse(data)
         for entry in feed.entries[:20]:  # Limit to 20 items
+            # Session 293: Strip HTML from title and description
+            # RSS feeds (especially Medium) often include HTML markup
+            raw_description = entry.get('summary', entry.get('description', ''))
+            clean_description = strip_html_tags(raw_description)[:500]
+            clean_title = strip_html_tags(entry.get('title', 'Untitled'))
+
             item = {
-                'title': entry.get('title', 'Untitled'),
+                'title': clean_title,
                 'link': entry.get('link', ''),
-                'description': entry.get('summary', entry.get('description', ''))[:500],
+                'description': clean_description,
                 'published': entry.get('published', entry.get('updated', '')),
                 'source': source,
                 'type': 'article'
             }
             # Extract author if available
             if 'author' in entry:
-                item['author'] = entry.author
+                item['author'] = strip_html_tags(entry.author)
             # Extract tags/categories
             if 'tags' in entry:
-                item['tags'] = [t.term for t in entry.tags[:5]]
+                item['tags'] = [strip_html_tags(t.term) for t in entry.tags[:5]]
             items.append(item)
     except Exception as e:
         logger.error(f"Error parsing RSS feed: {e}")
@@ -183,6 +211,9 @@ def normalize_item(item: Dict[str, Any], source: str) -> Dict[str, Any]:
         'location': ['location', 'remote', 'region', 'country'],
     }
 
+    # Session 293: Fields that should have HTML stripped
+    html_strip_fields = {'title', 'description', 'author'}
+
     for standard_field, possible_keys in field_mappings.items():
         for key in possible_keys:
             if key in item and item[key]:
@@ -190,6 +221,9 @@ def normalize_item(item: Dict[str, Any], source: str) -> Dict[str, Any]:
                 # Handle nested objects
                 if isinstance(value, dict):
                     value = str(value)
+                # Session 293: Strip HTML from text fields that commonly contain markup
+                if isinstance(value, str) and standard_field in html_strip_fields:
+                    value = strip_html_tags(value)
                 # Truncate long strings
                 if isinstance(value, str) and len(value) > 1000:
                     value = value[:1000] + '...'
