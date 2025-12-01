@@ -250,6 +250,24 @@ class QueryClassifier:
         'important', 'priority', 'rush', 'need it now',
     ]
 
+    # Session 300: Priority phrases that OVERRIDE keyword-based classification
+    # These phrases are checked first and immediately return the specified type
+    # This prevents "generate a competitor analysis" from being classified as CREATION
+    PRIORITY_PHRASES = {
+        QueryType.ANALYSIS: [
+            'competitor analysis', 'competitive analysis', 'market analysis',
+            'swot analysis', 'analyze competitors', 'research the market',
+            'business landscape', 'industry analysis', 'market research',
+            'customer research', 'customer pain points', 'customer personas',
+            'target audience', 'user pain points', 'customer needs',
+            'pain point analysis', 'sentiment analysis', 'user research',
+        ],
+        QueryType.WORKFLOW: [
+            'research and create', 'brand identity package', 'thumbnail package',
+            'logo package', 'full brand kit', 'complete package',
+        ],
+    }
+
     # Agent suggestions based on query type and entities
     AGENT_SUGGESTIONS = {
         QueryType.CREATION: {
@@ -268,6 +286,11 @@ class QueryClassifier:
             'default': ['WorkflowOrchestrationAgent'],
         },
         QueryType.ANALYSIS: {
+            'competitor': ['CompetitorAnalysisAgent', 'ResearchAgent'],
+            'market': ['CompetitorAnalysisAgent', 'ResearchAgent', 'TrendAnalysisAgent'],
+            'customer': ['CustomerResearchAgent', 'ResearchAgent'],
+            'persona': ['CustomerResearchAgent'],
+            'pain': ['CustomerResearchAgent'],  # pain points
             'default': ['ResearchAgent', 'TrendAnalysisAgent', 'ContentStrategyAgent'],
         },
         QueryType.QUESTION: {
@@ -302,6 +325,35 @@ class QueryClassifier:
             ClassificationResult with type, confidence, and metadata
         """
         query_lower = query.lower().strip()
+
+        # Session 300: Check priority phrases FIRST
+        # These override keyword-based classification to handle cases like
+        # "Generate a competitor analysis" which should be ANALYSIS not CREATION
+        priority_match = self._check_priority_phrases(query_lower)
+        if priority_match:
+            query_type, matched_phrase = priority_match
+            # Detect entities and suggest agents based on the priority match
+            detected_entities = self._detect_entities(query_lower)
+            suggested_agents = self._suggest_agents(query_type, detected_entities, query_lower)
+            is_urgent = any(kw in query_lower for kw in self.URGENCY_KEYWORDS)
+
+            return ClassificationResult(
+                primary_type=query_type,
+                confidence=0.95,  # High confidence for priority phrase match
+                secondary_types=[],
+                detected_keywords=[matched_phrase],
+                detected_entities=detected_entities,
+                suggested_agents=suggested_agents,
+                requires_spider_data=query_type in [
+                    QueryType.QUESTION, QueryType.ANALYSIS,
+                    QueryType.OPPORTUNITY, QueryType.WORKFLOW
+                ],
+                requires_memory=False,
+                requires_mood_check=query_type in [
+                    QueryType.CREATION, QueryType.COLLABORATION, QueryType.WORKFLOW
+                ],
+                is_urgent=is_urgent,
+            )
 
         # Score each query type
         scores = {}
@@ -355,8 +407,8 @@ class QueryClassifier:
         # Detect entities
         detected_entities = self._detect_entities(query_lower)
 
-        # Suggest agents based on type and entities
-        suggested_agents = self._suggest_agents(primary_type, detected_entities)
+        # Suggest agents based on type, entities, and query keywords
+        suggested_agents = self._suggest_agents(primary_type, detected_entities, query_lower)
 
         # Check urgency
         is_urgent = any(kw in query_lower for kw in self.URGENCY_KEYWORDS)
@@ -401,10 +453,26 @@ class QueryClassifier:
     def _suggest_agents(
         self,
         query_type: QueryType,
-        entities: Dict[str, List[str]]
+        entities: Dict[str, List[str]],
+        query: str = ""
     ) -> List[str]:
-        """Suggest appropriate agents based on query type and entities."""
+        """Suggest appropriate agents based on query type, entities, and query keywords."""
         suggestions = self.AGENT_SUGGESTIONS.get(query_type, {})
+
+        # Session 300: For ANALYSIS type, check for specific keywords in query
+        if query_type == QueryType.ANALYSIS and query:
+            query_lower = query.lower()
+            # Check for competitor/market analysis keywords
+            if 'competitor' in query_lower or 'competitive' in query_lower:
+                return suggestions.get('competitor', suggestions.get('default', []))
+            if 'market' in query_lower and 'analysis' in query_lower:
+                return suggestions.get('market', suggestions.get('default', []))
+            if 'customer' in query_lower:
+                return suggestions.get('customer', suggestions.get('default', []))
+            if 'persona' in query_lower:
+                return suggestions.get('persona', suggestions.get('default', []))
+            if 'pain' in query_lower and 'point' in query_lower:
+                return suggestions.get('pain', suggestions.get('default', []))
 
         # Check if any entity matches a specific suggestion
         for entity_type, entity_values in entities.items():
@@ -415,6 +483,27 @@ class QueryClassifier:
 
         # Return default for this query type
         return suggestions.get('default', [])
+
+    def _check_priority_phrases(self, query: str) -> Optional[tuple]:
+        """
+        Session 300: Check for priority phrases that override keyword classification.
+
+        These phrases take precedence over individual keyword matches.
+        For example, "generate a competitor analysis" should match ANALYSIS
+        because "competitor analysis" is a priority phrase, even though
+        "generate" would normally trigger CREATION.
+
+        Args:
+            query: The lowercased query string
+
+        Returns:
+            Tuple of (QueryType, matched_phrase) or None if no match
+        """
+        for query_type, phrases in self.PRIORITY_PHRASES.items():
+            for phrase in phrases:
+                if phrase in query:
+                    return (query_type, phrase)
+        return None
 
     def get_routing_decision(self, classification: ClassificationResult) -> dict:
         """

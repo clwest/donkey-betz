@@ -25221,6 +25221,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     });
                     const cleanData = await cleanResponse.json();
                     console.log('📡 Clean Architecture response:', cleanData);
+                    console.log('🚨 SESSION 300 CACHE TEST - If you see this, cache is cleared!');
 
                     // Format response with agent info
                     let responseHtml = cleanData.response || cleanData.message || '';
@@ -25253,6 +25254,16 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     const agentResult = cleanData.metadata?.agent_result;
                     const agentName = cleanData.agents_used?.[0] || '';
 
+                    // Session 300: Early debug - check if we're entering the business research branch
+                    console.log('🔍 Session 300 - Business research check:', {
+                        hasAgentResult: !!agentResult,
+                        agentName: agentName,
+                        isCompetitor: agentName.includes('Competitor'),
+                        isCustomer: agentName.includes('Customer'),
+                        isResearch: agentName.includes('Research'),
+                        metadataKeys: cleanData.metadata ? Object.keys(cleanData.metadata) : []
+                    });
+
                     if (agentResult && (agentName.includes('Competitor') || agentName.includes('Customer') || agentName.includes('Research'))) {
                         // Check if there's an analysis (GPT-generated insights)
                         // Session 293: Structure can be at multiple locations:
@@ -25263,6 +25274,18 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         let analysisData = agentResult.analysis || agentResult.data?.analysis;
                         let analysisText = null;
                         let rawDataFromAnalysis = [];
+
+                        // Session 300: Debug logging to trace query flow
+                        console.log('🔍 Session 300 DEBUG - agentResult structure:', {
+                            hasAgentResult: !!agentResult,
+                            agentResultKeys: agentResult ? Object.keys(agentResult) : [],
+                            agentResultDataKeys: agentResult?.data ? Object.keys(agentResult.data) : [],
+                            directQuery: agentResult?.query,
+                            dataQuery: agentResult?.data?.query,
+                            analysisDataType: typeof analysisData,
+                            analysisDataKeys: analysisData && typeof analysisData === 'object' ? Object.keys(analysisData) : [],
+                            analysisDataQuery: analysisData?.query
+                        });
 
                         // Handle the case where analysis is an object containing the text
                         if (analysisData && typeof analysisData === 'object') {
@@ -25316,11 +25339,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             console.log('📊 Flattened items:', flattenedItems.length);
 
                             // Format the analysis report with the text and flattened raw data
+                            // Session 300: Include query for context-aware action buttons
                             responseHtml += this.formatAnalysisReport({
                                 analysis: analysisText,
                                 raw_data: flattenedItems,
                                 data_points_analyzed: analysisData?.data_points_analyzed || flattenedItems.length,
-                                sources_used: analysisData?.sources_used || [...new Set(flattenedItems.map(r => r.source || r.toolSource || 'unknown'))].length
+                                sources_used: analysisData?.sources_used || [...new Set(flattenedItems.map(r => r.source || r.toolSource || 'unknown'))].length,
+                                query: analysisData?.query || agentResult?.data?.query || ''
                             }, agentName);
                         }
                         // Fallback: show raw data if no analysis but data available
@@ -26798,6 +26823,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const sources = analysisData.sources_used || 0;
                 const rawData = analysisData.raw_data || [];
 
+                // Session 300: Extract the original query/market topic for button prompts
+                const originalQuery = analysisData.query || '';
+                console.log('🔍 Session 300 DEBUG - originalQuery:', originalQuery, 'analysisData keys:', Object.keys(analysisData));
+
                 // Determine icon based on agent
                 let icon = '📊';
                 let title = 'Market Analysis';
@@ -26840,8 +26869,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // This enables the cumulative intelligence pipeline: research -> create
                 const researchId = 'research_' + Date.now();
 
-                // Extract a clean market name from the title for project naming
-                const marketName = title.replace(/^(Competitive Analysis|Customer Research|Market Analysis)$/i, '').trim() || 'Research';
+                // Session 300: Use the original query from the analysis data for context-aware buttons
+                // This ensures buttons like "Add Customer Research" know what market to research
+                const marketName = originalQuery || 'this market';
 
                 html += `
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
@@ -27059,135 +27089,67 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 });
 
                 html += `
+                        </div>`;
+
+                // Session 300: Add action buttons to research results (same as formatAnalysisReport)
+                // Determine title based on agent for button labels
+                let title = 'Research';
+                let marketName = 'this topic';
+                if (agentName.includes('Competitor')) {
+                    title = 'competitive analysis';
+                    marketName = 'competitors';
+                } else if (agentName.includes('Customer')) {
+                    title = 'customer research';
+                    marketName = 'customers';
+                }
+
+                html += `
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
+                        <div style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">💡 <strong>Next Steps:</strong> Create content informed by this research</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Create a project for ${marketName} with all the research we have done')"
+                                    style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3)); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))'">
+                                📁 Create Project
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title} and create 3 professional logos')"
+                                    style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3)); border: 1px solid rgba(168, 85, 247, 0.4); color: #c4b5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3))'">
+                                🎨 Create Logos
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title} and create a YouTube thumbnail package')"
+                                    style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3)); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))'">
+                                📺 Create Thumbnails
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title} and create a brand identity package')"
+                                    style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3)); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                    onmouseover="this.style.background='linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.4))'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))'">
+                                🏢 Create Brand Identity
+                            </button>
                         </div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research customer pain points for ${marketName}')"
+                                    style="background: rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(100, 116, 139, 0.25)'"
+                                    onmouseout="this.style.background='rgba(100, 116, 139, 0.15)'">
+                                👥 + Add Customer Research
+                            </button>
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Analyze competitors in the ${marketName} market')"
+                                    style="background: rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 8px; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(100, 116, 139, 0.25)'"
+                                    onmouseout="this.style.background='rgba(100, 116, 139, 0.15)'">
+                                🎯 + Add Competitor Analysis
+                            </button>
+                        </div>
+                    </div>
                     </div>`;
 
                 // Wrap in RAW_HTML markers so formatMessage doesn't escape it
-                return `<!-- RAW_HTML -->${html}<!-- /RAW_HTML -->`;
-            }
-
-            // Session 293: Format GPT-generated analysis report from business research agents
-            formatAnalysisReport(analysisData, agentName) {
-                if (!analysisData || !analysisData.analysis) return '';
-
-                const analysisText = analysisData.analysis;
-                const dataPoints = analysisData.data_points_analyzed || 0;
-                const sourcesUsed = analysisData.sources_used || 0;
-                const rawData = analysisData.raw_data || [];
-
-                // Convert markdown-like text to HTML
-                const formatMarkdown = (text) => {
-                    if (!text) return '';
-
-                    // Escape HTML first
-                    let html = text
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;');
-
-                    // Convert markdown formatting
-                    // Headers
-                    html = html.replace(/^### (.+)$/gm, '<h4 style="color: #c4b5fd; margin: 16px 0 8px 0; font-size: 14px;">$1</h4>');
-                    html = html.replace(/^## (.+)$/gm, '<h3 style="color: #c4b5fd; margin: 20px 0 10px 0; font-size: 16px;">$1</h3>');
-                    html = html.replace(/^# (.+)$/gm, '<h2 style="color: #c4b5fd; margin: 24px 0 12px 0; font-size: 18px;">$1</h2>');
-
-                    // Numbered section headers like "1) MARKET OVERVIEW"
-                    html = html.replace(/^(\d+)\)\s+\*\*(.+?)\*\*\s*(\(.+?\))?$/gm,
-                        '<h3 style="color: #a78bfa; margin: 24px 0 10px 0; font-size: 16px; border-bottom: 1px solid rgba(139, 92, 246, 0.3); padding-bottom: 8px;">$1. $2 $3</h3>');
-
-                    // Bold
-                    html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #e2e8f0;">$1</strong>');
-
-                    // Italic
-                    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-                    // Bullet points
-                    html = html.replace(/^- (.+)$/gm, '<li style="margin: 6px 0; color: #cbd5e1; line-height: 1.6;">$1</li>');
-
-                    // Wrap consecutive <li> in <ul>
-                    html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, '<ul style="margin: 10px 0 10px 20px; padding: 0;">$&</ul>');
-
-                    // Paragraphs - convert double newlines
-                    html = html.replace(/\n\n/g, '</p><p style="color: #cbd5e1; line-height: 1.7; margin: 12px 0;">');
-
-                    // Single newlines inside paragraphs
-                    html = html.replace(/\n/g, '<br>');
-
-                    // Wrap in paragraph
-                    html = '<p style="color: #cbd5e1; line-height: 1.7; margin: 12px 0;">' + html + '</p>';
-
-                    // Clean up empty paragraphs
-                    html = html.replace(/<p[^>]*><\/p>/g, '');
-                    html = html.replace(/<p[^>]*><br><\/p>/g, '');
-
-                    return html;
-                };
-
-                // Determine theme based on agent
-                let theme = {
-                    gradient: 'rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.12)',
-                    border: 'rgba(168, 85, 247, 0.5)',
-                    accent: '#c4b5fd',
-                    headerBg: 'rgba(139, 92, 246, 0.2)',
-                    icon: '📊',
-                    title: 'Competitive Analysis Report'
-                };
-
-                if (agentName.includes('Customer')) {
-                    theme = {
-                        gradient: 'rgba(34, 197, 94, 0.08), rgba(22, 163, 74, 0.12)',
-                        border: 'rgba(34, 197, 94, 0.5)',
-                        accent: '#86efac',
-                        headerBg: 'rgba(22, 163, 74, 0.2)',
-                        icon: '👥',
-                        title: 'Customer Research Report'
-                    };
-                }
-
-                // Generate unique ID for collapsible raw data section
-                const collapseId = `raw-data-${Date.now()}`;
-
-                let html = `
-                    <div class="analysis-report" style="margin-top: 20px; background: linear-gradient(135deg, ${theme.gradient}); border-radius: 16px; border: 2px solid ${theme.border}; overflow: hidden;">
-                        <!-- Header -->
-                        <div style="background: ${theme.headerBg}; padding: 20px; border-bottom: 1px solid ${theme.border};">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h2 style="color: ${theme.accent}; margin: 0 0 8px 0; font-size: 20px; font-weight: 700;">
-                                        ${theme.icon} ${theme.title}
-                                    </h2>
-                                    <p style="color: #94a3b8; margin: 0; font-size: 13px;">
-                                        Analyzed ${dataPoints} data points from ${sourcesUsed} source${sourcesUsed !== 1 ? 's' : ''}
-                                    </p>
-                                </div>
-                                <div style="background: rgba(0, 0, 0, 0.3); padding: 8px 16px; border-radius: 8px;">
-                                    <span style="color: #22c55e; font-size: 14px; font-weight: 600;">✓ AI Analysis Complete</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Analysis Content -->
-                        <div style="padding: 24px;">
-                            <div class="analysis-content" style="font-size: 14px;">
-                                ${formatMarkdown(analysisText)}
-                            </div>
-                        </div>
-
-                        <!-- Raw Data Section (Collapsible) -->
-                        ${rawData.length > 0 ? `
-                        <div style="border-top: 1px solid ${theme.border}; padding: 16px 24px;">
-                            <button onclick="document.getElementById('${collapseId}').style.display = document.getElementById('${collapseId}').style.display === 'none' ? 'block' : 'none'; this.querySelector('span').textContent = document.getElementById('${collapseId}').style.display === 'none' ? '▶' : '▼';"
-                                    style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-                                <span>▶</span> View Source Data (${rawData.length} articles)
-                            </button>
-                            <div id="${collapseId}" style="display: none; margin-top: 15px;">
-                                ${this.formatResearchResults(rawData, agentName)}
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>`;
-
-                // Wrap in RAW_HTML markers
                 return `<!-- RAW_HTML -->${html}<!-- /RAW_HTML -->`;
             }
 
