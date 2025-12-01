@@ -365,6 +365,35 @@ class SemanticRoutingService:
         """Fall back to keyword matching if semantic routing fails."""
         query_lower = query.lower()
 
+        # Session 300: Priority phrases that override individual keyword matches
+        # These are checked first before general keyword matching
+        PRIORITY_PHRASES = {
+            "CompetitorAnalysisAgent": [
+                "competitor analysis", "analyze competitors", "competitive analysis",
+                "market analysis", "swot analysis", "business landscape",
+                "who are the competitors", "research the market"
+            ],
+            "CustomerResearchAgent": [
+                "customer research", "customer pain points", "customer personas",
+                "target audience", "user pain points", "customer needs"
+            ],
+            "WorkflowAgent": [
+                "research and create", "create a package", "brand identity package",
+                "thumbnail package"
+            ],
+        }
+
+        # Check priority phrases first
+        for agent_name, phrases in PRIORITY_PHRASES.items():
+            for phrase in phrases:
+                if phrase in query_lower:
+                    return RoutingResult(
+                        agent_name=agent_name,
+                        confidence=0.9,
+                        method='keyword_fallback_priority',
+                        all_matches=[(agent_name, 0.9)],
+                    )
+
         scores = {}
         for agent_name, capability in AGENT_CAPABILITIES.items():
             score = 0

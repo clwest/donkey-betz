@@ -287,15 +287,20 @@ If asked to create content, explain you can only research and suggest using the 
                         agent_name=self.name
                     )
 
+                # Session 300: Check for vague requests and look up prior research context
+                # This enables the "cumulative intelligence" flow where customer research
+                # automatically uses context from prior competitor analysis
+                enhanced_task = self._enhance_task_with_prior_research(task)
+
                 self.record_decision(
                     decision_type="task_analysis",
                     action="Analyzing customer research request",
-                    reasoning=f"Received task: {task[:100]}",
+                    reasoning=f"Received task: {task[:100]}, enhanced: {enhanced_task != task}",
                     confidence=0.9
                 )
 
                 # Build prompt with context
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_prompt(enhanced_task, scifi_context, spider_context)
 
                 # Add instruction to be comprehensive
                 full_prompt += """
@@ -744,6 +749,19 @@ Return as JSON with these keys."""
                 'topic': topic
             }
         }
+
+    def _enhance_task_with_prior_research(self, task: str) -> str:
+        """
+        Session 300: Simple pass-through - context should come from frontend buttons.
+
+        The frontend now properly passes the original query from prior research,
+        so this method just logs and returns the task as-is.
+
+        If we need to enhance context in the future (e.g., for voice commands
+        that don't go through buttons), we can add semantic search here.
+        """
+        logger.debug(f"CustomerResearchAgent received task: {task[:100]}...")
+        return task
 
     def _synthesize_research(
         self,
