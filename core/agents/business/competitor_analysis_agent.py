@@ -24,9 +24,24 @@ Tools NOT Available (by design):
 import logging
 import time
 import json
+import re
 from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+
+
+def strip_html_tags(text: str) -> str:
+    """Strip HTML tags from text (Session 293)."""
+    if not text:
+        return ''
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(text, 'html.parser')
+        clean_text = soup.get_text(separator=' ', strip=True)
+        clean_text = ' '.join(clean_text.split())
+        return clean_text
+    except Exception:
+        return re.sub(r'<[^>]+>', '', text).strip()
 
 logger = logging.getLogger(__name__)
 
@@ -579,11 +594,11 @@ Generate a structured SWOT analysis with:
 Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an array of strings)."""
 
         try:
+            # Session 293: gpt-5-mini uses tokens for internal reasoning first
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": swot_prompt}],
-                max_completion_tokens=1500,
-                reasoning_effort="medium",
+                max_completion_tokens=4000,  # High enough for reasoning + output
             )
 
             content = response.choices[0].message.content
@@ -620,29 +635,82 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
         task: str,
         all_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Synthesize all gathered data into a coherent analysis."""
+        """Synthesize all gathered data into a coherent analysis using GPT."""
 
-        # Collect all competitor names mentioned
-        competitors_found = set()
-        all_mentions = []
-
+        # Collect all data points for analysis
+        all_items = []
         for source in all_data:
             data = source.get('data', {})
+            source_name = source.get('source', 'unknown')
             if isinstance(data, list):
-                for item in data:
-                    title = item.get('title', '')
-                    all_mentions.append(title)
-            elif isinstance(data, dict):
-                if 'name' in data:
-                    competitors_found.add(data['name'])
-                if 'recent_mentions' in data.get('analysis', {}):
-                    for mention in data['analysis']['recent_mentions']:
-                        all_mentions.append(mention.get('title', ''))
+                for item in data[:15]:  # Limit per source
+                    # Session 293: Strip HTML from titles and descriptions
+                    all_items.append({
+                        'title': strip_html_tags(item.get('title', '')),
+                        'description': strip_html_tags(item.get('description', ''))[:200],
+                        'source': item.get('source', source_name),
+                        'url': item.get('url', '')
+                    })
 
-        return {
-            'query': task,
-            'competitors_identified': list(competitors_found),
-            'total_mentions_analyzed': len(all_mentions),
-            'data_sources': len(all_data),
-            'summary': f"Analyzed {len(all_data)} data sources, found {len(competitors_found)} competitors"
-        }
+        # Limit total items to avoid token limits
+        all_items = all_items[:30]
+
+        # Build analysis prompt
+        items_text = "\n".join([
+            f"- {item['title']}: {item['description'][:100]}..."
+            for item in all_items if item['title']
+        ])
+
+        analysis_prompt = f"""You are a competitive intelligence analyst. Analyze the following market research data and provide actionable insights.
+
+RESEARCH QUERY: {task}
+
+DATA COLLECTED ({len(all_items)} articles/mentions):
+{items_text}
+
+Based on this data, provide a comprehensive competitive analysis with:
+
+1. **MARKET OVERVIEW** (2-3 sentences about this market)
+
+2. **KEY COMPETITORS IDENTIFIED** (list 3-5 main competitors with brief description)
+
+3. **MARKET TRENDS** (3-4 current trends you see in the data)
+
+4. **OPPORTUNITIES** (3-4 gaps or opportunities for a new entrant)
+
+5. **THREATS & CHALLENGES** (2-3 things to watch out for)
+
+6. **STRATEGIC RECOMMENDATIONS** (3-4 actionable recommendations for someone entering this market)
+
+Be specific and reference actual data points where possible. This analysis will be used for business planning."""
+
+        try:
+            # Session 293: gpt-5-mini uses tokens for internal reasoning first
+            # Need 4000+ tokens to ensure room for reasoning + visible output
+            response = self.client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[{"role": "user", "content": analysis_prompt}],
+                max_completion_tokens=6000,  # High enough for reasoning + output
+            )
+
+            analysis_text = response.choices[0].message.content
+
+            return {
+                'query': task,
+                'analysis': analysis_text,
+                'data_points_analyzed': len(all_items),
+                'sources_used': len(all_data),
+                'raw_data': all_items  # Include for reference
+            }
+
+        except Exception as e:
+            logger.error(f"GPT analysis failed: {e}")
+            # Fallback to basic summary
+            return {
+                'query': task,
+                'analysis': f"Collected {len(all_items)} data points about {task}. Analysis generation failed.",
+                'data_points_analyzed': len(all_items),
+                'sources_used': len(all_data),
+                'error': str(e),
+                'raw_data': all_items
+            }

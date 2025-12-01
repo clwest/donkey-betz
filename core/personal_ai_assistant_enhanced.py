@@ -2723,6 +2723,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         Uses spider network and web search for real data.
         """
         logger.info(f"🏢 COMPETITOR_ANALYSIS_AGENT TOOL CALLED!")
+        logger.info(f"🏢 Arguments: {arguments}")
 
         try:
             from core.agents.business import CompetitorAnalysisAgent
@@ -2749,7 +2750,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             if user_context:
                 task += f". Context: {user_context}"
 
-            # Execute the agent
+            logger.info(f"🏢 Task: {task}")
+
+            # Session 293: Execute the agent with ALL required parameters
+            # AgentResult requires: task, context, scifi_context, spider_context
             result = agent.execute(
                 task=task,
                 context={
@@ -2757,18 +2761,39 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     'focus_areas': focus_areas,
                     'competitor_names': competitor_names,
                     'user_context': user_context
-                }
+                },
+                scifi_context={},  # Session 293: Required parameter
+                spider_context={}  # Session 293: Required parameter
             )
 
+            logger.info(f"🏢 Agent result: success={result.success}, message={result.message[:100] if result.message else 'N/A'}...")
+            logger.info(f"🏢 Agent data keys: {result.data.keys() if result.data else 'None'}")
+
             if result.success:
-                return {
+                # Session 293: Build response with proper structure for frontend
+                # Frontend expects: agent_result.data.analysis (object with .analysis string)
+                response = {
                     'success': True,
-                    'message': result.content,
-                    'agent': 'CompetitorAnalysisAgent',
+                    'message': result.message,  # Session 293: Use .message not .content
+                    'agents_used': ['CompetitorAnalysisAgent'],
+                    'metadata': {
+                        'agent_result': {
+                            'success': result.success,
+                            'message': result.message,
+                            'data': result.data,  # Contains {analysis: {...}, raw_data, query}
+                            'agent_name': result.agent_name,
+                            'execution_time_ms': result.execution_time_ms,
+                            'decisions_made': result.decisions_made,
+                            'tool_calls': result.tool_calls
+                        }
+                    },
                     'market': market,
-                    'data': result.data if hasattr(result, 'data') else {}
+                    'data': result.data  # Also at top level for legacy compatibility
                 }
+                logger.info(f"🏢 Returning success response with analysis")
+                return response
             else:
+                logger.error(f"🏢 Agent returned failure: {result.error}")
                 return {
                     'success': False,
                     'error': result.error or 'Competitor analysis failed'

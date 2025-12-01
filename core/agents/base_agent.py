@@ -247,14 +247,15 @@ class BaseAgent(ABC, TimeTravelMixin):
             messages.extend(conversation_history)
 
         # Make API call
+        # Session 293: gpt-5-mini uses tokens for internal reasoning first
+        # Need high token limit to ensure room for reasoning + visible output
         try:
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=messages,
                 tools=self.tools if self.tools else None,
                 tool_choice="auto" if self.tools else None,
-                max_completion_tokens=2000,
-                reasoning_effort="medium",
+                max_completion_tokens=6000,  # High enough for reasoning + output
             )
 
             choice = response.choices[0]

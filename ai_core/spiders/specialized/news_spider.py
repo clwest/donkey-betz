@@ -224,20 +224,41 @@ class NewsHarvesterSpider(BaseIntelligenceSpider):
 
         return article
 
+    def _strip_html(self, text: str) -> str:
+        """Strip HTML tags from text content.
+
+        Session 293: RSS feeds often contain HTML in summaries.
+        """
+        if not text:
+            return ''
+        try:
+            soup = BeautifulSoup(text, 'html.parser')
+            clean_text = soup.get_text(separator=' ', strip=True)
+            return ' '.join(clean_text.split())
+        except Exception:
+            import re
+            return re.sub(r'<[^>]+>', '', text).strip()
+
     def _process_rss_entries(self, entries: List[Any]) -> List[Dict[str, Any]]:
         """Process RSS feed entries"""
         articles = []
 
         for entry in entries[:20]:  # Limit to 20 entries
+            # Session 293: Strip HTML from all text fields - RSS often contains markup
+            raw_summary = getattr(entry, 'summary', '')
+            raw_content = ''
+            if hasattr(entry, 'content') and entry.content:
+                raw_content = entry.content[0].get('value', '')
+
             article = {
-                'title': getattr(entry, 'title', ''),
-                'summary': getattr(entry, 'summary', ''),
-                'content': getattr(entry, 'content', [{}])[0].get('value', '') if hasattr(entry, 'content') else '',
-                'author': getattr(entry, 'author', ''),
+                'title': self._strip_html(getattr(entry, 'title', '')),
+                'summary': self._strip_html(raw_summary),
+                'content': self._strip_html(raw_content),
+                'author': self._strip_html(getattr(entry, 'author', '')),
                 'published_time': getattr(entry, 'published', ''),
                 'url': getattr(entry, 'link', ''),
                 'source': getattr(entry, 'source', {}).get('title', ''),
-                'tags': [tag.term for tag in getattr(entry, 'tags', [])]
+                'tags': [self._strip_html(tag.term) for tag in getattr(entry, 'tags', [])]
             }
 
             # Use summary for content if content is empty
