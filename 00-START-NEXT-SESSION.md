@@ -1,74 +1,59 @@
-# Session 306: Next Steps
+# Session 308: Next Steps
 
 **Date:** December 1, 2025
-**Previous Session:** 305 (AudioHistory + Learning Infrastructure for Legacy Agents)
+**Previous Session:** 307 (Deprecated Agents Learning Expansion)
 **Session Type:** Implementation
-**Status:** ALL 6 HANDOFFS COMPLETE + LEARNING INFRASTRUCTURE UNIFIED
+**Status:** ALL 6 HANDOFFS COMPLETE + LEARNING INFRASTRUCTURE FULLY OPERATIONAL
 
 ---
 
-## SESSION 305 COMPLETE SUMMARY
+## SESSION 307 COMPLETE SUMMARY
 
-### Part 1: AudioHistory Model & Integration
+### Wired 4 Additional Agents with Learning Hooks
 
-**Problem from Session 303 Audit:**
-Missing database model for tracking audio generation.
+Extended learning infrastructure to deprecated and additional standalone agents:
 
-**Solution:**
-1. Created `AudioHistory` model in `content/models.py`
-2. Updated `_execute_generate_voice()` in `core/views_image.py` to save to AudioHistory
-3. AudioAgent now automatically tracks all generated audio
+| Agent | File | Learning Hooks |
+|-------|------|----------------|
+| OpportunityScoringAgent | `agents/_deprecated/opportunity_scoring_agent.py` | OpportunityScoringLearningMixin |
+| AIProjectBuilder | `agents/ai_project_builder.py` | ProjectBuilderLearningMixin |
+| DonkeyBetzContentExecutor | `agents/content_executor.py` | ContentExecutorLearningMixin |
+| LiveLearningOrchestrator | `agents/live_learning_orchestrator.py` | LiveLearningLearningMixin |
 
-### Part 2: Learning Hooks for Legacy Agents
+### Test Results
 
-**Problem:**
-Session 304 added learning hooks to 11 clean architecture agents, but the 22 legacy agents in `agents/` didn't have learning capabilities.
+```
+Learning Hooks Verification:
+✅ OpportunityScoringAgent - all 4 hooks working
+✅ AIProjectBuilder - all 4 hooks working
+✅ DonkeyBetzContentExecutor - all 4 hooks working
+✅ LiveLearningOrchestrator - all 4 hooks working
 
-**Solution:**
-Added learning hooks to legacy `BaseContentAgent` in `agents/base_agent.py`:
-
-| Method | Purpose |
-|--------|---------|
-| `_record_learning_outcome()` | Record execution for XP and patterns |
-| `_create_execution_memory()` | Create memories from interactions |
-| `_share_knowledge()` | Share learned patterns cross-agent |
-| `_get_shared_knowledge()` | Retrieve knowledge from other agents |
-| `learning_loop` property | Lazy-load LearningLoopService |
-| `memory_service` property | Lazy-load MemoryEmbeddingService |
-| `agent_model` property | Lazy-load Agent model instance |
-
-### Part 3: WorkflowOrchestrationAgent Wiring
-
-Wired the legacy `WorkflowOrchestrationAgent` (2871 lines) to use learning hooks:
-- Records learning outcomes for all workflow executions
-- Creates high-importance memories (0.8) for workflows
-- Shares successful workflow patterns for cross-agent learning
+AgentKnowledgeSource: 6 records ✅ (2 new from Session 307)
+AgentMemory: 3 records ✅
+```
 
 ### Files Modified
 
 | File | Changes |
-|------|---------|
-| `content/models.py` | Added AudioHistory model |
-| `content/migrations/0033_audiohistory.py` | Migration for AudioHistory |
-| `core/views_image.py` | Save generated audio to AudioHistory |
-| `core/agents/audio_agent.py` | Updated docstring |
-| `agents/base_agent.py` | Added learning hooks (~240 lines) |
-| `agents/workflow_orchestration_agent.py` | Wired to learning hooks |
+|------|------------|
+| `agents/_deprecated/opportunity_scoring_agent.py` | +OpportunityScoringLearningMixin + wiring |
+| `agents/ai_project_builder.py` | +ProjectBuilderLearningMixin + wiring |
+| `agents/content_executor.py` | +ContentExecutorLearningMixin + wiring |
+| `agents/live_learning_orchestrator.py` | +LiveLearningLearningMixin + wiring |
+| `docs/handoffs/SESSION_307_DEPRECATED_AGENTS_LEARNING_EXPANSION.md` | Handoff doc |
 
 ---
 
 ## NEXT SESSION OPTIONS
 
-### Option A: Wire More Legacy Agents
+### Option A: Create Audio Gallery UI
 
-Add learning hooks to these key legacy agents:
-- `agents/bookmaker_agent.py` (897 lines) - Sports/financial analysis
-- `agents/creation_agent.py` - General content creation
-- `agents/opportunity_pipeline_orchestrator.py` (1508 lines) - Opportunity processing
+Add audio playback/gallery to the frontend similar to image/video galleries. The `AudioHistory` model exists but has no frontend display.
 
-### Option B: Create Audio Gallery UI
+### Option B: Wire Remaining Legacy Agents
 
-Add audio playback/gallery to the frontend similar to image/video galleries.
+Continue adding learning hooks to other legacy agents in `agents/` directory that haven't been wired yet.
 
 ### Option C: User-Requested Feature
 
@@ -86,33 +71,21 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Testing Session 305 Changes
-
-### Test AudioHistory Integration
+## Learning Infrastructure Health Check
 
 ```python
+from core.models_unified_system import AgentKnowledgeSource, AgentMemory
 from content.models import AudioHistory
-from django.contrib.auth import get_user_model
 
-User = get_user_model()
-print(f"AudioHistory records: {AudioHistory.objects.count()}")
+print(f"AgentKnowledgeSource: {AgentKnowledgeSource.objects.count()} records")
+print(f"AgentMemory: {AgentMemory.objects.count()} records")
+print(f"AudioHistory: {AudioHistory.objects.count()} records")
 ```
 
-### Test Legacy Agent Learning
-
-```python
-from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-user = User.objects.first()
-
-# Check if learning hooks are available
-agent = WorkflowOrchestrationAgent(user=user)
-print(f"Learning loop available: {agent.learning_loop is not None}")
-print(f"Memory service available: {agent.memory_service is not None}")
-print(f"Agent model: {agent.agent_model}")
-```
+Expected after Session 307:
+- `AgentKnowledgeSource`: 6+ records (knowledge sharing working!)
+- `AgentMemory`: 3+ records (memory creation working!)
+- `AudioHistory`: 0 (no audio generated yet)
 
 ---
 
@@ -128,9 +101,13 @@ CODEBASE HEALTH
 ├── Database Audit: COMPLETE
 ├── Unified Intelligence: COMPLETE
 ├── Agent Audit: COMPLETE
-├── Learning Infrastructure: UNIFIED! ✅
+├── Learning Infrastructure: FULLY OPERATIONAL! ✅
 │   ├── Clean Agents (11): ALL CONNECTED
-│   └── Legacy Agents: BaseContentAgent + WorkflowOrchestrationAgent CONNECTED
+│   ├── Legacy Agents (BaseContentAgent): WorkflowOrchestrationAgent CONNECTED
+│   ├── Standalone Agents (3): BookmakerAgent, CreationAgent, OPO CONNECTED
+│   ├── Deprecated/Additional (4): OSA, AIProjectBuilder, ContentExecutor, LLO CONNECTED ✅
+│   ├── AgentKnowledgeSource: 6 records ✅
+│   └── AgentMemory: 3 records ✅
 ├── AudioHistory Model: CREATED & INTEGRATED! ✅
 ├── Workflow Engine: FULLY WORKING!
 ├── DaVinci Bridge: FULLY WORKING!
@@ -152,32 +129,29 @@ CODEBASE HEALTH
 
 ---
 
-## Learning Infrastructure Status
+## Learning Infrastructure Status - Session 307 Final
 
 ### Clean Architecture Agents (11) - Session 304
 
-All connected via `core/agents/base_agent.py`:
-- ImageAgent, VideoAgent, AudioAgent, ThreeDAgent
-- ResearchAgent, ImageEditingAgent, VideoEditingAgent
-- WorkflowAgent, CompetitorAnalysisAgent, CustomerResearchAgent
+All connected via `core/agents/base_agent.py`
 
-### Legacy Agents - Session 305
+### Legacy Agents via BaseContentAgent - Session 305
 
-Connected via `agents/base_agent.py` (BaseContentAgent):
 - WorkflowOrchestrationAgent (explicitly wired)
-- All other legacy agents inherit hooks but need explicit calls
+- All other legacy agents inherit hooks
 
----
+### Standalone Agents via Mixins - Session 306
 
-## History Models Status
+- BookmakerAgent (LearningMixin)
+- CreationAgent (CreationLearningMixin)
+- OpportunityPipelineOrchestrator (PipelineLearningMixin)
 
-| Model | Location | Integrated |
-|-------|----------|------------|
-| `ImageHistory` | `content/models.py` | ✅ Yes |
-| `VideoHistory` | `content/models.py` | ✅ Yes |
-| `AudioHistory` | `content/models.py` | ✅ **NEW!** |
-| `MiniFigAsset` | `content/models.py` | ✅ Yes |
-| `WorkflowHistory` | `content/models.py` | ✅ Yes |
+### Deprecated/Additional Agents via Mixins - Session 307 ✅
+
+- OpportunityScoringAgent (OpportunityScoringLearningMixin)
+- AIProjectBuilder (ProjectBuilderLearningMixin)
+- DonkeyBetzContentExecutor (ContentExecutorLearningMixin)
+- LiveLearningOrchestrator (LiveLearningLearningMixin)
 
 ---
 
@@ -193,4 +167,4 @@ Connected via `agents/base_agent.py` (BaseContentAgent):
 
 ---
 
-**Session 305 Complete: AudioHistory + Learning Infrastructure Unified for Legacy Agents!**
+**Session 307 Complete: Learning Infrastructure Extended to 4 More Agents!**

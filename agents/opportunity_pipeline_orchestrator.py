@@ -13,6 +13,8 @@ Features:
 - Cross-platform opportunity management
 - Real-time performance monitoring
 - Adaptive workflow optimization
+
+Session 306: Added learning infrastructure hooks for cross-agent knowledge sharing.
 """
 
 import json
@@ -60,6 +62,198 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class PipelineLearningMixin:
+    """
+    Learning infrastructure mixin for OpportunityPipelineOrchestrator.
+    Session 306: Enables cross-agent knowledge sharing for pipeline orchestration.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='OpportunityPipelineOrchestrator',
+                    defaults={
+                        'agent_type': 'standalone',
+                        'specialization': 'workflow_orchestration',
+                        'description': 'Orchestrates multi-stage opportunity execution workflows.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = False
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='workflow',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['OpportunityPipelineOrchestrator'],
+                response=result.get('message', str(result)),
+                execution_time_ms=int(result.get('execution_time', 0) * 1000),
+                success=result.get('success', False),
+                spider_data_used=spider_data_used,
+                scifi_context_used=True,  # Pipeline uses memory insights
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the pipeline execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"Pipeline: {task[:50]}...",
+                content=str(result.get('pipeline_report', result)),
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['pipeline', 'orchestration', 'success' if result.get('success') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'pipeline': 'tool_discovery',
+                'workflow': 'tool_discovery',
+                'optimization': 'market',
+                'agent_selection': 'tool_discovery',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'opportunity')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                type_mapping = {
+                    'pipeline': 'tool_discovery',
+                    'workflow': 'tool_discovery',
+                    'optimization': 'market',
+                }
+                mapped_type = type_mapping.get(knowledge_type, knowledge_type)
+                queryset = queryset.filter(knowledge_type=mapped_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
+
+
 class PipelineStage(Enum):
     """Pipeline execution stages"""
     DISCOVERY = "discovery"
@@ -96,13 +290,15 @@ class StageResult:
     next_stage_recommendations: List[str]
 
 
-class OpportunityPipelineOrchestrator:
+class OpportunityPipelineOrchestrator(PipelineLearningMixin):
     """
     Orchestrates multi-stage opportunity execution workflows
 
     Creates sophisticated pipelines that flow opportunities through specialized
     agents and advisors, with each stage adding compound value before passing
     to the next specialist.
+
+    Session 306: Now includes learning infrastructure for cross-agent knowledge sharing.
     """
 
     def __init__(self):
@@ -114,6 +310,11 @@ class OpportunityPipelineOrchestrator:
         self.embedding_manager = CodebaseEmbeddingManager() if CodebaseEmbeddingManager else None
         self.search_engine = SemanticCodeSearchEngine() if SemanticCodeSearchEngine else None
         self.opportunity_memory = {}  # Cache for opportunity patterns
+
+        # Session 306: Initialize learning mixin attributes
+        self._learning_loop = None
+        self._memory_service = None
+        self._agent_model = None
 
         # Stage configuration
         self.stage_agents = {
@@ -218,7 +419,7 @@ class OpportunityPipelineOrchestrator:
             # Update tracking
             await self._update_pipeline_tracking(pipeline_id, pipeline_report)
 
-            return {
+            success_result = {
                 'success': True,
                 'pipeline_id': pipeline_id,
                 'final_value': current_value,
@@ -231,13 +432,63 @@ class OpportunityPipelineOrchestrator:
                 )
             }
 
+            # Session 306: Learning Infrastructure Hooks
+            task = f"Pipeline for: {opportunity.get('title', 'Unknown opportunity')}"
+
+            # Record learning outcome (sync call in async context is fine for non-critical)
+            self._record_learning_outcome(
+                result=success_result,
+                task=task,
+                context={
+                    'stages_executed': len(stage_results),
+                    'final_value': current_value,
+                    'value_multiplication': success_result['value_multiplication'],
+                },
+                spider_data_used=True  # Spider network is used
+            )
+
+            # Create high-importance memory for pipeline execution
+            self._create_execution_memory(
+                result=success_result,
+                task=task,
+                memory_type="success",
+                importance=0.8  # High importance for successful pipelines
+            )
+
+            # Share pipeline pattern knowledge for cross-agent learning
+            if success_result['value_multiplication'] > 1.5:
+                agents_used = [r.agent_used for r in stage_results if r.success]
+                self._share_knowledge(
+                    knowledge_type='pipeline',
+                    title=f"High-value pipeline: {success_result['value_multiplication']:.1f}x",
+                    knowledge_value={
+                        'opportunity_type': opportunity.get('type', 'unknown'),
+                        'agents_used': agents_used,
+                        'value_multiplication': success_result['value_multiplication'],
+                        'stages_completed': len(stage_results),
+                    },
+                    confidence=min(0.9, 0.5 + success_result['value_multiplication'] * 0.1)
+                )
+
+            return success_result
+
         except Exception as e:
             logger.error(f"Pipeline orchestration failed: {str(e)}")
-            return {
+
+            error_result = {
                 'success': False,
                 'error': str(e),
                 'partial_results': stage_results if 'stage_results' in locals() else []
             }
+
+            # Session 306: Record failed pipeline for learning
+            self._record_learning_outcome(
+                result=error_result,
+                task=f"Pipeline for: {opportunity.get('title', 'Unknown')}",
+                context={'error': str(e)}
+            )
+
+            return error_result
 
     async def _execute_pipeline_stage(
         self,

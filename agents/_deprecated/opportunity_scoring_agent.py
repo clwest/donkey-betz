@@ -27,10 +27,13 @@ Example:
 
     # Get top opportunities
     top = agent.get_top_opportunities(limit=10)
+
+Session 306: Added learning infrastructure hooks for cross-agent knowledge sharing.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
@@ -41,6 +44,192 @@ from decimal import Decimal
 from core.super_platform.spider_context_mixin import SpiderContextMixin
 
 logger = logging.getLogger(__name__)
+
+
+class OpportunityScoringLearningMixin:
+    """
+    Learning infrastructure mixin for OpportunityScoringAgent.
+    Session 306: Enables cross-agent knowledge sharing for opportunity scoring.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='OpportunityScoringAgent',
+                    defaults={
+                        'agent_type': 'deprecated',
+                        'specialization': 'opportunity_scoring',
+                        'description': 'Transforms spider data into scored, actionable opportunities.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = True
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='scoring',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['OpportunityScoringAgent'],
+                response=str(result),
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', False),
+                spider_data_used=spider_data_used,
+                scifi_context_used=False,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the scoring execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"Scoring: {task[:50]}...",
+                content=str(result),
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['opportunity_scoring', 'spider_data', 'success' if result.get('success') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'opportunity': 'opportunity',
+                'trend': 'trend',
+                'scoring': 'market',
+                'content_suggestion': 'content_idea',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'opportunity')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                queryset = queryset.filter(knowledge_type=knowledge_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
 
 
 @dataclass
@@ -114,7 +303,7 @@ class ScoringResult:
         }
 
 
-class OpportunityScoringAgent(SpiderContextMixin):
+class OpportunityScoringAgent(OpportunityScoringLearningMixin, SpiderContextMixin):
     """
     AI agent that transforms spider data into scored opportunities.
 
@@ -125,6 +314,7 @@ class OpportunityScoringAgent(SpiderContextMixin):
     - Consult advisors for strategic input
 
     Session 264 Phase 4: Enhanced with SpiderContextMixin for real-time spider intelligence.
+    Session 306: Added learning infrastructure for cross-agent knowledge sharing.
     """
 
     # Content type mappings based on opportunity characteristics
@@ -266,10 +456,59 @@ class OpportunityScoringAgent(SpiderContextMixin):
             results.sort(key=lambda x: x.overall_score, reverse=True)
 
             logger.info(f"Scored {len(results)} spider data items")
+
+            # Session 306: Learning Infrastructure Hooks
+            successful_results = [r for r in results if r.success]
+            if successful_results:
+                # Record learning outcome for batch scoring
+                batch_result = {
+                    'success': True,
+                    'items_scored': len(successful_results),
+                    'avg_score': sum(r.overall_score for r in successful_results) / len(successful_results),
+                    'top_score': max(r.overall_score for r in successful_results),
+                }
+                self._record_learning_outcome(
+                    result=batch_result,
+                    task=f"Score {len(successful_results)} spider data items from last {hours} hours",
+                    context={'hours': hours, 'limit': limit},
+                    spider_data_used=True
+                )
+
+                # Create memory for high-value scoring sessions
+                if batch_result['avg_score'] > 60:
+                    self._create_execution_memory(
+                        result=batch_result,
+                        task=f"Batch scoring: {len(successful_results)} items",
+                        memory_type="success",
+                        importance=0.7
+                    )
+
+                # Share high-scoring opportunities
+                top_results = [r for r in successful_results if r.overall_score >= 75]
+                for result in top_results[:3]:  # Share top 3
+                    self._share_knowledge(
+                        knowledge_type='opportunity',
+                        title=f"High-score opportunity: {result.overall_score}",
+                        knowledge_value={
+                            'overall_score': result.overall_score,
+                            'profit_potential': result.profit_potential,
+                            'content_types': result.suggested_content_types,
+                            'keywords': result.keywords[:5],
+                        },
+                        confidence=result.overall_score / 100
+                    )
+
             return results
 
         except Exception as e:
             logger.error(f"Error scoring spider data: {e}")
+            # Session 306: Record failure for learning
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task=f"Score spider data (failed)",
+                context={'error': str(e)},
+                spider_data_used=True
+            )
             return [ScoringResult(success=False, error=str(e))]
 
     def analyze_trend(
@@ -324,7 +563,7 @@ class OpportunityScoringAgent(SpiderContextMixin):
                 user=user,
             )
 
-            return ScoringResult(
+            result = ScoringResult(
                 success=True,
                 opportunity_id=str(opportunity.id) if opportunity else None,
                 profit_potential=scores['profit_potential'],
@@ -345,8 +584,53 @@ class OpportunityScoringAgent(SpiderContextMixin):
                 advisors_consulted=list(advisor_input.keys()) if advisor_input else [],
             )
 
+            # Session 306: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result={'success': True, 'overall_score': result.overall_score},
+                task=f"Analyze trend: {trend_topic[:50]}",
+                context={
+                    'trend_topic': trend_topic,
+                    'overall_score': result.overall_score,
+                    'content_types': content_types,
+                },
+                spider_data_used=True
+            )
+
+            # Create memory for trend analysis
+            self._create_execution_memory(
+                result={'success': True, 'message': f"Trend '{trend_topic}' scored {result.overall_score}"},
+                task=f"Trend analysis: {trend_topic[:50]}",
+                memory_type="success",
+                importance=0.65
+            )
+
+            # Share high-value trend discoveries
+            if result.overall_score >= 70:
+                self._share_knowledge(
+                    knowledge_type='trend',
+                    title=f"High-value trend: {trend_topic[:50]}",
+                    knowledge_value={
+                        'topic': trend_topic,
+                        'overall_score': result.overall_score,
+                        'profit_potential': result.profit_potential,
+                        'time_sensitivity': result.time_sensitivity,
+                        'suggested_content_types': content_types,
+                        'workflows': workflows,
+                    },
+                    confidence=result.overall_score / 100
+                )
+
+            return result
+
         except Exception as e:
             logger.error(f"Error analyzing trend '{trend_topic}': {e}")
+            # Session 306: Record failure for learning
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task=f"Analyze trend: {trend_topic[:50]} (failed)",
+                context={'trend_topic': trend_topic, 'error': str(e)},
+                spider_data_used=False
+            )
             return ScoringResult(success=False, error=str(e))
 
     def score_job_opportunity(
@@ -399,7 +683,7 @@ class OpportunityScoringAgent(SpiderContextMixin):
                 metadata=job_data,
             )
 
-            return ScoringResult(
+            result = ScoringResult(
                 success=True,
                 opportunity_id=str(opportunity.id) if opportunity else None,
                 profit_potential=scores['profit_potential'],
@@ -413,8 +697,53 @@ class OpportunityScoringAgent(SpiderContextMixin):
                 estimated_cost=cost,
             )
 
+            # Session 306: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result={'success': True, 'overall_score': result.overall_score},
+                task=f"Score job: {title[:50]}",
+                context={
+                    'job_title': title,
+                    'company': company,
+                    'salary': float(salary) if salary else 0,
+                    'overall_score': result.overall_score,
+                },
+                spider_data_used=True
+            )
+
+            # Create memory for job scoring
+            self._create_execution_memory(
+                result={'success': True, 'message': f"Job '{title[:50]}' scored {result.overall_score}"},
+                task=f"Job scoring: {title[:50]}",
+                memory_type="success",
+                importance=0.6
+            )
+
+            # Share high-value job opportunities
+            if result.overall_score >= 70 or (salary and salary > 75000):
+                self._share_knowledge(
+                    knowledge_type='opportunity',
+                    title=f"High-value job: {title[:40]}",
+                    knowledge_value={
+                        'job_title': title,
+                        'company': company,
+                        'salary': float(salary) if salary else 0,
+                        'overall_score': result.overall_score,
+                        'keywords': keywords[:5],
+                    },
+                    confidence=min(0.9, result.overall_score / 100)
+                )
+
+            return result
+
         except Exception as e:
             logger.error(f"Error scoring job opportunity: {e}")
+            # Session 306: Record failure for learning
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task=f"Score job opportunity (failed)",
+                context={'error': str(e)},
+                spider_data_used=True
+            )
             return ScoringResult(success=False, error=str(e))
 
     def get_top_opportunities(
