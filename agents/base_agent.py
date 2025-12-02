@@ -8,8 +8,10 @@ Provides a standardized base class for content generation agents with:
 - Agent contribution tracking
 - User and project context management
 - Common utility methods
+- Learning infrastructure hooks (Session 305)
 
 Session 186: Created as part of Phase 3 Architecture Improvements (Task 3.7)
+Session 305: Added learning hooks for cross-agent knowledge sharing
 
 Usage:
     class MyAgent(BaseContentAgent):
@@ -380,3 +382,238 @@ class BaseContentAgent(ABC):
     def log_error(self, operation: str, error: Exception):
         """Log an error during operation."""
         self.logger.error(f"{self.agent_name} {operation} error: {error}", exc_info=True)
+
+    # =========================================================================
+    # Session 305: Learning Infrastructure Hooks
+    # =========================================================================
+    # These methods mirror the learning hooks in core/agents/base_agent.py
+    # to enable cross-agent knowledge sharing for legacy agents.
+
+    # Lazy-loaded service instances
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(self.user)
+            except ImportError:
+                self.logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                self.logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name=self.agent_name,
+                    defaults={
+                        'agent_type': 'legacy_content',
+                        'specialization': self.specialization,
+                        'description': f'Legacy content agent: {self.agent_name}',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                self.logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = False,
+        scifi_context_used: bool = False
+    ):
+        """
+        Record execution outcome for XP and pattern learning.
+        Session 305: Learning infrastructure hook for legacy agents.
+        """
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type=self._detect_query_type(task),
+                query_text=task,
+                execution_mode='agent',
+                agents_used=[self.agent_name],
+                response=result.get('message', str(result.get('data', ''))),
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', False),
+                spider_data_used=spider_data_used,
+                scifi_context_used=scifi_context_used,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            self.logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _detect_query_type(self, task: str) -> str:
+        """Detect the type of query from the task text."""
+        task_lower = task.lower()
+        if any(word in task_lower for word in ['research', 'search', 'find', 'look up']):
+            return 'research'
+        elif any(word in task_lower for word in ['create', 'generate', 'make', 'design']):
+            return 'create'
+        elif any(word in task_lower for word in ['edit', 'modify', 'change', 'update']):
+            return 'edit'
+        elif any(word in task_lower for word in ['workflow', 'process', 'pipeline']):
+            return 'workflow'
+        return 'general'
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """
+        Create a memory from the interaction.
+        Session 305: Learning infrastructure hook for legacy agents.
+        """
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"{self.agent_name}: {task[:50]}...",
+                content=result.get('message', str(result.get('data', ''))),
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                metadata={
+                    'task': task,
+                    'success': result.get('success', False),
+                    'specialization': self.specialization,
+                    'project_id': self.project_id,
+                    'session_id': self.session_id,
+                }
+            )
+            return memory
+        except Exception as e:
+            self.logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """
+        Share learned knowledge for cross-agent learning.
+        Session 305: Learning infrastructure hook for legacy agents.
+        """
+        if not self.agent_model:
+            return None
+
+        try:
+            import json
+            from core.models_unified_system import AgentKnowledgeSource
+
+            # Map generic types to model's choices
+            type_mapping = {
+                'technique': 'tool_discovery',
+                'insight': 'market',
+                'pattern': 'user_behavior',
+                'preference': 'user_behavior',
+                'workflow': 'tool_discovery',
+            }
+            mapped_type = type_mapping.get(knowledge_type, knowledge_type)
+
+            valid_types = ['trend', 'market', 'opportunity', 'competitor',
+                          'pricing', 'user_behavior', 'content_idea', 'tool_discovery']
+            if mapped_type not in valid_types:
+                mapped_type = 'tool_discovery'
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            self.logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve knowledge from other agents.
+        Session 305: Learning infrastructure hook for legacy agents.
+        """
+        try:
+            import json
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                type_mapping = {
+                    'technique': 'tool_discovery',
+                    'insight': 'market',
+                    'pattern': 'user_behavior',
+                    'preference': 'user_behavior',
+                }
+                mapped_type = type_mapping.get(knowledge_type, knowledge_type)
+                queryset = queryset.filter(knowledge_type=mapped_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            # Exclude own knowledge to learn from others
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                    'created': ks.created_at.isoformat() if ks.created_at else None,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            self.logger.debug(f"Failed to get shared knowledge: {e}")
+            return []

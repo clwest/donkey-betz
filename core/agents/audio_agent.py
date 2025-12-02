@@ -4,6 +4,7 @@ Audio Agent - Specialized for Audio Generation ONLY
 
 Session 268: Phase 2 - Creation Agents
 Session 304: Learning Infrastructure Integration
+Session 305: AudioHistory Integration
 
 This agent creates audio. That's ALL it does.
 It has NO access to image, video, 3D, or research tools.
@@ -18,6 +19,9 @@ Tools NOT Available (by design):
     - video generation
     - 3D generation
     - web search
+
+Audio History:
+    All generated audio is automatically saved to AudioHistory model.
 """
 
 import logging
