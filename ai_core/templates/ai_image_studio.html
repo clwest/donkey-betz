@@ -7289,6 +7289,46 @@
                         </div>
                     </div>
 
+                    <!-- Session 309: Agent Architecture Breakdown -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                                <div class="card-body py-2">
+                                    <h3 class="mb-0" id="agent-clean-count">11</h3>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Clean Agents</small>
+                                    <span class="badge bg-light text-success ms-1" style="font-size: 0.6rem;">NEW ARCH</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none;">
+                                <div class="card-body py-2">
+                                    <h3 class="mb-0" id="agent-deprecated-count">14</h3>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Legacy + Learning</small>
+                                    <span class="badge bg-light text-primary ms-1" style="font-size: 0.6rem;">HOOKS</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                <div class="card-body py-2">
+                                    <h3 class="mb-0" id="agent-memory-count">0</h3>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Agent Memories</small>
+                                    <span class="badge ms-1" style="font-size: 0.6rem; background: rgba(255,255,255,0.3); color: white;">S309</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                                <div class="card-body py-2">
+                                    <h3 class="mb-0" id="agent-knowledge-sources">0</h3>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Knowledge Sources</small>
+                                    <span class="badge ms-1" style="font-size: 0.6rem; background: rgba(255,255,255,0.3); color: white;">SHARED</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Session 244: Agent Learning Activity Section -->
                     <div class="row mb-4">
                         <div class="col-md-4">
@@ -42891,10 +42931,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // Session 216: Load Agent Intelligence Dashboard
         async function loadAgentDashboard() {
+            console.log('🤖 Session 310: loadAgentDashboard() called!');
             const loadingEl = document.getElementById('agents-loading');
             const containerEl = document.getElementById('agents-container');
 
             try {
+                console.log('🤖 Session 310: Fetching /api/collective/dashboard/...');
                 // Fetch dashboard data
                 const response = await fetch('/api/collective/dashboard/', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
@@ -42915,6 +42957,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 document.getElementById('agent-synthesized-count').textContent = data.stats?.learning?.synthesized_items || 0;
 
                 // Session 310: Update architecture and memory stats
+                console.log('🤖 Session 310: Calling loadSession310Stats()...');
                 loadSession310Stats();
 
                 // Session 244: Update learning feed
@@ -42962,26 +43005,32 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // Session 310: Load architecture and memory stats for Overview tab
         async function loadSession310Stats() {
+            console.log('🤖 Session 310: loadSession310Stats() started');
             try {
                 const response = await fetch('/api/agent-learning/stats/', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
                 });
                 const data = await response.json();
+                console.log('🤖 Session 310: API response:', data);
 
                 if (data.success && data.stats) {
+                    console.log('🤖 Session 310: Stats received:', data.stats);
                     // Update Session 310 cards in Overview tab
                     const memoryEl = document.getElementById('agent-memory-count');
                     const knowledgeEl = document.getElementById('agent-knowledge-sources');
                     const cleanEl = document.getElementById('agent-clean-count');
                     const deprecatedEl = document.getElementById('agent-deprecated-count');
 
+                    console.log('🤖 Session 310: Elements found:', {memoryEl: !!memoryEl, knowledgeEl: !!knowledgeEl, cleanEl: !!cleanEl, deprecatedEl: !!deprecatedEl});
+
                     if (memoryEl) memoryEl.textContent = data.stats.agent_memories || 0;
                     if (knowledgeEl) knowledgeEl.textContent = data.stats.knowledge_sources || 0;
                     if (cleanEl) cleanEl.textContent = data.stats.clean_agents || 11;
                     if (deprecatedEl) deprecatedEl.textContent = data.stats.deprecated_agents || 14;
+                    console.log('🤖 Session 310: Cards updated!');
                 }
             } catch (err) {
-                console.debug('Session 310 stats not available:', err);
+                console.error('🤖 Session 310 stats error:', err);
             }
         }
 

@@ -1049,33 +1049,46 @@ class CollectiveIntelligenceService:
                 avg=Avg('quality_score')
             )['avg'] or 0
 
-            # Spider connection stats (Session 242)
-            spider_connections = AgentSpiderConnection.objects.count()
+            # Spider connection stats (Session 242) - graceful fallback if table missing
+            try:
+                spider_connections = AgentSpiderConnection.objects.count()
+            except Exception:
+                spider_connections = 0
 
-            # Learning connections (Session 243)
-            learning_connections = AgentLearningConnection.objects.filter(is_active=True).count()
+            # Learning connections (Session 243) - graceful fallback if table missing
+            try:
+                learning_connections = AgentLearningConnection.objects.filter(is_active=True).count()
+            except Exception:
+                learning_connections = 0
 
-            # Learning stats (Session 244)
-            total_transfers = KnowledgeTransfer.objects.count()
+            # Learning stats (Session 244) - graceful fallback if table missing
+            try:
+                total_transfers = KnowledgeTransfer.objects.count()
+            except Exception:
+                total_transfers = 0
+
             learned_items = AgentKnowledgeSource.objects.filter(title__startswith='[Learned]').count()
             synthesized_items = AgentKnowledgeSource.objects.filter(title__startswith='[Synthesis]').count()
 
-            # Recent transfers for live feed
-            recent_transfers = KnowledgeTransfer.objects.select_related(
-                'connection__teacher_agent',
-                'connection__student_agent',
-                'source_knowledge'
-            ).order_by('-created_at')[:10]
-
+            # Recent transfers for live feed - graceful fallback if table missing
             recent_transfer_list = []
-            for t in recent_transfers:
-                recent_transfer_list.append({
-                    'teacher': t.connection.teacher_agent.name if t.connection.teacher_agent else 'Unknown',
-                    'student': t.connection.student_agent.name if t.connection.student_agent else 'Unknown',
-                    'knowledge': t.source_knowledge.title[:50] if t.source_knowledge else 'Unknown',
-                    'usefulness': round(t.usefulness_score, 2),
-                    'time': t.created_at.isoformat() if t.created_at else None
-                })
+            try:
+                recent_transfers = KnowledgeTransfer.objects.select_related(
+                    'connection__teacher_agent',
+                    'connection__student_agent',
+                    'source_knowledge'
+                ).order_by('-created_at')[:10]
+
+                for t in recent_transfers:
+                    recent_transfer_list.append({
+                        'teacher': t.connection.teacher_agent.name if t.connection.teacher_agent else 'Unknown',
+                        'student': t.connection.student_agent.name if t.connection.student_agent else 'Unknown',
+                        'knowledge': t.source_knowledge.title[:50] if t.source_knowledge else 'Unknown',
+                        'usefulness': round(t.usefulness_score, 2),
+                        'time': t.created_at.isoformat() if t.created_at else None
+                    })
+            except Exception:
+                pass
 
             # Message stats
             total_messages = InterAgentMessage.objects.count()
