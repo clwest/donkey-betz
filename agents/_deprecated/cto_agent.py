@@ -392,17 +392,18 @@ Provide a comprehensive analysis including:
 Be specific, technical, and actionable. Reference actual file paths and line numbers when possible.
 """
 
-            response = self.client.chat.completions.create(
+            # Session 313: Use GPT-5-mini with Responses API
+            full_input = f"{self.template.system_prompt}\n\n{analysis_prompt}"
+
+            response = self.client.responses.create(
                 model="gpt-5-mini",
-                messages=[
-                    {"role": "system", "content": self.template.system_prompt},
-                    {"role": "user", "content": analysis_prompt}
-                ],
-                max_completion_tokens=3000,
-                reasoning_effort="high"
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=3000
             )
 
-            analysis_text = response.choices[0].message.content
+            analysis_text = response.output_text
 
             # Store analysis in memory
             analysis_data = {
@@ -541,17 +542,19 @@ Create a comprehensive plan including:
 The plan should be detailed enough that a developer can execute it safely.
 """
 
-            response = self.client.chat.completions.create(
+            # Session 313: Use GPT-5-mini with Responses API
+            system_prompt = self.template.system_prompt + "\n\nYou are creating an implementation PLAN. Be thorough and specific."
+            full_input = f"{system_prompt}\n\n{planning_prompt}"
+
+            response = self.client.responses.create(
                 model="gpt-5-mini",
-                messages=[
-                    {"role": "system", "content": self.template.system_prompt + "\n\nYou are creating an implementation PLAN. Be thorough and specific."},
-                    {"role": "user", "content": planning_prompt}
-                ],
-                max_completion_tokens=3500,
-                reasoning_effort="high"
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=3500
             )
 
-            implementation_plan = response.choices[0].message.content
+            implementation_plan = response.output_text
 
             # Store plan in memory
             plan_data = {
@@ -679,17 +682,19 @@ Analyze:
 Provide specific file paths and content recommendations.
 """
 
-            response = self.client.chat.completions.create(
+            # Session 313: Use GPT-5-mini with Responses API
+            system_prompt = "You are a technical documentation expert analyzing documentation coverage and quality."
+            full_input = f"{system_prompt}\n\n{doc_analysis_prompt}"
+
+            response = self.client.responses.create(
                 model="gpt-5-mini",
-                messages=[
-                    {"role": "system", "content": "You are a technical documentation expert analyzing documentation coverage and quality."},
-                    {"role": "user", "content": doc_analysis_prompt}
-                ],
-                max_completion_tokens=3000,
-                reasoning_effort="medium"
+                input=full_input,
+                reasoning={"effort": "medium"},
+                text={"verbosity": "medium"},
+                max_output_tokens=3000
             )
 
-            doc_analysis = response.choices[0].message.content
+            doc_analysis = response.output_text
 
             # Store analysis in memory
             analysis_data = {
@@ -798,17 +803,18 @@ Create a coordination plan including:
 Be specific about agent capabilities and realistic about what each can deliver.
 """
 
-            response = self.client.chat.completions.create(
+            # Session 313: Use GPT-5-mini with Responses API
+            full_input = f"{self.template.system_prompt}\n\n{coordination_prompt}"
+
+            response = self.client.responses.create(
                 model="gpt-5-mini",
-                messages=[
-                    {"role": "system", "content": self.template.system_prompt},
-                    {"role": "user", "content": coordination_prompt}
-                ],
-                max_completion_tokens=2500,
-                reasoning_effort="high"
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=2500
             )
 
-            coordination_plan = response.choices[0].message.content
+            coordination_plan = response.output_text
 
             # Store coordination plan
             plan_data = {

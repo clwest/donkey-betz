@@ -1,108 +1,83 @@
-# Session 312: Continue Platform Development
+# Session 315: End-to-End Agent Testing
 
 **Date:** December 2, 2025
-**Previous Session:** 311 - CreativeDirectorAgent Learning Hooks (90.9% pass rate)
+**Previous Session:** 314 - GPT-5 Responses API Migration + UI Cleanup
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 311 completed:
-- Added learning hooks to CreativeDirectorAgent (last missing agent)
-- **100% learning hook coverage** for all tested agents
-- Test suite now at 90.9% pass rate (40/44 tests)
-
-**System Status: FULLY OPERATIONAL!**
-- 9/9 clean architecture agents working (100% with learning hooks)
-- 8/8 legacy agents working (100% with learning hooks)
-- 4/4 data flow pipelines working
-- 3,609 spider data records
-- 170 registered agents
-- 153 agent executions tracked
+Session 314 completed:
+- Migrated 5 agents to GPT-5 Responses API (11 API calls total)
+- Removed legacy UI badges (S309, NEW ARCH, HOOKS, SHARED)
+- Consolidated agent stats display (Total Agents, Learning Events, Memories, Knowledge)
+- Handoff: `docs/handoffs/SESSION_314_GPT5_API_MIGRATION.md`
 
 ---
 
-## What's Working
+## Session 315 Goal: End-to-End Testing
 
-### Learning Infrastructure (Session 305-311)
-All agents now have learning hooks:
-- `_share_knowledge()` - Cross-agent knowledge sharing
-- `_create_execution_memory()` - Execution memory creation
-- `_get_shared_knowledge()` - Knowledge retrieval from other agents
-- `learning_loop` - XP and pattern learning
-
-### Test Suite Results
-```
-COMPREHENSIVE AGENT TEST RESULTS
-├── Spider Network: 74 spiders, 3,609 data records
-├── Clean Architecture Agents: 18/18 (100%)
-├── Legacy Agents: 16/16 (100%)
-├── Data Flow: 4/4 (100%)
-└── OVERALL: 90.9% pass rate (40/44)
-```
-
-### Core Platform
-- AI content creation (images, videos, audio, 3D)
-- Spider network (74 spiders, 24 real data sources)
-- Workflow orchestration (6 workflows)
-- Business research agents (no API credits needed!)
-- Unified Intelligence Search
-- Time Travel Debugging
-- Learning Infrastructure (COMPLETE!)
+Test all 27 connected agents through the chat UI to verify:
+1. Each agent can be triggered via natural language
+2. GPT-5 Responses API calls work correctly
+3. Results display properly in the UI
+4. Error handling works as expected
 
 ---
 
-## Session 311 Changes
+## Test Plan
 
-1. **CreativeDirectorAgent Learning Hooks** - Added `CreativeDirectorLearningMixin` with all learning methods
-2. **100% Agent Coverage** - All 17 tested agents now have learning hooks
-3. **Updated Test Suite** - Verifies learning hook presence
+### Phase 1: Creative Agents (7 tools)
+| Tool | Test Prompt |
+|------|-------------|
+| `image_generation_agent` | "Create a logo for a tech startup" |
+| `image_editing_agent` | "Upscale image 5" |
+| `video_generation_agent` | "Generate a 5 second video of a sunset" |
+| `audio_generation_agent` | "Create a voiceover saying welcome" |
+| `three_d_generation_agent` | "Generate a 3D model of a coffee cup" |
+| `video_editing_agent` | "Add color grading to video 3" |
+| `character_training_agent` | "Train a character model" |
 
----
+### Phase 2: Research Agents (4 tools)
+| Tool | Test Prompt |
+|------|-------------|
+| `web_search` | "What's trending in AI?" |
+| `competitor_analysis_agent` | "Analyze competitors for AI content tools" |
+| `customer_research_agent` | "Research customer personas for SaaS" |
+| `trend_analysis_agent` | "What are the latest design trends?" |
 
-## Platform Stats (Post-Session 311)
+### Phase 3: Strategy Agents (5 tools)
+| Tool | Test Prompt |
+|------|-------------|
+| `brand_identity_agent` | "Create brand guidelines for a fintech" |
+| `content_strategy_agent` | "Plan content strategy for Q1" |
+| `seo_optimizer_agent` | "Optimize SEO for my blog post" |
+| `social_media_agent` | "Create social media posts for product launch" |
+| `creative_director_agent` | "Review my prompt for a marketing video" |
 
-```
-CODEBASE HEALTH
-├── Test Suite: 90.9% (40/44 tests passing)
-├── Learning Hook Coverage: 100% (all tested agents)
-├── Frontend: 22,605 lines (60% smaller)
-├── Spiders: 74/74 working (100%)
-├── Spider Data: 3,609 entries
-├── Agents: 9 clean + 8 legacy tested (17 verified)
-├── Agent Executions: 153 tracked
-├── Agent Memories: 5 records
-├── Knowledge Sources: 11 records
-├── Learning Infrastructure: FULLY OPERATIONAL!
-├── Workflow Engine: FULLY WORKING!
-├── DaVinci Bridge: FULLY WORKING!
-└── Direct API: Create Project bypasses GPT (instant!)
-```
+### Phase 4: Executive Agents (6 tools) - GPT-5 API Updated
+| Tool | Test Prompt |
+|------|-------------|
+| `cto_agent` | "Analyze the image generation feature architecture" |
+| `coo_agent` | "Propose the next sprint for AI features" |
+| `meeting_coordinator_agent` | "Start a meeting about platform scaling" |
+| `opportunity_scoring_agent` | "Score spider data for opportunities" |
+| `trained_creation_agent` | "Generate image with trained character model" |
 
----
+### Phase 5: Content Agents (2 tools) - GPT-5 API Updated
+| Tool | Test Prompt |
+|------|-------------|
+| `content_executor_agent` | "Create a professional blog post about AI trends" |
+| `ai_project_builder_agent` | "Build an AI content generator project" |
 
-## Session 312 Options
-
-Choose what to work on:
-
-### Option A: End-to-End System Test
-- Test complete user workflow from spider data to content creation
-- Verify learning hooks are recording data
-- Test cross-agent knowledge sharing
-
-### Option B: Spider Network Enhancement
-- Schedule fresh spider data collection
-- Add more spider data sources
-- Improve spider-to-agent data flow
-
-### Option C: Platform Enhancement
-- Add learning analytics dashboard
-- Optimize agent collaboration patterns
-- Continue Super Platform Unification
-
-### Option D: User Request
-- What would you like to work on?
+### Phase 6: Workflow Agents (3 tools)
+| Tool | Test Prompt |
+|------|-------------|
+| `workflow_orchestration_agent` | "Create a brand package for my startup" |
+| `create_brand_video` | "Create a brand video for product launch" |
+| `coleadership_agent` | "Get leadership guidance on strategy" |
+| `talking_character_agent` | "Create a talking character video" |
 
 ---
 
@@ -110,35 +85,50 @@ Choose what to work on:
 
 ```bash
 # Start the platform
-make start
-make celery
+make start && make celery
 
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Run comprehensive agent test suite
-.venv/bin/python test_all_agents.py
-
-# Check agent stats
+# Check tool count
 .venv/bin/python manage.py shell -c "
-from core.models_unified_system import AgentKnowledgeSource, AgentMemory, Agent
-print(f'Agents: {Agent.objects.filter(is_active=True).count()}')
-print(f'Knowledge: {AgentKnowledgeSource.objects.count()}')
-print(f'Memory: {AgentMemory.objects.count()}')
+from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+from django.contrib.auth import get_user_model
+assistant = EnhancedPersonalAIAssistant(get_user_model().objects.first())
+print(f'Total tools: {len(assistant.get_tool_definitions())}')
 "
+# Expected: Total tools: 27
 ```
 
 ---
 
-## Services Status
+## Current Status: 27 Tools Connected
 
-| Service | Port | Command |
-|---------|------|---------|
-| Django/Daphne | 8000 | `make start` |
-| Redis | 6379 | (started by make start) |
-| Celery Worker | - | `make celery` |
-| Celery Beat | - | `make celery` |
-| DaVinci Bridge | 9090 | `make davinci-bridge` |
+| Category | Count | Tools |
+|----------|-------|-------|
+| Creative | 9 | image, video, audio, 3D, editing, character, talking |
+| Research | 4 | web search, competitor, customer, trends |
+| Strategy | 5 | brand, content, SEO, social, creative director |
+| Executive | 6 | CTO, COO, meeting, opportunity, trained creation |
+| Content | 2 | content executor, AI project builder |
+| Workflow | 1 | workflow orchestration |
+
+---
+
+## GPT-5 API Reference
+
+Agents now use the Responses API:
+
+```python
+response = client.responses.create(
+    model="gpt-5-mini",
+    input="system prompt\n\nuser prompt",
+    reasoning={"effort": "high"},      # minimal, low, medium, high
+    text={"verbosity": "medium"},       # low, medium, high
+    max_output_tokens=4000
+)
+result = response.output_text
+```
 
 ---
 
@@ -146,10 +136,21 @@ print(f'Memory: {AgentMemory.objects.count()}')
 
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_311_CREATIVE_DIRECTOR_LEARNING_HOOKS.md` | Session 311 details |
-| `test_all_agents.py` | Comprehensive test suite |
+| `docs/handoffs/SESSION_314_GPT5_API_MIGRATION.md` | Session 314 details |
+| `docs/handoffs/SESSION_313_AGENT_CONNECTION_EXPANSION.md` | Agent connection details |
+| `docs/architecture/GPT5_REASONING_MODELS_GUIDE.md` | GPT-5 API reference |
 | `CLAUDE.md` | Full system context |
 
 ---
 
-**Read `CLAUDE.md` for full system context, then choose what to work on!**
+## Success Criteria for Session 315
+
+- [ ] All 27 agents respond to natural language prompts
+- [ ] No API errors from GPT-5 Responses API
+- [ ] Results display correctly in chat UI
+- [ ] Error messages are user-friendly
+- [ ] Agent count displays as 27 in dashboard
+
+---
+
+**Status:** Ready for end-to-end testing. All agents migrated to GPT-5 Responses API.

@@ -1049,6 +1049,14 @@ class CollectiveIntelligenceService:
                 avg=Avg('quality_score')
             )['avg'] or 0
 
+            # Session 313: Count connected tools (agents accessible via chat)
+            try:
+                from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+                assistant = EnhancedPersonalAIAssistant(self.user)
+                connected_tools = len(assistant.get_tool_definitions())
+            except Exception:
+                connected_tools = 27  # Default to known count from Session 313
+
             # Spider connection stats (Session 242) - graceful fallback if table missing
             try:
                 spider_connections = AgentSpiderConnection.objects.count()
@@ -1114,7 +1122,9 @@ class CollectiveIntelligenceService:
                     'avg_effectiveness': avg_effectiveness
                 },
                 'agents': {
-                    'total': total_agents,
+                    'total': connected_tools,  # Session 313: Show connected tools (27) as primary count
+                    'connected_tools': connected_tools,  # Session 313: Explicitly show connected count
+                    'database_agents': total_agents,  # Session 313: Keep database count for reference
                     'avg_quality_score': avg_quality,
                     'spider_connections': spider_connections,  # Session 242
                     'learning_connections': learning_connections  # Session 243

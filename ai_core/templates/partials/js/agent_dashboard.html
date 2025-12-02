@@ -4168,16 +4168,16 @@
                 const data = await response.json();
 
                 if (data.success && data.stats) {
-                    // Update Session 309 cards
+                    // Update Agent Stats cards
+                    const totalEl = document.getElementById('agent-total-count');
+                    const learningEl = document.getElementById('agent-learning-count');
                     const memoryEl = document.getElementById('agent-memory-count');
                     const knowledgeEl = document.getElementById('agent-knowledge-sources');
-                    const cleanEl = document.getElementById('agent-clean-count');
-                    const deprecatedEl = document.getElementById('agent-deprecated-count');
 
+                    if (totalEl) totalEl.textContent = data.stats.agents?.total || data.stats.agents?.connected_tools || 27;
+                    if (learningEl) learningEl.textContent = data.stats.learning_events || 0;
                     if (memoryEl) memoryEl.textContent = data.stats.agent_memories || 0;
                     if (knowledgeEl) knowledgeEl.textContent = data.stats.knowledge_sources || 0;
-                    if (cleanEl) cleanEl.textContent = data.stats.clean_agents || 11;
-                    if (deprecatedEl) deprecatedEl.textContent = data.stats.deprecated_agents || 14;
                 }
             } catch (err) {
                 console.debug('Session 309 stats not available:', err);
