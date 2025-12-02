@@ -63,32 +63,34 @@ Your ONLY job is to research potential customers and build personas. You do NOT 
 You have these tools:
 - refresh_spider_data: Trigger fresh data collection (use FIRST for up-to-date intel)
 - get_prior_research: Retrieve past research to build on existing knowledge
-- spider_query: Query Reddit (20+ subreddits), HackerNews, and forums for customer discussions
+- spider_query: Query cached spider data (15 subreddits, HackerNews, forums)
+- reddit_search: Search ANY Reddit subreddit in real-time (use for specific communities!)
 - web_search: Search for customer reviews, testimonials, and feedback
 - analyze_pain_points: Extract pain points from gathered discussions
 - build_persona: Build detailed customer persona from research
 
-IMPORTANT - Session 303 Intelligence Integration:
-1. ALWAYS start with get_prior_research to check for existing analysis
-2. Use refresh_spider_data to ensure fresh community discussions
-3. Then proceed with spider_query and web_search
-4. Build on past research rather than starting from scratch
+IMPORTANT - Dynamic Reddit Search (Session 312):
+The spider_query tool only caches 15 subreddits. Use reddit_search for:
+- Industry-specific subreddits: r/podcasting, r/coffee, r/fitness, r/photography
+- Business subreddits: r/smallbusiness, r/SaaS, r/marketing, r/ecommerce
+- Niche communities: r/solotravel, r/homebrewing, r/woodworking
+- You can combine subreddits: "smallbusiness+Entrepreneur+startups"
 
 When given a customer research task:
-1. Check for prior research on this market/topic
-2. Refresh spider data for latest community discussions
-3. Identify the target market from the user's description
-4. Search Reddit for discussions about the problem/need
-5. Search for reviews of existing solutions
-6. Extract common pain points and desires
-7. Build 2-3 customer personas
+1. Check for prior research on this market/topic (get_prior_research)
+2. Refresh spider data for cached sources (refresh_spider_data)
+3. Use spider_query for broad cached community data
+4. Use reddit_search for specific industry subreddits NOT in cache
+5. Use web_search for reviews of existing solutions
+6. Extract pain points and desires (analyze_pain_points)
+7. Build 2-3 customer personas (build_persona)
 
-Reddit subreddits to consider:
-- r/Entrepreneur, r/startups, r/smallbusiness for business ideas
-- r/SaaS, r/webdev, r/programming for tech products
-- r/marketing, r/socialmedia for marketing tools
-- r/productivity, r/getdisciplined for productivity tools
-- Industry-specific subreddits based on the market
+Example subreddit choices by market:
+- Podcast tools: reddit_search in "podcasting+podcasts+audioengineering"
+- Coffee products: reddit_search in "coffee+barista+espresso"
+- SaaS products: reddit_search in "SaaS+startups+indiehackers"
+- Fitness apps: reddit_search in "fitness+running+bodybuilding"
+- Productivity: reddit_search in "productivity+getdisciplined+ADHD"
 
 Output Format:
 Return structured research with:
@@ -298,6 +300,45 @@ If asked to create content, explain you can only research and suggest using the 
                         }
                     },
                     "required": ["market_topic"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "reddit_search",
+                "description": "Search ANY Reddit subreddit in real-time for customer discussions. Use this for specific communities not covered by spider_query (which only caches 15 subreddits). Examples: r/smallbusiness, r/SaaS, r/podcasting, r/coffee, or any industry-specific subreddit.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (e.g., 'podcast hosting frustrated', 'need better invoicing')"
+                        },
+                        "subreddits": {
+                            "type": "string",
+                            "description": "Subreddit(s) to search, joined with +. Examples: 'podcasting', 'smallbusiness+Entrepreneur', 'SaaS+startups+indiehackers'. Use 'all' to search all of Reddit.",
+                            "default": "all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 25
+                        },
+                        "sort": {
+                            "type": "string",
+                            "description": "Sort order for results",
+                            "enum": ["relevance", "hot", "top", "new"],
+                            "default": "relevance"
+                        },
+                        "time_filter": {
+                            "type": "string",
+                            "description": "Time period to search within",
+                            "enum": ["hour", "day", "week", "month", "year", "all"],
+                            "default": "month"
+                        }
+                    },
+                    "required": ["query"]
                 }
             }
         }
@@ -753,6 +794,16 @@ Return comprehensive customer research with personas and pain points."""
                     'error': f"Prior research lookup failed: {str(e)}"
                 }
 
+        elif tool_name == "reddit_search":
+            # Session 312: Dynamic Reddit search for ANY subreddit
+            return self._reddit_dynamic_search(
+                query=arguments.get('query', ''),
+                subreddits=arguments.get('subreddits', 'all'),
+                limit=arguments.get('limit', 25),
+                sort=arguments.get('sort', 'relevance'),
+                time_filter=arguments.get('time_filter', 'month')
+            )
+
         else:
             return {
                 'success': False,
@@ -1172,4 +1223,173 @@ Be specific and reference actual data points. This analysis will be used for pro
                 'customer_quotes': all_quotes[:10],
                 'data_sources': len(all_data),
                 'error': str(e)
+            }
+
+    def _reddit_dynamic_search(
+        self,
+        query: str,
+        subreddits: str = 'all',
+        limit: int = 25,
+        sort: str = 'relevance',
+        time_filter: str = 'month'
+    ) -> Dict[str, Any]:
+        """
+        Session 312: Dynamic Reddit search for ANY subreddit.
+
+        First tries the registered RedditSearchTool (requires API credentials).
+        Falls back to public JSON endpoint if credentials aren't configured.
+
+        Args:
+            query: Search query
+            subreddits: Subreddit(s) to search, joined with +
+            limit: Max results
+            sort: Sort order (relevance, hot, top, new)
+            time_filter: Time period (hour, day, week, month, year, all)
+
+        Returns:
+            Dict with success status and search results
+        """
+        try:
+            # Try the registered RedditSearchTool first (uses PRAW with full API)
+            from core.tools import ToolRegistry
+            reddit_tool = ToolRegistry.get_tool('reddit_api')
+
+            if reddit_tool and reddit_tool.is_configured:
+                logger.info(f"Using RedditSearchTool for: {query} in r/{subreddits}")
+                result = reddit_tool.execute(
+                    query=query,
+                    search_type='posts',
+                    subreddit=subreddits,
+                    limit=limit,
+                    sort=sort,
+                    time_filter=time_filter
+                )
+
+                if result.get('success'):
+                    # Store discussions for later pain point analysis
+                    for post in result.get('data', {}).get('results', []):
+                        self._gathered_discussions.append(
+                            f"[r/{post.get('subreddit', '')}] {post.get('title', '')} - {post.get('selftext', '')[:200]}"
+                        )
+                    return result
+
+            # Fallback: Use public JSON endpoint (no auth required)
+            logger.info(f"Using public Reddit JSON for: {query} in r/{subreddits}")
+            return self._reddit_public_json_search(query, subreddits, limit)
+
+        except Exception as e:
+            logger.error(f"Reddit dynamic search failed: {e}")
+            return {
+                'success': False,
+                'error': f"Reddit search failed: {str(e)}"
+            }
+
+    def _reddit_public_json_search(
+        self,
+        query: str,
+        subreddits: str = 'all',
+        limit: int = 25
+    ) -> Dict[str, Any]:
+        """
+        Session 312: Fallback Reddit search using public JSON endpoints.
+
+        Works without API credentials - uses reddit.com's public JSON API.
+        Rate limited but functional for research purposes.
+
+        Args:
+            query: Search query
+            subreddits: Subreddit(s) to search
+            limit: Max results
+
+        Returns:
+            Dict with success status and search results
+        """
+        import requests
+        from datetime import datetime
+
+        try:
+            headers = {
+                'User-Agent': 'DonkeyBetz-CustomerResearch/1.0 (AI Content Studio; Educational Research)'
+            }
+
+            # Build search URL
+            url = f"https://www.reddit.com/r/{subreddits}/search.json"
+            params = {
+                'q': query,
+                'limit': min(limit, 100),  # Reddit caps at 100
+                'restrict_sr': 'true' if subreddits != 'all' else 'false',
+                'sort': 'relevance',
+                't': 'month'  # Time filter
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=15)
+
+            if response.status_code == 200:
+                data = response.json()
+                posts = data.get('data', {}).get('children', [])
+
+                results = []
+                for post in posts:
+                    post_data = post.get('data', {})
+                    title = post_data.get('title', '')
+                    selftext = post_data.get('selftext', '')[:500]
+                    subreddit_name = post_data.get('subreddit', '')
+
+                    results.append({
+                        'id': post_data.get('id', ''),
+                        'title': title,
+                        'selftext': selftext,
+                        'subreddit': subreddit_name,
+                        'url': f"https://reddit.com{post_data.get('permalink', '')}",
+                        'score': post_data.get('score', 0),
+                        'num_comments': post_data.get('num_comments', 0),
+                        'created_utc': datetime.fromtimestamp(
+                            post_data.get('created_utc', 0)
+                        ).isoformat() if post_data.get('created_utc') else None,
+                        'author': post_data.get('author', '[deleted]'),
+                        'upvote_ratio': post_data.get('upvote_ratio', 0),
+                    })
+
+                    # Store for pain point analysis
+                    self._gathered_discussions.append(
+                        f"[r/{subreddit_name}] {title} - {selftext[:200]}"
+                    )
+
+                logger.info(f"Public Reddit search returned {len(results)} results for '{query}' in r/{subreddits}")
+
+                return {
+                    'success': True,
+                    'data': {
+                        'query': query,
+                        'subreddit': subreddits,
+                        'results': results,
+                        'total_results': len(results),
+                        'source': 'reddit_public_json',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                }
+
+            elif response.status_code == 429:
+                logger.warning("Reddit rate limit hit, returning empty results")
+                return {
+                    'success': False,
+                    'error': "Reddit rate limit reached. Try again in a few minutes."
+                }
+            else:
+                logger.warning(f"Reddit returned status {response.status_code}")
+                return {
+                    'success': False,
+                    'error': f"Reddit returned status {response.status_code}"
+                }
+
+        except requests.Timeout:
+            return {
+                'success': False,
+                'error': "Reddit search timed out"
+            }
+        except Exception as e:
+            logger.error(f"Public Reddit JSON search failed: {e}")
+            return {
+                'success': False,
+                'error': f"Reddit search failed: {str(e)}"
             }

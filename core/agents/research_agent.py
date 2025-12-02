@@ -50,7 +50,8 @@ class ResearchAgent(BaseAgent):
 Your ONLY job is to research topics and gather information. You do NOT create content.
 You have these tools:
 - web_search: Search the web for current information
-- spider_query: Query the spider network (70 spiders, 24 data sources)
+- spider_query: Query cached spider data (70 spiders, but only 15 Reddit subreddits)
+- reddit_search: Search ANY Reddit subreddit in real-time (use for specific communities!)
 - analyze_trends: Analyze trending topics from spider data
 
 Spider network categories:
@@ -58,13 +59,20 @@ Spider network categories:
 - Jobs: RemoteOK, WeWorkRemotely, Adzuna
 - Financial: CoinGecko, Yahoo Finance
 - Creative: Dribbble, Behance, Unsplash
-- Community: Reddit (20+ subreddits)
+- Community: Reddit (15 cached subreddits)
+
+Dynamic Reddit Search (Session 312):
+Use reddit_search for specific communities not in spider cache:
+- Combine subreddits with +: "python+learnpython+django"
+- Industry subreddits: r/podcasting, r/coffee, r/photography
+- Technical subs: r/reactjs, r/golang, r/rust
 
 When given a research task:
-1. Decide whether to use web search, spider query, or both
+1. Decide whether to use web search, spider query, reddit_search, or combination
 2. For current events/news, prefer web_search
 3. For trends/opportunities, prefer spider_query
-4. Synthesize findings into a clear summary
+4. For specific Reddit communities, use reddit_search
+5. Synthesize findings into a clear summary
 
 You CANNOT create images, videos, audio, or edit anything. Only research.
 If asked to create content, explain you can only research and suggest using the appropriate agent."""
@@ -164,6 +172,45 @@ If asked to create content, explain you can only research and suggest using the 
                             "default": 10
                         }
                     }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "reddit_search",
+                "description": "Search ANY Reddit subreddit in real-time. Use for specific communities not cached by spider_query. Supports combining subreddits with + (e.g., 'python+django+flask').",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "subreddits": {
+                            "type": "string",
+                            "description": "Subreddit(s) to search, joined with +. Use 'all' for all of Reddit.",
+                            "default": "all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 25
+                        },
+                        "sort": {
+                            "type": "string",
+                            "description": "Sort order",
+                            "enum": ["relevance", "hot", "top", "new"],
+                            "default": "relevance"
+                        },
+                        "time_filter": {
+                            "type": "string",
+                            "description": "Time period to search",
+                            "enum": ["hour", "day", "week", "month", "year", "all"],
+                            "default": "month"
+                        }
+                    },
+                    "required": ["query"]
                 }
             }
         }
@@ -426,8 +473,148 @@ If asked to create content, explain you can only research and suggest using the 
                     'error': f"Trend analysis failed: {str(e)}"
                 }
 
+        elif tool_name == "reddit_search":
+            # Session 312: Dynamic Reddit search for ANY subreddit
+            return self._reddit_dynamic_search(
+                query=arguments.get('query', ''),
+                subreddits=arguments.get('subreddits', 'all'),
+                limit=arguments.get('limit', 25),
+                sort=arguments.get('sort', 'relevance'),
+                time_filter=arguments.get('time_filter', 'month')
+            )
+
         else:
             return {
                 'success': False,
                 'error': f"Unknown tool: {tool_name}. ResearchAgent only supports research tools."
+            }
+
+    def _reddit_dynamic_search(
+        self,
+        query: str,
+        subreddits: str = 'all',
+        limit: int = 25,
+        sort: str = 'relevance',
+        time_filter: str = 'month'
+    ) -> Dict[str, Any]:
+        """
+        Session 312: Dynamic Reddit search for ANY subreddit.
+
+        First tries the registered RedditSearchTool (requires API credentials).
+        Falls back to public JSON endpoint if credentials aren't configured.
+        """
+        try:
+            # Try the registered RedditSearchTool first (uses PRAW with full API)
+            from core.tools import ToolRegistry
+            reddit_tool = ToolRegistry.get_tool('reddit_api')
+
+            if reddit_tool and reddit_tool.is_configured:
+                logger.info(f"Using RedditSearchTool for: {query} in r/{subreddits}")
+                result = reddit_tool.execute(
+                    query=query,
+                    search_type='posts',
+                    subreddit=subreddits,
+                    limit=limit,
+                    sort=sort,
+                    time_filter=time_filter
+                )
+                if result.get('success'):
+                    return result
+
+            # Fallback: Use public JSON endpoint (no auth required)
+            logger.info(f"Using public Reddit JSON for: {query} in r/{subreddits}")
+            return self._reddit_public_json_search(query, subreddits, limit)
+
+        except Exception as e:
+            logger.error(f"Reddit dynamic search failed: {e}")
+            return {
+                'success': False,
+                'error': f"Reddit search failed: {str(e)}"
+            }
+
+    def _reddit_public_json_search(
+        self,
+        query: str,
+        subreddits: str = 'all',
+        limit: int = 25
+    ) -> Dict[str, Any]:
+        """
+        Session 312: Fallback Reddit search using public JSON endpoints.
+        Works without API credentials.
+        """
+        import requests
+        from datetime import datetime
+
+        try:
+            headers = {
+                'User-Agent': 'DonkeyBetz-Research/1.0 (AI Content Studio; Educational Research)'
+            }
+
+            url = f"https://www.reddit.com/r/{subreddits}/search.json"
+            params = {
+                'q': query,
+                'limit': min(limit, 100),
+                'restrict_sr': 'true' if subreddits != 'all' else 'false',
+                'sort': 'relevance',
+                't': 'month'
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=15)
+
+            if response.status_code == 200:
+                data = response.json()
+                posts = data.get('data', {}).get('children', [])
+
+                results = []
+                for post in posts:
+                    post_data = post.get('data', {})
+                    results.append({
+                        'id': post_data.get('id', ''),
+                        'title': post_data.get('title', ''),
+                        'selftext': post_data.get('selftext', '')[:500],
+                        'subreddit': post_data.get('subreddit', ''),
+                        'url': f"https://reddit.com{post_data.get('permalink', '')}",
+                        'score': post_data.get('score', 0),
+                        'num_comments': post_data.get('num_comments', 0),
+                        'created_utc': datetime.fromtimestamp(
+                            post_data.get('created_utc', 0)
+                        ).isoformat() if post_data.get('created_utc') else None,
+                        'author': post_data.get('author', '[deleted]'),
+                    })
+
+                logger.info(f"Public Reddit search returned {len(results)} results")
+
+                return {
+                    'success': True,
+                    'data': {
+                        'query': query,
+                        'subreddit': subreddits,
+                        'results': results,
+                        'total_results': len(results),
+                        'source': 'reddit_public_json',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                }
+
+            elif response.status_code == 429:
+                return {
+                    'success': False,
+                    'error': "Reddit rate limit reached. Try again in a few minutes."
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f"Reddit returned status {response.status_code}"
+                }
+
+        except requests.Timeout:
+            return {
+                'success': False,
+                'error': "Reddit search timed out"
+            }
+        except Exception as e:
+            logger.error(f"Public Reddit JSON search failed: {e}")
+            return {
+                'success': False,
+                'error': f"Reddit search failed: {str(e)}"
             }
