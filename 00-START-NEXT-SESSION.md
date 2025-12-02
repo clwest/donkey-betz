@@ -1,87 +1,94 @@
-# Session 305: Next Steps
+# Session 306: Next Steps
 
 **Date:** December 1, 2025
-**Previous Session:** 304 (Learning Infrastructure Connected to ALL 11 Clean Agents)
+**Previous Session:** 305 (AudioHistory Model Created)
 **Session Type:** Implementation
-**Status:** ALL 6 HANDOFFS COMPLETE + LEARNING INFRASTRUCTURE FULLY CONNECTED
+**Status:** ALL 6 HANDOFFS COMPLETE + LEARNING INFRASTRUCTURE FULLY CONNECTED + AudioHistory Model
 
 ---
 
-## SESSION 304 COMPLETE SUMMARY
+## SESSION 305 COMPLETE SUMMARY
 
-### Learning Infrastructure Audit & Full Connection
+### AudioHistory Model Created
 
-**Problem Found:**
-All learning services existed but agents NEVER called them! Empty tables:
-- AgentKnowledgeSource: 0 records (agents don't write knowledge)
-- AgentMemory: 0 records (no memories being created)
-- AgentEvolution: 0 records (no XP being tracked)
-- AgentContribution: 0 records (not being written despite code existing!)
+**Problem from Session 303 Audit:**
+Missing database model for tracking audio generation. ImageHistory and VideoHistory existed, but AudioHistory was missing.
 
 **Solution Implemented:**
-Added learning hooks to `BaseAgent` that all agents inherit, then wired ALL 11 clean agents to use them.
+Created `AudioHistory` model in `content/models.py` following the same patterns as `ImageHistory` and `VideoHistory`.
 
-### All 11 Clean Agents Now Have Learning
+### AudioHistory Model Features
 
-| Agent | Status | Knowledge Type |
-|-------|--------|----------------|
-| ImageAgent | ✅ | technique (styles) |
-| VideoAgent | ✅ | technique (motion) |
-| AudioAgent | ✅ | technique (voices) |
-| ThreeDAgent | ✅ | technique (formats) |
-| ResearchAgent | ✅ | trend (search patterns) |
-| ImageEditingAgent | ✅ | technique (tools) |
-| VideoEditingAgent | ✅ | technique (tools) |
-| WorkflowAgent | ✅ | technique (workflows) |
-| CompetitorAnalysisAgent | ✅ | market (analysis) |
-| CustomerResearchAgent | ✅ | user_behavior (insights) |
+| Field | Type | Purpose |
+|-------|------|---------|
+| user | ForeignKey | User who created the audio |
+| project | ForeignKey | Optional project link |
+| session | ForeignKey | AI session that created the audio |
+| agent | ForeignKey | Agent that generated (if applicable) |
+| filename | CharField | Stored filename |
+| file_path | TextField | Full path to audio file |
+| audio_type | CharField | tts, voice_clone, sfx, voice_design, audio_isolation |
+| prompt | TextField | Text/prompt used for generation |
+| parameters | JSONField | Complete parameters (voice, model, settings) |
+| voice_id | CharField | ElevenLabs voice ID |
+| voice_name | CharField | Human-readable voice name |
+| model_used | CharField | ElevenLabs model variant |
+| duration_seconds | FloatField | Audio duration |
+| file_size_bytes | PositiveIntegerField | File size |
+| sample_rate | PositiveIntegerField | Audio sample rate in Hz |
+| status | CharField | pending, processing, completed, failed |
+| error_message | TextField | Error message if failed |
+| download_count | PositiveIntegerField | Number of downloads |
+| play_count | PositiveIntegerField | Number of plays |
+| is_favorite | BooleanField | User marked as favorite |
+| user_notes | TextField | User's personal notes |
+| tags | JSONField | User-defined tags |
 
-### Learning Hooks Added to BaseAgent
+### Helper Methods
 
-1. **`_record_learning_outcome()`** - Records execution outcome for XP and pattern learning
-2. **`_create_execution_memory()`** - Creates memories from successful/failed interactions
-3. **`_track_contribution()`** - Tracks agent contributions to created content
-4. **`_share_knowledge()`** - Shares learned patterns with other agents
-5. **`_get_shared_knowledge()`** - Retrieves knowledge from other agents
+- `increment_play_count()` - Atomic increment of play counter
+- `increment_download_count()` - Atomic increment of download counter
+- `get_sequential_number()` - Get 1-based sequential number for voice commands
 
 ### Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/agents/base_agent.py` | Added 5 learning hook methods + lazy-loaded services |
-| `core/agents/image_agent.py` | Learning hooks for image generation |
-| `core/agents/video_agent.py` | Learning hooks for video generation |
-| `core/agents/audio_agent.py` | Learning hooks for audio generation |
-| `core/agents/three_d_agent.py` | Learning hooks for 3D generation |
-| `core/agents/research_agent.py` | Learning hooks for research |
-| `core/agents/image_editing_agent.py` | Learning hooks for image editing |
-| `core/agents/video_editing_agent.py` | Learning hooks for video editing |
-| `core/agents/workflow_agent.py` | Learning hooks for workflows |
-| `core/agents/business/competitor_analysis_agent.py` | Learning hooks for competitor research |
-| `core/agents/business/customer_research_agent.py` | Learning hooks for customer research |
+| `content/models.py` | Added AudioHistory model (~200 lines) |
+| `content/migrations/0033_audiohistory.py` | New migration file |
 
 ---
 
 ## NEXT SESSION OPTIONS
 
-### Option A: Create AudioHistory Model (from Session 303)
+### Option A: Wire AudioAgent to Use AudioHistory
+
+Update `core/agents/audio_agent.py` to save generated audio to the new AudioHistory model.
+
 ```python
-# content/models.py
-class AudioHistory(UnifiedBaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    filename = models.CharField(max_length=255)
-    file_path = models.TextField()
-    audio_type = models.CharField(max_length=50)  # tts, voice_clone, sfx
-    prompt = models.TextField(blank=True)
-    voice_id = models.CharField(max_length=100, blank=True)
-    duration_seconds = models.FloatField(null=True)
-    session = models.ForeignKey('AISession', null=True, on_delete=models.SET_NULL)
+# In AudioAgent execute():
+from content.models import AudioHistory
+
+audio_record = AudioHistory.objects.create(
+    user=self.user,
+    session=context.get('session'),
+    filename=result.data.get('filename'),
+    file_path=result.data.get('file_path'),
+    audio_type='tts',  # or 'voice_clone', 'sfx'
+    prompt=task,
+    voice_id=arguments.get('voice_id'),
+    model_used=arguments.get('model'),
+    status='completed',
+)
+self._track_contribution('audio', audio_record.id)
 ```
 
 ### Option B: Add Learning to Legacy Agents
+
 Wire the 22 legacy agents in `agents/` directory to use learning hooks.
 
 ### Option C: User-Requested Feature
+
 Awaiting user direction.
 
 ---
@@ -96,30 +103,31 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Testing Session 304 Changes
+## Testing Session 305 Changes
 
-### Test Learning Hooks Work
+### Test AudioHistory Model
+
 ```python
-from core.agents.image_agent import ImageAgent
-from core.models_unified_system import AgentKnowledgeSource, AgentMemory
+from content.models import AudioHistory
+from django.contrib.auth import get_user_model
 
-# After any agent runs, check learning data:
-print(f"Knowledge: {AgentKnowledgeSource.objects.count()}")
-print(f"Memories: {AgentMemory.objects.count()}")
-```
+User = get_user_model()
+user = User.objects.first()
 
-### Test Cross-Agent Learning
-```python
-from core.agents.research_agent import ResearchAgent
-
-agent = ResearchAgent(user=None)
-
-# Get knowledge from other agents
-knowledge = agent._get_shared_knowledge(
-    knowledge_type='technique',
-    from_agents=['ImageAgent', 'VideoAgent']
+# Create a test audio record
+audio = AudioHistory.objects.create(
+    user=user,
+    filename="test_speech.mp3",
+    file_path="/media/audio/test_speech.mp3",
+    audio_type="tts",
+    prompt="Hello, this is a test",
+    voice_id="pNInz6obpgDQGcFmaJgB",
+    voice_name="Adam",
+    model_used="eleven_multilingual_v2",
+    duration_seconds=3.5,
+    status="completed"
 )
-print(f"Learned from other agents: {knowledge}")
+print(f"Created audio #{audio.get_sequential_number()}")
 ```
 
 ---
@@ -139,6 +147,7 @@ CODEBASE HEALTH
 ├── Unified Intelligence: COMPLETE
 ├── Agent Audit: COMPLETE
 ├── Learning Infrastructure: ALL 11 AGENTS CONNECTED! ✅
+├── AudioHistory Model: CREATED! ✅
 ├── Workflow Engine: FULLY WORKING!
 ├── DaVinci Bridge: FULLY WORKING!
 └── Direct API: Create Project bypasses GPT (instant!)
@@ -173,6 +182,18 @@ CODEBASE HEALTH
 
 ---
 
+## History Models Now Complete
+
+| Model | Location | Purpose |
+|-------|----------|---------|
+| `ImageHistory` | `content/models.py` | AI-generated images |
+| `VideoHistory` | `content/models.py` | AI-generated videos |
+| `AudioHistory` | `content/models.py` | AI-generated audio (NEW!) |
+| `MiniFigAsset` | `content/models.py` | 3D Mini-Fig assets |
+| `WorkflowHistory` | `content/models.py` | Workflow executions |
+
+---
+
 ## Services Status
 
 | Service | Port | Command |
@@ -185,4 +206,4 @@ CODEBASE HEALTH
 
 ---
 
-**Session 304 Complete: Learning Infrastructure Connected to ALL 11 Clean Agents!**
+**Session 305 Complete: AudioHistory Model Created!**

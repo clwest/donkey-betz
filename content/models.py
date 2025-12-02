@@ -2232,6 +2232,211 @@ class VideoHistory(UnifiedBaseModel):
         return earlier_videos + 1
 
 
+class AudioHistory(UnifiedBaseModel):
+    """
+    Track all AI-generated audio for user gallery.
+    Session 305: Created for AudioAgent tracking (TTS, voice clones, SFX)
+    """
+
+    # User identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='audio_history',
+        help_text="User who created this audio"
+    )
+
+    # Link to projects
+    project = models.ForeignKey(
+        'CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_audio',
+        help_text="Optional project this audio belongs to"
+    )
+
+    # Link to AI sessions
+    session = models.ForeignKey(
+        'AISession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='session_audio',
+        help_text="AI session that created this audio"
+    )
+
+    # Track which agent created this audio
+    agent = models.ForeignKey(
+        'agents.UnifiedAgentTemplate',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generated_audio',
+        help_text="Agent that generated this audio (if created by agent)"
+    )
+
+    # Audio identification
+    filename = models.CharField(
+        max_length=255,
+        help_text="Stored filename"
+    )
+
+    file_path = models.TextField(
+        help_text="Full path to audio file in storage"
+    )
+
+    # Audio classification
+    audio_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('tts', 'Text to Speech'),
+            ('voice_clone', 'Voice Clone'),
+            ('sfx', 'Sound Effect'),
+            ('voice_design', 'Voice Design'),
+            ('audio_isolation', 'Audio Isolation'),
+        ],
+        help_text="Type of audio generation"
+    )
+
+    # Generation parameters
+    prompt = models.TextField(
+        blank=True,
+        help_text="Text/prompt used for generation"
+    )
+
+    parameters = models.JSONField(
+        default=dict,
+        help_text="Complete parameters used (voice, model, settings, etc.)"
+    )
+
+    # Voice information
+    voice_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="ElevenLabs voice ID used"
+    )
+
+    voice_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Human-readable voice name"
+    )
+
+    # Model information
+    model_used = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=[
+            ('eleven_multilingual_v2', 'ElevenLabs Multilingual v2'),
+            ('eleven_turbo_v2', 'ElevenLabs Turbo v2'),
+            ('eleven_english_v1', 'ElevenLabs English v1'),
+            ('eleven_monolingual_v1', 'ElevenLabs Monolingual v1'),
+        ],
+        help_text="AI model used for generation"
+    )
+
+    # Audio metadata
+    duration_seconds = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Audio duration in seconds"
+    )
+
+    file_size_bytes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="File size in bytes"
+    )
+
+    sample_rate = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Audio sample rate in Hz"
+    )
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='completed',
+        help_text="Generation status"
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if generation failed"
+    )
+
+    # Usage tracking
+    download_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times downloaded"
+    )
+
+    play_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times played"
+    )
+
+    is_favorite = models.BooleanField(
+        default=False,
+        help_text="User marked as favorite"
+    )
+
+    # User notes
+    user_notes = models.TextField(
+        blank=True,
+        help_text="User's personal notes about this audio"
+    )
+
+    tags = models.JSONField(
+        default=list,
+        help_text="User-defined tags for organization"
+    )
+
+    class Meta:
+        verbose_name = "Audio History"
+        verbose_name_plural = "Audio History"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['audio_type']),
+            models.Index(fields=['model_used']),
+            models.Index(fields=['status']),
+            models.Index(fields=['is_favorite']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.audio_type} - {self.filename}"
+
+    def increment_play_count(self):
+        """Increment play counter using atomic F() expression"""
+        AudioHistory.objects.filter(pk=self.pk).update(play_count=F('play_count') + 1)
+        self.refresh_from_db(fields=['play_count'])
+
+    def increment_download_count(self):
+        """Increment download counter using atomic F() expression"""
+        AudioHistory.objects.filter(pk=self.pk).update(download_count=F('download_count') + 1)
+        self.refresh_from_db(fields=['download_count'])
+
+    def get_sequential_number(self):
+        """
+        Get sequential number for this audio (per user, chronological)
+        Returns 1-based sequential number for easy voice commands
+        """
+        earlier_audio = AudioHistory.objects.filter(
+            user=self.user,
+            created_at__lt=self.created_at
+        ).count()
+        return earlier_audio + 1
+
+
 class MiniFigAsset(UnifiedBaseModel):
     """
     Track 3D Mini-Fig assets created from AI-generated images
