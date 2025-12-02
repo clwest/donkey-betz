@@ -260,7 +260,8 @@ class RateLimitMiddleware:
             # 100 requests per minute for anonymous users
             current = cache.get(cache_key, 0)
             if current >= 100:
-                ttl = cache.ttl(cache_key)
+                # Django's cache doesn't have ttl(), use 60 seconds as default
+                ttl = 60
                 return JsonResponse({
                     'success': False,
                     'error': {
