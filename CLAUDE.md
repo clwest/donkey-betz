@@ -1,12 +1,13 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 1, 2025 - Session 300 (Cumulative Intelligence Pipeline Fix - Context Chaining)
+**Last Updated:** December 1, 2025 - Session 303 (Database Audit + Unified Intelligence)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
-**Spider Network:** 70 spiders | 20 categories | 24 real data sources | **Topic Filtering (ai/web/security/cloud/design)!**
+**Spider Network:** 74 spiders | 20 categories | 24 real data sources | **Topic Filtering (ai/web/security/cloud/design)!**
 **Agent Ecosystem:** 24 clean agents (including 2 Business Research) + 22 legacy | Time Travel Debugging | Real-time conversations
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
+**Unified Intelligence:** SpiderData + BusinessResearchResult combined search with auto-refresh!
 
 ---
 
@@ -244,9 +245,11 @@ Central location for ALL prompts: `core/prompts/`
 - `core/super_platform/context_aggregator.py` - Multi-source context
 
 ### Spider Network
-- `ai_core/spiders/spider_registry.py` - Central spider registry (70 spiders)
+- `ai_core/spiders/spider_registry.py` - Central spider registry (74 spiders)
 - `ai_core/spiders/specialized/` - Individual spider implementations
 - `core/services/spider_intelligence.py` - Spider Intelligence Service
+- `core/services/spider_semantic_search.py` - Semantic search across spider data
+- `core/services/unified_intelligence_search.py` - **Session 303: Unified search (spiders + research)**
 
 ### Frontend
 - `ai_core/templates/ai_image_studio.html` - Main UI (~55k lines)
@@ -355,6 +358,9 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 303:** Database Audit + Unified Intelligence - Comprehensive audit of all database models and agent relationships. Created `UnifiedIntelligenceSearch` service that combines SpiderData + BusinessResearchResult into one searchable index. Added auto-refresh spiders before business research and 2 new tools (`refresh_spider_data`, `get_prior_research`) to both business agents. Handoff: `docs/handoffs/SESSION_303_DATABASE_RELATIONSHIP_AUDIT.md`
+- **Session 302:** Direct API + Project Context Awareness - Created direct REST API endpoint (`POST /api/projects/from-research/`) that bypasses GPT for instant project creation (~1-2 seconds vs 178+ seconds). Added `project_id` parameter to business research agents so they automatically enhance vague requests with project context. Handoff: `docs/handoffs/SESSION_302_PROJECT_CONTEXT_AND_DIRECT_API.md`
+- **Session 301:** Create Project Button Fix - Changed button messaging from "Create a project for..." to "Organize our research..." to prevent WorkflowAgent mis-routing. Handoff: `docs/handoffs/SESSION_301_CREATE_PROJECT_BUTTON_FIX.md`
 - **Session 300:** Cumulative Intelligence Pipeline Fix - Fixed context chaining between business research agents. Deleted duplicate `formatAnalysisReport` function that was overriding the first one with action buttons. Now "+ Add Customer Research" carries context from prior competitor analysis. Handoff: `docs/handoffs/SESSION_300_CUMULATIVE_INTELLIGENCE_PIPELINE.md`
 - **Session 293:** Competitive Analysis Report UI Fix - Fixed CompetitorAnalysisAgent to display GPT-generated analysis with 6 sections (Market Overview, Competitors, Trends, Opportunities, Threats, Recommendations), fixed gpt-5-mini token allocation (6000 for reasoning models), HTML stripping for RSS feeds, frontend data path fixes. Handoff: `docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md`
 - **Session 293 (earlier):** Workflow Engine + Creative Toolbox + Business Research - Full project creation with intelligence data, fixed Creative Toolbox image selection, added CompetitorAnalysisAgent + CustomerResearchAgent (no Stability AI needed!), 3 new business research workflows
@@ -390,6 +396,26 @@ response = self.client.chat.completions.create(
 - `CustomerResearchAgent` - Personas, pain points, Reddit research
 
 These agents use spider data + GPT analysis only - no image/video API calls needed!
+
+### Unified Intelligence Search (Session 303)
+Business research agents now have cumulative intelligence:
+- **Auto-refresh spiders** at start of analysis for fresh data
+- **Prior research context** automatically injected into prompts
+- **New tools:** `refresh_spider_data`, `get_prior_research`
+
+```python
+from core.services.unified_intelligence_search import get_unified_intelligence_search
+search = get_unified_intelligence_search()
+
+# Search both spider data AND business research
+results = search.unified_search("AI content generation")
+
+# Get context for prompt injection
+context = search.get_research_context("AI tools")
+
+# Trigger fresh spider crawls
+search.refresh_spiders_for_query("market analysis")
+```
 
 ---
 
