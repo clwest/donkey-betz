@@ -14466,10 +14466,35 @@ def _execute_generate_voice(user, parameters, session=None):
 
         logger.info(f"✅ Agent generated voice: {saved_path}")
 
+        # Session 305: Save to AudioHistory
+        from content.models import AudioHistory
+        audio_record = AudioHistory.objects.create(
+            user=user,
+            session=session,
+            filename=filename,
+            file_path=saved_path,
+            audio_type='tts',
+            prompt=text,
+            parameters={
+                'stability': stability,
+                'similarity_boost': similarity_boost,
+                'model_id': 'eleven_monolingual_v1'
+            },
+            voice_id=voice_id,
+            voice_name=voice,
+            model_used='eleven_monolingual_v1',
+            file_size_bytes=len(audio_data),
+            status='completed'
+        )
+
         return {
             'success': True,
             'audio_url': audio_url,
+            'audio_id': audio_record.id,
             'voice': voice,
+            'voice_id': voice_id,
+            'filename': filename,
+            'file_path': saved_path,
             'message': f"Voice generated with {voice}"
         }
 

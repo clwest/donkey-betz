@@ -2853,6 +2853,51 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         else:
             result['summary'] = f"Workflow '{workflow}' failed: {error}"
 
+        # =====================================================================
+        # SESSION 305: Learning Infrastructure Integration
+        # Record workflow outcomes for cross-agent knowledge sharing
+        # =====================================================================
+        try:
+            task = f"Workflow: {workflow} - {context.get('topic', '')}"
+            spider_data_used = bool(context.get('spider_insights') or context.get('spider_trending'))
+
+            # Record learning outcome
+            self._record_learning_outcome(
+                result=result,
+                task=task,
+                context=context,
+                spider_data_used=spider_data_used,
+                scifi_context_used=False
+            )
+
+            # Create memory of this workflow execution
+            memory_type = "success" if success else "failure"
+            self._create_execution_memory(
+                result=result,
+                task=task,
+                memory_type=memory_type,
+                importance=0.8  # Workflows are high-importance
+            )
+
+            # Share workflow knowledge for cross-agent learning
+            if success:
+                agents_used = [s.get('agent', '') for s in step_results]
+                self._share_knowledge(
+                    knowledge_type='workflow',
+                    title=f"Successful workflow: {workflow}",
+                    knowledge_value={
+                        'workflow': workflow,
+                        'topic': context.get('topic', ''),
+                        'agents_used': agents_used,
+                        'steps_completed': result.get('completed_steps', 0),
+                        'images_created': len(context.get('generated_image_ids', [])),
+                        'spider_data_used': spider_data_used,
+                    },
+                    confidence=0.85
+                )
+        except Exception as e:
+            logger.debug(f"Learning hooks failed (non-critical): {e}")
+
         return result
 
 
