@@ -1342,12 +1342,19 @@
                             </span>
                         `).join('');
 
-                        // Update agent grid
+                        // Update agent grid (Session 310: Added personality display)
                         const gridEl = document.getElementById('mood-agents-grid');
-                        gridEl.innerHTML = data.agents.slice(0, 12).map(agent => `
+                        gridEl.innerHTML = data.agents.slice(0, 12).map(agent => {
+                            // Session 310: Build personality badge if available
+                            const personalityBadge = agent.personality
+                                ? `<span class="badge" style="font-size: 0.6rem; background: ${agent.personality.color || '#6366f1'}; position: absolute; top: 4px; right: 4px;" title="${agent.personality.archetype || 'Unknown'}">${agent.personality.type_code || '?'}</span>`
+                                : '';
+
+                            return `
                             <div class="col-md-3 col-sm-4 col-6">
-                                <div class="p-2 rounded text-center" style="background: rgba(245, 158, 11, 0.1); border: 1px solid ${agent.color}; cursor: pointer;"
+                                <div class="p-2 rounded text-center position-relative" style="background: rgba(245, 158, 11, 0.1); border: 1px solid ${agent.color}; cursor: pointer;"
                                      onclick="showAgentMoodDetail('${agent.id}', '${agent.name}')">
+                                    ${personalityBadge}
                                     <div style="font-size: 24px;">${agent.emoji}</div>
                                     <div class="small text-truncate" style="color: ${agent.color};">${agent.name.replace('Agent', '')}</div>
                                     <div class="small text-muted">${agent.current_mood}</div>
@@ -1356,7 +1363,7 @@
                                     </div>
                                 </div>
                             </div>
-                        `).join('');
+                        `}).join('');
 
                         // Populate modal dropdown
                         const modalSelect = document.getElementById('mood-modal-agent');

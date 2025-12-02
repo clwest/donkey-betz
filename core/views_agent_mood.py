@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.db.models import Count, Avg
 
 from .models_unified_system import (
-    Agent, AgentMood, MoodHistory, MoodTriggerRule, AgentMemory
+    Agent, AgentMood, MoodHistory, MoodTriggerRule, AgentMemory, AgentPersonality
 )
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,8 @@ def get_mood_overview(request):
     Overview of all agent moods with statistics.
     """
     try:
-        # Get all agents with their moods
-        agents = Agent.objects.filter(is_active=True).prefetch_related('mood')
+        # Get all agents with their moods and personalities (Session 310)
+        agents = Agent.objects.filter(is_active=True).prefetch_related('mood', 'personality')
 
         agent_moods = []
         mood_distribution = {}
@@ -42,6 +42,20 @@ def get_mood_overview(request):
         for agent in agents:
             try:
                 mood = agent.mood
+
+                # Session 310: Get personality data if available
+                personality_data = None
+                try:
+                    if hasattr(agent, 'personality') and agent.personality:
+                        personality_data = {
+                            'type_code': agent.personality.get_type_code(),
+                            'archetype': agent.personality.archetype,
+                            'emoji': agent.personality.get_personality_emoji(),
+                            'color': agent.personality.get_personality_color(),
+                        }
+                except AgentPersonality.DoesNotExist:
+                    pass
+
                 mood_data = {
                     'id': str(agent.id),
                     'name': agent.name,
@@ -56,6 +70,7 @@ def get_mood_overview(request):
                     'trigger_type': mood.trigger_type,
                     'mood_started_at': mood.mood_started_at.isoformat() if mood.mood_started_at else None,
                     'total_mood_changes': mood.total_mood_changes,
+                    'personality': personality_data,  # Session 310: Add personality
                 }
                 agent_moods.append(mood_data)
 
@@ -65,6 +80,20 @@ def get_mood_overview(request):
             except AgentMood.DoesNotExist:
                 # Create default mood for agent
                 mood = AgentMood.objects.create(agent=agent)
+
+                # Session 310: Get personality for new mood agents too
+                personality_data = None
+                try:
+                    if hasattr(agent, 'personality') and agent.personality:
+                        personality_data = {
+                            'type_code': agent.personality.get_type_code(),
+                            'archetype': agent.personality.archetype,
+                            'emoji': agent.personality.get_personality_emoji(),
+                            'color': agent.personality.get_personality_color(),
+                        }
+                except AgentPersonality.DoesNotExist:
+                    pass
+
                 agent_moods.append({
                     'id': str(agent.id),
                     'name': agent.name,
@@ -79,6 +108,7 @@ def get_mood_overview(request):
                     'trigger_type': 'idle',
                     'mood_started_at': timezone.now().isoformat(),
                     'total_mood_changes': 0,
+                    'personality': personality_data,  # Session 310: Add personality
                 })
                 mood_distribution['calm'] = mood_distribution.get('calm', 0) + 1
 
