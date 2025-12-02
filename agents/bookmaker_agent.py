@@ -2,6 +2,8 @@
 The Bookmaker Agent - AI-Powered Odds Analysis and Line Prediction
 This agent thinks like a Vegas bookmaker, analyzing games to predict line movements,
 identify value, and provide professional betting insights.
+
+Session 306: Added learning infrastructure hooks for cross-agent knowledge sharing.
 """
 
 import json
@@ -15,7 +17,228 @@ from django.db.models import Q, Avg, Count
 logger = logging.getLogger(__name__)
 
 
-class BookmakerAgent:
+class LearningMixin:
+    """
+    Learning infrastructure mixin for standalone agents.
+    Session 306: Enables cross-agent knowledge sharing without requiring inheritance.
+
+    Provides:
+    - _record_learning_outcome(): Record execution for XP and patterns
+    - _create_execution_memory(): Create memories from interactions
+    - _share_knowledge(): Share learned patterns cross-agent
+    - _get_shared_knowledge(): Retrieve knowledge from other agents
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)  # No user context for this agent
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                agent_name = getattr(self, 'name', self.__class__.__name__)
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name=agent_name,
+                    defaults={
+                        'agent_type': 'standalone',
+                        'specialization': 'sports_analysis',
+                        'description': getattr(self, 'description', f'Standalone agent: {agent_name}'),
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = False,
+        scifi_context_used: bool = False
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type=self._detect_query_type(task),
+                query_text=task,
+                execution_mode='agent',
+                agents_used=[getattr(self, 'name', self.__class__.__name__)],
+                response=result.get('message', str(result.get('analysis', ''))),
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=not result.get('error'),
+                spider_data_used=spider_data_used,
+                scifi_context_used=scifi_context_used,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _detect_query_type(self, task: str) -> str:
+        """Detect the type of query from the task text."""
+        task_lower = task.lower()
+        if any(word in task_lower for word in ['analyze', 'predict', 'forecast']):
+            return 'analysis'
+        elif any(word in task_lower for word in ['odds', 'line', 'spread', 'value']):
+            return 'betting'
+        elif any(word in task_lower for word in ['game', 'match', 'team']):
+            return 'sports'
+        return 'general'
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the interaction."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"{getattr(self, 'name', self.__class__.__name__)}: {task[:50]}...",
+                content=result.get('message', str(result.get('analysis', ''))),
+                memory_type=memory_type,
+                valence="positive" if not result.get('error') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['sports_analysis', 'bookmaker', 'success' if not result.get('error') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            # Map generic types to model's choices
+            type_mapping = {
+                'technique': 'tool_discovery',
+                'insight': 'market',
+                'pattern': 'user_behavior',
+                'prediction': 'market',
+                'betting': 'pricing',
+            }
+            mapped_type = type_mapping.get(knowledge_type, knowledge_type)
+
+            valid_types = ['trend', 'market', 'opportunity', 'competitor',
+                          'pricing', 'user_behavior', 'content_idea', 'tool_discovery']
+            if mapped_type not in valid_types:
+                mapped_type = 'market'
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                type_mapping = {
+                    'technique': 'tool_discovery',
+                    'insight': 'market',
+                    'pattern': 'user_behavior',
+                    'prediction': 'market',
+                }
+                mapped_type = type_mapping.get(knowledge_type, knowledge_type)
+                queryset = queryset.filter(knowledge_type=mapped_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            # Exclude own knowledge to learn from others
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                    'created': ks.created_at.isoformat() if ks.created_at else None,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
+
+
+class BookmakerAgent(LearningMixin):
     """
     The Bookmaker Agent - Your AI Vegas Insider
 
@@ -27,12 +250,18 @@ class BookmakerAgent:
     - Analyze injury impacts on lines
     - Track steam moves and reverse line movement
     - Provide closing line value predictions
+
+    Session 306: Now includes learning infrastructure for cross-agent knowledge sharing.
     """
 
     def __init__(self):
         self.name = "Vegas AI"
         self.description = "AI Bookmaker analyzing odds like a Vegas professional"
         self.confidence_threshold = 0.65
+        # Initialize learning mixin attributes
+        self._learning_loop = None
+        self._memory_service = None
+        self._agent_model = None
 
     def analyze_game(self, game_id: str) -> Dict[str, Any]:
         """
@@ -63,10 +292,61 @@ class BookmakerAgent:
                 'alerts': self.generate_alerts(game)
             }
 
+            # Session 306: Learning Infrastructure Hooks
+            task = f"Analyze game {game_id}: {game.home_team.name} vs {game.away_team.name}"
+
+            # Record learning outcome
+            self._record_learning_outcome(
+                result={'success': True, 'analysis': analysis},
+                task=task,
+                context={'game_id': game_id, 'league': game.league.abbreviation}
+            )
+
+            # Create high-importance memory for game analysis
+            self._create_execution_memory(
+                result={'success': True, 'analysis': analysis},
+                task=task,
+                memory_type="success",
+                importance=0.7
+            )
+
+            # Share valuable insights for cross-agent learning
+            sharp_money = analysis['analysis']['sharp_money']
+            if sharp_money.get('sharp_probability', 0) > 0.6:
+                self._share_knowledge(
+                    knowledge_type='prediction',
+                    title=f"Sharp money on {sharp_money.get('sharp_side', 'UNKNOWN')} - {game_id}",
+                    knowledge_value={
+                        'game_id': game_id,
+                        'sharp_side': sharp_money.get('sharp_side'),
+                        'probability': sharp_money.get('sharp_probability'),
+                        'indicators': sharp_money.get('indicators', {}),
+                    },
+                    confidence=sharp_money.get('sharp_probability', 0.5)
+                )
+
+            # Share value bet insights
+            value_bets = analysis['analysis']['value_bets']
+            if value_bets:
+                for bet in value_bets[:2]:  # Top 2 value bets
+                    self._share_knowledge(
+                        knowledge_type='betting',
+                        title=f"Value bet: {bet.get('type')} on {bet.get('team', bet.get('direction'))}",
+                        knowledge_value=bet,
+                        confidence=0.8 if bet.get('confidence') == 'HIGH' else 0.6
+                    )
+
             return analysis
 
         except Game.DoesNotExist:
-            return {'error': f'Game {game_id} not found'}
+            error_result = {'error': f'Game {game_id} not found'}
+            # Record failed outcome
+            self._record_learning_outcome(
+                result=error_result,
+                task=f"Analyze game {game_id}",
+                context={'game_id': game_id}
+            )
+            return error_result
 
     def predict_line_movement(self, game) -> Dict[str, Any]:
         """

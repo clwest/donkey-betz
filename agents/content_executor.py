@@ -4,12 +4,14 @@ Donkey Betz Content Creator Execution Engine
 
 This module provides the execution engine for the Donkey Betz Content Creator agent.
 It handles actual content generation using OpenAI/Claude APIs.
+
+Session 306: Added learning infrastructure hooks for cross-agent knowledge sharing.
 """
 
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from django.utils import timezone
 
 from core.llm_enforcer import LLMEnforcer
@@ -18,12 +20,205 @@ from agents.models import AgentExecution, AgentStatus
 logger = logging.getLogger(__name__)
 
 
-class DonkeyBetzContentExecutor:
-    """Execution engine for Donkey Betz Content Creator"""
+class ContentExecutorLearningMixin:
+    """
+    Learning infrastructure mixin for DonkeyBetzContentExecutor.
+    Session 306: Enables cross-agent knowledge sharing for content creation.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='DonkeyBetzContentExecutor',
+                    defaults={
+                        'agent_type': 'legacy',
+                        'specialization': 'content_creation',
+                        'description': 'Generates content for the Donkey Betz platform using AI.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = False
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='create',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['DonkeyBetzContentExecutor'],
+                response=str(result.get('content', ''))[:500],  # Truncate for storage
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', False),
+                spider_data_used=spider_data_used,
+                scifi_context_used=False,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the content creation execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"Content: {task[:50]}...",
+                content=str(result.get('content', ''))[:500],  # Truncate for storage
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['content_creation', 'donkey_betz', 'success' if result.get('success') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'content': 'content_idea',
+                'seo': 'tool_discovery',
+                'pattern': 'content_idea',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'content_idea')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                queryset = queryset.filter(knowledge_type=knowledge_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
+
+
+class DonkeyBetzContentExecutor(ContentExecutorLearningMixin):
+    """
+    Execution engine for Donkey Betz Content Creator.
+
+    Session 306: Added learning infrastructure for cross-agent knowledge sharing.
+    """
 
     def __init__(self):
         self.llm_enforcer = LLMEnforcer()
         self.logger = logging.getLogger(__name__)
+        # Initialize learning mixin attributes
+        self._learning_loop = None
+        self._memory_service = None
+        self._agent_model = None
 
     def execute_content_creation(self, execution_id: str, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -68,12 +263,51 @@ class DonkeyBetzContentExecutor:
                 execution.save()
 
                 self.logger.info(f"✅ Content created successfully for execution {execution_id}")
-                return {
+
+                result = {
                     'success': True,
                     'execution_id': execution_id,
                     'content': content_result['content'],
                     'metadata': execution.output_data
                 }
+
+                # Session 306: Learning Infrastructure Hooks
+                self._record_learning_outcome(
+                    result=result,
+                    task=f"Create {content_type} content: {task_description[:50]}",
+                    context={
+                        'content_type': content_type,
+                        'target_audience': target_audience,
+                        'word_count': content_result.get('word_count', 0),
+                        'seo_score': content_result.get('seo_score', 0),
+                    },
+                    spider_data_used=False
+                )
+
+                # Create memory for successful content generation
+                self._create_execution_memory(
+                    result=result,
+                    task=f"Created {content_type}: {content_result.get('title', '')[:40]}",
+                    memory_type="success",
+                    importance=0.7
+                )
+
+                # Share successful content patterns
+                if content_result.get('seo_score', 0) >= 0.7:
+                    self._share_knowledge(
+                        knowledge_type='content',
+                        title=f"High-SEO {content_type}: {content_result.get('title', '')[:35]}",
+                        knowledge_value={
+                            'content_type': content_type,
+                            'target_audience': target_audience,
+                            'seo_score': content_result.get('seo_score', 0),
+                            'word_count': content_result.get('word_count', 0),
+                            'tags': content_result.get('tags', []),
+                        },
+                        confidence=content_result.get('seo_score', 0.7)
+                    )
+
+                return result
             else:
                 # Handle failure
                 execution.status = AgentStatus.FAILED
@@ -81,17 +315,35 @@ class DonkeyBetzContentExecutor:
                 execution.save()
 
                 self.logger.error(f"❌ Content creation failed for execution {execution_id}")
-                return {
+
+                error_result = {
                     'success': False,
                     'execution_id': execution_id,
                     'error': content_result.get('error', 'Content generation failed')
                 }
+
+                # Session 306: Record failure for learning
+                self._record_learning_outcome(
+                    result=error_result,
+                    task=f"Create {content_type} content (failed)",
+                    context={'error': content_result.get('error', 'Unknown error')},
+                    spider_data_used=False
+                )
+
+                return error_result
 
         except AgentExecution.DoesNotExist:
             self.logger.error(f"Execution {execution_id} not found")
             return {'success': False, 'error': 'Execution not found'}
         except Exception as e:
             self.logger.error(f"Error executing content creation: {e}")
+            # Session 306: Record exception for learning
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task=f"Content creation execution (failed)",
+                context={'exception': str(e)},
+                spider_data_used=False
+            )
             return {'success': False, 'error': str(e)}
 
     def _generate_donkey_betz_content(self, task: str, content_type: str, audience: str) -> Dict[str, Any]:
