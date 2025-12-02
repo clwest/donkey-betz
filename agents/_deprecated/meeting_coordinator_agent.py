@@ -163,24 +163,19 @@ IMPORTANT: Reference the context above when relevant. If past decisions apply, m
 If user preferences are noted, factor them into your recommendation.
 """
 
-                    # Session 173: Use gpt-4o-mini for faster, more reliable responses
-                    response = self.client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": agent_template.system_prompt or "You are an executive advisor."
-                            },
-                            {
-                                "role": "user",
-                                "content": perspective_prompt
-                            }
-                        ],
-                        max_tokens=300,
-                        temperature=0.7
+                    # Session 313: Use GPT-5-mini with Responses API
+                    system_prompt = agent_template.system_prompt or "You are an executive advisor."
+                    full_input = f"{system_prompt}\n\n{perspective_prompt}"
+
+                    response = self.client.responses.create(
+                        model="gpt-5-mini",
+                        input=full_input,
+                        reasoning={"effort": "low"},
+                        text={"verbosity": "low"},
+                        max_output_tokens=500
                     )
 
-                    agent_perspective = response.choices[0].message.content or ""
+                    agent_perspective = response.output_text or ""
 
                     # Session 173: Handle empty responses
                     if not agent_perspective.strip():
@@ -217,24 +212,19 @@ Focus on:
 - Cross-functional collaboration opportunities
 """
 
-            response = self.client.chat.completions.create(
+            # Session 313: Use GPT-5-mini with Responses API for synthesis
+            full_input = f"{self._get_system_prompt()}\n\n{synthesis_prompt}"
+
+            response = self.client.responses.create(
                 model="gpt-5-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": synthesis_prompt
-                    }
-                ],
-                reasoning_effort="high",
-                max_completion_tokens=4000
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=4000
             )
 
             # Get synthesis (plain text from reasoning model)
-            synthesis = response.choices[0].message.content
+            synthesis = response.output_text
 
             # Phase 3: Extract structured data from synthesis
             extraction_prompt = f"""
@@ -253,20 +243,17 @@ Return ONLY valid JSON with these exact keys:
 }}
 """
 
-            extraction_response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Use regular GPT-4o-mini for JSON extraction
-                messages=[
-                    {
-                        "role": "user",
-                        "content": extraction_prompt
-                    }
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=2000
+            # Session 313: Use GPT-5-nano with Responses API for JSON extraction
+            extraction_response = self.client.responses.create(
+                model="gpt-5-nano",
+                input=extraction_prompt,
+                reasoning={"effort": "minimal"},
+                text={"format": {"type": "json_object"}},
+                max_output_tokens=2000
             )
 
             # Parse structured data
-            extracted = json.loads(extraction_response.choices[0].message.content)
+            extracted = json.loads(extraction_response.output_text)
 
             # Combine results
             meeting_results = {

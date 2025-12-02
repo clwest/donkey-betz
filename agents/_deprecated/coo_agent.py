@@ -118,17 +118,8 @@ class COOAgent:
             if feature_name:
                 context += f"\nFeature: {feature_name}"
 
-            # Call GPT-5-mini for analysis
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""
+            # Session 313: Call GPT-5-mini with Responses API
+            user_prompt = f"""
 Analyze the roadmap for: {feature_name or project_slug or 'Unified Donkey Betz Platform'}
 
 {context}
@@ -140,14 +131,18 @@ Provide a strategic roadmap analysis including:
 4. Suggested tasks/milestones
 5. Estimated timeline
 """
-                    }
-                ],
-                reasoning_effort="high",
-                max_completion_tokens=4000
+            full_input = f"{self._get_system_prompt()}\n\n{user_prompt}"
+
+            response = self.client.responses.create(
+                model="gpt-5-mini",
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=4000
             )
 
             # Get response content (plain text from reasoning model)
-            analysis_text = response.choices[0].message.content
+            analysis_text = response.output_text
 
             # Structure the response (GPT-5-mini returns formatted text, not JSON)
             analysis = {
@@ -223,17 +218,8 @@ Provide a strategic roadmap analysis including:
                 context += f"\nFeature: {feature_name}"
             context += f"\nSprint Duration: {sprint_duration}"
 
-            # Call GPT-5-mini for planning
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""
+            # Session 313: Call GPT-5-mini with Responses API for planning
+            user_prompt = f"""
 Plan the next sprint for: {feature_name or project_slug or 'Unified Donkey Betz Platform'}
 
 {context}
@@ -245,14 +231,18 @@ Create a {sprint_duration} sprint plan including:
 4. Success criteria
 5. Total estimated effort
 """
-                    }
-                ],
-                reasoning_effort="high",
-                max_completion_tokens=4000
+            full_input = f"{self._get_system_prompt()}\n\n{user_prompt}"
+
+            response = self.client.responses.create(
+                model="gpt-5-mini",
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=4000
             )
 
             # Get response content (plain text from reasoning model)
-            sprint_plan_text = response.choices[0].message.content
+            sprint_plan_text = response.output_text
 
             # Structure the response (GPT-5-mini returns formatted text, not JSON)
             sprint_plan = {
@@ -329,17 +319,8 @@ Create a {sprint_duration} sprint plan including:
             if feature_name:
                 context += f"\nFeature: {feature_name}"
 
-            # Call GPT-5-mini for risk analysis
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""
+            # Session 313: Call GPT-5-mini with Responses API for risk analysis
+            user_prompt = f"""
 Perform risk analysis for: {feature_name or project_slug or 'Unified Donkey Betz Platform'}
 
 {context}
@@ -351,14 +332,18 @@ Identify and analyze:
 4. Key dependencies and blockers
 5. Mitigation strategies for each risk
 """
-                    }
-                ],
-                reasoning_effort="high",
-                max_completion_tokens=4000
+            full_input = f"{self._get_system_prompt()}\n\n{user_prompt}"
+
+            response = self.client.responses.create(
+                model="gpt-5-mini",
+                input=full_input,
+                reasoning={"effort": "high"},
+                text={"verbosity": "medium"},
+                max_output_tokens=4000
             )
 
             # Get response content (plain text from reasoning model)
-            risk_analysis_text = response.choices[0].message.content
+            risk_analysis_text = response.output_text
 
             # Structure the response (GPT-5-mini returns formatted text, not JSON)
             risk_analysis = {

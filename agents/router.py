@@ -97,6 +97,67 @@ class Intent(str, Enum):
     EXECUTIVE_REVIEW = 'executive_review'
     STRATEGIC_REVIEW = 'strategic_review'
 
+    # Session 312: Strategy agent intents (connecting 5 disconnected agents)
+    # Brand Identity
+    GET_BRAND_PROFILE = 'get_brand_profile'
+    SET_BRAND_COLORS = 'set_brand_colors'
+    ENHANCE_BRAND_PROMPT = 'enhance_brand_prompt'
+    GENERATE_BRAND_GUIDELINES = 'generate_brand_guidelines'
+
+    # Content Strategy
+    GET_CONTENT_RECOMMENDATIONS = 'get_content_recommendations'
+    GET_TRENDING_TOPICS = 'get_trending_topics'
+    GET_CONTENT_CALENDAR = 'get_content_calendar'
+
+    # SEO Optimization
+    OPTIMIZE_SEO = 'optimize_seo'
+    GET_HASHTAGS = 'get_hashtags'
+    SUGGEST_KEYWORDS = 'suggest_keywords'
+
+    # Trend Analysis
+    ANALYZE_TRENDS = 'analyze_trends'
+    FIND_OPPORTUNITIES = 'find_opportunities'
+    GENERATE_TREND_BRIEFING = 'generate_trend_briefing'
+
+    # Social Media
+    CREATE_SOCIAL_CONTENT = 'create_social_content'
+    GET_PLATFORM_SPECS = 'get_platform_specs'
+    CREATE_CONTENT_CALENDAR = 'create_content_calendar'
+
+    # Session 313: Creative Director Agent intents
+    REVIEW_CREATIVE_PROMPT = 'review_creative_prompt'
+    ESTABLISH_CREATIVE_DIRECTION = 'establish_creative_direction'
+    CRITIQUE_DESIGN = 'critique_design'
+    GET_CREATIVE_INSIGHTS = 'get_creative_insights'
+
+    # Session 313: Opportunity Scoring Agent intents
+    SCORE_SPIDER_DATA = 'score_spider_data'
+    ANALYZE_TREND = 'analyze_trend'
+    GET_TOP_OPPORTUNITIES = 'get_top_opportunities'
+
+    # Session 313: Trained Creation Agent intents
+    GENERATE_WITH_TRAINED_MODEL = 'generate_with_trained_model'
+
+    # Session 313: CTO Agent intents
+    ANALYZE_FEATURE = 'analyze_feature'
+    PLAN_IMPLEMENTATION = 'plan_implementation'
+    ANALYZE_DOCUMENTATION = 'analyze_documentation'
+    COORDINATE_AGENTS = 'coordinate_agents'
+
+    # Session 313: COO Agent intents
+    ANALYZE_ROADMAP = 'analyze_roadmap'
+    PROPOSE_SPRINT = 'propose_sprint'
+    IDENTIFY_RISKS = 'identify_risks'
+
+    # Session 313: Meeting Coordinator Agent intents
+    START_MEETING = 'start_meeting'
+
+    # Session 313: Content Executor Agent intents
+    EXECUTE_CONTENT_CREATION = 'execute_content_creation'
+
+    # Session 313: AI Project Builder Agent intents
+    BUILD_AI_PROJECT = 'build_ai_project'
+
 
 @dataclass
 class RouteResult:
@@ -173,6 +234,67 @@ class AgentRouter:
 
         # Project creation (Session 204: Tool Consolidation)
         Intent.CREATE_PROJECT: ('agents.workflow_orchestration_agent', 'WorkflowOrchestrationAgent', 'create_project_from_research', None),
+
+        # Session 312: Strategy agent routes (connecting 5 disconnected agents)
+        # Brand Identity routes -> BrandIdentityAgent
+        Intent.GET_BRAND_PROFILE: ('agents.brand_identity_agent', 'BrandIdentityAgent', 'get_brand_profile', None),
+        Intent.SET_BRAND_COLORS: ('agents.brand_identity_agent', 'BrandIdentityAgent', 'set_brand_colors', None),
+        Intent.ENHANCE_BRAND_PROMPT: ('agents.brand_identity_agent', 'BrandIdentityAgent', 'enhance_prompt', None),
+        Intent.GENERATE_BRAND_GUIDELINES: ('agents.brand_identity_agent', 'BrandIdentityAgent', 'generate_guidelines', None),
+
+        # Content Strategy routes -> ContentStrategyAgent
+        Intent.GET_CONTENT_RECOMMENDATIONS: ('agents.content_strategy_agent', 'ContentStrategyAgent', 'get_recommendations', None),
+        Intent.GET_TRENDING_TOPICS: ('agents.content_strategy_agent', 'ContentStrategyAgent', 'get_trending_topics', None),
+        Intent.GET_CONTENT_CALENDAR: ('agents.content_strategy_agent', 'ContentStrategyAgent', 'get_content_calendar', None),
+
+        # SEO routes -> SEOOptimizerAgent
+        Intent.OPTIMIZE_SEO: ('agents.seo_optimizer_agent', 'SEOOptimizerAgent', 'optimize_image', None),
+        Intent.GET_HASHTAGS: ('agents.seo_optimizer_agent', 'SEOOptimizerAgent', 'get_hashtags', None),
+        Intent.SUGGEST_KEYWORDS: ('agents.seo_optimizer_agent', 'SEOOptimizerAgent', 'suggest_keywords', None),
+
+        # Trend Analysis routes -> TrendAnalysisAgent
+        Intent.ANALYZE_TRENDS: ('agents.trend_analysis_agent', 'TrendAnalysisAgent', 'analyze_sector', None),
+        Intent.FIND_OPPORTUNITIES: ('agents.trend_analysis_agent', 'TrendAnalysisAgent', 'find_emerging_opportunities', None),
+        Intent.GENERATE_TREND_BRIEFING: ('agents.trend_analysis_agent', 'TrendAnalysisAgent', 'generate_daily_briefing', None),
+
+        # Social Media routes -> SocialMediaAgent
+        Intent.CREATE_SOCIAL_CONTENT: ('agents.social_media_agent', 'SocialMediaAgent', 'create_for_platform', None),
+        Intent.GET_PLATFORM_SPECS: ('agents.social_media_agent', 'SocialMediaAgent', 'get_platform_specs', None),
+        Intent.CREATE_CONTENT_CALENDAR: ('agents.social_media_agent', 'SocialMediaAgent', 'create_content_calendar', None),
+
+        # Session 313: Creative Director routes -> CreativeDirectorAgent
+        Intent.REVIEW_CREATIVE_PROMPT: ('agents._deprecated.creative_director_agent', 'CreativeDirectorAgent', 'review_prompt', None),
+        Intent.ESTABLISH_CREATIVE_DIRECTION: ('agents._deprecated.creative_director_agent', 'CreativeDirectorAgent', 'establish_creative_direction', None),
+        Intent.CRITIQUE_DESIGN: ('agents._deprecated.creative_director_agent', 'CreativeDirectorAgent', 'critique_design', None),
+        Intent.GET_CREATIVE_INSIGHTS: ('agents._deprecated.creative_director_agent', 'CreativeDirectorAgent', 'get_creative_insights', None),
+
+        # Session 313: Opportunity Scoring routes -> OpportunityScoringAgent
+        Intent.SCORE_SPIDER_DATA: ('agents._deprecated.opportunity_scoring_agent', 'OpportunityScoringAgent', 'score_spider_data', None),
+        Intent.ANALYZE_TREND: ('agents._deprecated.opportunity_scoring_agent', 'OpportunityScoringAgent', 'analyze_trend', None),
+        Intent.GET_TOP_OPPORTUNITIES: ('agents._deprecated.opportunity_scoring_agent', 'OpportunityScoringAgent', 'get_top_opportunities', None),
+
+        # Session 313: Trained Creation routes -> TrainedCreationAgent
+        Intent.GENERATE_WITH_TRAINED_MODEL: ('agents._deprecated.trained_creation_agent', 'TrainedCreationAgent', 'execute', None),
+
+        # Session 313: CTO Agent routes -> CTOAgent
+        Intent.ANALYZE_FEATURE: ('agents._deprecated.cto_agent', 'CTOAgent', 'analyze_feature', None),
+        Intent.PLAN_IMPLEMENTATION: ('agents._deprecated.cto_agent', 'CTOAgent', 'implement_feature', None),
+        Intent.ANALYZE_DOCUMENTATION: ('agents._deprecated.cto_agent', 'CTOAgent', 'sync_documentation', None),
+        Intent.COORDINATE_AGENTS: ('agents._deprecated.cto_agent', 'CTOAgent', 'coordinate_agents', None),
+
+        # Session 313: COO Agent routes -> COOAgent
+        Intent.ANALYZE_ROADMAP: ('agents._deprecated.coo_agent', 'COOAgent', 'analyze_roadmap', None),
+        Intent.PROPOSE_SPRINT: ('agents._deprecated.coo_agent', 'COOAgent', 'propose_next_sprint', None),
+        Intent.IDENTIFY_RISKS: ('agents._deprecated.coo_agent', 'COOAgent', 'identify_risks', None),
+
+        # Session 313: Meeting Coordinator routes -> MeetingCoordinatorAgent
+        Intent.START_MEETING: ('agents._deprecated.meeting_coordinator_agent', 'MeetingCoordinatorAgent', 'start_meeting', None),
+
+        # Session 313: Content Executor routes -> DonkeyBetzContentExecutor
+        Intent.EXECUTE_CONTENT_CREATION: ('agents.content_executor', 'DonkeyBetzContentExecutor', 'execute_content_creation', None),
+
+        # Session 313: AI Project Builder routes -> AIProjectBuilder
+        Intent.BUILD_AI_PROJECT: ('agents.ai_project_builder', 'AIProjectBuilder', 'build_project', None),
     }
 
     # Legacy tool name to intent mapping (for backwards compatibility)
@@ -239,6 +361,80 @@ class AgentRouter:
         'coleadership_agent': Intent.EXECUTIVE_REVIEW,
         'strategic_review': Intent.STRATEGIC_REVIEW,
         'create_project_from_research': Intent.CREATE_PROJECT,
+
+        # Session 312: Strategy agent tools (connecting 5 disconnected agents)
+        # Brand Identity tools
+        'brand_identity_agent': Intent.GET_BRAND_PROFILE,
+        'get_brand_profile': Intent.GET_BRAND_PROFILE,
+        'set_brand_colors': Intent.SET_BRAND_COLORS,
+        'enhance_brand_prompt': Intent.ENHANCE_BRAND_PROMPT,
+        'generate_brand_guidelines': Intent.GENERATE_BRAND_GUIDELINES,
+
+        # Content Strategy tools
+        'content_strategy_agent': Intent.GET_CONTENT_RECOMMENDATIONS,
+        'get_content_recommendations': Intent.GET_CONTENT_RECOMMENDATIONS,
+        'get_trending_topics': Intent.GET_TRENDING_TOPICS,
+        'get_content_calendar': Intent.GET_CONTENT_CALENDAR,
+
+        # SEO tools
+        'seo_optimizer_agent': Intent.OPTIMIZE_SEO,
+        'optimize_seo': Intent.OPTIMIZE_SEO,
+        'get_hashtags': Intent.GET_HASHTAGS,
+        'suggest_keywords': Intent.SUGGEST_KEYWORDS,
+
+        # Trend Analysis tools
+        'trend_analysis_agent': Intent.ANALYZE_TRENDS,
+        'analyze_trends': Intent.ANALYZE_TRENDS,
+        'find_opportunities': Intent.FIND_OPPORTUNITIES,
+        'generate_trend_briefing': Intent.GENERATE_TREND_BRIEFING,
+
+        # Social Media tools
+        'social_media_agent': Intent.CREATE_SOCIAL_CONTENT,
+        'create_social_content': Intent.CREATE_SOCIAL_CONTENT,
+        'get_platform_specs': Intent.GET_PLATFORM_SPECS,
+        'create_content_calendar': Intent.CREATE_CONTENT_CALENDAR,
+
+        # Session 313: Creative Director tools
+        'creative_director_agent': Intent.REVIEW_CREATIVE_PROMPT,
+        'review_creative_prompt': Intent.REVIEW_CREATIVE_PROMPT,
+        'establish_creative_direction': Intent.ESTABLISH_CREATIVE_DIRECTION,
+        'critique_design': Intent.CRITIQUE_DESIGN,
+        'get_creative_insights': Intent.GET_CREATIVE_INSIGHTS,
+
+        # Session 313: Opportunity Scoring tools
+        'opportunity_scoring_agent': Intent.SCORE_SPIDER_DATA,
+        'score_spider_data': Intent.SCORE_SPIDER_DATA,
+        'analyze_trend': Intent.ANALYZE_TREND,
+        'get_top_opportunities': Intent.GET_TOP_OPPORTUNITIES,
+
+        # Session 313: Trained Creation tools
+        'trained_creation_agent': Intent.GENERATE_WITH_TRAINED_MODEL,
+        'generate_with_trained_model': Intent.GENERATE_WITH_TRAINED_MODEL,
+
+        # Session 313: CTO Agent tools
+        'cto_agent': Intent.ANALYZE_FEATURE,
+        'analyze_feature': Intent.ANALYZE_FEATURE,
+        'plan_implementation': Intent.PLAN_IMPLEMENTATION,
+        'analyze_documentation': Intent.ANALYZE_DOCUMENTATION,
+        'coordinate_agents': Intent.COORDINATE_AGENTS,
+
+        # Session 313: COO Agent tools
+        'coo_agent': Intent.ANALYZE_ROADMAP,
+        'analyze_roadmap': Intent.ANALYZE_ROADMAP,
+        'propose_sprint': Intent.PROPOSE_SPRINT,
+        'identify_risks': Intent.IDENTIFY_RISKS,
+
+        # Session 313: Meeting Coordinator tools
+        'meeting_coordinator_agent': Intent.START_MEETING,
+        'start_meeting': Intent.START_MEETING,
+
+        # Session 313: Content Executor tools
+        'content_executor_agent': Intent.EXECUTE_CONTENT_CREATION,
+        'execute_content_creation': Intent.EXECUTE_CONTENT_CREATION,
+
+        # Session 313: AI Project Builder tools
+        'ai_project_builder_agent': Intent.BUILD_AI_PROJECT,
+        'build_ai_project': Intent.BUILD_AI_PROJECT,
     }
 
     @classmethod

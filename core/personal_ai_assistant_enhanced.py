@@ -641,6 +641,469 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["market"]
                 }
+            },
+
+            # Session 312: Strategy Agents (connecting 5 disconnected agents to Personal Assistant)
+            # Brand Identity Agent - manages brand consistency
+            {
+                "type": "function",
+                "name": "brand_identity_agent",
+                "description": "Manage brand identity and consistency. Use when the user wants to set brand colors, get brand profile, enhance prompts with brand styling, or generate brand guidelines. Helps maintain consistent branding across all generated content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["get_profile", "set_colors", "enhance_prompt", "generate_guidelines", "suggest_colors"],
+                            "description": "Action: get_profile (current brand settings), set_colors (define brand palette), enhance_prompt (add brand styling to a prompt), generate_guidelines (create brand guide), suggest_colors (get colors for industry)"
+                        },
+                        "primary_color": {
+                            "type": "string",
+                            "description": "Primary brand color hex code (e.g., '#FF5733') - for set_colors action"
+                        },
+                        "secondary_color": {
+                            "type": "string",
+                            "description": "Secondary brand color hex code - for set_colors action"
+                        },
+                        "accent_color": {
+                            "type": "string",
+                            "description": "Accent brand color hex code - for set_colors action"
+                        },
+                        "prompt": {
+                            "type": "string",
+                            "description": "The prompt to enhance with brand styling - for enhance_prompt action"
+                        },
+                        "industry": {
+                            "type": "string",
+                            "description": "Industry for color suggestions (e.g., 'tech', 'healthcare', 'finance') - for suggest_colors action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Content Strategy Agent - content recommendations from trends
+            {
+                "type": "function",
+                "name": "content_strategy_agent",
+                "description": "Get content strategy recommendations based on spider intelligence and trending topics. Use when user asks what content to create, wants trending topics, or needs a content calendar. Connects trend data to actionable content recommendations.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["get_recommendations", "get_trending", "get_calendar", "analyze_opportunity"],
+                            "description": "Action: get_recommendations (what to create), get_trending (hot topics), get_calendar (posting schedule), analyze_opportunity (evaluate specific idea)"
+                        },
+                        "niche": {
+                            "type": "string",
+                            "description": "Content niche (e.g., 'tech', 'lifestyle', 'gaming') - optional filter for recommendations"
+                        },
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["logos", "thumbnails", "social", "videos", "all"],
+                            "default": "all",
+                            "description": "Type of content to recommend"
+                        },
+                        "opportunity_description": {
+                            "type": "string",
+                            "description": "Description of content opportunity to analyze - for analyze_opportunity action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # SEO Optimizer Agent - hashtags, keywords, metadata
+            {
+                "type": "function",
+                "name": "seo_optimizer_agent",
+                "description": "Optimize content for discoverability with SEO. Use when user wants hashtags, keywords, descriptions, alt text, or metadata for their images/videos. Generates platform-specific optimization.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["get_hashtags", "suggest_keywords", "optimize_image", "optimize_for_platform"],
+                            "description": "Action: get_hashtags (trending hashtags), suggest_keywords (SEO keywords), optimize_image (full SEO for image), optimize_for_platform (platform-specific optimization)"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "Topic or description to generate hashtags/keywords for"
+                        },
+                        "image_id": {
+                            "type": "string",
+                            "description": "Image ID to optimize - for optimize_image action"
+                        },
+                        "platform": {
+                            "type": "string",
+                            "enum": ["instagram", "twitter", "linkedin", "pinterest", "youtube", "tiktok"],
+                            "description": "Target platform for optimization - for optimize_for_platform action"
+                        },
+                        "hashtag_count": {
+                            "type": "integer",
+                            "default": 10,
+                            "description": "Number of hashtags to generate (5-30)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Trend Analysis Agent - market intelligence
+            {
+                "type": "function",
+                "name": "trend_analysis_agent",
+                "description": "Analyze trends and find emerging opportunities using spider intelligence. Use when user wants trend analysis, daily briefings, opportunity discovery, or sector analysis. Provides actionable insights from market data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["analyze_sector", "find_opportunities", "daily_briefing", "get_insights"],
+                            "description": "Action: analyze_sector (deep dive), find_opportunities (emerging trends), daily_briefing (today's summary), get_insights (quick insights for prompt)"
+                        },
+                        "sector": {
+                            "type": "string",
+                            "description": "Sector to analyze (e.g., 'ai', 'design', 'marketing', 'tech')"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "Topic for insights - used to enhance generation prompts"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Social Media Agent - platform-specific content
+            {
+                "type": "function",
+                "name": "social_media_agent",
+                "description": "Create platform-optimized social media content. Use when user wants content for specific platforms, multi-platform content, content calendars, or platform specs. Knows optimal dimensions, hashtag limits, and best practices for each platform.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["create_for_platform", "create_multi_platform", "get_platform_specs", "create_calendar", "suggest_content_type"],
+                            "description": "Action: create_for_platform (single platform), create_multi_platform (all platforms), get_platform_specs (dimensions/limits), create_calendar (posting schedule), suggest_content_type (what works best)"
+                        },
+                        "platform": {
+                            "type": "string",
+                            "enum": ["instagram", "twitter", "linkedin", "pinterest", "youtube", "tiktok", "facebook"],
+                            "description": "Target platform - for single platform actions"
+                        },
+                        "content_description": {
+                            "type": "string",
+                            "description": "Description of the content to create"
+                        },
+                        "brand_name": {
+                            "type": "string",
+                            "description": "Brand name for content - optional"
+                        },
+                        "calendar_days": {
+                            "type": "integer",
+                            "default": 7,
+                            "description": "Number of days for content calendar (1-30)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Session 313: Creative Director Agent - high-level creative guidance
+            {
+                "type": "function",
+                "name": "creative_director_agent",
+                "description": "Get high-level creative direction and guidance for visual projects. Use when user wants prompt enhancement, creative direction for a project, design critique, or creative insights. This agent reviews prompts, suggests improvements, ensures consistency, and provides expert creative guidance based on design principles and trends.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["review_prompt", "establish_direction", "critique_design", "get_insights"],
+                            "description": "Action: review_prompt (enhance a creative prompt with design principles), establish_direction (set creative direction for entire project), critique_design (get constructive feedback on a design), get_insights (creative insights for a topic)"
+                        },
+                        "prompt": {
+                            "type": "string",
+                            "description": "The creative prompt to review and enhance - for review_prompt action"
+                        },
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["logo", "thumbnail", "social_media", "brand_identity"],
+                            "description": "Type of content - helps provide relevant design principles"
+                        },
+                        "project_brief": {
+                            "type": "string",
+                            "description": "Description of the project - for establish_direction action"
+                        },
+                        "target_audience": {
+                            "type": "string",
+                            "description": "Target audience for the content"
+                        },
+                        "industry": {
+                            "type": "string",
+                            "description": "Industry category (tech, healthcare, food, etc.)"
+                        },
+                        "design_description": {
+                            "type": "string",
+                            "description": "Description of the design to critique - for critique_design action"
+                        },
+                        "intended_purpose": {
+                            "type": "string",
+                            "description": "What the design is for - for critique_design action"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "Topic to get creative insights for - for get_insights action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Session 313: Opportunity Scoring Agent - spider data to opportunities
+            {
+                "type": "function",
+                "name": "opportunity_scoring_agent",
+                "description": "Transform spider intelligence data into scored, actionable opportunities. Use when user wants to find profitable content opportunities, analyze trends for monetization, score spider data for business potential, or discover top opportunities from market data. Scores opportunities on profit potential, competition level, effort required, and time sensitivity.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["score_data", "analyze_trend", "get_top"],
+                            "description": "Action: score_data (score recent spider data for opportunities), analyze_trend (score a specific trend topic), get_top (get highest-scoring opportunities)"
+                        },
+                        "hours": {
+                            "type": "integer",
+                            "default": 24,
+                            "description": "Look back period in hours for spider data - for score_data action"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "default": 10,
+                            "description": "Maximum number of opportunities to return"
+                        },
+                        "trend_topic": {
+                            "type": "string",
+                            "description": "The trend topic to analyze and score - for analyze_trend action"
+                        },
+                        "min_score": {
+                            "type": "integer",
+                            "default": 50,
+                            "description": "Minimum overall score threshold (0-100) - for get_top action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Session 313: Trained Creation Agent - generate with trained LoRA models
+            {
+                "type": "function",
+                "name": "trained_creation_agent",
+                "description": "Generate images using trained character/style LoRA models. Use when user wants to generate images with a previously trained character or style, references a trained model by name, or wants to use custom LoRA weights. Requires a trained model from character_training_agent.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Text description of the image to generate with the trained style/character"
+                        },
+                        "character_model_name": {
+                            "type": "string",
+                            "description": "Name or ID of the trained character/style model to use"
+                        },
+                        "lora_scale": {
+                            "type": "number",
+                            "default": 0.8,
+                            "description": "Strength of LoRA effect (0.0-1.0, default 0.8)"
+                        },
+                        "width": {
+                            "type": "integer",
+                            "default": 1024,
+                            "description": "Image width in pixels"
+                        },
+                        "height": {
+                            "type": "integer",
+                            "default": 1024,
+                            "description": "Image height in pixels"
+                        },
+                        "num_outputs": {
+                            "type": "integer",
+                            "default": 1,
+                            "description": "Number of images to generate (1-4)"
+                        }
+                    },
+                    "required": ["prompt", "character_model_name"]
+                }
+            },
+
+            # Session 313: CTO Agent - technical architecture and planning
+            {
+                "type": "function",
+                "name": "cto_agent",
+                "description": "Get technical architecture analysis, feature planning, and code review guidance. Use when user wants technical analysis, architectural recommendations, implementation planning, documentation review, or agent coordination for complex tasks. The CTO Agent understands the entire codebase.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["analyze_feature", "plan_implementation", "analyze_documentation", "coordinate_agents"],
+                            "description": "Action: analyze_feature (assess architecture/code quality), plan_implementation (create implementation plan without executing), analyze_documentation (review docs for gaps), coordinate_agents (orchestrate multiple agents)"
+                        },
+                        "feature_name": {
+                            "type": "string",
+                            "description": "Name of the feature to analyze or implement"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Description of the feature or task"
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": ["feature", "module", "platform"],
+                            "default": "feature",
+                            "description": "Scope of analysis"
+                        },
+                        "required_agents": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of agent names to coordinate (for coordinate_agents action)"
+                        },
+                        "task": {
+                            "type": "string",
+                            "description": "Task to coordinate agents for"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Session 313: COO Agent - operations and sprint planning
+            {
+                "type": "function",
+                "name": "coo_agent",
+                "description": "Get operations planning, roadmap analysis, sprint planning, and risk identification. Use when user wants project planning, sprint recommendations, risk analysis, or operational strategy. Provides strategic planning without execution.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["analyze_roadmap", "propose_sprint", "identify_risks"],
+                            "description": "Action: analyze_roadmap (strategic roadmap analysis), propose_sprint (plan next sprint with tasks), identify_risks (identify blockers and risks)"
+                        },
+                        "project_slug": {
+                            "type": "string",
+                            "description": "Project identifier for context"
+                        },
+                        "feature_name": {
+                            "type": "string",
+                            "description": "Specific feature to focus on"
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": ["project", "feature", "platform"],
+                            "default": "project",
+                            "description": "Scope of analysis"
+                        },
+                        "sprint_duration": {
+                            "type": "string",
+                            "default": "2 weeks",
+                            "description": "Sprint length for propose_sprint action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+
+            # Session 313: Meeting Coordinator Agent - executive boardroom
+            {
+                "type": "function",
+                "name": "meeting_coordinator_agent",
+                "description": "Coordinate executive boardroom meetings between AI agents. Use when user wants multiple agents to collaborate on a topic, needs strategic alignment between CTO and COO, or wants synthesized decisions from agent discussions. Collects perspectives, synthesizes discussion, and extracts decisions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "The meeting topic/agenda to discuss"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Optional project context for the meeting"
+                        },
+                        "participants": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "default": ["CTOAgent", "COOAgent"],
+                            "description": "List of agent names to participate (default: CTO and COO)"
+                        }
+                    },
+                    "required": ["topic"]
+                }
+            },
+
+            # Session 313: Content Executor Agent - AI content generation
+            {
+                "type": "function",
+                "name": "content_executor_agent",
+                "description": "Execute AI content creation tasks. Use when user wants to generate blog posts, social media content, email copy, or other written content. Creates SEO-optimized content with proper formatting.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task": {
+                            "type": "string",
+                            "description": "Description of the content to create"
+                        },
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["blog_post", "social_media", "email", "landing_page", "product_description"],
+                            "default": "blog_post",
+                            "description": "Type of content to generate"
+                        },
+                        "target_audience": {
+                            "type": "string",
+                            "description": "Target audience for the content"
+                        },
+                        "tone": {
+                            "type": "string",
+                            "enum": ["professional", "casual", "persuasive", "informative", "entertaining"],
+                            "default": "professional",
+                            "description": "Tone/style of the content"
+                        }
+                    },
+                    "required": ["task"]
+                }
+            },
+
+            # Session 313: AI Project Builder Agent - build AI projects from strategies
+            {
+                "type": "function",
+                "name": "ai_project_builder_agent",
+                "description": "Build complete AI projects from monetization strategies discovered by spiders. Use when user wants to create an AI application, build a project from opportunity data, or scaffold a new AI-powered tool. Creates ready-to-launch project with code files.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task": {
+                            "type": "string",
+                            "description": "Description of the AI project to build"
+                        },
+                        "project_type": {
+                            "type": "string",
+                            "enum": ["content_generator", "ai_assistant", "automation_tool", "analytics_dashboard"],
+                            "description": "Type of AI project to build"
+                        },
+                        "use_spider_strategy": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Whether to use spider-discovered monetization strategies"
+                        }
+                    },
+                    "required": ["task"]
+                }
             }
         ]
 
@@ -747,6 +1210,36 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_competitor_analysis_agent(arguments)
             elif function_name == 'customer_research_agent':
                 result = self._handle_customer_research_agent(arguments)
+            # Session 312: Strategy agents (connected to router)
+            elif function_name == 'brand_identity_agent':
+                result = self._handle_strategy_agent('brand_identity_agent', arguments)
+            elif function_name == 'content_strategy_agent':
+                result = self._handle_strategy_agent('content_strategy_agent', arguments)
+            elif function_name == 'seo_optimizer_agent':
+                result = self._handle_strategy_agent('seo_optimizer_agent', arguments)
+            elif function_name == 'trend_analysis_agent':
+                result = self._handle_strategy_agent('trend_analysis_agent', arguments)
+            elif function_name == 'social_media_agent':
+                result = self._handle_strategy_agent('social_media_agent', arguments)
+            # Session 313: Creative Director and Opportunity Scoring agents
+            elif function_name == 'creative_director_agent':
+                result = self._handle_creative_director_agent(arguments)
+            elif function_name == 'opportunity_scoring_agent':
+                result = self._handle_opportunity_scoring_agent(arguments)
+            # Session 313: Executive and coordination agents
+            elif function_name == 'trained_creation_agent':
+                result = self._handle_trained_creation_agent(arguments)
+            elif function_name == 'cto_agent':
+                result = self._handle_cto_agent(arguments)
+            elif function_name == 'coo_agent':
+                result = self._handle_coo_agent(arguments)
+            elif function_name == 'meeting_coordinator_agent':
+                result = self._handle_meeting_coordinator_agent(arguments)
+            # Session 313: Content Executor and AI Project Builder agents
+            elif function_name == 'content_executor_agent':
+                result = self._handle_content_executor_agent(arguments)
+            elif function_name == 'ai_project_builder_agent':
+                result = self._handle_ai_project_builder_agent(arguments)
             else:
                 result = {
                     'success': False,
@@ -2910,6 +3403,572 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return {
                 'success': False,
                 'error': f"Customer research failed: {str(e)}"
+            }
+
+    # Session 312: Unified strategy agent handler
+    def _handle_strategy_agent(self, agent_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle strategy agent tools - Session 312.
+
+        Unified handler for: brand_identity_agent, content_strategy_agent,
+        seo_optimizer_agent, trend_analysis_agent, social_media_agent.
+
+        These agents were previously disconnected from the Personal Assistant.
+        """
+        logger.info(f"📊 STRATEGY_AGENT: {agent_name} CALLED!")
+
+        try:
+            action = arguments.get('action', '')
+            if not action:
+                return {'success': False, 'error': 'Action is required'}
+
+            # Import and instantiate the appropriate agent
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            if agent_name == 'brand_identity_agent':
+                from agents._deprecated.brand_identity_agent import BrandIdentityAgent
+                agent = BrandIdentityAgent(user=self.user)
+
+                if action == 'get_profile':
+                    result = agent.get_brand_profile()
+                elif action == 'set_colors':
+                    result = agent.set_brand_colors(
+                        primary=arguments.get('primary_color', '#3498DB'),
+                        secondary=arguments.get('secondary_color', '#2ECC71'),
+                        accent=arguments.get('accent_color', '#E74C3C')
+                    )
+                elif action == 'enhance_prompt':
+                    result = agent.enhance_prompt(arguments.get('prompt', ''))
+                elif action == 'generate_guidelines':
+                    result = agent.generate_guidelines()
+                elif action == 'suggest_colors':
+                    result = agent.suggest_colors_for_industry(arguments.get('industry', 'tech'))
+                else:
+                    return {'success': False, 'error': f'Unknown action: {action}'}
+
+            elif agent_name == 'content_strategy_agent':
+                from agents._deprecated.content_strategy_agent import ContentStrategyAgent
+                agent = ContentStrategyAgent(user=self.user)
+
+                if action == 'get_recommendations':
+                    result = agent.get_recommendations(
+                        niche=arguments.get('niche'),
+                        content_type=arguments.get('content_type', 'all')
+                    )
+                elif action == 'get_trending':
+                    result = agent.get_trending_topics()
+                elif action == 'get_calendar':
+                    result = agent.get_content_calendar()
+                elif action == 'analyze_opportunity':
+                    result = agent.analyze_opportunity(arguments.get('opportunity_description', ''))
+                else:
+                    return {'success': False, 'error': f'Unknown action: {action}'}
+
+            elif agent_name == 'seo_optimizer_agent':
+                from agents._deprecated.seo_optimizer_agent import SEOOptimizerAgent
+                agent = SEOOptimizerAgent(user=self.user)
+
+                if action == 'get_hashtags':
+                    result = agent.get_hashtags(
+                        topic=arguments.get('topic', ''),
+                        count=arguments.get('hashtag_count', 10)
+                    )
+                elif action == 'suggest_keywords':
+                    result = agent.suggest_keywords(arguments.get('topic', ''))
+                elif action == 'optimize_image':
+                    result = agent.optimize_image(image_id=arguments.get('image_id', ''))
+                elif action == 'optimize_for_platform':
+                    result = agent.optimize_for_platform(
+                        content=arguments.get('topic', ''),
+                        platform=arguments.get('platform', 'instagram')
+                    )
+                else:
+                    return {'success': False, 'error': f'Unknown action: {action}'}
+
+            elif agent_name == 'trend_analysis_agent':
+                from agents._deprecated.trend_analysis_agent import TrendAnalysisAgent
+                agent = TrendAnalysisAgent(user=self.user)
+
+                if action == 'analyze_sector':
+                    result = agent.analyze_sector(arguments.get('sector', 'tech'))
+                elif action == 'find_opportunities':
+                    result = agent.find_emerging_opportunities()
+                elif action == 'daily_briefing':
+                    result = agent.generate_daily_briefing()
+                elif action == 'get_insights':
+                    result = agent.get_insights_for_prompt(arguments.get('topic', ''))
+                else:
+                    return {'success': False, 'error': f'Unknown action: {action}'}
+
+            elif agent_name == 'social_media_agent':
+                from agents._deprecated.social_media_agent import SocialMediaAgent
+                agent = SocialMediaAgent(user=self.user)
+
+                if action == 'create_for_platform':
+                    result = agent.create_for_platform(
+                        platform=arguments.get('platform', 'instagram'),
+                        content_description=arguments.get('content_description', '')
+                    )
+                elif action == 'create_multi_platform':
+                    result = agent.create_multi_platform(arguments.get('content_description', ''))
+                elif action == 'get_platform_specs':
+                    result = agent.get_platform_specs(arguments.get('platform', 'instagram'))
+                elif action == 'create_calendar':
+                    result = agent.create_content_calendar(
+                        days=arguments.get('calendar_days', 7)
+                    )
+                elif action == 'suggest_content_type':
+                    result = agent.suggest_content_type(arguments.get('platform', 'instagram'))
+                else:
+                    return {'success': False, 'error': f'Unknown action: {action}'}
+
+            else:
+                return {'success': False, 'error': f'Unknown strategy agent: {agent_name}'}
+
+            # Return the result
+            if isinstance(result, dict):
+                return {'success': True, 'agent': agent_name, 'action': action, **result}
+            else:
+                return {'success': True, 'agent': agent_name, 'action': action, 'result': result}
+
+        except Exception as e:
+            logger.error(f"❌ Strategy agent error ({agent_name}): {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Strategy agent failed: {str(e)}"
+            }
+
+    # Session 313: Creative Director Agent handler
+    def _handle_creative_director_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle creative_director_agent tool - Session 313.
+
+        Provides high-level creative guidance and direction for visual projects.
+        """
+        logger.info(f"🎨 CREATIVE_DIRECTOR_AGENT CALLED!")
+
+        try:
+            action = arguments.get('action', '')
+            if not action:
+                return {'success': False, 'error': 'Action is required'}
+
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            from agents._deprecated.creative_director_agent import CreativeDirectorAgent
+            agent = CreativeDirectorAgent(user=self.user)
+
+            if action == 'review_prompt':
+                prompt = arguments.get('prompt', '')
+                if not prompt:
+                    return {'success': False, 'error': 'Prompt is required for review_prompt action'}
+                result = agent.review_prompt(
+                    prompt=prompt,
+                    content_type=arguments.get('content_type')
+                )
+            elif action == 'establish_direction':
+                project_brief = arguments.get('project_brief', '')
+                if not project_brief:
+                    return {'success': False, 'error': 'Project brief is required for establish_direction action'}
+                result = agent.establish_creative_direction(
+                    project_brief=project_brief,
+                    target_audience=arguments.get('target_audience'),
+                    industry=arguments.get('industry')
+                )
+            elif action == 'critique_design':
+                design_description = arguments.get('design_description', '')
+                intended_purpose = arguments.get('intended_purpose', '')
+                if not design_description or not intended_purpose:
+                    return {'success': False, 'error': 'Design description and intended purpose are required'}
+                result = agent.critique_design(
+                    design_description=design_description,
+                    intended_purpose=intended_purpose
+                )
+            elif action == 'get_insights':
+                topic = arguments.get('topic', '')
+                if not topic:
+                    return {'success': False, 'error': 'Topic is required for get_insights action'}
+                result = agent.get_creative_insights(topic=topic)
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+            # Return the result
+            if isinstance(result, dict):
+                return {'success': True, 'agent': 'creative_director_agent', 'action': action, **result}
+            else:
+                return {'success': True, 'agent': 'creative_director_agent', 'action': action, 'result': result}
+
+        except Exception as e:
+            logger.error(f"❌ Creative Director agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Creative Director agent failed: {str(e)}"
+            }
+
+    # Session 313: Opportunity Scoring Agent handler
+    def _handle_opportunity_scoring_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle opportunity_scoring_agent tool - Session 313.
+
+        Transforms spider intelligence data into scored, actionable opportunities.
+        """
+        logger.info(f"📊 OPPORTUNITY_SCORING_AGENT CALLED!")
+
+        try:
+            action = arguments.get('action', '')
+            if not action:
+                return {'success': False, 'error': 'Action is required'}
+
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            from agents._deprecated.opportunity_scoring_agent import OpportunityScoringAgent
+            agent = OpportunityScoringAgent()
+
+            if action == 'score_data':
+                hours = arguments.get('hours', 24)
+                limit = arguments.get('limit', 50)
+                results = agent.score_spider_data(hours=hours, limit=limit, user=self.user)
+                # Convert ScoringResult objects to dicts
+                scored_items = [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+                result = {
+                    'success': True,
+                    'scored_opportunities': scored_items,
+                    'count': len(scored_items),
+                    'message': f"Scored {len(scored_items)} spider data items from last {hours} hours"
+                }
+            elif action == 'analyze_trend':
+                trend_topic = arguments.get('trend_topic', '')
+                if not trend_topic:
+                    return {'success': False, 'error': 'Trend topic is required for analyze_trend action'}
+                scoring_result = agent.analyze_trend(
+                    trend_topic=trend_topic,
+                    user=self.user
+                )
+                result = scoring_result.to_dict() if hasattr(scoring_result, 'to_dict') else scoring_result
+            elif action == 'get_top':
+                limit = arguments.get('limit', 10)
+                min_score = arguments.get('min_score', 50)
+                results = agent.get_top_opportunities(limit=limit, min_score=min_score)
+                # Convert to serializable format
+                opportunities = []
+                for opp in results:
+                    if hasattr(opp, 'to_dict'):
+                        opportunities.append(opp.to_dict())
+                    elif hasattr(opp, '__dict__'):
+                        opportunities.append({k: str(v) if hasattr(v, '__str__') else v for k, v in opp.__dict__.items()})
+                    else:
+                        opportunities.append(str(opp))
+                result = {
+                    'success': True,
+                    'opportunities': opportunities,
+                    'count': len(opportunities),
+                    'message': f"Found {len(opportunities)} top opportunities (min score: {min_score})"
+                }
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+            # Return the result
+            if isinstance(result, dict):
+                return {'success': True, 'agent': 'opportunity_scoring_agent', 'action': action, **result}
+            else:
+                return {'success': True, 'agent': 'opportunity_scoring_agent', 'action': action, 'result': result}
+
+        except Exception as e:
+            logger.error(f"❌ Opportunity Scoring agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Opportunity Scoring agent failed: {str(e)}"
+            }
+
+    # Session 313: Trained Creation Agent handler
+    def _handle_trained_creation_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle trained_creation_agent tool - Session 313.
+
+        Generates images using trained LoRA models (character/style).
+        """
+        logger.info(f"🎨 TRAINED_CREATION_AGENT CALLED!")
+
+        try:
+            prompt = arguments.get('prompt', '')
+            character_model_name = arguments.get('character_model_name', '')
+
+            if not prompt:
+                return {'success': False, 'error': 'Prompt is required'}
+            if not character_model_name:
+                return {'success': False, 'error': 'Character model name is required'}
+
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            from agents._deprecated.trained_creation_agent import TrainedCreationAgent
+            agent = TrainedCreationAgent(user=self.user, project_id=getattr(self, 'project_id', None))
+
+            result = agent.execute(
+                prompt=prompt,
+                character_model_name=character_model_name,
+                lora_scale=arguments.get('lora_scale', 0.8),
+                width=arguments.get('width', 1024),
+                height=arguments.get('height', 1024),
+                num_outputs=arguments.get('num_outputs', 1)
+            )
+
+            return {'success': True, 'agent': 'trained_creation_agent', **result}
+
+        except Exception as e:
+            logger.error(f"❌ Trained Creation agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Trained Creation agent failed: {str(e)}"
+            }
+
+    # Session 313: CTO Agent handler
+    def _handle_cto_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle cto_agent tool - Session 313.
+
+        Provides technical architecture analysis and planning.
+        """
+        logger.info(f"🏗️ CTO_AGENT CALLED!")
+
+        try:
+            action = arguments.get('action', '')
+            if not action:
+                return {'success': False, 'error': 'Action is required'}
+
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            from agents._deprecated.cto_agent import CTOAgent
+            agent = CTOAgent(user=self.user)
+
+            if action == 'analyze_feature':
+                feature_name = arguments.get('feature_name', arguments.get('description', ''))
+                if not feature_name:
+                    return {'success': False, 'error': 'Feature name is required for analyze_feature action'}
+                result = agent.analyze_feature(
+                    feature_name=feature_name,
+                    scope=arguments.get('scope', 'feature')
+                )
+            elif action == 'plan_implementation':
+                description = arguments.get('description', arguments.get('feature_name', ''))
+                if not description:
+                    return {'success': False, 'error': 'Description is required for plan_implementation action'}
+                result = agent.implement_feature(
+                    description=description,
+                    approach=arguments.get('approach', 'recommended')
+                )
+            elif action == 'analyze_documentation':
+                result = agent.sync_documentation(
+                    scope=arguments.get('scope', 'all_agents')
+                )
+            elif action == 'coordinate_agents':
+                task = arguments.get('task', '')
+                required_agents = arguments.get('required_agents', [])
+                if not task:
+                    return {'success': False, 'error': 'Task is required for coordinate_agents action'}
+                result = agent.coordinate_agents(
+                    task=task,
+                    required_agents=required_agents
+                )
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+            if isinstance(result, dict):
+                return {'success': True, 'agent': 'cto_agent', 'action': action, **result}
+            else:
+                return {'success': True, 'agent': 'cto_agent', 'action': action, 'result': result}
+
+        except Exception as e:
+            logger.error(f"❌ CTO agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"CTO agent failed: {str(e)}"
+            }
+
+    # Session 313: COO Agent handler
+    def _handle_coo_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle coo_agent tool - Session 313.
+
+        Provides operations planning and risk analysis.
+        """
+        logger.info(f"🏢 COO_AGENT CALLED!")
+
+        try:
+            action = arguments.get('action', '')
+            if not action:
+                return {'success': False, 'error': 'Action is required'}
+
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            from agents._deprecated.coo_agent import COOAgent
+            agent = COOAgent(user=self.user)
+
+            if action == 'analyze_roadmap':
+                result = agent.analyze_roadmap(
+                    project_slug=arguments.get('project_slug'),
+                    feature_name=arguments.get('feature_name'),
+                    scope=arguments.get('scope', 'project')
+                )
+            elif action == 'propose_sprint':
+                result = agent.propose_next_sprint(
+                    project_slug=arguments.get('project_slug'),
+                    feature_name=arguments.get('feature_name'),
+                    sprint_duration=arguments.get('sprint_duration', '2 weeks')
+                )
+            elif action == 'identify_risks':
+                result = agent.identify_risks(
+                    project_slug=arguments.get('project_slug'),
+                    feature_name=arguments.get('feature_name'),
+                    scope=arguments.get('scope', 'project')
+                )
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+            if isinstance(result, dict):
+                return {'success': True, 'agent': 'coo_agent', 'action': action, **result}
+            else:
+                return {'success': True, 'agent': 'coo_agent', 'action': action, 'result': result}
+
+        except Exception as e:
+            logger.error(f"❌ COO agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"COO agent failed: {str(e)}"
+            }
+
+    # Session 313: Meeting Coordinator Agent handler
+    def _handle_meeting_coordinator_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle meeting_coordinator_agent tool - Session 313.
+
+        Coordinates executive boardroom meetings between agents.
+        """
+        logger.info(f"🏢 MEETING_COORDINATOR_AGENT CALLED!")
+
+        try:
+            topic = arguments.get('topic', '')
+            if not topic:
+                return {'success': False, 'error': 'Topic is required'}
+
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+            from agents._deprecated.meeting_coordinator_agent import MeetingCoordinatorAgent
+            agent = MeetingCoordinatorAgent(user=self.user)
+
+            result = agent.start_meeting(
+                topic=topic,
+                project_id=arguments.get('project_id'),
+                participants=arguments.get('participants')
+            )
+
+            if isinstance(result, dict):
+                return {'success': True, 'agent': 'meeting_coordinator_agent', **result}
+            else:
+                return {'success': True, 'agent': 'meeting_coordinator_agent', 'result': result}
+
+        except Exception as e:
+            logger.error(f"❌ Meeting Coordinator agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Meeting Coordinator agent failed: {str(e)}"
+            }
+
+    # Session 313: Content Executor Agent handler
+    def _handle_content_executor_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle content_executor_agent tool - Session 313.
+
+        Executes AI content creation tasks.
+        """
+        logger.info(f"📝 CONTENT_EXECUTOR_AGENT CALLED!")
+
+        try:
+            task = arguments.get('task', '')
+            if not task:
+                return {'success': False, 'error': 'Task description is required'}
+
+            from agents.content_executor import DonkeyBetzContentExecutor
+            from agents.models import AgentExecution, UnifiedAgentTemplate
+            import uuid
+
+            # Create execution record
+            try:
+                template = UnifiedAgentTemplate.objects.get(name='DonkeyBetzContentExecutor')
+            except UnifiedAgentTemplate.DoesNotExist:
+                template = UnifiedAgentTemplate.objects.create(
+                    name='DonkeyBetzContentExecutor',
+                    display_name='Content Executor',
+                    description='Executes AI content creation tasks'
+                )
+
+            execution = AgentExecution.objects.create(
+                agent=template,
+                user=self.user,
+                input_data={
+                    'task': task,
+                    'content_type': arguments.get('content_type', 'blog_post'),
+                    'target_audience': arguments.get('target_audience', 'general audience'),
+                    'tone': arguments.get('tone', 'professional')
+                }
+            )
+
+            executor = DonkeyBetzContentExecutor()
+            result = executor.execute_content_creation(
+                execution_id=str(execution.id),
+                task_data=execution.input_data
+            )
+
+            return {'success': True, 'agent': 'content_executor_agent', **result}
+
+        except Exception as e:
+            logger.error(f"❌ Content Executor agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Content Executor agent failed: {str(e)}"
+            }
+
+    # Session 313: AI Project Builder Agent handler
+    def _handle_ai_project_builder_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle ai_project_builder_agent tool - Session 313.
+
+        Builds AI projects from spider-discovered monetization strategies.
+        """
+        logger.info(f"🏗️ AI_PROJECT_BUILDER_AGENT CALLED!")
+
+        try:
+            task = arguments.get('task', '')
+            if not task:
+                return {'success': False, 'error': 'Task description is required'}
+
+            from agents.ai_project_builder import AIProjectBuilder
+
+            builder = AIProjectBuilder()
+
+            # Optionally provide a strategy hint based on project type
+            strategy = None
+            project_type = arguments.get('project_type')
+            if project_type:
+                strategy = {'strategy_type': project_type, 'title': task}
+
+            result = builder.build_project(
+                task=task,
+                strategy=strategy if not arguments.get('use_spider_strategy', True) else None
+            )
+
+            return {'success': True, 'agent': 'ai_project_builder_agent', **result}
+
+        except Exception as e:
+            logger.error(f"❌ AI Project Builder agent error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"AI Project Builder agent failed: {str(e)}"
             }
 
     # Session 184: Restored create_brand_video handler from Session 67

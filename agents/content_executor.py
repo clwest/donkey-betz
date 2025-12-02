@@ -352,19 +352,19 @@ class DonkeyBetzContentExecutor(ContentExecutorLearningMixin):
             # Build specialized prompt for Donkey Betz content
             prompt = self._build_donkey_betz_prompt(task, content_type, audience)
 
-            # Use OpenAI for content generation
+            # Session 313: Use GPT-5-mini with Responses API
             if self.llm_enforcer.openai_client:
-                response = self.llm_enforcer.openai_client.chat.completions.create(
-                    model="gpt-5-mini",  # High-quality content with GPT-5-mini
-                    messages=[
-                        {"role": "system", "content": self._get_donkey_betz_system_prompt()},
-                        {"role": "user", "content": prompt}
-                    ],
-                    # temperature=0.7  # GPT-5 only supports default temperature,
-                    max_completion_tokens=2000  # GPT-5 uses max_completion_tokens
+                full_input = f"{self._get_donkey_betz_system_prompt()}\n\n{prompt}"
+
+                response = self.llm_enforcer.openai_client.responses.create(
+                    model="gpt-5-mini",
+                    input=full_input,
+                    reasoning={"effort": "low"},
+                    text={"verbosity": "medium"},
+                    max_output_tokens=2000
                 )
 
-                content = response.choices[0].message.content
+                content = response.output_text
 
                 # Parse and enhance content
                 parsed_content = self._parse_generated_content(content)
