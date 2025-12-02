@@ -187,9 +187,9 @@ class ContentStrategyLearningMixin:
         title_contains: str = None,
         from_agents: List[str] = None
     ) -> List[Dict[str, Any]]:
-        """Retrieve knowledge from other agents."""
+        """Retrieve knowledge from other agents and record the learning transfer."""
         try:
-            from core.models_unified_system import AgentKnowledgeSource
+            from core.models_unified_system import AgentKnowledgeSource, AgentLearningConnection, KnowledgeTransfer
 
             queryset = AgentKnowledgeSource.objects.filter(is_active=True)
 
@@ -205,16 +205,44 @@ class ContentStrategyLearningMixin:
             if self.agent_model:
                 queryset = queryset.exclude(agent=self.agent_model)
 
-            return [
-                {
+            results = []
+            for ks in queryset.order_by('-confidence_score')[:10]:
+                results.append({
                     'source_agent': ks.agent.name,
                     'title': ks.title,
                     'type': ks.knowledge_type,
                     'value': json.loads(ks.summary) if ks.summary else {},
                     'confidence': ks.confidence_score,
-                }
-                for ks in queryset.order_by('-confidence_score')[:10]
-            ]
+                })
+
+                # Record the learning connection and transfer (Session 311)
+                if self.agent_model and ks.agent:
+                    try:
+                        connection, created = AgentLearningConnection.objects.get_or_create(
+                            teacher_agent=ks.agent,
+                            student_agent=self.agent_model,
+                            defaults={
+                                'learning_type': 'knowledge_sharing',
+                                'shareable_knowledge_types': [ks.knowledge_type],
+                                'is_active': True,
+                            }
+                        )
+                        connection.total_transfers += 1
+                        connection.last_transfer_at = timezone.now()
+                        connection.save()
+
+                        KnowledgeTransfer.objects.create(
+                            connection=connection,
+                            source_knowledge=ks,
+                            transfer_summary=f"Retrieved '{ks.title}' for content strategy",
+                            key_points={'knowledge_type': ks.knowledge_type},
+                            was_useful=True,
+                            usefulness_score=ks.confidence_score,
+                        )
+                    except Exception as transfer_error:
+                        logger.debug(f"Failed to record transfer: {transfer_error}")
+
+            return results
         except Exception as e:
             logger.debug(f"Failed to get shared knowledge: {e}")
             return []
