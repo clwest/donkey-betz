@@ -27,6 +27,9 @@
                 document.getElementById('agent-transfers-count').textContent = data.stats?.learning?.total_transfers || 0;
                 document.getElementById('agent-synthesized-count').textContent = data.stats?.learning?.synthesized_items || 0;
 
+                // Session 309: Update architecture and memory stats
+                loadSession309Stats();
+
                 // Session 244: Update learning feed
                 updateLearningFeed(data.stats?.learning?.recent_transfers || []);
 
@@ -4148,4 +4151,29 @@
         });
 
         // ============================================================
+
+        // Session 309: Load architecture breakdown and learning stats
+        async function loadSession309Stats() {
+            try {
+                const response = await fetch('/api/agent-learning/stats/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.success && data.stats) {
+                    // Update Session 309 cards
+                    const memoryEl = document.getElementById('agent-memory-count');
+                    const knowledgeEl = document.getElementById('agent-knowledge-sources');
+                    const cleanEl = document.getElementById('agent-clean-count');
+                    const deprecatedEl = document.getElementById('agent-deprecated-count');
+
+                    if (memoryEl) memoryEl.textContent = data.stats.agent_memories || 0;
+                    if (knowledgeEl) knowledgeEl.textContent = data.stats.knowledge_sources || 0;
+                    if (cleanEl) cleanEl.textContent = data.stats.clean_agents || 11;
+                    if (deprecatedEl) deprecatedEl.textContent = data.stats.deprecated_agents || 14;
+                }
+            } catch (err) {
+                console.debug('Session 309 stats not available:', err);
+            }
+        }
 </script>

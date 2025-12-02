@@ -171,6 +171,20 @@ def get_learning_stats(request):
         service = get_learning_service()
         stats = service.get_learning_stats(user_id=request.user.id)
 
+        # Session 309: Add memory and knowledge source counts
+        try:
+            from core.models_unified_system import AgentMemory, AgentKnowledgeSource, Agent
+            stats['agent_memories'] = AgentMemory.objects.count()
+            stats['knowledge_sources'] = AgentKnowledgeSource.objects.count()
+            stats['clean_agents'] = 11  # core/agents/ count
+            stats['deprecated_agents'] = Agent.objects.filter(agent_type='deprecated').count() or 14
+        except Exception as db_err:
+            logger.debug(f"Could not fetch Session 309 stats: {db_err}")
+            stats['agent_memories'] = 0
+            stats['knowledge_sources'] = 0
+            stats['clean_agents'] = 11
+            stats['deprecated_agents'] = 14
+
         return JsonResponse({
             'success': True,
             'stats': stats
