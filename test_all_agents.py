@@ -113,7 +113,10 @@ def test_clean_agents():
 
             # Check for required methods
             has_execute = hasattr(agent, 'execute') or hasattr(agent, 'process')
-            has_learning = hasattr(agent, 'record_learning') or hasattr(agent, 'share_knowledge')
+            # Learning hooks use underscore-prefixed methods from mixin
+            has_learning = (hasattr(agent, '_share_knowledge') or
+                          hasattr(agent, '_create_execution_memory') or
+                          hasattr(agent, 'learning_loop'))
 
             if has_execute:
                 test_result('clean_agents', f"{display_name} instantiation", True)
@@ -161,17 +164,19 @@ def test_legacy_agents():
             # Try to instantiate
             agent = agent_class()
 
-            # Check for learning methods
-            has_record = hasattr(agent, 'record_learning')
-            has_share = hasattr(agent, 'share_knowledge')
-            has_retrieve = hasattr(agent, 'retrieve_knowledge')
+            # Check for learning methods (Sessions 305-308 use underscore-prefixed methods)
+            has_share = hasattr(agent, '_share_knowledge')
+            has_memory = hasattr(agent, '_create_execution_memory')
+            has_retrieve = hasattr(agent, '_get_shared_knowledge')
+            has_learning_loop = hasattr(agent, 'learning_loop') or hasattr(agent, '_learning_loop')
 
             test_result('legacy_agents', f"{display_name} instantiation", True)
 
             learning_methods = []
-            if has_record: learning_methods.append('record_learning')
-            if has_share: learning_methods.append('share_knowledge')
-            if has_retrieve: learning_methods.append('retrieve_knowledge')
+            if has_share: learning_methods.append('_share_knowledge')
+            if has_memory: learning_methods.append('_create_execution_memory')
+            if has_retrieve: learning_methods.append('_get_shared_knowledge')
+            if has_learning_loop: learning_methods.append('learning_loop')
 
             if learning_methods:
                 test_result('legacy_agents', f"{display_name} learning hooks", True)
