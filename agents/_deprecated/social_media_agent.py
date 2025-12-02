@@ -3,6 +3,7 @@ Social Media Content Creator Agent
 ===================================
 
 Session 241: Created as part of agent cleanup - building real, valuable agents.
+Session 308: Added learning infrastructure hooks for cross-agent knowledge sharing.
 
 This agent specializes in platform-specific content generation:
 - Knows optimal dimensions for each platform
@@ -26,6 +27,7 @@ Example:
 from __future__ import annotations
 
 import logging
+import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -35,11 +37,198 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class SocialMediaAgent:
+class SocialMediaLearningMixin:
+    """
+    Learning infrastructure mixin for SocialMediaAgent.
+    Session 308: Enables cross-agent knowledge sharing for platform-specific patterns.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='SocialMediaAgent',
+                    defaults={
+                        'agent_type': 'deprecated',
+                        'specialization': 'social_media',
+                        'description': 'Creates platform-optimized social media content.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='social_media',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['SocialMediaAgent'],
+                response=str(result)[:500],
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', False),
+                spider_data_used=False,
+                scifi_context_used=False,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the social media execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"Social: {task[:50]}...",
+                content=str(result)[:500],
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['social_media', 'platform', 'success' if result.get('success') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned social media knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'platform': 'market',
+                'posting_times': 'content_idea',
+                'content_type': 'content_idea',
+                'calendar': 'content_idea',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'content_idea')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                queryset = queryset.filter(knowledge_type=knowledge_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
+
+
+class SocialMediaAgent(SocialMediaLearningMixin):
     """
     Creates platform-optimized social media content.
 
     Handles dimensions, styles, and best practices for each platform.
+
+    Session 308: Added SocialMediaLearningMixin for cross-agent knowledge sharing.
     """
 
     # Platform specifications
@@ -246,10 +435,37 @@ class SocialMediaAgent:
             else:
                 result['message'] = f"Content specs ready for {specs['name']}"
 
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result=result,
+                task=f"Create for platform: {platform}",
+                context={'platform': platform, 'style': style, 'generated_image': generate_image}
+            )
+
+            # Share platform-specific knowledge
+            if result.get('success'):
+                self._share_knowledge(
+                    knowledge_type='platform',
+                    title=f"Platform content: {platform}",
+                    knowledge_value={
+                        'platform': platform,
+                        'size': specs['size'],
+                        'aspect_ratio': specs['aspect_ratio'],
+                        'style_tips': specs.get('style_tips', [])[:2],
+                    },
+                    confidence=0.75
+                )
+
             return result
 
         except Exception as e:
             logger.error(f"❌ SocialMediaAgent.create_for_platform failed: {e}", exc_info=True)
+            # Session 308: Record failure
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task=f"Create for platform: {platform} (failed)",
+                context={'error': str(e)}
+            )
             return {
                 'success': False,
                 'error': str(e)
@@ -301,13 +517,31 @@ class SocialMediaAgent:
                 if result.get('success'):
                     successful += 1
 
-            return {
+            result = {
                 'success': successful > 0,
                 'total_platforms': len(platforms),
                 'successful': successful,
                 'results': results,
                 'message': f"Created content for {successful}/{len(platforms)} platforms"
             }
+
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result=result,
+                task=f"Create multi-platform content",
+                context={'platforms': platforms, 'successful': successful, 'total': len(platforms)}
+            )
+
+            # Create memory for multi-platform success
+            if successful > 0:
+                self._create_execution_memory(
+                    result=result,
+                    task=f"Multi-platform: {successful} platforms",
+                    memory_type="success",
+                    importance=0.7
+                )
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ SocialMediaAgent.create_multi_platform failed: {e}", exc_info=True)
@@ -520,7 +754,7 @@ class SocialMediaAgent:
                     'posts': posts
                 })
 
-            return {
+            result = {
                 'success': True,
                 'calendar': calendar,
                 'days_planned': days,
@@ -531,6 +765,37 @@ class SocialMediaAgent:
                     'Leave room for timely content'
                 ]
             }
+
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result=result,
+                task=f"Create {days}-day content calendar",
+                context={'days': days, 'total_posts': result['total_posts']}
+            )
+
+            # Create memory for calendar generation
+            self._create_execution_memory(
+                result=result,
+                task=f"Social calendar: {days} days",
+                memory_type="success",
+                importance=0.65
+            )
+
+            # Share calendar knowledge
+            self._share_knowledge(
+                knowledge_type='calendar',
+                title=f"Social calendar: {days} days",
+                knowledge_value={
+                    'days_planned': days,
+                    'total_posts': result['total_posts'],
+                    'platforms_used': list(set(
+                        p.get('platform') for day in calendar for p in day.get('posts', [])
+                    )),
+                },
+                confidence=0.8
+            )
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ SocialMediaAgent.create_content_calendar failed: {e}", exc_info=True)
