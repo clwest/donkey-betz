@@ -3,6 +3,7 @@ Brand Identity Creator Agent
 =============================
 
 Session 241: Created as part of agent cleanup - building real, valuable agents.
+Session 308: Added learning infrastructure hooks for cross-agent knowledge sharing.
 
 This agent manages brand consistency across generated content by:
 - Remembering user's brand colors, fonts, and style preferences
@@ -37,12 +38,199 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class BrandIdentityAgent:
+class BrandIdentityLearningMixin:
+    """
+    Learning infrastructure mixin for BrandIdentityAgent.
+    Session 308: Enables cross-agent knowledge sharing for brand patterns.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='BrandIdentityAgent',
+                    defaults={
+                        'agent_type': 'deprecated',
+                        'specialization': 'brand_identity',
+                        'description': 'Manages brand consistency across generated content.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='brand_identity',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['BrandIdentityAgent'],
+                response=str(result),
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', False),
+                spider_data_used=False,
+                scifi_context_used=False,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the brand identity execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"Brand: {task[:50]}...",
+                content=str(result),
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['brand_identity', 'branding', 'success' if result.get('success') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned brand knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'color_palette': 'content_idea',
+                'style': 'content_idea',
+                'brand': 'content_idea',
+                'industry': 'market',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'content_idea')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                queryset = queryset.filter(knowledge_type=knowledge_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
+
+
+class BrandIdentityAgent(BrandIdentityLearningMixin):
     """
     Manages brand consistency across all generated content.
 
     Stores and applies brand preferences (colors, fonts, styles) to ensure
     consistent branding across logos, social content, and other assets.
+
+    Session 308: Added BrandIdentityLearningMixin for cross-agent knowledge sharing.
     """
 
     # Color palette templates
@@ -227,11 +415,32 @@ class BrandIdentityAgent:
 
         self._save_brand_data()
 
-        return {
+        result = {
             'success': True,
             'colors': self._brand_data['colors'],
             'message': 'Brand colors updated successfully'
         }
+
+        # Session 308: Learning Infrastructure Hooks
+        self._record_learning_outcome(
+            result=result,
+            task=f"Set brand colors: primary={primary}",
+            context={'primary': primary, 'secondary': secondary, 'accent': accent}
+        )
+
+        # Share successful color palettes
+        self._share_knowledge(
+            knowledge_type='color_palette',
+            title=f"Brand colors: {primary}",
+            knowledge_value={
+                'primary': primary,
+                'secondary': self._brand_data['colors']['secondary'],
+                'accent': self._brand_data['colors']['accent'],
+            },
+            confidence=0.75
+        )
+
+        return result
 
     def set_brand_style(self, style: str) -> Dict[str, Any]:
         """
@@ -258,12 +467,33 @@ class BrandIdentityAgent:
 
         self._save_brand_data()
 
-        return {
+        result = {
             'success': True,
             'style': style,
             'details': self.BRAND_STYLES[style],
             'message': f'Brand style set to "{style}"'
         }
+
+        # Session 308: Learning Infrastructure Hooks
+        self._record_learning_outcome(
+            result=result,
+            task=f"Set brand style: {style}",
+            context={'style': style, 'characteristics': self.BRAND_STYLES[style].get('characteristics', [])}
+        )
+
+        # Share style preferences
+        self._share_knowledge(
+            knowledge_type='style',
+            title=f"Brand style: {style}",
+            knowledge_value={
+                'style': style,
+                'characteristics': self.BRAND_STYLES[style].get('characteristics', []),
+                'fonts': self.BRAND_STYLES[style].get('fonts', []),
+            },
+            confidence=0.8
+        )
+
+        return result
 
     def set_brand_name(self, name: str, tagline: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -493,12 +723,42 @@ class BrandIdentityAgent:
                     'colors': self.COLOR_PALETTES[palette_name]
                 })
 
-        return {
+        result = {
             'success': True,
             'industry': industry,
             'suggestions': suggestions,
             'message': f'Suggested {len(suggestions)} color palettes for {industry}'
         }
+
+        # Session 308: Learning Infrastructure Hooks
+        self._record_learning_outcome(
+            result=result,
+            task=f"Suggest colors for industry: {industry}",
+            context={'industry': industry, 'suggestions': [s['name'] for s in suggestions]}
+        )
+
+        # Share industry-specific palette knowledge
+        if suggestions:
+            self._share_knowledge(
+                knowledge_type='industry',
+                title=f"Industry palette: {industry}",
+                knowledge_value={
+                    'industry': industry,
+                    'recommended_palettes': [s['name'] for s in suggestions],
+                    'primary_colors': [s['colors']['primary'] for s in suggestions],
+                },
+                confidence=0.7
+            )
+
+            # Create memory for industry palette suggestion
+            self._create_execution_memory(
+                result=result,
+                task=f"Industry colors: {industry}",
+                memory_type="success",
+                importance=0.6
+            )
+
+        return result
 
     # Private helper methods
 

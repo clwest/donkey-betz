@@ -3,6 +3,7 @@ SEO Content Optimizer Agent
 ===========================
 
 Session 241: Created as part of agent cleanup - building real, valuable agents.
+Session 308: Added learning infrastructure hooks for cross-agent knowledge sharing.
 
 This agent optimizes generated content for discoverability by:
 - Adding SEO-friendly descriptions and alt text
@@ -25,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import re
+import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from django.utils import timezone
@@ -34,11 +36,199 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class SEOOptimizerAgent:
+class SEOOptimizerLearningMixin:
+    """
+    Learning infrastructure mixin for SEOOptimizerAgent.
+    Session 308: Enables cross-agent knowledge sharing for SEO patterns.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='SEOOptimizerAgent',
+                    defaults={
+                        'agent_type': 'deprecated',
+                        'specialization': 'seo_optimization',
+                        'description': 'Optimizes content for search engines and social platforms.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = False
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='seo_optimization',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['SEOOptimizerAgent'],
+                response=str(result),
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', False),
+                spider_data_used=spider_data_used,
+                scifi_context_used=False,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the SEO optimization execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"SEO: {task[:50]}...",
+                content=str(result),
+                memory_type=memory_type,
+                valence="positive" if result.get('success') else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['seo', 'optimization', 'success' if result.get('success') else 'failure']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned SEO knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'hashtags': 'content_idea',
+                'keywords': 'content_idea',
+                'platform': 'market',
+                'seo': 'tool_discovery',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'content_idea')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                queryset = queryset.filter(knowledge_type=knowledge_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
+
+
+class SEOOptimizerAgent(SEOOptimizerLearningMixin):
     """
     Optimizes content for search engines and social platforms.
 
     Generates metadata, hashtags, and descriptions to improve discoverability.
+
+    Session 308: Added SEOOptimizerLearningMixin for cross-agent knowledge sharing.
     """
 
     # Platform-specific hashtag limits
@@ -149,10 +339,45 @@ class SEOOptimizerAgent:
                 image.save()
                 result['saved'] = True
 
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result=result,
+                task=f"Optimize image: {image_id}",
+                context={'content_type': content_type, 'keywords_count': len(keywords)}
+            )
+
+            # Create memory for successful SEO optimization
+            self._create_execution_memory(
+                result=result,
+                task=f"Image SEO: {content_type}",
+                memory_type="success",
+                importance=0.65
+            )
+
+            # Share successful SEO patterns
+            if keywords:
+                self._share_knowledge(
+                    knowledge_type='seo',
+                    title=f"SEO pattern: {content_type}",
+                    knowledge_value={
+                        'content_type': content_type,
+                        'keywords': keywords[:5],
+                        'categories': categories,
+                        'hashtag_count': len(hashtags.get('hashtags', [])),
+                    },
+                    confidence=0.75
+                )
+
             return result
 
         except Exception as e:
             logger.error(f"❌ SEOOptimizerAgent.optimize_image failed: {e}", exc_info=True)
+            # Session 308: Record failure
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task=f"Optimize image: {image_id} (failed)",
+                context={'error': str(e)}
+            )
             return {
                 'success': False,
                 'error': str(e)
@@ -206,7 +431,7 @@ class SEOOptimizerAgent:
             # Format with # prefix
             formatted = [f"#{tag}" for tag in hashtag_list]
 
-            return {
+            result = {
                 'success': True,
                 'hashtags': formatted,
                 'hashtags_raw': hashtag_list,
@@ -215,6 +440,30 @@ class SEOOptimizerAgent:
                 'limit': limit,
                 'copy_text': ' '.join(formatted)
             }
+
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result=result,
+                task=f"Get hashtags: {topic[:30]}",
+                context={'platform': platform, 'hashtag_count': len(formatted)},
+                spider_data_used=include_trending
+            )
+
+            # Share effective hashtag patterns
+            if len(formatted) >= 5:
+                self._share_knowledge(
+                    knowledge_type='hashtags',
+                    title=f"Hashtags for: {topic[:30]}",
+                    knowledge_value={
+                        'topic': topic[:50],
+                        'platform': platform,
+                        'hashtags': hashtag_list[:10],
+                        'categories': categories,
+                    },
+                    confidence=0.7
+                )
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ SEOOptimizerAgent.get_hashtags failed: {e}", exc_info=True)
@@ -403,7 +652,7 @@ class SEOOptimizerAgent:
                 max_length=platform_info.get('caption_limit', 300)
             )
 
-            return {
+            result = {
                 'success': True,
                 'platform': platform,
                 'optimized': {
@@ -414,6 +663,28 @@ class SEOOptimizerAgent:
                 'platform_guidelines': platform_info,
                 'tips': platform_info.get('tips', [])
             }
+
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result=result,
+                task=f"Optimize for platform: {platform}",
+                context={'platform': platform, 'content_preview': content[:50]}
+            )
+
+            # Share platform-specific optimization patterns
+            self._share_knowledge(
+                knowledge_type='platform',
+                title=f"Platform optimization: {platform}",
+                knowledge_value={
+                    'platform': platform,
+                    'max_hashtags': platform_info['max_hashtags'],
+                    'ideal_hashtags': platform_info.get('ideal_hashtags'),
+                    'tips': platform_info.get('tips', [])[:2],
+                },
+                confidence=0.8
+            )
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ SEOOptimizerAgent.optimize_for_platform failed: {e}", exc_info=True)

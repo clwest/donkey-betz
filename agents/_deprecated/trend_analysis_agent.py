@@ -3,6 +3,7 @@ Trend Analysis Agent - Spider Intelligence Analyst
 ===================================================
 
 Session 209: Created as part of Phase A - Spider Intelligence Enhancement
+Session 308: Added learning infrastructure hooks for cross-agent knowledge sharing.
 
 This agent provides intelligent trend analysis by:
 1. Analyzing patterns across all spider data
@@ -30,12 +31,200 @@ Example:
 from __future__ import annotations
 
 import logging
+import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from collections import Counter
 
 logger = logging.getLogger(__name__)
+
+
+class TrendAnalysisLearningMixin:
+    """
+    Learning infrastructure mixin for TrendAnalysisAgent.
+    Session 308: Enables cross-agent knowledge sharing for trend patterns.
+    """
+
+    _learning_loop = None
+    _memory_service = None
+    _agent_model = None
+
+    @property
+    def learning_loop(self):
+        """Lazy-load LearningLoopService."""
+        if self._learning_loop is None:
+            try:
+                from core.super_platform.learning_loop import get_learning_loop_service
+                self._learning_loop = get_learning_loop_service(None)
+            except ImportError:
+                logger.debug("LearningLoopService not available")
+                return None
+        return self._learning_loop
+
+    @property
+    def memory_service(self):
+        """Lazy-load MemoryEmbeddingService."""
+        if self._memory_service is None:
+            try:
+                from core.services.memory_embedding_service import get_memory_embedding_service
+                self._memory_service = get_memory_embedding_service()
+            except ImportError:
+                logger.debug("MemoryEmbeddingService not available")
+                return None
+        return self._memory_service
+
+    @property
+    def agent_model(self):
+        """Lazy-load or create Agent model instance."""
+        if self._agent_model is None:
+            try:
+                from core.models_unified_system import Agent
+                self._agent_model, _ = Agent.objects.get_or_create(
+                    name='TrendAnalysisAgent',
+                    defaults={
+                        'agent_type': 'deprecated',
+                        'specialization': 'trend_analysis',
+                        'description': 'Analyzes spider data for trends, opportunities, and market intelligence.',
+                        'is_active': True,
+                    }
+                )
+            except ImportError:
+                logger.debug("Agent model not available")
+                return None
+        return self._agent_model
+
+    def _record_learning_outcome(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        context: Dict[str, Any] = None,
+        spider_data_used: bool = True
+    ):
+        """Record execution outcome for XP and pattern learning."""
+        if not self.learning_loop:
+            return None
+
+        try:
+            outcome_id = self.learning_loop.record_outcome(
+                query_type='trend_analysis',
+                query_text=task,
+                execution_mode='agent',
+                agents_used=['TrendAnalysisAgent'],
+                response=str(result)[:500],
+                execution_time_ms=result.get('execution_time_ms', 0),
+                success=result.get('success', True),
+                spider_data_used=spider_data_used,
+                scifi_context_used=False,
+                context=context or {}
+            )
+            return outcome_id
+        except Exception as e:
+            logger.debug(f"Failed to record learning outcome: {e}")
+            return None
+
+    def _create_execution_memory(
+        self,
+        result: Dict[str, Any],
+        task: str,
+        memory_type: str = "interaction",
+        importance: float = 0.5
+    ):
+        """Create a memory from the trend analysis execution."""
+        if not self.memory_service or not self.agent_model:
+            return None
+
+        try:
+            memory = self.memory_service.create_memory(
+                agent=self.agent_model,
+                title=f"Trend: {task[:50]}...",
+                content=str(result)[:500],
+                memory_type=memory_type,
+                valence="positive" if result.get('success', True) else "negative",
+                importance_score=importance,
+                source_type='agent_execution',
+                tags=['trend_analysis', 'spider_data', 'intelligence']
+            )
+            return memory
+        except Exception as e:
+            logger.debug(f"Failed to create execution memory: {e}")
+            return None
+
+    def _share_knowledge(
+        self,
+        knowledge_type: str,
+        title: str,
+        knowledge_value: Dict[str, Any],
+        confidence: float = 0.8
+    ):
+        """Share learned trend knowledge for cross-agent learning."""
+        if not self.agent_model:
+            return None
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            type_mapping = {
+                'trend': 'trend',
+                'opportunity': 'opportunity',
+                'market': 'market',
+                'tech': 'tool_discovery',
+                'emerging': 'trend',
+            }
+            mapped_type = type_mapping.get(knowledge_type, 'trend')
+
+            knowledge, created = AgentKnowledgeSource.objects.update_or_create(
+                agent=self.agent_model,
+                title=title,
+                knowledge_type=mapped_type,
+                defaults={
+                    'summary': json.dumps(knowledge_value),
+                    'confidence_score': confidence,
+                    'is_active': True,
+                }
+            )
+            return knowledge
+        except Exception as e:
+            logger.debug(f"Failed to share knowledge: {e}")
+            return None
+
+    def _get_shared_knowledge(
+        self,
+        knowledge_type: str = None,
+        title_contains: str = None,
+        from_agents: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve knowledge from other agents."""
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+
+            queryset = AgentKnowledgeSource.objects.filter(is_active=True)
+
+            if knowledge_type:
+                queryset = queryset.filter(knowledge_type=knowledge_type)
+
+            if title_contains:
+                queryset = queryset.filter(title__icontains=title_contains)
+
+            if from_agents:
+                queryset = queryset.filter(agent__name__in=from_agents)
+
+            if self.agent_model:
+                queryset = queryset.exclude(agent=self.agent_model)
+
+            return [
+                {
+                    'source_agent': ks.agent.name,
+                    'title': ks.title,
+                    'type': ks.knowledge_type,
+                    'value': json.loads(ks.summary) if ks.summary else {},
+                    'confidence': ks.confidence_score,
+                }
+                for ks in queryset.order_by('-confidence_score')[:10]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get shared knowledge: {e}")
+            return []
 
 
 @dataclass
@@ -144,7 +333,7 @@ class TrendReport:
         return "\n".join(lines)
 
 
-class TrendAnalysisAgent:
+class TrendAnalysisAgent(TrendAnalysisLearningMixin):
     """
     Intelligent trend analysis agent that transforms spider data into insights.
 
@@ -153,6 +342,8 @@ class TrendAnalysisAgent:
     - Generate comprehensive intelligence reports
     - Find actionable opportunities
     - Track market and tech sector shifts
+
+    Session 308: Added TrendAnalysisLearningMixin for cross-agent knowledge sharing.
     """
 
     # Opportunity detection keywords
@@ -220,7 +411,7 @@ class TrendAnalysisAgent:
             total_data = summary.get('total_items', 0)
             confidence = min(1.0, total_data / 100)  # Full confidence at 100+ data points
 
-            return TrendReport(
+            report = TrendReport(
                 success=True,
                 report_type='daily',
                 generated_at=now,
@@ -238,10 +429,48 @@ class TrendAnalysisAgent:
                 confidence_score=confidence,
             )
 
+            # Session 308: Learning Infrastructure Hooks
+            self._record_learning_outcome(
+                result={'success': True, 'trends_count': len(trends), 'data_points': total_data},
+                task="Generate daily intelligence briefing",
+                context={'period': '24h', 'sources': len(list(summary.get('by_spider', {}).keys()))}
+            )
+
+            # Create high-importance memory for daily briefings
+            self._create_execution_memory(
+                result={'trends': len(trends), 'opportunities': len(opportunities)},
+                task="Daily briefing",
+                memory_type="success",
+                importance=0.8
+            )
+
+            # Share top trends as cross-agent knowledge
+            if trends:
+                top_trend = trends[0] if trends else {}
+                self._share_knowledge(
+                    knowledge_type='trend',
+                    title=f"Daily top trend: {top_trend.get('topic', 'Unknown')[:30]}",
+                    knowledge_value={
+                        'top_trends': [t.get('topic', '') for t in trends[:5]],
+                        'emerging_count': len(emerging),
+                        'opportunity_count': len(opportunities),
+                        'confidence': confidence,
+                    },
+                    confidence=confidence
+                )
+
+            return report
+
         except Exception as e:
             logger.error(f"Error generating daily briefing: {e}")
             from django.utils import timezone
             now = timezone.now()
+            # Session 308: Record failure
+            self._record_learning_outcome(
+                result={'success': False, 'error': str(e)},
+                task="Generate daily briefing (failed)",
+                context={'error': str(e)}
+            )
             return TrendReport(
                 success=False,
                 report_type='daily',
@@ -401,7 +630,30 @@ class TrendAnalysisAgent:
             tech = self.intelligence_service.get_tech_trends(hours=hours)
             jobs = self.intelligence_service.get_job_market_summary(hours=hours)
 
-            return self._find_opportunities(trends, market, tech, jobs)
+            opportunities = self._find_opportunities(trends, market, tech, jobs)
+
+            # Session 308: Learning Infrastructure Hooks
+            if opportunities:
+                self._record_learning_outcome(
+                    result={'success': True, 'opportunities_found': len(opportunities)},
+                    task=f"Find emerging opportunities ({hours}h)",
+                    context={'hours': hours, 'opportunity_types': list(set(o.get('type') for o in opportunities))}
+                )
+
+                # Share high-value opportunities
+                for opp in opportunities[:3]:  # Top 3
+                    self._share_knowledge(
+                        knowledge_type='opportunity',
+                        title=f"Opportunity: {opp.get('title', 'Unknown')[:40]}",
+                        knowledge_value={
+                            'type': opp.get('type'),
+                            'title': opp.get('title'),
+                            'description': opp.get('description'),
+                        },
+                        confidence=0.75
+                    )
+
+            return opportunities
 
         except Exception as e:
             logger.error(f"Error finding opportunities: {e}")
