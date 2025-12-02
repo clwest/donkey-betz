@@ -43,11 +43,11 @@ Sessions 305-309 completed the learning infrastructure rollout:
 
 ---
 
-## Known Minor Issues
+## Issues Fixed (Session 309)
 
-1. **LearningLoopService.record_outcome()** - Shows warning about unexpected `context` keyword. Doesn't break functionality.
+1. **LearningLoopService.record_outcome()** - Added `context` parameter support. No more warnings.
 
-2. **UserPreference model** - BrandIdentityAgent can't persist user preferences. Core learning works.
+2. **UserPreference model** - Created key-value model for brand data persistence. BrandIdentityAgent works fully.
 
 ---
 
