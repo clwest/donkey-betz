@@ -85,6 +85,100 @@ class ConversationOrchestrator:
             self._client = openai.OpenAI(api_key=self.api_key)
         return self._client
 
+    def _get_live_system_stats(self) -> Dict[str, Any]:
+        """
+        Gather real-time system statistics for grounding conversations.
+
+        Session 315: Agents now discuss ACTUAL system state, not placeholders.
+        """
+        stats = {}
+
+        try:
+            # Spider count
+            from ai_core.spiders.spider_registry import SpiderRegistry
+            registry = SpiderRegistry()
+            spider_counts = registry.get_spider_count()
+            stats['spider_count'] = spider_counts.get('total', 0)
+            stats['spider_categories'] = spider_counts.get('by_category', {})
+        except Exception as e:
+            logger.warning(f"Could not get spider stats: {e}")
+            stats['spider_count'] = 'unknown'
+
+        try:
+            # Agent counts
+            from core.models import Agent
+            stats['active_agents'] = Agent.objects.filter(is_active=True).count()
+            stats['total_agents'] = Agent.objects.count()
+        except Exception as e:
+            logger.warning(f"Could not get agent stats: {e}")
+            stats['active_agents'] = 'unknown'
+
+        try:
+            # Memory and knowledge stats
+            from core.models import AgentMemory, AgentKnowledgeSource
+            stats['total_memories'] = AgentMemory.objects.count()
+            stats['knowledge_sources'] = AgentKnowledgeSource.objects.count()
+        except Exception as e:
+            logger.warning(f"Could not get memory stats: {e}")
+            stats['total_memories'] = 'unknown'
+
+        try:
+            # Spider data stats
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+            from datetime import timedelta
+
+            stats['spider_data_total'] = SpiderData.objects.count()
+            recent = timezone.now() - timedelta(hours=24)
+            stats['spider_data_24h'] = SpiderData.objects.filter(created_at__gte=recent).count()
+        except Exception as e:
+            logger.warning(f"Could not get spider data stats: {e}")
+            stats['spider_data_total'] = 'unknown'
+
+        try:
+            # Workflow stats
+            from core.models_unified_system import Opportunity, ABTest
+            stats['opportunities'] = Opportunity.objects.count()
+            stats['ab_tests'] = ABTest.objects.count()
+        except Exception as e:
+            logger.warning(f"Could not get workflow stats: {e}")
+
+        try:
+            # Conversation stats
+            from core.models import AgentConversation
+            stats['total_conversations'] = AgentConversation.objects.count()
+        except Exception as e:
+            logger.warning(f"Could not get conversation stats: {e}")
+
+        try:
+            # Learning events
+            from core.models_unified_system import AgentLearningEvent
+            stats['learning_events'] = AgentLearningEvent.objects.count()
+        except Exception as e:
+            logger.warning(f"Could not get learning stats: {e}")
+            stats['learning_events'] = 0
+
+        return stats
+
+    def _format_system_context(self, stats: Dict[str, Any]) -> str:
+        """Format live system stats into a context block for prompts."""
+        lines = [
+            "=== LIVE PLATFORM STATISTICS (Real-Time Data) ===",
+            f"• Spider Network: {stats.get('spider_count', 'N/A')} active spiders across {len(stats.get('spider_categories', {}))} categories",
+            f"• Agent Ecosystem: {stats.get('active_agents', 'N/A')} active agents ({stats.get('total_agents', 'N/A')} total)",
+            f"• Memory Palace: {stats.get('total_memories', 'N/A')} memories stored",
+            f"• Knowledge Base: {stats.get('knowledge_sources', 'N/A')} knowledge sources",
+            f"• Spider Data: {stats.get('spider_data_total', 'N/A')} total records ({stats.get('spider_data_24h', 'N/A')} in last 24h)",
+            f"• Opportunities Tracked: {stats.get('opportunities', 'N/A')}",
+            f"• A/B Tests: {stats.get('ab_tests', 'N/A')}",
+            f"• Agent Conversations: {stats.get('total_conversations', 'N/A')}",
+            f"• Learning Events: {stats.get('learning_events', 'N/A')}",
+            "",
+            "USE THESE EXACT NUMBERS when discussing platform capabilities.",
+            "==================================================="
+        ]
+        return "\n".join(lines)
+
     def generate_conversation(
         self,
         agent1: Dict[str, Any],
@@ -114,6 +208,11 @@ class ConversationOrchestrator:
         """
         logger.info(f"Starting conversation: {agent1['name']} <-> {agent2['name']} on '{topic}'")
 
+        # Session 315: Gather live system stats once for the entire conversation
+        system_stats = self._get_live_system_stats()
+        system_context = self._format_system_context(system_stats)
+        logger.info(f"Injecting live stats: {system_stats.get('spider_count')} spiders, {system_stats.get('active_agents')} agents")
+
         state = ConversationState()
         messages = []
         conversation_context = []
@@ -138,7 +237,8 @@ class ConversationOrchestrator:
                 context=conversation_context,
                 force_tension=force_tension,
                 is_final_turn=is_final_turn,
-                state=state
+                state=state,
+                system_context=system_context  # Session 315: Live stats
             )
 
             # Generate response with retry logic
@@ -219,7 +319,8 @@ class ConversationOrchestrator:
         context: List[Dict],
         force_tension: bool,
         is_final_turn: bool,
-        state: ConversationState
+        state: ConversationState,
+        system_context: str = ""  # Session 315: Live system stats
     ) -> str:
         """Build the complete prompt for a conversation turn."""
 
@@ -304,8 +405,10 @@ AGREEMENT RULES:
 - If you agree, still add nuance: "That aligns with the data, though one consideration is..."
 - Always contribute something new, don't just validate""")
 
-        # Assemble full prompt
+        # Assemble full prompt with live system stats (Session 315)
         prompt = f"""{role_prompt}
+
+{system_context}
 
 {type_instructions}
 
@@ -358,18 +461,27 @@ Approach: Examine data, consider implications, draw conclusions."""
     ) -> str:
         """Generate a message with retry logic for contract compliance."""
 
-        max_completion_tokens = 600 if is_final_turn else 250
+        # GPT-5 reasoning models: max_output_tokens includes BOTH reasoning + text
+        # Need higher values to leave room for text after reasoning
+        # Final turn needs more for DecisionSummary
+        max_output_tokens = 2000 if is_final_turn else 1000
 
         for attempt in range(max_retries + 1):
             try:
-                response = self.client.chat.completions.create(
+                # Use GPT-5 Responses API (Session 314 migration)
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_completion_tokens=max_completion_tokens,
-                    reasoning_effort="medium",
+                    input=prompt,
+                    reasoning={"effort": "medium"},
+                    text={"verbosity": "medium"},
+                    max_output_tokens=max_output_tokens,
                 )
 
-                content = response.choices[0].message.content.strip()
+                content = response.output_text.strip() if response.output_text else ""
+
+                # Check if response was incomplete due to token limit
+                if response.status == 'incomplete':
+                    logger.warning(f"Response incomplete: {response.incomplete_details}")
 
                 # For final turn, validate decision summary presence
                 if is_final_turn and attempt < max_retries:

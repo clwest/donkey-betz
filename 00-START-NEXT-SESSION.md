@@ -1,34 +1,38 @@
-# Session 315: End-to-End Agent Testing
+# Session 316: Continue Platform Testing
 
 **Date:** December 2, 2025
-**Previous Session:** 314 - GPT-5 Responses API Migration + UI Cleanup
+**Previous Session:** 315 - Agent Conversations Fix + Live System Stats
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 314 completed:
-- Migrated 5 agents to GPT-5 Responses API (11 API calls total)
-- Removed legacy UI badges (S309, NEW ARCH, HOOKS, SHARED)
-- Consolidated agent stats display (Total Agents, Learning Events, Memories, Knowledge)
-- Handoff: `docs/handoffs/SESSION_314_GPT5_API_MIGRATION.md`
+Session 315 completed:
+- Fixed Agent Conversations (empty content issue)
+- Migrated ConversationOrchestrator to GPT-5 Responses API
+- Fixed rate limiter `cache.ttl()` crash
+- **NEW:** Injected real-time system stats into Agent Conversations
+- Agents now reference ACTUAL system counts (74 spiders, 36 agents, etc.)
+- Handoff: `docs/handoffs/SESSION_315_AGENT_CONVERSATIONS_FIX.md`
 
 ---
 
-## Session 315 Goal: End-to-End Testing
+## Session 315 Fixes Summary
 
-Test all 27 connected agents through the chat UI to verify:
-1. Each agent can be triggered via natural language
-2. GPT-5 Responses API calls work correctly
-3. Results display properly in the UI
-4. Error handling works as expected
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| Empty conversation content | Wrong API + low token limit (250) | GPT-5 Responses API + 1000/2000 tokens |
+| Rate limiter crash | `cache.ttl()` doesn't exist in Django | Fixed 60s default |
+| Inaccurate system references | No live data access | `_get_live_system_stats()` injection |
 
 ---
 
-## Test Plan
+## Session 316 Goal: Platform Testing
 
-### Phase 1: Creative Agents (7 tools)
+Continue testing the 27 connected agents through the chat UI:
+
+### Phase 1: Creative Agents (9 tools)
 | Tool | Test Prompt |
 |------|-------------|
 | `image_generation_agent` | "Create a logo for a tech startup" |
@@ -38,6 +42,8 @@ Test all 27 connected agents through the chat UI to verify:
 | `three_d_generation_agent` | "Generate a 3D model of a coffee cup" |
 | `video_editing_agent` | "Add color grading to video 3" |
 | `character_training_agent` | "Train a character model" |
+| `talking_character_agent` | "Create a talking character video" |
+| `create_brand_video` | "Create a brand video for product launch" |
 
 ### Phase 2: Research Agents (4 tools)
 | Tool | Test Prompt |
@@ -56,7 +62,7 @@ Test all 27 connected agents through the chat UI to verify:
 | `social_media_agent` | "Create social media posts for product launch" |
 | `creative_director_agent` | "Review my prompt for a marketing video" |
 
-### Phase 4: Executive Agents (6 tools) - GPT-5 API Updated
+### Phase 4: Executive & Content Agents (7 tools)
 | Tool | Test Prompt |
 |------|-------------|
 | `cto_agent` | "Analyze the image generation feature architecture" |
@@ -64,20 +70,14 @@ Test all 27 connected agents through the chat UI to verify:
 | `meeting_coordinator_agent` | "Start a meeting about platform scaling" |
 | `opportunity_scoring_agent` | "Score spider data for opportunities" |
 | `trained_creation_agent` | "Generate image with trained character model" |
-
-### Phase 5: Content Agents (2 tools) - GPT-5 API Updated
-| Tool | Test Prompt |
-|------|-------------|
 | `content_executor_agent` | "Create a professional blog post about AI trends" |
 | `ai_project_builder_agent` | "Build an AI content generator project" |
 
-### Phase 6: Workflow Agents (3 tools)
+### Phase 5: Workflow Agents (2 tools)
 | Tool | Test Prompt |
 |------|-------------|
 | `workflow_orchestration_agent` | "Create a brand package for my startup" |
-| `create_brand_video` | "Create a brand video for product launch" |
 | `coleadership_agent` | "Get leadership guidance on strategy" |
-| `talking_character_agent` | "Create a talking character video" |
 
 ---
 
@@ -89,6 +89,9 @@ make start && make celery
 
 # Access AI Studio
 open http://localhost:8000/ai-studio/
+
+# Test Agent Conversations (now with live stats!)
+# Navigate to Agents > Social > Start Conversation
 
 # Check tool count
 .venv/bin/python manage.py shell -c "
@@ -106,29 +109,29 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 
 | Category | Count | Tools |
 |----------|-------|-------|
-| Creative | 9 | image, video, audio, 3D, editing, character, talking |
+| Creative | 9 | image, video, audio, 3D, editing, character, talking, brand_video |
 | Research | 4 | web search, competitor, customer, trends |
 | Strategy | 5 | brand, content, SEO, social, creative director |
-| Executive | 6 | CTO, COO, meeting, opportunity, trained creation |
+| Executive | 5 | CTO, COO, meeting, opportunity, trained creation |
 | Content | 2 | content executor, AI project builder |
-| Workflow | 1 | workflow orchestration |
+| Workflow | 2 | workflow orchestration, coleadership |
 
 ---
 
-## GPT-5 API Reference
+## Agent Conversations - NOW WITH LIVE STATS!
 
-Agents now use the Responses API:
-
-```python
-response = client.responses.create(
-    model="gpt-5-mini",
-    input="system prompt\n\nuser prompt",
-    reasoning={"effort": "high"},      # minimal, low, medium, high
-    text={"verbosity": "medium"},       # low, medium, high
-    max_output_tokens=4000
-)
-result = response.output_text
+Agents now receive real-time system statistics in every conversation:
 ```
+=== LIVE PLATFORM STATISTICS (Real-Time Data) ===
+• Spider Network: 74 active spiders across 20 categories
+• Agent Ecosystem: 36 active agents
+• Memory Palace: XX memories stored
+• Knowledge Base: XX knowledge sources
+• Spider Data: XX total records (XX in last 24h)
+...
+```
+
+This makes demos incredibly impressive - agents discuss ACTUAL infrastructure!
 
 ---
 
@@ -136,21 +139,21 @@ result = response.output_text
 
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_314_GPT5_API_MIGRATION.md` | Session 314 details |
-| `docs/handoffs/SESSION_313_AGENT_CONNECTION_EXPANSION.md` | Agent connection details |
-| `docs/architecture/GPT5_REASONING_MODELS_GUIDE.md` | GPT-5 API reference |
+| `docs/handoffs/SESSION_315_AGENT_CONVERSATIONS_FIX.md` | Session 315 details |
+| `docs/handoffs/SESSION_314_GPT5_API_MIGRATION.md` | GPT-5 API reference |
+| `core/conversation_orchestrator.py` | Agent conversation logic + live stats |
 | `CLAUDE.md` | Full system context |
 
 ---
 
-## Success Criteria for Session 315
+## Success Criteria for Session 316
 
 - [ ] All 27 agents respond to natural language prompts
 - [ ] No API errors from GPT-5 Responses API
 - [ ] Results display correctly in chat UI
 - [ ] Error messages are user-friendly
-- [ ] Agent count displays as 27 in dashboard
+- [ ] Agent Conversations show live system stats
 
 ---
 
-**Status:** Ready for end-to-end testing. All agents migrated to GPT-5 Responses API.
+**Status:** Ready for comprehensive agent testing. Agent Conversations now feature real-time system stats!
