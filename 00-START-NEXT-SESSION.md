@@ -1,95 +1,192 @@
-# Session 308: Next Steps
+# Session 309: Test Learning Infrastructure
 
 **Date:** December 1, 2025
-**Previous Session:** 307 (Deprecated Agents Learning Expansion)
-**Session Type:** Implementation
-**Status:** ALL 6 HANDOFFS COMPLETE + LEARNING INFRASTRUCTURE FULLY OPERATIONAL
+**Previous Session:** 308 - Wired 5 high-value deprecated agents with learning hooks
+**Branch:** `feature/session-52-ai-assistant`
 
 ---
 
-## SESSION 307 COMPLETE SUMMARY
+## Context
 
-### Wired 4 Additional Agents with Learning Hooks
+Sessions 305-308 wired **14 deprecated agents** with learning infrastructure:
+- Learning Loop integration (`_record_learning_outcome`)
+- Memory creation (`_create_execution_memory`)
+- Knowledge sharing (`_share_knowledge`)
+- Knowledge retrieval (`_get_shared_knowledge`)
 
-Extended learning infrastructure to deprecated and additional standalone agents:
+**Session 308 specifically wired these 5 high-value agents:**
+- BrandIdentityAgent - Color palette and style pattern learning
+- SEOOptimizerAgent - Hashtag and platform optimization learning
+- TrendAnalysisAgent - Trend and opportunity pattern learning
+- ContentStrategyAgent - Content recommendation learning
+- SocialMediaAgent - Platform-specific content learning
 
-| Agent | File | Learning Hooks |
-|-------|------|----------------|
-| OpportunityScoringAgent | `agents/_deprecated/opportunity_scoring_agent.py` | OpportunityScoringLearningMixin |
-| AIProjectBuilder | `agents/ai_project_builder.py` | ProjectBuilderLearningMixin |
-| DonkeyBetzContentExecutor | `agents/content_executor.py` | ContentExecutorLearningMixin |
-| LiveLearningOrchestrator | `agents/live_learning_orchestrator.py` | LiveLearningLearningMixin |
-
-### Test Results
-
-```
-Learning Hooks Verification:
-✅ OpportunityScoringAgent - all 4 hooks working
-✅ AIProjectBuilder - all 4 hooks working
-✅ DonkeyBetzContentExecutor - all 4 hooks working
-✅ LiveLearningOrchestrator - all 4 hooks working
-
-AgentKnowledgeSource: 6 records ✅ (2 new from Session 307)
-AgentMemory: 3 records ✅
-```
-
-### Files Modified
-
-| File | Changes |
-|------|------------|
-| `agents/_deprecated/opportunity_scoring_agent.py` | +OpportunityScoringLearningMixin + wiring |
-| `agents/ai_project_builder.py` | +ProjectBuilderLearningMixin + wiring |
-| `agents/content_executor.py` | +ContentExecutorLearningMixin + wiring |
-| `agents/live_learning_orchestrator.py` | +LiveLearningLearningMixin + wiring |
-| `docs/handoffs/SESSION_307_DEPRECATED_AGENTS_LEARNING_EXPANSION.md` | Handoff doc |
+**Now we need to verify it all works!**
 
 ---
 
-## NEXT SESSION OPTIONS
+## Session 309 Goals
 
-### Option A: Create Audio Gallery UI
+### 1. Test Knowledge Flow Between Agents
 
-Add audio playback/gallery to the frontend similar to image/video galleries. The `AudioHistory` model exists but has no frontend display.
-
-### Option B: Wire Remaining Legacy Agents
-
-Continue adding learning hooks to other legacy agents in `agents/` directory that haven't been wired yet.
-
-### Option C: User-Requested Feature
-
-Awaiting user direction.
-
----
-
-## Quick Start
-
-```bash
-cd /Users/donkeyking/development/unified-donkey-betz
-make start && make celery
-open http://localhost:8000/ai-studio/
-```
-
----
-
-## Learning Infrastructure Health Check
+Verify agents can share and retrieve knowledge from each other:
 
 ```python
-from core.models_unified_system import AgentKnowledgeSource, AgentMemory
-from content.models import AudioHistory
+# Example test flow:
+from agents._deprecated.brand_identity_agent import BrandIdentityAgent
+from agents._deprecated.seo_optimizer_agent import SEOOptimizerAgent
 
-print(f"AgentKnowledgeSource: {AgentKnowledgeSource.objects.count()} records")
-print(f"AgentMemory: {AgentMemory.objects.count()} records")
-print(f"AudioHistory: {AudioHistory.objects.count()} records")
+# Brand agent shares color palette knowledge
+brand = BrandIdentityAgent()
+brand.set_brand_colors(primary='#FF5733')
+
+# SEO agent retrieves brand knowledge
+seo = SEOOptimizerAgent()
+shared = seo._get_shared_knowledge(title_contains='Brand colors')
+# Should return the color palette shared by BrandIdentityAgent
 ```
 
-Expected after Session 307:
-- `AgentKnowledgeSource`: 6+ records (knowledge sharing working!)
-- `AgentMemory`: 3+ records (memory creation working!)
-- `AudioHistory`: 0 (no audio generated yet)
+### 2. Monitor Memory Creation
+
+Check that agent executions create memories in the database:
+
+```python
+from core.models_unified_system import AgentMemory
+
+# Before running agent
+before_count = AgentMemory.objects.count()
+
+# Run an agent
+from agents._deprecated.trend_analysis_agent import TrendAnalysisAgent
+agent = TrendAnalysisAgent()
+agent.generate_daily_briefing()
+
+# After running agent
+after_count = AgentMemory.objects.count()
+# Should have increased
+```
+
+### 3. Verify Learning Loop Recording
+
+Check execution outcomes are recorded:
+
+```python
+from core.models_unified_system import ExecutionOutcome  # or similar model
+
+# Run agent and check if outcome was recorded
+```
+
+### 4. Test Cross-Agent Knowledge Sharing
+
+Create a test that exercises the full loop:
+1. TrendAnalysisAgent finds trends → shares as knowledge
+2. ContentStrategyAgent reads trend knowledge → makes recommendations
+3. SocialMediaAgent reads content recommendations → creates calendar
+4. SEOOptimizerAgent optimizes content → shares hashtag patterns
+5. BrandIdentityAgent applies consistent styling
 
 ---
 
-## Platform Stats
+## Quick Test Commands
+
+```bash
+# Start the platform
+make start
+make celery
+
+# Run a quick Django shell test
+.venv/bin/python manage.py shell
+```
+
+```python
+# In Django shell:
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+import django
+django.setup()
+
+# Test 1: Agent imports work
+from agents._deprecated.brand_identity_agent import BrandIdentityAgent
+from agents._deprecated.seo_optimizer_agent import SEOOptimizerAgent
+from agents._deprecated.trend_analysis_agent import TrendAnalysisAgent
+from agents._deprecated.content_strategy_agent import ContentStrategyAgent
+from agents._deprecated.social_media_agent import SocialMediaAgent
+print("All 5 agents imported successfully!")
+
+# Test 2: Knowledge sharing works
+brand = BrandIdentityAgent()
+result = brand.set_brand_colors(primary='#3498DB', secondary='#2ECC71')
+print(f"Brand colors set: {result['success']}")
+
+# Test 3: Check if AgentKnowledgeSource was created
+from core.models_unified_system import AgentKnowledgeSource
+knowledge = AgentKnowledgeSource.objects.filter(agent__name='BrandIdentityAgent').first()
+print(f"Knowledge shared: {knowledge.title if knowledge else 'None'}")
+
+# Test 4: Cross-agent retrieval
+seo = SEOOptimizerAgent()
+shared = seo._get_shared_knowledge(from_agents=['BrandIdentityAgent'])
+print(f"Retrieved {len(shared)} knowledge items from BrandIdentityAgent")
+```
+
+---
+
+## Files to Review
+
+| File | Purpose |
+|------|---------|
+| `docs/handoffs/SESSION_308_HIGH_VALUE_AGENT_LEARNING_EXPANSION.md` | Details of what was wired |
+| `docs/DEPRECATED_AGENTS_INVENTORY.md` | Status of all 18 deprecated agents |
+| `agents/_deprecated/brand_identity_agent.py` | Example of wired agent |
+| `core/models_unified_system.py` | Database models for Agent, AgentKnowledgeSource, AgentMemory |
+
+---
+
+## Potential Issues to Watch For
+
+1. **Agent model not created** - First run should auto-create Agent records
+2. **Memory service unavailable** - Check if MemoryEmbeddingService is properly initialized
+3. **Learning loop not connected** - Verify LearningLoopService is available
+4. **Knowledge not persisting** - Check database connections
+
+---
+
+## Success Criteria
+
+- [ ] All 5 agents create Agent records in database on first use
+- [ ] Knowledge sharing creates AgentKnowledgeSource records
+- [ ] Memory creation works (AgentMemory records created)
+- [ ] Cross-agent knowledge retrieval returns shared data
+- [ ] Learning outcomes are recorded (if LearningLoopService available)
+
+---
+
+## Commands Reference
+
+```bash
+# Check Agent records
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import Agent
+print('Agents:', list(Agent.objects.filter(agent_type='deprecated').values_list('name', flat=True)))
+"
+
+# Check Knowledge records
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import AgentKnowledgeSource
+for k in AgentKnowledgeSource.objects.all()[:10]:
+    print(f'{k.agent.name}: {k.title} ({k.knowledge_type})')
+"
+
+# Check Memory records
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import AgentMemory
+print(f'Total memories: {AgentMemory.objects.count()}')
+"
+```
+
+---
+
+## Platform Stats (Post-Session 308)
 
 ```
 CODEBASE HEALTH
@@ -105,53 +202,19 @@ CODEBASE HEALTH
 │   ├── Clean Agents (11): ALL CONNECTED
 │   ├── Legacy Agents (BaseContentAgent): WorkflowOrchestrationAgent CONNECTED
 │   ├── Standalone Agents (3): BookmakerAgent, CreationAgent, OPO CONNECTED
-│   ├── Deprecated/Additional (4): OSA, AIProjectBuilder, ContentExecutor, LLO CONNECTED ✅
-│   ├── AgentKnowledgeSource: 6 records ✅
-│   └── AgentMemory: 3 records ✅
-├── AudioHistory Model: CREATED & INTEGRATED! ✅
+│   ├── Deprecated Agents (14/18): CONNECTED ✅
+│   │   ├── Session 305: AudioAgent
+│   │   ├── Session 306: PromptEngineering, CTO, COO, Meeting, Character, Trained, Memory, Creative
+│   │   ├── Session 307: OpportunityScoring
+│   │   └── Session 308: BrandIdentity, SEO, Trend, ContentStrategy, SocialMedia ✅
+│   ├── Remaining 4: Have clean replacements (Image, Video, Research, 3D)
+│   ├── AgentKnowledgeSource: 6+ records
+│   └── AgentMemory: 3+ records
+├── AudioHistory Model: CREATED & INTEGRATED!
 ├── Workflow Engine: FULLY WORKING!
 ├── DaVinci Bridge: FULLY WORKING!
 └── Direct API: Create Project bypasses GPT (instant!)
 ```
-
----
-
-## All Handoffs Status - **100% COMPLETE**
-
-| # | Handoff | Status |
-|---|---------|--------|
-| 01 | Frontend Componentization | **COMPLETE** |
-| 02 | Agent Architecture Unification | **COMPLETE** |
-| 03 | Sci-Fi Feature Rationalization | **COMPLETE** |
-| 04 | Database Model Consolidation | **COMPLETE** |
-| 05 | Test Infrastructure Overhaul | **COMPLETE** |
-| 06 | Spider Network Wiring | **COMPLETE** |
-
----
-
-## Learning Infrastructure Status - Session 307 Final
-
-### Clean Architecture Agents (11) - Session 304
-
-All connected via `core/agents/base_agent.py`
-
-### Legacy Agents via BaseContentAgent - Session 305
-
-- WorkflowOrchestrationAgent (explicitly wired)
-- All other legacy agents inherit hooks
-
-### Standalone Agents via Mixins - Session 306
-
-- BookmakerAgent (LearningMixin)
-- CreationAgent (CreationLearningMixin)
-- OpportunityPipelineOrchestrator (PipelineLearningMixin)
-
-### Deprecated/Additional Agents via Mixins - Session 307 ✅
-
-- OpportunityScoringAgent (OpportunityScoringLearningMixin)
-- AIProjectBuilder (ProjectBuilderLearningMixin)
-- DonkeyBetzContentExecutor (ContentExecutorLearningMixin)
-- LiveLearningOrchestrator (LiveLearningLearningMixin)
 
 ---
 
@@ -167,4 +230,4 @@ All connected via `core/agents/base_agent.py`
 
 ---
 
-**Session 307 Complete: Learning Infrastructure Extended to 4 More Agents!**
+**Read `CLAUDE.md` for full system context, then test the learning infrastructure!**
