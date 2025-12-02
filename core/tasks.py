@@ -3539,27 +3539,50 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             'agents_participated': set()
         }
 
-        # Conversation types with their prompts
+        # Conversation types with their prompts and dynamics
+        # Each type has a "tension_level" to encourage varied responses
         conversation_templates = [
             {
                 'type': 'knowledge_sharing',
+                'tension_level': 'low',
+                'dynamic': 'share expertise but question assumptions',
                 'starter': "I've been analyzing {topic} and noticed something interesting...",
                 'responder': "That's a great observation. In my experience with {specialty}..."
             },
             {
                 'type': 'question_answer',
+                'tension_level': 'medium',
+                'dynamic': 'challenge the premise, offer alternative views',
                 'starter': "I have a question about {topic} - how do you approach this?",
                 'responder': "Based on my expertise in {specialty}, I'd suggest..."
             },
             {
                 'type': 'brainstorm',
+                'tension_level': 'medium',
+                'dynamic': 'push back on ideas, play devils advocate',
                 'starter': "Let's brainstorm ideas for {topic}. What if we considered...",
                 'responder': "Building on that idea, we could also..."
             },
             {
                 'type': 'debate',
+                'tension_level': 'high',
+                'dynamic': 'strongly disagree, defend your position, find flaws',
                 'starter': "I think {topic} could be approached differently. Here's my view...",
-                'responder': "Interesting perspective. However, from my angle..."
+                'responder': "I see it differently. From my perspective..."
+            },
+            {
+                'type': 'critical_review',
+                'tension_level': 'high',
+                'dynamic': 'point out weaknesses, demand evidence, be skeptical',
+                'starter': "I'm not convinced that {topic} is the right approach...",
+                'responder': "I have concerns about that too. Specifically..."
+            },
+            {
+                'type': 'devils_advocate',
+                'tension_level': 'high',
+                'dynamic': 'deliberately take opposing stance, challenge everything',
+                'starter': "Let me play devil's advocate on {topic}...",
+                'responder': "That's a fair challenge. But consider this counterpoint..."
             }
         ]
 
@@ -3628,18 +3651,49 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 # Build the conversation context
                 speaker_role = "initiator" if current_speaker == initiator else "responder"
 
+                # Get conversation dynamic based on template
+                tension = template.get('tension_level', 'medium')
+                dynamic = template.get('dynamic', 'engage naturally')
+
+                # Build tension-appropriate guidelines
+                if tension == 'high':
+                    behavior_guide = """IMPORTANT - This is a HIGH TENSION discussion:
+- Challenge claims directly - don't just agree
+- Point out flaws, risks, or oversights in their approach
+- Defend your expertise when questioned
+- Ask tough "what about..." or "but what if..." questions
+- It's OK to disagree respectfully but firmly
+- Push back on assumptions you find questionable"""
+                elif tension == 'medium':
+                    behavior_guide = """This is a BALANCED discussion:
+- Share your perspective but also question theirs
+- Offer alternatives when you see different approaches
+- Mix agreement with constructive pushback
+- Ask clarifying questions that probe deeper
+- Don't just validate - add real critique when warranted"""
+                else:
+                    behavior_guide = """This is an EXPLORATORY discussion:
+- Share knowledge while remaining curious
+- Ask questions about their assumptions
+- Offer different angles even if not disagreeing
+- Build on ideas but also test them"""
+
                 # Create the prompt for the current speaker
                 system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
-You are having a professional discussion with {other_speaker.name} about: {topic}
+You are having a {template['type'].replace('_', ' ')} with {other_speaker.name} about: {topic}
 
 Your knowledge context: {knowledge_item.summary[:500] if knowledge_item.summary else 'No specific context'}
 
+{behavior_guide}
+
+Conversation dynamic: {dynamic}
+
 Guidelines:
 - Keep responses concise (2-3 sentences)
-- Be insightful and add value to the discussion
-- Reference your specialization when relevant
-- If this is a later message, build on what was said before
-- Be collaborative and constructive"""
+- Be authentic to YOUR expertise - don't just defer to theirs
+- If you see a problem with their approach, say so
+- Ask probing questions, don't just accept statements
+- Real experts disagree sometimes - that's healthy"""
 
                 # Build message history for context
                 history = []
@@ -3649,25 +3703,30 @@ Guidelines:
                         "content": f"{prev_msg['agent']}: {prev_msg['content']}"
                     })
 
-                # Generate the message
+                # Generate the message with dynamic-appropriate prompts
                 if msg_num == 0:
-                    user_content = f"Start a {template['type'].replace('_', ' ')} discussion about {topic}. Be the first to speak."
+                    user_content = f"Start a {template['type'].replace('_', ' ')} about {topic}. Be the first to speak and set the tone."
                 else:
-                    user_content = f"Continue the conversation. The last message was from {other_speaker.name}. Respond appropriately."
+                    last_msg = messages[-1]['content'] if messages else ''
+                    if tension == 'high':
+                        user_content = f"Respond to {other_speaker.name}. Challenge their point or defend your position. Don't just agree - push back if you see issues."
+                    else:
+                        user_content = f"Respond to {other_speaker.name}. Build on the discussion but don't hesitate to question or offer alternative perspectives."
 
                 try:
+                    # Use chat.completions for gpt-5-mini with high max_completion_tokens
+                    # GPT-5 reasoning models use tokens for internal reasoning first,
+                    # so we need ~500+ tokens to ensure room for reasoning + actual output
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
-                            *history,
                             {"role": "user", "content": user_content}
                         ],
-                        max_completion_tokens=150,
-                        reasoning_effort="medium",
+                        max_completion_tokens=800,  # Higher for GPT-5 reasoning models
                     )
 
-                    content = response.choices[0].message.content.strip()
+                    content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
                     # Clean up the content (remove agent name prefix if present)
                     if content.startswith(f"{current_speaker.name}:"):
@@ -3719,6 +3778,7 @@ Guidelines:
             if messages:
                 # Generate a conclusion
                 try:
+                    # GPT-5 reasoning models need higher token limits for reasoning + output
                     conclusion_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
@@ -3726,10 +3786,9 @@ Guidelines:
                             {"role": "user", "content": f"Discussion between {initiator.name} and {responder.name} about {topic}:\n\n" +
                                 "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
                         ],
-                        max_completion_tokens=100,
-                        reasoning_effort="low",
+                        max_completion_tokens=400,
                     )
-                    conclusion = conclusion_response.choices[0].message.content.strip()
+                    conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
                 except:
                     conclusion = f"Productive discussion about {topic}"
 
