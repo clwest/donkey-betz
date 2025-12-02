@@ -90,27 +90,19 @@ SocialMediaAgent
 
 ---
 
-## Known Issues (Minor)
+## Issues Fixed (Session 309)
 
-### 1. LearningLoopService.record_outcome() Context Parameter
+### 1. LearningLoopService.record_outcome() Context Parameter - FIXED
 
-```
-Failed to record learning outcome: LearningLoopService.record_outcome() got an unexpected keyword argument 'context'
-```
+**Problem:** Learning mixins passed `context` keyword that the service didn't expect.
 
-**Impact:** Warning only - doesn't break functionality. Knowledge sharing and memory creation work correctly.
+**Solution:** Added `context` as an optional parameter (alias for `metadata`) in `core/super_platform/learning_loop.py`.
 
-**Cause:** The learning mixins pass a `context` keyword that the service doesn't expect.
+### 2. UserPreference Model - FIXED
 
-**Fix (Future):** Update either the mixins or the LearningLoopService to match signatures.
+**Problem:** BrandIdentityAgent couldn't persist user preferences.
 
-### 2. UserPreference Model Missing
-
-```
-Could not load brand data: cannot import name 'UserPreference' from 'core.models'
-```
-
-**Impact:** BrandIdentityAgent can't persist user preferences, but core learning functionality works.
+**Solution:** Created `UserPreference` key-value model in `core/models/users/models.py` with migration `0060_add_userpreference_model`.
 
 ---
 
