@@ -3,6 +3,8 @@ Customer Research Agent - Business Intelligence
 ================================================
 
 Session 293: Business Research Extension
+Session 303: Unified Intelligence Search + Auto Spider Refresh
+Session 304: Learning Infrastructure Integration
 
 This agent researches potential customers for a business idea.
 It uses spider data (especially Reddit) and web search to:
@@ -16,6 +18,8 @@ Tools Available:
     - web_search: Search for customer reviews and feedback
     - analyze_pain_points: Extract pain points from discussions
     - build_persona: Build customer persona from research
+    - refresh_spider_data: Trigger fresh spider crawls for up-to-date data
+    - get_prior_research: Retrieve relevant past research
 
 Tools NOT Available (by design):
     - image/video/audio generation
@@ -57,17 +61,27 @@ class CustomerResearchAgent(BaseAgent):
 Your ONLY job is to research potential customers and build personas. You do NOT create content.
 
 You have these tools:
+- refresh_spider_data: Trigger fresh data collection (use FIRST for up-to-date intel)
+- get_prior_research: Retrieve past research to build on existing knowledge
 - spider_query: Query Reddit (20+ subreddits), HackerNews, and forums for customer discussions
 - web_search: Search for customer reviews, testimonials, and feedback
 - analyze_pain_points: Extract pain points from gathered discussions
 - build_persona: Build detailed customer persona from research
 
+IMPORTANT - Session 303 Intelligence Integration:
+1. ALWAYS start with get_prior_research to check for existing analysis
+2. Use refresh_spider_data to ensure fresh community discussions
+3. Then proceed with spider_query and web_search
+4. Build on past research rather than starting from scratch
+
 When given a customer research task:
-1. First identify the target market from the user's description
-2. Search Reddit for discussions about the problem/need
-3. Search for reviews of existing solutions
-4. Extract common pain points and desires
-5. Build 2-3 customer personas
+1. Check for prior research on this market/topic
+2. Refresh spider data for latest community discussions
+3. Identify the target market from the user's description
+4. Search Reddit for discussions about the problem/need
+5. Search for reviews of existing solutions
+6. Extract common pain points and desires
+7. Build 2-3 customer personas
 
 Reddit subreddits to consider:
 - r/Entrepreneur, r/startups, r/smallbusiness for business ideas
@@ -236,6 +250,56 @@ If asked to create content, explain you can only research and suggest using the 
                     "required": ["topic"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "refresh_spider_data",
+                "description": "Trigger spider network to fetch fresh, real-time data before research. Use this at the START to ensure you have the latest community discussions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "categories": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["tech", "financial", "jobs", "news", "creative", "community"]
+                            },
+                            "description": "Spider categories to refresh (defaults to auto-detect from query)",
+                            "default": []
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_prior_research",
+                "description": "Retrieve relevant past research from previous competitor and customer analyses. Use this to build on existing knowledge rather than starting from scratch.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "market_topic": {
+                            "type": "string",
+                            "description": "Market/topic to find related research for (e.g., 'AI writing tools', 'coffee industry')"
+                        },
+                        "research_type": {
+                            "type": "string",
+                            "description": "Type of research to retrieve",
+                            "enum": ["competitor", "customer", "all"],
+                            "default": "all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 5
+                        }
+                    },
+                    "required": ["market_topic"]
+                }
+            }
         }
     ]
 
@@ -255,6 +319,7 @@ If asked to create content, explain you can only research and suggest using the 
     def __init__(self, user=None):
         super().__init__(user)
         self._spider_service = None
+        self._unified_search = None
         self._gathered_discussions = []
 
     @property
@@ -264,6 +329,14 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.spider_intelligence import SpiderIntelligenceService
             self._spider_service = SpiderIntelligenceService()
         return self._spider_service
+
+    @property
+    def unified_search(self):
+        """Session 303: Lazy-load Unified Intelligence Search Service."""
+        if self._unified_search is None:
+            from core.services.unified_intelligence_search import get_unified_intelligence_search
+            self._unified_search = get_unified_intelligence_search()
+        return self._unified_search
 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
@@ -362,6 +435,35 @@ If asked to create content, explain you can only research and suggest using the 
                 # automatically uses context from prior competitor analysis
                 enhanced_task = self._enhance_task_with_prior_research(enhanced_task)
 
+                # Session 303: Store current task for tool access
+                self._current_task = enhanced_task
+
+                # Session 303: Auto-trigger spider refresh for fresh community data
+                try:
+                    refresh_result = self.unified_search.refresh_spiders_for_query(enhanced_task)
+                    logger.info(f"Auto-triggered spider refresh: {refresh_result.get('categories', [])}")
+                    self.record_decision(
+                        decision_type="data_refresh",
+                        action="Triggered spider network refresh",
+                        reasoning=f"Ensuring fresh community discussions for: {enhanced_task[:50]}",
+                        confidence=0.9
+                    )
+                except Exception as e:
+                    logger.warning(f"Auto spider refresh failed (continuing anyway): {e}")
+
+                # Session 303: Get prior research context
+                prior_context = ""
+                try:
+                    prior_context = self.unified_search.get_research_context(
+                        query=enhanced_task,
+                        max_spider_items=3,
+                        max_research_items=2
+                    )
+                    if prior_context:
+                        logger.info(f"Found prior research context ({len(prior_context)} chars)")
+                except Exception as e:
+                    logger.warning(f"Prior research lookup failed: {e}")
+
                 self.record_decision(
                     decision_type="task_analysis",
                     action="Analyzing customer research request",
@@ -372,15 +474,21 @@ If asked to create content, explain you can only research and suggest using the 
                 # Build prompt with context
                 full_prompt = self._build_prompt(enhanced_task, scifi_context, spider_context)
 
+                # Session 303: Inject prior research context if available
+                if prior_context:
+                    full_prompt += f"\n\n{prior_context}\n"
+
                 # Add instruction to be comprehensive
                 full_prompt += """
 
 IMPORTANT: For thorough customer research:
-1. First use spider_query to find Reddit/forum discussions about this problem
-2. Use web_search to find reviews of existing solutions
-3. Use analyze_pain_points to synthesize findings
-4. Use build_persona to create 2-3 customer personas
-5. Use extract_quotes to find powerful customer quotes
+1. First check get_prior_research for existing analysis on this market
+2. Use refresh_spider_data if you need the absolute latest discussions
+3. Use spider_query to find Reddit/forum discussions about this problem
+4. Use web_search to find reviews of existing solutions
+5. Use analyze_pain_points to synthesize findings
+6. Use build_persona to create 2-3 customer personas
+7. Use extract_quotes to find powerful customer quotes
 
 Return comprehensive customer research with personas and pain points."""
 
@@ -439,7 +547,7 @@ Return comprehensive customer research with personas and pain points."""
 
                     # Session 294: Return analysis at top level for frontend compatibility
                     # Frontend checks agentResult.analysis and agentResult.data?.analysis
-                    return AgentResult(
+                    result = AgentResult(
                         success=True,
                         message=f"Customer research completed with {len(all_research_data)} data sources",
                         data={
@@ -453,6 +561,47 @@ Return comprehensive customer research with personas and pain points."""
                         decisions_made=self._tt_decision_count,
                         tool_calls=tool_calls_made
                     )
+
+                    # === Session 304: Learning Infrastructure ===
+                    self._record_learning_outcome(
+                        result=result,
+                        task=task,
+                        context=context,
+                        spider_data_used=True,  # Always uses spider data
+                        scifi_context_used=bool(scifi_context)
+                    )
+
+                    self._create_execution_memory(
+                        result=result,
+                        task=task,
+                        memory_type="success",
+                        importance=0.7  # Customer research is important
+                    )
+
+                    # Track contribution to research result
+                    if saved_result:
+                        self._track_contribution(
+                            content_type='research',
+                            content_id=saved_result.id,
+                            contribution_type='primary_creator',
+                            contribution_score=1.0
+                        )
+
+                    # Share knowledge about customer insights
+                    if synthesis.get('analysis'):
+                        self._share_knowledge(
+                            knowledge_type='user_behavior',
+                            title=f"Customer Research: {task[:80]}",
+                            knowledge_value={
+                                'query': task,
+                                'discussions_analyzed': synthesis.get('discussions_analyzed', 0),
+                                'sources': synthesis.get('sources_used', []),
+                                'success': True
+                            },
+                            confidence=0.85
+                        )
+
+                    return result
                 else:
                     return AgentResult(
                         success=True,
@@ -538,6 +687,71 @@ Return comprehensive customer research with personas and pain points."""
                 quote_type=arguments.get('quote_type', 'all'),
                 limit=arguments.get('limit', 10)
             )
+
+        elif tool_name == "refresh_spider_data":
+            # Session 303: Trigger fresh spider crawls
+            try:
+                categories = arguments.get('categories', [])
+                # Use the current task/query to determine categories if not specified
+                result = self.unified_search.refresh_spiders_for_query(
+                    query=self._current_task if hasattr(self, '_current_task') else '',
+                    categories=categories if categories else None
+                )
+                return {
+                    'success': True,
+                    'data': result,
+                    'message': f"Triggered spider refresh for: {result.get('categories', [])}"
+                }
+            except Exception as e:
+                logger.warning(f"Spider refresh failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Spider refresh failed: {str(e)}"
+                }
+
+        elif tool_name == "get_prior_research":
+            # Session 303: Get prior research from unified intelligence
+            try:
+                market_topic = arguments.get('market_topic', '')
+                research_type = arguments.get('research_type', 'all')
+                limit = arguments.get('limit', 5)
+
+                # Use unified search for combined results
+                results = self.unified_search.unified_search(
+                    query=market_topic,
+                    include_spiders=False,  # Only get research, not spider data
+                    include_research=True,
+                    research_limit=limit
+                )
+
+                # Also get context string for prompt injection
+                context = self.unified_search.get_research_context(
+                    query=market_topic,
+                    max_spider_items=0,
+                    max_research_items=limit
+                )
+
+                return {
+                    'success': True,
+                    'data': [
+                        {
+                            'title': r.title,
+                            'description': r.description,
+                            'research_type': r.research_type,
+                            'market_topic': r.market_topic,
+                            'similarity': r.similarity
+                        }
+                        for r in results
+                    ],
+                    'context': context,
+                    'count': len(results)
+                }
+            except Exception as e:
+                logger.warning(f"Prior research lookup failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Prior research lookup failed: {str(e)}"
+                }
 
         else:
             return {

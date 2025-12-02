@@ -3,6 +3,7 @@ Image Editing Agent - Specialized for Image EDITING ONLY
 =========================================================
 
 Session 268: Phase 2 - Editing Agents
+Session 304: Learning Infrastructure Integration
 
 This agent EDITS existing images. That's ALL it does.
 It has NO access to creation, video, audio, or research tools.
@@ -259,7 +260,7 @@ If asked to create something new, explain you can only edit existing images."""
 
                     successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
                     if successful_calls:
-                        return AgentResult(
+                        result = AgentResult(
                             success=True,
                             message=f"Image edited successfully",
                             data=successful_calls[0]['result'],
@@ -268,14 +269,30 @@ If asked to create something new, explain you can only edit existing images."""
                             decisions_made=self._tt_decision_count,
                             tool_calls=tool_calls_made
                         )
+
+                        # === Session 304: Learning Infrastructure ===
+                        self._record_learning_outcome(result, task, context, bool(spider_context), bool(scifi_context))
+                        self._create_execution_memory(result, task, "success", 0.6)
+                        tool_used = successful_calls[0]['tool']
+                        self._share_knowledge(
+                            knowledge_type='technique',
+                            title=f"ImageEdit: {tool_used} works",
+                            knowledge_value={'tool': tool_used, 'success': True},
+                            confidence=0.8
+                        )
+
+                        return result
                     else:
-                        return AgentResult(
+                        result = AgentResult(
                             success=False,
                             error="Image editing failed",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
                         )
+                        self._record_learning_outcome(result, task, context, bool(spider_context), bool(scifi_context))
+                        self._create_execution_memory(result, task, "failure", 0.7)
+                        return result
                 else:
                     return AgentResult(
                         success=True,

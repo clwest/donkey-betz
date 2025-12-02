@@ -1,6 +1,6 @@
 # Platform Architecture
 
-**Last Updated:** Session 293 (November 30, 2025)
+**Last Updated:** Session 303 (December 1, 2025)
 
 ---
 
@@ -115,6 +115,8 @@ Each agent is specialized with isolated tools - cannot call other agents' tools.
 | VideoEditingAgent | trim, add_text, effects | Creation tools |
 | ResearchAgent | web_search, spider_query | Creation tools |
 | WorkflowAgent | delegate_to_agent | Direct API calls |
+| CompetitorAnalysisAgent | refresh_spider_data, get_prior_research, web_search, spider_query, analyze_competitor, generate_swot | Creation tools |
+| CustomerResearchAgent | refresh_spider_data, get_prior_research, spider_query, web_search, analyze_pain_points, build_persona, extract_quotes | Creation tools |
 
 ### Base Agent Class
 
@@ -199,9 +201,47 @@ stats = search.get_embedding_stats()
 context = search.enhance_agent_context("machine learning trends", max_items=3)
 ```
 
+### UnifiedIntelligenceSearch (Session 303)
+
+**Location:** `core/services/unified_intelligence_search.py`
+
+Combines SpiderData AND BusinessResearchResult into one searchable index.
+
+```python
+from core.services.unified_intelligence_search import get_unified_intelligence_search
+
+search = get_unified_intelligence_search()
+
+# Search both spider data AND business research
+results = search.unified_search(
+    query="AI content generation",
+    include_spiders=True,
+    include_research=True,
+    spider_limit=20,
+    research_limit=10
+)
+
+# Get formatted context for agent prompt injection
+context = search.get_research_context("AI tools", max_spider_items=3, max_research_items=2)
+
+# Trigger fresh spider crawls before analysis
+search.refresh_spiders_for_query("market analysis", categories=["tech", "news"])
+
+# Get intelligence stats
+stats = search.get_intelligence_stats()
+# Returns: {spider_data: {...}, business_research: {...}}
+```
+
+**Used By:** CompetitorAnalysisAgent, CustomerResearchAgent
+
+**Benefits:**
+- New research builds on prior analyses
+- Auto-refresh ensures fresh data
+- Prior context injected into agent prompts
+
 ---
 
-## Layer 3.5: Semantic Services (Session 293)
+## Layer 3.5: Semantic Services (Session 293, Enhanced 303)
 
 **Location:** `core/services/`
 
@@ -436,8 +476,10 @@ REPLICATE_API_TOKEN=...  # For 3D
 ### Core Models
 - `ImageHistory` - Generated images
 - `VideoHistory` - Generated videos
-- `AudioHistory` - Generated audio
+- `AudioHistory` - Generated audio (MISSING - Session 303 audit)
 - `SpiderData` - Spider-collected data (+ embedding, item_embeddings, embedding_text - Session 293)
+- `BusinessResearchResult` - Competitor/customer research with embeddings (Session 293)
+- `PartnershipProject` - Projects with M2M to BusinessResearchResult (Session 302)
 
 ### Sci-Fi Models
 - `AgentMood` - Emotional states
@@ -448,6 +490,12 @@ REPLICATE_API_TOKEN=...  # For 3D
 - `AgentDream` - Idle thoughts
 - `AgentPrediction` - Prophecies
 - `TimeCapsule` - Future messages
+
+### Agent Models (Session 303 Audit)
+- `UnifiedAgentTemplate` - Agent definitions
+- `AgentExecution` - Execution tracking
+- `AgentContribution` - Links agents → content (images, videos, projects)
+- `AgentOrchestration` - Multi-agent workflows
 
 ---
 

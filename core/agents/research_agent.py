@@ -3,6 +3,7 @@ Research Agent - Specialized for Web & Spider Search ONLY
 ==========================================================
 
 Session 268: Phase 2 - Research Agents
+Session 304: Learning Infrastructure Integration
 
 This agent searches for information. That's ALL it does.
 It has NO access to creation, editing, or generation tools.
@@ -245,7 +246,7 @@ If asked to create content, explain you can only research and suggest using the 
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
-                        return AgentResult(
+                        result = AgentResult(
                             success=True,
                             message=f"Research completed from {len(all_results)} source(s)",
                             data={
@@ -257,14 +258,64 @@ If asked to create content, explain you can only research and suggest using the 
                             decisions_made=self._tt_decision_count,
                             tool_calls=tool_calls_made
                         )
+
+                        # === Session 304: Learning Infrastructure ===
+                        self._record_learning_outcome(
+                            result=result,
+                            task=task,
+                            context=context,
+                            spider_data_used=True,  # Always uses spider data
+                            scifi_context_used=bool(scifi_context)
+                        )
+
+                        self._create_execution_memory(
+                            result=result,
+                            task=task,
+                            memory_type="success",
+                            importance=0.6
+                        )
+
+                        # Share knowledge about research patterns
+                        sources_used = [r['source'] for r in all_results]
+                        self._share_knowledge(
+                            knowledge_type='trend',
+                            title=f"Research: {task[:60]}",
+                            knowledge_value={
+                                'query': task,
+                                'sources_used': sources_used,
+                                'result_count': len(all_results),
+                                'success': True
+                            },
+                            confidence=0.75
+                        )
+
+                        return result
                     else:
-                        return AgentResult(
+                        result = AgentResult(
                             success=False,
                             error="Research returned no results",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
                         )
+
+                        # Record failure for learning
+                        self._record_learning_outcome(
+                            result=result,
+                            task=task,
+                            context=context,
+                            spider_data_used=True,
+                            scifi_context_used=bool(scifi_context)
+                        )
+
+                        self._create_execution_memory(
+                            result=result,
+                            task=task,
+                            memory_type="failure",
+                            importance=0.7
+                        )
+
+                        return result
                 else:
                     return AgentResult(
                         success=True,

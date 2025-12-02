@@ -3,6 +3,7 @@ Workflow Agent - Specialized for Multi-Step Orchestration
 ==========================================================
 
 Session 268: Phase 2 - Orchestration Agents
+Session 304: Learning Infrastructure Integration
 
 This agent coordinates multi-step workflows by delegating to other agents.
 It is the ONLY agent that can call other agents.
@@ -240,7 +241,7 @@ You orchestrate. You don't create content directly."""
                 failed_steps = [wr for wr in workflow_results if not wr['success']]
 
                 if successful_steps:
-                    return AgentResult(
+                    result = AgentResult(
                         success=len(failed_steps) == 0,
                         message=f"Workflow completed: {len(successful_steps)} successful, {len(failed_steps)} failed",
                         data={
@@ -254,14 +255,30 @@ You orchestrate. You don't create content directly."""
                         decisions_made=self._tt_decision_count,
                         tool_calls=tool_calls_made
                     )
+
+                    # === Session 304: Learning Infrastructure ===
+                    self._record_learning_outcome(result, task, context, bool(spider_context), bool(scifi_context))
+                    self._create_execution_memory(result, task, "success" if len(failed_steps) == 0 else "partial", 0.7)
+                    agents_used = [wr['agent'] for wr in workflow_results]
+                    self._share_knowledge(
+                        knowledge_type='technique',
+                        title=f"Workflow: {' -> '.join(agents_used[:3])}",
+                        knowledge_value={'agents': agents_used, 'success_rate': len(successful_steps) / len(workflow_results)},
+                        confidence=0.8
+                    )
+
+                    return result
                 else:
-                    return AgentResult(
+                    result = AgentResult(
                         success=False,
                         error="Workflow produced no results",
                         agent_name=self.name,
                         execution_time_ms=execution_time,
                         tool_calls=tool_calls_made
                     )
+                    self._record_learning_outcome(result, task, context, bool(spider_context), bool(scifi_context))
+                    self._create_execution_memory(result, task, "failure", 0.7)
+                    return result
 
             except Exception as e:
                 logger.error(f"WorkflowAgent error: {e}")

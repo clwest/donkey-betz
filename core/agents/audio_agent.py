@@ -3,6 +3,7 @@ Audio Agent - Specialized for Audio Generation ONLY
 ====================================================
 
 Session 268: Phase 2 - Creation Agents
+Session 304: Learning Infrastructure Integration
 
 This agent creates audio. That's ALL it does.
 It has NO access to image, video, 3D, or research tools.
@@ -222,7 +223,7 @@ If asked to do something outside audio generation, politely explain you can only
 
                     successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
                     if successful_calls:
-                        return AgentResult(
+                        result = AgentResult(
                             success=True,
                             message=f"Audio generated successfully",
                             data=successful_calls[0]['result'],
@@ -231,14 +232,75 @@ If asked to do something outside audio generation, politely explain you can only
                             decisions_made=self._tt_decision_count,
                             tool_calls=tool_calls_made
                         )
+
+                        # === Session 304: Learning Infrastructure ===
+                        self._record_learning_outcome(
+                            result=result,
+                            task=task,
+                            context=context,
+                            spider_data_used=bool(spider_context),
+                            scifi_context_used=bool(scifi_context)
+                        )
+
+                        self._create_execution_memory(
+                            result=result,
+                            task=task,
+                            memory_type="success",
+                            importance=0.6
+                        )
+
+                        # Track contribution if we have an audio ID
+                        audio_id = successful_calls[0]['result'].get('audio_id')
+                        if audio_id:
+                            self._track_contribution(
+                                content_type='audio',
+                                content_id=audio_id,
+                                contribution_type='primary_creator',
+                                contribution_score=1.0
+                            )
+
+                        # Share knowledge about voice/audio techniques
+                        tool_used = successful_calls[0]['tool']
+                        args = successful_calls[0].get('arguments', {})
+                        self._share_knowledge(
+                            knowledge_type='technique',
+                            title=f"Audio: {args.get('voice', 'default')} voice works well",
+                            knowledge_value={
+                                'tool': tool_used,
+                                'voice': args.get('voice'),
+                                'text_length': len(args.get('text', '')),
+                                'success': True
+                            },
+                            confidence=0.8
+                        )
+
+                        return result
                     else:
-                        return AgentResult(
+                        result = AgentResult(
                             success=False,
                             error="Audio generation failed",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
                         )
+
+                        # Record failure for learning
+                        self._record_learning_outcome(
+                            result=result,
+                            task=task,
+                            context=context,
+                            spider_data_used=bool(spider_context),
+                            scifi_context_used=bool(scifi_context)
+                        )
+
+                        self._create_execution_memory(
+                            result=result,
+                            task=task,
+                            memory_type="failure",
+                            importance=0.7
+                        )
+
+                        return result
                 else:
                     return AgentResult(
                         success=True,
