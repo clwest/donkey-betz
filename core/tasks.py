@@ -4115,17 +4115,17 @@ Guidelines:
                 )
 
                 try:
+                    # GPT-5 reasoning models need higher token limits for reasoning + output
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        max_completion_tokens=200,
-                        reasoning_effort="medium",
+                        max_completion_tokens=600,  # Higher for GPT-5 reasoning
                     )
 
-                    dream_content = response.choices[0].message.content.strip()
+                    dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
                     # Clean up the content
                     # Remove any repeated prefixes
@@ -4133,18 +4133,17 @@ Guidelines:
                         if dream_content.startswith(prefix):
                             dream_content = dream_content[len(prefix):].strip()
 
-                    # Generate a catchy title
+                    # Generate a catchy title (needs more tokens for reasoning)
                     title_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
-                            {"role": "user", "content": dream_content}
+                            {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
                         ],
-                        max_completion_tokens=20,
-                        reasoning_effort="low",
+                        max_completion_tokens=200,  # Higher for GPT-5 reasoning
                     )
 
-                    title = title_response.choices[0].message.content.strip().strip('"\'')[:200]
+                    title = title_response.choices[0].message.content.strip().strip('"\'')[:200] if title_response.choices[0].message.content else "Creative Thought"
 
                     # Create the dream
                     AgentDream.objects.create(
