@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 273 (November 29, 2025)
+**Last Updated:** Session 303 (December 1, 2025)
 
 ---
 
@@ -8,9 +8,11 @@
 
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
 
+**Session 303 Addition:** Business research agents now have unified intelligence search with auto-refresh and prior research context.
+
 ---
 
-## Clean Architecture Agents (9)
+## Clean Architecture Agents (11)
 
 ### PersonalAssistantAgent
 
@@ -239,6 +241,69 @@ Step 4: Generate social media banners
 ```
 
 **Special Powers:** Can orchestrate any other agent
+
+---
+
+### CompetitorAnalysisAgent (Session 293, Enhanced 303)
+
+**Purpose:** Competitive intelligence and market analysis
+
+**Location:** `core/agents/business/competitor_analysis_agent.py`
+
+**Tools:**
+- `refresh_spider_data` - Trigger fresh spider crawls before analysis (Session 303)
+- `get_prior_research` - Retrieve relevant past research (Session 303)
+- `web_search` - Search for competitor info, features, pricing
+- `spider_query` - Query spider network for competitor mentions
+- `analyze_competitor` - Deep analysis of a specific competitor
+- `generate_swot` - Generate SWOT analysis
+
+**Session 303 Enhancements:**
+- Auto-triggers spider refresh at start of execution
+- Injects prior research context into GPT prompts
+- Uses `UnifiedIntelligenceSearch` for combined data access
+
+**Parameters:**
+```python
+{
+    "query": "Analyze AI content generation competitors",
+    "project_id": "uuid"  # Optional - auto-enhances vague requests
+}
+```
+
+**Cannot Access:** Image, video, audio, editing tools
+
+---
+
+### CustomerResearchAgent (Session 293, Enhanced 303)
+
+**Purpose:** Customer research and persona development
+
+**Location:** `core/agents/business/customer_research_agent.py`
+
+**Tools:**
+- `refresh_spider_data` - Trigger fresh spider crawls (Session 303)
+- `get_prior_research` - Retrieve past research (Session 303)
+- `spider_query` - Query Reddit, HackerNews, forums
+- `web_search` - Search for reviews, testimonials
+- `analyze_pain_points` - Extract pain points from discussions
+- `build_persona` - Build customer personas
+- `extract_quotes` - Extract customer quotes for messaging
+
+**Session 303 Enhancements:**
+- Auto-triggers spider refresh for fresh community data
+- Cumulative intelligence from prior competitor analysis
+- Uses `UnifiedIntelligenceSearch` for combined data access
+
+**Parameters:**
+```python
+{
+    "query": "Research customer pain points for AI writing tools",
+    "project_id": "uuid"  # Optional
+}
+```
+
+**Cannot Access:** Image, video, audio, editing tools
 
 ---
 

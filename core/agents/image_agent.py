@@ -3,6 +3,7 @@ Image Agent - Specialized for Image Generation ONLY
 ====================================================
 
 Session 268: Phase 1 - Foundation
+Session 304: Added Learning Infrastructure Integration
 
 This agent creates images. That's ALL it does.
 It has NO access to video, audio, 3D, or research tools.
@@ -219,7 +220,7 @@ If asked to do something outside image generation, politely explain you can only
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_images:
-                        return AgentResult(
+                        result = AgentResult(
                             success=True,
                             message=f"Generated {len(all_images)} image(s)",
                             data={
@@ -232,14 +233,80 @@ If asked to do something outside image generation, politely explain you can only
                             decisions_made=self._tt_decision_count,
                             tool_calls=tool_calls_made
                         )
+
+                        # === Session 304: Learning Infrastructure ===
+                        # Record outcome for XP and pattern learning
+                        self._record_learning_outcome(
+                            result=result,
+                            task=task,
+                            context=context,
+                            spider_data_used=bool(spider_context),
+                            scifi_context_used=bool(scifi_context)
+                        )
+
+                        # Create memory of successful execution
+                        self._create_execution_memory(
+                            result=result,
+                            task=task,
+                            memory_type="success",
+                            importance=0.6  # Successful generations are moderately important
+                        )
+
+                        # Track contribution to generated images
+                        for img in all_images:
+                            if img.get('id'):
+                                self._track_contribution(
+                                    content_type='image',
+                                    content_id=img['id'],
+                                    contribution_type='primary_creator',
+                                    contribution_score=1.0
+                                )
+
+                        # Share knowledge about what styles/prompts worked
+                        if tool_calls_made:
+                            for tc in tool_calls_made:
+                                if tc.get('result', {}).get('success'):
+                                    args = tc.get('arguments', {})
+                                    self._share_knowledge(
+                                        knowledge_type='technique',
+                                        title=f"Style: {args.get('style', 'default')} works well",
+                                        knowledge_value={
+                                            'style': args.get('style'),
+                                            'prompt_pattern': args.get('prompt', '')[:100],
+                                            'size': args.get('size'),
+                                            'success': True
+                                        },
+                                        confidence=0.8
+                                    )
+
+                        return result
                     else:
-                        return AgentResult(
+                        result = AgentResult(
                             success=False,
                             error="No images were generated",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
                         )
+
+                        # Record failed outcome for learning
+                        self._record_learning_outcome(
+                            result=result,
+                            task=task,
+                            context=context,
+                            spider_data_used=bool(spider_context),
+                            scifi_context_used=bool(scifi_context)
+                        )
+
+                        # Create memory of failure to learn from
+                        self._create_execution_memory(
+                            result=result,
+                            task=task,
+                            memory_type="failure",
+                            importance=0.7  # Failures are important to learn from
+                        )
+
+                        return result
 
                 else:
                     # GPT responded without tool calls - return conversational response

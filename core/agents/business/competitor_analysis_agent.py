@@ -3,6 +3,8 @@ Competitor Analysis Agent - Business Intelligence
 ==================================================
 
 Session 293: Business Research Extension
+Session 303: Unified Intelligence Search + Auto Spider Refresh
+Session 304: Learning Infrastructure Integration
 
 This agent analyzes competitors in a given market/industry.
 It uses web search and spider data to:
@@ -15,6 +17,8 @@ Tools Available:
     - web_search: Search for competitor information
     - spider_query: Query spider network for competitor mentions
     - analyze_competitor: Deep analysis of a specific competitor
+    - refresh_spider_data: Trigger fresh spider crawls for up-to-date data
+    - get_prior_research: Retrieve relevant past research
 
 Tools NOT Available (by design):
     - image/video/audio generation
@@ -69,21 +73,30 @@ class CompetitorAnalysisAgent(BaseAgent):
 Your ONLY job is to analyze competitors and market positioning. You do NOT create content.
 
 You have these tools:
+- refresh_spider_data: Trigger fresh data collection (use FIRST for up-to-date intel)
+- get_prior_research: Retrieve past research to build on existing knowledge
 - web_search: Search the web for competitor information, features, pricing
 - spider_query: Query spider network for competitor mentions, news, discussions
 - analyze_competitor: Deep analysis of a specific competitor (name, website)
 
+IMPORTANT - Session 303 Intelligence Integration:
+1. ALWAYS start with get_prior_research to check for existing analysis
+2. Use refresh_spider_data to ensure fresh market data
+3. Then proceed with web_search and spider_query
+4. Build on past research rather than starting from scratch
+
 When given a competitive analysis task:
-1. First identify the market/industry from the user's description
-2. Search for key competitors in that space
-3. For each major competitor, gather:
+1. Check for prior research on this market/topic
+2. Refresh spider data for latest intel
+3. Search for key competitors in that space
+4. For each major competitor, gather:
    - Company overview and positioning
    - Key features/products
    - Pricing model (if available)
    - Strengths and weaknesses
    - Recent news/developments
-4. Synthesize into a competitive landscape analysis
-5. Identify market gaps and opportunities
+5. Synthesize into a competitive landscape analysis
+6. Identify market gaps and opportunities
 
 Output Format:
 Return structured analysis with:
@@ -215,6 +228,56 @@ If asked to create content, explain you can only research and suggest using the 
                     "required": ["business_idea", "competitors"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "refresh_spider_data",
+                "description": "Trigger spider network to fetch fresh, real-time data before analysis. Use this at the START of analysis to ensure you have the latest market data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "categories": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["tech", "financial", "jobs", "news", "creative", "community"]
+                            },
+                            "description": "Spider categories to refresh (defaults to auto-detect from query)",
+                            "default": []
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_prior_research",
+                "description": "Retrieve relevant past research from previous competitor and customer analyses. Use this to build on existing knowledge rather than starting from scratch.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "market_topic": {
+                            "type": "string",
+                            "description": "Market/topic to find related research for (e.g., 'AI writing tools', 'coffee industry')"
+                        },
+                        "research_type": {
+                            "type": "string",
+                            "description": "Type of research to retrieve",
+                            "enum": ["competitor", "customer", "all"],
+                            "default": "all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 5
+                        }
+                    },
+                    "required": ["market_topic"]
+                }
+            }
         }
     ]
 
@@ -222,6 +285,7 @@ If asked to create content, explain you can only research and suggest using the 
         super().__init__(user)
         self._spider_service = None
         self._semantic_search = None
+        self._unified_search = None
 
     @property
     def spider_service(self):
@@ -238,6 +302,14 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.spider_semantic_search import get_spider_semantic_search
             self._semantic_search = get_spider_semantic_search()
         return self._semantic_search
+
+    @property
+    def unified_search(self):
+        """Session 303: Lazy-load Unified Intelligence Search Service."""
+        if self._unified_search is None:
+            from core.services.unified_intelligence_search import get_unified_intelligence_search
+            self._unified_search = get_unified_intelligence_search()
+        return self._unified_search
 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
@@ -330,6 +402,35 @@ If asked to create content, explain you can only research and suggest using the 
                 # Session 302: Enhance task with project context if available
                 task = self._enhance_task_with_project(task, project_context)
 
+                # Session 303: Store current task for tool access
+                self._current_task = task
+
+                # Session 303: Auto-trigger spider refresh for fresh data
+                try:
+                    refresh_result = self.unified_search.refresh_spiders_for_query(task)
+                    logger.info(f"Auto-triggered spider refresh: {refresh_result.get('categories', [])}")
+                    self.record_decision(
+                        decision_type="data_refresh",
+                        action="Triggered spider network refresh",
+                        reasoning=f"Ensuring fresh data for: {task[:50]}",
+                        confidence=0.9
+                    )
+                except Exception as e:
+                    logger.warning(f"Auto spider refresh failed (continuing anyway): {e}")
+
+                # Session 303: Get prior research context
+                prior_context = ""
+                try:
+                    prior_context = self.unified_search.get_research_context(
+                        query=task,
+                        max_spider_items=3,
+                        max_research_items=2
+                    )
+                    if prior_context:
+                        logger.info(f"Found prior research context ({len(prior_context)} chars)")
+                except Exception as e:
+                    logger.warning(f"Prior research lookup failed: {e}")
+
                 self.record_decision(
                     decision_type="task_analysis",
                     action="Analyzing competitive research request",
@@ -340,14 +441,20 @@ If asked to create content, explain you can only research and suggest using the 
                 # Build prompt with context
                 full_prompt = self._build_prompt(task, scifi_context, spider_context)
 
+                # Session 303: Inject prior research context if available
+                if prior_context:
+                    full_prompt += f"\n\n{prior_context}\n"
+
                 # Add instruction to be comprehensive
                 full_prompt += """
 
 IMPORTANT: For a thorough competitive analysis:
-1. First use web_search to find competitors in this market
-2. Then use spider_query to find discussions and reviews
-3. For top 3-5 competitors, use analyze_competitor for deep dives
-4. Finally, use generate_swot to synthesize findings
+1. First check get_prior_research for existing analysis on this market
+2. Use refresh_spider_data if you need the absolute latest data
+3. Use web_search to find competitors in this market
+4. Use spider_query to find discussions and reviews
+5. For top 3-5 competitors, use analyze_competitor for deep dives
+6. Finally, use generate_swot to synthesize findings
 
 Return a comprehensive competitive landscape analysis."""
 
@@ -404,7 +511,7 @@ Return a comprehensive competitive landscape analysis."""
                     except Exception as e:
                         logger.warning(f"Failed to save competitor analysis: {e}")
 
-                    return AgentResult(
+                    result = AgentResult(
                         success=True,
                         message=f"Competitive analysis completed with {len(all_competitor_data)} data sources",
                         data={
@@ -418,6 +525,49 @@ Return a comprehensive competitive landscape analysis."""
                         decisions_made=self._tt_decision_count,
                         tool_calls=tool_calls_made
                     )
+
+                    # === Session 304: Learning Infrastructure ===
+                    # Record outcome for XP and pattern learning
+                    self._record_learning_outcome(
+                        result=result,
+                        task=task,
+                        context=context,
+                        spider_data_used=True,  # Always uses spider data
+                        scifi_context_used=bool(scifi_context)
+                    )
+
+                    # Create memory of successful research
+                    self._create_execution_memory(
+                        result=result,
+                        task=task,
+                        memory_type="success",
+                        importance=0.7  # Research is important to remember
+                    )
+
+                    # Track contribution to research result
+                    if saved_result:
+                        self._track_contribution(
+                            content_type='research',
+                            content_id=saved_result.id,
+                            contribution_type='primary_creator',
+                            contribution_score=1.0
+                        )
+
+                    # Share knowledge about market/competitors discovered
+                    if synthesis.get('analysis'):
+                        self._share_knowledge(
+                            knowledge_type='market',
+                            title=f"Market Analysis: {task[:80]}",
+                            knowledge_value={
+                                'query': task,
+                                'data_points': synthesis.get('data_points_analyzed', 0),
+                                'sources': synthesis.get('sources_used', 0),
+                                'success': True
+                            },
+                            confidence=0.85
+                        )
+
+                    return result
                 else:
                     # Return conversational response if no tools called
                     return AgentResult(
@@ -508,6 +658,71 @@ Return a comprehensive competitive landscape analysis."""
                 competitors=arguments.get('competitors', []),
                 market_context=arguments.get('market_context', '')
             )
+
+        elif tool_name == "refresh_spider_data":
+            # Session 303: Trigger fresh spider crawls
+            try:
+                categories = arguments.get('categories', [])
+                # Use the current task/query to determine categories if not specified
+                result = self.unified_search.refresh_spiders_for_query(
+                    query=self._current_task if hasattr(self, '_current_task') else '',
+                    categories=categories if categories else None
+                )
+                return {
+                    'success': True,
+                    'data': result,
+                    'message': f"Triggered spider refresh for: {result.get('categories', [])}"
+                }
+            except Exception as e:
+                logger.warning(f"Spider refresh failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Spider refresh failed: {str(e)}"
+                }
+
+        elif tool_name == "get_prior_research":
+            # Session 303: Get prior research from unified intelligence
+            try:
+                market_topic = arguments.get('market_topic', '')
+                research_type = arguments.get('research_type', 'all')
+                limit = arguments.get('limit', 5)
+
+                # Use unified search for combined results
+                results = self.unified_search.unified_search(
+                    query=market_topic,
+                    include_spiders=False,  # Only get research, not spider data
+                    include_research=True,
+                    research_limit=limit
+                )
+
+                # Also get context string for prompt injection
+                context = self.unified_search.get_research_context(
+                    query=market_topic,
+                    max_spider_items=0,
+                    max_research_items=limit
+                )
+
+                return {
+                    'success': True,
+                    'data': [
+                        {
+                            'title': r.title,
+                            'description': r.description,
+                            'research_type': r.research_type,
+                            'market_topic': r.market_topic,
+                            'similarity': r.similarity
+                        }
+                        for r in results
+                    ],
+                    'context': context,
+                    'count': len(results)
+                }
+            except Exception as e:
+                logger.warning(f"Prior research lookup failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Prior research lookup failed: {str(e)}"
+                }
 
         else:
             return {
