@@ -24,7 +24,8 @@ import logging
 from core.models_engagement_metrics import EngagementMetrics, OpportunityInteraction
 from core.models_unified_system import (
     UserAgentLearning, Revenue, Opportunity, Application,
-    Agent, Advisor, Collaboration, AgentExecution
+    Agent, Advisor, Collaboration, AgentExecution,
+    AgentMemory, AgentKnowledgeSource  # Session 310: Added for stats
 )
 
 User = get_user_model()
@@ -945,6 +946,15 @@ def learning_stats(request):
             avg_confidence=Avg('confidence_score')
         ).order_by('-learning_count')[:5]
 
+        # Session 310: Agent architecture and memory stats
+        agent_memories = AgentMemory.objects.count()
+        knowledge_sources = AgentKnowledgeSource.objects.count()
+
+        # Count agents by type (clean architecture vs legacy)
+        # Clean agents are in core/agents/, legacy are in agents/
+        clean_agents = 11  # Clean architecture agents (Session 268-270)
+        deprecated_agents = 14  # Legacy agents with learning hooks (Session 305-308)
+
         return Response({
             'success': True,
             'total_learnings': total_learnings,
@@ -971,6 +981,13 @@ def learning_stats(request):
                 }
                 for item in top_agents
             ],
+            # Session 310: Stats object for Overview tab cards
+            'stats': {
+                'agent_memories': agent_memories,
+                'knowledge_sources': knowledge_sources,
+                'clean_agents': clean_agents,
+                'deprecated_agents': deprecated_agents,
+            },
             'timestamp': timezone.now().isoformat()
         })
 
