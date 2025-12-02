@@ -220,7 +220,8 @@ class LearningLoopService:
         classification_confidence: float = 0.0,
         spider_data_used: bool = False,
         scifi_context_used: bool = False,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        context: Optional[Dict] = None  # Alias for metadata (Session 309 fix)
     ) -> Optional[str]:
         """
         Record an outcome from a coordinator execution.
@@ -237,10 +238,16 @@ class LearningLoopService:
             spider_data_used: Whether spider data was used
             scifi_context_used: Whether sci-fi features were used
             metadata: Additional metadata
+            context: Alias for metadata (for agent learning mixins)
 
         Returns:
             Outcome ID or None if failed
         """
+        # Merge context into metadata if provided (Session 309 fix)
+        if context and not metadata:
+            metadata = context
+        elif context and metadata:
+            metadata = {**metadata, **context}
         import uuid
 
         outcome_type = OutcomeType.SUCCESS if success else OutcomeType.FAILURE
