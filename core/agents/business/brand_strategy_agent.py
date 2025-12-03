@@ -226,6 +226,58 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
                     "required": ["project_name"]
                 }
             }
+        },
+        # Tool 5: Session 336 - Refresh spider data for fresh insights
+        {
+            "type": "function",
+            "function": {
+                "name": "refresh_spider_data",
+                "description": "Trigger spider network to fetch fresh, real-time data before analysis. Use this at the START of analysis to ensure you have the latest branding trends and market data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "categories": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["tech", "financial", "jobs", "news", "creative", "community"]
+                            },
+                            "description": "Spider categories to refresh (defaults to auto-detect from query)",
+                            "default": []
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 6: Session 336 - Get prior research from unified intelligence
+        {
+            "type": "function",
+            "function": {
+                "name": "get_prior_research",
+                "description": "Retrieve relevant past research from previous competitor, customer, and brand analyses. Use this to build on existing knowledge rather than starting from scratch.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "market_topic": {
+                            "type": "string",
+                            "description": "Market/topic to find related research for (e.g., 'AI tools branding', 'podcast brand identity')"
+                        },
+                        "research_type": {
+                            "type": "string",
+                            "description": "Type of research to retrieve",
+                            "enum": ["competitor", "customer", "brand_strategy", "all"],
+                            "default": "all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 5
+                        }
+                    },
+                    "required": ["market_topic"]
+                }
+            }
         }
     ]
 
@@ -234,6 +286,7 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
         self.project_id = project_id
         self._spider_service = None
         self._semantic_search = None
+        self._unified_search = None
 
     @property
     def semantic_search(self):
@@ -242,6 +295,14 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
             from core.services.spider_semantic_search import get_spider_semantic_search
             self._semantic_search = get_spider_semantic_search()
         return self._semantic_search
+
+    @property
+    def unified_search(self):
+        """Session 336: Lazy-load Unified Intelligence Search Service."""
+        if self._unified_search is None:
+            from core.services.unified_intelligence_search import get_unified_intelligence_search
+            self._unified_search = get_unified_intelligence_search()
+        return self._unified_search
 
     def _get_project_context(self) -> Dict[str, Any]:
         """Fetch project context including existing research."""
@@ -345,6 +406,35 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
                         task = f"{task} for '{project_name}'"
                         logger.info(f"Enhanced task with project name: {task}")
 
+                # Session 336: Store current task for tool access
+                self._current_task = task
+
+                # Session 336: Auto-trigger spider refresh for fresh branding data
+                try:
+                    refresh_result = self.unified_search.refresh_spiders_for_query(task)
+                    logger.info(f"Auto-triggered spider refresh: {refresh_result.get('categories', [])}")
+                    self.record_decision(
+                        decision_type="data_refresh",
+                        action="Triggered spider network refresh",
+                        reasoning=f"Ensuring fresh branding data for: {task[:50]}",
+                        confidence=0.9
+                    )
+                except Exception as e:
+                    logger.warning(f"Auto spider refresh failed (continuing anyway): {e}")
+
+                # Session 336: Get prior research context
+                prior_context = ""
+                try:
+                    prior_context = self.unified_search.get_research_context(
+                        query=task,
+                        max_spider_items=3,
+                        max_research_items=2
+                    )
+                    if prior_context:
+                        logger.info(f"Found prior research context ({len(prior_context)} chars)")
+                except Exception as e:
+                    logger.warning(f"Prior research lookup failed (continuing anyway): {e}")
+
                 self.record_decision(
                     decision_type="task_analysis",
                     action="Analyzing brand strategy request",
@@ -368,6 +458,13 @@ EXISTING PROJECT RESEARCH (use this as the foundation):
 - Pain Points: {len(project_context.get('customer_pain_points', []))} identified
 
 IMPORTANT: Call get_project_research FIRST to load the full research data."""
+
+                # Session 336: Add prior research context if available
+                if prior_context:
+                    full_prompt += f"""
+
+PRIOR RESEARCH CONTEXT (from unified intelligence):
+{prior_context[:2000]}"""
 
                 full_prompt += """
 
@@ -606,6 +703,71 @@ Return a comprehensive brand strategy report that builds on existing project res
                 customer_insights=arguments.get('customer_insights', ''),
                 brand_trends=arguments.get('brand_trends', '')
             )
+
+        elif tool_name == "refresh_spider_data":
+            # Session 336: Trigger fresh spider crawls for branding data
+            try:
+                categories = arguments.get('categories', [])
+                # Use the current task/query to determine categories if not specified
+                result = self.unified_search.refresh_spiders_for_query(
+                    query=self._current_task if hasattr(self, '_current_task') else '',
+                    categories=categories if categories else None
+                )
+                return {
+                    'success': True,
+                    'data': result,
+                    'message': f"Triggered spider refresh for: {result.get('categories', [])}"
+                }
+            except Exception as e:
+                logger.warning(f"Spider refresh failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Spider refresh failed: {str(e)}"
+                }
+
+        elif tool_name == "get_prior_research":
+            # Session 336: Get prior research from unified intelligence
+            try:
+                market_topic = arguments.get('market_topic', '')
+                research_type = arguments.get('research_type', 'all')
+                limit = arguments.get('limit', 5)
+
+                # Use unified search for combined results
+                results = self.unified_search.unified_search(
+                    query=market_topic,
+                    include_spiders=False,  # Only get research, not spider data
+                    include_research=True,
+                    research_limit=limit
+                )
+
+                # Also get context string for prompt injection
+                context = self.unified_search.get_research_context(
+                    query=market_topic,
+                    max_spider_items=0,
+                    max_research_items=limit
+                )
+
+                return {
+                    'success': True,
+                    'data': [
+                        {
+                            'title': r.title,
+                            'description': r.description,
+                            'research_type': r.research_type,
+                            'market_topic': r.market_topic,
+                            'similarity': r.similarity
+                        }
+                        for r in results
+                    ],
+                    'context': context,
+                    'count': len(results)
+                }
+            except Exception as e:
+                logger.warning(f"Prior research lookup failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Prior research lookup failed: {str(e)}"
+                }
 
         else:
             return {
