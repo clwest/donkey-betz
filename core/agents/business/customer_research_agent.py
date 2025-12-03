@@ -108,11 +108,17 @@ When given a customer research task:
 6. Build 2-3 customer personas (build_persona)
 
 Example subreddit choices by market:
+- AI Content Generation for Creators: "podcasting+youtube+blogging+contentcreation+NewTubers"
 - Podcast tools: reddit_search in "podcasting+podcasts+audioengineering"
-- Coffee products: reddit_search in "coffee+barista+espresso"
+- YouTube/Video creators: reddit_search in "youtube+NewTubers+videography+contentcreation"
+- Blogging/Writing: reddit_search in "blogging+juststart+writing+copywriting"
 - SaaS products: reddit_search in "SaaS+startups+indiehackers"
 - Fitness apps: reddit_search in "fitness+running+bodybuilding"
-- Productivity: reddit_search in "productivity+getdisciplined+ADHD"
+
+CRITICAL: Match your research to the ACTUAL market requested!
+- If asked about "AI for podcasters" → research podcaster pain points, NOT developer pain points
+- If asked about "content creators" → research YouTubers, bloggers, podcasters
+- Your personas should be REAL people in that market (e.g., "Sarah the Solo Podcaster")
 
 Output Format:
 Return structured research with:
@@ -552,21 +558,27 @@ If asked to create content, explain you can only research and suggest using the 
                     full_prompt += f"\n\n{prior_context}\n"
 
                 # Add instruction to be comprehensive - Session 325: Emphasize spider_query is MANDATORY
-                full_prompt += """
+                # Session 325b: Added explicit instruction to focus on the ACTUAL query topic
+                full_prompt += f"""
 
 CRITICAL: For thorough customer research you MUST:
-1. FIRST call spider_query to get REAL discussions from our spider network (Reddit, HackerNews, tech news, YouTube)
+1. FIRST call spider_query to get REAL discussions about the SPECIFIC topic in the user's request
    - This is MANDATORY - without it your analysis is just assumptions!
-   - Example: spider_query with query="AI tools pain points frustrated developers"
-2. OPTIONALLY check get_prior_research for context from previous analyses
-3. Use reddit_search for specific subreddits not in our spider network
-4. Use web_search to find reviews of existing solutions
-5. Use analyze_pain_points to synthesize your findings
-6. Use build_persona to create 2-3 customer personas
+   - Your spider_query should match the user's topic: "{enhanced_task[:100]}"
+   - For content creators: search for podcasters, YouTubers, bloggers pain points
+   - For SaaS: search for the specific tool category frustrations
+2. Use reddit_search for industry-specific subreddits matching the topic
+   - For podcasting/content: "podcasting+youtube+blogging+contentcreation"
+   - For the user's actual industry, NOT generic developer communities
+3. Use web_search to find reviews of existing solutions in that SPECIFIC market
+4. Use analyze_pain_points to synthesize your findings
+5. Use build_persona to create 2-3 customer personas FOR THE SPECIFIC MARKET
 
-DO NOT skip spider_query! It provides the actual customer discussions that power your analysis.
+IMPORTANT: Focus your research on the ACTUAL topic requested: "{enhanced_task[:150]}"
+Do NOT drift to generic "developer tools" or "AI platforms" unless that's what was asked.
+Your personas and pain points must match the TARGET MARKET in the request.
 
-Return comprehensive customer research with personas, pain points, and real quotes from customers."""
+Return comprehensive customer research with personas, pain points, and real quotes from customers in the SPECIFIC market requested."""
 
                 # Make GPT call to determine tools to use
                 gpt_response = self._call_openai(full_prompt)
