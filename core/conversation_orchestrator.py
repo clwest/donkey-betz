@@ -85,11 +85,90 @@ class ConversationOrchestrator:
             self._client = openai.OpenAI(api_key=self.api_key)
         return self._client
 
+    def _get_agent_knowledge(self, agent_name: str) -> Dict[str, Any]:
+        """
+        Session 318: Get an agent's actual learned knowledge and memories.
+
+        This is what makes conversations meaningful - agents bring their
+        real experiences and insights to the discussion.
+        """
+        knowledge = {
+            'knowledge_sources': [],
+            'memories': [],
+            'specialization': ''
+        }
+
+        try:
+            from core.models import Agent, AgentKnowledgeSource, AgentMemory
+
+            agent = Agent.objects.filter(name=agent_name).first()
+            if not agent:
+                return knowledge
+
+            knowledge['specialization'] = agent.specialization or ''
+
+            # Get recent knowledge sources (what they've learned)
+            sources = AgentKnowledgeSource.objects.filter(
+                agent=agent
+            ).order_by('-last_updated_at')[:5]
+
+            for source in sources:
+                knowledge['knowledge_sources'].append({
+                    'title': source.title,
+                    'summary': source.summary[:200] if source.summary else ''
+                })
+
+            # Get recent memories (their experiences)
+            memories = AgentMemory.objects.filter(
+                agent=agent
+            ).order_by('-created_at')[:5]
+
+            for memory in memories:
+                knowledge['memories'].append({
+                    'type': memory.memory_type,
+                    'content': memory.content[:200] if memory.content else ''
+                })
+
+        except Exception as e:
+            logger.warning(f"Could not get agent knowledge for {agent_name}: {e}")
+
+        return knowledge
+
+    def _format_agent_context(self, agent_name: str, knowledge: Dict[str, Any]) -> str:
+        """
+        Session 318: Format an agent's knowledge into conversation context.
+
+        This replaces the generic stats with actual learned insights.
+        """
+        lines = [f"=== {agent_name.upper()}'S KNOWLEDGE & EXPERIENCE ==="]
+
+        if knowledge.get('specialization'):
+            lines.append(f"Specialization: {knowledge['specialization']}")
+
+        if knowledge.get('knowledge_sources'):
+            lines.append("\nWhat I've Learned Recently:")
+            for source in knowledge['knowledge_sources'][:3]:
+                lines.append(f"• {source['title']}")
+                if source['summary']:
+                    lines.append(f"  → {source['summary'][:150]}...")
+
+        if knowledge.get('memories'):
+            lines.append("\nMy Experiences:")
+            for memory in knowledge['memories'][:3]:
+                lines.append(f"• [{memory['type']}] {memory['content'][:150]}...")
+
+        if not knowledge.get('knowledge_sources') and not knowledge.get('memories'):
+            lines.append("(No specific knowledge or memories yet)")
+
+        lines.append("=" * 50)
+        return "\n".join(lines)
+
     def _get_live_system_stats(self) -> Dict[str, Any]:
         """
         Gather real-time system statistics for grounding conversations.
 
         Session 315: Agents now discuss ACTUAL system state, not placeholders.
+        Session 318: Reduced emphasis on raw counts - knowledge context is more important.
         """
         stats = {}
 
@@ -161,21 +240,19 @@ class ConversationOrchestrator:
         return stats
 
     def _format_system_context(self, stats: Dict[str, Any]) -> str:
-        """Format live system stats into a context block for prompts."""
+        """
+        Format live system stats into a context block for prompts.
+
+        Session 318: Simplified - don't force agents to parrot numbers.
+        The real context comes from agent knowledge, not dashboard stats.
+        """
         lines = [
-            "=== LIVE PLATFORM STATISTICS (Real-Time Data) ===",
-            f"• Spider Network: {stats.get('spider_count', 'N/A')} active spiders across {len(stats.get('spider_categories', {}))} categories",
-            f"• Agent Ecosystem: {stats.get('active_agents', 'N/A')} active agents ({stats.get('total_agents', 'N/A')} total)",
-            f"• Memory Palace: {stats.get('total_memories', 'N/A')} memories stored",
-            f"• Knowledge Base: {stats.get('knowledge_sources', 'N/A')} knowledge sources",
-            f"• Spider Data: {stats.get('spider_data_total', 'N/A')} total records ({stats.get('spider_data_24h', 'N/A')} in last 24h)",
-            f"• Opportunities Tracked: {stats.get('opportunities', 'N/A')}",
-            f"• A/B Tests: {stats.get('ab_tests', 'N/A')}",
-            f"• Agent Conversations: {stats.get('total_conversations', 'N/A')}",
-            f"• Learning Events: {stats.get('learning_events', 'N/A')}",
+            "=== PLATFORM CONTEXT (Reference Only) ===",
+            f"• Active spiders: {stats.get('spider_count', 'N/A')} | Recent data: {stats.get('spider_data_24h', 'N/A')} items",
+            f"• Active agents: {stats.get('active_agents', 'N/A')} | Opportunities: {stats.get('opportunities', 'N/A')}",
             "",
-            "USE THESE EXACT NUMBERS when discussing platform capabilities.",
-            "==================================================="
+            "Focus on your knowledge and experiences, not these numbers.",
+            "================================================"
         ]
         return "\n".join(lines)
 
@@ -211,7 +288,16 @@ class ConversationOrchestrator:
         # Session 315: Gather live system stats once for the entire conversation
         system_stats = self._get_live_system_stats()
         system_context = self._format_system_context(system_stats)
-        logger.info(f"Injecting live stats: {system_stats.get('spider_count')} spiders, {system_stats.get('active_agents')} agents")
+
+        # Session 318: Load ACTUAL knowledge and memories for each agent
+        # This is what makes conversations meaningful - real learned insights
+        agent1_knowledge = self._get_agent_knowledge(agent1['name'])
+        agent2_knowledge = self._get_agent_knowledge(agent2['name'])
+        agent1_context = self._format_agent_context(agent1['name'], agent1_knowledge)
+        agent2_context = self._format_agent_context(agent2['name'], agent2_knowledge)
+
+        logger.info(f"Agent knowledge loaded: {agent1['name']} has {len(agent1_knowledge.get('knowledge_sources', []))} learnings, "
+                    f"{agent2['name']} has {len(agent2_knowledge.get('knowledge_sources', []))} learnings")
 
         state = ConversationState()
         messages = []
@@ -221,6 +307,9 @@ class ConversationOrchestrator:
             # Alternate between agents
             current_agent = agent1 if turn % 2 == 0 else agent2
             other_agent = agent2 if turn % 2 == 0 else agent1
+
+            # Session 318: Get the right knowledge context for the current speaker
+            current_knowledge_context = agent1_context if turn % 2 == 0 else agent2_context
 
             # Determine if we need to force tension (every 2-3 turns)
             turns_since_tension = turn - state.last_tension_turn
@@ -238,7 +327,8 @@ class ConversationOrchestrator:
                 force_tension=force_tension,
                 is_final_turn=is_final_turn,
                 state=state,
-                system_context=system_context  # Session 315: Live stats
+                system_context=system_context,
+                agent_knowledge_context=current_knowledge_context  # Session 318: Real knowledge
             )
 
             # Generate response with retry logic
@@ -320,7 +410,8 @@ class ConversationOrchestrator:
         force_tension: bool,
         is_final_turn: bool,
         state: ConversationState,
-        system_context: str = ""  # Session 315: Live system stats
+        system_context: str = "",  # Session 315: Live system stats
+        agent_knowledge_context: str = ""  # Session 318: Agent's real knowledge
     ) -> str:
         """Build the complete prompt for a conversation turn."""
 
@@ -350,16 +441,16 @@ class ConversationOrchestrator:
             turn_instructions.append(f"""OPENING MESSAGE INSTRUCTIONS:
 You are starting a {conversation_type} conversation about: "{topic}"
 
-- Open with an insightful observation or provocative question
+- Open with an insight FROM YOUR KNOWLEDGE ABOVE - reference what you've learned
 - Set the stage for a productive discussion
-- Reference a specific metric or system from our platform
+- Share a specific experience or learning that's relevant
 - Keep it to 2-3 sentences""")
         else:
             turn_instructions.append(f"""RESPONSE INSTRUCTIONS:
 Continue this {conversation_type} conversation about: "{topic}"
 
 - Respond directly to what {other_agent['name']} just said
-- Add your unique perspective based on your role
+- Draw on YOUR specific experiences and learnings from above
 - Build toward actionable conclusions
 - Keep it to 2-4 sentences""")
 
@@ -390,13 +481,8 @@ This is the LAST message of the conversation. You MUST:
 
 The DecisionSummary MUST appear at the end of your message. This is required.""")
 
-        # Grounding reminder
-        if state.grounding_count < turn // 2:
-            turn_instructions.append("""
-GROUNDING REMINDER:
-Reference specific platform elements:
-- Metrics: reading time, scroll depth, completion rate, engagement score, conversion rate
-- Systems: embeddings, RAG, spiders, dashboards, A/B testing, workflows""")
+        # Session 318: Removed generic grounding reminder
+        # Agents now ground in their ACTUAL knowledge/experiences, not generic platform stats
 
         # Anti-agreement reminder
         turn_instructions.append("""
@@ -405,8 +491,10 @@ AGREEMENT RULES:
 - If you agree, still add nuance: "That aligns with the data, though one consideration is..."
 - Always contribute something new, don't just validate""")
 
-        # Assemble full prompt with live system stats (Session 315)
+        # Assemble full prompt with agent knowledge (Session 318) and system context
         prompt = f"""{role_prompt}
+
+{agent_knowledge_context}
 
 {system_context}
 
@@ -419,7 +507,7 @@ AGREEMENT RULES:
 
 {chr(10).join(turn_instructions)}
 
-Write your response now. Do NOT prefix with your name - just write the message content directly."""
+Draw on your knowledge and experiences above. Write your response now. Do NOT prefix with your name - just write the message content directly."""
 
         return prompt
 

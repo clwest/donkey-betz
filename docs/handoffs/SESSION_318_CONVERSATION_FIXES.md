@@ -8,11 +8,12 @@
 
 ## Summary
 
-Fixed three major issues with Agent Conversations:
+Fixed **four major issues** with Agent Conversations:
 
 1. **Empty first messages** - First 2 messages had no content
 2. **Repetitive "Core expertise:" topics** - Topics came from knowledge titles
 3. **Same agent pairings** - ContentExecutor + CustomerResearchAgent paired repeatedly
+4. **Parroting dashboard stats** - Agents just repeated "74 spiders, 48 memories" instead of using real knowledge
 
 ---
 
@@ -77,21 +78,45 @@ possible_responders = [
 
 ---
 
+### 4. Real Knowledge Integration (`core/conversation_orchestrator.py`)
+
+**Problem:** Agents just parroted "74 spiders, 48 memories" instead of using learned knowledge
+
+**Before:**
+```
+"Spider Network (74 active spiders across 21 categories) with spider data (6717 total records)..."
+Spider mentions: 6/6 messages
+```
+
+**After:** New methods `_get_agent_knowledge()` and `_format_agent_context()` inject actual learned knowledge:
+```python
+# Load ACTUAL knowledge and memories for each agent
+agent1_knowledge = self._get_agent_knowledge(agent1['name'])
+agent1_context = self._format_agent_context(agent1['name'], agent1_knowledge)
+
+# Result: Agents now discuss their real learnings
+"Session 316 flagged strong demand for content repurposing tools..."
+Spider mentions: 0/4 messages
+```
+
+---
+
 ## Test Results
 
-Before fix:
+### Before (Empty + Stats Parroting):
 ```
 1. [ContentExecutor] (statement): ""     <- EMPTY
 2. [CustomerResearchAgent] (statement): ""  <- EMPTY
-3. [ContentExecutor] (statement): "That aligns..."
+3. "Spider Network (74 active spiders across 21 categories)..."
+Spider mentions: 6/6
 ```
 
-After fix:
+### After (Knowledge-Driven):
 ```
-1. [BrandIdentityAgent] (question): "How do we turn high-volume signals..."
-2. [SEOOptimizerAgent] (challenge): "That aligns with the platform signals..."
-3. [BrandIdentityAgent] (proposal): "That aligns with the data..."
-...
+1. [BrandIdentityAgent]: "Session 316 flagged strong demand for content repurposing tools..."
+2. [SEOOptimizerAgent]: "That aligns with the data, platform-specific hypotheses..."
+3. [BrandIdentityAgent]: "We should add platform-specific hypotheses (Reels/TikTok...)"
+Spider mentions: 0/4
 Quality score: 100
 ```
 
@@ -101,7 +126,7 @@ Quality score: 100
 
 | File | Changes |
 |------|---------|
-| `core/conversation_orchestrator.py` | Token limits: 1000→1500, 2000→2500. Added retry on empty. |
+| `core/conversation_orchestrator.py` | Token limits increased. Added `_get_agent_knowledge()` and `_format_agent_context()`. Prompt now includes agent's real knowledge. Removed generic grounding reminder. |
 | `core/agent_conversation_consumer.py` | Random pairing with 24h repeat avoidance. Strategic topic pool. |
 
 ---
