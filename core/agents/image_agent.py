@@ -4,6 +4,7 @@ Image Agent - Specialized for Image Generation ONLY
 
 Session 268: Phase 1 - Foundation
 Session 304: Added Learning Infrastructure Integration
+Session 334: Added Project Context Support - Works within projects!
 
 This agent creates images. That's ALL it does.
 It has NO access to video, audio, 3D, or research tools.
@@ -22,13 +23,19 @@ Tools NOT Available (by design):
     - spider queries
     - any editing operations
 
+Session 334: Project Context Support
+    When project_id is in context, the agent:
+    - Fetches project name, description, and brand info
+    - Enhances vague prompts with project context
+    - Example: "create logo" → "create logo for 'TechCorp': AI solutions company"
+
 Usage:
     from core.agents import ImageAgent
 
     agent = ImageAgent(user=request.user)
     result = agent.execute(
         task="create a cyberpunk logo for a tech startup",
-        context={'count': 3, 'style': 'cyberpunk'},
+        context={'count': 3, 'style': 'cyberpunk', 'project_id': 'uuid...'},
         scifi_context=scifi_service.get_context('ImageAgent'),
         spider_context=spider_service.get_insights_for_prompt(task)
     )
@@ -164,17 +171,28 @@ If asked to do something outside image generation, politely explain you can only
                         agent_name=self.name
                     )
 
+                # Session 334: Get project context if project_id is provided
+                project_id = context.get('project_id') if context else None
+                project_context = self._get_project_context(project_id) if project_id else {}
+
+                # Session 334: Enhance task with project context
+                enhanced_task = self._enhance_task_with_project(task, project_context)
+                if enhanced_task != task:
+                    logger.info(f"Session 334: Enhanced task with project context")
+
                 # Record initial analysis decision
                 self.record_decision(
                     decision_type="task_analysis",
                     action="Analyzing image generation request",
-                    reasoning=f"Received task: {task[:100]}",
+                    reasoning=f"Received task: {enhanced_task[:100]}",
                     alternatives=["reject_task", "request_clarification"],
                     confidence=0.9
                 )
 
-                # Build enhanced prompt with context
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                # Build enhanced prompt with all context (including project)
+                full_prompt = self._build_prompt_with_project(
+                    enhanced_task, scifi_context, spider_context, project_context
+                )
 
                 logger.info(f"ImageAgent executing: {task[:50]}...")
 
@@ -220,14 +238,22 @@ If asked to do something outside image generation, politely explain you can only
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_images:
+                        # Session 334: Include project context in result for "Add to Project" button
+                        result_data = {
+                            'images': all_images,
+                            'count': len(all_images),
+                            'task': enhanced_task,  # Use enhanced task for display
+                            'original_task': task,
+                        }
+                        # Include project info for frontend "Add to Project" flow
+                        if project_context:
+                            result_data['project_id'] = project_context.get('project_id')
+                            result_data['project_name'] = project_context.get('project_name')
+
                         result = AgentResult(
                             success=True,
                             message=f"Generated {len(all_images)} image(s)",
-                            data={
-                                'images': all_images,
-                                'count': len(all_images),
-                                'task': task,
-                            },
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

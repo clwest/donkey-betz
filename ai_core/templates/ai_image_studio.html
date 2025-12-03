@@ -27737,6 +27737,52 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     }
                 });
 
+                // Session 334: Add "Add to Project" section for creative content
+                // Store artifacts for project association
+                const creativeDataId = 'creative_' + Date.now();
+                window[creativeDataId] = {
+                    artifacts: artifacts,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Extract image IDs for project association
+                const imageIds = artifacts
+                    .filter(a => a.type === 'image' && a.id)
+                    .map(a => a.id);
+                const videoIds = artifacts
+                    .filter(a => a.type === 'video' && a.id)
+                    .map(a => a.id);
+                const audioIds = artifacts
+                    .filter(a => a.type === 'audio' && a.id)
+                    .map(a => a.id);
+
+                // Only show buttons if we have content to add
+                if (imageIds.length > 0 || videoIds.length > 0 || audioIds.length > 0) {
+                    const contentTypes = [];
+                    if (imageIds.length > 0) contentTypes.push(`${imageIds.length} image${imageIds.length > 1 ? 's' : ''}`);
+                    if (videoIds.length > 0) contentTypes.push(`${videoIds.length} video${videoIds.length > 1 ? 's' : ''}`);
+                    if (audioIds.length > 0) contentTypes.push(`${audioIds.length} audio file${audioIds.length > 1 ? 's' : ''}`);
+
+                    html += `
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
+                            <div style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">💡 <strong>Save to Project:</strong> Add ${contentTypes.join(', ')} to a project</div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button onclick="showAddCreativeToProjectModal('${creativeDataId}')"
+                                        style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3)); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                        onmouseover="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.4))'"
+                                        onmouseout="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))'">
+                                    📁 Add to Project
+                                </button>
+                                <button onclick="window.aiAssistant?.sendPrefilledMessage('Create more variations')"
+                                        style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3)); border: 1px solid rgba(168, 85, 247, 0.4); color: #c4b5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
+                                        onmouseover="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.4))'"
+                                        onmouseout="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3))'">
+                                    🔄 Create Variations
+                                </button>
+                            </div>
+                        </div>`;
+                }
+
                 html += `</div>`;
                 return html;
             }
@@ -51609,6 +51655,171 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             })
             .catch(err => {
                 console.error('Error adding research to project:', err);
+                showToast(`❌ Error: ${err.message}`, 'error');
+            });
+        }
+
+        // Session 334: Show modal to add creative content (images/videos/audio) to a project
+        function showAddCreativeToProjectModal(dataId) {
+            // Get stored creative data
+            const creativeData = window[dataId];
+            if (!creativeData || !creativeData.artifacts) {
+                showToast('⚠️ No creative content to add', 'warning');
+                return;
+            }
+
+            // Extract content info
+            const artifacts = creativeData.artifacts;
+            const imageCount = artifacts.filter(a => a.type === 'image').length;
+            const videoCount = artifacts.filter(a => a.type === 'video').length;
+            const audioCount = artifacts.filter(a => a.type === 'audio').length;
+
+            const contentSummary = [];
+            if (imageCount > 0) contentSummary.push(`${imageCount} image${imageCount > 1 ? 's' : ''}`);
+            if (videoCount > 0) contentSummary.push(`${videoCount} video${videoCount > 1 ? 's' : ''}`);
+            if (audioCount > 0) contentSummary.push(`${audioCount} audio file${audioCount > 1 ? 's' : ''}`);
+
+            // Fetch existing projects for dropdown
+            fetch('/api/projects/?limit=20', {
+                headers: { 'X-CSRFToken': getCsrfToken() }
+            })
+            .then(response => response.json())
+            .then(projectsData => {
+                const projects = projectsData.projects || [];
+
+                let projectOptionsHtml = `<option value="">-- Select a project --</option>`;
+                projects.forEach(p => {
+                    projectOptionsHtml += `<option value="${p.id}">${p.project_name}</option>`;
+                });
+
+                const modalHtml = `
+                    <div class="modal fade" id="addCreativeToProjectModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content" style="background: #1e293b; color: #e2e8f0;">
+                                <div class="modal-header" style="border-color: rgba(168, 85, 247, 0.3); background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.1));">
+                                    <h5 class="modal-title" style="color: #c4b5fd;">🎨 Add Creative Content to Project</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p style="color: #94a3b8; font-size: 14px; margin-bottom: 15px;">
+                                        Adding ${contentSummary.join(', ')} to a project:
+                                    </p>
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Existing Project</label>
+                                        <select class="form-select" id="creativeProjectSelect" style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                            ${projectOptionsHtml}
+                                        </select>
+                                    </div>
+                                    <div class="text-center" style="color: #64748b; margin: 15px 0;">— or —</div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Create New Project</label>
+                                        <input type="text" class="form-control" id="newCreativeProjectName" placeholder="Enter new project name..." style="background: rgba(71, 85, 105, 0.3); border-color: rgba(71, 85, 105, 0.5); color: #e2e8f0;">
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="border-color: rgba(71, 85, 105, 0.5);">
+                                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button class="btn" style="background: linear-gradient(135deg, #a855f7, #7c3aed); color: white; font-weight: 600;" onclick="submitAddCreativeToProject('${dataId}')">Add to Project</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Remove existing modal if any
+                const existingModal = document.getElementById('addCreativeToProjectModal');
+                if (existingModal) existingModal.remove();
+
+                // Add and show modal
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modal = new bootstrap.Modal(document.getElementById('addCreativeToProjectModal'));
+                modal.show();
+            })
+            .catch(err => {
+                console.error('Error fetching projects:', err);
+                showToast('❌ Failed to load projects', 'error');
+            });
+        }
+
+        // Session 334: Submit add creative content to project
+        function submitAddCreativeToProject(dataId) {
+            const creativeData = window[dataId];
+            if (!creativeData || !creativeData.artifacts) {
+                showToast('⚠️ No creative content found', 'warning');
+                return;
+            }
+
+            const selectedProjectId = document.getElementById('creativeProjectSelect').value;
+            const newProjectName = document.getElementById('newCreativeProjectName').value.trim();
+
+            if (!selectedProjectId && !newProjectName) {
+                showToast('⚠️ Please select a project or enter a new project name', 'warning');
+                return;
+            }
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('addCreativeToProjectModal')).hide();
+
+            // Extract content IDs
+            const artifacts = creativeData.artifacts;
+            const imageIds = artifacts.filter(a => a.type === 'image' && a.id).map(a => a.id);
+            const videoIds = artifacts.filter(a => a.type === 'video' && a.id).map(a => a.id);
+            const audioIds = artifacts.filter(a => a.type === 'audio' && a.id).map(a => a.id);
+
+            showToast('📁 Adding creative content to project...', 'info');
+
+            // Prepare request body
+            const requestBody = {
+                image_ids: imageIds,
+                video_ids: videoIds,
+                audio_ids: audioIds
+            };
+
+            let apiUrl;
+            if (selectedProjectId) {
+                // Add to existing project
+                apiUrl = `/api/projects/${selectedProjectId}/add-creative-content/`;
+            } else {
+                // Create new project with content
+                apiUrl = '/api/projects/from-creative-content/';
+                requestBody.project_name = newProjectName;
+            }
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const projectName = data.project_name || newProjectName || 'your project';
+                    const addedCount = (imageIds.length + videoIds.length + audioIds.length);
+                    showToast(`✅ Added ${addedCount} item(s) to "${projectName}"!`, 'success');
+
+                    // Clear stored data
+                    delete window[dataId];
+
+                    // Add confirmation to chat
+                    if (window.aiAssistant?.addMessage) {
+                        window.aiAssistant.addMessage('assistant',
+                            `📁 Successfully added ${addedCount} creative asset(s) to project "${projectName}"! ` +
+                            `You can view them in the Projects panel.`
+                        );
+                    }
+
+                    // Refresh project view if available
+                    if (data.project_id && typeof viewProjectDetails === 'function') {
+                        viewProjectDetails(data.project_id);
+                    }
+                } else {
+                    showToast(`❌ Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Error adding creative content to project:', err);
                 showToast(`❌ Error: ${err.message}`, 'error');
             });
         }

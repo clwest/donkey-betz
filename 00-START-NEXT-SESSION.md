@@ -1,40 +1,40 @@
-# Session 334: Continue Platform Development
+# Session 335: Continue Platform Development
 
 **Date:** December 3, 2025
-**Previous Session:** 333 - Project Intelligence Hub Enhanced UI
+**Previous Session:** 334 - Project Context for Creative Workflows
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 333 enhanced all **Project Intelligence Hub tabs** with Agent/Social tab styling:
-- Learning tab now shows Live Agent Learning Activity feed
-- Dreams tab has gradient cards, type badges, and "Trigger Dream" button
-- Boardroom tab has decision cards with type badges and "Promote to Canonical" button
-- All tabs have hover effects, consistent styling, and real-time WebSocket status
-
-**Known Issue:** Learning data not fully project-scoped (shows some platform-wide data).
+Session 334 added **project research context as guidance** to creative workflows:
+- WorkflowOrchestrationAgent now fetches existing project research (competitor analysis, customer research)
+- Research context is injected into web search, executive review, and image generation steps
+- Agents still do their own research, but project context helps **guide the direction**
+- Example: "Create brand identity" from within a project uses competitor/customer insights as guidance
 
 ---
 
-## Session 333 Summary
+## Session 334 Summary
 
 | Task | Status |
 |------|--------|
-| Add Live Agent Learning Activity to Learning tab | **Complete** |
-| Enhance Dreams tab with Dream Journal styling | **Complete** |
-| Enhance Boardroom tab with decision card styling | **Complete** |
-| Add triggerProjectDream function | **Complete** |
-| Add promoteProjectDecision function | **Complete** |
+| Add `_get_project_research_context()` method | **Complete** |
+| Inject project context into `_execute_web_search_step()` | **Complete** |
+| Inject project context into `_execute_coleadership_step()` | **Complete** |
+| Inject project context into `_execute_image_generation_step()` | **Complete** |
+| Fix `has_research` flag for metadata-based research | **Complete** |
 
-### UI Enhancements Made
+### How Project Context Works Now
 
-| Tab | Features Added |
-|-----|----------------|
-| Learning | Live Activity Feed, teacher → student transfers, usefulness badges |
-| Dreams | Gradient cards, type badges (7 types), Trigger Dream button, hover effects |
-| Boardroom | Decision type badges (6 types), Promote to Canonical button, gradient cards |
+When a user says "Create a Brand Identity" from within a project that has competitor/customer research:
+
+1. **Web Search Step**: Query is enhanced with terms from project pain points and differentiation needs
+2. **Executive Review Step**: Executives see project name, competitor insights, customer insights, and pain points
+3. **Image Generation Step**: Visual cues are derived from customer pain points (trust → "trustworthy stable", simple → "simple approachable", etc.)
+
+All agents **still do their own fresh research** - the project context just helps **guide** the direction.
 
 ---
 
@@ -47,10 +47,10 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Project Intelligence Hub:
-# 1. Click on any project
-# 2. Expand the Project Intelligence Hub
-# 3. Click through Learning, Dreams, Boardroom tabs
+# Test Project Context for Creative Workflows:
+# 1. Click on "Donkey Betz Podcast" project (has competitor + customer research)
+# 2. In project assistant, say "Create a brand identity"
+# 3. Watch logs for "Session 334" messages showing context injection
 ```
 
 ---
@@ -78,9 +78,10 @@ open http://localhost:8000/ai-studio/
 | Project-Agent Bridge | Working (Session 326) |
 | Feedback Learning | Working (Session 326) |
 | Spider Prioritization | Working (Session 326) |
-| Project Intelligence Hub | **Enhanced UI (Session 333)** |
+| Project Intelligence Hub | Enhanced UI (Session 333) |
 | Project Agent Slack | Working (Session 328) |
 | Project Conversations | Working (Session 330-331) |
+| **Creative Workflow Context** | **NEW (Session 334)** |
 
 ### System Stats
 - **198 total agents** (36 active)
@@ -92,27 +93,15 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Project Intelligence Hub Tabs (Enhanced Session 333)
-
-| Tab | Description | Session 333 Enhancements |
-|-----|-------------|--------------------------|
-| Learning | Knowledge sources from project research | Live Activity Feed, transfer badges |
-| Dreams | Creative agent thoughts | Gradient cards, type badges, Trigger Dream button |
-| Boardroom | Agent decisions about the project | Decision cards, type badges, Promote button |
-| Conversations | Multi-turn agent discussions | Already styled (Session 330) |
-| Agent Slack | Real-time chat with agents | Already styled (Session 328) |
-
----
-
-## Files Modified (Session 333)
+## Files Modified (Session 334)
 
 | File | Changes |
 |------|---------|
-| `ai_core/templates/ai_image_studio.html` | Enhanced renderProjectLearning, renderProjectDreams, renderProjectBoardroom; Added triggerProjectDream, promoteProjectDecision |
+| `agents/workflow_orchestration_agent.py` | Added `_get_project_research_context()`, enhanced `_execute_web_search_step()`, `_execute_coleadership_step()`, `_execute_image_generation_step()` with project context injection |
 
 ---
 
-## Next Steps (Session 334+)
+## Next Steps (Session 335+)
 
 1. **Filter Learning data by project**: Currently shows some platform-wide data
 2. **WebSocket real-time updates**: Push new dreams/decisions as they're created
@@ -122,4 +111,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**Status:** Session 333 COMPLETE. Project Intelligence Hub UI enhanced!
+**Status:** Session 334 COMPLETE. Creative workflows now use project research as guidance!

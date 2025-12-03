@@ -878,3 +878,389 @@ def export_research_pdf(request, project_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_creative_content_to_project(request, project_id):
+    """
+    Add creative content (images, videos, audio) to an existing project.
+
+    Session 334: Allows adding AI-generated content from agents to current project.
+    Mirrors the "Add to Project" flow from research agents.
+
+    POST /api/projects/<project_id>/add-creative-content/
+
+    Body:
+    {
+        "image_ids": ["uuid1", "uuid2"],
+        "video_ids": ["uuid1"],
+        "audio_ids": ["uuid1"],
+        "content_description": "Generated logos for brand identity"
+    }
+
+    Returns:
+    {
+        "success": true,
+        "message": "Added 3 images, 1 video to project",
+        "data": {
+            "images_added": 3,
+            "videos_added": 1,
+            "audio_added": 0,
+            "total_content": 4
+        }
+    }
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory, AudioHistory
+
+        user = request.user
+        data = request.data
+
+        # Get the project
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Extract content IDs
+        image_ids = data.get('image_ids', [])
+        video_ids = data.get('video_ids', [])
+        audio_ids = data.get('audio_ids', [])
+        content_description = data.get('content_description', '')
+
+        # Get existing metadata or initialize
+        metadata = project.metadata or {}
+
+        # Initialize content arrays if not present
+        if 'creative_content' not in metadata:
+            metadata['creative_content'] = {
+                'images': [],
+                'videos': [],
+                'audio': []
+            }
+
+        # Track what we add
+        images_added = 0
+        videos_added = 0
+        audio_added = 0
+        content_details = []
+
+        # Add images
+        for img_id in image_ids:
+            try:
+                image = ImageHistory.objects.get(id=img_id, user=user)
+                # Avoid duplicates
+                existing_ids = [i.get('id') for i in metadata['creative_content']['images']]
+                if str(img_id) not in existing_ids:
+                    metadata['creative_content']['images'].append({
+                        'id': str(image.id),
+                        'url': image.url or image.signed_url or '',
+                        'prompt': image.prompt or '',
+                        'style': image.style or '',
+                        'created_at': image.created_at.isoformat() if image.created_at else None,
+                        'added_at': datetime.now().isoformat()
+                    })
+                    images_added += 1
+                    content_details.append(f"Image: {(image.prompt or 'Untitled')[:50]}")
+            except ImageHistory.DoesNotExist:
+                logger.warning(f"⚠️ Image {img_id} not found")
+
+        # Add videos
+        for vid_id in video_ids:
+            try:
+                video = VideoHistory.objects.get(id=vid_id, user=user)
+                existing_ids = [v.get('id') for v in metadata['creative_content']['videos']]
+                if str(vid_id) not in existing_ids:
+                    metadata['creative_content']['videos'].append({
+                        'id': str(video.id),
+                        'url': video.video_url or '',
+                        'prompt': video.prompt or '',
+                        'duration': video.duration_seconds or 0,
+                        'created_at': video.created_at.isoformat() if video.created_at else None,
+                        'added_at': datetime.now().isoformat()
+                    })
+                    videos_added += 1
+                    content_details.append(f"Video: {(video.prompt or 'Untitled')[:50]}")
+            except VideoHistory.DoesNotExist:
+                logger.warning(f"⚠️ Video {vid_id} not found")
+
+        # Add audio
+        for aud_id in audio_ids:
+            try:
+                audio = AudioHistory.objects.get(id=aud_id, user=user)
+                existing_ids = [a.get('id') for a in metadata['creative_content']['audio']]
+                if str(aud_id) not in existing_ids:
+                    metadata['creative_content']['audio'].append({
+                        'id': str(audio.id),
+                        'url': audio.audio_url or '',
+                        'text': audio.text or '',
+                        'voice': audio.voice_id or '',
+                        'duration': audio.duration_seconds or 0,
+                        'created_at': audio.created_at.isoformat() if audio.created_at else None,
+                        'added_at': datetime.now().isoformat()
+                    })
+                    audio_added += 1
+                    content_details.append(f"Audio: {(audio.text or 'Untitled')[:50]}")
+            except AudioHistory.DoesNotExist:
+                logger.warning(f"⚠️ Audio {aud_id} not found")
+
+        # Save project metadata
+        project.metadata = metadata
+        project.save(update_fields=['metadata'])
+
+        # Add to AI contributions
+        total_added = images_added + videos_added + audio_added
+        if total_added > 0:
+            ai_contributions = project.ai_contributions or []
+            ai_contributions.append({
+                'agent': 'Creative Agent',
+                'task': content_description or f'Added {total_added} creative assets',
+                'timestamp': datetime.now().isoformat(),
+                'output': f'Added {images_added} images, {videos_added} videos, {audio_added} audio files',
+                'content_count': total_added,
+                'content_details': content_details[:5]  # First 5 items
+            })
+            project.ai_contributions = ai_contributions
+            project.save(update_fields=['ai_contributions'])
+
+        # Build message
+        parts = []
+        if images_added:
+            parts.append(f"{images_added} image{'s' if images_added > 1 else ''}")
+        if videos_added:
+            parts.append(f"{videos_added} video{'s' if videos_added > 1 else ''}")
+        if audio_added:
+            parts.append(f"{audio_added} audio file{'s' if audio_added > 1 else ''}")
+
+        message = f"Added {', '.join(parts)} to project" if parts else "No content added"
+
+        logger.info(f"🎨 Added {total_added} creative assets to project {project.project_name}")
+
+        return Response({
+            'success': True,
+            'message': message,
+            'data': {
+                'images_added': images_added,
+                'videos_added': videos_added,
+                'audio_added': audio_added,
+                'total_content': total_added,
+                'project_id': str(project.id),
+                'project_name': project.project_name
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error adding creative content to project: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_project_from_creative_content(request):
+    """
+    Create a new project from AI-generated creative content.
+
+    Session 334: Direct API endpoint for creating projects with creative assets.
+    Mirrors create_project_from_research but for images/videos/audio.
+
+    POST /api/projects/from-creative-content/
+
+    Body:
+    {
+        "project_name": "Brand Identity Package",
+        "image_ids": ["uuid1", "uuid2"],
+        "video_ids": ["uuid1"],
+        "audio_ids": [],
+        "content_description": "Logo variations and brand video"
+    }
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "project_id": "uuid",
+            "project_name": "Brand Identity Package",
+            "message": "Project created with 3 images, 1 video",
+            "content_included": {
+                "images": 3,
+                "videos": 1,
+                "audio": 0
+            }
+        }
+    }
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory, AudioHistory
+
+        user = request.user
+        data = request.data
+
+        project_name = data.get('project_name', 'Creative Project')
+        image_ids = data.get('image_ids', [])
+        video_ids = data.get('video_ids', [])
+        audio_ids = data.get('audio_ids', [])
+        content_description = data.get('content_description', '')
+
+        # Gather content details for the project
+        creative_content = {
+            'images': [],
+            'videos': [],
+            'audio': []
+        }
+
+        content_types = []
+        content_details = []
+
+        # Process images
+        for img_id in image_ids:
+            try:
+                image = ImageHistory.objects.get(id=img_id, user=user)
+                creative_content['images'].append({
+                    'id': str(image.id),
+                    'url': image.url or image.signed_url or '',
+                    'prompt': image.prompt or '',
+                    'style': image.style or '',
+                    'created_at': image.created_at.isoformat() if image.created_at else None,
+                    'added_at': datetime.now().isoformat()
+                })
+                content_details.append(f"Image: {(image.prompt or 'Untitled')[:50]}")
+            except ImageHistory.DoesNotExist:
+                pass
+
+        if creative_content['images']:
+            content_types.append('images')
+
+        # Process videos
+        for vid_id in video_ids:
+            try:
+                video = VideoHistory.objects.get(id=vid_id, user=user)
+                creative_content['videos'].append({
+                    'id': str(video.id),
+                    'url': video.video_url or '',
+                    'prompt': video.prompt or '',
+                    'duration': video.duration_seconds or 0,
+                    'created_at': video.created_at.isoformat() if video.created_at else None,
+                    'added_at': datetime.now().isoformat()
+                })
+                content_details.append(f"Video: {(video.prompt or 'Untitled')[:50]}")
+            except VideoHistory.DoesNotExist:
+                pass
+
+        if creative_content['videos']:
+            content_types.append('videos')
+
+        # Process audio
+        for aud_id in audio_ids:
+            try:
+                audio = AudioHistory.objects.get(id=aud_id, user=user)
+                creative_content['audio'].append({
+                    'id': str(audio.id),
+                    'url': audio.audio_url or '',
+                    'text': audio.text or '',
+                    'voice': audio.voice_id or '',
+                    'duration': audio.duration_seconds or 0,
+                    'created_at': audio.created_at.isoformat() if audio.created_at else None,
+                    'added_at': datetime.now().isoformat()
+                })
+                content_details.append(f"Audio: {(audio.text or 'Untitled')[:50]}")
+            except AudioHistory.DoesNotExist:
+                pass
+
+        if creative_content['audio']:
+            content_types.append('audio')
+
+        # Determine project type based on content
+        if len(creative_content['images']) > 0 and 'logo' in (content_description or project_name).lower():
+            project_type = 'brand_identity'
+        elif len(creative_content['videos']) > 0:
+            project_type = 'video_production'
+        elif len(creative_content['audio']) > 0:
+            project_type = 'audio_production'
+        else:
+            project_type = 'content_creation'
+
+        # Build project metadata
+        total_content = (len(creative_content['images']) +
+                         len(creative_content['videos']) +
+                         len(creative_content['audio']))
+
+        project_metadata = {
+            'creative_content': creative_content,
+            'content_types': content_types,
+            'total_assets': total_content,
+            'created_from': 'creative_content',
+        }
+
+        # Create the project
+        short_description = content_description or f"Creative project with {total_content} assets ({', '.join(content_types)})"
+
+        project = PartnershipProject.objects.create(
+            user=user,
+            project_name=project_name,
+            project_type=project_type,
+            description=short_description[:500],
+            status='in_progress',
+            ai_contribution_percent=90,
+            human_contribution_percent=10,
+            metadata=project_metadata,
+            ai_contributions=[{
+                'agent': 'Creative Agent',
+                'task': content_description or 'Generated creative assets',
+                'timestamp': datetime.now().isoformat(),
+                'output': f'Created project with {len(creative_content["images"])} images, '
+                          f'{len(creative_content["videos"])} videos, '
+                          f'{len(creative_content["audio"])} audio files',
+                'content_count': total_content,
+                'content_details': content_details[:5]
+            }],
+            workflow_steps=[{
+                'step': 'Creative Asset Generation',
+                'status': 'completed',
+                'description': f'Generated {total_content} creative assets'
+            }]
+        )
+
+        # Build message
+        parts = []
+        if creative_content['images']:
+            parts.append(f"{len(creative_content['images'])} image{'s' if len(creative_content['images']) > 1 else ''}")
+        if creative_content['videos']:
+            parts.append(f"{len(creative_content['videos'])} video{'s' if len(creative_content['videos']) > 1 else ''}")
+        if creative_content['audio']:
+            parts.append(f"{len(creative_content['audio'])} audio file{'s' if len(creative_content['audio']) > 1 else ''}")
+
+        message = f'Project "{project_name}" created with {", ".join(parts)}.' if parts else f'Project "{project_name}" created.'
+
+        logger.info(f"🎨 Created project from creative content: {project_name} (ID: {project.id}) with {total_content} assets")
+
+        return Response({
+            'success': True,
+            'data': {
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'message': message,
+                'content_included': {
+                    'images': len(creative_content['images']),
+                    'videos': len(creative_content['videos']),
+                    'audio': len(creative_content['audio'])
+                }
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error creating project from creative content: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
