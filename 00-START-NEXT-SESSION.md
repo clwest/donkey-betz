@@ -1,85 +1,50 @@
-# Session 331: Continue Platform Development
+# Session 332: Continue Platform Development
 
 **Date:** December 3, 2025
-**Previous Session:** 330 - Project Multi-Turn Conversations
+**Previous Session:** 331 - Learning 100% Verified
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 330 transformed **Project Conversations** from parallel HiveMind responses to **real multi-turn discussions** - just like the Agent/Social tab! Agents now have actual back-and-forth conversations about projects.
+Session 331 verified the **complete agent learning pipeline** is working at 100%:
+- Research → Knowledge (478/610 entries from research)
+- Agent Learning Cycle (54 transfers, 44 in last 24h)
+- Agent Conversations (233 total)
+- Project Conversations (fixed import bugs, now working)
 
-**What Was Built in Session 330:**
-- **New Celery Task**: `run_project_conversation` - generates multi-turn agent discussions
-- **AgentConversation Model**: Now used for projects (was using HiveMindSession)
-- **Multi-Turn Messages**: Agents build on each other's ideas, challenge approaches, debate
-- **Conversation Types**: brainstorm, strategic_planning, problem_solving, opportunity_analysis
-- **Enhanced UI**: Shows conversation type badges, participant names, message types
-
-**Current State:**
-- Projects have 5 intelligence tabs: Learning, Conversations, Boardroom, Dreams, Agent Slack
-- **Project Conversations** are now REAL discussions (not parallel single responses!)
-- Agents discuss based on project research, challenge each other, generate conclusions
-- Full data flow: Research -> Knowledge -> **Multi-Turn Agent Discussions** -> Insights
+**Session 331 Accomplishments:**
+- Fixed `run_project_conversation` import error (PartnershipProject in wrong module)
+- Fixed field name errors (business_type → project_type)
+- Verified learning cycle runs successfully (3 transfers in live test)
+- Committed all pending code from Sessions 326-328
 
 ---
 
-## Session 330 Summary
+## Session 331 Summary
 
 | Task | Status |
 |------|--------|
-| Create `run_project_conversation` Celery task | **Complete** |
-| Update `trigger_project_conversation` to use new task | **Complete** |
-| Update `get_project_conversations` for multi-turn data | **Complete** |
-| Update frontend for multi-turn display | **Complete** |
-| Create session handoff document | **Complete** |
+| Verify Research → Knowledge flow | **Complete** |
+| Fix project conversation import errors | **Complete** |
+| Verify agent-to-agent learning | **Complete** |
+| Run learning cycle in real-time | **Complete** |
+| Commit all pending changes | **Complete** |
 
-### Key Change (Session 330)
-
-**Before (Session 329 - HiveMind):**
-```
-Topic: "How can we grow?"
-  Agent1: "Here's my idea..." (parallel)
-  Agent2: "Here's my idea..." (parallel)
-  Agent3: "Here's my idea..." (parallel)
-```
-
-**After (Session 330 - Multi-Turn):**
-```
-Topic: "How can we grow?"
-  Agent1: "I've been looking at the research and think we should focus on..."
-  Agent2: "That's interesting, but what about the customer feedback showing..."
-  Agent1: "Good point! We could address that by..."
-  Agent2: "I see what you mean. One challenge might be..."
-  Agent1: "Let's tackle that by..."
-  Agent2: "Agreed. Here's my conclusion..."
-  Conclusion: Key insights and action items
-```
-
----
-
-## How Project Conversations Work Now
+### Learning Pipeline Status (Verified)
 
 ```
-User clicks "Start Conversation" button
-        |
-Enter topic: "How can we grow the podcast?"
-        |
-POST /api/projects/{id}/intelligence/conversations/trigger/
-        |
-Celery task: run_project_conversation(project_id, topic)
-        |
-Task:
-  1. Loads project + research context
-  2. Selects 2 agents (prefer those with project knowledge)
-  3. Chooses template: brainstorm, strategic_planning, etc.
-  4. Creates AgentConversation with project link
-  5. Generates 6 back-and-forth messages (GPT)
-  6. Generates conclusion
-        |
-User sees multi-turn conversation in Intelligence Hub!
+Research (47 results)
+    → Knowledge (478 entries from research)
+        → Agent Learning (54 transfers total)
+            → Agent Conversations (233 total)
 ```
+
+### Bug Fixes Made (Session 331)
+
+1. **ImportError**: `PartnershipProject` was in `core.models_partnership`, not `core.models_unified_system`
+2. **AttributeError**: Used wrong field names `business_type` and `project.name`
 
 ---
 
@@ -92,15 +57,9 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Project Conversations:
-# 1. Go to Projects tab
-# 2. Click on a project to open details
-# 3. Click "Project Intelligence Hub" section
-# 4. Click "Conversations" tab
-# 5. Click "Start Conversation" button
-# 6. Enter a topic and click Start
-# 7. Wait for Celery to process (10-15 seconds)
-# 8. Refresh to see multi-turn agent discussion!
+# Test Learning Pipeline:
+# Django shell: from core.tasks import run_agent_learning_cycle
+# result = run_agent_learning_cycle()  # Should show 3+ transfers
 ```
 
 ---
@@ -110,13 +69,13 @@ open http://localhost:8000/ai-studio/
 ### Sci-Fi Agent Features
 | Feature | Schedule | Status |
 |---------|----------|--------|
-| Agent Learning | Every 10 min | Working |
+| Agent Learning | Every 10 min | **Working (verified Session 331)** |
 | Agent Dreams | Every 15 min | Working |
 | Agent Conversations | Every 5 min | Working |
 | Agent Slack | Real-time | Working |
 | Boardroom Decisions | On conversation conclude | Working |
 | Policy Feedback Loop | On agent prompt | Working |
-| **Project Multi-Turn Conversations** | **On-demand (Session 330)** | **Working** |
+| Project Multi-Turn Conversations | On-demand | **Working (fixed Session 331)** |
 
 ### Business Intelligence Features
 | Feature | Status |
@@ -130,13 +89,15 @@ open http://localhost:8000/ai-studio/
 | Spider Prioritization | Working (Session 326) |
 | Project Intelligence Hub | Working (Session 327) |
 | Project Agent Slack | Working (Session 328) |
-| Project Conversations (HiveMind) | Working (Session 329) |
-| **Project Multi-Turn Discussions** | **Working (Session 330)** |
+| Project Conversations | **Working (Session 330-331)** |
 
-### Spider Network
-- **74 spiders** across 14 categories
-- **7,900+ data points** collected
-- **Dynamic prioritization** based on active projects
+### System Stats
+- **198 total agents** (36 active)
+- **74 spiders** across 20 categories
+- **47 business research results** (all recent)
+- **610 knowledge entries** (478 from research)
+- **54 knowledge transfers** (44 in last 24h)
+- **233 agent conversations**
 
 ---
 
@@ -145,24 +106,22 @@ open http://localhost:8000/ai-studio/
 | Tab | Description |
 |-----|-------------|
 | Learning | Knowledge sources from project research |
-| Conversations | **Multi-turn agent discussions** about the project |
+| Conversations | Multi-turn agent discussions about the project |
 | Boardroom | Agent decisions about the project |
 | Dreams | Creative agent thoughts |
 | Agent Slack | Real-time chat with agents about the project |
 
 ---
 
-## Files Modified (Session 330)
+## Files Modified (Session 331)
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added `run_project_conversation` task (lines 4022-4332) |
-| `core/views_project_intelligence.py` | Updated `trigger_project_conversation` + `get_project_conversations` |
-| `ai_core/templates/ai_image_studio.html` | Updated `renderProjectConversations` for multi-turn UI |
+| `core/tasks.py` | Fixed imports and field names in `run_project_conversation` |
 
 ---
 
-## Next Steps (Session 331+)
+## Next Steps (Session 332+)
 
 1. **Auto-trigger conversations**: Start conversation when new research is added
 2. **WebSocket real-time updates**: Push new messages as they're generated
@@ -172,4 +131,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**Status:** Session 330 COMPLETE. Project Multi-Turn Conversations fully operational!
+**Status:** Session 331 COMPLETE. Learning pipeline verified at 100%!
