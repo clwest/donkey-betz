@@ -917,6 +917,36 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.run_spider_network',
         'schedule': 1800.0,  # Every 30 minutes (1800 seconds)
     },
+    # Session 243: Agent Learning Cycle - Knowledge sharing between agents
+    'run-agent-learning-cycle': {
+        'task': 'core.tasks.run_agent_learning_cycle',
+        'schedule': 600.0,  # Every 10 minutes
+    },
+    # Session 243: Broadcast Learning Status
+    'broadcast-learning-status': {
+        'task': 'core.tasks.broadcast_learning_status',
+        'schedule': 60.0,  # Every 60 seconds
+    },
+    # Session 244: Agent Conversations - Agents chat with each other
+    'agent-conversation-cycle': {
+        'task': 'core.tasks.run_agent_conversation',
+        'schedule': 300.0,  # Every 5 minutes
+    },
+    # Session 244: Broadcast Conversation Status
+    'broadcast-conversation-status': {
+        'task': 'core.tasks.broadcast_conversation_status',
+        'schedule': 120.0,  # Every 2 minutes
+    },
+    # Session 247: Agent Dreams - Creative idle thoughts
+    'agent-dream-cycle': {
+        'task': 'core.tasks.generate_agent_dreams',
+        'schedule': 900.0,  # Every 15 minutes
+    },
+    # Session 247: Broadcast Dream Journal
+    'broadcast-dream-journal': {
+        'task': 'core.tasks.broadcast_dream_journal',
+        'schedule': 180.0,  # Every 3 minutes
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
