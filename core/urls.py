@@ -58,7 +58,8 @@ from core.views_projects import (
 # Import project API views (Phase 3: Frontend Reality Fix)
 from core.views_projects_api import (
     projects_list, project_detail, project_agents, assign_agent_to_project,
-    create_project_from_research  # Session 302: Direct API endpoint
+    create_project_from_research,  # Session 302: Direct API endpoint
+    add_research_to_project  # Session 324: Add research to existing project
 )
 
 # Import agent tracking API views (Session 120)
@@ -166,6 +167,10 @@ from core.views_agent_learning import (
     # Session 249: Dream Feedback System
     get_dream_preferences,
     get_dream_exploration,
+    # Session 323: Boardroom Decisions
+    get_boardroom_decisions,
+    promote_decision,
+    reject_decision,
 )
 
 # Session 250: Hive Mind Mode
@@ -1056,6 +1061,7 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/agents/', project_agents, name='project-agents'),
     path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
     path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
+    path('api/projects/<uuid:project_id>/add-research/', add_research_to_project, name='add-research-to-project'),  # Session 324
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),
@@ -2160,6 +2166,11 @@ urlpatterns = [
     # Session 249: Dream Feedback System
     path('api/agent-dreams/preferences/', get_dream_preferences, name='dream-preferences'),
     path('api/agent-dreams/explorations/<uuid:exploration_id>/', get_dream_exploration, name='dream-exploration'),
+
+    # Session 323: Boardroom Decisions API
+    path('api/boardroom/decisions/', get_boardroom_decisions, name='boardroom-decisions'),
+    path('api/boardroom/decisions/<uuid:decision_id>/promote/', promote_decision, name='promote-decision'),
+    path('api/boardroom/decisions/<uuid:decision_id>/reject/', reject_decision, name='reject-decision'),
 
     # Session 250: Hive Mind Mode API
     path('api/hive-mind/start/', start_hive_mind_session, name='hive-mind-start'),

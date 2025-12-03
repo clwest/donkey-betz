@@ -2844,10 +2844,12 @@ def run_agent_learning_cycle():
             ).order_by('-confidence_score', '-last_updated_at')[:5]
 
             for knowledge in teacher_knowledge:
-                # Check if student already has similar knowledge
+                # Session 322: Check if student already has this exact knowledge
+                # Use first 30 chars of title for better matching (was just first word which was too crude)
+                title_prefix = knowledge.title[:30] if knowledge.title else ''
                 student_has_similar = AgentKnowledgeSource.objects.filter(
                     agent=student,
-                    title__icontains=knowledge.title.split()[0] if knowledge.title else '',
+                    title__icontains=title_prefix,
                     knowledge_type=knowledge.knowledge_type
                 ).exists()
 
@@ -3175,7 +3177,7 @@ def broadcast_learning_status():
 
         stats['recent_transfers'] = recent_transfers
 
-        # Publish to Redis
+        # Publish to Redis (legacy)
         r.publish('agent_learning', json.dumps({
             'type': 'status_update',
             'data': stats
@@ -3183,6 +3185,52 @@ def broadcast_learning_status():
 
         # Cache for API access
         r.setex('agent_learning:status', 300, json.dumps(stats))
+
+        # Session 324: Broadcast to Learning Feed WebSocket channel
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+
+            # Build feed items for WebSocket
+            feed_items = []
+            for transfer in KnowledgeTransfer.objects.select_related(
+                'connection__teacher_agent',
+                'connection__student_agent'
+            ).order_by('-created_at')[:20]:
+                teacher = transfer.connection.teacher_agent
+                student = transfer.connection.student_agent
+
+                if teacher.id == student.id:
+                    source = 'self_learning'
+                    description = f"{teacher.name} acquired new knowledge"
+                else:
+                    source = 'knowledge_transfer'
+                    description = f"{teacher.name} shared knowledge with {student.name}"
+
+                feed_items.append({
+                    'timestamp': transfer.created_at.isoformat(),
+                    'type': source,
+                    'source': 'Knowledge transfer',
+                    'description': description,
+                    'knowledge': transfer.transfer_summary[:100] if transfer.transfer_summary else 'Knowledge shared',
+                    'teacher': teacher.name,
+                    'student': student.name,
+                    'was_useful': transfer.was_useful,
+                    'effectiveness_gain': 0.0
+                })
+
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'agent_learning_feed',
+                {
+                    'type': 'learning_feed_update',
+                    'feed_items': feed_items,
+                    'stats': stats
+                }
+            )
+            logger.info(f"🧠 [LEARNING FEED] Broadcast {len(feed_items)} items to WebSocket")
+        except Exception as ws_error:
+            logger.warning(f"🧠 [LEARNING FEED] WebSocket broadcast failed: {ws_error}")
 
         return stats
 
@@ -3678,6 +3726,48 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
 - Offer different angles even if not disagreeing
 - Build on ideas but also test them"""
 
+                # Session 323: Get canonical policies for this agent
+                try:
+                    from core.services.policy_context import get_policy_context_service
+                    policy_service = get_policy_context_service()
+                    policy_context = policy_service.get_policies_for_agent(current_speaker.name)
+                except Exception as e:
+                    policy_context = ""
+                    logger.debug(f"Could not get policy context: {e}")
+
+                # Session 324: Get spider intelligence for real-world context
+                spider_context = ""
+                try:
+                    from core.services.spider_intelligence import SpiderIntelligenceService
+                    spider_service = SpiderIntelligenceService()
+                    spider_insights = spider_service.get_insights_for_prompt(topic)
+
+                    if spider_insights:
+                        spider_parts = ["\n\n== REAL-WORLD INTELLIGENCE (from Spider Network) =="]
+
+                        if spider_insights.get('relevant_trends'):
+                            trends = spider_insights['relevant_trends'][:3]
+                            spider_parts.append(f"Trending Topics: {', '.join(trends)}")
+
+                        if spider_insights.get('related_discussions'):
+                            discussions = spider_insights['related_discussions'][:2]
+                            for disc in discussions:
+                                if isinstance(disc, dict):
+                                    spider_parts.append(f"- {disc.get('title', '')[:80]}")
+                                else:
+                                    spider_parts.append(f"- {str(disc)[:80]}")
+
+                        if spider_insights.get('market_data'):
+                            market = spider_insights['market_data']
+                            if market.get('summary'):
+                                spider_parts.append(f"Market: {market['summary'][:100]}")
+
+                        if len(spider_parts) > 1:
+                            spider_context = '\n'.join(spider_parts)
+                            logger.info(f"🕷️ [CONVERSATIONS] Injected spider intelligence for {topic[:30]}")
+                except Exception as e:
+                    logger.debug(f"Could not get spider intelligence: {e}")
+
                 # Create the prompt for the current speaker
                 system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
 You are having a {template['type'].replace('_', ' ')} with {other_speaker.name} about: {topic}
@@ -3693,7 +3783,9 @@ Guidelines:
 - Be authentic to YOUR expertise - don't just defer to theirs
 - If you see a problem with their approach, say so
 - Ask probing questions, don't just accept statements
-- Real experts disagree sometimes - that's healthy"""
+- Real experts disagree sometimes - that's healthy
+{policy_context}
+{spider_context}"""
 
                 # Build message history for context
                 history = []
@@ -3807,6 +3899,17 @@ Guidelines:
                 # Session 321: Update message_count to actual count
                 conversation.message_count = len(messages)
                 conversation.save()
+
+                # Session 323: Extract decision from conversation
+                try:
+                    from core.services.decision_extractor import get_decision_extractor
+                    extractor = get_decision_extractor()
+                    decision = extractor.create_decision_from_conversation(conversation)
+                    if decision:
+                        logger.info(f"🏛️ [BOARDROOM] Extracted decision: {decision.topic}")
+                        stats['decisions_extracted'] = stats.get('decisions_extracted', 0) + 1
+                except Exception as e:
+                    logger.warning(f"Could not extract decision from conversation: {e}")
 
         # Broadcast the update
         try:

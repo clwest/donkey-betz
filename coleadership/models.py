@@ -28,8 +28,9 @@ class CoLeadershipDecision(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Context
+    # Session 324: Unified from CreativeProject
     project = models.ForeignKey(
-        "content.CreativeProject",
+        "core.PartnershipProject",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

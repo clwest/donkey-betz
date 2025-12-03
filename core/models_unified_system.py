@@ -11598,8 +11598,9 @@ class BusinessResearchResult(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Link to project (optional - research can exist independently)
+    # Session 324: Unified from CreativeProject
     project = models.ForeignKey(
-        'content.CreativeProject',
+        'core.PartnershipProject',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -12769,3 +12770,133 @@ class ChannelMessage(models.Model):
         if mentions:
             agents = Agent.objects.filter(name__in=mentions)
             self.mentioned_agents.set(agents)
+
+
+# =============================================================================
+# Session 323: Boardroom Decisions
+# =============================================================================
+
+class AgentDecisionSummary(models.Model):
+    """
+    Session 323: Boardroom Decisions
+
+    Structured decision extracted from agent conversations.
+    These can be promoted to canonical policies that affect future agent behavior.
+
+    This closes the governance loop:
+    1. Agents have conversations
+    2. Conversations generate conclusions
+    3. Conclusions are parsed into structured decisions
+    4. Humans can promote decisions to canonical policies
+    5. Policies are injected into future agent prompts
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to source conversation
+    conversation = models.ForeignKey(
+        'AgentConversation',
+        on_delete=models.CASCADE,
+        related_name='decisions'
+    )
+
+    # Decision metadata
+    topic = models.CharField(max_length=255)
+    decision_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('policy', 'Policy'),
+            ('architecture', 'Architecture'),
+            ('pipeline', 'Pipeline'),
+            ('product', 'Product Feature'),
+            ('experiment', 'Experiment'),
+            ('guideline', 'Guideline'),
+        ]
+    )
+    impact_area = models.CharField(
+        max_length=50,
+        choices=[
+            ('prompting', 'Prompt Engineering'),
+            ('memory', 'Memory & Storage'),
+            ('image', 'Image Generation'),
+            ('video', 'Video Generation'),
+            ('audio', 'Audio Generation'),
+            ('workflow', 'Workflows'),
+            ('agents', 'Agent Behavior'),
+            ('security', 'Security & Privacy'),
+            ('infrastructure', 'Infrastructure'),
+            ('product', 'Product/UX'),
+        ]
+    )
+
+    # The actual decision content
+    key_insights = models.JSONField(default=list)  # List of 3-5 bullet points
+    recommended_stance = models.TextField()  # The main policy/decision
+    suggested_feature = models.TextField(blank=True)  # Optional feature suggestion
+    rationale = models.TextField(blank=True)  # Why this decision was made
+
+    # Participants who contributed
+    participants = models.JSONField(default=list)  # List of agent names
+
+    # Governance status
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('draft', 'Draft'),
+            ('review', 'Under Review'),
+            ('canonical', 'Canonical Policy'),
+            ('experiment', 'Active Experiment'),
+            ('superseded', 'Superseded'),
+            ('rejected', 'Rejected'),
+        ],
+        default='draft'
+    )
+    is_canonical = models.BooleanField(default=False)
+    promoted_at = models.DateTimeField(null=True, blank=True)
+    promoted_by = models.CharField(max_length=100, blank=True)  # 'human' or agent name
+
+    # If this supersedes a previous decision
+    supersedes = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='superseded_by'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = "Agent Decision Summary"
+        verbose_name_plural = "Agent Decision Summaries"
+        indexes = [
+            models.Index(fields=['decision_type', 'impact_area']),
+            models.Index(fields=['status']),
+            models.Index(fields=['is_canonical']),
+        ]
+
+    def __str__(self):
+        return f"[{self.decision_type}] {self.topic}"
+
+    def promote_to_canonical(self, promoted_by='human'):
+        """Promote this decision to canonical policy status."""
+        self.status = 'canonical'
+        self.is_canonical = True
+        self.promoted_at = timezone.now()
+        self.promoted_by = promoted_by
+        self.save()
+
+    def get_policy_context(self):
+        """Get this decision formatted for injection into agent prompts."""
+        insights = '\n'.join(f'  - {i}' for i in self.key_insights[:3])
+        return f"""
+[CANONICAL POLICY: {self.topic}]
+Type: {self.get_decision_type_display()}
+Area: {self.get_impact_area_display()}
+Key Points:
+{insights}
+Stance: {self.recommended_stance}
+"""

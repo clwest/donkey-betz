@@ -1050,6 +1050,166 @@ def get_dream_exploration(request, exploration_id):
         }, status=500)
 
 
+# =============================================================================
+# Session 323: Boardroom Decisions API Endpoints
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_boardroom_decisions(request):
+    """
+    Get agent decision summaries for the Boardroom UI.
+
+    GET /api/boardroom/decisions/
+
+    Query params:
+    - limit: Max decisions to return (default 20)
+    - decision_type: Filter by type (policy, architecture, etc.)
+    - impact_area: Filter by area (prompting, memory, etc.)
+    - status: Filter by status (draft, canonical, etc.)
+    - canonical_only: If 'true', only return canonical policies
+    """
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+        from django.db.models import Count
+
+        limit = int(request.GET.get('limit', 20))
+        decision_type = request.GET.get('decision_type')
+        impact_area = request.GET.get('impact_area')
+        status = request.GET.get('status')
+        canonical_only = request.GET.get('canonical_only', 'false').lower() == 'true'
+
+        queryset = AgentDecisionSummary.objects.select_related(
+            'conversation'
+        ).order_by('-created_at')
+
+        if decision_type:
+            queryset = queryset.filter(decision_type=decision_type)
+        if impact_area:
+            queryset = queryset.filter(impact_area=impact_area)
+        if status:
+            queryset = queryset.filter(status=status)
+        if canonical_only:
+            queryset = queryset.filter(is_canonical=True)
+
+        decisions = queryset[:limit]
+
+        decisions_data = []
+        for d in decisions:
+            decisions_data.append({
+                'id': str(d.id),
+                'topic': d.topic,
+                'decision_type': d.decision_type,
+                'decision_type_display': d.get_decision_type_display(),
+                'impact_area': d.impact_area,
+                'impact_area_display': d.get_impact_area_display(),
+                'key_insights': d.key_insights,
+                'recommended_stance': d.recommended_stance,
+                'suggested_feature': d.suggested_feature,
+                'rationale': d.rationale,
+                'participants': d.participants,
+                'status': d.status,
+                'status_display': d.get_status_display(),
+                'is_canonical': d.is_canonical,
+                'promoted_at': d.promoted_at.isoformat() if d.promoted_at else None,
+                'conversation_id': str(d.conversation.id) if d.conversation else None,
+                'created_at': d.created_at.isoformat(),
+            })
+
+        # Get counts by type for filters
+        type_counts = dict(
+            AgentDecisionSummary.objects.values('decision_type')
+            .annotate(count=Count('id'))
+            .values_list('decision_type', 'count')
+        )
+
+        return JsonResponse({
+            'success': True,
+            'decisions': decisions_data,
+            'count': len(decisions_data),
+            'total': AgentDecisionSummary.objects.count(),
+            'canonical_count': AgentDecisionSummary.objects.filter(is_canonical=True).count(),
+            'type_counts': type_counts,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting boardroom decisions: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def promote_decision(request, decision_id):
+    """
+    Promote a decision to canonical policy status.
+
+    POST /api/boardroom/decisions/{decision_id}/promote/
+    """
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+
+        decision = AgentDecisionSummary.objects.get(id=decision_id)
+        decision.promote_to_canonical(promoted_by='human')
+
+        logger.info(f"🏛️ [BOARDROOM] Decision promoted to canonical: {decision.topic}")
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Decision "{decision.topic}" promoted to canonical policy',
+            'decision_id': str(decision.id)
+        })
+
+    except AgentDecisionSummary.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Decision not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error promoting decision: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def reject_decision(request, decision_id):
+    """
+    Reject a decision (mark as not applicable).
+
+    POST /api/boardroom/decisions/{decision_id}/reject/
+    """
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+
+        decision = AgentDecisionSummary.objects.get(id=decision_id)
+        decision.status = 'rejected'
+        decision.save()
+
+        logger.info(f"🏛️ [BOARDROOM] Decision rejected: {decision.topic}")
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Decision "{decision.topic}" marked as rejected',
+            'decision_id': str(decision.id)
+        })
+
+    except AgentDecisionSummary.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Decision not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error rejecting decision: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

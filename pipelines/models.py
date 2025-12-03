@@ -83,8 +83,9 @@ class CreativePipelineRun(models.Model):
         related_name='runs',
         help_text="Template used for this run"
     )
+    # Session 324: Unified from CreativeProject
     project = models.ForeignKey(
-        'content.CreativeProject',
+        'core.PartnershipProject',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

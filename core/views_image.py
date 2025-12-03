@@ -7416,11 +7416,12 @@ def execute_tool(request):
             session = get_or_create_session(user=request.user, session_id=session_id)
         elif project_id:
             # Get project from project_id for context
-            from content.models import CreativeProject
+            # Session 324: Unified to PartnershipProject
+            from core.models_partnership import PartnershipProject
             try:
-                project = CreativeProject.objects.get(id=project_id, user=request.user)
-                logger.info(f"🔗 Tool execution in project context: {project.name} ({project_id})")
-            except CreativeProject.DoesNotExist:
+                project = PartnershipProject.objects.get(id=project_id, user=request.user)
+                logger.info(f"🔗 Tool execution in project context: {project.project_name} ({project_id})")
+            except PartnershipProject.DoesNotExist:
                 logger.warning(f"⚠️ Project {project_id} not found for user {request.user.username}")
 
         # Session 182: Inject project_id into parameters for project association
@@ -7883,6 +7884,23 @@ def execute_tool(request):
                 assistant.project = project
                 parameters['project_id'] = str(project.id)
             result = assistant._tool_talking_character(parameters)
+
+        # Session 324: Business Research Agents
+        elif tool_name == 'competitor_analysis_agent':
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_competitor_analysis_agent(parameters)
+
+        elif tool_name == 'customer_research_agent':
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_customer_research_agent(parameters)
 
         else:
             return Response({
@@ -10678,7 +10696,8 @@ def create_project(request):
         }
     """
     try:
-        from content.models import CreativeProject
+        # Session 324: Use unified PartnershipProject model
+        from core.models_partnership import PartnershipProject
         from django.utils.dateparse import parse_datetime
 
         # Validate required fields
@@ -10691,10 +10710,11 @@ def create_project(request):
                 'error': 'Project name is required'
             }, status=400)
 
-        if not goal:
-            return Response({
-                'error': 'Project goal is required'
-            }, status=400)
+        # Goal is optional for unified model (backward compatible)
+        # if not goal:
+        #     return Response({
+        #         'error': 'Project goal is required'
+        #     }, status=400)
 
         # Optional fields
         deadline_str = request.data.get('deadline')
@@ -10705,17 +10725,20 @@ def create_project(request):
         category = request.data.get('category', '')
         colors = request.data.get('colors', '')  # Session 63: Professional agency intake field
         tags = request.data.get('tags', [])
+        project_type = request.data.get('project_type', 'content_creation')
 
-        # Create project
-        project = CreativeProject.objects.create(
+        # Session 324: Create project using unified PartnershipProject model
+        project = PartnershipProject.objects.create(
             user=request.user,
-            name=name,
+            project_name=name,  # PartnershipProject uses project_name
             description=description,
             goal=goal,
             deadline=deadline,
             category=category,
             colors=colors,
-            tags=tags
+            tags=tags,
+            project_type=project_type,
+            status='planning'
         )
 
         logger.info(f"✅ Created project '{name}' for user {request.user.username}")

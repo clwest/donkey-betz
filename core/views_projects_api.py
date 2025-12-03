@@ -10,7 +10,7 @@ Created: September 30, 2025
 
 import logging
 from django.db.models import Q, Count, Avg
-from datetime import datetime
+from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -503,8 +503,7 @@ def create_project_from_research(request):
     Create a new project from business research data.
 
     Session 302: Direct API endpoint that bypasses GPT routing.
-    This allows the Create Project button to work reliably without
-    being misrouted to WorkflowAgent.
+    Session 324: Enhanced to include full research data (articles, sources, etc.)
 
     POST /api/projects/from-research/
 
@@ -512,7 +511,9 @@ def create_project_from_research(request):
     {
         "project_name": "Coffee Shop Analysis",
         "research_summary": "Competitive analysis of the coffee shop market...",
-        "research_type": "competitor_analysis" | "customer_research" | "business_research"
+        "research_type": "competitor_analysis" | "customer_research" | "business_research",
+        "research_id": "uuid" (optional - links to BusinessResearchResult),
+        "research_articles": [...] (optional - raw articles/data points)
     }
 
     Returns:
@@ -521,19 +522,78 @@ def create_project_from_research(request):
         "data": {
             "project_id": "uuid",
             "project_name": "Coffee Shop Analysis",
-            "message": "Project created successfully with research data"
+            "message": "Project created successfully with research data",
+            "research_included": {
+                "articles_count": 5,
+                "sources": ["reddit", "youtube"]
+            }
         }
     }
     """
     try:
+        from core.models_unified_system import BusinessResearchResult
+
         user = request.user
         data = request.data
 
         project_name = data.get('project_name', 'Business Research')
         research_summary = data.get('research_summary', '')
         research_type = data.get('research_type', 'business_research')
+        research_id = data.get('research_id')
+        research_articles = data.get('research_articles', [])
 
-        # Create the project
+        # Session 324: Try to get full research data from BusinessResearchResult
+        research_data = None
+        sources_used = []
+        articles_count = 0
+
+        if research_id:
+            try:
+                research_data = BusinessResearchResult.objects.get(id=research_id)
+                sources_used = research_data.sources_used or []
+                articles_count = research_data.data_points_analyzed or len(research_data.raw_data or [])
+                research_summary = research_data.analysis or research_summary
+                research_articles = research_data.raw_data or []
+                logger.info(f"📊 Found research result {research_id} with {articles_count} articles")
+            except BusinessResearchResult.DoesNotExist:
+                logger.warning(f"⚠️ Research result {research_id} not found")
+
+        # If no research_id but we have recent research, try to find it
+        if not research_data and not research_articles:
+            # Look for recent unlinked research that might match
+            recent_research = BusinessResearchResult.objects.filter(
+                project__isnull=True,
+                created_at__gte=datetime.now() - timedelta(hours=1)
+            ).order_by('-created_at').first()
+
+            if recent_research:
+                research_data = recent_research
+                sources_used = recent_research.sources_used or []
+                articles_count = recent_research.data_points_analyzed or len(recent_research.raw_data or [])
+                research_articles = recent_research.raw_data or []
+                logger.info(f"📊 Found recent unlinked research with {articles_count} articles")
+
+        # Build rich metadata for the project
+        project_metadata = {
+            'research_sources': sources_used,
+            'research_articles': research_articles[:20],  # Store up to 20 articles
+            'articles_count': articles_count or len(research_articles),
+            'research_type': research_type,
+            'created_from': 'business_research',
+        }
+
+        # Add structured findings if available
+        if research_data:
+            if research_data.pain_points:
+                project_metadata['pain_points'] = research_data.pain_points
+            if research_data.personas:
+                project_metadata['personas'] = research_data.personas
+            if research_data.quotes:
+                project_metadata['quotes'] = research_data.quotes[:10]  # Top 10 quotes
+            if research_data.recommendations:
+                project_metadata['recommendations'] = research_data.recommendations
+
+        # Create the project with full research data
         project = PartnershipProject.objects.create(
             user=user,
             project_name=project_name,
@@ -542,32 +602,149 @@ def create_project_from_research(request):
             status='in_progress',
             ai_contribution_percent=80,
             human_contribution_percent=20,
+            metadata=project_metadata,  # Session 324: Store full research data
             ai_contributions=[{
                 'agent': 'Business Research Agent',
                 'task': f'{research_type.replace("_", " ").title()} analysis',
                 'timestamp': datetime.now().isoformat(),
-                'output': research_summary[:500] if research_summary else 'Research data saved'
+                'output': research_summary[:500] if research_summary else 'Research data saved',
+                'articles_analyzed': articles_count,
+                'sources': sources_used
             }],
             workflow_steps=[{
                 'step': 'Research Analysis',
                 'status': 'completed',
-                'description': research_summary[:200] if research_summary else 'Initial research gathered'
+                'description': f'Analyzed {articles_count} articles from {len(sources_used)} sources' if articles_count else 'Initial research gathered'
             }]
         )
 
-        logger.info(f"📁 Created project from research: {project_name} (ID: {project.id})")
+        # Session 324: Link the research result to this project
+        if research_data:
+            research_data.project = project
+            research_data.save(update_fields=['project'])
+            logger.info(f"🔗 Linked research result {research_data.id} to project {project.id}")
+
+        logger.info(f"📁 Created project from research: {project_name} (ID: {project.id}) with {articles_count} articles")
 
         return Response({
             'success': True,
             'data': {
                 'project_id': str(project.id),
                 'project_name': project.project_name,
-                'message': f'Project "{project_name}" created successfully with research data. You can now continue adding research or create content for this project.'
+                'message': f'Project "{project_name}" created successfully with {articles_count} research articles from {len(sources_used)} sources.' if articles_count else f'Project "{project_name}" created successfully with research data.',
+                'research_included': {
+                    'articles_count': articles_count,
+                    'sources': sources_used
+                }
             }
         })
 
     except Exception as e:
         logger.error(f"❌ Error creating project from research: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_research_to_project(request, project_id):
+    """
+    Add research data to an existing project.
+
+    Session 324: Allows adding research from embedded assistant to current project.
+
+    POST /api/projects/<project_id>/add-research/
+
+    Body:
+    {
+        "research_type": "competitor_analysis" | "customer_research",
+        "research_summary": "Analysis text...",
+        "research_articles": [...],
+        "research_query": "original query",
+        "data_points_analyzed": 15,
+        "sources_used": ["reddit", "hackernews"]
+    }
+    """
+    try:
+        user = request.user
+        data = request.data
+
+        # Get the project
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Extract research data
+        research_type = data.get('research_type', 'business_research')
+        research_summary = data.get('research_summary', '')
+        research_articles = data.get('research_articles', [])
+        research_query = data.get('research_query', '')
+        data_points = data.get('data_points_analyzed', len(research_articles))
+        sources_used = data.get('sources_used', [])
+
+        # Get existing metadata or initialize
+        metadata = project.metadata or {}
+
+        # Merge new research articles with existing (avoid duplicates by URL)
+        existing_articles = metadata.get('research_articles', [])
+        existing_urls = {a.get('url') for a in existing_articles if a.get('url')}
+
+        new_articles = [a for a in research_articles if a.get('url') not in existing_urls]
+        merged_articles = existing_articles + new_articles[:20]  # Cap at 20 total
+
+        # Update metadata
+        metadata['research_articles'] = merged_articles[:20]
+        metadata['articles_count'] = len(merged_articles)
+
+        # Merge sources
+        existing_sources = set(metadata.get('research_sources', []))
+        metadata['research_sources'] = list(existing_sources.union(set(sources_used)))
+
+        # Add research type if not present
+        if 'research_type' not in metadata:
+            metadata['research_type'] = research_type
+
+        # Store the latest query
+        metadata['last_research_query'] = research_query
+
+        # Save project
+        project.metadata = metadata
+        project.save(update_fields=['metadata'])
+
+        # Add to AI contributions
+        ai_contributions = project.ai_contributions or []
+        ai_contributions.append({
+            'agent': f'{research_type.replace("_", " ").title()} Agent',
+            'task': research_query or f'Added {research_type.replace("_", " ")}',
+            'timestamp': datetime.now().isoformat(),
+            'output': research_summary[:500] if research_summary else f'Added {len(new_articles)} articles',
+            'articles_analyzed': data_points,
+            'sources': sources_used
+        })
+        project.ai_contributions = ai_contributions
+        project.save(update_fields=['ai_contributions'])
+
+        logger.info(f"📊 Added {len(new_articles)} research articles to project {project.project_name}")
+
+        return Response({
+            'success': True,
+            'message': f'Research added to project',
+            'articles_added': len(new_articles),
+            'total_articles': len(merged_articles)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error adding research to project: {e}")
+        import traceback
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': str(e)

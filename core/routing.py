@@ -416,3 +416,14 @@ agent_slack_patterns = [
 ]
 
 websocket_urlpatterns.extend(agent_slack_patterns)
+
+# Session 324: Learning Feed WebSocket - Real-time agent learning activity
+from .learning_feed_consumer import LearningFeedConsumer
+
+learning_feed_patterns = [
+    # Learning Feed WebSocket - stream live learning events
+    re_path(r'^ws/learning-feed/$', LearningFeedConsumer.as_asgi()),
+    re_path(r'^ws/agent-learning/$', LearningFeedConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(learning_feed_patterns)
