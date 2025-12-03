@@ -766,11 +766,52 @@ def add_research_to_project(request, project_id):
 
         logger.info(f"📊 Added {len(new_articles)} research articles to project {project.project_name}")
 
+        # Session 328: Create BusinessResearchResult and convert to AgentKnowledgeSource
+        # This enables the project's Learning tab to auto-populate
+        knowledge_created = 0
+        try:
+            from core.models_unified_system import BusinessResearchResult
+            from core.services.project_research_bridge import get_project_research_bridge
+
+            # Create the research result record - use correct field names
+            # Map research_type to model choices
+            type_map = {
+                'competitor_analysis': 'competitor',
+                'customer_research': 'customer',
+                'market_research': 'market',
+                'trend_analysis': 'trend',
+            }
+            model_research_type = type_map.get(research_type, 'market')
+
+            research_result = BusinessResearchResult.objects.create(
+                project=project,
+                research_type=model_research_type,
+                query=research_query or f"{project.project_name} research",
+                market_topic=f"{research_type.replace('_', ' ').title()}: {project.project_name}",
+                agent_name=f"{research_type.replace('_', ' ').title()} Agent",
+                analysis=research_summary[:5000] if research_summary else "Research analysis pending",
+                data_points_analyzed=data_points,
+                sources_used=sources_used,
+                raw_data=research_articles[:10],  # Store top 10 articles
+                recommendations=[a.get('summary', a.get('title', ''))[:200] for a in research_articles[:5] if a.get('summary') or a.get('title')],
+            )
+
+            # Immediately convert to knowledge (populates Learning tab)
+            bridge = get_project_research_bridge()
+            knowledge_entries = bridge.research_to_knowledge(research_result.id)
+            knowledge_created = len(knowledge_entries)
+
+            logger.info(f"🧠 Created {knowledge_created} knowledge entries from research for project {project.project_name}")
+
+        except Exception as ke:
+            logger.warning(f"⚠️ Could not auto-create knowledge from research: {ke}")
+
         return Response({
             'success': True,
             'message': f'Research added to project',
             'articles_added': len(new_articles),
-            'total_articles': len(merged_articles)
+            'total_articles': len(merged_articles),
+            'knowledge_created': knowledge_created,
         })
 
     except Exception as e:
