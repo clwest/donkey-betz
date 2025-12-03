@@ -113,7 +113,7 @@ class ResearchPDFService:
         ))
 
         self.styles.add(ParagraphStyle(
-            name='BodyText',
+            name='ReportBody',
             parent=self.styles['Normal'],
             fontSize=10,
             textColor=DARK_COLOR,
@@ -245,7 +245,7 @@ class ResearchPDFService:
         # Project info
         story.append(Paragraph(
             f"<b>Project:</b> {project.project_name}",
-            self.styles['BodyText']
+            self.styles['ReportBody']
         ))
 
         # Date
@@ -258,7 +258,7 @@ class ResearchPDFService:
 
         story.append(Paragraph(
             f"<b>Generated:</b> {date_str}",
-            self.styles['BodyText']
+            self.styles['ReportBody']
         ))
 
         # Data points and sources
@@ -266,13 +266,13 @@ class ResearchPDFService:
         sources = research.get('sources', [])
         story.append(Paragraph(
             f"<b>Analysis:</b> {data_points} data points from {len(sources)} sources",
-            self.styles['BodyText']
+            self.styles['ReportBody']
         ))
 
         story.append(Spacer(1, 20))
 
         # Horizontal line
-        story.append(Paragraph("—" * 80, self.styles['BodyText']))
+        story.append(Paragraph("—" * 80, self.styles['ReportBody']))
         story.append(Spacer(1, 10))
 
     def _add_executive_summary(self, story: List, research: Dict):
@@ -290,7 +290,7 @@ class ResearchPDFService:
         # Clean up markdown
         exec_summary = self._clean_markdown(exec_summary)
 
-        story.append(Paragraph(exec_summary, self.styles['BodyText']))
+        story.append(Paragraph(exec_summary, self.styles['ReportBody']))
         story.append(Spacer(1, 15))
 
     def _add_analysis_content(self, story: List, research: Dict):
@@ -327,9 +327,9 @@ class ResearchPDFService:
                         line = line.strip()
                         if line.startswith('- ') or line.startswith('• '):
                             line = '• ' + line[2:]
-                        story.append(Paragraph(line, self.styles['BodyText']))
+                        story.append(Paragraph(line, self.styles['ReportBody']))
                 else:
-                    story.append(Paragraph(para, self.styles['BodyText']))
+                    story.append(Paragraph(para, self.styles['ReportBody']))
 
             story.append(Spacer(1, 5))
 
@@ -347,7 +347,7 @@ class ResearchPDFService:
             sources_text = ", ".join(sources)
             story.append(Paragraph(
                 f"<b>Data Sources:</b> {sources_text}",
-                self.styles['BodyText']
+                self.styles['ReportBody']
             ))
 
         if articles:
@@ -363,12 +363,12 @@ class ResearchPDFService:
                 if url:
                     article_text = f"{i}. <link href='{url}'><b>{title}</b></link> ({source})"
 
-                story.append(Paragraph(article_text, self.styles['BodyText']))
+                story.append(Paragraph(article_text, self.styles['ReportBody']))
 
     def _add_footer(self, story: List, project):
         """Add report footer."""
         story.append(Spacer(1, 30))
-        story.append(Paragraph("—" * 80, self.styles['BodyText']))
+        story.append(Paragraph("—" * 80, self.styles['ReportBody']))
         story.append(Spacer(1, 10))
 
         story.append(Paragraph(
