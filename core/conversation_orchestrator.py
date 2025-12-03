@@ -463,8 +463,9 @@ Approach: Examine data, consider implications, draw conclusions."""
 
         # GPT-5 reasoning models: max_output_tokens includes BOTH reasoning + text
         # Need higher values to leave room for text after reasoning
+        # Session 318: Increased from 1000 to 1500 for regular turns to fix empty messages
         # Final turn needs more for DecisionSummary
-        max_output_tokens = 2000 if is_final_turn else 1000
+        max_output_tokens = 2500 if is_final_turn else 1500
 
         for attempt in range(max_retries + 1):
             try:
@@ -479,9 +480,13 @@ Approach: Examine data, consider implications, draw conclusions."""
 
                 content = response.output_text.strip() if response.output_text else ""
 
-                # Check if response was incomplete due to token limit
-                if response.status == 'incomplete':
-                    logger.warning(f"Response incomplete: {response.incomplete_details}")
+                # Session 318: Retry with higher tokens if response was incomplete or empty
+                if response.status == 'incomplete' or not content:
+                    logger.warning(f"Response incomplete or empty (attempt {attempt + 1}): {response.incomplete_details if hasattr(response, 'incomplete_details') else 'no content'}")
+                    if attempt < max_retries:
+                        # Try again with even more tokens
+                        max_output_tokens = min(max_output_tokens + 500, 4000)
+                        continue
 
                 # For final turn, validate decision summary presence
                 if is_final_turn and attempt < max_retries:

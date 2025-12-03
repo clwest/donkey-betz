@@ -1,16 +1,21 @@
-# Session 318: Continue Platform Testing
+# Session 319: Continue Platform Testing
 
 **Date:** December 2, 2025
-**Previous Session:** 317 - Dream Journal Fix
+**Previous Session:** 318 - Agent Conversations Comprehensive Fix
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
+Session 318 completed:
+- Fixed Agent Conversations empty first messages (token limits 1000→1500, 2000→2500)
+- Fixed repetitive "Core expertise:" topics with strategic topic pool
+- Fixed repetitive agent pairings with random selection + 24h repeat avoidance
+- Handoff: `docs/handoffs/SESSION_318_CONVERSATION_FIXES.md`
+
 Session 317 completed:
-- Fixed Dream Journal empty content issue (same root cause as Session 315)
-- Increased GPT-5 token limits for dream generation (600 -> 1000, 200 -> 500)
+- Fixed Dream Journal empty content issue (token limits 600→1000, 200→500)
 - Generated 19+ new dreams with substantive content
 - Handoff: `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md`
 
@@ -19,37 +24,33 @@ Session 316 completed:
 - Triggered fresh learning cycles (8 knowledge transfers)
 - Handoff: `docs/handoffs/SESSION_316_AGENT_LEARNING_VERIFICATION.md`
 
-Session 315 completed:
-- Fixed Agent Conversations (empty content issue)
-- Migrated ConversationOrchestrator to GPT-5 Responses API
-- Handoff: `docs/handoffs/SESSION_315_AGENT_CONVERSATIONS_FIX.md`
-
 ---
 
-## Session 317 Summary
+## Session 318 Summary
 
 | Task | Status |
 |------|--------|
-| Investigate stale Dream Journal | Completed - Celery was idle |
-| Fix empty dream content | Fixed - token limits too low |
-| Test dream generation | Done - 19+ new dreams generated |
-| Create handoff documentation | Done |
+| Diagnose empty first messages | Fixed - GPT-5 token limits too low |
+| Fix empty messages | Done - 1000→1500, 2000→2500 tokens |
+| Fix "Core expertise:" topics | Done - strategic topic pool |
+| Fix repetitive pairings | Done - random + 24h repeat avoidance |
+| Test conversation generation | Passed - all 6 messages have content |
 
 ---
 
-## GPT-5 Token Limit Reference
-
-GPT-5 reasoning models split tokens between internal reasoning AND visible output. Use these limits:
+## GPT-5 Token Limit Reference (Updated Session 318)
 
 | Use Case | Recommended Tokens |
 |----------|-------------------|
 | Short generation (titles) | 500+ |
 | Medium generation (dreams, comments) | 1000+ |
-| Long generation (conversations, reports) | 1500-2000+ |
+| **Conversation turns** | **1500+** |
+| Long generation (reports, summaries) | 2000+ |
+| **Final turn with DecisionSummary** | **2500+** |
 
 ---
 
-## Session 318 Goal: Continue Platform Testing
+## Session 319 Goal: Continue Platform Testing
 
 Test the 27 connected agents through the chat UI:
 
@@ -111,14 +112,22 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Dream Journal (now with real content!)
-# Navigate to Agents > Social > Dream Journal
+# Test Agent Conversations (now with diverse pairings!)
+# Navigate to Agents > Social > Agent Conversations
 
-# Trigger dreams manually
+# Trigger a conversation manually
 .venv/bin/python manage.py shell -c "
-from core.tasks import generate_agent_dreams
-result = generate_agent_dreams()
-print(f'Generated: {result[\"stats\"][\"dreams_generated\"]} dreams')
+from core.conversation_orchestrator import ConversationOrchestrator
+orchestrator = ConversationOrchestrator()
+result = orchestrator.generate_conversation(
+    agent1={'name': 'BrandIdentityAgent', 'type': 'strategy', 'specialization': 'Brand strategy'},
+    agent2={'name': 'SEOOptimizerAgent', 'type': 'analytical', 'specialization': 'SEO optimization'},
+    topic='Testing conversation fixes',
+    conversation_type='brainstorm',
+    num_turns=6
+)
+for msg in result['messages']:
+    print(f'{msg[\"agent\"]}: {msg[\"content\"][:80]}...')
 "
 
 # Check tool count
@@ -152,7 +161,7 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 |---------|----------|--------|
 | Agent Learning | Every 10 min | Working |
 | Agent Dreams | Every 15 min | Fixed (Session 317) |
-| Agent Conversations | On-demand | Working (Session 315) |
+| **Agent Conversations** | On-demand | **Fixed (Session 318) - diverse pairings + content** |
 | Learning Broadcast | Every 60 sec | Working |
 
 ---
@@ -161,22 +170,22 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 
 | File | Purpose |
 |------|---------|
+| `docs/handoffs/SESSION_318_CONVERSATION_FIXES.md` | Session 318 details |
 | `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md` | Session 317 details |
-| `docs/handoffs/SESSION_316_AGENT_LEARNING_VERIFICATION.md` | Session 316 details |
-| `docs/handoffs/SESSION_315_AGENT_CONVERSATIONS_FIX.md` | Session 315 details |
-| `core/tasks.py:3910` | Agent dream generation |
-| `core/conversation_orchestrator.py` | Agent conversations |
+| `core/conversation_orchestrator.py` | Agent conversations (token limits fixed) |
+| `core/agent_conversation_consumer.py` | Random pairing + strategic topics |
 | `CLAUDE.md` | Full system context |
 
 ---
 
-## Success Criteria for Session 318
+## Success Criteria for Session 319
 
 - [ ] All 27 agents respond to natural language prompts
 - [ ] No API errors from GPT-5 Responses API
 - [ ] Results display correctly in chat UI
+- [ ] Agent Conversations show diverse pairings
+- [ ] Agent Conversations have content in all messages
 - [ ] Dream Journal shows fresh, creative content
-- [ ] Agent Conversations work with live stats
 - [ ] Agent Learning Activity shows recent updates
 
 ---
