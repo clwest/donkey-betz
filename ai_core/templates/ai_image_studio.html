@@ -27101,12 +27101,16 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 message += `⚠️ **Error:** ${r.error}\n\n`;
                             }
 
-                        } else if (result.tool === 'competitor_analysis_agent' || result.tool === 'customer_research_agent') {
+                        } else if (result.tool === 'competitor_analysis_agent' || result.tool === 'customer_research_agent' || result.tool === 'brand_strategy_agent') {
                             // Session 324: Business Research Agents - Show full analysis report
+                            // Session 336: Added BrandStrategyAgent support
                             const r = result.result;
-                            const agentName = result.tool === 'competitor_analysis_agent' ? 'CompetitorAnalysisAgent' : 'CustomerResearchAgent';
-                            const icon = result.tool === 'competitor_analysis_agent' ? '🎯' : '👥';
-                            const title = result.tool === 'competitor_analysis_agent' ? 'Competitive Analysis' : 'Customer Research';
+                            const agentName = result.tool === 'competitor_analysis_agent' ? 'CompetitorAnalysisAgent' :
+                                              result.tool === 'brand_strategy_agent' ? 'BrandStrategyAgent' : 'CustomerResearchAgent';
+                            const icon = result.tool === 'competitor_analysis_agent' ? '🎯' :
+                                         result.tool === 'brand_strategy_agent' ? '🎨' : '👥';
+                            const title = result.tool === 'competitor_analysis_agent' ? 'Competitive Analysis' :
+                                          result.tool === 'brand_strategy_agent' ? 'Brand Strategy' : 'Customer Research';
 
                             // Check for analysis data in result.data or result.metadata.agent_result.data
                             // Structure: r.data = { analysis: {query, analysis, raw_data, sources_used, ...}, raw_data: [...], query: "..." }
@@ -30912,8 +30916,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <!-- Analysis Header -->
                             <div class="d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleResearchSection('${project.id}', 'analysis', ${idx})">
                                 <div style="color: #a855f7; font-weight: 600; font-size: 13px;">
-                                    ${research.type === 'customer_research' ? '👥' : research.type === 'competitor_analysis' ? '🎯' : '📊'}
-                                    Analysis: ${research.type === 'customer_research' ? 'Customer Research' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : 'Business Research'}
+                                    ${research.type === 'customer_research' ? '👥' : research.type === 'competitor_analysis' ? '🎯' : research.type === 'brand_strategy' ? '🎨' : '📊'}
+                                    Analysis: ${research.type === 'customer_research' ? 'Customer Research' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : research.type === 'brand_strategy' ? 'Brand Strategy' : 'Business Research'}
                                     <span id="toggle-analysis-${project.id}-${idx}" style="font-size: 10px; margin-left: 5px;">▶</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
@@ -51550,6 +51554,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 researchType = 'competitor_analysis';
             } else if (researchData.agent_name?.includes('Customer')) {
                 researchType = 'customer_research';
+            } else if (researchData.agent_name?.includes('BrandStrategy') || researchData.research_type === 'brand_strategy') {
+                researchType = 'brand_strategy';
             }
 
             // Direct API call - bypasses GPT routing entirely (Session 302)
@@ -51618,6 +51624,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 researchType = 'competitor_analysis';
             } else if (researchData.agent_name?.includes('Customer')) {
                 researchType = 'customer_research';
+            } else if (researchData.agent_name?.includes('BrandStrategy') || researchData.research_type === 'brand_strategy') {
+                researchType = 'brand_strategy';
             }
 
             showToast('📁 Adding research to project...', 'info');
