@@ -4041,9 +4041,8 @@ def run_project_conversation(self, project_id: str, topic: str, max_messages: in
         Agent, AgentConversation, ConversationMessage,
         AgentKnowledgeSource
     )
-    from core.models_unified_system import (
-        PartnershipProject, BusinessResearchResult
-    )
+    from core.models_partnership import PartnershipProject
+    from core.models_unified_system import BusinessResearchResult
     import random
     import openai
     import os
@@ -4064,9 +4063,9 @@ def run_project_conversation(self, project_id: str, topic: str, max_messages: in
         ).order_by('-created_at')[:5]
 
         # Build project context from research
-        project_context_parts = [f"Project: {project.project_name or project.name}"]
-        if project.business_type:
-            project_context_parts.append(f"Business Type: {project.business_type}")
+        project_context_parts = [f"Project: {project.project_name}"]
+        if project.project_type:
+            project_context_parts.append(f"Type: {project.project_type}")
         if project.description:
             project_context_parts.append(f"Description: {project.description[:500]}")
 
