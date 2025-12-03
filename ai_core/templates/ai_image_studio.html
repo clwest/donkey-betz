@@ -27271,29 +27271,36 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     ? originalQuery.replace(/^(analyze|research|look up|find|investigate)\s+/i, '').trim()
                     : 'Business Research';
 
+                // Session 337: Escape strings for safe use in onclick handlers
+                // Prevents syntax errors when strings contain quotes or special chars
+                const escapeForJS = (str) => str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+                const safeProjectName = escapeForJS(projectName);
+                const safeMarketName = escapeForJS(marketName);
+                const safeTitle = escapeForJS(title.toLowerCase());
+
                 html += `
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(100, 116, 139, 0.2);">
                         <div style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">💡 <strong>Next Steps:</strong> Create content informed by this research</div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button onclick="showCreateProjectFromResearchModal('${projectName}')"
+                            <button onclick="showCreateProjectFromResearchModal('${safeProjectName}')"
                                     style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3)); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
                                     onmouseover="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.4))'"
                                     onmouseout="this.style.background='linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.3))'">
                                 📁 Create Project
                             </button>
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title.toLowerCase()} and create 3 professional logos')"
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${safeTitle} and create 3 professional logos')"
                                     style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3)); border: 1px solid rgba(168, 85, 247, 0.4); color: #c4b5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
                                     onmouseover="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.4))'"
                                     onmouseout="this.style.background='linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.3))'">
                                 🎨 Create Logos
                             </button>
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title.toLowerCase()} and create a YouTube thumbnail package')"
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${safeTitle} and create a YouTube thumbnail package')"
                                     style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3)); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
                                     onmouseover="this.style.background='linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.4))'"
                                     onmouseout="this.style.background='linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))'">
                                 📺 Create Thumbnails
                             </button>
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${title.toLowerCase()} and create a brand identity package')"
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research ${safeTitle} and create a brand identity package')"
                                     style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3)); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;"
                                     onmouseover="this.style.background='linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.4))'"
                                     onmouseout="this.style.background='linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))'">
@@ -27301,13 +27308,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             </button>
                         </div>
                         <div style="margin-top: 10px;">
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research customer pain points for ${marketName}')"
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Research customer pain points for ${safeMarketName}')"
                                     style="background: rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
                                     onmouseover="this.style.background='rgba(100, 116, 139, 0.25)'"
                                     onmouseout="this.style.background='rgba(100, 116, 139, 0.15)'">
                                 👥 + Add Customer Research
                             </button>
-                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Analyze competitors in the ${marketName} market')"
+                            <button onclick="window.aiAssistant?.sendPrefilledMessage('Analyze competitors in the ${safeMarketName} market')"
                                     style="background: rgba(100, 116, 139, 0.15); border: 1px solid rgba(100, 116, 139, 0.3); color: #94a3b8; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 8px; transition: all 0.2s;"
                                     onmouseover="this.style.background='rgba(100, 116, 139, 0.25)'"
                                     onmouseout="this.style.background='rgba(100, 116, 139, 0.15)'">
@@ -27325,8 +27332,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             formatMarkdownContent(text) {
                 if (!text) return '';
 
-                // Escape HTML first
+                // Session 337: Escape backticks and ${} sequences that could break template literals
+                // Also escape HTML entities
                 let html = text
+                    .replace(/\\/g, '\\\\')  // Escape backslashes first
+                    .replace(/`/g, '&#96;')   // Escape backticks for template literals
+                    .replace(/\$\{/g, '&#36;{') // Escape ${} for template literals
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;');
@@ -36371,9 +36382,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 324/325: Replace "Create Project" button with "Add to Project" for embedded assistant
                 // Since we're already in a project context, we add research TO the current project
                 // Session 325: Fixed regex - match onclick="showCreateProjectFromResearchModal('...')"
-                // Note: projectName can contain parentheses, so we use [^']* to match inside single quotes
+                // Session 337: Updated regex to handle escaped quotes in project names (\\')
                 displayContent = displayContent.replace(
-                    /onclick="showCreateProjectFromResearchModal\('[^']*'\)"/g,
+                    /onclick="showCreateProjectFromResearchModal\('(?:[^'\\]|\\.)*'\)"/g,
                     `onclick="addResearchToCurrentProject('${projectId}')"`
                 );
                 displayContent = displayContent.replace('📁 Create Project', '📁 Add to Project');
