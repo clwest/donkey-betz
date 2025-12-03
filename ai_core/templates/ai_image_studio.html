@@ -30990,6 +30990,85 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     </div><!-- End section-content-info -->
                 </div>
 
+                <!-- Session 327: Project Intelligence Hub - Agent Activity Scoped to Project -->
+                <div class="mb-4">
+                    <div class="card" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border: none;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'intelligence')">
+                                <h5 style="color: white; margin: 0;">
+                                    <span id="section-toggle-intelligence-${project.id}" style="display: inline-block; width: 20px; font-size: 12px;">▶</span>
+                                    🧠 Project Intelligence Hub
+                                </h5>
+                                <div id="intelligence-overview-stats-${project.id}" style="display: none;">
+                                    <span class="badge bg-light text-dark me-1" style="font-size: 10px;">📚 <span id="intelligence-knowledge-count-${project.id}">0</span></span>
+                                    <span class="badge bg-light text-dark me-1" style="font-size: 10px;">💬 <span id="intelligence-conv-count-${project.id}">0</span></span>
+                                    <span class="badge bg-light text-dark" style="font-size: 10px;">📋 <span id="intelligence-decision-count-${project.id}">0</span></span>
+                                </div>
+                            </div>
+                            <div id="section-content-intelligence-${project.id}" style="display: none;">
+                                <p class="small mb-3" style="color: rgba(255,255,255,0.9);">
+                                    All agent learning, conversations, and decisions scoped to this project.
+                                </p>
+
+                                <!-- Intelligence Sub-tabs -->
+                                <ul class="nav nav-pills mb-3" id="intelligence-tabs-${project.id}" role="tablist" style="border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; flex-wrap: wrap;">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" style="color: white; background: rgba(255,255,255,0.2); border: none; font-size: 11px; padding: 4px 10px; margin-right: 4px; margin-bottom: 4px;"
+                                                onclick="loadProjectIntelligence('${project.id}', 'learning')">
+                                            📚 Learning
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" style="color: rgba(255,255,255,0.7); background: transparent; border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 4px 10px; margin-right: 4px; margin-bottom: 4px;"
+                                                onclick="loadProjectIntelligence('${project.id}', 'conversations')">
+                                            💬 Conversations
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" style="color: rgba(255,255,255,0.7); background: transparent; border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 4px 10px; margin-right: 4px; margin-bottom: 4px;"
+                                                onclick="loadProjectIntelligence('${project.id}', 'boardroom')">
+                                            📋 Boardroom
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" style="color: rgba(255,255,255,0.7); background: transparent; border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 4px 10px; margin-right: 4px; margin-bottom: 4px;"
+                                                onclick="loadProjectIntelligence('${project.id}', 'dreams')">
+                                            💭 Dreams
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" style="color: rgba(255,255,255,0.7); background: transparent; border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 4px 10px; margin-bottom: 4px;"
+                                                onclick="loadProjectIntelligence('${project.id}', 'slack')">
+                                            💼 Agent Slack
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <!-- Intelligence Content Area -->
+                                <div id="intelligence-content-${project.id}" style="min-height: 150px; max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+                                        <p class="mt-2 small" style="color: rgba(255,255,255,0.7);">Loading project intelligence...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Actions -->
+                                <div class="d-flex gap-2 mt-3">
+                                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;"
+                                            onclick="triggerProjectConversation('${project.id}')">
+                                        💬 Start Conversation
+                                    </button>
+                                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;"
+                                            onclick="refreshProjectIntelligence('${project.id}')">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Session 327: Project Intelligence Hub -->
+
                 <!-- Session 183: Removed Decision Timeline (premature complexity for v1)
                      TODO: Re-add when meaningful decision tracking is implemented -->
 
@@ -37578,6 +37657,815 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 toggle.textContent = '▶';
             }
         }
+
+        // =====================================================================
+        // Session 327: Project Intelligence Hub Functions
+        // =====================================================================
+
+        /**
+         * Session 327: Load project intelligence data by type
+         * @param {string} projectId - UUID of the project
+         * @param {string} type - 'learning' | 'conversations' | 'dreams' | 'boardroom'
+         */
+        async function loadProjectIntelligence(projectId, type) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!contentArea) return;
+
+            // Update active tab styling
+            const tabs = document.querySelectorAll(`#intelligence-tabs-${projectId} .nav-link`);
+            tabs.forEach(tab => {
+                tab.style.color = 'rgba(255,255,255,0.7)';
+                tab.style.background = 'transparent';
+                tab.style.border = '1px solid rgba(255,255,255,0.3)';
+            });
+            const activeTab = [...tabs].find(t => t.textContent.toLowerCase().includes(type));
+            if (activeTab) {
+                activeTab.style.color = 'white';
+                activeTab.style.background = 'rgba(255,255,255,0.2)';
+                activeTab.style.border = 'none';
+            }
+
+            // Show loading
+            contentArea.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+                    <p class="mt-2 small" style="color: rgba(255,255,255,0.7);">Loading ${type}...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/${type}/`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    switch (type) {
+                        case 'learning':
+                            renderProjectLearning(projectId, data);
+                            break;
+                        case 'conversations':
+                            renderProjectConversations(projectId, data);
+                            break;
+                        case 'dreams':
+                            renderProjectDreams(projectId, data);
+                            break;
+                        case 'boardroom':
+                            renderProjectBoardroom(projectId, data);
+                            break;
+                        case 'spiders':
+                            renderProjectSpiders(projectId, data);
+                            break;
+                        case 'slack':
+                            renderProjectSlack(projectId, data);
+                            break;
+                    }
+                } else {
+                    contentArea.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-warning">⚠️ ${data.error || 'Failed to load data'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error(`Error loading project ${type}:`, error);
+                contentArea.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-danger">❌ Error loading ${type}: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Session 327: Render project learning content
+         */
+        function renderProjectLearning(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!data.knowledge || data.knowledge.length === 0) {
+                contentArea.innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">📚</span>
+                        <p class="text-light mt-2">No knowledge sources yet for this project.</p>
+                        <p class="small" style="color: rgba(255,255,255,0.6);">Knowledge will appear as agents learn from project research.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="mb-3 p-2" style="background: rgba(255,255,255,0.1); border-radius: 6px;">
+                    <div class="d-flex justify-content-between small">
+                        <span style="color: rgba(255,255,255,0.7);">📚 ${data.stats.knowledge_sources} sources</span>
+                        <span style="color: rgba(255,255,255,0.7);">💬 ${data.stats.feedback_given} feedback</span>
+                        <span style="color: rgba(255,255,255,0.7);">📊 ${(data.stats.avg_confidence * 100).toFixed(0)}% confidence</span>
+                    </div>
+                </div>
+            `;
+
+            data.knowledge.forEach(k => {
+                html += `
+                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #a855f7;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong style="color: #c4b5fd; font-size: 12px;">${k.topic}</strong>
+                                <div class="small" style="color: rgba(255,255,255,0.6);">
+                                    🤖 ${k.agent_name} • ${k.source_type}
+                                </div>
+                            </div>
+                            <span class="badge" style="background: ${k.confidence > 0.7 ? '#22c55e' : k.confidence > 0.4 ? '#f59e0b' : '#ef4444'}; font-size: 10px;">
+                                ${(k.confidence * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 327: Render project conversations
+         * Session 329: Added Start Conversation button
+         */
+        function renderProjectConversations(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+
+            // Session 329: Add conversation starter UI
+            let html = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="small" style="color: rgba(255,255,255,0.7);">${data.count || 0} conversations</div>
+                    <button class="btn btn-sm" onclick="showConversationStarter('${projectId}')"
+                        style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; font-size: 11px;">
+                        🗣️ Start Conversation
+                    </button>
+                </div>
+                <div id="conversation-starter-${projectId}" style="display: none;"></div>
+            `;
+
+            if (!data.conversations || data.conversations.length === 0) {
+                html += `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">💬</span>
+                        <p class="text-light mt-2">No agent conversations yet for this project.</p>
+                        <p class="small" style="color: rgba(255,255,255,0.6);">Click "Start Conversation" to have agents discuss project topics.</p>
+                    </div>
+                `;
+                contentArea.innerHTML = html;
+                return;
+            }
+
+            data.conversations.forEach(conv => {
+                const timeAgo = formatTimeAgo(conv.created_at);
+
+                // Session 330: Determine if this is multi-turn (new) or hive_mind (legacy)
+                const isMultiTurn = conv.type === 'multi_turn';
+                const convTypeLabel = conv.conversation_type ?
+                    conv.conversation_type.replace(/_/g, ' ') : 'discussion';
+
+                // Session 329/330: Build chat-style messages like Agent/Social tab
+                let messagesHtml = '';
+                if (conv.messages && conv.messages.length > 0) {
+                    // Assign consistent colors to each agent
+                    const agentColors = {};
+                    const colorPalette = ['#ec4899', '#06b6d4', '#22c55e', '#f59e0b', '#8b5cf6', '#6366f1'];
+                    let colorIndex = 0;
+
+                    messagesHtml = conv.messages.map((msg, idx) => {
+                        // Get or assign color for this agent
+                        if (!agentColors[msg.agent]) {
+                            agentColors[msg.agent] = colorPalette[colorIndex % colorPalette.length];
+                            colorIndex++;
+                        }
+                        const agentColor = agentColors[msg.agent];
+
+                        // Clean content - remove agent name prefix if GPT included it
+                        let cleanContent = msg.content;
+                        const prefixPattern = new RegExp(`^${msg.agent}:\\s*`, 'i');
+                        cleanContent = cleanContent.replace(prefixPattern, '');
+
+                        // Alternate alignment for chat feel
+                        const isLeft = idx % 2 === 0;
+                        const alignStyle = isLeft ? 'margin-right: 15%;' : 'margin-left: 15%;';
+
+                        // Session 330: Show message type badge for multi-turn
+                        const msgTypeBadge = msg.type && msg.type !== 'statement' ?
+                            `<span class="badge ms-1" style="font-size: 9px; background: rgba(255,255,255,0.1);">${msg.type}</span>` : '';
+
+                        return `
+                            <div class="mb-2 p-2" style="background: rgba(236, 72, 153, 0.08); border-radius: 12px; border-left: 3px solid ${agentColor}; ${alignStyle}">
+                                <div style="font-size: 11px; color: ${agentColor}; font-weight: 600; margin-bottom: 4px;">
+                                    ${msg.agent} ${msgTypeBadge}
+                                </div>
+                                <div style="color: #e5e7eb; font-size: 13px; line-height: 1.4;">${cleanContent}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Show status indicator for pending conversations
+                const statusBadge = conv.status === 'completed' ?
+                    '<span class="badge bg-success" style="font-size: 10px;">Completed</span>' :
+                    (conv.pending_count > 0 ?
+                        `<span class="badge bg-warning" style="font-size: 10px;">⏳ ${conv.pending_count} pending</span>` :
+                        '<span class="badge bg-info" style="font-size: 10px;">Active</span>');
+
+                // Session 330: Show conversation type badge for multi-turn
+                const convTypeBadge = isMultiTurn ?
+                    `<span class="badge" style="font-size: 10px; background: rgba(139, 92, 246, 0.3); color: #c4b5fd;">🗣️ ${convTypeLabel}</span>` :
+                    '<span class="badge" style="font-size: 10px; background: rgba(236, 72, 153, 0.3); color: #f9a8d4;">🧠 hive mind</span>';
+
+                // Build conclusion/synthesis display
+                let conclusionHtml = '';
+                if (conv.synthesis_summary || conv.conclusion) {
+                    const conclusionText = conv.conclusion || conv.synthesis_summary;
+                    conclusionHtml = `
+                        <div class="mt-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 2px solid #22c55e;">
+                            <div style="font-size: 11px; color: #22c55e;">💡 ${isMultiTurn ? 'Conclusion' : 'Synthesis'}:</div>
+                            <div style="color: #d1d5db; font-size: 12px;">${conclusionText}</div>
+                        </div>
+                    `;
+                }
+
+                // Session 330: Show participants for multi-turn conversations
+                const participantsText = conv.participants ?
+                    conv.participants.join(' & ') :
+                    `${conv.participant_count} agents`;
+
+                html += `
+                    <div class="mb-3 p-3" style="background: rgba(236, 72, 153, 0.1); border-radius: 10px; border: 1px solid rgba(236, 72, 153, 0.3);">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span style="font-size: 18px;">💬</span>
+                                <strong style="color: #f9a8d4;">${conv.topic}</strong>
+                            </div>
+                            <div class="text-end">
+                                ${convTypeBadge}
+                                ${statusBadge}
+                                <div class="small" style="color: rgba(255,255,255,0.5);">${timeAgo}</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">
+                            👥 ${participantsText}
+                            ${conv.message_count > 0 ? `<span class="ms-2 badge bg-secondary">${conv.message_count} messages</span>` : ''}
+                        </div>
+                        ${messagesHtml ? `<div class="conversation-messages">${messagesHtml}</div>` : '<div class="text-muted small text-center py-2">Waiting for agent responses...</div>'}
+                        ${conclusionHtml}
+                    </div>
+                `;
+            });
+
+            contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 329: Show conversation starter UI
+         */
+        function showConversationStarter(projectId) {
+            const starterDiv = document.getElementById(`conversation-starter-${projectId}`);
+            if (!starterDiv) return;
+
+            const isVisible = starterDiv.style.display !== 'none';
+            if (isVisible) {
+                starterDiv.style.display = 'none';
+                return;
+            }
+
+            starterDiv.style.display = 'block';
+            starterDiv.innerHTML = `
+                <div class="mb-3 p-3" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 8px;">
+                    <div class="mb-2">
+                        <label class="form-label small text-light mb-1">Conversation Topic</label>
+                        <input type="text" id="conv-topic-${projectId}" class="form-control form-control-sm"
+                            placeholder="What should agents discuss about this project?"
+                            style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-sm" onclick="hideConversationStarter('${projectId}')"
+                            style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border: none;">
+                            Cancel
+                        </button>
+                        <button class="btn btn-sm" onclick="triggerProjectConversation('${projectId}')"
+                            id="trigger-conv-btn-${projectId}"
+                            style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none;">
+                            🚀 Start
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Session 329: Hide conversation starter UI
+         */
+        function hideConversationStarter(projectId) {
+            const starterDiv = document.getElementById(`conversation-starter-${projectId}`);
+            if (starterDiv) {
+                starterDiv.style.display = 'none';
+            }
+        }
+
+        /**
+         * Session 329: Trigger a project conversation
+         */
+        async function triggerProjectConversation(projectId) {
+            const topicInput = document.getElementById(`conv-topic-${projectId}`);
+            const triggerBtn = document.getElementById(`trigger-conv-btn-${projectId}`);
+
+            const topic = topicInput?.value?.trim() || 'General project discussion';
+
+            if (triggerBtn) {
+                triggerBtn.disabled = true;
+                triggerBtn.innerHTML = '⏳ Starting...';
+            }
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ topic })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Conversation started! ${data.participant_count} agents discussing: "${topic}"`, 'success');
+                    hideConversationStarter(projectId);
+                    // Refresh conversations after a short delay (agents need time to respond)
+                    setTimeout(() => {
+                        loadProjectIntelligence(projectId, 'conversations');
+                    }, 3000);
+                } else {
+                    showToast(data.error || 'Failed to start conversation', 'error');
+                }
+            } catch (error) {
+                console.error('Error triggering conversation:', error);
+                showToast('Error starting conversation', 'error');
+            } finally {
+                if (triggerBtn) {
+                    triggerBtn.disabled = false;
+                    triggerBtn.innerHTML = '🚀 Start';
+                }
+            }
+        }
+
+        /**
+         * Session 327: Render project dreams
+         */
+        function renderProjectDreams(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!data.dreams || data.dreams.length === 0) {
+                contentArea.innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">💭</span>
+                        <p class="text-light mt-2">No agent dreams yet for this project.</p>
+                        <p class="small" style="color: rgba(255,255,255,0.6);">Dreams appear when agents have idle creative thoughts about projects.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const dreamTypeIcons = {
+                'creative_idea': '💡',
+                'what_if': '🤔',
+                'mashup': '🔀',
+                'prediction': '🔮',
+                'improvement': '📈',
+                'observation': '👁️',
+                'wild_thought': '🌀'
+            };
+
+            let html = `<div class="small mb-2" style="color: rgba(255,255,255,0.7);">${data.count} dreams</div>`;
+
+            data.dreams.forEach(dream => {
+                const icon = dreamTypeIcons[dream.dream_type] || '💭';
+                const timeAgo = formatTimeAgo(dream.dreamed_at);
+                html += `
+                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #06b6d4;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span style="font-size: 16px; margin-right: 4px;">${icon}</span>
+                                <strong style="color: #67e8f9; font-size: 12px;">${dream.title}</strong>
+                                <div class="small" style="color: rgba(255,255,255,0.6);">
+                                    🤖 ${dream.agent_name}
+                                </div>
+                            </div>
+                            <span class="small" style="color: rgba(255,255,255,0.5);">${timeAgo}</span>
+                        </div>
+                        <div class="mt-1 small" style="color: rgba(255,255,255,0.8);">${dream.content.substring(0, 120)}...</div>
+                    </div>
+                `;
+            });
+
+            contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 327: Render project boardroom decisions
+         */
+        function renderProjectBoardroom(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!data.decisions || data.decisions.length === 0) {
+                contentArea.innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">📋</span>
+                        <p class="text-light mt-2">No boardroom decisions yet for this project.</p>
+                        <p class="small" style="color: rgba(255,255,255,0.6);">Decisions are created when agent conversations reach conclusions.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="small mb-2" style="color: rgba(255,255,255,0.7);">
+                    ${data.count} decisions • ${data.canonical_count} canonical
+                </div>
+            `;
+
+            data.decisions.forEach(d => {
+                const timeAgo = formatTimeAgo(d.created_at);
+                html += `
+                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid ${d.is_canonical ? '#22c55e' : '#f59e0b'};">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong style="color: ${d.is_canonical ? '#86efac' : '#fcd34d'}; font-size: 12px;">
+                                    ${d.is_canonical ? '✅' : '📋'} ${d.topic}
+                                </strong>
+                                <div class="small" style="color: rgba(255,255,255,0.6);">
+                                    ${d.decision_type_display} • ${d.impact_area_display}
+                                </div>
+                            </div>
+                            <span class="small" style="color: rgba(255,255,255,0.5);">${timeAgo}</span>
+                        </div>
+                        <div class="mt-1 small" style="color: rgba(255,255,255,0.8);">${d.recommended_stance.substring(0, 100)}...</div>
+                    </div>
+                `;
+            });
+
+            contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 327: Trigger a new project conversation
+         */
+        async function triggerProjectConversation(projectId) {
+            const topic = prompt('What should the agents discuss about this project?', 'What marketing strategy should we use?');
+            if (!topic) return;
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ topic })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`💬 Conversation started: ${topic}`, 'success');
+                    // Refresh conversations tab
+                    loadProjectIntelligence(projectId, 'conversations');
+                } else {
+                    showNotification(`❌ ${data.error || 'Failed to start conversation'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error triggering conversation:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        /**
+         * Session 327: Refresh project intelligence (reload current tab)
+         */
+        function refreshProjectIntelligence(projectId) {
+            // Find active tab and reload it
+            const tabs = document.querySelectorAll(`#intelligence-tabs-${projectId} .nav-link`);
+            for (const tab of tabs) {
+                if (tab.style.background && tab.style.background.includes('rgba(255')) {
+                    const type = tab.textContent.toLowerCase().trim().replace(/[^a-z]/g, '');
+                    loadProjectIntelligence(projectId, type);
+                    return;
+                }
+            }
+            // Default to learning
+            loadProjectIntelligence(projectId, 'learning');
+        }
+
+        /**
+         * Session 327: Load intelligence overview when section is opened
+         */
+        async function loadProjectIntelligenceOverview(projectId) {
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update overview stats
+                    const knowledgeCount = document.getElementById(`intelligence-knowledge-count-${projectId}`);
+                    const convCount = document.getElementById(`intelligence-conv-count-${projectId}`);
+                    const decisionCount = document.getElementById(`intelligence-decision-count-${projectId}`);
+
+                    if (knowledgeCount) knowledgeCount.textContent = data.learning.knowledge_sources;
+                    if (convCount) convCount.textContent = data.conversations.total;
+                    if (decisionCount) decisionCount.textContent = data.boardroom.total_decisions;
+
+                    // Show stats badges
+                    const statsEl = document.getElementById(`intelligence-overview-stats-${projectId}`);
+                    if (statsEl) statsEl.style.display = 'flex';
+
+                    // Load learning by default
+                    loadProjectIntelligence(projectId, 'learning');
+                }
+            } catch (error) {
+                console.error('Error loading intelligence overview:', error);
+            }
+        }
+
+        // Override toggleProjectSection to auto-load intelligence when opened
+        const originalToggleProjectSection = toggleProjectSection;
+        toggleProjectSection = function(projectId, sectionName) {
+            originalToggleProjectSection(projectId, sectionName);
+
+            // If opening intelligence section, load data
+            if (sectionName === 'intelligence') {
+                const content = document.getElementById(`section-content-intelligence-${projectId}`);
+                if (content && content.style.display !== 'none') {
+                    loadProjectIntelligenceOverview(projectId);
+                }
+            }
+        };
+
+        // =====================================================================
+        // Session 328: Project Spider & Agent Slack Functions
+        // =====================================================================
+
+        /**
+         * Session 328: Render project spider network
+         */
+        function renderProjectSpiders(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+
+            let html = `
+                <div class="mb-3 p-2" style="background: rgba(255,255,255,0.1); border-radius: 6px;">
+                    <div class="d-flex justify-content-between small">
+                        <span style="color: rgba(255,255,255,0.7);">🕷️ ${data.stats.total_spiders} spiders</span>
+                        <span style="color: rgba(255,255,255,0.7);">📊 ${data.stats.priority_categories} priorities</span>
+                        <span style="color: rgba(255,255,255,0.7);">📥 ${data.stats.relevant_data_count} data points</span>
+                    </div>
+                </div>
+            `;
+
+            // Show matched topics
+            if (data.stats.matched_topics && data.stats.matched_topics.length > 0) {
+                html += `<div class="mb-3">
+                    <span class="small" style="color: rgba(255,255,255,0.7);">Matched Topics: </span>`;
+                data.stats.matched_topics.forEach(topic => {
+                    html += `<span class="badge me-1" style="background: rgba(139, 92, 246, 0.5); font-size: 10px;">${topic}</span>`;
+                });
+                html += `</div>`;
+            }
+
+            // Show spider priorities
+            if (data.priorities && data.priorities.length > 0) {
+                html += `<div class="mb-3">
+                    <h6 class="small mb-2" style="color: rgba(255,255,255,0.8);">Spider Priorities</h6>`;
+                data.priorities.forEach(p => {
+                    const effectivenessColor = p.effectiveness > 0.7 ? '#22c55e' : p.effectiveness > 0.3 ? '#f59e0b' : '#666';
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-1 p-1" style="background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <span class="small" style="color: rgba(255,255,255,0.9);">🕷️ ${p.category}</span>
+                            <div>
+                                <span class="badge me-1" style="background: rgba(139, 92, 246, 0.5); font-size: 9px;">Weight: ${p.weight}</span>
+                                <span class="badge" style="background: ${effectivenessColor}; font-size: 9px;">${Math.round(p.effectiveness * 100)}% effective</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            } else {
+                html += `<p class="small text-center" style="color: rgba(255,255,255,0.6);">No spider priorities detected yet. Run spider refresh to calculate.</p>`;
+            }
+
+            // Show relevant spider data
+            if (data.spider_data && data.spider_data.length > 0) {
+                html += `<div class="mb-3">
+                    <h6 class="small mb-2" style="color: rgba(255,255,255,0.8);">Relevant Spider Data</h6>`;
+                data.spider_data.slice(0, 10).forEach(sd => {
+                    const timeAgo = formatTimeAgo(sd.created_at);
+                    html += `
+                        <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #8b5cf6;">
+                            <div class="d-flex justify-content-between">
+                                <span class="small" style="color: #c4b5fd;">${sd.spider_name}</span>
+                                <span class="small" style="color: rgba(255,255,255,0.5);">${timeAgo}</span>
+                            </div>
+                            <div class="small mt-1" style="color: rgba(255,255,255,0.8);">
+                                ${sd.summary || 'No summary available'}
+                            </div>
+                            ${sd.url ? `<a href="${sd.url}" target="_blank" class="small" style="color: #a78bfa;">View source →</a>` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            } else {
+                html += `<p class="small text-center" style="color: rgba(255,255,255,0.6);">No matching spider data found yet.</p>`;
+            }
+
+            // Refresh button
+            html += `
+                <div class="text-center mt-3">
+                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;"
+                            onclick="refreshProjectSpiders('${projectId}')">
+                        🔄 Refresh Spider Data
+                    </button>
+                </div>
+            `;
+
+            contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 328: Refresh project spiders
+         */
+        async function refreshProjectSpiders(projectId) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            contentArea.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+                    <p class="mt-2 small" style="color: rgba(255,255,255,0.7);">Refreshing spider data...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/spiders/refresh/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`🕷️ ${data.message}`, 'success');
+                    // Reload spiders tab
+                    loadProjectIntelligence(projectId, 'spiders');
+                } else {
+                    showNotification(`❌ ${data.error || 'Failed to refresh'}`, 'error');
+                    loadProjectIntelligence(projectId, 'spiders');
+                }
+            } catch (error) {
+                console.error('Error refreshing spiders:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        /**
+         * Session 328: Render project Agent Slack channel
+         */
+        function renderProjectSlack(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+
+            let html = `
+                <div class="mb-3 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.3);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span style="color: #22c55e; font-weight: 500;"># ${data.channel.name}</span>
+                        <span class="badge" style="background: #22c55e; font-size: 10px;">${data.members.length} agents</span>
+                    </div>
+                    <small style="color: rgba(255,255,255,0.6);">${data.channel.description}</small>
+                </div>
+            `;
+
+            // Online agents
+            if (data.members && data.members.length > 0) {
+                html += `<div class="mb-3">
+                    <span class="small" style="color: rgba(255,255,255,0.7);">Online Agents: </span>`;
+                data.members.slice(0, 8).forEach(m => {
+                    html += `<span class="badge me-1" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; font-size: 10px;">
+                        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; margin-right: 4px;"></span>
+                        ${m.name}
+                    </span>`;
+                });
+                html += `</div>`;
+            }
+
+            // Messages area
+            html += `<div id="project-slack-messages-${projectId}" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; margin-bottom: 12px;">`;
+
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    const timeAgo = formatTimeAgo(msg.created_at);
+                    html += `
+                        <div class="mb-2 p-1" style="border-radius: 4px;">
+                            <div class="d-flex justify-content-between">
+                                <span style="color: #22c55e; font-size: 11px; font-weight: 500;">${msg.agent_name}</span>
+                                <span style="color: rgba(255,255,255,0.4); font-size: 10px;">${timeAgo}</span>
+                            </div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 12px;">${msg.content}</div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `<p class="text-center small" style="color: rgba(255,255,255,0.5);">No messages yet. Start a conversation!</p>`;
+            }
+
+            html += `</div>`;
+
+            // Input area
+            html += `
+                <div class="d-flex gap-2">
+                    <input type="text" id="project-slack-input-${projectId}"
+                           class="form-control form-control-sm"
+                           placeholder="Message #${data.channel.name} (use @AgentName to mention)"
+                           style="background: rgba(0,0,0,0.3); border: 1px solid rgba(34, 197, 94, 0.3); color: white; font-size: 12px;"
+                           onkeypress="if(event.key==='Enter') sendProjectSlackMessage('${projectId}')">
+                    <button class="btn btn-sm" style="background: #22c55e; color: white; border: none;"
+                            onclick="sendProjectSlackMessage('${projectId}')">
+                        Send
+                    </button>
+                </div>
+                <small style="color: rgba(255,255,255,0.5); font-size: 10px;">Type @AgentName to get a response from that agent</small>
+            `;
+
+            contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 328: Send message to project slack channel
+         */
+        async function sendProjectSlackMessage(projectId) {
+            const input = document.getElementById(`project-slack-input-${projectId}`);
+            const content = input.value.trim();
+            if (!content) return;
+
+            // Disable input while sending
+            input.disabled = true;
+            const messagesArea = document.getElementById(`project-slack-messages-${projectId}`);
+
+            // Show sending indicator
+            messagesArea.innerHTML += `
+                <div class="mb-2 p-1" style="border-radius: 4px;">
+                    <div class="d-flex justify-content-between">
+                        <span style="color: #3b82f6; font-size: 11px; font-weight: 500;">You</span>
+                        <span style="color: rgba(255,255,255,0.4); font-size: 10px;">now</span>
+                    </div>
+                    <div style="color: rgba(255,255,255,0.9); font-size: 12px;">${content}</div>
+                </div>
+            `;
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/slack/message/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        sender_name: 'User'
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    input.value = '';
+
+                    // Show agent responses
+                    if (data.agent_responses && data.agent_responses.length > 0) {
+                        data.agent_responses.forEach(resp => {
+                            messagesArea.innerHTML += `
+                                <div class="mb-2 p-1" style="border-radius: 4px; background: rgba(34, 197, 94, 0.1);">
+                                    <div class="d-flex justify-content-between">
+                                        <span style="color: #22c55e; font-size: 11px; font-weight: 500;">${resp.agent_name}</span>
+                                        <span style="color: rgba(255,255,255,0.4); font-size: 10px;">just now</span>
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 12px;">${resp.content}</div>
+                                </div>
+                            `;
+                        });
+                        messagesArea.scrollTop = messagesArea.scrollHeight;
+                    }
+                } else {
+                    showNotification(`❌ ${data.error || 'Failed to send message'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error sending slack message:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            }
+
+            input.disabled = false;
+            input.focus();
+        }
+
+        // End Session 327/328: Project Intelligence Hub Functions
+        // =====================================================================
 
         /**
          * Session 197: Toggle toolbox sub-sections (Image, Video, Audio, 3D, Character)

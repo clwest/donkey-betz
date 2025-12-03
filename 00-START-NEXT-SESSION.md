@@ -1,54 +1,84 @@
-# Session 326: Continue Platform Development
+# Session 331: Continue Platform Development
 
 **Date:** December 3, 2025
-**Previous Session:** 325 - Unified Business Research + PDF Export + Project Context
+**Previous Session:** 330 - Project Multi-Turn Conversations
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 325 unified the CustomerResearchAgent with CompetitorAnalysisAgent (same semantic search), added PDF export, fixed project UI layout, and ensured all agents receive project context.
+Session 330 transformed **Project Conversations** from parallel HiveMind responses to **real multi-turn discussions** - just like the Agent/Social tab! Agents now have actual back-and-forth conversations about projects.
 
-**What Was Built:**
-- **Unified Spider Network** - CustomerResearchAgent now uses same semantic search as CompetitorAnalysisAgent
-- **PDF Export** - Download research as professional PDF documents
-- **Project UI Fix** - Analysis/Research are independent dropdowns (not filling form)
-- **Project Context Awareness** - All business agents receive project_id and full context
-- **Topic Focus** - Agents stay focused on actual topic requested (not drift to "developer tools")
+**What Was Built in Session 330:**
+- **New Celery Task**: `run_project_conversation` - generates multi-turn agent discussions
+- **AgentConversation Model**: Now used for projects (was using HiveMindSession)
+- **Multi-Turn Messages**: Agents build on each other's ideas, challenge approaches, debate
+- **Conversation Types**: brainstorm, strategic_planning, problem_solving, opportunity_analysis
+- **Enhanced UI**: Shows conversation type badges, participant names, message types
 
 **Current State:**
-- Both business agents use semantic search across 74 spiders
-- PDF export working with professional formatting
-- Agents receive project name, description, and prior research context
-- Research stays focused on requested market (podcasters, YouTubers, etc.)
+- Projects have 5 intelligence tabs: Learning, Conversations, Boardroom, Dreams, Agent Slack
+- **Project Conversations** are now REAL discussions (not parallel single responses!)
+- Agents discuss based on project research, challenge each other, generate conclusions
+- Full data flow: Research -> Knowledge -> **Multi-Turn Agent Discussions** -> Insights
 
 ---
 
-## Session 325 Summary
+## Session 330 Summary
 
 | Task | Status |
 |------|--------|
-| CustomerResearchAgent Semantic Search | **Complete** |
-| PDF Export Service | **Complete** |
-| Project Description Fix | **Complete** |
-| Expandable Analysis/Research Sections | **Complete** |
-| Project Context to Agents | **Complete** |
-| Topic Focus Improvements | **Complete** |
+| Create `run_project_conversation` Celery task | **Complete** |
+| Update `trigger_project_conversation` to use new task | **Complete** |
+| Update `get_project_conversations` for multi-turn data | **Complete** |
+| Update frontend for multi-turn display | **Complete** |
+| Create session handoff document | **Complete** |
 
-### Files Modified
-| File | Changes |
-|------|---------|
-| `core/agents/business/customer_research_agent.py` | Semantic search, HTML stripping, topic focus |
-| `core/services/research_pdf_service.py` | NEW: PDF generation with reportlab |
-| `core/views_projects_api.py` | PDF export endpoint, description fix |
-| `core/urls.py` | Added export-research-pdf route |
-| `core/personal_ai_assistant_enhanced.py` | Pass project_id to both business agents |
-| `ai_core/templates/ai_image_studio.html` | Expandable sections, PDF buttons |
+### Key Change (Session 330)
 
-### New API Endpoints
+**Before (Session 329 - HiveMind):**
 ```
-GET /api/projects/<project_id>/export-research-pdf/?index=0
+Topic: "How can we grow?"
+  Agent1: "Here's my idea..." (parallel)
+  Agent2: "Here's my idea..." (parallel)
+  Agent3: "Here's my idea..." (parallel)
+```
+
+**After (Session 330 - Multi-Turn):**
+```
+Topic: "How can we grow?"
+  Agent1: "I've been looking at the research and think we should focus on..."
+  Agent2: "That's interesting, but what about the customer feedback showing..."
+  Agent1: "Good point! We could address that by..."
+  Agent2: "I see what you mean. One challenge might be..."
+  Agent1: "Let's tackle that by..."
+  Agent2: "Agreed. Here's my conclusion..."
+  Conclusion: Key insights and action items
+```
+
+---
+
+## How Project Conversations Work Now
+
+```
+User clicks "Start Conversation" button
+        |
+Enter topic: "How can we grow the podcast?"
+        |
+POST /api/projects/{id}/intelligence/conversations/trigger/
+        |
+Celery task: run_project_conversation(project_id, topic)
+        |
+Task:
+  1. Loads project + research context
+  2. Selects 2 agents (prefer those with project knowledge)
+  3. Chooses template: brainstorm, strategic_planning, etc.
+  4. Creates AgentConversation with project link
+  5. Generates 6 back-and-forth messages (GPT)
+  6. Generates conclusion
+        |
+User sees multi-turn conversation in Intelligence Hub!
 ```
 
 ---
@@ -62,47 +92,22 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Business Research Flow:
+# Test Project Conversations:
 # 1. Go to Projects tab
-# 2. Create/select a project (e.g., "AI Content Gen Podcast")
-# 3. Ask: "Analyze competitors for AI podcast tools"
-# 4. See full analysis with real spider data
-# 5. Click "Add to Project"
-# 6. Ask: "Research customers for this market"
-# 7. Agent uses project context (stays focused on podcasters!)
-# 8. Download PDF of any research
+# 2. Click on a project to open details
+# 3. Click "Project Intelligence Hub" section
+# 4. Click "Conversations" tab
+# 5. Click "Start Conversation" button
+# 6. Enter a topic and click Start
+# 7. Wait for Celery to process (10-15 seconds)
+# 8. Refresh to see multi-turn agent discussion!
 ```
 
 ---
 
-## How Project Context Works
+## All System Features
 
-When you run research in a project, agents now receive:
-1. **project_id** - For database lookups
-2. **Project name** - "AI Content Gen Podcast"
-3. **Project description** - First 200 chars
-4. **Prior research** - Latest research summary (300 chars)
-
-This keeps agents focused on YOUR topic instead of drifting to generic "developer tools".
-
----
-
-## Business Research Agents
-
-Both agents now use the same infrastructure:
-
-| Feature | CustomerResearchAgent | CompetitorAnalysisAgent |
-|---------|----------------------|-------------------------|
-| Semantic Search | Yes (74 spiders) | Yes (74 spiders) |
-| HTML Stripping | Yes | Yes |
-| Project Context | Yes | Yes |
-| Prior Research | Yes | Yes |
-| PDF Export | Yes | Yes |
-
----
-
-## All Sci-Fi Features - VERIFIED WORKING
-
+### Sci-Fi Agent Features
 | Feature | Schedule | Status |
 |---------|----------|--------|
 | Agent Learning | Every 10 min | Working |
@@ -111,19 +116,60 @@ Both agents now use the same infrastructure:
 | Agent Slack | Real-time | Working |
 | Boardroom Decisions | On conversation conclude | Working |
 | Policy Feedback Loop | On agent prompt | Working |
-| **Business Research** | On-demand | **Enhanced (Session 325)** |
-| **PDF Export** | On-demand | **NEW (Session 325)** |
-| **Project Context** | Automatic | **NEW (Session 325)** |
+| **Project Multi-Turn Conversations** | **On-demand (Session 330)** | **Working** |
+
+### Business Intelligence Features
+| Feature | Status |
+|---------|--------|
+| Competitor Analysis | Working (74 spiders) |
+| Customer Research | Working (74 spiders) |
+| PDF Export | Working |
+| Project Context | Working |
+| Project-Agent Bridge | Working (Session 326) |
+| Feedback Learning | Working (Session 326) |
+| Spider Prioritization | Working (Session 326) |
+| Project Intelligence Hub | Working (Session 327) |
+| Project Agent Slack | Working (Session 328) |
+| Project Conversations (HiveMind) | Working (Session 329) |
+| **Project Multi-Turn Discussions** | **Working (Session 330)** |
+
+### Spider Network
+- **74 spiders** across 14 categories
+- **7,900+ data points** collected
+- **Dynamic prioritization** based on active projects
 
 ---
 
-## Next Steps (Session 326+)
+## Project Intelligence Hub Tabs
 
-1. **Verify ALL agents have project_id** - Audit all agent handlers
-2. **Test full flow end-to-end** - Video recording demo
-3. **Platform polish** - Bug fixes, UI improvements
-4. **Agent collaboration** - Multiple agents working on same project
+| Tab | Description |
+|-----|-------------|
+| Learning | Knowledge sources from project research |
+| Conversations | **Multi-turn agent discussions** about the project |
+| Boardroom | Agent decisions about the project |
+| Dreams | Creative agent thoughts |
+| Agent Slack | Real-time chat with agents about the project |
 
 ---
 
-**Status:** Session 325 COMPLETE. Business research unified, PDF export working, project context flowing!
+## Files Modified (Session 330)
+
+| File | Changes |
+|------|---------|
+| `core/tasks.py` | Added `run_project_conversation` task (lines 4022-4332) |
+| `core/views_project_intelligence.py` | Updated `trigger_project_conversation` + `get_project_conversations` |
+| `ai_core/templates/ai_image_studio.html` | Updated `renderProjectConversations` for multi-turn UI |
+
+---
+
+## Next Steps (Session 331+)
+
+1. **Auto-trigger conversations**: Start conversation when new research is added
+2. **WebSocket real-time updates**: Push new messages as they're generated
+3. **Multi-agent conversations**: More than 2 participants
+4. **Agent selection UI**: Let users choose which agents participate
+5. **Conversation threads**: Reply to specific messages
+
+---
+
+**Status:** Session 330 COMPLETE. Project Multi-Turn Conversations fully operational!

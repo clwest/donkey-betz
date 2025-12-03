@@ -1042,8 +1042,8 @@ class CollectiveIntelligenceService:
                 avg=Avg('effectiveness_score')
             )['avg'] or 0
 
-            # Agent stats - use core.Agent model (the real 20 agents) with fallback
-            real_agent_count = Agent.objects.filter(is_active=True).count()
+            # Agent stats - use ALL agents (196 total including legacy)
+            real_agent_count = Agent.objects.count()
             total_agents = real_agent_count if real_agent_count > 0 else AgentPerformanceMetric.objects.count()
             avg_quality = AgentPerformanceMetric.objects.aggregate(
                 avg=Avg('quality_score')
