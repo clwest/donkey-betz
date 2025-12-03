@@ -404,3 +404,15 @@ hive_mind_patterns = [
 ]
 
 websocket_urlpatterns.extend(hive_mind_patterns)
+
+# Session 319: Agent Slack WebSocket - Multi-agent channel communication
+from .agent_slack_consumer import AgentSlackConsumer
+
+agent_slack_patterns = [
+    # Agent Slack WebSocket - Slack-like channels for agents
+    re_path(r'^ws/agent-slack/$', AgentSlackConsumer.as_asgi()),
+    re_path(r'^ws/agent-slack/(?P<channel_id>[^/]+)/$', AgentSlackConsumer.as_asgi()),
+    re_path(r'^ws/agent-workspace/$', AgentSlackConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(agent_slack_patterns)

@@ -1,58 +1,90 @@
-# Session 319: Continue Platform Testing
+# Session 320: Continue Platform Testing
 
 **Date:** December 2, 2025
-**Previous Session:** 318 - Agent Conversations Comprehensive Fix
+**Previous Session:** 319 - Agent Slack Multi-Agent Channels
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
+Session 319 completed:
+- Built **Agent Slack** - internal Slack-like multi-agent channel system
+- 3 new models: AgentChannel, ChannelMembership, ChannelMessage
+- WebSocket consumer with @mention agent responses
+- Channel orchestrator for multi-agent coordination
+- Slack-like UI added to Agents > Social tab
+- Handoff: `docs/handoffs/SESSION_319_AGENT_SLACK.md`
+
 Session 318 completed:
-- Fixed Agent Conversations empty first messages (token limits 1000→1500, 2000→2500)
+- Fixed Agent Conversations empty first messages (token limits 1000->1500, 2000->2500)
 - Fixed repetitive "Core expertise:" topics with strategic topic pool
 - Fixed repetitive agent pairings with random selection + 24h repeat avoidance
+- Agents now use REAL knowledge in conversations (not dashboard stats)
 - Handoff: `docs/handoffs/SESSION_318_CONVERSATION_FIXES.md`
 
 Session 317 completed:
-- Fixed Dream Journal empty content issue (token limits 600→1000, 200→500)
+- Fixed Dream Journal empty content issue (token limits 600->1000, 200->500)
 - Generated 19+ new dreams with substantive content
 - Handoff: `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md`
 
-Session 316 completed:
-- Verified Agent Learning system is working correctly
-- Triggered fresh learning cycles (8 knowledge transfers)
-- Handoff: `docs/handoffs/SESSION_316_AGENT_LEARNING_VERIFICATION.md`
-
 ---
 
-## Session 318 Summary
+## Session 319 Summary
 
 | Task | Status |
 |------|--------|
-| Diagnose empty first messages | Fixed - GPT-5 token limits too low |
-| Fix empty messages | Done - 1000→1500, 2000→2500 tokens |
-| Fix "Core expertise:" topics | Done - strategic topic pool |
-| Fix repetitive pairings | Done - random + 24h repeat avoidance |
-| Test conversation generation | Passed - all 6 messages have content |
+| Create Agent Slack database models | Done - AgentChannel, ChannelMembership, ChannelMessage |
+| Build WebSocket consumer | Done - @mention agent responses |
+| Create Channel Orchestrator | Done - Multi-agent coordination |
+| Build UI component | Done - Slack-like interface |
+| Add routing | Done - /ws/agent-slack/ endpoints |
 
 ---
 
-## GPT-5 Token Limit Reference (Updated Session 318)
+## Agent Slack Features
 
-| Use Case | Recommended Tokens |
-|----------|-------------------|
-| Short generation (titles) | 500+ |
-| Medium generation (dreams, comments) | 1000+ |
-| **Conversation turns** | **1500+** |
-| Long generation (reports, summaries) | 2000+ |
-| **Final turn with DecisionSummary** | **2500+** |
+| Feature | Description |
+|---------|-------------|
+| **Channels** | Topic-based rooms (#general, #content-strategy) |
+| **@Mentions** | Type @AgentName to get a knowledge-aware response |
+| **Threading** | Reply to specific messages |
+| **Reactions** | Emoji reactions on messages |
+| **Presence** | See which agents are online |
+| **Create Channels** | Create new channels for projects/topics |
 
 ---
 
-## Session 319 Goal: Continue Platform Testing
+## How to Test Agent Slack
 
-Test the 27 connected agents through the chat UI:
+```bash
+# Start the platform
+make start && make celery
+
+# Access AI Studio
+open http://localhost:8000/ai-studio/
+
+# Navigate to Agents > Social tab
+# Agent Workspace appears at the top
+
+# Send a message like:
+# "@BrandIdentityAgent what's your take on our brand strategy?"
+# The agent will respond using their learned knowledge!
+
+# Test via WebSocket directly:
+.venv/bin/python manage.py shell -c "
+from core.models import AgentChannel, ChannelMembership
+print(f'Channels: {AgentChannel.objects.count()}')
+for ch in AgentChannel.objects.all():
+    print(f'  #{ch.name} - {ch.member_count} members')
+"
+```
+
+---
+
+## Session 320 Goal: Comprehensive Agent Testing
+
+Continue testing the 27 connected agents through the chat UI:
 
 ### Phase 1: Creative Agents (9 tools)
 | Tool | Test Prompt |
@@ -112,23 +144,11 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Agent Conversations (now with diverse pairings!)
-# Navigate to Agents > Social > Agent Conversations
+# Test Agent Slack (Agents > Social tab)
+# Type: @BrandIdentityAgent what do you think about our content strategy?
 
-# Trigger a conversation manually
-.venv/bin/python manage.py shell -c "
-from core.conversation_orchestrator import ConversationOrchestrator
-orchestrator = ConversationOrchestrator()
-result = orchestrator.generate_conversation(
-    agent1={'name': 'BrandIdentityAgent', 'type': 'strategy', 'specialization': 'Brand strategy'},
-    agent2={'name': 'SEOOptimizerAgent', 'type': 'analytical', 'specialization': 'SEO optimization'},
-    topic='Testing conversation fixes',
-    conversation_type='brainstorm',
-    num_turns=6
-)
-for msg in result['messages']:
-    print(f'{msg[\"agent\"]}: {msg[\"content\"][:80]}...')
-"
+# Test Agent Conversations
+# Click "Start Chat" button
 
 # Check tool count
 .venv/bin/python manage.py shell -c "
@@ -142,26 +162,14 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 
 ---
 
-## Current Status: 27 Tools Connected
-
-| Category | Count | Tools |
-|----------|-------|-------|
-| Creative | 9 | image, video, audio, 3D, editing, character, talking, brand_video |
-| Research | 4 | web search, competitor, customer, trends |
-| Strategy | 5 | brand, content, SEO, social, creative director |
-| Executive | 5 | CTO, COO, meeting, opportunity, trained creation |
-| Content | 2 | content executor, AI project builder |
-| Workflow | 2 | workflow orchestration, coleadership |
-
----
-
 ## All Sci-Fi Features - VERIFIED WORKING
 
 | Feature | Schedule | Status |
 |---------|----------|--------|
 | Agent Learning | Every 10 min | Working |
 | Agent Dreams | Every 15 min | Fixed (Session 317) |
-| **Agent Conversations** | On-demand | **Fixed (Session 318) - diverse pairings + content** |
+| Agent Conversations | On-demand | Fixed (Session 318) |
+| **Agent Slack** | Real-time | **NEW (Session 319)** |
 | Learning Broadcast | Every 60 sec | Working |
 
 ---
@@ -170,24 +178,25 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 
 | File | Purpose |
 |------|---------|
+| `docs/handoffs/SESSION_319_AGENT_SLACK.md` | Session 319 details |
 | `docs/handoffs/SESSION_318_CONVERSATION_FIXES.md` | Session 318 details |
-| `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md` | Session 317 details |
-| `core/conversation_orchestrator.py` | Agent conversations (token limits fixed) |
-| `core/agent_conversation_consumer.py` | Random pairing + strategic topics |
+| `core/agent_slack_consumer.py` | Agent Slack WebSocket consumer |
+| `core/channel_orchestrator.py` | Multi-agent channel orchestration |
+| `ai_core/templates/components/panels/agents/agents_slack.html` | Agent Slack UI |
 | `CLAUDE.md` | Full system context |
 
 ---
 
-## Success Criteria for Session 319
+## Success Criteria for Session 320
 
 - [ ] All 27 agents respond to natural language prompts
 - [ ] No API errors from GPT-5 Responses API
 - [ ] Results display correctly in chat UI
+- [ ] Agent Slack @mentions trigger agent responses
 - [ ] Agent Conversations show diverse pairings
 - [ ] Agent Conversations have content in all messages
 - [ ] Dream Journal shows fresh, creative content
-- [ ] Agent Learning Activity shows recent updates
 
 ---
 
-**Status:** Ready for comprehensive agent testing. All Sci-Fi features verified working!
+**Status:** Agent Slack complete. Ready for comprehensive agent testing!

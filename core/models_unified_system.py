@@ -12398,3 +12398,374 @@ class OriginalityScore(models.Model):
             return "Average - Consider differentiation suggestions"
         else:
             return "Generic - High risk of 'AI slop' perception"
+
+
+# =============================================================================
+# Session 319: Agent Slack - Multi-Agent Channel Communication
+# =============================================================================
+
+class AgentChannel(models.Model):
+    """
+    A Slack-like channel where multiple agents can collaborate.
+
+    Channels are topic-based rooms where agents can join, share knowledge,
+    and work together on projects. Each channel has a purpose and can be
+    linked to specific projects or workflows.
+
+    Session 319: Building internal Slack for AI agents.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Channel identity
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Channel name (e.g., #brand-strategy, #content-creation)"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="What this channel is for"
+    )
+
+    # Channel type
+    channel_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('project', 'Project Channel'),        # Linked to a specific project
+            ('topic', 'Topic Channel'),            # General topic discussion
+            ('workflow', 'Workflow Channel'),      # For workflow coordination
+            ('team', 'Team Channel'),              # Team of agents
+            ('announcement', 'Announcements'),     # Read-only for most
+            ('emergency', 'Emergency Response'),   # High-priority issues
+        ],
+        default='topic'
+    )
+
+    # Optional project link
+    project_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Associated project ID (if project channel)"
+    )
+
+    # Channel owner/creator
+    created_by = models.ForeignKey(
+        Agent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_channels',
+        help_text="Agent that created this channel"
+    )
+
+    # Channel settings
+    is_public = models.BooleanField(
+        default=True,
+        help_text="Whether any agent can join"
+    )
+
+    is_archived = models.BooleanField(
+        default=False,
+        help_text="Archived channels are read-only"
+    )
+
+    auto_invite_types = models.JSONField(
+        default=list,
+        help_text="Agent types to auto-invite (e.g., ['strategy', 'creative'])"
+    )
+
+    # Metadata
+    topic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Current channel topic/focus"
+    )
+
+    pinned_messages = models.JSONField(
+        default=list,
+        help_text="List of pinned message IDs"
+    )
+
+    # Metrics
+    message_count = models.IntegerField(default=0)
+    member_count = models.IntegerField(default=0)
+    last_activity = models.DateTimeField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-last_activity', '-created_at']
+        verbose_name = "Agent Channel"
+        verbose_name_plural = "Agent Channels"
+
+    def __str__(self):
+        return f"#{self.name}"
+
+    def get_members(self):
+        """Get all agents in this channel."""
+        return Agent.objects.filter(
+            channel_memberships__channel=self,
+            channel_memberships__is_active=True
+        )
+
+    def get_recent_messages(self, limit=50):
+        """Get recent messages from this channel."""
+        return self.channel_messages.order_by('-created_at')[:limit]
+
+    def add_member(self, agent, role='member'):
+        """Add an agent to this channel."""
+        membership, created = ChannelMembership.objects.get_or_create(
+            channel=self,
+            agent=agent,
+            defaults={'role': role}
+        )
+        if created:
+            self.member_count += 1
+            self.save(update_fields=['member_count'])
+        return membership
+
+    def remove_member(self, agent):
+        """Remove an agent from this channel."""
+        removed = ChannelMembership.objects.filter(
+            channel=self,
+            agent=agent
+        ).update(is_active=False)
+        if removed:
+            self.member_count = max(0, self.member_count - 1)
+            self.save(update_fields=['member_count'])
+
+
+class ChannelMembership(models.Model):
+    """
+    Tracks which agents are members of which channels.
+
+    Similar to Slack's channel membership, with roles and preferences.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    channel = models.ForeignKey(
+        AgentChannel,
+        on_delete=models.CASCADE,
+        related_name='memberships'
+    )
+
+    agent = models.ForeignKey(
+        Agent,
+        on_delete=models.CASCADE,
+        related_name='channel_memberships'
+    )
+
+    # Membership role
+    role = models.CharField(
+        max_length=20,
+        choices=[
+            ('owner', 'Channel Owner'),
+            ('admin', 'Channel Admin'),
+            ('member', 'Member'),
+            ('guest', 'Guest'),
+        ],
+        default='member'
+    )
+
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_muted = models.BooleanField(default=False)
+
+    # Engagement metrics
+    messages_sent = models.IntegerField(default=0)
+    last_read_at = models.DateTimeField(null=True, blank=True)
+    last_posted_at = models.DateTimeField(null=True, blank=True)
+
+    # Agent presence (for UI)
+    presence_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('idle', 'Idle'),
+            ('away', 'Away'),
+            ('dnd', 'Do Not Disturb'),
+        ],
+        default='active'
+    )
+
+    # Timestamps
+    joined_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['channel', 'agent']
+        verbose_name = "Channel Membership"
+        verbose_name_plural = "Channel Memberships"
+
+    def __str__(self):
+        return f"{self.agent.name} in #{self.channel.name}"
+
+
+class ChannelMessage(models.Model):
+    """
+    A message posted in an agent channel.
+
+    Similar to Slack messages with threading, reactions, and mentions.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    channel = models.ForeignKey(
+        AgentChannel,
+        on_delete=models.CASCADE,
+        related_name='channel_messages'
+    )
+
+    agent = models.ForeignKey(
+        Agent,
+        on_delete=models.CASCADE,
+        related_name='channel_posts'
+    )
+
+    # Message content
+    content = models.TextField(
+        help_text="The message text"
+    )
+
+    message_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('message', 'Regular Message'),
+            ('insight', 'Insight'),
+            ('question', 'Question'),
+            ('answer', 'Answer'),
+            ('announcement', 'Announcement'),
+            ('action_item', 'Action Item'),
+            ('decision', 'Decision Made'),
+            ('summary', 'Summary'),
+            ('system', 'System Message'),
+        ],
+        default='message'
+    )
+
+    # Threading
+    thread_parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='thread_replies'
+    )
+
+    reply_count = models.IntegerField(default=0)
+
+    # Mentions (@agent references)
+    mentioned_agents = models.ManyToManyField(
+        Agent,
+        related_name='channel_mentions',
+        blank=True
+    )
+
+    # Reactions (emoji-style)
+    reactions = models.JSONField(
+        default=dict,
+        help_text="Reactions from agents: {'emoji': ['agent_id1', 'agent_id2']}"
+    )
+
+    # Knowledge references
+    referenced_knowledge = models.JSONField(
+        default=list,
+        help_text="List of AgentKnowledgeSource IDs referenced"
+    )
+
+    # Attachments (artifacts, files, etc.)
+    attachments = models.JSONField(
+        default=list,
+        help_text="List of attachment metadata"
+    )
+
+    # Edit tracking
+    is_edited = models.BooleanField(default=False)
+    edited_at = models.DateTimeField(null=True, blank=True)
+
+    # Pinned/highlighted
+    is_pinned = models.BooleanField(default=False)
+
+    # Quality metrics
+    relevance_score = models.FloatField(
+        default=0.8,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How relevant/useful was this message"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['created_at']
+        verbose_name = "Channel Message"
+        verbose_name_plural = "Channel Messages"
+        indexes = [
+            models.Index(fields=['channel', 'created_at']),
+            models.Index(fields=['agent', 'created_at']),
+            models.Index(fields=['thread_parent']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name} in #{self.channel.name}: {self.content[:50]}..."
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # Update channel metrics on new message
+        if is_new:
+            self.channel.message_count += 1
+            self.channel.last_activity = timezone.now()
+            self.channel.save(update_fields=['message_count', 'last_activity'])
+
+            # Update membership metrics
+            ChannelMembership.objects.filter(
+                channel=self.channel,
+                agent=self.agent
+            ).update(
+                messages_sent=models.F('messages_sent') + 1,
+                last_posted_at=timezone.now()
+            )
+
+            # Update thread parent reply count
+            if self.thread_parent:
+                ChannelMessage.objects.filter(pk=self.thread_parent.pk).update(
+                    reply_count=models.F('reply_count') + 1
+                )
+
+    def add_reaction(self, agent, emoji):
+        """Add an emoji reaction from an agent."""
+        if emoji not in self.reactions:
+            self.reactions[emoji] = []
+        agent_id = str(agent.id)
+        if agent_id not in self.reactions[emoji]:
+            self.reactions[emoji].append(agent_id)
+            self.save(update_fields=['reactions'])
+
+    def remove_reaction(self, agent, emoji):
+        """Remove an emoji reaction."""
+        if emoji in self.reactions:
+            agent_id = str(agent.id)
+            if agent_id in self.reactions[emoji]:
+                self.reactions[emoji].remove(agent_id)
+                if not self.reactions[emoji]:
+                    del self.reactions[emoji]
+                self.save(update_fields=['reactions'])
+
+    def get_thread(self):
+        """Get all replies to this message."""
+        return ChannelMessage.objects.filter(thread_parent=self).order_by('created_at')
+
+    def parse_mentions(self):
+        """Parse @agent mentions from content and link them."""
+        import re
+        mentions = re.findall(r'@(\w+)', self.content)
+        if mentions:
+            agents = Agent.objects.filter(name__in=mentions)
+            self.mentioned_agents.set(agents)
