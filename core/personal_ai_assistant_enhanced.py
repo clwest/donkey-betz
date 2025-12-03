@@ -3266,16 +3266,37 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             focus_areas = arguments.get('focus_areas', [])
             competitor_names = arguments.get('competitor_names', [])
             user_context = arguments.get('user_context', '')
+            # Session 325: Extract project_id for context awareness
+            project_id = arguments.get('project_id')
 
             if not market:
                 return {'success': False, 'error': 'Market is required for competitor analysis'}
 
             logger.info(f"🏢 Analyzing competitors in: {market}")
 
+            # Session 325: If we have a project, get its full context for the agent
+            project_context_str = ""
+            if project_id:
+                try:
+                    from core.models_partnership import PartnershipProject
+                    project = PartnershipProject.objects.get(id=project_id)
+                    project_context_str = f"Project: {project.project_name}"
+                    if project.description:
+                        project_context_str += f" - {project.description[:200]}"
+                    # Include any prior research from this project
+                    if project.metadata:
+                        prior_research = project.metadata.get('research_summaries', [])
+                        if prior_research:
+                            latest = prior_research[-1]
+                            project_context_str += f". Prior research ({latest.get('type', 'unknown')}): {latest.get('summary', '')[:300]}..."
+                    logger.info(f"🏢 Project context: {project_context_str[:100]}...")
+                except Exception as e:
+                    logger.warning(f"Failed to get project context: {e}")
+
             # Instantiate and execute the agent
             agent = CompetitorAnalysisAgent(user=self.user)
 
-            # Build task description
+            # Build task description - Session 325: Include project context
             task = f"Analyze the {market} market"
             if focus_areas:
                 task += f" focusing on: {', '.join(focus_areas)}"
@@ -3283,18 +3304,22 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 task += f". Specifically analyze: {', '.join(competitor_names)}"
             if user_context:
                 task += f". Context: {user_context}"
+            if project_context_str:
+                task += f" {project_context_str}"
 
             logger.info(f"🏢 Task: {task}")
 
             # Session 293: Execute the agent with ALL required parameters
             # AgentResult requires: task, context, scifi_context, spider_context
+            # Session 325: Now passing project_id for full context awareness
             result = agent.execute(
                 task=task,
                 context={
                     'market': market,
                     'focus_areas': focus_areas,
                     'competitor_names': competitor_names,
-                    'user_context': user_context
+                    'user_context': user_context,
+                    'project_id': project_id  # Session 325: Pass project_id!
                 },
                 scifi_context={},  # Session 293: Required parameter
                 spider_context={}  # Session 293: Required parameter
@@ -3356,32 +3381,57 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             persona_count = arguments.get('persona_count', 3)
             focus_on = arguments.get('focus_on', 'all')
             user_context = arguments.get('user_context', '')
+            # Session 325: Extract project_id for context awareness
+            project_id = arguments.get('project_id')
 
             if not market:
                 return {'success': False, 'error': 'Market is required for customer research'}
 
             logger.info(f"👥 Researching customers for: {market}")
 
+            # Session 325: If we have a project, get its full context for the agent
+            project_context_str = ""
+            if project_id:
+                try:
+                    from core.models_partnership import PartnershipProject
+                    project = PartnershipProject.objects.get(id=project_id)
+                    project_context_str = f"Project: {project.project_name}"
+                    if project.description:
+                        project_context_str += f" - {project.description[:200]}"
+                    # Include any prior research from this project
+                    if project.metadata:
+                        prior_research = project.metadata.get('research_summaries', [])
+                        if prior_research:
+                            latest = prior_research[-1]
+                            project_context_str += f". Prior research ({latest.get('type', 'unknown')}): {latest.get('summary', '')[:300]}..."
+                    logger.info(f"👥 Project context: {project_context_str[:100]}...")
+                except Exception as e:
+                    logger.warning(f"Failed to get project context: {e}")
+
             # Instantiate and execute the agent
             agent = CustomerResearchAgent(user=self.user)
 
-            # Build task description
+            # Build task description - Session 325: Include project context
             task = f"Research customers for {market}"
             if focus_on != 'all':
                 task += f" focusing on {focus_on}"
             task += f". Build {persona_count} customer personas."
             if user_context:
                 task += f" Context: {user_context}"
+            if project_context_str:
+                task += f" {project_context_str}"
 
             # Execute the agent
             # Session 324: Agent requires scifi_context and spider_context
+            # Session 325: Now passing project_id for full context awareness
             result = agent.execute(
                 task=task,
                 context={
                     'market': market,
                     'persona_count': persona_count,
                     'focus_on': focus_on,
-                    'user_context': user_context
+                    'user_context': user_context,
+                    'project_id': project_id  # Session 325: Pass project_id!
                 },
                 scifi_context={},  # Optional sci-fi features context
                 spider_context={}  # Spider data is fetched internally by the agent
