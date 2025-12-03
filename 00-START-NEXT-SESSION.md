@@ -1,40 +1,45 @@
-# Session 335: Continue Platform Development
+# Session 336: Continue Platform Development
 
 **Date:** December 3, 2025
-**Previous Session:** 334 - Project Context for Creative Workflows
+**Previous Session:** 335 - BrandStrategyAgent
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 334 added **project research context as guidance** to creative workflows:
-- WorkflowOrchestrationAgent now fetches existing project research (competitor analysis, customer research)
-- Research context is injected into web search, executive review, and image generation steps
-- Agents still do their own research, but project context helps **guide the direction**
-- Example: "Create brand identity" from within a project uses competitor/customer insights as guidance
+Session 335 created the **BrandStrategyAgent** - a new business research agent that produces comprehensive brand strategy reports by reading existing project research (competitor analysis, customer research).
+
+This follows the vision: **"All agents should work like CompetitorAnalysisAgent and CustomerResearchAgent - producing rich research reports that build on existing project research."**
 
 ---
 
-## Session 334 Summary
+## Session 335 Summary
 
 | Task | Status |
 |------|--------|
-| Add `_get_project_research_context()` method | **Complete** |
-| Inject project context into `_execute_web_search_step()` | **Complete** |
-| Inject project context into `_execute_coleadership_step()` | **Complete** |
-| Inject project context into `_execute_image_generation_step()` | **Complete** |
-| Fix `has_research` flag for metadata-based research | **Complete** |
+| Create `BrandStrategyAgent` following CompetitorAnalysisAgent pattern | **Complete** |
+| Add tool definition to `tool_definitions.py` | **Complete** |
+| Add tool description to `tool_descriptions.py` | **Complete** |
+| Add handler to `personal_ai_assistant_enhanced.py` | **Complete** |
+| Add routing to `views_image.py` | **Complete** |
 
-### How Project Context Works Now
+### How BrandStrategyAgent Works
 
-When a user says "Create a Brand Identity" from within a project that has competitor/customer research:
+When a user says "Create a brand strategy" from within a project that has competitor/customer research:
 
-1. **Web Search Step**: Query is enhanced with terms from project pain points and differentiation needs
-2. **Executive Review Step**: Executives see project name, competitor insights, customer insights, and pain points
-3. **Image Generation Step**: Visual cues are derived from customer pain points (trust → "trustworthy stable", simple → "simple approachable", etc.)
+1. **get_project_research** - Fetches existing competitor + customer research from project
+2. **spider_query** - Searches spider network for brand-related trends
+3. **web_search** - Searches web for brand best practices
+4. **synthesize_brand_strategy** - GPT creates comprehensive 6-section report
 
-All agents **still do their own fresh research** - the project context just helps **guide** the direction.
+**Output Sections:**
+- Brand Positioning
+- Target Audience Summary
+- Brand Messaging Framework
+- Visual Direction
+- Competitive Differentiation
+- Actionable Next Steps
 
 ---
 
@@ -47,15 +52,28 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Project Context for Creative Workflows:
+# Test BrandStrategyAgent:
 # 1. Click on "Donkey Betz Podcast" project (has competitor + customer research)
-# 2. In project assistant, say "Create a brand identity"
-# 3. Watch logs for "Session 334" messages showing context injection
+# 2. In project assistant, say "Create a brand strategy"
+# 3. Watch for comprehensive brand strategy report with 6 sections
 ```
 
 ---
 
 ## All System Features
+
+### Business Research Agents (The Self-Learning Pattern)
+| Agent | Purpose | Status |
+|-------|---------|--------|
+| CompetitorAnalysisAgent | Market & competitor analysis | Working |
+| CustomerResearchAgent | Personas & pain points | Working |
+| **BrandStrategyAgent** | **Brand positioning & messaging** | **NEW (Session 335)** |
+
+These agents all follow the same pattern:
+1. Read existing project research
+2. Enhance with fresh spider/web data
+3. Produce comprehensive strategic reports
+4. Save to BusinessResearchResult for project learning
 
 ### Sci-Fi Agent Features
 | Feature | Schedule | Status |
@@ -73,6 +91,7 @@ open http://localhost:8000/ai-studio/
 |---------|--------|
 | Competitor Analysis | Working (74 spiders) |
 | Customer Research | Working (74 spiders) |
+| **Brand Strategy** | **NEW (Session 335)** |
 | PDF Export | Working |
 | Project Context | Working |
 | Project-Agent Bridge | Working (Session 326) |
@@ -81,10 +100,10 @@ open http://localhost:8000/ai-studio/
 | Project Intelligence Hub | Enhanced UI (Session 333) |
 | Project Agent Slack | Working (Session 328) |
 | Project Conversations | Working (Session 330-331) |
-| **Creative Workflow Context** | **NEW (Session 334)** |
+| Creative Workflow Context | Working (Session 334) |
 
 ### System Stats
-- **198 total agents** (36 active)
+- **199 total agents** (36 active + BrandStrategyAgent)
 - **74 spiders** across 20 categories
 - **47 business research results** (all recent)
 - **610 knowledge entries** (478 from research)
@@ -93,22 +112,28 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Files Modified (Session 334)
+## Files Modified (Session 335)
 
 | File | Changes |
 |------|---------|
-| `agents/workflow_orchestration_agent.py` | Added `_get_project_research_context()`, enhanced `_execute_web_search_step()`, `_execute_coleadership_step()`, `_execute_image_generation_step()` with project context injection |
+| `core/agents/business/brand_strategy_agent.py` | **NEW** - Complete BrandStrategyAgent (~500 lines) |
+| `core/agents/business/__init__.py` | Added BrandStrategyAgent export |
+| `core/assistant/tool_definitions.py` | Added `_get_brand_strategy_agent_definition()` |
+| `core/prompts/tool_descriptions.py` | Added `brand_strategy_agent` description |
+| `core/personal_ai_assistant_enhanced.py` | Added `_handle_brand_strategy_agent()` method |
+| `core/views_image.py` | Added routing for `brand_strategy_agent` |
 
 ---
 
-## Next Steps (Session 335+)
+## Next Steps (Session 336+)
 
-1. **Filter Learning data by project**: Currently shows some platform-wide data
-2. **WebSocket real-time updates**: Push new dreams/decisions as they're created
-3. **Multi-agent conversations**: More than 2 participants
-4. **Agent selection UI**: Let users choose which agents participate
-5. **Conversation threads**: Reply to specific messages
+1. **Test BrandStrategyAgent** - Verify it produces rich reports within projects
+2. **Apply pattern to more agents** - ContentStrategyAgent, SEOOptimizerAgent
+3. **Add action buttons** - "+ Create Brand Strategy" after competitor/customer research
+4. **Add "Generate Logos from Strategy"** button in brand strategy output
+5. **Filter Learning data by project**: Currently shows some platform-wide data
+6. **WebSocket real-time updates**: Push new dreams/decisions as they're created
 
 ---
 
-**Status:** Session 334 COMPLETE. Creative workflows now use project research as guidance!
+**Status:** Session 335 COMPLETE. BrandStrategyAgent ready for testing!

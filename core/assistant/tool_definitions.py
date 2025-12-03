@@ -56,6 +56,7 @@ def get_tool_definitions() -> List[Dict]:
         _get_strategic_review_definition(),
         _get_competitor_analysis_agent_definition(),  # Session 293: Business research
         _get_customer_research_agent_definition(),    # Session 293: Customer research
+        _get_brand_strategy_agent_definition(),       # Session 335: Brand strategy research
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -705,5 +706,40 @@ def _get_customer_research_agent_definition() -> Dict:
                 }
             },
             "required": ["market"]
+        }
+    }
+
+
+def _get_brand_strategy_agent_definition() -> Dict:
+    """
+    Session 335: Brand strategy agent that reads existing project research.
+    Produces comprehensive brand strategy reports (no image/video generation).
+    """
+    return {
+        "type": "function",
+        "name": "brand_strategy_agent",
+        "description": get_tool_description("brand_strategy_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "REQUIRED: Project ID to read existing research from. This agent works best when the project already has competitor/customer research."
+                },
+                "brand_name": {
+                    "type": "string",
+                    "description": "Optional: The brand name to develop strategy for. If not provided, uses project name."
+                },
+                "focus_areas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional areas to focus on: 'positioning', 'messaging', 'visual_direction', 'differentiation', 'audience'. Defaults to comprehensive strategy."
+                },
+                "user_context": {
+                    "type": "string",
+                    "description": "Additional context about brand goals, preferences, or constraints"
+                }
+            },
+            "required": ["project_id"]
         }
     }

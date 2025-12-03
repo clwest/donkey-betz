@@ -3468,6 +3468,115 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'error': f"Customer research failed: {str(e)}"
             }
 
+    # Session 335: Brand Strategy Agent
+    def _handle_brand_strategy_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle brand_strategy_agent tool - Session 335.
+
+        Comprehensive brand strategy that reads existing project research
+        (competitor analysis, customer research) and synthesizes it into
+        actionable brand recommendations.
+
+        IMPORTANT: This agent works best AFTER competitor and customer research
+        has been completed for the project.
+        """
+        logger.info(f"🎨 BRAND_STRATEGY_AGENT TOOL CALLED!")
+        logger.info(f"🎨 Arguments: {arguments}")
+
+        try:
+            from core.agents.business import BrandStrategyAgent
+
+            project_id = arguments.get('project_id')
+            brand_name = arguments.get('brand_name', '')
+            focus_areas = arguments.get('focus_areas', [])
+            user_context = arguments.get('user_context', '')
+
+            if not project_id:
+                return {
+                    'success': False,
+                    'error': 'Project ID is required for brand strategy. This agent reads existing project research.'
+                }
+
+            logger.info(f"🎨 Creating brand strategy for project: {project_id}")
+
+            # Get project context
+            project_context_str = ""
+            project_name = brand_name
+            try:
+                from core.models_partnership import PartnershipProject
+                project = PartnershipProject.objects.get(id=project_id)
+                if not project_name:
+                    project_name = project.project_name
+                project_context_str = f"Project: {project.project_name}"
+                if project.description:
+                    project_context_str += f" - {project.description[:200]}"
+                logger.info(f"🎨 Project context: {project_context_str[:100]}...")
+            except Exception as e:
+                logger.warning(f"Failed to get project context: {e}")
+
+            # Instantiate and execute the agent
+            agent = BrandStrategyAgent(user=self.user)
+
+            # Build task description
+            task = f"Create comprehensive brand strategy for '{project_name}'"
+            if focus_areas:
+                task += f" focusing on: {', '.join(focus_areas)}"
+            if user_context:
+                task += f". Context: {user_context}"
+            if project_context_str:
+                task += f" {project_context_str}"
+
+            logger.info(f"🎨 Task: {task}")
+
+            # Execute the agent
+            result = agent.execute(
+                task=task,
+                context={
+                    'project_id': project_id,
+                    'brand_name': project_name,
+                    'focus_areas': focus_areas,
+                    'user_context': user_context
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            logger.info(f"🎨 Agent result: success={result.success}")
+
+            if result.success:
+                return {
+                    'success': True,
+                    'message': result.message,
+                    'agents_used': ['BrandStrategyAgent'],
+                    'metadata': {
+                        'agent_result': {
+                            'success': result.success,
+                            'message': result.message,
+                            'data': result.data,
+                            'agent_name': result.agent_name,
+                            'execution_time_ms': result.execution_time_ms,
+                            'decisions_made': result.decisions_made,
+                            'tool_calls': result.tool_calls
+                        }
+                    },
+                    'project_id': project_id,
+                    'brand_name': project_name,
+                    'data': result.data
+                }
+            else:
+                logger.error(f"🎨 Agent returned failure: {result.error}")
+                return {
+                    'success': False,
+                    'error': result.error or 'Brand strategy creation failed'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Brand strategy error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Brand strategy failed: {str(e)}"
+            }
+
     # Session 312: Unified strategy agent handler
     def _handle_strategy_agent(self, agent_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
