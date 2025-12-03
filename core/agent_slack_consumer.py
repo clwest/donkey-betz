@@ -57,6 +57,10 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
         # Send channel info on connect
         await self.send_channel_info()
 
+        # Session 321: Also send member list and channel list on connect
+        await self.send_member_list()
+        await self.send_channel_list()
+
     async def disconnect(self, close_code):
         """Leave channel group on disconnect."""
         await self.channel_layer.group_discard(

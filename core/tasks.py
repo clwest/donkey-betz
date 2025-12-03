@@ -3732,6 +3732,13 @@ Guidelines:
                     if content.startswith(f"{current_speaker.name}:"):
                         content = content[len(current_speaker.name)+1:].strip()
 
+                    # Session 321: Skip empty messages - don't save if content is empty
+                    if not content:
+                        logger.warning(f"💬 [CONVERSATIONS] Empty content from {current_speaker.name}, skipping message {msg_num + 1}")
+                        # Still swap speakers to continue conversation
+                        current_speaker, other_speaker = other_speaker, current_speaker
+                        continue
+
                     # Determine message type based on content
                     msg_type = 'statement'
                     content_lower = content.lower()
@@ -3797,6 +3804,8 @@ Guidelines:
                     insights=[m['content'] for m in messages if m['type'] == 'insight']
                 )
                 conversation.quality_score = min(1.0, len(messages) / max_messages * 0.8 + 0.2)
+                # Session 321: Update message_count to actual count
+                conversation.message_count = len(messages)
                 conversation.save()
 
         # Broadcast the update
