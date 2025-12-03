@@ -7902,6 +7902,15 @@ def execute_tool(request):
                 parameters['project_id'] = str(project.id)
             result = assistant._handle_customer_research_agent(parameters)
 
+        # Session 335: Brand Strategy Agent
+        elif tool_name == 'brand_strategy_agent':
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_brand_strategy_agent(parameters)
+
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'

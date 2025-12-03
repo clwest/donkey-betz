@@ -1,0 +1,755 @@
+"""
+Brand Strategy Agent - Business Intelligence
+=============================================
+
+Session 334: New agent for comprehensive brand strategy research
+
+This agent synthesizes existing project research (competitor analysis, customer research)
+and creates a comprehensive brand strategy report with actionable recommendations.
+
+Unlike the old brand_identity_package workflow that just generated logos, this agent:
+1. Reads existing project research (competitor + customer insights)
+2. Conducts additional brand-specific research
+3. Synthesizes a comprehensive brand strategy report with:
+   - Brand Positioning Analysis
+   - Target Audience Alignment
+   - Competitive Differentiation Strategy
+   - Visual Direction Recommendations
+   - Messaging Guidelines
+   - Actionable Brand Recommendations
+4. Saves to BusinessResearchResult for project learning
+
+Tools Available:
+    - get_project_research: Fetch existing competitor/customer research from project
+    - spider_query: Search for brand/design trends and best practices
+    - web_search: Search for industry branding examples
+    - synthesize_brand_strategy: Generate comprehensive brand strategy report
+
+Tools NOT Available (by design):
+    - image/video/audio generation (use ImageAgent after brand strategy)
+    - editing operations
+"""
+
+import logging
+import time
+import json
+from typing import Dict, Any, List, Optional
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class BrandStrategyAgent(BaseAgent):
+    """
+    Agent specialized in brand strategy research and recommendations.
+
+    This agent:
+    1. Takes a project with existing research OR a brand/business topic
+    2. Fetches existing competitor and customer research from project
+    3. Conducts brand-specific research (trends, best practices, visual direction)
+    4. Synthesizes a comprehensive brand strategy report
+    5. Provides actionable recommendations for brand identity
+
+    Key difference from old brand_identity_package workflow:
+    - Produces RESEARCH like CompetitorAnalysisAgent (rich text report)
+    - Builds on existing project research (cumulative intelligence)
+    - Does NOT generate images (use ImageAgent after getting brand strategy)
+    """
+
+    name = "BrandStrategyAgent"
+
+    system_prompt = """You are BrandStrategyAgent, a specialist in brand strategy and identity development.
+
+Your ONLY job is to analyze brand positioning and provide strategic recommendations. You do NOT create images.
+
+You have these tools:
+- get_project_research: ALWAYS USE FIRST - Fetch existing competitor/customer research from the project
+- spider_query: Search for branding trends, design inspiration, and industry best practices
+- web_search: Search for brand examples, visual trends, and positioning strategies
+- synthesize_brand_strategy: Generate the final comprehensive brand strategy report
+
+CRITICAL WORKFLOW:
+1. FIRST: Call get_project_research to fetch ALL existing research from the project
+   - This gives you competitor analysis, customer personas, pain points, market insights
+   - This is the FOUNDATION of your brand strategy
+2. THEN: Call spider_query to find current branding trends and visual direction
+3. OPTIONALLY: Call web_search for specific brand examples or industry standards
+4. FINALLY: Call synthesize_brand_strategy with all gathered data
+
+Your output should include:
+1. BRAND POSITIONING ANALYSIS
+   - Market position based on competitor analysis
+   - Unique value proposition derived from research
+
+2. TARGET AUDIENCE ALIGNMENT
+   - Customer personas (from existing research)
+   - Pain points the brand should address visually
+   - Emotional triggers and messaging hooks
+
+3. COMPETITIVE DIFFERENTIATION STRATEGY
+   - How to stand out from competitors (based on competitor analysis)
+   - Visual differentiation opportunities
+   - Messaging differentiation
+
+4. VISUAL DIRECTION RECOMMENDATIONS
+   - Color palette suggestions (with rationale tied to audience)
+   - Typography direction
+   - Imagery style (abstract, photographic, illustrative)
+   - Logo concept directions (icon-only, wordmark, combination)
+
+5. MESSAGING GUIDELINES
+   - Brand voice and tone
+   - Key messages tied to customer pain points
+   - Tagline suggestions
+
+6. ACTIONABLE RECOMMENDATIONS
+   - Immediate next steps
+   - Priority visual assets to create
+   - Brand consistency guidelines
+
+You CANNOT create images, videos, or audio. Only research and strategize.
+After your brand strategy is complete, the user can use ImageAgent to generate visual assets."""
+
+    tools = [
+        # Tool 1: MOST IMPORTANT - Get existing project research
+        {
+            "type": "function",
+            "function": {
+                "name": "get_project_research",
+                "description": "MUST USE FIRST: Fetch all existing research from the project (competitor analysis, customer research, market insights). This is the foundation of your brand strategy.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "include_competitor": {
+                            "type": "boolean",
+                            "description": "Include competitor analysis research",
+                            "default": True
+                        },
+                        "include_customer": {
+                            "type": "boolean",
+                            "description": "Include customer research (personas, pain points)",
+                            "default": True
+                        },
+                        "include_market": {
+                            "type": "boolean",
+                            "description": "Include market research if available",
+                            "default": True
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 2: Spider query for brand/design trends
+        {
+            "type": "function",
+            "function": {
+                "name": "spider_query",
+                "description": "Search spider network for branding trends, design inspiration, visual direction, and industry best practices.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for brand/design trends (e.g., 'AI startup branding trends 2025', 'podcast brand identity')"
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "Filter by category",
+                            "enum": ["creative", "tech", "news", "all"],
+                            "default": "creative"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 20
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        # Tool 3: Web search for brand examples
+        {
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Search the web for brand examples, visual identity case studies, and positioning strategies.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (e.g., 'best AI tool brand identities', 'podcast branding examples')"
+                        },
+                        "num_results": {
+                            "type": "integer",
+                            "description": "Number of results to return",
+                            "default": 10
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        # Tool 4: Synthesize brand strategy
+        {
+            "type": "function",
+            "function": {
+                "name": "synthesize_brand_strategy",
+                "description": "Generate comprehensive brand strategy report from all gathered research and data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "project_name": {
+                            "type": "string",
+                            "description": "Name of the project/brand"
+                        },
+                        "project_context": {
+                            "type": "string",
+                            "description": "Brief description of the project/business"
+                        },
+                        "competitor_insights": {
+                            "type": "string",
+                            "description": "Key insights from competitor analysis"
+                        },
+                        "customer_insights": {
+                            "type": "string",
+                            "description": "Key insights from customer research (personas, pain points)"
+                        },
+                        "brand_trends": {
+                            "type": "string",
+                            "description": "Current branding trends and visual direction from spider/web research"
+                        }
+                    },
+                    "required": ["project_name"]
+                }
+            }
+        }
+    ]
+
+    def __init__(self, user=None, project_id: str = None):
+        super().__init__(user)
+        self.project_id = project_id
+        self._spider_service = None
+        self._semantic_search = None
+
+    @property
+    def semantic_search(self):
+        """Lazy-load Spider Semantic Search Service."""
+        if self._semantic_search is None:
+            from core.services.spider_semantic_search import get_spider_semantic_search
+            self._semantic_search = get_spider_semantic_search()
+        return self._semantic_search
+
+    def _get_project_context(self) -> Dict[str, Any]:
+        """Fetch project context including existing research."""
+        if not self.project_id:
+            return {'has_project': False}
+
+        try:
+            from core.models_partnership import PartnershipProject
+            from core.models_unified_system import BusinessResearchResult
+
+            project = PartnershipProject.objects.get(id=self.project_id)
+
+            context = {
+                'has_project': True,
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'project_description': project.description or '',
+                'project_type': project.project_type or 'general',
+                'competitor_analysis': '',
+                'customer_research': '',
+                'customer_personas': [],
+                'customer_pain_points': [],
+                'market_overview': '',
+            }
+
+            # Get existing research from BusinessResearchResult
+            research_results = BusinessResearchResult.objects.filter(
+                project=project
+            ).order_by('-created_at')
+
+            for result in research_results[:10]:
+                if result.research_type == 'competitor' and not context['competitor_analysis']:
+                    context['competitor_analysis'] = result.analysis or ''
+                    if result.recommendations:
+                        context['competitor_recommendations'] = result.recommendations
+                elif result.research_type == 'customer' and not context['customer_research']:
+                    context['customer_research'] = result.analysis or ''
+                    if result.personas:
+                        context['customer_personas'] = result.personas
+                    if result.pain_points:
+                        context['customer_pain_points'] = result.pain_points
+                elif result.research_type == 'market' and not context['market_overview']:
+                    context['market_overview'] = result.analysis or ''
+
+            # Also check metadata for research summaries (Session 325 format)
+            if project.metadata and project.metadata.get('research_summaries'):
+                for summary in project.metadata['research_summaries']:
+                    if summary.get('type') == 'competitor_analysis' and not context['competitor_analysis']:
+                        context['competitor_analysis'] = summary.get('summary', '')
+                    elif summary.get('type') == 'customer_research' and not context['customer_research']:
+                        context['customer_research'] = summary.get('summary', '')
+
+            # Determine if we have meaningful research
+            context['has_research'] = bool(
+                context['competitor_analysis'] or
+                context['customer_research'] or
+                context['customer_personas']
+            )
+
+            logger.info(f"BrandStrategyAgent: Found project context for {project.project_name}, has_research={context['has_research']}")
+
+            return context
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch project context: {e}")
+            return {'has_project': False}
+
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> AgentResult:
+        """Execute brand strategy research."""
+        start_time = time.time()
+        tool_calls_made = []
+        all_brand_data = []
+
+        # Get project_id from context if not set
+        if not self.project_id:
+            self.project_id = context.get('project_id')
+
+        with self.time_travel_session("brand_strategy", task, input_data=context):
+            try:
+                if not self._validate_task(task):
+                    return AgentResult(
+                        success=False,
+                        error="Invalid or empty task",
+                        agent_name=self.name
+                    )
+
+                # Get project context
+                project_context = self._get_project_context()
+                self._project_context = project_context  # Store for tool access
+
+                # Enhance task with project name if available
+                if project_context.get('has_project'):
+                    project_name = project_context.get('project_name', '')
+                    if project_name and project_name.lower() not in task.lower():
+                        task = f"{task} for '{project_name}'"
+                        logger.info(f"Enhanced task with project name: {task}")
+
+                self.record_decision(
+                    decision_type="task_analysis",
+                    action="Analyzing brand strategy request",
+                    reasoning=f"Task: {task[:100]}, Has project research: {project_context.get('has_research', False)}",
+                    confidence=0.9
+                )
+
+                # Build prompt with context
+                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+
+                # Add project research context to prompt
+                if project_context.get('has_research'):
+                    full_prompt += f"""
+
+EXISTING PROJECT RESEARCH (use this as the foundation):
+- Project: {project_context.get('project_name', 'Unknown')}
+- Description: {project_context.get('project_description', 'N/A')[:500]}
+- Competitor Analysis Available: {'Yes' if project_context.get('competitor_analysis') else 'No'}
+- Customer Research Available: {'Yes' if project_context.get('customer_research') else 'No'}
+- Customer Personas: {len(project_context.get('customer_personas', []))} defined
+- Pain Points: {len(project_context.get('customer_pain_points', []))} identified
+
+IMPORTANT: Call get_project_research FIRST to load the full research data."""
+
+                full_prompt += """
+
+WORKFLOW:
+1. FIRST: Call get_project_research to load existing competitor/customer research
+2. THEN: Call spider_query for branding trends relevant to this industry
+3. OPTIONALLY: Call web_search for brand examples
+4. FINALLY: Call synthesize_brand_strategy with all gathered insights
+
+Return a comprehensive brand strategy report that builds on existing project research."""
+
+                # Make GPT call
+                gpt_response = self._call_openai(full_prompt)
+
+                # Process tool calls
+                if gpt_response.get('tool_calls'):
+                    for tool_call in gpt_response['tool_calls']:
+                        tool_name = tool_call['name']
+                        arguments = tool_call['arguments']
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"Calling {tool_name}",
+                            reasoning=f"Selected {tool_name} for brand strategy",
+                            confidence=0.95
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, arguments)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': arguments,
+                            'result': tool_result
+                        })
+
+                        if tool_result.get('success'):
+                            all_brand_data.append({
+                                'source': tool_name,
+                                'data': tool_result.get('data', tool_result)
+                            })
+
+                        self.mark_decision_outcome(
+                            success=tool_result.get('success', False),
+                            result_summary=str(tool_result)[:100]
+                        )
+
+                execution_time = int((time.time() - start_time) * 1000)
+
+                if all_brand_data:
+                    # Find the synthesized strategy in the tool results
+                    synthesis = None
+                    for data in all_brand_data:
+                        if data['source'] == 'synthesize_brand_strategy':
+                            synthesis = data['data']
+                            break
+
+                    # If no synthesis yet, create one from gathered data
+                    if not synthesis:
+                        synthesis = self._synthesize_brand_strategy_fallback(
+                            project_context.get('project_name', task),
+                            all_brand_data
+                        )
+
+                    # Save to database
+                    saved_result = None
+                    try:
+                        from core.models_unified_system import BusinessResearchResult
+                        from core.models_partnership import PartnershipProject
+
+                        project = None
+                        if self.project_id:
+                            try:
+                                project = PartnershipProject.objects.get(id=self.project_id)
+                            except:
+                                pass
+
+                        saved_result = BusinessResearchResult.objects.create(
+                            user=self.user,
+                            project=project,
+                            research_type='brand_strategy',
+                            market_topic=project_context.get('project_name', task),
+                            analysis=synthesis.get('strategy', synthesis.get('analysis', str(synthesis))),
+                            recommendations=synthesis.get('recommendations', []),
+                            execution_time_ms=execution_time
+                        )
+                        logger.info(f"Saved brand strategy to database: {saved_result.id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to save brand strategy: {e}")
+
+                    result = AgentResult(
+                        success=True,
+                        message=f"Brand strategy completed with {len(all_brand_data)} data sources",
+                        data={
+                            'analysis': synthesis.get('strategy', synthesis.get('analysis', str(synthesis))),
+                            'visual_direction': synthesis.get('visual_direction', {}),
+                            'recommendations': synthesis.get('recommendations', []),
+                            'project_name': project_context.get('project_name', ''),
+                            'query': task,
+                            'saved_id': str(saved_result.id) if saved_result else None,
+                            'research_type': 'brand_strategy'
+                        },
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                        decisions_made=self._tt_decision_count,
+                        tool_calls=tool_calls_made
+                    )
+
+                    # Learning infrastructure
+                    self._record_learning_outcome(
+                        result=result,
+                        task=task,
+                        context=context,
+                        spider_data_used=True,
+                        scifi_context_used=bool(scifi_context)
+                    )
+
+                    self._create_execution_memory(
+                        result=result,
+                        task=task,
+                        memory_type="success",
+                        importance=0.8  # Brand strategy is important
+                    )
+
+                    if saved_result:
+                        self._track_contribution(
+                            content_type='research',
+                            content_id=saved_result.id,
+                            contribution_type='primary_creator',
+                            contribution_score=1.0
+                        )
+
+                    return result
+
+                else:
+                    # Return conversational response if no tools called
+                    return AgentResult(
+                        success=True,
+                        message=gpt_response.get('content', 'No brand strategy data generated'),
+                        data={'type': 'conversation'},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
+            except Exception as e:
+                logger.error(f"BrandStrategyAgent error: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+    def _execute_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Execute a tool call for brand strategy."""
+
+        if tool_name == "get_project_research":
+            # Return the pre-loaded project context
+            project_context = getattr(self, '_project_context', {})
+
+            if not project_context.get('has_project'):
+                return {
+                    'success': False,
+                    'error': "No project context available. Please provide a project_id or specify a brand/business to research."
+                }
+
+            return {
+                'success': True,
+                'data': {
+                    'project_name': project_context.get('project_name', ''),
+                    'project_description': project_context.get('project_description', ''),
+                    'competitor_analysis': project_context.get('competitor_analysis', ''),
+                    'customer_research': project_context.get('customer_research', ''),
+                    'customer_personas': project_context.get('customer_personas', []),
+                    'customer_pain_points': project_context.get('customer_pain_points', []),
+                    'market_overview': project_context.get('market_overview', ''),
+                    'has_research': project_context.get('has_research', False)
+                }
+            }
+
+        elif tool_name == "spider_query":
+            try:
+                results = self.semantic_search.semantic_search(
+                    query=arguments.get('query', ''),
+                    category=arguments.get('category'),
+                    hours=168,
+                    limit=arguments.get('limit', 20),
+                    min_similarity=0.3
+                )
+                data = [
+                    {
+                        'title': r.title,
+                        'description': r.description,
+                        'url': r.url,
+                        'source': r.source,
+                        'category': r.category
+                    }
+                    for r in results
+                ]
+                return {
+                    'success': True,
+                    'data': data
+                }
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"Spider query failed: {str(e)}"
+                }
+
+        elif tool_name == "web_search":
+            try:
+                from core.tools.web_search import WebSearchTool
+                search_tool = WebSearchTool()
+                results = search_tool.search(
+                    query=arguments.get('query', ''),
+                    max_results=arguments.get('num_results', 10)
+                )
+                return {
+                    'success': True,
+                    'data': results
+                }
+            except Exception as e:
+                logger.warning(f"Web search failed: {e}")
+                return {
+                    'success': False,
+                    'error': f"Web search failed: {str(e)}"
+                }
+
+        elif tool_name == "synthesize_brand_strategy":
+            return self._generate_brand_strategy(
+                project_name=arguments.get('project_name', ''),
+                project_context=arguments.get('project_context', ''),
+                competitor_insights=arguments.get('competitor_insights', ''),
+                customer_insights=arguments.get('customer_insights', ''),
+                brand_trends=arguments.get('brand_trends', '')
+            )
+
+        else:
+            return {
+                'success': False,
+                'error': f"Unknown tool: {tool_name}"
+            }
+
+    def _generate_brand_strategy(
+        self,
+        project_name: str,
+        project_context: str = '',
+        competitor_insights: str = '',
+        customer_insights: str = '',
+        brand_trends: str = ''
+    ) -> Dict[str, Any]:
+        """Generate comprehensive brand strategy using GPT."""
+
+        strategy_prompt = f"""You are a senior brand strategist. Create a comprehensive brand strategy report.
+
+PROJECT: {project_name}
+{f'CONTEXT: {project_context}' if project_context else ''}
+
+COMPETITOR ANALYSIS INSIGHTS:
+{competitor_insights if competitor_insights else 'No competitor analysis available yet.'}
+
+CUSTOMER RESEARCH INSIGHTS:
+{customer_insights if customer_insights else 'No customer research available yet.'}
+
+CURRENT BRANDING TRENDS:
+{brand_trends if brand_trends else 'No specific trends data gathered.'}
+
+Based on this research, create a COMPREHENSIVE BRAND STRATEGY REPORT with:
+
+1) BRAND POSITIONING ANALYSIS
+- Market position recommendation based on competitor landscape
+- Unique value proposition that differentiates from competitors
+- Key brand pillars (3-4 core values/attributes)
+
+2) TARGET AUDIENCE ALIGNMENT
+- Primary and secondary audience profiles (based on customer research)
+- Key pain points the brand should address
+- Emotional triggers and psychological hooks for brand connection
+- Communication preferences and channels
+
+3) COMPETITIVE DIFFERENTIATION STRATEGY
+- How to visually differentiate from competitors
+- Messaging differentiation opportunities
+- Market gaps the brand can own
+- Positioning statement recommendation
+
+4) VISUAL DIRECTION RECOMMENDATIONS
+- Color palette suggestions with rationale (primary, secondary, accent colors)
+- Typography direction (modern, classic, playful, authoritative)
+- Imagery style recommendations (photographic, illustrative, abstract, geometric)
+- Logo concept directions (icon-only, wordmark, combination mark)
+- Overall visual personality (minimalist, bold, sophisticated, friendly)
+
+5) MESSAGING GUIDELINES
+- Brand voice and tone recommendations
+- Key messages that address customer pain points
+- Tagline suggestions (3-5 options)
+- Elevator pitch template
+
+6) ACTIONABLE RECOMMENDATIONS (prioritized list)
+- Immediate next steps (first 30 days)
+- Priority visual assets to create
+- Brand consistency guidelines
+- Launch strategy considerations
+
+Be specific and tie recommendations back to the research insights. This strategy will guide the visual identity creation."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[{"role": "user", "content": strategy_prompt}],
+                max_completion_tokens=6000,
+            )
+
+            strategy_text = response.choices[0].message.content
+
+            # Extract structured data if possible
+            visual_direction = {}
+            recommendations = []
+
+            # Try to extract key sections
+            if 'VISUAL DIRECTION' in strategy_text.upper():
+                # Extract color suggestions
+                if 'color' in strategy_text.lower():
+                    visual_direction['has_color_recommendations'] = True
+                if 'typography' in strategy_text.lower():
+                    visual_direction['has_typography_recommendations'] = True
+                if 'logo' in strategy_text.lower():
+                    visual_direction['has_logo_recommendations'] = True
+
+            # Try to extract recommendations
+            if 'ACTIONABLE' in strategy_text.upper() or 'RECOMMENDATIONS' in strategy_text.upper():
+                recommendations = ['See detailed recommendations in report']
+
+            return {
+                'success': True,
+                'data': {
+                    'strategy': strategy_text,
+                    'project_name': project_name,
+                    'visual_direction': visual_direction,
+                    'recommendations': recommendations,
+                    'analysis': strategy_text  # Alias for compatibility
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Brand strategy generation failed: {e}")
+            return {
+                'success': False,
+                'error': f"Strategy generation failed: {str(e)}"
+            }
+
+    def _synthesize_brand_strategy_fallback(
+        self,
+        project_name: str,
+        all_data: List[Dict]
+    ) -> Dict[str, Any]:
+        """Fallback synthesis if GPT tool call wasn't made."""
+
+        # Collect insights from gathered data
+        competitor_insights = ""
+        customer_insights = ""
+        brand_trends = ""
+
+        for source in all_data:
+            source_name = source.get('source', '')
+            data = source.get('data', {})
+
+            if source_name == 'get_project_research':
+                competitor_insights = data.get('competitor_analysis', '')[:2000]
+                customer_insights = data.get('customer_research', '')[:2000]
+            elif source_name in ['spider_query', 'web_search']:
+                if isinstance(data, list):
+                    trend_items = [f"- {item.get('title', '')}" for item in data[:5]]
+                    brand_trends += "\n".join(trend_items)
+
+        # Generate strategy with gathered data
+        return self._generate_brand_strategy(
+            project_name=project_name,
+            competitor_insights=competitor_insights,
+            customer_insights=customer_insights,
+            brand_trends=brand_trends
+        ).get('data', {'strategy': 'Brand strategy synthesis failed'})

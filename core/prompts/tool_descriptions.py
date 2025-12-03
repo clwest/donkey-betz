@@ -314,6 +314,35 @@ IMPORTANT: This is for PURE RESEARCH - no image/video generation.
 Uses spider network (especially Reddit) for real customer data.""",
 
 
+    "brand_strategy_agent": """Comprehensive brand strategy research that READS existing project research.
+
+⭐ BEST FOR: "Create a brand identity" or "Develop brand strategy" when INSIDE a project
+that already has competitor/customer research.
+
+Use this for BRAND STRATEGY requests like:
+- "Create a brand identity for this project"
+- "Develop our brand strategy"
+- "What should our brand positioning be?"
+- "Create brand guidelines based on our research"
+- "Build a brand strategy from the competitor/customer research"
+
+This agent:
+1. READS existing project research (competitor analysis, customer research)
+2. Synthesizes findings into comprehensive brand strategy
+3. Provides positioning, messaging, visual direction, and actionable recommendations
+
+Output includes:
+- Brand Positioning (differentiation, market position)
+- Target Audience Summary (from customer research)
+- Brand Messaging Framework (taglines, value propositions)
+- Visual Direction (colors, typography, imagery guidance)
+- Competitive Differentiation (how to stand out)
+- Actionable Next Steps
+
+IMPORTANT: This is for STRATEGIC RESEARCH - no image/video generation.
+Uses existing project research as foundation, enhances with fresh spider/web data.""",
+
+
     "strategic_review": """IMPORTANT: Call this AFTER web_search but BEFORE image_generation_agent.
 
 Get strategic review and creative direction from the executive team (CTO, COO, Creative Director) based on research findings.
