@@ -1,44 +1,57 @@
-# Session 317: Continue Platform Testing
+# Session 318: Continue Platform Testing
 
 **Date:** December 2, 2025
-**Previous Session:** 316 - Agent Learning System Verification
+**Previous Session:** 317 - Dream Journal Fix
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
+Session 317 completed:
+- Fixed Dream Journal empty content issue (same root cause as Session 315)
+- Increased GPT-5 token limits for dream generation (600 -> 1000, 200 -> 500)
+- Generated 19+ new dreams with substantive content
+- Handoff: `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md`
+
 Session 316 completed:
 - Verified Agent Learning system is working correctly
 - Triggered fresh learning cycles (8 knowledge transfers)
-- Added 15 new knowledge sources for teacher agents
-- Confirmed API `/api/agent-learning/activity/` returns real-time data
-- Celery Beat schedules verified (learning every 10 min, broadcast every 60 sec)
 - Handoff: `docs/handoffs/SESSION_316_AGENT_LEARNING_VERIFICATION.md`
 
 Session 315 completed:
 - Fixed Agent Conversations (empty content issue)
 - Migrated ConversationOrchestrator to GPT-5 Responses API
-- Fixed rate limiter `cache.ttl()` crash
-- Injected real-time system stats into Agent Conversations
 - Handoff: `docs/handoffs/SESSION_315_AGENT_CONVERSATIONS_FIX.md`
 
 ---
 
-## Session 316 Summary
+## Session 317 Summary
 
 | Task | Status |
 |------|--------|
-| Investigate stale learning data | Completed - Celery was idle |
-| Verify learning system works | Confirmed - 8 transfers made |
-| Trigger fresh learning cycles | Done - API shows 18 items |
-| Add fresh knowledge sources | Done - 15 new items for teachers |
+| Investigate stale Dream Journal | Completed - Celery was idle |
+| Fix empty dream content | Fixed - token limits too low |
+| Test dream generation | Done - 19+ new dreams generated |
+| Create handoff documentation | Done |
 
 ---
 
-## Session 317 Goal: Platform Testing
+## GPT-5 Token Limit Reference
 
-Continue testing the 27 connected agents through the chat UI:
+GPT-5 reasoning models split tokens between internal reasoning AND visible output. Use these limits:
+
+| Use Case | Recommended Tokens |
+|----------|-------------------|
+| Short generation (titles) | 500+ |
+| Medium generation (dreams, comments) | 1000+ |
+| Long generation (conversations, reports) | 1500-2000+ |
+
+---
+
+## Session 318 Goal: Continue Platform Testing
+
+Test the 27 connected agents through the chat UI:
 
 ### Phase 1: Creative Agents (9 tools)
 | Tool | Test Prompt |
@@ -98,8 +111,15 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Agent Conversations (now with live stats!)
-# Navigate to Agents > Social > Start Conversation
+# Test Dream Journal (now with real content!)
+# Navigate to Agents > Social > Dream Journal
+
+# Trigger dreams manually
+.venv/bin/python manage.py shell -c "
+from core.tasks import generate_agent_dreams
+result = generate_agent_dreams()
+print(f'Generated: {result[\"stats\"][\"dreams_generated\"]} dreams')
+"
 
 # Check tool count
 .venv/bin/python manage.py shell -c "
@@ -109,13 +129,6 @@ assistant = EnhancedPersonalAIAssistant(get_user_model().objects.first())
 print(f'Total tools: {len(assistant.get_tool_definitions())}')
 "
 # Expected: Total tools: 27
-
-# Trigger agent learning manually
-.venv/bin/python manage.py shell -c "
-from core.tasks import run_agent_learning_cycle
-result = run_agent_learning_cycle()
-print(f'Transfers: {result[\"transfers_made\"]}')
-"
 ```
 
 ---
@@ -133,34 +146,14 @@ print(f'Transfers: {result[\"transfers_made\"]}')
 
 ---
 
-## Agent Learning System - VERIFIED WORKING
+## All Sci-Fi Features - VERIFIED WORKING
 
-The agent learning system runs automatically via Celery Beat:
-- **Every 10 min:** Agents share knowledge with connected agents
-- **Every 60 sec:** Status broadcast to UI via WebSocket
-- **API:** `/api/agent-learning/activity/` returns real-time data
-
-To trigger learning manually:
-```python
-from core.tasks import run_agent_learning_cycle, broadcast_learning_status
-result = run_agent_learning_cycle()
-broadcast_learning_status()
-```
-
----
-
-## Agent Conversations - WITH LIVE STATS
-
-Agents receive real-time system statistics in every conversation:
-```
-=== LIVE PLATFORM STATISTICS (Real-Time Data) ===
-- Spider Network: 74 active spiders across 20 categories
-- Agent Ecosystem: 36 active agents
-- Memory Palace: XX memories stored
-- Knowledge Base: XX knowledge sources
-- Spider Data: XX total records (XX in last 24h)
-...
-```
+| Feature | Schedule | Status |
+|---------|----------|--------|
+| Agent Learning | Every 10 min | Working |
+| Agent Dreams | Every 15 min | Fixed (Session 317) |
+| Agent Conversations | On-demand | Working (Session 315) |
+| Learning Broadcast | Every 60 sec | Working |
 
 ---
 
@@ -168,24 +161,24 @@ Agents receive real-time system statistics in every conversation:
 
 | File | Purpose |
 |------|---------|
+| `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md` | Session 317 details |
 | `docs/handoffs/SESSION_316_AGENT_LEARNING_VERIFICATION.md` | Session 316 details |
 | `docs/handoffs/SESSION_315_AGENT_CONVERSATIONS_FIX.md` | Session 315 details |
-| `docs/handoffs/SESSION_314_GPT5_API_MIGRATION.md` | GPT-5 API reference |
-| `core/conversation_orchestrator.py` | Agent conversation logic + live stats |
-| `core/tasks.py:2807` | Agent learning cycle implementation |
+| `core/tasks.py:3910` | Agent dream generation |
+| `core/conversation_orchestrator.py` | Agent conversations |
 | `CLAUDE.md` | Full system context |
 
 ---
 
-## Success Criteria for Session 317
+## Success Criteria for Session 318
 
 - [ ] All 27 agents respond to natural language prompts
 - [ ] No API errors from GPT-5 Responses API
 - [ ] Results display correctly in chat UI
-- [ ] Error messages are user-friendly
-- [ ] Agent Conversations show live system stats
+- [ ] Dream Journal shows fresh, creative content
+- [ ] Agent Conversations work with live stats
 - [ ] Agent Learning Activity shows recent updates
 
 ---
 
-**Status:** Ready for comprehensive agent testing. Agent Learning verified. Agent Conversations feature real-time stats!
+**Status:** Ready for comprehensive agent testing. All Sci-Fi features verified working!

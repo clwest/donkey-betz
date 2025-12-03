@@ -4115,14 +4115,15 @@ Guidelines:
                 )
 
                 try:
-                    # GPT-5 reasoning models need higher token limits for reasoning + output
+                    # Session 317: GPT-5 reasoning models split tokens between reasoning + output
+                    # Need 1000+ tokens to ensure room for both (like Session 315 fix)
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        max_completion_tokens=600,  # Higher for GPT-5 reasoning
+                        max_completion_tokens=1000,  # Higher for GPT-5 reasoning (Session 317)
                     )
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
@@ -4133,14 +4134,14 @@ Guidelines:
                         if dream_content.startswith(prefix):
                             dream_content = dream_content[len(prefix):].strip()
 
-                    # Generate a catchy title (needs more tokens for reasoning)
+                    # Session 317: Generate catchy title with adequate tokens for reasoning
                     title_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
                             {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
                         ],
-                        max_completion_tokens=200,  # Higher for GPT-5 reasoning
+                        max_completion_tokens=500,  # Higher for GPT-5 reasoning (Session 317)
                     )
 
                     title = title_response.choices[0].message.content.strip().strip('"\'')[:200] if title_response.choices[0].message.content else "Creative Thought"
