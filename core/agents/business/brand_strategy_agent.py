@@ -553,6 +553,44 @@ Return a comprehensive brand strategy report that builds on existing project res
                     except Exception as e:
                         logger.warning(f"Failed to save brand strategy: {e}")
 
+                    # Session 337: Extract source articles for frontend display (like CustomerResearchAgent)
+                    # Filter out the synthesis tool result - we only want spider/web data sources
+                    source_articles = []
+                    sources_used = set()
+                    for data_item in all_brand_data:
+                        if data_item['source'] not in ['synthesize_brand_strategy', 'get_project_research', 'get_prior_research']:
+                            sources_used.add(data_item['source'])
+                            # Extract articles from the data
+                            item_data = data_item.get('data', {})
+                            if isinstance(item_data, dict):
+                                # Handle spider_query results
+                                if 'discussions' in item_data:
+                                    for d in item_data.get('discussions', []):
+                                        source_articles.append({
+                                            'title': d.get('title', ''),
+                                            'description': d.get('description', d.get('content', ''))[:300],
+                                            'url': d.get('url', ''),
+                                            'source': d.get('source', data_item['source'])
+                                        })
+                                # Handle web_search results
+                                elif 'results' in item_data:
+                                    for r in item_data.get('results', []):
+                                        source_articles.append({
+                                            'title': r.get('title', ''),
+                                            'description': r.get('snippet', r.get('description', ''))[:300],
+                                            'url': r.get('link', r.get('url', '')),
+                                            'source': 'web_search'
+                                        })
+                                # Handle raw list items
+                                elif 'items' in item_data:
+                                    for item in item_data.get('items', []):
+                                        source_articles.append({
+                                            'title': item.get('title', ''),
+                                            'description': item.get('description', '')[:300],
+                                            'url': item.get('url', ''),
+                                            'source': data_item['source']
+                                        })
+
                     result = AgentResult(
                         success=True,
                         message=f"Brand strategy completed with {len(all_brand_data)} data sources",
@@ -560,6 +598,9 @@ Return a comprehensive brand strategy report that builds on existing project res
                             'analysis': synthesis.get('strategy', synthesis.get('analysis', str(synthesis))),
                             'visual_direction': synthesis.get('visual_direction', {}),
                             'recommendations': synthesis.get('recommendations', []),
+                            'raw_data': all_brand_data,  # Session 337: Include raw data for frontend
+                            'sources_used': list(sources_used),  # Session 337: Track sources
+                            'data_points_analyzed': len(source_articles),  # Session 337: Count articles
                             'project_name': project_context.get('project_name', ''),
                             'query': task,
                             'saved_id': str(saved_result.id) if saved_result else None,

@@ -277,3 +277,193 @@ class UnifiedAgentTemplateFactory(DjangoModelFactory):
     system_prompt = 'You are a test agent.'
     configuration = {'temperature': 0.7}
     creator = factory.SubFactory(UserFactory)
+
+
+# =============================================================================
+# Business Research Factories (Session 334)
+# =============================================================================
+
+class PartnershipProjectFactory(DjangoModelFactory):
+    """Factory for creating PartnershipProject instances."""
+
+    class Meta:
+        model = 'core.PartnershipProject'
+
+    user = factory.SubFactory(UserFactory)
+    project_name = factory.Sequence(lambda n: f'Test Project {n}')
+    project_type = 'research'
+    description = factory.Faker('paragraph')
+    goal = factory.Faker('sentence')
+    status = 'planning'
+    category = 'ai_tech'
+    tags = ['test', 'automated']
+    metadata = factory.LazyFunction(lambda: {
+        'test_scenario_id': None,
+        'company_info': {
+            'name': 'Test Company',
+            'location': 'Test City, USA',
+            'founded': 2023,
+        }
+    })
+
+
+class BusinessResearchResultFactory(DjangoModelFactory):
+    """Factory for creating BusinessResearchResult instances."""
+
+    class Meta:
+        model = 'core.BusinessResearchResult'
+
+    project = factory.SubFactory(PartnershipProjectFactory)
+    research_type = 'competitor'
+    query = factory.Faker('sentence')
+    agent_name = 'CompetitorAnalysisAgent'
+    market_topic = factory.Faker('catch_phrase')
+
+    # Analysis content
+    analysis = factory.LazyAttribute(
+        lambda o: f"""## Market Overview
+This is a test analysis for {o.query}.
+
+## Key Competitors
+- Competitor A
+- Competitor B
+- Competitor C
+
+## SWOT Analysis
+**Strengths:** Test strengths
+**Weaknesses:** Test weaknesses
+**Opportunities:** Test opportunities
+**Threats:** Test threats
+
+## Recommendations
+1. Recommendation one
+2. Recommendation two
+"""
+    )
+
+    # Metrics
+    data_points_analyzed = factory.Faker('random_int', min=5, max=50)
+    sources_used = factory.LazyFunction(lambda: ['reddit', 'hackernews', 'techcrunch'])
+
+    # Structured data
+    raw_data = factory.LazyFunction(lambda: [
+        {'title': 'Test Article 1', 'source': 'reddit', 'url': 'https://reddit.com/1'},
+        {'title': 'Test Article 2', 'source': 'hackernews', 'url': 'https://news.ycombinator.com/1'},
+    ])
+    pain_points = factory.LazyFunction(lambda: [
+        'Pain point 1: Users struggle with X',
+        'Pain point 2: Customers want Y',
+    ])
+    personas = factory.LazyFunction(lambda: [
+        {'name': 'Test Persona', 'description': 'A test customer persona'},
+    ])
+    quotes = factory.LazyFunction(lambda: [
+        {'text': 'I wish there was a better way to do X', 'source': 'reddit'},
+    ])
+    recommendations = factory.LazyFunction(lambda: [
+        'Focus on mobile experience',
+        'Add AI-powered features',
+    ])
+
+
+class CompetitorAnalysisResultFactory(BusinessResearchResultFactory):
+    """Factory specifically for competitor analysis results."""
+
+    research_type = 'competitor'
+    agent_name = 'CompetitorAnalysisAgent'
+    analysis = factory.LazyAttribute(
+        lambda o: f"""## Competitive Analysis: {o.market_topic}
+
+### Market Overview
+The market for {o.market_topic} is growing rapidly...
+
+### Key Competitors Identified
+
+1. **Competitor A** - Market leader with 40% share
+   - Strengths: Strong brand, extensive features
+   - Weaknesses: High pricing, slow innovation
+
+2. **Competitor B** - Rising challenger
+   - Strengths: Modern UX, competitive pricing
+   - Weaknesses: Limited features
+
+3. **Competitor C** - Niche player
+   - Strengths: Specialized focus
+   - Weaknesses: Small market share
+
+### Market Gaps & Opportunities
+- Gap 1: No solution addresses X
+- Gap 2: Underserved segment Y
+
+### Strategic Recommendations
+1. Differentiate on speed and simplicity
+2. Target underserved mid-market segment
+3. Build integrations with popular tools
+"""
+    )
+
+
+class CustomerResearchResultFactory(BusinessResearchResultFactory):
+    """Factory specifically for customer research results."""
+
+    research_type = 'customer'
+    agent_name = 'CustomerResearchAgent'
+    analysis = factory.LazyAttribute(
+        lambda o: f"""## Customer Research: {o.market_topic}
+
+### Target Market Overview
+Our research analyzed discussions from Reddit, HackerNews, and industry forums...
+
+### Top Pain Points
+
+1. **Pain Point 1** (mentioned 45 times)
+   - Users frustrated with complex onboarding
+   - Quote: "I spent 3 hours just trying to set this up"
+
+2. **Pain Point 2** (mentioned 32 times)
+   - Pricing too high for small teams
+   - Quote: "Love the product but can't justify the cost"
+
+3. **Pain Point 3** (mentioned 28 times)
+   - Missing key integrations
+   - Quote: "Why doesn't this work with Slack?"
+
+### Customer Personas
+
+**Persona 1: Sarah the Startup Founder**
+- Age: 28-35
+- Goals: Move fast, minimize overhead
+- Pain points: Too many tools, high costs
+- Motivation: Simplicity and speed
+
+**Persona 2: Mike the Marketing Manager**
+- Age: 32-45
+- Goals: Prove ROI, streamline workflow
+- Pain points: Fragmented data, manual reporting
+- Motivation: Look good to leadership
+
+### Actionable Quotes
+- "I would pay double for something that just works"
+- "The learning curve is killing our productivity"
+- "If it integrated with X, I'd switch immediately"
+
+### Recommendations
+1. Simplify onboarding to under 5 minutes
+2. Add Slack/Teams integration as priority
+3. Create mid-tier pricing for small teams
+"""
+    )
+    personas = factory.LazyFunction(lambda: [
+        {
+            'name': 'Sarah the Startup Founder',
+            'demographics': '28-35, Tech industry',
+            'goals': ['Move fast', 'Minimize overhead'],
+            'pain_points': ['Too many tools', 'High costs'],
+        },
+        {
+            'name': 'Mike the Marketing Manager',
+            'demographics': '32-45, B2B companies',
+            'goals': ['Prove ROI', 'Streamline workflow'],
+            'pain_points': ['Fragmented data', 'Manual reporting'],
+        },
+    ])

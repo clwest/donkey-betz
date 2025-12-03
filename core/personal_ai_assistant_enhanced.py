@@ -1104,6 +1104,27 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["task"]
                 }
+            },
+
+            # Session 337: Brand Strategy Agent - comprehensive brand strategy research
+            {
+                "type": "function",
+                "name": "brand_strategy_agent",
+                "description": "Create comprehensive BRAND STRATEGY research by reading existing project research. Use this when user wants to: 'create a brand strategy', 'develop brand identity', 'brand positioning', 'brand guidelines', 'branding strategy'. This agent reads existing competitor analysis and customer research from the project, then synthesizes actionable brand recommendations including positioning, messaging, visual direction, and differentiation. Must be used INSIDE a project context.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Brand/business topic to analyze (e.g., 'AI podcast platform', 'coffee shop')"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Project ID to read existing research from and save results to"
+                        }
+                    },
+                    "required": ["topic"]
+                }
             }
         ]
 
@@ -1151,6 +1172,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'create_project_from_research',
                 # Business research (Session 293) - no image/video credits
                 'competitor_analysis_agent', 'customer_research_agent',
+                # Session 337: Brand strategy agent
+                'brand_strategy_agent',
             }
 
             if function_name in ROUTER_ENABLED_TOOLS:
@@ -1210,6 +1233,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_competitor_analysis_agent(arguments)
             elif function_name == 'customer_research_agent':
                 result = self._handle_customer_research_agent(arguments)
+            # Session 337: Brand strategy agent
+            elif function_name == 'brand_strategy_agent':
+                result = self._handle_brand_strategy_agent(arguments)
             # Session 312: Strategy agents (connected to router)
             elif function_name == 'brand_identity_agent':
                 result = self._handle_strategy_agent('brand_identity_agent', arguments)
@@ -6509,7 +6535,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'research', 'search for', 'look up', 'find out', 'what are the latest',
                 'brand video', 'create brand', 'promotional video', 'promo videos',
                 'create logos', 'create logo', 'make logos', 'make logo',
-                'cyberpunk', 'cinematic style', 'modern style', 'playful style'
+                'cyberpunk', 'cinematic style', 'modern style', 'playful style',
+                # Session 337: Brand Strategy keywords (force tool usage)
+                'brand strategy', 'brand identity', 'brand positioning', 'brand guidelines',
+                'branding strategy', 'develop brand', 'create a brand'
             ]
             is_operation = any(keyword in message.lower() for keyword in operation_keywords)
 
