@@ -1,137 +1,60 @@
-# Session 320: Continue Platform Testing
+# Session 322: Continue Platform Development
 
 **Date:** December 2, 2025
-**Previous Session:** 319 - Agent Slack Multi-Agent Channels
+**Previous Session:** 321 - Agent Slack Online Agents + Conversation Fixes
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 319 completed:
-- Built **Agent Slack** - internal Slack-like multi-agent channel system
-- 3 new models: AgentChannel, ChannelMembership, ChannelMessage
-- WebSocket consumer with @mention agent responses
-- Channel orchestrator for multi-agent coordination
-- Slack-like UI added to Agents > Social tab
-- Handoff: `docs/handoffs/SESSION_319_AGENT_SLACK.md`
+Session 321 completed:
+- **Agent Slack Online Agents Fix** - Now sends member_list on WebSocket connect
+- **Agent Conversations Empty Message Fix** - Skip saving empty GPT responses
+- **Message Count Fix** - Properly tracks actual message count in conversations
+- **Data Cleanup** - Deleted 47 empty messages, fixed 11 conversation counts
 
-Session 318 completed:
-- Fixed Agent Conversations empty first messages (token limits 1000->1500, 2000->2500)
-- Fixed repetitive "Core expertise:" topics with strategic topic pool
-- Fixed repetitive agent pairings with random selection + 24h repeat avoidance
-- Agents now use REAL knowledge in conversations (not dashboard stats)
-- Handoff: `docs/handoffs/SESSION_318_CONVERSATION_FIXES.md`
-
-Session 317 completed:
-- Fixed Dream Journal empty content issue (token limits 600->1000, 200->500)
-- Generated 19+ new dreams with substantive content
-- Handoff: `docs/handoffs/SESSION_317_DREAM_JOURNAL_FIX.md`
+Session 320 completed:
+- **Social Tab Auto-Refresh** - All components refresh when navigating to Social tab
+- **Fixed Celery Beat Schedule** - Agent tasks were missing from settings.py
+- **Page Visibility API** - Components refresh when returning to browser tab
+- Handoff: `docs/handoffs/SESSION_320_SOCIAL_TAB_AUTOREFRESH.md`
 
 ---
 
-## Session 319 Summary
+## Session 321 Summary
 
 | Task | Status |
 |------|--------|
-| Create Agent Slack database models | Done - AgentChannel, ChannelMembership, ChannelMessage |
-| Build WebSocket consumer | Done - @mention agent responses |
-| Create Channel Orchestrator | Done - Multi-agent coordination |
-| Build UI component | Done - Slack-like interface |
-| Add routing | Done - /ws/agent-slack/ endpoints |
+| Fix Online Agents showing "Loading..." | Done - WebSocket sends member_list on connect |
+| Fix empty first message in conversations | Done - Skip empty GPT responses |
+| Fix message_count showing 0 | Done - Update count on conversation conclude |
+| Cleanup existing data | Done - Deleted 47 empty messages, fixed 11 counts |
 
 ---
 
-## Agent Slack Features
+## Fixes Applied
 
-| Feature | Description |
-|---------|-------------|
-| **Channels** | Topic-based rooms (#general, #content-strategy) |
-| **@Mentions** | Type @AgentName to get a knowledge-aware response |
-| **Threading** | Reply to specific messages |
-| **Reactions** | Emoji reactions on messages |
-| **Presence** | See which agents are online |
-| **Create Channels** | Create new channels for projects/topics |
+### 1. Agent Slack Online Agents
+The "Online Agents" panel was stuck on "Loading..." because the WebSocket consumer wasn't sending the member list on connect.
 
----
+**Fix:** Added `send_member_list()` and `send_channel_list()` calls in `AgentSlackConsumer.connect()`
 
-## How to Test Agent Slack
+**File:** `core/agent_slack_consumer.py` (line 60-62)
 
-```bash
-# Start the platform
-make start && make celery
+### 2. Agent Conversations Empty First Message
+Some conversations had empty first messages because GPT-5-mini reasoning tokens were being exhausted before generating visible output.
 
-# Access AI Studio
-open http://localhost:8000/ai-studio/
+**Fix:** Skip saving messages with empty content - continue to next speaker instead.
 
-# Navigate to Agents > Social tab
-# Agent Workspace appears at the top
+**File:** `core/tasks.py` (lines 3735-3740)
 
-# Send a message like:
-# "@BrandIdentityAgent what's your take on our brand strategy?"
-# The agent will respond using their learned knowledge!
+### 3. Message Count Not Updating
+The `message_count` field on AgentConversation was always 0 because it wasn't being updated after messages were generated.
 
-# Test via WebSocket directly:
-.venv/bin/python manage.py shell -c "
-from core.models import AgentChannel, ChannelMembership
-print(f'Channels: {AgentChannel.objects.count()}')
-for ch in AgentChannel.objects.all():
-    print(f'  #{ch.name} - {ch.member_count} members')
-"
-```
+**Fix:** Set `conversation.message_count = len(messages)` before saving.
 
----
-
-## Session 320 Goal: Comprehensive Agent Testing
-
-Continue testing the 27 connected agents through the chat UI:
-
-### Phase 1: Creative Agents (9 tools)
-| Tool | Test Prompt |
-|------|-------------|
-| `image_generation_agent` | "Create a logo for a tech startup" |
-| `image_editing_agent` | "Upscale image 5" |
-| `video_generation_agent` | "Generate a 5 second video of a sunset" |
-| `audio_generation_agent` | "Create a voiceover saying welcome" |
-| `three_d_generation_agent` | "Generate a 3D model of a coffee cup" |
-| `video_editing_agent` | "Add color grading to video 3" |
-| `character_training_agent` | "Train a character model" |
-| `talking_character_agent` | "Create a talking character video" |
-| `create_brand_video` | "Create a brand video for product launch" |
-
-### Phase 2: Research Agents (4 tools)
-| Tool | Test Prompt |
-|------|-------------|
-| `web_search` | "What's trending in AI?" |
-| `competitor_analysis_agent` | "Analyze competitors for AI content tools" |
-| `customer_research_agent` | "Research customer personas for SaaS" |
-| `trend_analysis_agent` | "What are the latest design trends?" |
-
-### Phase 3: Strategy Agents (5 tools)
-| Tool | Test Prompt |
-|------|-------------|
-| `brand_identity_agent` | "Create brand guidelines for a fintech" |
-| `content_strategy_agent` | "Plan content strategy for Q1" |
-| `seo_optimizer_agent` | "Optimize SEO for my blog post" |
-| `social_media_agent` | "Create social media posts for product launch" |
-| `creative_director_agent` | "Review my prompt for a marketing video" |
-
-### Phase 4: Executive & Content Agents (7 tools)
-| Tool | Test Prompt |
-|------|-------------|
-| `cto_agent` | "Analyze the image generation feature architecture" |
-| `coo_agent` | "Propose the next sprint for AI features" |
-| `meeting_coordinator_agent` | "Start a meeting about platform scaling" |
-| `opportunity_scoring_agent` | "Score spider data for opportunities" |
-| `trained_creation_agent` | "Generate image with trained character model" |
-| `content_executor_agent` | "Create a professional blog post about AI trends" |
-| `ai_project_builder_agent` | "Build an AI content generator project" |
-
-### Phase 5: Workflow Agents (2 tools)
-| Tool | Test Prompt |
-|------|-------------|
-| `workflow_orchestration_agent` | "Create a brand package for my startup" |
-| `coleadership_agent` | "Get leadership guidance on strategy" |
+**File:** `core/tasks.py` (lines 3807-3808)
 
 ---
 
@@ -144,20 +67,10 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Agent Slack (Agents > Social tab)
-# Type: @BrandIdentityAgent what do you think about our content strategy?
-
-# Test Agent Conversations
-# Click "Start Chat" button
-
-# Check tool count
-.venv/bin/python manage.py shell -c "
-from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-from django.contrib.auth import get_user_model
-assistant = EnhancedPersonalAIAssistant(get_user_model().objects.first())
-print(f'Total tools: {len(assistant.get_tool_definitions())}')
-"
-# Expected: Total tools: 27
+# Navigate to Agents > Social tab
+# - Agent Slack should show 5 Online Agents
+# - Agent Conversations should show proper message counts
+# - No more empty first messages
 ```
 
 ---
@@ -167,10 +80,20 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 | Feature | Schedule | Status |
 |---------|----------|--------|
 | Agent Learning | Every 10 min | Working |
-| Agent Dreams | Every 15 min | Fixed (Session 317) |
-| Agent Conversations | On-demand | Fixed (Session 318) |
-| **Agent Slack** | Real-time | **NEW (Session 319)** |
+| Agent Dreams | Every 15 min | Working |
+| Agent Conversations | Every 5 min | **Fixed (Session 321)** |
+| Agent Slack | Real-time | **Fixed (Session 321)** |
 | Learning Broadcast | Every 60 sec | Working |
+| Social Tab Auto-Refresh | On tab show | Working |
+
+---
+
+## Files Modified in Session 321
+
+| File | Changes |
+|------|---------|
+| `core/agent_slack_consumer.py` | Send member_list and channel_list on WebSocket connect |
+| `core/tasks.py` | Skip empty conversation messages, update message_count |
 
 ---
 
@@ -178,25 +101,21 @@ print(f'Total tools: {len(assistant.get_tool_definitions())}')
 
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_319_AGENT_SLACK.md` | Session 319 details |
-| `docs/handoffs/SESSION_318_CONVERSATION_FIXES.md` | Session 318 details |
-| `core/agent_slack_consumer.py` | Agent Slack WebSocket consumer |
-| `core/channel_orchestrator.py` | Multi-agent channel orchestration |
-| `ai_core/templates/components/panels/agents/agents_slack.html` | Agent Slack UI |
+| `core/agent_slack_consumer.py` (lines 60-62) | Online agents fix |
+| `core/tasks.py` (lines 3735-3740, 3807-3808) | Conversation fixes |
+| `docs/handoffs/SESSION_320_SOCIAL_TAB_AUTOREFRESH.md` | Previous session details |
 | `CLAUDE.md` | Full system context |
 
 ---
 
-## Success Criteria for Session 320
+## Success Criteria for Session 322
 
-- [ ] All 27 agents respond to natural language prompts
-- [ ] No API errors from GPT-5 Responses API
-- [ ] Results display correctly in chat UI
-- [ ] Agent Slack @mentions trigger agent responses
-- [ ] Agent Conversations show diverse pairings
-- [ ] Agent Conversations have content in all messages
-- [ ] Dream Journal shows fresh, creative content
+- [x] Agent Slack shows Online Agents (not "Loading...")
+- [x] Agent Conversations show correct message counts
+- [x] No empty first messages in conversations
+- [ ] Continue comprehensive agent testing (27 agents)
+- [ ] Verify all Celery tasks running on schedule
 
 ---
 
-**Status:** Agent Slack complete. Ready for comprehensive agent testing!
+**Status:** Session 321 fixes complete. Agent Slack and Conversations working properly!
