@@ -4,6 +4,7 @@ Base Agent Class for Clean Architecture
 
 Session 268: Phase 1 - Foundation
 Session 304: Added Learning Infrastructure Hooks
+Session 334: Added Project Context Support - All agents can now work within projects
 
 This is the abstract base class for all clean architecture agents.
 Each agent inherits from this class and TimeTravelMixin for debugging.
@@ -14,6 +15,7 @@ Key Features:
 3. Standard interfaces for sci-fi and spider context injection
 4. Prompt building helpers that combine context sources
 5. Learning hooks for memory, evolution, and knowledge sharing (Session 304)
+6. Project context support - agents can enhance prompts with project info (Session 334)
 
 Usage:
     class MyAgent(BaseAgent):
@@ -22,6 +24,11 @@ Usage:
         tools = [...]
 
         def execute(self, task, context, scifi_context, spider_context):
+            # Get project context if project_id is in context
+            project_id = context.get('project_id')
+            project_context = self._get_project_context(project_id)
+            task = self._enhance_task_with_project(task, project_context)
+
             # Implementation
             # After execution, call learning hooks:
             # self._record_learning_outcome(result, task, context)
@@ -361,6 +368,144 @@ class BaseAgent(ABC, TimeTravelMixin):
             True if valid, False otherwise
         """
         return bool(task and task.strip())
+
+    # ==================== Project Context Support (Session 334) ====================
+
+    def _get_project_context(self, project_id: str) -> Dict[str, Any]:
+        """
+        Session 334: Fetch project context when project_id is provided.
+
+        This enables all agents to work within projects by understanding
+        the project's name, description, and type. When users say
+        "create a logo for this project", the agent automatically knows
+        what the project is about.
+
+        Args:
+            project_id: UUID of the PartnershipProject
+
+        Returns:
+            Dict with project context (name, description, type, id) or empty dict
+        """
+        if not project_id:
+            return {}
+
+        try:
+            from core.models_partnership import PartnershipProject
+            project = PartnershipProject.objects.get(id=project_id)
+
+            context = {
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'project_description': project.description or '',
+                'project_type': project.project_type or 'general',
+            }
+
+            # Include brand context if available
+            if hasattr(project, 'brand_colors') and project.brand_colors:
+                context['brand_colors'] = project.brand_colors
+            if hasattr(project, 'brand_style') and project.brand_style:
+                context['brand_style'] = project.brand_style
+
+            logger.debug(f"Fetched project context for {project.project_name}")
+            return context
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch project context for {project_id}: {e}")
+            return {}
+
+    def _enhance_task_with_project(self, task: str, project_context: Dict[str, Any]) -> str:
+        """
+        Session 334: Enhance the task with project context.
+
+        If user says "create a logo" and we have project context,
+        enhance it to "create a logo for [project name]: [description]"
+
+        This allows all agents to understand what they're creating for.
+
+        Args:
+            task: Original task
+            project_context: Dict from _get_project_context()
+
+        Returns:
+            Enhanced task with project context
+        """
+        if not project_context:
+            return task
+
+        project_name = project_context.get('project_name', '')
+        project_description = project_context.get('project_description', '')
+
+        # Check if task is vague (doesn't specify what to create for)
+        # Look for common creative action words without specific context
+        creative_keywords = [
+            'create', 'generate', 'make', 'design', 'build',
+            'logo', 'image', 'banner', 'thumbnail', 'video', 'brand'
+        ]
+        has_creative_intent = any(kw in task.lower() for kw in creative_keywords)
+        is_short_task = len(task.split()) < 15  # Short tasks likely need context
+
+        # Only enhance if task seems to need project context
+        if has_creative_intent and is_short_task and project_name:
+            enhanced = f"{task} for '{project_name}'"
+            if project_description and len(project_description) < 200:
+                enhanced += f" - {project_description}"
+            logger.info(f"Enhanced task with project context: {enhanced[:100]}...")
+            return enhanced
+
+        return task
+
+    def _build_prompt_with_project(
+        self,
+        task: str,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any],
+        project_context: Dict[str, Any]
+    ) -> str:
+        """
+        Session 334: Build prompt with project context included.
+
+        Extends _build_prompt to add project-specific context like
+        brand colors, style preferences, and project description.
+
+        Args:
+            task: The user's task
+            scifi_context: Sci-fi system context
+            spider_context: Spider intelligence context
+            project_context: Project context from _get_project_context()
+
+        Returns:
+            Complete prompt string with project context
+        """
+        # Start with base prompt
+        prompt = self._build_prompt(task, scifi_context, spider_context)
+
+        # Add project context if available
+        if project_context:
+            project_section = "\n\n## Project Context"
+            project_section += f"\nProject: {project_context.get('project_name', 'Unknown')}"
+
+            if project_context.get('project_description'):
+                desc = project_context['project_description'][:500]
+                project_section += f"\nDescription: {desc}"
+
+            if project_context.get('project_type'):
+                project_section += f"\nType: {project_context['project_type']}"
+
+            if project_context.get('brand_colors'):
+                project_section += f"\nBrand Colors: {project_context['brand_colors']}"
+
+            if project_context.get('brand_style'):
+                project_section += f"\nBrand Style: {project_context['brand_style']}"
+
+            # Insert project section before the task
+            # Find the ## Task section and insert before it
+            task_marker = "\n\n## Task"
+            if task_marker in prompt:
+                prompt = prompt.replace(task_marker, f"{project_section}{task_marker}")
+            else:
+                prompt += project_section
+
+        return prompt
 
     # ==================== Learning Infrastructure (Session 304) ====================
 

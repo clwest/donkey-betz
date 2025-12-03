@@ -684,6 +684,105 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         }
     }
 
+    # =========================================================================
+    # SESSION 334: Project Research Context Integration
+    # When project_id is provided, fetch existing research to inform creative work
+    # =========================================================================
+
+    def _get_project_research_context(self) -> Dict[str, Any]:
+        """
+        Session 334: Fetch existing research from project to GUIDE creative workflows.
+
+        When a user says "Create brand identity" from within a project that already
+        has competitor analysis and customer research, this method retrieves that
+        research to ENHANCE and GUIDE each agent's work. Agents still do their own
+        research, but they have project context to inform their direction.
+
+        This context is injected into prompts so:
+        - Research agents know what competitor/customer insights already exist
+        - Image generation agents know the brand context and target audience
+        - Executive review agents can make decisions based on prior research
+
+        Returns:
+            Dict with project info, research summaries, and context for prompts.
+        """
+        if not self.project_id:
+            return {'has_research': False}
+
+        try:
+            from core.models_partnership import PartnershipProject
+            from core.models_unified_system import BusinessResearchResult
+
+            project = PartnershipProject.objects.get(id=self.project_id)
+
+            # Get project basic info
+            project_context = {
+                'has_research': False,
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'project_description': project.description or '',
+                'project_type': project.project_type or 'general',
+                'research_summary': '',
+                'competitor_insights': '',
+                'customer_insights': '',
+                'brand_recommendations': '',
+            }
+
+            # Get existing research from BusinessResearchResult
+            research_results = BusinessResearchResult.objects.filter(
+                project=project
+            ).order_by('-created_at')
+
+            research_summaries = []
+            for result in research_results[:5]:  # Last 5 research results
+                if result.research_type == 'competitor':
+                    project_context['competitor_insights'] = result.analysis[:2000] if result.analysis else ''
+                    research_summaries.append(f"Competitor Analysis: {result.analysis[:500] if result.analysis else 'N/A'}")
+                elif result.research_type == 'customer':
+                    project_context['customer_insights'] = result.analysis[:2000] if result.analysis else ''
+                    # Include personas and pain points if available
+                    if result.personas:
+                        project_context['customer_personas'] = result.personas
+                    if result.pain_points:
+                        project_context['customer_pain_points'] = result.pain_points
+                    research_summaries.append(f"Customer Research: {result.analysis[:500] if result.analysis else 'N/A'}")
+                elif result.research_type == 'market':
+                    research_summaries.append(f"Market Research: {result.analysis[:500] if result.analysis else 'N/A'}")
+
+            # Also check metadata for research summaries (Session 325 format)
+            if project.metadata and project.metadata.get('research_summaries'):
+                for summary in project.metadata['research_summaries']:
+                    if summary.get('type') == 'competitor_analysis' and not project_context['competitor_insights']:
+                        project_context['competitor_insights'] = summary.get('summary', '')[:2000]
+                    elif summary.get('type') == 'customer_research' and not project_context['customer_insights']:
+                        project_context['customer_insights'] = summary.get('summary', '')[:2000]
+
+            # Combine all research into a summary
+            if research_summaries:
+                project_context['research_summary'] = '\n\n'.join(research_summaries)
+                project_context['has_research'] = True
+
+            # Session 334 FIX: Also set has_research if we found insights from metadata
+            if project_context['competitor_insights'] or project_context['customer_insights']:
+                project_context['has_research'] = True
+
+            # Generate brand recommendations from research
+            if project_context['competitor_insights'] or project_context['customer_insights']:
+                brand_recs = []
+                if project_context.get('customer_pain_points'):
+                    brand_recs.append(f"Address customer pain points: {', '.join(project_context['customer_pain_points'][:3])}")
+                if project.project_name:
+                    brand_recs.append(f"Brand name: {project.project_name}")
+                project_context['brand_recommendations'] = '; '.join(brand_recs)
+
+            logger.info(f"📊 Session 334: Found project research context for {project.project_name}: has_research={project_context['has_research']}")
+
+            return project_context
+
+        except Exception as e:
+            logger.warning(f"⚠️ Session 334: Could not fetch project research context: {e}")
+            return {'has_research': False}
+
     def execute(
         self,
         workflow: str,
@@ -812,6 +911,10 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     logger.info(f"🎬 Session 239: Auto-detected style '{style_value}' from topic")
                     break
 
+        # Session 334: Fetch existing project research to GUIDE the workflow
+        # This doesn't skip any steps - it provides context to enhance each agent's work
+        project_research_context = self._get_project_research_context()
+
         # Initialize workflow context - shared data between steps
         context = {
             'topic': topic,
@@ -832,7 +935,17 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             'generated_video_ids': [],  # Session 199: Track videos too
             'selected_image_id': kwargs.get('image_id'),  # Session 199: For logo_to_video
             'project_created': None,
+            # Session 334: Project research context as GUIDANCE (not replacement)
+            'project_research_context': project_research_context,
         }
+
+        # Session 334: If we have project context, enhance the topic with project name
+        if project_research_context.get('has_research'):
+            project_name = project_research_context.get('project_name', '')
+            if project_name and project_name.lower() not in topic.lower():
+                # Enhance topic with project context
+                context['topic'] = f"{topic} for '{project_name}'"
+                logger.info(f"📊 Session 334: Enhanced topic with project name: {context['topic']}")
 
         # Execute each step in order
         step_results = []
@@ -1023,6 +1136,30 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             query += f" {trending_addition}"
             logger.info(f"🕷️ Augmented query with spider trends: {trending_addition}")
 
+        # =====================================================================
+        # SESSION 334: INJECT PROJECT RESEARCH CONTEXT AS GUIDANCE
+        # If we have prior research, augment the query with relevant terms
+        # This helps the web search find MORE RELEVANT information, not LESS
+        # =====================================================================
+        project_research_context = context.get('project_research_context', {})
+        if project_research_context.get('has_research'):
+            # Extract key terms from existing research to enhance search
+            guidance_terms = []
+
+            # If we have customer pain points, search for solutions
+            if project_research_context.get('customer_pain_points'):
+                pain_points = project_research_context['customer_pain_points'][:2]
+                guidance_terms.extend([str(pp).split()[0] for pp in pain_points if pp])
+
+            # If we have competitor insights, search for differentiation
+            if project_research_context.get('competitor_insights'):
+                guidance_terms.append('differentiate')
+
+            if guidance_terms:
+                guidance_addition = ' '.join(guidance_terms[:3])
+                query += f" {guidance_addition}"
+                logger.info(f"📊 Session 334: Enhanced query with project context: {guidance_addition}")
+
         logger.info(f"🔍 Web search query ({content_type}): {query}")
 
         try:
@@ -1171,6 +1308,37 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             ai_context += f"\n\n🕷️ LIVE MARKET INTELLIGENCE FROM OUR SPIDER NETWORK:\n{spider_context}"
         if spider_trending:
             ai_context += f"\n\nTrending keywords to consider: {', '.join(spider_trending[:5])}"
+
+        # =====================================================================
+        # SESSION 334: INJECT PROJECT RESEARCH CONTEXT AS GUIDANCE
+        # If we have prior competitor/customer research, share it with executives
+        # This helps them make informed decisions based on existing project intel
+        # =====================================================================
+        project_research_context = context.get('project_research_context', {})
+        if project_research_context.get('has_research'):
+            ai_context += "\n\n📊 EXISTING PROJECT RESEARCH (use this to GUIDE your recommendations):"
+
+            project_name = project_research_context.get('project_name', '')
+            if project_name:
+                ai_context += f"\n- Project: {project_name}"
+
+            # Share competitor insights for differentiation guidance
+            competitor_insights = project_research_context.get('competitor_insights', '')
+            if competitor_insights:
+                # Truncate to key insights
+                ai_context += f"\n- Competitor Analysis (key insights): {competitor_insights[:500]}"
+
+            # Share customer insights for target audience guidance
+            customer_insights = project_research_context.get('customer_insights', '')
+            if customer_insights:
+                ai_context += f"\n- Customer Research (key insights): {customer_insights[:500]}"
+
+            # Share pain points for visual direction
+            pain_points = project_research_context.get('customer_pain_points', [])
+            if pain_points:
+                ai_context += f"\n- Customer Pain Points to address visually: {', '.join(str(pp) for pp in pain_points[:3])}"
+
+            logger.info(f"📊 Session 334: Injected project research context for executive review")
 
         if content_type == 'youtube_thumbnails':
             question = (
@@ -1543,6 +1711,42 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         except Exception as e:
             logger.warning(f"Session 299: Could not inject research context: {e}")
+
+        # =====================================================================
+        # SESSION 334: INJECT PROJECT-SPECIFIC RESEARCH AS GUIDANCE
+        # If we have research from the actual project, use it to enhance prompt
+        # This is more targeted than Session 299's topic-based search
+        # =====================================================================
+        project_research_context = context.get('project_research_context', {})
+        if project_research_context.get('has_research'):
+            project_visual_cues = []
+
+            # Use direct pain points from project research
+            project_pain_points = project_research_context.get('customer_pain_points', [])
+            for pp in project_pain_points[:2]:
+                if isinstance(pp, str):
+                    pp_lower = pp.lower()
+                    # Map pain points to visual concepts for image generation
+                    if 'trust' in pp_lower or 'reliable' in pp_lower:
+                        project_visual_cues.append('trustworthy stable')
+                    elif 'simple' in pp_lower or 'easy' in pp_lower:
+                        project_visual_cues.append('simple approachable')
+                    elif 'expensive' in pp_lower or 'cost' in pp_lower:
+                        project_visual_cues.append('premium value')
+                    elif 'confus' in pp_lower or 'overwhelm' in pp_lower:
+                        project_visual_cues.append('clear organized')
+                    elif 'slow' in pp_lower or 'time' in pp_lower:
+                        project_visual_cues.append('fast efficient dynamic')
+
+            # If competitor insights mention differentiation
+            if project_research_context.get('competitor_insights'):
+                project_visual_cues.append('distinctive unique')
+
+            if project_visual_cues:
+                project_modifier = ', '.join(list(set(project_visual_cues))[:3])
+                prompt += f", {project_modifier}"
+                logger.info(f"📊 Session 334: Enhanced prompt with project research: {project_modifier}")
+                context['project_research_used'] = True
 
         logger.info(f"🎨 Image generation prompt ({content_type}): {prompt[:100]}...")
         logger.info(f"🎨 Generating {count} images at {width}x{height}")
