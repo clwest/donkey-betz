@@ -197,29 +197,42 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
             if len(agents_list) < 2:
                 return {'status': 'error', 'reason': 'Not enough agents available'}
 
-        # Prefer strategic agent pairings for better conversations
-        # Priority 1: ContentStrategyAgent + ResearchAgent (the recommended pair)
-        content_agents = [a for a in agents_list if 'Content' in a.name or 'Strategy' in a.name]
-        research_agents = [a for a in agents_list if 'Research' in a.name]
+        # Session 318: Pure random pairing for diversity
+        # Avoid recent pairings to ensure variety
+        from core.models import AgentConversation
+        from datetime import timedelta
+        from django.utils import timezone
 
-        # Priority 2: CreativeDirector + any analytical agent
-        creative_agents = [a for a in agents_list if 'Creative' in a.name or 'Director' in a.name]
-        analytical_agents = [a for a in agents_list if any(x in a.name for x in ['SEO', 'Trend', 'Analysis', 'Research'])]
+        # Get recent conversation pairs (last 24 hours) to avoid repeats
+        recent_cutoff = timezone.now() - timedelta(hours=24)
+        recent_conversations = AgentConversation.objects.filter(
+            started_at__gte=recent_cutoff
+        ).prefetch_related('participants')
 
-        if content_agents and research_agents:
-            initiator = random.choice(content_agents)
-            responder = random.choice(research_agents)
-            logger.info("Using preferred pairing: ContentStrategy + Research")
-        elif creative_agents and analytical_agents:
-            initiator = random.choice(creative_agents)
-            responder = random.choice(analytical_agents)
-            logger.info("Using secondary pairing: Creative + Analytical")
-        else:
-            # Random pairing as fallback
-            initiator = random.choice(agents_list)
+        recent_pairs = set()
+        for conv in recent_conversations:
+            participants = list(conv.participants.values_list('id', flat=True))
+            if len(participants) >= 2:
+                # Add both orderings to avoid either direction
+                recent_pairs.add((participants[0], participants[1]))
+                recent_pairs.add((participants[1], participants[0]))
+
+        # Pick random initiator
+        initiator = random.choice(agents_list)
+
+        # Filter out recently paired agents
+        possible_responders = [
+            a for a in agents_list
+            if a.id != initiator.id and (initiator.id, a.id) not in recent_pairs
+        ]
+
+        # If all agents were recently paired, fall back to any agent
+        if not possible_responders:
             possible_responders = [a for a in agents_list if a.id != initiator.id]
-            responder = random.choice(possible_responders)
-            logger.info(f"Using random pairing: {initiator.name} + {responder.name}")
+            logger.info(f"All agents recently paired, using fallback")
+
+        responder = random.choice(possible_responders)
+        logger.info(f"Random pairing: {initiator.name} + {responder.name}")
 
         # Pick conversation type - weighted toward strategic types
         conversation_types = [
@@ -235,31 +248,29 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
             weights=[t[1] for t in conversation_types]
         )[0]
 
-        # Get topic from knowledge if not provided
+        # Session 318: Generate engaging topics based on agent pairing
         if not topic:
-            knowledge = AgentKnowledgeSource.objects.filter(
-                agent=initiator
-            ).order_by('-last_updated_at').first()
+            # Strategic topics based on agent specializations for better conversations
+            # Use agent names/specializations to create relevant topics
+            initiator_spec = initiator.specialization or initiator.name
+            responder_spec = responder.specialization or responder.name
 
-            if knowledge:
-                clean_title = knowledge.title
-                clean_title = re.sub(r'^\[.*?\]\s*', '', clean_title)
-                if len(clean_title) > 60:
-                    clean_title = clean_title[:57] + "..."
-                topic = clean_title
-            else:
-                # Strategic topics that encourage good conversations
-                topics = [
-                    "Optimizing Content Engagement Through Data-Driven Insights",
-                    "Building a Pacing Score System for Long-Form Content",
-                    "Measuring and Improving User Retention Metrics",
-                    "Creating an Authority vs Virality Framework",
-                    "Designing Dashboard Widgets for Creator Analytics",
-                    "Leveraging Spider Data for Content Recommendations",
-                    "Building Embedding-Based Content Quality Scoring",
-                    "A/B Testing Strategies for Creative Content",
-                ]
-                topic = random.choice(topics)
+            # Topics that work for any agent pairing
+            strategic_topics = [
+                f"How can {initiator.name} and {responder.name} collaborate on content strategy?",
+                "Optimizing Content Engagement Through Data-Driven Insights",
+                "Building a Pacing Score System for Long-Form Content",
+                "Measuring and Improving User Retention Metrics",
+                "Creating an Authority vs Virality Framework",
+                "Designing Dashboard Widgets for Creator Analytics",
+                "Leveraging Spider Data for Content Recommendations",
+                "Building Embedding-Based Content Quality Scoring",
+                "A/B Testing Strategies for Creative Content",
+                "Converting Spider Intelligence into Revenue Opportunities",
+                "Optimizing the Research-to-Creation Pipeline",
+                "Building Feedback Loops from User Engagement Data",
+            ]
+            topic = random.choice(strategic_topics)
 
         # Create conversation record
         conversation = AgentConversation.objects.create(
