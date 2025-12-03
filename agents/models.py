@@ -740,8 +740,9 @@ class AgentContribution(UnifiedBaseModel):
     )
 
     # Project reference (always required)
+    # Session 324: Unified from CreativeProject
     project = models.ForeignKey(
-        'content.CreativeProject',
+        'core.PartnershipProject',
         on_delete=models.CASCADE,
         related_name='agent_contributions',
         help_text="Project this contribution belongs to"

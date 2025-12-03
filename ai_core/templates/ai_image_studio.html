@@ -7568,9 +7568,9 @@
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
                             <h5 class="mb-0" style="color: #ec4899;">🧠 Live Agent Learning Activity</h5>
                             <div>
-                                <span class="badge bg-success" id="learning-status-badge">
-                                    <span class="spinner-grow spinner-grow-sm me-1" role="status"></span>
-                                    Learning Active
+                                <span class="badge" id="learning-status-badge" style="background: #6b7280;">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" style="width: 10px; height: 10px;"></span>
+                                    Connecting...
                                 </span>
                             </div>
                         </div>
@@ -7693,6 +7693,56 @@
                         .dream-type-observation { background: #6366f1; }
                         .dream-type-wild_thought { background: #ec4899; }
                     </style>
+
+                    <!-- ========== SESSION 323: BOARDROOM DECISIONS ========== -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                            <h5 class="mb-0" style="color: #f59e0b;">
+                                <span style="font-size: 24px;">🏛️</span> Boardroom Decisions
+                            </h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge" style="background: #f59e0b;" id="canonical-count-badge">0 Policies</span>
+                                <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #f59e0b; color: #fff;" id="decision-type-filter" onchange="loadBoardroomDecisions(this.value)">
+                                    <option value="">All Decisions</option>
+                                    <option value="canonical">✅ Adopted Policies</option>
+                                    <option value="guideline">📖 Guideline (32)</option>
+                                    <option value="product">🎯 Product (7)</option>
+                                    <option value="experiment">🧪 Experiment (3)</option>
+                                    <option value="architecture">🏗️ Architecture</option>
+                                    <option value="pipeline">⚡ Pipeline</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "Agent conversations generate governance decisions. Promote valuable insights to canonical policies."
+                            </p>
+                            <div id="boardroom-decisions-list">
+                                <p class="text-muted text-center">Loading decisions...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .decision-card {
+                            background: rgba(245, 158, 11, 0.1);
+                            border-radius: 8px;
+                            border-left: 4px solid #f59e0b;
+                            padding: 12px;
+                            margin-bottom: 12px;
+                            transition: transform 0.2s, box-shadow 0.2s;
+                        }
+                        .decision-card:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+                        }
+                        .decision-type-policy { border-left-color: #f59e0b; }
+                        .decision-type-architecture { border-left-color: #8b5cf6; }
+                        .decision-type-pipeline { border-left-color: #10b981; }
+                        .decision-type-product { border-left-color: #3b82f6; }
+                        .decision-type-experiment { border-left-color: #ec4899; }
+                        .decision-type-guideline { border-left-color: #6b7280; }
+                    </style>
+                    <!-- END BOARDROOM DECISIONS -->
 
                         </div>
                         <!-- END SOCIAL SUB-TAB -->
@@ -27051,6 +27101,61 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 message += `⚠️ **Error:** ${r.error}\n\n`;
                             }
 
+                        } else if (result.tool === 'competitor_analysis_agent' || result.tool === 'customer_research_agent') {
+                            // Session 324: Business Research Agents - Show full analysis report
+                            const r = result.result;
+                            const agentName = result.tool === 'competitor_analysis_agent' ? 'CompetitorAnalysisAgent' : 'CustomerResearchAgent';
+                            const icon = result.tool === 'competitor_analysis_agent' ? '🎯' : '👥';
+                            const title = result.tool === 'competitor_analysis_agent' ? 'Competitive Analysis' : 'Customer Research';
+
+                            // Check for analysis data in result.data or result.metadata.agent_result.data
+                            // Structure: r.data = { analysis: {query, analysis, raw_data, sources_used, ...}, raw_data: [...], query: "..." }
+                            const resultData = r.data || r.metadata?.agent_result?.data;
+
+                            // The 'analysis' field is the synthesis object containing the GPT report
+                            const synthesisObj = resultData?.analysis;
+
+                            console.log('📊 Session 324 - Business research result:', {
+                                hasResultData: !!resultData,
+                                hasSynthesis: !!synthesisObj,
+                                synthesisKeys: synthesisObj ? Object.keys(synthesisObj) : [],
+                                query: resultData?.query
+                            });
+
+                            if (synthesisObj && (synthesisObj.analysis || typeof synthesisObj === 'string')) {
+                                // Extract the actual analysis text and data
+                                const analysisText = typeof synthesisObj === 'string' ? synthesisObj : synthesisObj.analysis;
+                                const rawData = synthesisObj.raw_data || resultData?.raw_data || [];
+                                const dataPoints = synthesisObj.data_points_analyzed || rawData.length;
+                                const sources = synthesisObj.sources_used || [];
+                                const query = resultData?.query || synthesisObj.query || '';
+
+                                // Use the same formatAnalysisReport as the main assistant
+                                // This will also set window.lastResearchData for project creation
+                                message += this.formatAnalysisReport({
+                                    analysis: analysisText,
+                                    raw_data: rawData,
+                                    data_points_analyzed: dataPoints,
+                                    sources_used: sources,
+                                    query: query
+                                }, agentName);
+                            } else {
+                                // Fallback to simple message
+                                message += `${icon} **${title} Complete!**\n\n`;
+                                message += `${r.message || 'Research completed.'}\n\n`;
+
+                                // Even with fallback, try to store research data for project creation
+                                if (resultData) {
+                                    window.lastResearchData = {
+                                        id: 'research_' + Date.now(),
+                                        query: resultData.query || '',
+                                        analysis: r.message || '',
+                                        raw_data: resultData.raw_data || [],
+                                        agent_name: agentName,
+                                        timestamp: new Date().toISOString()
+                                    };
+                                }
+                            }
                         } else {
                             // Session 190: Default handler for any tool not explicitly handled above
                             message += `✅ **${result.tool} executed:**\n\n`;
@@ -27131,6 +27236,24 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 299: Add "Create Content from Research" action buttons
                 // This enables the cumulative intelligence pipeline: research -> create
                 const researchId = 'research_' + Date.now();
+
+                // Session 324: Store research data for project creation
+                // This allows the "Create Project" button to include full research data
+                window.lastResearchData = {
+                    id: researchId,
+                    query: originalQuery,
+                    analysis: analysis,
+                    raw_data: rawData,
+                    data_points_analyzed: dataPoints,
+                    sources_used: sources,
+                    agent_name: agentName,
+                    timestamp: new Date().toISOString()
+                };
+                console.log('📊 Session 324: Stored research data for project creation:', {
+                    id: researchId,
+                    articlesCount: rawData.length,
+                    query: originalQuery
+                });
 
                 // Session 300: Use the original query from the analysis data for context-aware buttons
                 // This ensures buttons like "Add Customer Research" know what market to research
@@ -28114,7 +28237,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-                    // Monitor audio level
+                    // Monitor audio level (set isRecording early so monitor works)
+                    this.isRecording = true;
+
                     const checkAudioLevel = () => {
                         if (!this.isRecording) return;
 
@@ -28175,7 +28300,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                     // Start recording - collect data every 100ms to ensure we capture everything
                     this.mediaRecorder.start(100);
-                    this.isRecording = true;
+                    // Note: isRecording already set earlier for audio level monitoring
 
                     console.log('🎤 Recording started');
 
@@ -30712,7 +30837,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <div id="project-description-${project.id}" style="font-size: 13px;">${formatMarkdown(project.description)}</div>
                     </div>` : ''}
 
-                    <!-- Session 201: Research Sources -->
+                    <!-- Session 201: Research Sources (legacy format) -->
                     ${project.metadata && project.metadata.research_links && project.metadata.research_links.length > 0 ? `
                     <div class="mb-3 p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
                         <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSubsection('${project.id}', 'research')">
@@ -30728,6 +30853,31 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                         ${idx + 1}. ${link.title || 'Source'}
                                     </a>
                                     <div class="small text-muted mt-1" style="font-size: 11px;">${link.snippet || ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>` : ''}
+
+                    <!-- Session 324: Research Articles (from business research agents) -->
+                    ${project.metadata && project.metadata.research_articles && project.metadata.research_articles.length > 0 ? `
+                    <div class="mb-3 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 3px solid #22c55e;">
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSubsection('${project.id}', 'articles')">
+                            <div class="small" style="color: #22c55e; font-weight: 600;">
+                                📚 Research Articles (${project.metadata.research_articles.length})
+                                <span id="subsection-toggle-articles-${project.id}" style="font-size: 10px; margin-left: 5px;">▼</span>
+                            </div>
+                        </div>
+                        <div id="subsection-content-articles-${project.id}" style="max-height: 300px; overflow-y: auto;">
+                            ${project.metadata.research_articles.map((article, idx) => `
+                                <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 4px;">
+                                    <a href="${article.url || article.link || '#'}" target="_blank" style="color: #86efac; font-size: 12px; font-weight: 500;">
+                                        ${idx + 1}. ${article.title || 'Article'}
+                                    </a>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <span class="badge" style="background: rgba(34, 197, 94, 0.3); font-size: 9px;">${article.source || 'Unknown'}</span>
+                                        ${article.score ? `<span class="badge" style="background: rgba(251, 191, 36, 0.3); font-size: 9px;">Score: ${article.score}</span>` : ''}
+                                    </div>
+                                    ${article.description ? `<div class="small text-muted mt-1" style="font-size: 11px; line-height: 1.4;">${article.description.substring(0, 150)}${article.description.length > 150 ? '...' : ''}</div>` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -36030,14 +36180,42 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const bgColor = role === 'user' ? '#10b981' : role === 'error' ? '#ef4444' : role === 'system' ? '#6b7280' : '#3b82f6';
             const roleName = role === 'user' ? 'You' : role === 'error' ? 'Error' : role === 'system' ? 'System' : 'AI Assistant';
 
-            messageDiv.innerHTML = `
-                <div style="display: inline-block; max-width: 80%; text-align: left;">
-                    <small style="color: #9ca3af;">${roleEmoji} ${roleName}</small>
-                    <div style="background: ${bgColor}; color: white; padding: 12px; border-radius: 8px; margin-top: 4px;">
-                        ${content.replace(/\n/g, '<br>')}
+            // Session 324: Check if content is raw HTML (from research reports, etc.)
+            const hasRawHtml = content.includes('<!-- RAW_HTML -->') || content.includes('class="analysis-report"');
+            let displayContent;
+
+            if (hasRawHtml) {
+                // Strip markers and use HTML directly - don't wrap in colored box for rich content
+                displayContent = content.replace(/<!-- RAW_HTML -->/g, '').replace(/<!-- \/RAW_HTML -->/g, '');
+
+                // Session 324: Replace "Create Project" button with "Add to Project" for embedded assistant
+                // Since we're already in a project context, we add research TO the current project
+                displayContent = displayContent.replace(
+                    /onclick="showCreateProjectFromResearchModal\([^)]+\)"/g,
+                    `onclick="addResearchToCurrentProject('${projectId}')"`
+                );
+                displayContent = displayContent.replace('📁 Create Project', '📁 Add to Project');
+
+                messageDiv.innerHTML = `
+                    <div style="max-width: 100%; text-align: left;">
+                        <small style="color: #9ca3af;">${roleEmoji} ${roleName}</small>
+                        <div style="margin-top: 4px;">
+                            ${displayContent}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                // Regular message - wrap in colored box
+                displayContent = content.replace(/\n/g, '<br>');
+                messageDiv.innerHTML = `
+                    <div style="display: inline-block; max-width: 80%; text-align: left;">
+                        <small style="color: #9ca3af;">${roleEmoji} ${roleName}</small>
+                        <div style="background: ${bgColor}; color: white; padding: 12px; border-radius: 8px; margin-top: 4px;">
+                            ${displayContent}
+                        </div>
+                    </div>
+                `;
+            }
 
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -43183,8 +43361,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.log('🤖 Session 310: Calling loadSession310Stats()...');
                 loadSession310Stats();
 
-                // Session 244: Update learning feed
-                updateLearningFeed(data.stats?.learning?.recent_transfers || []);
+                // Session 244/322: Update learning feed - use API instead of WebSocket data
+                loadLearningFeed();
 
                 // Update health banner
                 updateHealthBanner(data.monitor);
@@ -43284,38 +43462,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
-        // Session 244: Update Learning Feed
-        function updateLearningFeed(transfers) {
-            const listEl = document.getElementById('learning-feed-list');
-
-            if (transfers && transfers.length > 0) {
-                listEl.innerHTML = transfers.map(t => {
-                    const timeAgo = t.time ? formatTimeAgo(t.time) : 'Just now';
-                    const usefulnessColor = t.usefulness >= 0.8 ? '#22c55e' :
-                                           t.usefulness >= 0.5 ? '#f59e0b' : '#ef4444';
-                    return `
-                        <div class="d-flex align-items-center mb-2 p-2" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid ${usefulnessColor};">
-                            <div style="flex: 1;">
-                                <div style="color: #f9a8d4; font-size: 13px;">
-                                    <span style="color: #ec4899;">🎓 ${t.teacher}</span>
-                                    <span style="opacity: 0.7;">→</span>
-                                    <span style="color: #14b8a6;">📚 ${t.student}</span>
-                                </div>
-                                <div class="text-muted small mt-1" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    "${t.knowledge}"
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <div class="badge" style="background: ${usefulnessColor};">${Math.round(t.usefulness * 100)}%</div>
-                                <div class="text-muted small">${timeAgo}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                listEl.innerHTML = '<p class="text-muted text-center">No recent learning activity. Next cycle in ~10 minutes.</p>';
-            }
-        }
+        // Session 244/322: Old updateLearningFeed(transfers) function removed - now using loadLearningFeed() API call instead
+        // This prevents duplicate function definitions that were overwriting each other
 
         // Session 244: Format time ago helper
         function formatTimeAgo(isoTime) {
@@ -43953,10 +44101,21 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             }
 
-            // 4. Refresh Learning Feed
-            if (typeof loadLearningFeed === 'function') {
+            // 4. Session 324: Connect Learning Feed WebSocket (or fallback to API)
+            if (typeof connectLearningFeedWs === 'function') {
+                // If WebSocket exists and is open, request refresh
+                if (learningFeedWs && learningFeedWs.readyState === WebSocket.OPEN) {
+                    learningFeedWs.send(JSON.stringify({ type: 'get_recent' }));
+                    console.log('  ✓ Learning Feed: WebSocket refresh requested');
+                } else {
+                    // Connect WebSocket (will load data on connect)
+                    connectLearningFeedWs();
+                    console.log('  ✓ Learning Feed: WebSocket connecting');
+                }
+            } else if (typeof loadLearningFeed === 'function') {
+                // Fallback to API
                 loadLearningFeed();
-                console.log('  ✓ Learning Feed: loading latest');
+                console.log('  ✓ Learning Feed: API fallback');
             }
 
             // 5. Refresh Agent Dreams
@@ -43965,9 +44124,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.log('  ✓ Agent Dreams: loading latest');
             }
 
-            // 6. Start auto-refresh for learning feed
-            if (typeof startLearningFeedAutoRefresh === 'function') {
-                startLearningFeedAutoRefresh();
+            // 6. Session 323: Refresh Boardroom Decisions
+            if (typeof loadBoardroomDecisions === 'function') {
+                loadBoardroomDecisions();
+                console.log('  ✓ Boardroom Decisions: loading latest');
             }
         }
 
@@ -44020,10 +44180,80 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // =====================================================================
-        // Session 248: Live Agent Learning Activity Feed
+        // Session 248/324: Live Agent Learning Activity Feed - WebSocket
         // =====================================================================
 
-        // Load learning feed from API (Session 248: Use KnowledgeTransfer endpoint)
+        // Session 324: Learning Feed WebSocket connection
+        let learningFeedWs = null;
+        let learningFeedReconnectAttempts = 0;
+        const LEARNING_FEED_MAX_RECONNECTS = 5;
+
+        function connectLearningFeedWs() {
+            if (learningFeedWs && learningFeedWs.readyState === WebSocket.OPEN) {
+                return; // Already connected
+            }
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/learning-feed/`;
+
+            learningFeedWs = new WebSocket(wsUrl);
+
+            learningFeedWs.onopen = function() {
+                console.log('🧠 Learning Feed WebSocket connected');
+                learningFeedReconnectAttempts = 0;
+                updateLearningFeedStatus('connected');
+            };
+
+            learningFeedWs.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'learning_activity' || data.type === 'learning_event') {
+                        updateLearningFeed(data);
+                    } else if (data.type === 'connected') {
+                        console.log('🧠 Learning Feed:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error parsing learning feed message:', error);
+                }
+            };
+
+            learningFeedWs.onclose = function(event) {
+                console.log('🧠 Learning Feed WebSocket closed:', event.code);
+                updateLearningFeedStatus('disconnected');
+
+                // Attempt reconnection with backoff
+                if (learningFeedReconnectAttempts < LEARNING_FEED_MAX_RECONNECTS) {
+                    learningFeedReconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, learningFeedReconnectAttempts), 30000);
+                    console.log(`🧠 Reconnecting learning feed in ${delay}ms (attempt ${learningFeedReconnectAttempts})`);
+                    setTimeout(connectLearningFeedWs, delay);
+                }
+            };
+
+            learningFeedWs.onerror = function(error) {
+                console.error('🧠 Learning Feed WebSocket error:', error);
+                updateLearningFeedStatus('error');
+            };
+        }
+
+        function updateLearningFeedStatus(status) {
+            const badge = document.getElementById('learning-status-badge');
+            if (!badge) return;
+
+            if (status === 'connected') {
+                badge.innerHTML = '<span class="spinner-grow spinner-grow-sm me-1" role="status"></span> Live';
+                badge.className = 'badge bg-success';
+            } else if (status === 'disconnected') {
+                badge.innerHTML = '⚠️ Reconnecting...';
+                badge.className = 'badge bg-warning';
+            } else if (status === 'error') {
+                badge.innerHTML = '❌ Disconnected';
+                badge.className = 'badge bg-danger';
+            }
+        }
+
+        // Fallback: Load learning feed from API (used if WebSocket fails)
         async function loadLearningFeed() {
             try {
                 const response = await fetch('/api/agent-learning/activity/');
@@ -44091,17 +44321,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }).join('');
         }
 
-        // Set up auto-refresh for learning feed (every 60 seconds)
-        let learningFeedInterval = null;
+        // Session 324: Start WebSocket connection (replaces polling)
         function startLearningFeedAutoRefresh() {
-            if (learningFeedInterval) clearInterval(learningFeedInterval);
-            learningFeedInterval = setInterval(loadLearningFeed, 60000);
+            connectLearningFeedWs();
         }
 
         function stopLearningFeedAutoRefresh() {
-            if (learningFeedInterval) {
-                clearInterval(learningFeedInterval);
-                learningFeedInterval = null;
+            // Session 324: Close WebSocket connection instead of clearing interval
+            if (learningFeedWs && learningFeedWs.readyState === WebSocket.OPEN) {
+                learningFeedWs.close();
+                learningFeedWs = null;
+                console.log('🧠 Learning Feed WebSocket closed');
             }
         }
 
@@ -44361,9 +44591,169 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 agentsTabTrigger.addEventListener('shown.bs.tab', function() {
                     loadAgentDreams();
                     loadHiveMindSessions();
+                    loadBoardroomDecisions();  // Session 323
                 });
             }
         });
+
+        // =========================================================================
+        // Session 323: Boardroom Decisions - Agent Governance System
+        // =========================================================================
+
+        // Load boardroom decisions from API
+        async function loadBoardroomDecisions(filter = '') {
+            try {
+                let url = '/api/boardroom/decisions/?limit=20';
+
+                // Handle special "canonical" filter vs decision_type filters
+                if (filter === 'canonical') {
+                    url += '&canonical_only=true';
+                } else if (filter) {
+                    url += `&decision_type=${filter}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    updateBoardroomDecisions(data);
+                }
+            } catch (error) {
+                console.error('Error loading boardroom decisions:', error);
+            }
+        }
+
+        // Update the decisions UI
+        function updateBoardroomDecisions(data) {
+            const container = document.getElementById('boardroom-decisions-list');
+            const canonicalBadge = document.getElementById('canonical-count-badge');
+
+            if (canonicalBadge) {
+                canonicalBadge.textContent = `${data.canonical_count} Policies`;
+            }
+
+            if (!data.decisions || data.decisions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">🏛️</span>
+                        <p class="text-muted mt-2">No decisions yet...</p>
+                        <small class="text-muted">Agent conversations will generate policy decisions</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const typeColors = {
+                'policy': '#f59e0b',
+                'architecture': '#8b5cf6',
+                'pipeline': '#10b981',
+                'product': '#3b82f6',
+                'experiment': '#ec4899',
+                'guideline': '#6b7280'
+            };
+
+            const typeIcons = {
+                'policy': '📋',
+                'architecture': '🏗️',
+                'pipeline': '⚡',
+                'product': '🎯',
+                'experiment': '🧪',
+                'guideline': '📖'
+            };
+
+            container.innerHTML = data.decisions.map(d => {
+                const color = typeColors[d.decision_type] || '#6b7280';
+                const icon = typeIcons[d.decision_type] || '📄';
+                const timeAgo = formatTimeAgo(d.created_at);
+                const insights = d.key_insights.slice(0, 3).map(i =>
+                    `<li style="color: #d1d5db; font-size: 12px;">${i}</li>`
+                ).join('');
+
+                const canonicalBadge = d.is_canonical
+                    ? '<span class="badge bg-success ms-2">Canonical</span>'
+                    : '';
+
+                const actionButtons = d.is_canonical ? `
+                    <div class="mt-2">
+                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active Policy</span>
+                    </div>
+                ` : `
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-success me-1" onclick="promoteDecision('${d.id}')">
+                            ✅ Adopt as Policy
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="rejectDecision('${d.id}')">
+                            ❌ Reject
+                        </button>
+                    </div>
+                `;
+
+                return `
+                    <div class="decision-card decision-type-${d.decision_type}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span style="font-size: 18px; margin-right: 8px;">${icon}</span>
+                                <strong style="color: ${color};">${d.topic.substring(0, 60)}${d.topic.length > 60 ? '...' : ''}</strong>
+                                ${canonicalBadge}
+                            </div>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                        <div class="mb-2">
+                            <span class="badge" style="background: ${color};">${d.decision_type_display}</span>
+                            <span class="badge bg-secondary ms-1">${d.impact_area_display}</span>
+                        </div>
+                        <p style="color: #e5e7eb; font-size: 14px; margin-bottom: 8px;">${d.recommended_stance}</p>
+                        <ul style="margin: 0; padding-left: 20px;">${insights}</ul>
+                        <div class="mt-2">
+                            <small class="text-muted">Participants: ${d.participants.join(', ')}</small>
+                        </div>
+                        ${actionButtons}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Promote a decision to canonical policy
+        async function promoteDecision(decisionId) {
+            try {
+                const response = await fetch(`/api/boardroom/decisions/${decisionId}/promote/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(`🏛️ ${data.message}`, 'success');
+                    loadBoardroomDecisions();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error promoting decision:', error);
+                showNotification('Error promoting decision', 'danger');
+            }
+        }
+
+        // Reject a decision
+        async function rejectDecision(decisionId) {
+            try {
+                const response = await fetch(`/api/boardroom/decisions/${decisionId}/reject/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('Decision marked as rejected', 'info');
+                    loadBoardroomDecisions();
+                }
+            } catch (error) {
+                console.error('Error rejecting decision:', error);
+                showNotification('Error rejecting decision', 'danger');
+            }
+        }
 
         // =========================================================================
         // Session 250: Hive Mind Mode - Collective Intelligence Functions
@@ -49224,6 +49614,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Submit create project from research - Direct API call (Session 302)
+        // Session 324: Enhanced to include full research data (articles, sources, etc.)
         function submitCreateProjectFromResearch() {
             const projectName = document.getElementById('researchProjectName').value.trim();
             if (!projectName) {
@@ -49234,15 +49625,33 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             // Close modal
             bootstrap.Modal.getInstance(document.getElementById('createProjectFromResearchModal')).hide();
 
-            // Get research summary from current chat context if available
-            let researchSummary = '';
-            const lastMessage = document.querySelector('.assistant-message:last-of-type .message-content');
-            if (lastMessage) {
-                researchSummary = lastMessage.innerText.substring(0, 2000);
+            // Session 324: Get stored research data (includes articles, sources, etc.)
+            const researchData = window.lastResearchData || {};
+            console.log('📊 Session 324: Creating project with research data:', {
+                hasResearchData: !!window.lastResearchData,
+                articlesCount: researchData.raw_data?.length || 0,
+                query: researchData.query
+            });
+
+            // Get research summary - prefer stored analysis, fallback to last message
+            let researchSummary = researchData.analysis || '';
+            if (!researchSummary) {
+                const lastMessage = document.querySelector('.assistant-message:last-of-type .message-content');
+                if (lastMessage) {
+                    researchSummary = lastMessage.innerText.substring(0, 2000);
+                }
+            }
+
+            // Determine research type from agent name
+            let researchType = 'business_research';
+            if (researchData.agent_name?.includes('Competitor')) {
+                researchType = 'competitor_analysis';
+            } else if (researchData.agent_name?.includes('Customer')) {
+                researchType = 'customer_research';
             }
 
             // Direct API call - bypasses GPT routing entirely (Session 302)
-            showToast('📁 Creating project...', 'info');
+            showToast('📁 Creating project with research data...', 'info');
 
             fetch('/api/projects/from-research/', {
                 method: 'POST',
@@ -49253,17 +49662,29 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 body: JSON.stringify({
                     project_name: projectName,
                     research_summary: researchSummary,
-                    research_type: 'business_research'
+                    research_type: researchType,
+                    // Session 324: Include full research data
+                    research_articles: researchData.raw_data || [],
+                    research_query: researchData.query || ''
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Session 324: Show enhanced success message with article count
+                    const articlesInfo = data.data.research_included?.articles_count
+                        ? ` with ${data.data.research_included.articles_count} research articles`
+                        : '';
                     showToast(`✅ ${data.data.message}`, 'success');
                     // Add confirmation to chat
                     if (window.aiAssistant?.addMessage) {
-                        window.aiAssistant.addMessage('assistant', `📁 Project "${projectName}" created successfully! Your research has been saved.`);
+                        window.aiAssistant.addMessage('assistant',
+                            `📁 Project "${projectName}" created successfully${articlesInfo}! ` +
+                            `Your research data has been saved and will be available for future reference.`
+                        );
                     }
+                    // Clear stored research data after successful project creation
+                    window.lastResearchData = null;
                 } else {
                     showToast(`❌ Error: ${data.error}`, 'error');
                 }
@@ -49271,6 +49692,68 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             .catch(err => {
                 console.error('Error creating project:', err);
                 showToast(`❌ Error creating project: ${err.message}`, 'error');
+            });
+        }
+
+        // Session 324: Add research to current project (from embedded assistant)
+        function addResearchToCurrentProject(projectId) {
+            const researchData = window.lastResearchData || {};
+
+            if (!researchData.analysis && !researchData.raw_data?.length) {
+                showToast('⚠️ No research data to add', 'warning');
+                return;
+            }
+
+            console.log('📊 Session 324: Adding research to project:', {
+                projectId: projectId,
+                articlesCount: researchData.raw_data?.length || 0,
+                query: researchData.query
+            });
+
+            // Determine research type from agent name
+            let researchType = 'business_research';
+            if (researchData.agent_name?.includes('Competitor')) {
+                researchType = 'competitor_analysis';
+            } else if (researchData.agent_name?.includes('Customer')) {
+                researchType = 'customer_research';
+            }
+
+            showToast('📁 Adding research to project...', 'info');
+
+            // Call API to add research to existing project
+            fetch(`/api/projects/${projectId}/add-research/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    research_type: researchType,
+                    research_summary: researchData.analysis || '',
+                    research_articles: researchData.raw_data || [],
+                    research_query: researchData.query || '',
+                    data_points_analyzed: researchData.data_points_analyzed || 0,
+                    sources_used: researchData.sources_used || []
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const articlesInfo = data.articles_added ? ` (${data.articles_added} articles)` : '';
+                    showToast(`✅ Research added to project${articlesInfo}!`, 'success');
+                    // Clear stored research data
+                    window.lastResearchData = null;
+                    // Refresh project view to show new research
+                    if (typeof viewProjectDetails === 'function') {
+                        viewProjectDetails(projectId);
+                    }
+                } else {
+                    showToast(`❌ Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Error adding research to project:', err);
+                showToast(`❌ Error: ${err.message}`, 'error');
             });
         }
 

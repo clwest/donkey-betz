@@ -73,30 +73,29 @@ class CompetitorAnalysisAgent(BaseAgent):
 Your ONLY job is to analyze competitors and market positioning. You do NOT create content.
 
 You have these tools:
-- refresh_spider_data: Trigger fresh data collection (use FIRST for up-to-date intel)
-- get_prior_research: Retrieve past research to build on existing knowledge
+- spider_query: Query spider network for competitor mentions, news, discussions (MOST IMPORTANT - real data!)
 - web_search: Search the web for competitor information, features, pricing
-- spider_query: Query spider network for competitor mentions, news, discussions
+- get_prior_research: Retrieve past research to build on existing knowledge
 - analyze_competitor: Deep analysis of a specific competitor (name, website)
 
-IMPORTANT - Session 303 Intelligence Integration:
-1. ALWAYS start with get_prior_research to check for existing analysis
-2. Use refresh_spider_data to ensure fresh market data
-3. Then proceed with web_search and spider_query
-4. Build on past research rather than starting from scratch
+CRITICAL - You MUST use spider_query:
+Session 324: The spider_query tool connects to our real-time data sources (Reddit, HackerNews, YouTube, etc).
+You MUST call spider_query to get actual articles and discussions about competitors.
+WITHOUT spider_query data, you cannot provide a proper competitive analysis.
 
 When given a competitive analysis task:
-1. Check for prior research on this market/topic
-2. Refresh spider data for latest intel
-3. Search for key competitors in that space
-4. For each major competitor, gather:
+1. FIRST: Call spider_query with a relevant search query to get real articles/discussions
+2. OPTIONALLY: Check get_prior_research for any existing analysis on this market
+3. THEN: Call web_search for additional competitor details
+4. For each major competitor found, gather:
    - Company overview and positioning
    - Key features/products
    - Pricing model (if available)
    - Strengths and weaknesses
-   - Recent news/developments
-5. Synthesize into a competitive landscape analysis
+5. Synthesize ALL the data into a competitive landscape analysis
 6. Identify market gaps and opportunities
+
+IMPORTANT: If spider_query returns data, USE that data in your analysis. Reference the specific articles/discussions you found.
 
 Output Format:
 Return structured analysis with:
@@ -110,6 +109,40 @@ You CANNOT create images, videos, audio, or edit anything. Only analyze competit
 If asked to create content, explain you can only research and suggest using the appropriate agent."""
 
     tools = [
+        # Session 324: spider_query FIRST - this is our primary data source!
+        {
+            "type": "function",
+            "function": {
+                "name": "spider_query",
+                "description": "MUST USE FIRST: Query spider network for real articles/discussions from Reddit, HackerNews, YouTube, tech news. This provides actual data for analysis.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for competitor mentions (e.g., 'AI content generation tools', 'best AI writing apps')"
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "Filter by category",
+                            "enum": ["tech", "news", "social", "all"],
+                            "default": "all"
+                        },
+                        "hours": {
+                            "type": "integer",
+                            "description": "Look back period in hours (default 168 = 1 week)",
+                            "default": 168
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return",
+                            "default": 30
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
         {
             "type": "function",
             "function": {
@@ -134,39 +167,6 @@ If asked to create content, explain you can only research and suggest using the 
                             "description": "Type of search",
                             "enum": ["search", "news"],
                             "default": "search"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "spider_query",
-                "description": "Query spider network for competitor mentions in tech news, Reddit, HackerNews, ProductHunt",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query for competitor mentions"
-                        },
-                        "category": {
-                            "type": "string",
-                            "description": "Filter by category",
-                            "enum": ["tech", "news", "social", "all"],
-                            "default": "all"
-                        },
-                        "hours": {
-                            "type": "integer",
-                            "description": "Look back period in hours",
-                            "default": 168
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Max results to return",
-                            "default": 30
                         }
                     },
                     "required": ["query"]

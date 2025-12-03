@@ -580,13 +580,18 @@ Orchestrate multi-step creative workflows from research to delivery.
 }
 
 
-def get_agent_prompt(agent_name: str, include_platform_context: bool = True) -> str:
+def get_agent_prompt(
+    agent_name: str,
+    include_platform_context: bool = True,
+    include_policies: bool = True
+) -> str:
     """
     Get the system prompt for a specific agent.
 
     Args:
         agent_name: Name of the agent (e.g., 'ResearchAgent')
         include_platform_context: Whether to include platform context
+        include_policies: Whether to include canonical policies (Session 323)
 
     Returns:
         Complete system prompt for the agent
@@ -609,7 +614,18 @@ Provide expert assistance in your area of specialization.
 4. Drive toward actionable results"""
 
     platform_ctx = PLATFORM_CONTEXT if include_platform_context else ""
-    return prompt.format(platform_context=platform_ctx)
+
+    # Session 323: Inject canonical policies for this agent
+    policy_ctx = ""
+    if include_policies:
+        try:
+            from core.services.policy_context import get_policy_context_service
+            policy_service = get_policy_context_service()
+            policy_ctx = policy_service.get_policies_for_agent(agent_name)
+        except Exception:
+            pass  # Silently ignore if policies unavailable
+
+    return prompt.format(platform_context=platform_ctx) + policy_ctx
 
 
 # =============================================================================

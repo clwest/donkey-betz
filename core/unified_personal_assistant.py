@@ -208,6 +208,42 @@ When users ask about agents, you should:
                 logger.warning(f"Spider intelligence unavailable: {e}")
                 spider_context = ""
 
+            # Session 324: Get canonical policies from Boardroom Decisions
+            policy_context = ""
+            try:
+                from core.services.policy_context import get_policy_context_service
+                policy_service = get_policy_context_service()
+                policy_context = policy_service.get_policies_for_agent('PersonalAssistant')
+                if policy_context:
+                    logger.info(f"🏛️ Canonical policies injected into Personal Assistant")
+            except Exception as e:
+                logger.debug(f"Could not get policy context: {e}")
+
+            # Session 324: Get agent knowledge/learning insights
+            agent_knowledge_context = ""
+            try:
+                from core.models import AgentKnowledgeSource, KnowledgeTransfer
+                from django.utils import timezone
+                from datetime import timedelta
+
+                # Get recent valuable knowledge transfers
+                recent_transfers = KnowledgeTransfer.objects.filter(
+                    was_useful=True,
+                    created_at__gte=timezone.now() - timedelta(days=7)
+                ).select_related('connection__teacher_agent').order_by('-created_at')[:5]
+
+                if recent_transfers:
+                    knowledge_parts = ["\n== AGENT COLLECTIVE KNOWLEDGE =="]
+                    knowledge_parts.append("Recent insights from the agent network:")
+                    for transfer in recent_transfers:
+                        summary = transfer.transfer_summary[:100] if transfer.transfer_summary else ''
+                        if summary:
+                            knowledge_parts.append(f"- {transfer.connection.teacher_agent.name}: {summary}")
+                    agent_knowledge_context = '\n'.join(knowledge_parts)
+                    logger.info(f"🧠 Injected {len(recent_transfers)} agent knowledge insights")
+            except Exception as e:
+                logger.debug(f"Could not get agent knowledge: {e}")
+
             # Check if user is asking about platform components
             message_lower = message.lower()
             is_platform_question = any(component in message_lower for component in [
@@ -243,6 +279,18 @@ REAL-TIME INTELLIGENCE FROM SPIDER NETWORK:
 {spider_context}
 
 Use this real-time data to provide informed, data-driven responses. Reference specific sources when relevant.
+"""
+
+                # Session 324: Add canonical policies if available
+                if policy_context:
+                    enhanced_prompt += f"""
+{policy_context}
+"""
+
+                # Session 324: Add agent knowledge if available
+                if agent_knowledge_context:
+                    enhanced_prompt += f"""
+{agent_knowledge_context}
 """
 
                 enhanced_prompt += f"""

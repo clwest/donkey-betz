@@ -54,7 +54,7 @@ class CreativeProjectFactory(DjangoModelFactory):
     """Factory for creating CreativeProject instances."""
 
     class Meta:
-        model = 'content.CreativeProject'
+        model = 'core.PartnershipProject'  # Session 324: Unified from CreativeProject
 
     user = factory.SubFactory(UserFactory)
     name = factory.Sequence(lambda n: f'Test Project {n}')

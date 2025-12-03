@@ -3374,6 +3374,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 task += f" Context: {user_context}"
 
             # Execute the agent
+            # Session 324: Agent requires scifi_context and spider_context
             result = agent.execute(
                 task=task,
                 context={
@@ -3381,16 +3382,28 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     'persona_count': persona_count,
                     'focus_on': focus_on,
                     'user_context': user_context
-                }
+                },
+                scifi_context={},  # Optional sci-fi features context
+                spider_context={}  # Spider data is fetched internally by the agent
             )
 
             if result.success:
+                # Session 324: AgentResult uses .message not .content
                 return {
                     'success': True,
-                    'message': result.content,
+                    'message': result.message,
                     'agent': 'CustomerResearchAgent',
                     'market': market,
-                    'data': result.data if hasattr(result, 'data') else {}
+                    'data': result.data if hasattr(result, 'data') else {},
+                    'metadata': {
+                        'agent_result': {
+                            'success': result.success,
+                            'message': result.message,
+                            'data': result.data,
+                            'agent_name': result.agent_name,
+                            'execution_time_ms': result.execution_time_ms
+                        }
+                    }
                 }
             else:
                 return {
@@ -6593,6 +6606,16 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if learning_context:
             sections.append(learning_context)
 
+        # Session 324: Inject Canonical Policies from Boardroom Decisions
+        policy_context = self._get_policy_context()
+        if policy_context:
+            sections.append(policy_context)
+
+        # Session 324: Inject Agent Knowledge/Learning Insights
+        agent_knowledge = self._get_agent_knowledge_context()
+        if agent_knowledge:
+            sections.append(agent_knowledge)
+
         if len(sections) > 1:  # More than just the header
             sections.append("\n--- END SPIDER INTELLIGENCE ---\n")
             return "\n".join(sections)
@@ -6739,6 +6762,80 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return self._learning_companion_service.get_learning_context_for_prompt()
         except Exception as e:
             logger.debug(f"Learning Companion context not available: {e}")
+            return ""
+
+    def _get_policy_context(self) -> str:
+        """
+        Session 324: Get canonical policies from Boardroom Decisions for system prompt.
+
+        Injects adopted team policies that guide AI behavior and recommendations.
+        These are policies that were discussed and voted on by the agent team.
+
+        Returns:
+            Formatted policy context string for the system prompt
+        """
+        try:
+            from core.services.policy_context import get_policy_context_service
+            policy_service = get_policy_context_service()
+            # PolicyContextService.get_policies_for_agent returns a pre-formatted string
+            policy_context = policy_service.get_policies_for_agent('PersonalAssistant')
+
+            if policy_context:
+                logger.debug("Session 324: Injecting policy context into assistant prompt")
+                return policy_context
+
+            return ""
+        except Exception as e:
+            logger.debug(f"Policy context not available: {e}")
+            return ""
+
+    def _get_agent_knowledge_context(self) -> str:
+        """
+        Session 324: Get recent agent knowledge transfers for system prompt.
+
+        Injects insights from what agents have been learning from each other.
+        This gives the assistant awareness of the collective agent intelligence.
+
+        Returns:
+            Formatted agent knowledge context string for the system prompt
+        """
+        try:
+            from core.models import KnowledgeTransfer
+            from django.utils import timezone
+            from datetime import timedelta
+
+            # Get recent successful knowledge transfers
+            recent_transfers = KnowledgeTransfer.objects.filter(
+                was_useful=True,
+                created_at__gte=timezone.now() - timedelta(days=7)
+            ).select_related(
+                'connection__teacher_agent',
+                'connection__student_agent'
+            ).order_by('-created_at')[:5]
+
+            if not recent_transfers:
+                return ""
+
+            sections = ["\n🧠 AGENT COLLECTIVE KNOWLEDGE (Recent Learnings):"]
+            for transfer in recent_transfers:
+                try:
+                    teacher = transfer.connection.teacher_agent.name
+                    student = transfer.connection.student_agent.name
+                    summary = transfer.transfer_summary[:100] if transfer.transfer_summary else 'Knowledge shared'
+                    if teacher == student:
+                        sections.append(f"- {teacher} learned: {summary}")
+                    else:
+                        sections.append(f"- {teacher} → {student}: {summary}")
+                except Exception:
+                    continue
+
+            if len(sections) > 1:
+                sections.append("*Leverage this collective knowledge when assisting.*")
+                return "\n".join(sections)
+
+            return ""
+        except Exception as e:
+            logger.debug(f"Agent knowledge context not available: {e}")
             return ""
 
     def _generate_intelligent_fallback(self, message: str, context: Dict[str, Any]) -> str:

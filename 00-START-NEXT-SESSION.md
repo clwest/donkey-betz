@@ -1,60 +1,56 @@
-# Session 322: Continue Platform Development
+# Session 325: Continue Platform Development
 
-**Date:** December 2, 2025
-**Previous Session:** 321 - Agent Slack Online Agents + Conversation Fixes
+**Date:** December 3, 2025
+**Previous Session:** 324 - Project Model Unification + Business Research Integration
 **Branch:** `feature/session-52-ai-assistant`
 
 ---
 
 ## Context
 
-Session 321 completed:
-- **Agent Slack Online Agents Fix** - Now sends member_list on WebSocket connect
-- **Agent Conversations Empty Message Fix** - Skip saving empty GPT responses
-- **Message Count Fix** - Properly tracks actual message count in conversations
-- **Data Cleanup** - Deleted 47 empty messages, fixed 11 conversation counts
+Session 324 unified the project models and fixed business research agents to work in the embedded project assistant.
 
-Session 320 completed:
-- **Social Tab Auto-Refresh** - All components refresh when navigating to Social tab
-- **Fixed Celery Beat Schedule** - Agent tasks were missing from settings.py
-- **Page Visibility API** - Components refresh when returning to browser tab
-- Handoff: `docs/handoffs/SESSION_320_SOCIAL_TAB_AUTOREFRESH.md`
+**What Was Built:**
+- **Unified Project Model** - Merged CreativeProject into PartnershipProject (one model now)
+- **Fixed FK References** - Updated 7 files with `'content.CreativeProject'` → `'core.PartnershipProject'`
+- **Business Research in Projects** - CustomerResearchAgent + CompetitorAnalysisAgent work in embedded assistant
+- **"Add to Project" button** - Research adds to current project instead of creating new one
+- **Raw HTML rendering fix** - Research reports display properly in project chat
+- **New API endpoint** - `POST /api/projects/<project_id>/add-research/`
+
+**Current State:**
+- Single PartnershipProject model (CreativeProject is alias)
+- Research data saved to project metadata (up to 20 articles)
+- Full analysis reports render correctly in project embedded assistant
+- Research can be added to existing projects
 
 ---
 
-## Session 321 Summary
+## Session 324 Summary
 
 | Task | Status |
 |------|--------|
-| Fix Online Agents showing "Loading..." | Done - WebSocket sends member_list on connect |
-| Fix empty first message in conversations | Done - Skip empty GPT responses |
-| Fix message_count showing 0 | Done - Update count on conversation conclude |
-| Cleanup existing data | Done - Deleted 47 empty messages, fixed 11 counts |
+| Unified Project Model | **Complete** |
+| Fixed FK References | **Complete** |
+| Business Research Agents in Projects | **Complete** |
+| Add to Project Flow | **Complete** |
+| UI Rendering Fixes | **Complete** |
+| Microphone/Transcription Fix | **Complete** |
 
----
+### Files Modified
+| File | Changes |
+|------|---------|
+| `core/models_partnership.py` | Added CreativeProject fields + compatibility properties |
+| `content/models.py` | CreativeProject alias + updated ForeignKeys |
+| `pipelines/models.py`, `agents/models.py`, `rendering/models.py`, `coleadership/models.py`, `core/models_unified_system.py`, `tests/factories.py` | Updated FK references |
+| `core/views_image.py` | Added business research agent handlers |
+| `core/views_projects_api.py` | Added `add_research_to_project` endpoint |
+| `core/urls.py` | Added new route |
+| `core/personal_ai_assistant_enhanced.py` | Fixed CustomerResearchAgent call |
+| `ai_core/templates/ai_image_studio.html` | Raw HTML rendering + Add to Project button |
 
-## Fixes Applied
-
-### 1. Agent Slack Online Agents
-The "Online Agents" panel was stuck on "Loading..." because the WebSocket consumer wasn't sending the member list on connect.
-
-**Fix:** Added `send_member_list()` and `send_channel_list()` calls in `AgentSlackConsumer.connect()`
-
-**File:** `core/agent_slack_consumer.py` (line 60-62)
-
-### 2. Agent Conversations Empty First Message
-Some conversations had empty first messages because GPT-5-mini reasoning tokens were being exhausted before generating visible output.
-
-**Fix:** Skip saving messages with empty content - continue to next speaker instead.
-
-**File:** `core/tasks.py` (lines 3735-3740)
-
-### 3. Message Count Not Updating
-The `message_count` field on AgentConversation was always 0 because it wasn't being updated after messages were generated.
-
-**Fix:** Set `conversation.message_count = len(messages)` before saving.
-
-**File:** `core/tasks.py` (lines 3807-3808)
+### Migration
+- `0063_session_324_unified_project_model` - Added 10 new fields to PartnershipProject
 
 ---
 
@@ -67,10 +63,66 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Navigate to Agents > Social tab
-# - Agent Slack should show 5 Online Agents
-# - Agent Conversations should show proper message counts
-# - No more empty first messages
+# Test Business Research in Project:
+# 1. Go to Projects tab
+# 2. Select a project (or create one)
+# 3. Use voice: "Research customer pain points"
+# 4. See full analysis report
+# 5. Click "Add to Project" button
+# 6. View project details - research articles appear!
+```
+
+---
+
+## How Research → Project Flow Works
+
+1. **User asks** for customer/competitor research in project context
+2. **Agent executes** with spider data + GPT analysis
+3. **Full report displays** with clickable sources and action buttons
+4. **User clicks "Add to Project"** button
+5. **Research data saved** to project.metadata.research_articles
+6. **Project details view** shows Research Articles section
+
+---
+
+## API Endpoints
+
+### Add Research to Existing Project
+```
+POST /api/projects/<project_id>/add-research/
+
+Body:
+{
+    "research_type": "competitor_analysis" | "customer_research",
+    "research_summary": "Analysis text...",
+    "research_articles": [...],
+    "research_query": "original query"
+}
+
+Response: { "success": true, "articles_added": 10 }
+```
+
+---
+
+## Verification Commands
+
+```bash
+# Check project model unification
+python manage.py shell -c "
+from content.models import CreativeProject
+from core.models_partnership import PartnershipProject
+print(f'Same model: {CreativeProject is PartnershipProject}')
+print(f'Table: {PartnershipProject._meta.db_table}')
+"
+
+# Check project with research data
+python manage.py shell -c "
+from core.models_partnership import PartnershipProject
+p = PartnershipProject.objects.filter(metadata__has_key='research_articles').first()
+if p:
+    print(f'Project: {p.project_name}')
+    print(f'Articles: {len(p.metadata.get(\"research_articles\", []))}')
+"
 ```
 
 ---
@@ -81,41 +133,22 @@ open http://localhost:8000/ai-studio/
 |---------|----------|--------|
 | Agent Learning | Every 10 min | Working |
 | Agent Dreams | Every 15 min | Working |
-| Agent Conversations | Every 5 min | **Fixed (Session 321)** |
-| Agent Slack | Real-time | **Fixed (Session 321)** |
-| Learning Broadcast | Every 60 sec | Working |
-| Social Tab Auto-Refresh | On tab show | Working |
+| Agent Conversations | Every 5 min | Working |
+| Agent Slack | Real-time | Working |
+| Boardroom Decisions | On conversation conclude | Working |
+| Policy Feedback Loop | On agent prompt | Working |
+| **Business Research in Projects** | On-demand | **NEW (Session 324)** |
+| **Add Research to Project** | On-demand | **NEW (Session 324)** |
 
 ---
 
-## Files Modified in Session 321
+## Next Steps (Session 325+)
 
-| File | Changes |
-|------|---------|
-| `core/agent_slack_consumer.py` | Send member_list and channel_list on WebSocket connect |
-| `core/tasks.py` | Skip empty conversation messages, update message_count |
-
----
-
-## Files to Review
-
-| File | Purpose |
-|------|---------|
-| `core/agent_slack_consumer.py` (lines 60-62) | Online agents fix |
-| `core/tasks.py` (lines 3735-3740, 3807-3808) | Conversation fixes |
-| `docs/handoffs/SESSION_320_SOCIAL_TAB_AUTOREFRESH.md` | Previous session details |
-| `CLAUDE.md` | Full system context |
+1. **Test full flow** - Voice → Research → Add to Project → View Details
+2. **Add research history view** in project details
+3. **Export research** functionality
+4. **Platform polish** - Bug fixes, UI improvements
 
 ---
 
-## Success Criteria for Session 322
-
-- [x] Agent Slack shows Online Agents (not "Loading...")
-- [x] Agent Conversations show correct message counts
-- [x] No empty first messages in conversations
-- [ ] Continue comprehensive agent testing (27 agents)
-- [ ] Verify all Celery tasks running on schedule
-
----
-
-**Status:** Session 321 fixes complete. Agent Slack and Conversations working properly!
+**Status:** Session 324 COMPLETE. Project model unified, business research works in projects!

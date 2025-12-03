@@ -47,8 +47,9 @@ class RenderJob(models.Model):
     )
 
     # Optional project/session linkage
+    # Session 324: Unified from CreativeProject
     project = models.ForeignKey(
-        'content.CreativeProject',
+        'core.PartnershipProject',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

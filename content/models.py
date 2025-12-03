@@ -1686,7 +1686,7 @@ class ImageHistory(UnifiedBaseModel):
 
     # Session 63: Phase C.4++ - Link images to projects for client management
     project = models.ForeignKey(
-        'CreativeProject',
+        'core.PartnershipProject',  # Session 324: Unified from CreativeProject
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1995,7 +1995,7 @@ class VideoHistory(UnifiedBaseModel):
 
     # Session 63: Phase C.4++ - Link videos to projects for client management
     project = models.ForeignKey(
-        'CreativeProject',
+        'core.PartnershipProject',  # Session 324: Unified from CreativeProject
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2248,7 +2248,7 @@ class AudioHistory(UnifiedBaseModel):
 
     # Link to projects
     project = models.ForeignKey(
-        'CreativeProject',
+        'core.PartnershipProject',  # Session 324: Unified from CreativeProject
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2472,7 +2472,7 @@ class MiniFigAsset(UnifiedBaseModel):
 
     # Session 137: Add project field
     project = models.ForeignKey(
-        'CreativeProject',
+        'core.PartnershipProject',  # Session 324: Unified from CreativeProject
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2645,7 +2645,7 @@ class WorkflowHistory(UnifiedBaseModel):
 
     # Session 62: Phase C.4 - Link workflows to projects for client management
     project = models.ForeignKey(
-        'CreativeProject',
+        'core.PartnershipProject',  # Session 324: Unified from CreativeProject
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2866,9 +2866,23 @@ class WorkflowFavorite(UnifiedBaseModel):
 # =============================================================================
 # SESSION 60: PHASE C - DECISION COMMAND / PROJECT MANAGEMENT
 # =============================================================================
+# SESSION 324: DEPRECATED - CreativeProject is now an alias for PartnershipProject
+# The PartnershipProject model in core/models_partnership.py is the unified project model.
+# This alias exists for backward compatibility with existing code.
+# =============================================================================
 
-class CreativeProject(UnifiedBaseModel):
+from core.models_partnership import PartnershipProject as CreativeProject  # noqa: F401
+
+# DEPRECATED: The original CreativeProject class below is kept for reference only
+# All new code should use PartnershipProject from core.models_partnership
+# The alias above ensures existing imports continue to work
+
+class _DeprecatedCreativeProject(UnifiedBaseModel):
     """
+    DEPRECATED - Session 324
+    This class is kept for reference only. Use PartnershipProject instead.
+    The CreativeProject name is now an alias pointing to PartnershipProject.
+
     A creative project containing multiple workflows
     Session 60: Phase C.1.1 - Project Management System
 
@@ -2882,7 +2896,7 @@ class CreativeProject(UnifiedBaseModel):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='creative_projects',
+        related_name='deprecated_creative_projects',
         help_text="User who owns this project"
     )
 
@@ -2972,14 +2986,12 @@ class CreativeProject(UnifiedBaseModel):
     )
 
     class Meta:
-        verbose_name = "Creative Project"
-        verbose_name_plural = "Creative Projects"
+        verbose_name = "Deprecated Creative Project"
+        verbose_name_plural = "Deprecated Creative Projects"
         ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['deadline']),
-        ]
+        # Session 324: Disable migrations for deprecated model
+        managed = False
+        abstract = True  # Prevent table creation
 
     def __str__(self):
         return f"{self.name} ({self.status})"
@@ -3069,8 +3081,9 @@ class ProjectWorkflow(models.Model):
 
     # Relationships
     # Session 60: Using UUIDField for foreign keys (following UUID pattern)
+    # Session 324: Updated to use string reference for unified PartnershipProject
     project = models.ForeignKey(
-        CreativeProject,
+        'core.PartnershipProject',
         on_delete=models.CASCADE,
         related_name='workflows',
         help_text="Project this workflow belongs to"
@@ -3571,7 +3584,7 @@ class AISession(UnifiedBaseModel):
 
     # Project linkage
     project = models.ForeignKey(
-        'CreativeProject',
+        'core.PartnershipProject',  # Session 324: Unified from CreativeProject
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -3739,8 +3752,9 @@ class ProjectShare(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Session 324: Updated to use string reference for unified PartnershipProject
     project = models.ForeignKey(
-        CreativeProject,
+        'core.PartnershipProject',
         on_delete=models.CASCADE,
         related_name='shares',
         help_text="Project being shared"

@@ -1,18 +1,19 @@
 """
-Human-AI Partnership Models
+Human-AI Partnership Models (Unified Project Model)
 
-NEW (Session Pre-38): Partnership layer for human-AI collaboration
-These models track contracts/gigs where user + AI work together
+Session 324: UNIFIED PROJECT MODEL
+This is now THE SINGLE project model for the entire platform.
+Previously there were two models (CreativeProject and PartnershipProject).
+CreativeProject has been deprecated and merged into this model.
 
-IMPORTANT: This is SEPARATE from learning loop integration (Session 37-A)
-- Learning loop: sports_betting_bridge.py, unified_learning_pipeline.py
-- Partnership: models_partnership.py (this file)
-- NO interference between these systems
+History:
+- Session Pre-38: Partnership layer for human-AI collaboration
+- Session 324: Unified with CreativeProject - now the single project model
 
 Architecture:
-- PartnershipProject: Tracks collaborative projects
+- PartnershipProject: THE unified project model for all projects
 - CollaborativeContent: Tracks content created together
-- Both integrate with existing Opportunity model (additive only)
+- Integrates with Opportunity model (additive only)
 """
 
 from django.db import models
@@ -151,13 +152,83 @@ class PartnershipProject(UnifiedBaseModel):
 
     # Status
     status = models.CharField(max_length=20, choices=[
-        ('planning', 'Planning Partnership'),
-        ('in_progress', 'Working Together'),
-        ('review', 'Human Review/Polish'),
-        ('submitted', 'Delivered to Client'),
-        ('completed', 'Completed & Paid'),
+        ('planning', 'Planning'),
+        ('in_progress', 'In Progress'),
+        ('review', 'Under Review'),
+        ('submitted', 'Delivered'),
+        ('completed', 'Completed'),
+        ('archived', 'Archived'),
         ('cancelled', 'Cancelled'),
     ], default='planning')
+
+    # ==========================================================================
+    # Session 324: Fields merged from CreativeProject for unified model
+    # ==========================================================================
+
+    # Project goal (from CreativeProject)
+    goal = models.TextField(
+        blank=True,
+        help_text="What's the objective of this project?"
+    )
+
+    # Timeline (from CreativeProject)
+    deadline = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Project deadline"
+    )
+
+    # Organization (from CreativeProject)
+    category = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Project category (e.g., 'Branding', 'Marketing', 'Research')"
+    )
+
+    colors = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Color palette for this project (e.g., 'navy blue, gold, white')"
+    )
+
+    tags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Project tags for organization"
+    )
+
+    # Workflow tracking (from CreativeProject)
+    total_workflows = models.PositiveIntegerField(
+        default=0,
+        help_text="Total number of workflows in this project"
+    )
+
+    completed_workflows = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of completed workflows"
+    )
+
+    # Collaboration flags (from CreativeProject)
+    is_shared = models.BooleanField(
+        default=False,
+        help_text="Whether project is shared with others"
+    )
+
+    is_quick_starts = models.BooleanField(
+        default=False,
+        help_text="Special project for ad-hoc/spontaneous work"
+    )
+
+    # Rich metadata (from CreativeProject Session 293)
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Rich metadata: research_sources, executive_recommendations, creative_direction, suggested_next_steps"
+    )
+
+    # ==========================================================================
+    # End Session 324 merged fields
+    # ==========================================================================
 
     # Learning (separate from core learning loop)
     what_worked = models.TextField(
@@ -179,12 +250,78 @@ class PartnershipProject(UnifiedBaseModel):
 
     class Meta:
         app_label = 'core'
+        verbose_name = "Project"
+        verbose_name_plural = "Projects"
         ordering = ['-started_at']
         indexes = [
             models.Index(fields=['user', 'status']),
             models.Index(fields=['status']),
             models.Index(fields=['-started_at']),
+            models.Index(fields=['deadline']),  # Session 324
         ]
+
+    def __str__(self):
+        return f"{self.project_name} ({self.status})"
+
+    # Session 324: Properties from CreativeProject
+    @property
+    def progress_percentage(self):
+        """
+        Calculate project completion percentage
+
+        Session 324: Merged from CreativeProject
+        - Workflow-based: If total_workflows > 0, use completed/total ratio
+        - AI contribution-based: Use ai_contribution_percent as fallback
+        """
+        # Workflow-based progress
+        if self.total_workflows > 0:
+            return int((self.completed_workflows / self.total_workflows) * 100)
+
+        # Fallback to AI contribution percent
+        return self.ai_contribution_percent
+
+    @property
+    def is_overdue(self):
+        """Check if project is past deadline"""
+        if not self.deadline:
+            return False
+        return timezone.now() > self.deadline and self.status not in ['completed', 'archived']
+
+    @property
+    def name(self):
+        """Alias for project_name for compatibility with CreativeProject references"""
+        return self.project_name
+
+    @name.setter
+    def name(self, value):
+        """Setter for name alias"""
+        self.project_name = value
+
+    def get_sequential_number(self):
+        """
+        Get sequential number for this project (per user, chronological)
+
+        Session 324: Merged from CreativeProject for unified model
+        Returns 1-based sequential number for easy referencing
+        Example: "Project #5" instead of "Project d4f7b3c2-8a9e-4d1f..."
+        """
+        # Count how many projects this user has created BEFORE this one
+        earlier_projects = PartnershipProject.objects.filter(
+            user=self.user,
+            created_at__lt=self.created_at
+        ).count()
+
+        # Sequential number is count + 1 (1-based indexing)
+        return earlier_projects + 1
+
+    def update_workflow_counts(self):
+        """
+        Update workflow counts from related ProjectWorkflow entries
+
+        Session 324: Merged from CreativeProject for unified model
+        """
+        # This is a placeholder - will be connected when ProjectWorkflow is migrated
+        pass
 
     def calculate_partnership_roi(self):
         """
