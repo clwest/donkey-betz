@@ -4016,6 +4016,323 @@ def broadcast_conversation_status(self):
 
 
 # =============================================================================
+# Session 330: Project Conversations (Multi-turn Agent Discussions about Projects)
+# =============================================================================
+
+@shared_task(bind=True)
+def run_project_conversation(self, project_id: str, topic: str, max_messages: int = 6):
+    """
+    Generate a multi-turn conversation between agents about a specific project.
+
+    Unlike HiveMind (parallel single responses), this creates a real back-and-forth
+    discussion where agents talk amongst themselves about the project's research,
+    plans, and opportunities - just like Agent/Social conversations.
+
+    Args:
+        project_id: UUID of the PartnershipProject
+        topic: Discussion topic (e.g., "How can we grow our audience?")
+        max_messages: Maximum messages in the conversation
+
+    Returns:
+        Dict with conversation details
+    """
+    from django.utils import timezone
+    from core.models import (
+        Agent, AgentConversation, ConversationMessage,
+        AgentKnowledgeSource
+    )
+    from core.models_unified_system import (
+        PartnershipProject, BusinessResearchResult
+    )
+    import random
+    import openai
+    import os
+
+    logger.info(f"🗣️ [PROJECT-CONVERSATION] Starting conversation for project {project_id}: {topic}")
+
+    try:
+        # Get the project
+        try:
+            project = PartnershipProject.objects.get(id=project_id)
+        except PartnershipProject.DoesNotExist:
+            logger.error(f"🗣️ [PROJECT-CONVERSATION] Project {project_id} not found")
+            return {'status': 'failed', 'error': 'Project not found'}
+
+        # Get project research for context
+        research_results = BusinessResearchResult.objects.filter(
+            project=project
+        ).order_by('-created_at')[:5]
+
+        # Build project context from research
+        project_context_parts = [f"Project: {project.project_name or project.name}"]
+        if project.business_type:
+            project_context_parts.append(f"Business Type: {project.business_type}")
+        if project.description:
+            project_context_parts.append(f"Description: {project.description[:500]}")
+
+        # Add research insights
+        research_context = []
+        for research in research_results:
+            if research.analysis:
+                research_context.append(f"Research ({research.research_type}): {research.analysis[:300]}")
+            if research.recommendations:
+                recs = research.recommendations[:3] if isinstance(research.recommendations, list) else []
+                for rec in recs:
+                    if isinstance(rec, str):
+                        research_context.append(f"Recommendation: {rec[:150]}")
+                    elif isinstance(rec, dict):
+                        research_context.append(f"Recommendation: {str(rec.get('text', rec))[:150]}")
+
+        project_context = "\n".join(project_context_parts)
+        if research_context:
+            project_context += "\n\n== Research Insights ==\n" + "\n".join(research_context[:5])
+
+        # Find agents with project knowledge OR random agents
+        agents_with_project_knowledge = Agent.objects.filter(
+            knowledge_sources__source_project=project
+        ).distinct()[:10]
+
+        if agents_with_project_knowledge.count() < 2:
+            # Session 329: Use ALL agents including deprecated for projects
+            agents_with_project_knowledge = list(Agent.objects.all().order_by('?')[:10])
+        else:
+            agents_with_project_knowledge = list(agents_with_project_knowledge)
+
+        if len(agents_with_project_knowledge) < 2:
+            logger.warning("🗣️ [PROJECT-CONVERSATION] Need at least 2 agents")
+            return {'status': 'failed', 'error': 'Insufficient agents'}
+
+        # Pick 2 random agents for the conversation
+        random.shuffle(agents_with_project_knowledge)
+        initiator = agents_with_project_knowledge[0]
+        responder = agents_with_project_knowledge[1]
+
+        # Conversation templates for project discussions
+        project_templates = [
+            {
+                'type': 'brainstorm',
+                'tension_level': 'medium',
+                'dynamic': 'generate ideas, build on each other, explore possibilities',
+                'starter': f"Let's brainstorm about {topic}. Based on the project research...",
+            },
+            {
+                'type': 'strategic_planning',
+                'tension_level': 'medium',
+                'dynamic': 'plan concrete steps, prioritize actions, identify resources',
+                'starter': f"We need to develop a strategy for {topic}. Here's what I'm thinking...",
+            },
+            {
+                'type': 'problem_solving',
+                'tension_level': 'high',
+                'dynamic': 'identify challenges, propose solutions, evaluate trade-offs',
+                'starter': f"Looking at the research, there are some challenges with {topic}...",
+            },
+            {
+                'type': 'opportunity_analysis',
+                'tension_level': 'low',
+                'dynamic': 'identify opportunities, assess potential, discuss approaches',
+                'starter': f"I see some interesting opportunities regarding {topic}...",
+            },
+        ]
+
+        template = random.choice(project_templates)
+
+        # Create the conversation with project link
+        conversation = AgentConversation.objects.create(
+            topic=f"Project Discussion: {topic[:100]}",
+            conversation_type=template['type'],
+            initiator=initiator,
+            trigger_type='user_triggered',
+            project=project,  # Session 327: Link to project
+            status='active'
+        )
+        conversation.participants.add(initiator, responder)
+
+        logger.info(f"🗣️ [PROJECT-CONVERSATION] Created conversation {conversation.id} with {initiator.name} and {responder.name}")
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        messages = []
+        current_speaker = initiator
+        other_speaker = responder
+
+        # Build tension-appropriate behavior guidelines
+        tension = template.get('tension_level', 'medium')
+        if tension == 'high':
+            behavior_guide = """IMPORTANT - This is a HIGH TENSION discussion:
+- Challenge claims directly - don't just agree
+- Point out flaws, risks, or oversights in their approach
+- Defend your expertise when questioned
+- Ask tough "what about..." or "but what if..." questions"""
+        elif tension == 'medium':
+            behavior_guide = """This is a BALANCED discussion:
+- Share your perspective but also question theirs
+- Offer alternatives when you see different approaches
+- Mix agreement with constructive pushback"""
+        else:
+            behavior_guide = """This is an EXPLORATORY discussion:
+- Share knowledge while remaining curious
+- Build on ideas but also test them
+- Be supportive while offering new angles"""
+
+        for msg_num in range(max_messages):
+            # Build the system prompt with project context
+            system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
+
+You are having a {template['type'].replace('_', ' ')} with {other_speaker.name} about a project.
+
+== PROJECT CONTEXT ==
+{project_context}
+
+== DISCUSSION TOPIC ==
+{topic}
+
+{behavior_guide}
+
+Conversation dynamic: {template['dynamic']}
+
+Guidelines:
+- Keep responses concise (2-4 sentences)
+- Reference specific research insights when relevant
+- Be authentic to YOUR expertise
+- Focus on practical, actionable ideas for this project
+- If you see a problem with their approach, say so constructively"""
+
+            # Build message history
+            history_msgs = []
+            for prev_msg in messages[-4:]:
+                history_msgs.append({
+                    "role": "user" if prev_msg['agent'] != current_speaker.name else "assistant",
+                    "content": f"{prev_msg['agent']}: {prev_msg['content']}"
+                })
+
+            # Generate user content prompt
+            if msg_num == 0:
+                user_content = f"Start a {template['type'].replace('_', ' ')} about '{topic}' for this project. Be the first to speak."
+            else:
+                last_msg = messages[-1]['content'] if messages else ''
+                user_content = f"Respond to {other_speaker.name}'s point: '{last_msg[:200]}...' Continue the project discussion."
+
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        *history_msgs,
+                        {"role": "user", "content": user_content}
+                    ],
+                    max_completion_tokens=800,
+                )
+
+                content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                # Clean up content
+                if content.startswith(f"{current_speaker.name}:"):
+                    content = content[len(current_speaker.name)+1:].strip()
+
+                if not content:
+                    logger.warning(f"🗣️ [PROJECT-CONVERSATION] Empty content from {current_speaker.name}, skipping")
+                    current_speaker, other_speaker = other_speaker, current_speaker
+                    continue
+
+                # Determine message type
+                msg_type = 'statement'
+                content_lower = content.lower()
+                if '?' in content:
+                    msg_type = 'question'
+                elif 'agree' in content_lower or "you're right" in content_lower:
+                    msg_type = 'agreement'
+                elif 'however' in content_lower or 'but' in content_lower or 'disagree' in content_lower:
+                    msg_type = 'disagreement'
+                elif 'suggest' in content_lower or 'could' in content_lower or 'what if' in content_lower:
+                    msg_type = 'suggestion'
+                elif 'insight' in content_lower or 'realize' in content_lower:
+                    msg_type = 'insight'
+
+                # Save the message
+                ConversationMessage.objects.create(
+                    conversation=conversation,
+                    agent=current_speaker,
+                    content=content,
+                    message_type=msg_type,
+                    sequence_number=msg_num + 1,
+                )
+
+                messages.append({
+                    'agent': current_speaker.name,
+                    'content': content,
+                    'type': msg_type
+                })
+
+                logger.info(f"🗣️ [PROJECT-CONVERSATION] {current_speaker.name}: {content[:80]}...")
+
+            except Exception as e:
+                logger.warning(f"🗣️ [PROJECT-CONVERSATION] Failed to generate message: {e}")
+                break
+
+            # Swap speakers
+            current_speaker, other_speaker = other_speaker, current_speaker
+
+        # Conclude the conversation
+        if messages:
+            try:
+                conclusion_response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=[
+                        {"role": "system", "content": "Summarize the key insights and action items from this project discussion in 2-3 sentences."},
+                        {"role": "user", "content": f"Project: {project.project_name or project.name}\nTopic: {topic}\n\nDiscussion:\n" +
+                            "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
+                    ],
+                    max_completion_tokens=500,
+                )
+                conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
+            except:
+                conclusion = f"Productive discussion about {topic}"
+
+            conversation.conclude(
+                conclusion,
+                insights=[m['content'] for m in messages if m['type'] == 'insight']
+            )
+            conversation.quality_score = min(1.0, len(messages) / max_messages * 0.8 + 0.2)
+            conversation.message_count = len(messages)
+            conversation.save()
+
+        # Broadcast update via WebSocket
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'project_conversation_complete',
+                'project_id': str(project_id),
+                'conversation_id': str(conversation.id),
+                'topic': topic,
+                'participants': [initiator.name, responder.name],
+                'message_count': len(messages),
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(f"🗣️ [PROJECT-CONVERSATION] Complete: {len(messages)} messages between {initiator.name} and {responder.name}")
+
+        return {
+            'status': 'success',
+            'conversation_id': str(conversation.id),
+            'project_id': str(project_id),
+            'topic': topic,
+            'participants': [initiator.name, responder.name],
+            'message_count': len(messages),
+            'conclusion': conclusion if messages else None
+        }
+
+    except Exception as e:
+        logger.exception(f"🗣️ [PROJECT-CONVERSATION] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
 # Session 247: Agent Dreams (Idle Thoughts & Creative Ideas)
 # =============================================================================
 
@@ -5672,3 +5989,142 @@ def broadcast_evolution_status():
     except Exception as e:
         logger.exception(f"📈 [EVOLUTION] Failed to broadcast: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+# ==================== SESSION 326: PROJECT-AGENT LEARNING BRIDGE ====================
+
+
+@shared_task
+def sync_project_knowledge():
+    """
+    Sync BusinessResearchResult to AgentKnowledgeSource.
+    Runs every 30 minutes via Celery Beat.
+
+    Session 326: Project-Agent Learning Bridge
+
+    This task:
+    - Finds unprocessed research results
+    - Converts them to agent knowledge
+    - Links knowledge to source project
+    """
+    from core.services.project_research_bridge import get_project_research_bridge
+
+    logger.info("🔗 [SESSION 326] Starting project knowledge sync...")
+
+    try:
+        bridge = get_project_research_bridge()
+        result = bridge.sync_all_research_to_knowledge(limit=50)
+
+        logger.info(
+            f"🔗 [SESSION 326] Knowledge sync complete: "
+            f"{result['processed_research']} research → {result['knowledge_created']} knowledge"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.exception(f"🔗 [SESSION 326] Knowledge sync failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def recalculate_spider_priorities():
+    """
+    Recalculate spider priorities based on active projects.
+    Runs every 6 hours via Celery Beat.
+
+    Session 326: Project-Agent Learning Bridge
+
+    This task:
+    - Scans all active projects
+    - Extracts topics and keywords
+    - Updates ProjectSpiderPriority weights
+    - Influences spider run frequency
+    """
+    from core.services.spider_priority_engine import get_spider_priority_engine
+
+    logger.info("🕷️ [SESSION 326] Starting spider priority recalculation...")
+
+    try:
+        engine = get_spider_priority_engine()
+        result = engine.recalculate_all_priorities()
+
+        logger.info(
+            f"🕷️ [SESSION 326] Priority recalculation complete: "
+            f"{result['projects_processed']} projects, "
+            f"{result['priorities_created']} created, "
+            f"{result['priorities_updated']} updated"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.exception(f"🕷️ [SESSION 326] Priority recalculation failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_research_feedback(feedback_id: str):
+    """
+    Process a single research feedback submission.
+
+    Session 326: Project-Agent Learning Bridge
+
+    This task:
+    - Loads the feedback entry
+    - Applies confidence adjustments to related knowledge
+    - Updates spider priorities if needed
+    """
+    from core.services.project_research_bridge import get_project_research_bridge
+
+    logger.info(f"📝 [SESSION 326] Processing feedback {feedback_id}...")
+
+    try:
+        bridge = get_project_research_bridge()
+        result = bridge.apply_feedback(feedback_id)
+
+        if result.get('status') == 'applied':
+            logger.info(
+                f"📝 [SESSION 326] Feedback applied: "
+                f"{result['feedback_type']} → {result['updated_count']} knowledge entries"
+            )
+        else:
+            logger.info(f"📝 [SESSION 326] Feedback status: {result.get('status', 'unknown')}")
+
+        return result
+
+    except Exception as e:
+        logger.exception(f"📝 [SESSION 326] Feedback processing failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def update_project_spider_priorities(project_id: str):
+    """
+    Update spider priorities for a specific project.
+    Called when a project is created or updated.
+
+    Session 326: Project-Agent Learning Bridge
+    """
+    from core.services.spider_priority_engine import get_spider_priority_engine
+    from core.models_unified_system import PartnershipProject
+
+    logger.info(f"🎯 [SESSION 326] Updating spider priorities for project {project_id}...")
+
+    try:
+        project = PartnershipProject.objects.get(id=project_id)
+        engine = get_spider_priority_engine()
+        result = engine.update_project_priorities(project)
+
+        logger.info(
+            f"🎯 [SESSION 326] Project priorities updated: "
+            f"{result['categories_matched']} categories matched"
+        )
+
+        return result
+
+    except PartnershipProject.DoesNotExist:
+        logger.error(f"🎯 [SESSION 326] Project {project_id} not found")
+        return {'error': 'Project not found'}
+    except Exception as e:
+        logger.exception(f"🎯 [SESSION 326] Priority update failed: {e}")
+        return {'error': str(e)}
