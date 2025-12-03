@@ -993,6 +993,30 @@ from core.views_super_platform import (
     SuperPlatformQuickAskView,
 )
 
+# Session 326: Project-Agent Learning Bridge API
+from core.views_research_feedback import (
+    submit_research_feedback,
+    get_research_feedback,
+    get_project_learning_stats,
+    trigger_knowledge_sync,
+    trigger_priority_recalculation,
+    get_spider_priorities,
+)
+
+# Session 327: Project-Scoped Agent Intelligence API
+from core.views_project_intelligence import (
+    get_project_intelligence_overview,
+    get_project_learning,
+    get_project_conversations,
+    get_project_dreams,
+    get_project_boardroom,
+    trigger_project_conversation,
+    get_project_spiders,
+    refresh_project_spiders,
+    get_project_slack_channel,
+    post_project_slack_message,
+)
+
 urlpatterns = [
     # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
     # Removed duplicate /v2/ namespace - see docs/debugging-sessions/SESSION_31_URL_CONSOLIDATION_PLAN.md
@@ -1064,6 +1088,28 @@ urlpatterns = [
     path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
     path('api/projects/<uuid:project_id>/add-research/', add_research_to_project, name='add-research-to-project'),  # Session 324
     path('api/projects/<uuid:project_id>/export-research-pdf/', export_research_pdf, name='export-research-pdf'),  # Session 325
+    path('api/projects/<uuid:project_id>/learning/', get_project_learning_stats, name='project-learning-stats'),  # Session 326
+
+    # Session 327: Project-Scoped Agent Intelligence APIs
+    path('api/projects/<uuid:project_id>/intelligence/', get_project_intelligence_overview, name='project-intelligence'),
+    path('api/projects/<uuid:project_id>/intelligence/learning/', get_project_learning, name='project-intelligence-learning'),
+    path('api/projects/<uuid:project_id>/intelligence/conversations/', get_project_conversations, name='project-intelligence-conversations'),
+    path('api/projects/<uuid:project_id>/intelligence/conversations/trigger/', trigger_project_conversation, name='project-trigger-conversation'),
+    path('api/projects/<uuid:project_id>/intelligence/dreams/', get_project_dreams, name='project-intelligence-dreams'),
+    path('api/projects/<uuid:project_id>/intelligence/boardroom/', get_project_boardroom, name='project-intelligence-boardroom'),
+
+    # Session 328: Project-Scoped Spider & Agent Slack APIs
+    path('api/projects/<uuid:project_id>/intelligence/spiders/', get_project_spiders, name='project-intelligence-spiders'),
+    path('api/projects/<uuid:project_id>/intelligence/spiders/refresh/', refresh_project_spiders, name='project-refresh-spiders'),
+    path('api/projects/<uuid:project_id>/intelligence/slack/', get_project_slack_channel, name='project-intelligence-slack'),
+    path('api/projects/<uuid:project_id>/intelligence/slack/message/', post_project_slack_message, name='project-slack-message'),
+
+    # Session 326: Research Feedback & Learning Bridge APIs
+    path('api/research/feedback/', submit_research_feedback, name='submit-research-feedback'),
+    path('api/research/<uuid:research_id>/feedback/', get_research_feedback, name='get-research-feedback'),
+    path('api/research/sync/', trigger_knowledge_sync, name='trigger-knowledge-sync'),
+    path('api/spiders/priorities/', get_spider_priorities, name='get-spider-priorities'),
+    path('api/spiders/recalculate-priorities/', trigger_priority_recalculation, name='recalculate-spider-priorities'),
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),

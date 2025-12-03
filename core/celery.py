@@ -410,6 +410,24 @@ app.conf.beat_schedule = {
             'expires': 115,
         }
     },
+    # Session 326: Project-Agent Learning Bridge
+    # Sync research results to agent knowledge
+    'sync-project-knowledge': {
+        'task': 'core.tasks.sync_project_knowledge',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes - convert research to knowledge
+        'options': {
+            'expires': 1800,
+        }
+    },
+    # Session 326: Spider Priority Recalculation
+    # Update spider priorities based on active projects
+    'recalculate-spider-priorities': {
+        'task': 'core.tasks.recalculate_spider_priorities',
+        'schedule': crontab(hour='*/6', minute=45),  # Every 6 hours at :45
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration

@@ -221,16 +221,64 @@ class AgentKnowledgeSource(models.Model):
     is_active = models.BooleanField(default=True)
     is_validated = models.BooleanField(default=False)
 
+    # Session 326: Project linkage - connect knowledge to project source
+    source_project = models.ForeignKey(
+        'core.PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='derived_knowledge',
+        help_text="Project this knowledge was derived from"
+    )
+    source_research = models.ForeignKey(
+        'core.BusinessResearchResult',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='derived_knowledge',
+        help_text="Research result this knowledge was derived from"
+    )
+
+    # Session 326: Feedback-adjusted metrics
+    feedback_positive = models.IntegerField(default=0, help_text="Count of positive feedback")
+    feedback_negative = models.IntegerField(default=0, help_text="Count of negative feedback")
+    feedback_adjusted_confidence = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Confidence after user feedback adjustments"
+    )
+
     class Meta:
         app_label = 'core'
         ordering = ['-confidence_score', '-last_updated_at']
         indexes = [
             models.Index(fields=['agent', 'knowledge_type']),
             models.Index(fields=['spider_category', 'is_active']),
+            models.Index(fields=['source_project']),  # Session 326
         ]
 
     def __str__(self):
         return f"{self.agent.name}: {self.title[:50]}"
+
+    @property
+    def effective_confidence(self):
+        """Get confidence score adjusted by feedback."""
+        if self.feedback_adjusted_confidence is not None:
+            return self.feedback_adjusted_confidence
+        return self.confidence_score
+
+    def apply_feedback(self, is_positive: bool, delta: float = 0.1):
+        """Apply feedback to adjust confidence score."""
+        if is_positive:
+            self.feedback_positive += 1
+            adjustment = delta
+        else:
+            self.feedback_negative += 1
+            adjustment = -delta
+
+        base = self.feedback_adjusted_confidence or self.confidence_score
+        self.feedback_adjusted_confidence = max(0.0, min(1.0, base + adjustment))
+        self.save()
 
 
 class AgentLearningConnection(models.Model):
@@ -6364,6 +6412,16 @@ class AgentConversation(models.Model):
         help_text="How valuable was this conversation"
     )
 
+    # Session 327: Project context for scoped intelligence
+    project = models.ForeignKey(
+        'PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agent_conversations',
+        help_text='Session 327: Optional project context for this conversation'
+    )
+
     # Timestamps
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
@@ -6714,6 +6772,16 @@ class AgentDream(models.Model):
         ('dismissed', 'Dismissed'),
     ])
     user_feedback = models.TextField(blank=True)
+
+    # Session 327: Project context for scoped intelligence
+    project = models.ForeignKey(
+        'PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agent_dreams',
+        help_text='Session 327: Optional project context for this dream'
+    )
 
     # Timestamps
     dreamed_at = models.DateTimeField(auto_now_add=True)
@@ -7112,6 +7180,16 @@ class HiveMindSession(models.Model):
     total_thinking_time = models.FloatField(
         default=0.0,
         help_text="Total seconds of agent thinking time"
+    )
+
+    # Session 327: Project context for scoped intelligence
+    project = models.ForeignKey(
+        'PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hive_sessions',
+        help_text='Session 327: Optional project context for this session'
     )
 
     # Timestamps
@@ -12863,6 +12941,16 @@ class AgentDecisionSummary(models.Model):
         related_name='superseded_by'
     )
 
+    # Session 327: Project context for scoped intelligence
+    project = models.ForeignKey(
+        'PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='boardroom_decisions',
+        help_text='Session 327: Optional project context for this decision'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -12900,3 +12988,228 @@ Key Points:
 {insights}
 Stance: {self.recommended_stance}
 """
+
+
+# =============================================================================
+# SESSION 326: PROJECT-AGENT LEARNING BRIDGE MODELS
+# =============================================================================
+
+class ProjectResearchFeedback(models.Model):
+    """
+    Session 326: Track user feedback on research results.
+
+    This enables:
+    1. Accept/reject tracking per research item
+    2. Confidence score adjustment in AgentKnowledgeSource
+    3. Pattern learning for agent improvement
+
+    Flow:
+    - User reviews research in project
+    - Clicks Accept/Reject/Rate
+    - System adjusts agent knowledge confidence
+    - Future research incorporates learning
+    """
+
+    FEEDBACK_TYPE_CHOICES = [
+        ('accept', 'Accepted - Useful'),
+        ('reject', 'Rejected - Not Useful'),
+        ('partial', 'Partially Useful'),
+        ('starred', 'Starred - Excellent'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to project and research
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        on_delete=models.CASCADE,
+        related_name='research_feedback'
+    )
+    research = models.ForeignKey(
+        'core.BusinessResearchResult',
+        on_delete=models.CASCADE,
+        related_name='feedback',
+        null=True,
+        blank=True,
+        help_text="Specific research result this feedback applies to"
+    )
+
+    # User who gave feedback
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='research_feedback'
+    )
+
+    # Feedback content
+    feedback_type = models.CharField(
+        max_length=20,
+        choices=FEEDBACK_TYPE_CHOICES,
+        default='accept'
+    )
+    rating = models.IntegerField(
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="1-5 star rating"
+    )
+    reason = models.TextField(
+        blank=True,
+        help_text="Why was this research useful/not useful?"
+    )
+
+    # What part of research was feedback about
+    feedback_context = models.JSONField(
+        default=dict,
+        help_text="Context: {section: 'competitors', item: 'Jasper AI', reason: 'outdated'}"
+    )
+
+    # Learning impact
+    applied_to_knowledge = models.BooleanField(
+        default=False,
+        help_text="Has this feedback been applied to agent knowledge?"
+    )
+    knowledge_delta = models.FloatField(
+        default=0.0,
+        help_text="Confidence adjustment made (-1 to +1)"
+    )
+    affected_knowledge_ids = ArrayField(
+        models.UUIDField(),
+        default=list,
+        help_text="IDs of AgentKnowledgeSource entries affected by this feedback"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', 'feedback_type']),
+            models.Index(fields=['research']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.feedback_type} on {self.project.project_name}"
+
+    def apply_to_knowledge(self):
+        """Apply this feedback to related AgentKnowledgeSource entries."""
+        from core.models_unified_system import AgentKnowledgeSource
+
+        # Find knowledge derived from this project
+        related_knowledge = AgentKnowledgeSource.objects.filter(
+            source_project=self.project,
+            is_active=True
+        )
+
+        if self.research:
+            related_knowledge = related_knowledge.filter(source_research=self.research)
+
+        affected_ids = []
+        is_positive = self.feedback_type in ('accept', 'starred')
+
+        # Calculate delta based on rating and feedback type
+        if self.feedback_type == 'starred':
+            delta = 0.2
+        elif self.feedback_type == 'accept':
+            delta = 0.1 * (self.rating / 5)  # Scale by rating
+        elif self.feedback_type == 'partial':
+            delta = 0.05 * ((self.rating - 3) / 2)  # Slight adjustment
+        else:  # reject
+            delta = -0.15 * ((6 - self.rating) / 5)  # Stronger negative for low ratings
+
+        for knowledge in related_knowledge:
+            knowledge.apply_feedback(is_positive, abs(delta))
+            affected_ids.append(knowledge.id)
+
+        self.affected_knowledge_ids = affected_ids
+        self.knowledge_delta = delta
+        self.applied_to_knowledge = True
+        self.save()
+
+        return len(affected_ids)
+
+
+class ProjectSpiderPriority(models.Model):
+    """
+    Session 326: Link projects to spider categories for prioritization.
+
+    Active projects influence spider crawling priorities:
+    - Projects with 'AI content' topic -> prioritize tech/AI spiders
+    - Projects with 'coffee roasting' -> prioritize business/market spiders
+
+    Spider priority is calculated based on:
+    1. Number of active projects with matching topics
+    2. Recency of project activity
+    3. Explicit user priority settings
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to project
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        on_delete=models.CASCADE,
+        related_name='spider_priorities'
+    )
+
+    # Spider category to prioritize
+    spider_category = models.ForeignKey(
+        'core.SpiderCategory',
+        on_delete=models.CASCADE,
+        related_name='project_priorities'
+    )
+
+    # Priority settings
+    priority_weight = models.FloatField(
+        default=1.0,
+        validators=[MinValueValidator(0.1), MaxValueValidator(10.0)],
+        help_text="Weight multiplier for this category (1.0 = normal)"
+    )
+
+    # Topic matching
+    matched_keywords = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        help_text="Keywords that matched this project to this category"
+    )
+
+    # Effectiveness tracking
+    data_used_count = models.IntegerField(
+        default=0,
+        help_text="How many spider data points were used from this category"
+    )
+    useful_data_count = models.IntegerField(
+        default=0,
+        help_text="How many were marked useful by user feedback"
+    )
+
+    is_auto_detected = models.BooleanField(
+        default=True,
+        help_text="Was this priority auto-detected from project content?"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = ['project', 'spider_category']
+        ordering = ['-priority_weight']
+
+    def __str__(self):
+        return f"{self.project.project_name} -> {self.spider_category.name} (weight: {self.priority_weight})"
+
+    @property
+    def effectiveness_score(self):
+        """Calculate how effective this priority has been."""
+        if self.data_used_count == 0:
+            return 0.5  # Neutral
+        return self.useful_data_count / self.data_used_count
+
+    def record_data_usage(self, was_useful: bool):
+        """Record that data from this category was used."""
+        self.data_used_count += 1
+        if was_useful:
+            self.useful_data_count += 1
+        self.save()
