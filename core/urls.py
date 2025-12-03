@@ -59,7 +59,8 @@ from core.views_projects import (
 from core.views_projects_api import (
     projects_list, project_detail, project_agents, assign_agent_to_project,
     create_project_from_research,  # Session 302: Direct API endpoint
-    add_research_to_project  # Session 324: Add research to existing project
+    add_research_to_project,  # Session 324: Add research to existing project
+    export_research_pdf  # Session 325: Export research as PDF
 )
 
 # Import agent tracking API views (Session 120)
@@ -1062,6 +1063,7 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
     path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
     path('api/projects/<uuid:project_id>/add-research/', add_research_to_project, name='add-research-to-project'),  # Session 324
+    path('api/projects/<uuid:project_id>/export-research-pdf/', export_research_pdf, name='export-research-pdf'),  # Session 325
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),

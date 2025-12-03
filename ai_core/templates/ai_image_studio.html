@@ -30858,28 +30858,79 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         </div>
                     </div>` : ''}
 
-                    <!-- Session 324: Research Articles (from business research agents) -->
-                    ${project.metadata && project.metadata.research_articles && project.metadata.research_articles.length > 0 ? `
-                    <div class="mb-3 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 3px solid #22c55e;">
-                        <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSubsection('${project.id}', 'articles')">
-                            <div class="small" style="color: #22c55e; font-weight: 600;">
-                                📚 Research Articles (${project.metadata.research_articles.length})
-                                <span id="subsection-toggle-articles-${project.id}" style="font-size: 10px; margin-left: 5px;">▼</span>
+                    <!-- Session 325: Analysis Section - Full expandable reports with PDF export -->
+                    ${project.metadata && project.metadata.research_summaries && project.metadata.research_summaries.length > 0 ? `
+                    <div class="mb-3">
+                        ${project.metadata.research_summaries.map((research, idx) => `
+                        <div class="mb-2 p-2" style="background: rgba(168, 85, 247, 0.1); border-radius: 8px; border-left: 3px solid #a855f7;">
+                            <!-- Analysis Header -->
+                            <div class="d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleResearchSection('${project.id}', 'analysis', ${idx})">
+                                <div style="color: #a855f7; font-weight: 600; font-size: 13px;">
+                                    ${research.type === 'customer_research' ? '👥' : research.type === 'competitor_analysis' ? '🎯' : '📊'}
+                                    Analysis: ${research.type === 'customer_research' ? 'Customer Research' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : 'Business Research'}
+                                    <span id="toggle-analysis-${project.id}-${idx}" style="font-size: 10px; margin-left: 5px;">▶</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge" style="background: rgba(168, 85, 247, 0.3); font-size: 9px;">${research.data_points || 0} data points</span>
+                                    <button onclick="event.stopPropagation(); exportResearchPDF('${project.id}', ${idx})"
+                                            class="btn btn-sm"
+                                            style="background: rgba(168, 85, 247, 0.3); border: 1px solid #a855f7; color: #c4b5fd; font-size: 10px; padding: 2px 8px;"
+                                            title="Download as PDF">
+                                        📄 Download PDF
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Analysis Content (collapsed by default) -->
+                            <div id="content-analysis-${project.id}-${idx}" style="display: none; margin-top: 10px;">
+                                <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 12px; max-height: 400px; overflow-y: auto;">
+                                    <div style="color: #e2e8f0; font-size: 12px; line-height: 1.6; white-space: pre-wrap;">
+                                        ${research.summary || 'No analysis available.'}
+                                    </div>
+                                    ${research.sources && research.sources.length > 0 ? `
+                                        <div class="mt-3 pt-2" style="border-top: 1px solid rgba(168, 85, 247, 0.3);">
+                                            <div style="color: #a855f7; font-size: 11px; font-weight: 600; margin-bottom: 5px;">Sources:</div>
+                                            ${research.sources.map(s => `<span class="badge me-1 mb-1" style="background: rgba(168, 85, 247, 0.2); color: #c4b5fd; font-size: 10px;">${s}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
-                        <div id="subsection-content-articles-${project.id}" style="max-height: 300px; overflow-y: auto;">
-                            ${project.metadata.research_articles.map((article, idx) => `
-                                <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 4px;">
-                                    <a href="${article.url || article.link || '#'}" target="_blank" style="color: #86efac; font-size: 12px; font-weight: 500;">
-                                        ${idx + 1}. ${article.title || 'Article'}
-                                    </a>
-                                    <div class="d-flex align-items-center gap-2 mt-1">
-                                        <span class="badge" style="background: rgba(34, 197, 94, 0.3); font-size: 9px;">${article.source || 'Unknown'}</span>
-                                        ${article.score ? `<span class="badge" style="background: rgba(251, 191, 36, 0.3); font-size: 9px;">Score: ${article.score}</span>` : ''}
+                        `).join('')}
+                    </div>` : ''}
+
+                    <!-- Session 325: Research Section - Source articles with PDF export -->
+                    ${project.metadata && project.metadata.research_articles && project.metadata.research_articles.length > 0 ? `
+                    <div class="mb-3 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border-left: 3px solid #22c55e;">
+                        <!-- Research Header -->
+                        <div class="d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleResearchSection('${project.id}', 'resources', 0)">
+                            <div style="color: #22c55e; font-weight: 600; font-size: 13px;">
+                                📚 Research: Source Articles (${project.metadata.research_articles.length})
+                                <span id="toggle-resources-${project.id}-0" style="font-size: 10px; margin-left: 5px;">▶</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); exportResearchPDF('${project.id}')"
+                                    class="btn btn-sm"
+                                    style="background: rgba(34, 197, 94, 0.3); border: 1px solid #22c55e; color: #86efac; font-size: 10px; padding: 2px 8px;"
+                                    title="Download as PDF">
+                                📄 Download PDF
+                            </button>
+                        </div>
+                        <!-- Research Content (collapsed by default) -->
+                        <div id="content-resources-${project.id}-0" style="display: none; margin-top: 10px;">
+                            <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 12px; max-height: 400px; overflow-y: auto;">
+                                ${project.metadata.research_articles.map((article, idx) => `
+                                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 4px;">
+                                        <a href="${article.url || article.link || '#'}" target="_blank" style="color: #86efac; font-size: 12px; font-weight: 500; text-decoration: none;">
+                                            ${idx + 1}. ${article.title || 'Article'}
+                                            <span style="font-size: 10px; color: #64748b;">↗</span>
+                                        </a>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge" style="background: rgba(34, 197, 94, 0.3); font-size: 9px;">${article.source || 'Unknown'}</span>
+                                            ${article.score ? `<span class="badge" style="background: rgba(251, 191, 36, 0.3); font-size: 9px;">Score: ${article.score}</span>` : ''}
+                                        </div>
+                                        ${article.description ? `<div class="mt-1" style="color: #94a3b8; font-size: 11px; line-height: 1.4;">${article.description.substring(0, 200)}${article.description.length > 200 ? '...' : ''}</div>` : ''}
                                     </div>
-                                    ${article.description ? `<div class="small text-muted mt-1" style="font-size: 11px; line-height: 1.4;">${article.description.substring(0, 150)}${article.description.length > 150 ? '...' : ''}</div>` : ''}
-                                </div>
-                            `).join('')}
+                                `).join('')}
+                            </div>
                         </div>
                     </div>` : ''}
 
@@ -36188,10 +36239,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Strip markers and use HTML directly - don't wrap in colored box for rich content
                 displayContent = content.replace(/<!-- RAW_HTML -->/g, '').replace(/<!-- \/RAW_HTML -->/g, '');
 
-                // Session 324: Replace "Create Project" button with "Add to Project" for embedded assistant
+                // Session 324/325: Replace "Create Project" button with "Add to Project" for embedded assistant
                 // Since we're already in a project context, we add research TO the current project
+                // Session 325: Fixed regex - match onclick="showCreateProjectFromResearchModal('...')"
+                // Note: projectName can contain parentheses, so we use [^']* to match inside single quotes
                 displayContent = displayContent.replace(
-                    /onclick="showCreateProjectFromResearchModal\([^)]+\)"/g,
+                    /onclick="showCreateProjectFromResearchModal\('[^']*'\)"/g,
                     `onclick="addResearchToCurrentProject('${projectId}')"`
                 );
                 displayContent = displayContent.replace('📁 Create Project', '📁 Add to Project');
@@ -37447,6 +37500,49 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const prefs = JSON.parse(localStorage.getItem('projectSubsectionPrefs') || '{}');
             prefs[`${subsectionName}-${projectId}`] = !isHidden;
             localStorage.setItem('projectSubsectionPrefs', JSON.stringify(prefs));
+        }
+
+        /**
+         * Session 325: Toggle research/analysis sections with improved animation
+         * Handles the new Analysis and Research dropdown sections
+         */
+        function toggleResearchSection(projectId, sectionType, index) {
+            const content = document.getElementById(`content-${sectionType}-${projectId}-${index}`);
+            const toggle = document.getElementById(`toggle-${sectionType}-${projectId}-${index}`);
+
+            if (!content || !toggle) {
+                console.warn(`Research section not found: ${sectionType}-${index} for project ${projectId}`);
+                return;
+            }
+
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                // Expand with smooth animation
+                content.style.display = 'block';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-10px)';
+                toggle.textContent = '▼';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                    content.style.opacity = '1';
+                    content.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                // Collapse
+                content.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-5px)';
+                setTimeout(() => {
+                    content.style.display = 'none';
+                    toggle.textContent = '▶';
+                }, 150);
+            }
+
+            // Store preference
+            const prefs = JSON.parse(localStorage.getItem('researchSectionPrefs') || '{}');
+            prefs[`${sectionType}-${projectId}-${index}`] = !isHidden;
+            localStorage.setItem('researchSectionPrefs', JSON.stringify(prefs));
         }
 
         /**
@@ -49753,6 +49849,58 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             })
             .catch(err => {
                 console.error('Error adding research to project:', err);
+                showToast(`❌ Error: ${err.message}`, 'error');
+            });
+        }
+
+        // Session 325: Export research as PDF
+        function exportResearchPDF(projectId, researchIndex = -1) {
+            showToast('📄 Generating PDF...', 'info');
+
+            // Create the URL with optional index parameter
+            let url = `/api/projects/${projectId}/export-research-pdf/`;
+            if (researchIndex !== -1) {
+                url += `?index=${researchIndex}`;
+            }
+
+            // Fetch the PDF and trigger download
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Failed to generate PDF');
+                    });
+                }
+                // Get filename from Content-Disposition header if available
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = 'research-report.pdf';
+                if (disposition && disposition.includes('filename=')) {
+                    const match = disposition.match(/filename="?([^"]+)"?/);
+                    if (match) filename = match[1];
+                }
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(({ blob, filename }) => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showToast('✅ PDF downloaded!', 'success');
+            })
+            .catch(err => {
+                console.error('Error exporting research PDF:', err);
                 showToast(`❌ Error: ${err.message}`, 'error');
             });
         }

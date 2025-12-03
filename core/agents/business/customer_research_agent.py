@@ -5,21 +5,23 @@ Customer Research Agent - Business Intelligence
 Session 293: Business Research Extension
 Session 303: Unified Intelligence Search + Auto Spider Refresh
 Session 304: Learning Infrastructure Integration
+Session 325: Unified Spider Network - Same semantic search as CompetitorAnalysisAgent
 
 This agent researches potential customers for a business idea.
-It uses spider data (especially Reddit) and web search to:
+It uses spider data (Reddit, HackerNews, YouTube, tech news) and web search to:
 1. Identify target customer segments
 2. Extract pain points and needs
 3. Analyze customer sentiment
 4. Build customer personas
 
 Tools Available:
-    - spider_query: Query Reddit and forums for customer discussions
+    - spider_query: Query spider network with SEMANTIC SEARCH (all categories)
     - web_search: Search for customer reviews and feedback
     - analyze_pain_points: Extract pain points from discussions
     - build_persona: Build customer persona from research
     - refresh_spider_data: Trigger fresh spider crawls for up-to-date data
     - get_prior_research: Retrieve relevant past research
+    - reddit_search: Real-time search of any Reddit subreddit
 
 Tools NOT Available (by design):
     - image/video/audio generation
@@ -34,6 +36,21 @@ from typing import Dict, Any, List
 from collections import Counter
 
 from core.agents.base_agent import BaseAgent, AgentResult
+
+
+def strip_html_tags(text: str) -> str:
+    """Strip HTML tags from text (Session 325: aligned with CompetitorAnalysisAgent)."""
+    if not text:
+        return ''
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(text, 'html.parser')
+        clean_text = soup.get_text(separator=' ', strip=True)
+        clean_text = ' '.join(clean_text.split())
+        return clean_text
+    except Exception:
+        return re.sub(r'<[^>]+>', '', text).strip()
+
 
 logger = logging.getLogger(__name__)
 
@@ -360,6 +377,7 @@ If asked to create content, explain you can only research and suggest using the 
     def __init__(self, user=None):
         super().__init__(user)
         self._spider_service = None
+        self._semantic_search = None  # Session 325: Added for unified spider network
         self._unified_search = None
         self._gathered_discussions = []
 
@@ -370,6 +388,14 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.spider_intelligence import SpiderIntelligenceService
             self._spider_service = SpiderIntelligenceService()
         return self._spider_service
+
+    @property
+    def semantic_search(self):
+        """Session 325: Lazy-load Spider Semantic Search Service (same as CompetitorAnalysisAgent)."""
+        if self._semantic_search is None:
+            from core.services.spider_semantic_search import get_spider_semantic_search
+            self._semantic_search = get_spider_semantic_search()
+        return self._semantic_search
 
     @property
     def unified_search(self):
@@ -818,68 +844,109 @@ Return comprehensive customer research with personas and pain points."""
         hours: int = 720,
         limit: int = 50
     ) -> Dict[str, Any]:
-        """Search spider data for customer discussions."""
-        try:
-            # Build enhanced query for pain points
-            pain_queries = [
-                query,
-                f"{query} frustrated",
-                f"{query} problem",
-                f"{query} wish",
-                f"{query} looking for"
-            ]
+        """
+        Session 325: Search spider data for customer discussions using SEMANTIC SEARCH.
 
+        Now uses the same semantic search as CompetitorAnalysisAgent for:
+        - Better query matching with embeddings
+        - Access to all spider categories (tech, news, community, video, etc.)
+        - HTML stripping for cleaner results
+        """
+        try:
+            # Session 325: Use semantic search for better results (same as CompetitorAnalysisAgent)
+            # This searches across ALL categories with embedding-based similarity
+            results = self.semantic_search.semantic_search(
+                query=query,
+                category=None,  # Search all categories
+                hours=hours,
+                limit=limit,
+                min_similarity=0.3  # Same threshold as CompetitorAnalysisAgent
+            )
+
+            # Convert SemanticSearchResult objects to dicts with HTML stripping
             all_results = []
-            for pq in pain_queries[:3]:  # Limit queries
+            for r in results:
+                # Session 325: Strip HTML from titles and descriptions (aligned with CompetitorAnalysisAgent)
+                cleaned_title = strip_html_tags(r.title)
+                cleaned_description = strip_html_tags(r.description)
+
+                item = {
+                    'title': cleaned_title,
+                    'description': cleaned_description[:300],
+                    'content': cleaned_description,  # For backward compatibility
+                    'url': r.url,
+                    'source': r.source,
+                    'similarity': r.similarity,
+                    'category': r.category
+                }
+                all_results.append(item)
+
+                # Store for later pain point analysis
+                self._gathered_discussions.append(
+                    f"[{r.source}] {cleaned_title} - {cleaned_description[:200]}"
+                )
+
+            # Filter by sentiment if specified
+            if sentiment != 'all':
+                all_results = self._filter_by_sentiment(all_results, sentiment)
+
+            # Get unique sources for reporting
+            sources = list(set(r.get('source', '') for r in all_results if r.get('source')))
+
+            return {
+                'success': True,
+                'data': {
+                    'discussions': all_results[:limit],
+                    'total_found': len(all_results),
+                    'sources': sources,
+                    'search_type': 'semantic'  # Indicate semantic search was used
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Semantic search failed: {e}, falling back to basic search")
+            # Fallback to basic spider service if semantic search fails
+            return self._basic_spider_search(query, hours, limit, sentiment)
+
+    def _basic_spider_search(
+        self,
+        query: str,
+        hours: int,
+        limit: int,
+        sentiment: str
+    ) -> Dict[str, Any]:
+        """
+        Session 325: Fallback to basic spider service if semantic search fails.
+
+        This uses the original SpiderIntelligenceService for keyword-based search.
+        """
+        try:
+            all_results = []
+
+            # Search across multiple categories
+            for category in ['social', 'tech', 'community', 'news']:
                 results = self.spider_service.search_spider_data(
-                    query=pq,
-                    category='social',  # Reddit, BlueSky, forums
+                    query=query,
+                    category=category,
                     hours=hours,
                     limit=limit // 4
                 )
                 all_results.extend(results)
 
-            # Also search tech category for HackerNews discussions
-            tech_results = self.spider_service.search_spider_data(
-                query=query,
-                category='tech',
-                hours=hours,
-                limit=limit // 4
-            )
-            all_results.extend(tech_results)
-
-            # Session 294: Search video category for YouTube content
-            video_results = self.spider_service.search_spider_data(
-                query=query,
-                category='video',
-                hours=hours,
-                limit=limit // 4
-            )
-            all_results.extend(video_results)
-
-            # Session 294: Search community category (includes reddit, bluesky, discord)
-            community_results = self.spider_service.search_spider_data(
-                query=query,
-                category='community',
-                hours=hours,
-                limit=limit // 4
-            )
-            all_results.extend(community_results)
-
             # Deduplicate by title
             seen_titles = set()
             unique_results = []
             for item in all_results:
-                title = item.get('title', '')
+                title = strip_html_tags(item.get('title', ''))
                 if title and title not in seen_titles:
                     seen_titles.add(title)
+                    item['title'] = title
+                    item['description'] = strip_html_tags(item.get('description', item.get('content', '')))[:300]
                     unique_results.append(item)
-                    # Store for later analysis
                     self._gathered_discussions.append(
-                        f"{item.get('title', '')} - {item.get('content', '')[:200]}"
+                        f"[{item.get('source', '')}] {title} - {item.get('description', '')[:200]}"
                     )
 
-            # Filter by sentiment if specified
             if sentiment != 'all':
                 unique_results = self._filter_by_sentiment(unique_results, sentiment)
 
@@ -888,10 +955,10 @@ Return comprehensive customer research with personas and pain points."""
                 'data': {
                     'discussions': unique_results[:limit],
                     'total_found': len(unique_results),
-                    'sources': list(set(r.get('source', '') for r in unique_results))
+                    'sources': list(set(r.get('source', '') for r in unique_results)),
+                    'search_type': 'basic'
                 }
             }
-
         except Exception as e:
             return {
                 'success': False,
@@ -1107,6 +1174,7 @@ Return as JSON with these keys."""
 
         Session 294: Added GPT synthesis like CompetitorAnalysisAgent to generate
         a proper Customer Research Report instead of just returning raw data.
+        Session 325: Added HTML stripping (aligned with CompetitorAnalysisAgent).
         """
 
         # Collect all discussion content for GPT analysis
@@ -1126,9 +1194,10 @@ Return as JSON with these keys."""
                 discussion_count += len(discussions)
                 for d in discussions[:20]:  # Limit per source
                     sources_used.add(d.get('source', 'unknown'))
+                    # Session 325: Strip HTML from titles and content (aligned with CompetitorAnalysisAgent)
                     all_discussions.append({
-                        'title': d.get('title', ''),
-                        'content': d.get('content', '')[:300],
+                        'title': strip_html_tags(d.get('title', '')),
+                        'content': strip_html_tags(d.get('content', d.get('description', '')))[:300],
                         'source': d.get('source', ''),
                         'url': d.get('url', '')
                     })

@@ -541,6 +541,7 @@ def create_project_from_research(request):
         research_type = data.get('research_type', 'business_research')
         research_id = data.get('research_id')
         research_articles = data.get('research_articles', [])
+        research_query = data.get('research_query', '')  # Session 325: Store original query
 
         # Session 324: Try to get full research data from BusinessResearchResult
         research_data = None
@@ -582,6 +583,18 @@ def create_project_from_research(request):
             'created_from': 'business_research',
         }
 
+        # Session 325: Store full analysis in research_summaries (NOT in description)
+        # This keeps the analysis in its own expandable section, not filling the description form
+        if research_summary:
+            project_metadata['research_summaries'] = [{
+                'type': research_type,
+                'summary': research_summary,
+                'query': research_query,
+                'timestamp': datetime.now().isoformat(),
+                'data_points': articles_count or len(research_articles),
+                'sources': sources_used
+            }]
+
         # Add structured findings if available
         if research_data:
             if research_data.pain_points:
@@ -594,11 +607,16 @@ def create_project_from_research(request):
                 project_metadata['recommendations'] = research_data.recommendations
 
         # Create the project with full research data
+        # Session 325: Description is just a short summary, NOT the full analysis
+        # The full analysis is in metadata.research_summaries for the Analysis dropdown
+        research_type_display = research_type.replace('_', ' ').title()
+        short_description = f"{research_type_display} project. See Analysis section for full report."
+
         project = PartnershipProject.objects.create(
             user=user,
             project_name=project_name,
             project_type=research_type,
-            description=research_summary or f"Business research project: {project_name}",
+            description=short_description,
             status='in_progress',
             ai_contribution_percent=80,
             human_contribution_percent=20,
@@ -715,6 +733,20 @@ def add_research_to_project(request, project_id):
         # Store the latest query
         metadata['last_research_query'] = research_query
 
+        # Session 325: Store the research summary/analysis for display
+        if research_summary:
+            existing_summaries = metadata.get('research_summaries', [])
+            existing_summaries.append({
+                'type': research_type,
+                'summary': research_summary,
+                'query': research_query,
+                'timestamp': datetime.now().isoformat(),
+                'data_points': data_points,
+                'sources': sources_used
+            })
+            # Keep last 5 summaries
+            metadata['research_summaries'] = existing_summaries[-5:]
+
         # Save project
         project.metadata = metadata
         project.save(update_fields=['metadata'])
@@ -743,6 +775,62 @@ def add_research_to_project(request, project_id):
 
     except Exception as e:
         logger.error(f"❌ Error adding research to project: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_research_pdf(request, project_id):
+    """
+    Export research analysis as PDF.
+
+    Session 325: Generate downloadable PDF from research data.
+
+    GET /api/projects/<project_id>/export-research-pdf/
+    Query params:
+        - index: Research summary index (default: -1 for latest)
+    """
+    from django.http import HttpResponse
+    from core.services.research_pdf_service import ResearchPDFService
+
+    try:
+        user = request.user
+        research_index = int(request.GET.get('index', -1))
+
+        # Verify project ownership
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Generate PDF
+        service = ResearchPDFService()
+        result = service.generate_research_pdf(str(project_id), research_index)
+
+        if not result.success:
+            return Response({
+                'success': False,
+                'error': result.error
+            }, status=400)
+
+        # Return PDF as download
+        response = HttpResponse(result.pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{result.filename}"'
+
+        logger.info(f"📄 Research PDF exported for project {project.project_name}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Error exporting research PDF: {e}")
         import traceback
         traceback.print_exc()
         return Response({
