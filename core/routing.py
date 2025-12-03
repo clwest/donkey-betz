@@ -427,3 +427,15 @@ learning_feed_patterns = [
 ]
 
 websocket_urlpatterns.extend(learning_feed_patterns)
+
+# Session 332: Project Intelligence Hub WebSocket - Real-time updates for all tabs
+from .project_intelligence_consumer import ProjectIntelligenceConsumer
+
+project_intelligence_patterns = [
+    # Unified Project Intelligence WebSocket - all tabs (learning, conversations, dreams, boardroom)
+    re_path(r'^ws/project-intelligence/(?P<project_id>[^/]+)/$', ProjectIntelligenceConsumer.as_asgi()),
+    # Legacy route for backward compatibility
+    re_path(r'^ws/project-conversations/(?P<project_id>[^/]+)/$', ProjectIntelligenceConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(project_intelligence_patterns)

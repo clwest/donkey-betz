@@ -4149,6 +4149,19 @@ def run_project_conversation(self, project_id: str, topic: str, max_messages: in
 
         logger.info(f"🗣️ [PROJECT-CONVERSATION] Created conversation {conversation.id} with {initiator.name} and {responder.name}")
 
+        # Session 332: Broadcast conversation started via WebSocket
+        try:
+            from core.project_intelligence_consumer import broadcast_project_conversation_started
+            broadcast_project_conversation_started(
+                project_id=str(project_id),
+                conversation_id=str(conversation.id),
+                topic=topic,
+                participants=[initiator.name, responder.name],
+                conversation_type=template['type']
+            )
+        except Exception as ws_err:
+            logger.warning(f"🗣️ [PROJECT-CONVERSATION] WebSocket broadcast failed: {ws_err}")
+
         # Initialize OpenAI client
         client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
@@ -4176,6 +4189,18 @@ def run_project_conversation(self, project_id: str, topic: str, max_messages: in
 - Be supportive while offering new angles"""
 
         for msg_num in range(max_messages):
+            # Session 332: Broadcast typing indicator before generating
+            try:
+                from core.project_intelligence_consumer import broadcast_project_typing_indicator
+                broadcast_project_typing_indicator(
+                    project_id=str(project_id),
+                    conversation_id=str(conversation.id),
+                    agent_name=current_speaker.name,
+                    agent_id=str(current_speaker.id)
+                )
+            except Exception as ws_err:
+                pass  # Non-critical
+
             # Build the system prompt with project context
             system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
 
@@ -4266,6 +4291,21 @@ Guidelines:
 
                 logger.info(f"🗣️ [PROJECT-CONVERSATION] {current_speaker.name}: {content[:80]}...")
 
+                # Session 332: Broadcast new message via WebSocket
+                try:
+                    from core.project_intelligence_consumer import broadcast_project_conversation_message
+                    broadcast_project_conversation_message(
+                        project_id=str(project_id),
+                        conversation_id=str(conversation.id),
+                        agent_name=current_speaker.name,
+                        agent_id=str(current_speaker.id),
+                        content=content,
+                        message_type=msg_type,
+                        sequence=msg_num + 1
+                    )
+                except Exception as ws_err:
+                    pass  # Non-critical
+
             except Exception as e:
                 logger.warning(f"🗣️ [PROJECT-CONVERSATION] Failed to generate message: {e}")
                 break
@@ -4297,7 +4337,20 @@ Guidelines:
             conversation.message_count = len(messages)
             conversation.save()
 
-        # Broadcast update via WebSocket
+            # Session 332: Broadcast conversation ended via WebSocket
+            try:
+                from core.project_intelligence_consumer import broadcast_project_conversation_ended
+                broadcast_project_conversation_ended(
+                    project_id=str(project_id),
+                    conversation_id=str(conversation.id),
+                    conclusion=conclusion,
+                    message_count=len(messages),
+                    quality_score=conversation.quality_score
+                )
+            except Exception as ws_err:
+                pass  # Non-critical
+
+        # Also broadcast via Redis for legacy consumers
         try:
             import redis
             import json

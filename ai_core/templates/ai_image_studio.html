@@ -37685,7 +37685,56 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 activeTab.style.border = 'none';
             }
 
-            // Show loading
+            // Session 332: Check cache first for WebSocket data
+            const cache = projectIntelligenceDataCache[projectId];
+            const cacheKey = type === 'conversations' ? 'conversations' : type;
+
+            if (cache && cache[cacheKey]) {
+                console.log(`[Project Intel] Using cached data for ${type}`);
+                const cachedData = cache[cacheKey];
+                // Convert WebSocket format to API format
+                switch (type) {
+                    case 'learning':
+                        // Map WebSocket stats format to render format
+                        const wsStats = cachedData.stats || {};
+                        renderProjectLearning(projectId, {
+                            success: true,
+                            knowledge: cachedData.knowledge || [],
+                            transfers: cachedData.transfers || [],
+                            feedback: cachedData.feedback || [],
+                            stats: {
+                                knowledge_sources: wsStats.knowledge_count || wsStats.knowledge_sources || 0,
+                                feedback_given: wsStats.feedback_count || wsStats.feedback_given || 0,
+                                avg_confidence: wsStats.avg_confidence || 0
+                            }
+                        });
+                        return;
+                    case 'conversations':
+                        renderProjectConversations(projectId, {
+                            success: true,
+                            conversations: cachedData.conversations || [],
+                            count: cachedData.count || 0
+                        });
+                        return;
+                    case 'dreams':
+                        renderProjectDreams(projectId, {
+                            success: true,
+                            dreams: cachedData.dreams || [],
+                            count: cachedData.count || 0
+                        });
+                        return;
+                    case 'boardroom':
+                        renderProjectBoardroom(projectId, {
+                            success: true,
+                            decisions: cachedData.decisions || [],
+                            count: cachedData.count || 0,
+                            canonical_count: cachedData.canonical_count || 0
+                        });
+                        return;
+                }
+            }
+
+            // Show loading (only if no cache)
             contentArea.innerHTML = `
                 <div class="text-center py-4">
                     <div class="spinner-border spinner-border-sm text-light" role="status"></div>
@@ -37742,45 +37791,114 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
          */
         function renderProjectLearning(projectId, data) {
             const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            console.log(`[renderProjectLearning] projectId: ${projectId}, data:`, data);
+
+            // Session 332: Connect to unified WebSocket for real-time updates
+            connectProjectIntelligenceWs(projectId);
+
             if (!data.knowledge || data.knowledge.length === 0) {
+                console.log(`[renderProjectLearning] No knowledge found - showing empty state`);
                 contentArea.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="small" style="color: rgba(255,255,255,0.7);">No knowledge sources yet</span>
+                        <span id="project-learning-ws-status-${projectId}" class="badge" style="font-size: 9px; padding: 2px 6px; background: rgba(34, 197, 94, 0.2);">
+                            <span style="color: #22c55e;">● Live</span>
+                        </span>
+                    </div>
                     <div class="text-center py-4">
                         <span style="font-size: 48px; opacity: 0.5;">📚</span>
                         <p class="text-light mt-2">No knowledge sources yet for this project.</p>
                         <p class="small" style="color: rgba(255,255,255,0.6);">Knowledge will appear as agents learn from project research.</p>
                     </div>
+                    <div id="project-learning-feed-${projectId}"></div>
                 `;
                 return;
             }
 
             let html = `
-                <div class="mb-3 p-2" style="background: rgba(255,255,255,0.1); border-radius: 6px;">
-                    <div class="d-flex justify-content-between small">
-                        <span style="color: rgba(255,255,255,0.7);">📚 ${data.stats.knowledge_sources} sources</span>
-                        <span style="color: rgba(255,255,255,0.7);">💬 ${data.stats.feedback_given} feedback</span>
-                        <span style="color: rgba(255,255,255,0.7);">📊 ${(data.stats.avg_confidence * 100).toFixed(0)}% confidence</span>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small" style="color: rgba(255,255,255,0.7);">📚 ${data.stats.knowledge_sources} sources</span>
+                        <span class="small" style="color: rgba(255,255,255,0.7);">💬 ${data.stats.feedback_given} feedback</span>
+                        <span class="small" style="color: rgba(255,255,255,0.7);">📊 ${(data.stats.avg_confidence * 100).toFixed(0)}%</span>
                     </div>
+                    <span id="project-learning-ws-status-${projectId}" class="badge" style="font-size: 9px; padding: 2px 6px; background: rgba(34, 197, 94, 0.2);">
+                        <span style="color: #22c55e;">● Live</span>
+                    </span>
                 </div>
+                <div id="project-learning-feed-${projectId}">
             `;
 
             data.knowledge.forEach(k => {
+                // Handle both API format (topic, source_type) and WebSocket format (title, knowledge_type)
+                const topic = k.topic || k.title || 'Unknown';
+                const sourceType = k.source_type || k.knowledge_type || 'knowledge';
+                const confidence = k.confidence || 0;
                 html += `
                     <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #a855f7;">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <strong style="color: #c4b5fd; font-size: 12px;">${k.topic}</strong>
+                                <strong style="color: #c4b5fd; font-size: 12px;">${topic}</strong>
                                 <div class="small" style="color: rgba(255,255,255,0.6);">
-                                    🤖 ${k.agent_name} • ${k.source_type}
+                                    🤖 ${k.agent_name} • ${sourceType}
                                 </div>
                             </div>
-                            <span class="badge" style="background: ${k.confidence > 0.7 ? '#22c55e' : k.confidence > 0.4 ? '#f59e0b' : '#ef4444'}; font-size: 10px;">
-                                ${(k.confidence * 100).toFixed(0)}%
+                            <span class="badge" style="background: ${confidence > 0.7 ? '#22c55e' : confidence > 0.4 ? '#f59e0b' : '#ef4444'}; font-size: 10px;">
+                                ${(confidence * 100).toFixed(0)}%
                             </span>
                         </div>
                     </div>
                 `;
             });
 
+            html += `</div>`;
+
+            // Session 333: Add Live Activity Feed section (like Agent/Social tab)
+            if (data.transfers && data.transfers.length > 0) {
+                html += `
+                    <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span style="color: #22c55e; font-size: 10px;">●</span>
+                            <span class="small" style="color: rgba(255,255,255,0.7); font-weight: 600;">Live Agent Learning Activity</span>
+                            <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; font-size: 9px;">${data.transfers.length} transfers</span>
+                        </div>
+                        <div id="project-learning-activity-${projectId}" style="max-height: 200px; overflow-y: auto;">
+                `;
+
+                data.transfers.forEach(t => {
+                    const timeAgo = t.created_at ? formatTimeAgo(t.created_at) : 'recently';
+                    const wasUseful = t.was_useful !== false;
+                    html += `
+                        <div class="mb-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 3px solid #22c55e;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="small" style="color: #86efac;">
+                                        📚 <strong>${t.teacher}</strong> → <strong>${t.student}</strong>
+                                    </div>
+                                    <div class="small" style="color: rgba(255,255,255,0.6); margin-top: 2px;">
+                                        ${t.summary || 'Knowledge shared'}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge" style="background: ${wasUseful ? '#22c55e' : '#6b7280'}; font-size: 9px;">
+                                        ${wasUseful ? '✓ Useful' : 'Pending'}
+                                    </span>
+                                    <div class="small" style="color: rgba(255,255,255,0.4); font-size: 9px; margin-top: 2px;">
+                                        ${timeAgo}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            // Add container for real-time appends
+            html += `<div id="project-learning-realtime-${projectId}"></div>`;
+
+            console.log(`[renderProjectLearning] Setting HTML with ${data.knowledge.length} knowledge items and ${data.transfers?.length || 0} transfers`);
             contentArea.innerHTML = html;
         }
 
@@ -37791,10 +37909,18 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         function renderProjectConversations(projectId, data) {
             const contentArea = document.getElementById(`intelligence-content-${projectId}`);
 
-            // Session 329: Add conversation starter UI
+            // Session 332: Connect to unified WebSocket for real-time updates
+            connectProjectIntelligenceWs(projectId);
+
+            // Session 329/332: Add conversation starter UI with WebSocket status
             let html = `
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="small" style="color: rgba(255,255,255,0.7);">${data.count || 0} conversations</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small" style="color: rgba(255,255,255,0.7);">${data.count || 0} conversations</span>
+                        <span id="project-conv-ws-status-${projectId}" class="badge" style="font-size: 9px; padding: 2px 6px; background: rgba(34, 197, 94, 0.2);">
+                            <span style="color: #22c55e;">● Live</span>
+                        </span>
+                    </div>
                     <button class="btn btn-sm" onclick="showConversationStarter('${projectId}')"
                         style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; font-size: 11px;">
                         🗣️ Start Conversation
@@ -37979,6 +38105,20 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 triggerBtn.innerHTML = '⏳ Starting...';
             }
 
+            // Session 332: Try WebSocket first for real-time experience
+            const ws = projectConversationWs[projectId];
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log(`[Project Conv] Using WebSocket to trigger conversation`);
+                ws.send(JSON.stringify({ type: 'start_conversation', topic }));
+                hideConversationStarter(projectId);
+                if (triggerBtn) {
+                    triggerBtn.disabled = false;
+                    triggerBtn.innerHTML = '🚀 Start';
+                }
+                return;
+            }
+
+            // Fallback to REST API
             try {
                 const response = await fetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
                     method: 'POST',
@@ -37992,12 +38132,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const data = await response.json();
 
                 if (data.success) {
-                    showToast(`Conversation started! ${data.participant_count} agents discussing: "${topic}"`, 'success');
+                    showToast(`Conversation started! Agents discussing: "${topic}"`, 'success');
                     hideConversationStarter(projectId);
-                    // Refresh conversations after a short delay (agents need time to respond)
+                    // Session 332: WebSocket will handle live updates, but also poll as fallback
                     setTimeout(() => {
                         loadProjectIntelligence(projectId, 'conversations');
-                    }, 3000);
+                    }, 8000);
                 } else {
                     showToast(data.error || 'Failed to start conversation', 'error');
                 }
@@ -38012,100 +38152,797 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
+        // =====================================================================
+        // Session 332: Project Intelligence Hub WebSocket - Real-time for ALL tabs
+        // =====================================================================
+
+        // Map of project_id -> WebSocket connection (unified for all tabs)
+        const projectIntelligenceWs = {};
+
+        // Session 332: Cache for WebSocket data to use when rendering tabs
+        const projectIntelligenceDataCache = {};
+
         /**
-         * Session 327: Render project dreams
+         * Session 332: Connect to unified Project Intelligence WebSocket
          */
-        function renderProjectDreams(projectId, data) {
-            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
-            if (!data.dreams || data.dreams.length === 0) {
-                contentArea.innerHTML = `
-                    <div class="text-center py-4">
-                        <span style="font-size: 48px; opacity: 0.5;">💭</span>
-                        <p class="text-light mt-2">No agent dreams yet for this project.</p>
-                        <p class="small" style="color: rgba(255,255,255,0.6);">Dreams appear when agents have idle creative thoughts about projects.</p>
-                    </div>
-                `;
-                return;
+        function connectProjectIntelligenceWs(projectId) {
+            // Don't reconnect if already connected
+            if (projectIntelligenceWs[projectId] && projectIntelligenceWs[projectId].readyState === WebSocket.OPEN) {
+                console.log(`[Project Intel WS] Already connected for project ${projectId}`);
+                return projectIntelligenceWs[projectId];
             }
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/project-intelligence/${projectId}/`;
+
+            console.log(`[Project Intel WS] Connecting to ${wsUrl}`);
+
+            try {
+                const ws = new WebSocket(wsUrl);
+                projectIntelligenceWs[projectId] = ws;
+
+                ws.onopen = function() {
+                    console.log(`[Project Intel WS] Connected for project ${projectId}`);
+                    updateProjectIntelWsStatus(projectId, 'connected');
+                };
+
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleProjectIntelligenceWsMessage(projectId, data);
+                };
+
+                ws.onclose = function() {
+                    console.log(`[Project Intel WS] Disconnected for project ${projectId}`);
+                    updateProjectIntelWsStatus(projectId, 'disconnected');
+                    // Reconnect after 5 seconds if intelligence section is still open
+                    setTimeout(() => {
+                        const content = document.getElementById(`intelligence-content-${projectId}`);
+                        if (content && content.style.display !== 'none') {
+                            connectProjectIntelligenceWs(projectId);
+                        }
+                    }, 5000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error(`[Project Intel WS] Error for project ${projectId}:`, error);
+                    updateProjectIntelWsStatus(projectId, 'error');
+                };
+
+                return ws;
+            } catch (error) {
+                console.error(`[Project Intel WS] Failed to connect:`, error);
+                return null;
+            }
+        }
+
+        // Backward compatibility alias
+        function connectProjectConversationWs(projectId) {
+            return connectProjectIntelligenceWs(projectId);
+        }
+
+        /**
+         * Session 332: Disconnect Project Intelligence WebSocket
+         */
+        function disconnectProjectIntelligenceWs(projectId) {
+            if (projectIntelligenceWs[projectId]) {
+                projectIntelligenceWs[projectId].close();
+                delete projectIntelligenceWs[projectId];
+            }
+        }
+
+        /**
+         * Session 332: Update WebSocket status indicator for all tabs
+         */
+        function updateProjectIntelWsStatus(projectId, status) {
+            // Update all status indicators for this project
+            const statusIds = [
+                `project-intel-ws-status-${projectId}`,
+                `project-conv-ws-status-${projectId}`,
+                `project-learning-ws-status-${projectId}`,
+                `project-dreams-ws-status-${projectId}`,
+                `project-boardroom-ws-status-${projectId}`
+            ];
+
+            statusIds.forEach(id => {
+                const statusEl = document.getElementById(id);
+                if (!statusEl) return;
+
+                if (status === 'connected') {
+                    statusEl.innerHTML = '<span style="color: #22c55e;">● Live</span>';
+                    statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
+                } else if (status === 'disconnected') {
+                    statusEl.innerHTML = '<span style="color: #f59e0b;">○ Reconnecting...</span>';
+                    statusEl.style.background = 'rgba(245, 158, 11, 0.2)';
+                } else {
+                    statusEl.innerHTML = '<span style="color: #ef4444;">× Error</span>';
+                    statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
+                }
+            });
+        }
+
+        // Backward compatibility alias
+        function updateProjectConvWsStatus(projectId, status) {
+            updateProjectIntelWsStatus(projectId, status);
+        }
+
+        /**
+         * Session 332: Handle ALL WebSocket messages for Project Intelligence Hub
+         */
+        function handleProjectIntelligenceWsMessage(projectId, data) {
+            console.log(`[Project Intel WS] Message for ${projectId}:`, data.type);
+
+            // Initialize cache for this project if needed
+            if (!projectIntelligenceDataCache[projectId]) {
+                projectIntelligenceDataCache[projectId] = {};
+            }
+
+            switch (data.type) {
+                case 'connected':
+                    console.log(`[Project Intel WS] Server confirmed connection`);
+                    // Auto-load the Learning tab (default active tab) now that we have cached data
+                    if (projectIntelligenceDataCache[projectId]?.learning) {
+                        loadProjectIntelligence(projectId, 'learning');
+                    }
+                    break;
+
+                // ==================== Learning Tab ====================
+                case 'learning_data':
+                    // Cache the data for later use
+                    console.log(`[Project Intel WS] Learning data:`, data);
+                    projectIntelligenceDataCache[projectId].learning = data;
+                    // Don't auto-render on initial connect - triggered by 'connected' message or tab click
+                    break;
+
+                case 'learning_event':
+                    // New learning event - append to UI
+                    appendProjectLearningEvent(projectId, data);
+                    showToast(`🧠 ${data.agent} learned: ${data.title || 'New knowledge'}`, 'info');
+                    break;
+
+                case 'knowledge_transfer':
+                    // Knowledge transferred between agents
+                    appendProjectKnowledgeTransfer(projectId, data);
+                    showToast(`📚 ${data.teacher} → ${data.student}: Knowledge shared!`, 'info');
+                    break;
+
+                // ==================== Conversations Tab ====================
+                case 'conversations_data':
+                    // Cache the data for later use
+                    console.log(`[Project Intel WS] Conversations data:`, data);
+                    projectIntelligenceDataCache[projectId].conversations = data;
+                    // Don't auto-render on initial connect - user will click tab to view
+                    break;
+
+                case 'conversation_starting':
+                    showToast(`🚀 ${data.message || 'Starting agent conversation...'}`, 'info');
+                    break;
+
+                case 'conversation_started':
+                    showProjectConvLiveContainer(projectId, data);
+                    showToast(`🗣️ ${data.participants?.join(' & ') || 'Agents'} started discussing: "${data.topic}"`, 'info');
+                    break;
+
+                case 'typing':
+                    showProjectConvTypingIndicator(projectId, data.agent);
+                    break;
+
+                case 'new_message':
+                    hideProjectConvTypingIndicator(projectId);
+                    appendProjectConvLiveMessage(projectId, data);
+                    break;
+
+                case 'conversation_ended':
+                    hideProjectConvTypingIndicator(projectId);
+                    completeProjectConvLiveContainer(projectId, data);
+                    showToast(`✅ Conversation complete! ${data.message_count || 0} messages`, 'success');
+                    setTimeout(() => loadProjectIntelligence(projectId, 'conversations'), 2000);
+                    break;
+
+                // ==================== Dreams Tab ====================
+                case 'dreams_data':
+                    // Cache the data for later use
+                    console.log(`[Project Intel WS] Dreams data:`, data);
+                    projectIntelligenceDataCache[projectId].dreams = data;
+                    // Don't auto-render on initial connect - user will click tab to view
+                    break;
+
+                case 'new_dream':
+                    // New dream generated
+                    appendProjectDream(projectId, data);
+                    showToast(`💭 ${data.agent} dreamed: ${data.title || 'New idea'}`, 'info');
+                    break;
+
+                case 'dream_generating':
+                    showToast(`💭 ${data.message || 'Agents are dreaming...'}`, 'info');
+                    break;
+
+                case 'dream_triggered':
+                    showToast(`💭 ${data.message || 'Dreams are being generated!'}`, 'info');
+                    break;
+
+                // ==================== Boardroom Tab ====================
+                case 'boardroom_data':
+                    // Cache the data for later use
+                    console.log(`[Project Intel WS] Boardroom data:`, data);
+                    projectIntelligenceDataCache[projectId].boardroom = data;
+                    // Don't auto-render on initial connect - user will click tab to view
+                    break;
+
+                case 'new_decision':
+                    // New boardroom decision
+                    appendProjectDecision(projectId, data);
+                    showToast(`🏛️ New decision: ${data.topic || 'Policy update'}`, 'info');
+                    break;
+
+                case 'decision_promoted':
+                    // Decision promoted to canonical
+                    showToast(`⭐ Decision promoted to canonical: ${data.topic}`, 'success');
+                    loadProjectIntelligence(projectId, 'boardroom');
+                    break;
+
+                // ==================== Errors ====================
+                case 'error':
+                    showToast(`❌ ${data.message || 'Error'}`, 'error');
+                    break;
+            }
+        }
+
+        // Backward compatibility alias
+        function handleProjectConversationWsMessage(projectId, data) {
+            handleProjectIntelligenceWsMessage(projectId, data);
+        }
+
+        /**
+         * Session 332: Update Learning tab UI from WebSocket data
+         */
+        function updateProjectLearningUI(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!contentArea) return;
+
+            // Check if we're on the learning tab
+            const learningTab = contentArea.querySelector('[data-tab="learning"]');
+            if (learningTab || contentArea.innerHTML.includes('📚')) {
+                // Re-render with new data
+                renderProjectLearning(projectId, {
+                    success: true,
+                    knowledge: data.knowledge || [],
+                    stats: data.stats || { knowledge_sources: 0, feedback_given: 0, avg_confidence: 0 }
+                });
+            }
+        }
+
+        /**
+         * Session 332: Append a learning event to the UI
+         */
+        function appendProjectLearningEvent(projectId, data) {
+            const feedList = document.getElementById(`project-learning-feed-${projectId}`);
+            if (!feedList) return;
+
+            const timeAgo = 'just now';
+            const html = `
+                <div class="learning-item p-2 mb-2" style="background: rgba(168, 85, 247, 0.15); border-radius: 8px; border-left: 3px solid #a855f7; animation: fadeIn 0.3s;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-center">
+                            <span style="font-size: 18px; margin-right: 8px;">🧠</span>
+                            <strong style="color: #c4b5fd;">${data.agent || 'Agent'}</strong>
+                        </div>
+                        <small class="text-muted">${timeAgo}</small>
+                    </div>
+                    <p class="mb-0 mt-1" style="color: #d1d5db; font-size: 13px;">${data.title || 'New knowledge acquired'}</p>
+                    ${data.summary ? `<small style="color: #9ca3af;">📖 ${data.summary}</small>` : ''}
+                </div>
+            `;
+            feedList.insertAdjacentHTML('afterbegin', html);
+        }
+
+        /**
+         * Session 332: Append a knowledge transfer to the UI
+         */
+        function appendProjectKnowledgeTransfer(projectId, data) {
+            const feedList = document.getElementById(`project-learning-feed-${projectId}`);
+            if (!feedList) return;
+
+            const html = `
+                <div class="learning-item p-2 mb-2" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid #ec4899; animation: fadeIn 0.3s;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-center">
+                            <span style="font-size: 18px; margin-right: 8px;">🔄</span>
+                            <span style="color: #f9a8d4;">${data.teacher}</span>
+                            <span class="text-muted mx-1">→</span>
+                            <span style="color: #a78bfa;">${data.student}</span>
+                        </div>
+                        <small class="text-muted">just now</small>
+                    </div>
+                    <p class="mb-0 mt-1" style="color: #d1d5db; font-size: 13px;">${data.summary || 'Knowledge shared'}</p>
+                </div>
+            `;
+            feedList.insertAdjacentHTML('afterbegin', html);
+        }
+
+        /**
+         * Session 332: Render conversations from WebSocket data
+         */
+        function renderProjectConversationsFromWs(projectId, data) {
+            renderProjectConversations(projectId, {
+                success: true,
+                count: data.count || data.conversations?.length || 0,
+                conversations: data.conversations || []
+            });
+        }
+
+        /**
+         * Session 332: Show live conversation container
+         */
+        function showProjectConvLiveContainer(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!contentArea) return;
+
+            // Remove any existing live container
+            const existingLive = document.getElementById(`project-conv-live-${projectId}`);
+            if (existingLive) existingLive.remove();
+
+            // Create new live container at the top
+            const liveContainer = document.createElement('div');
+            liveContainer.id = `project-conv-live-${projectId}`;
+            liveContainer.className = 'mb-3 p-3';
+            liveContainer.style.cssText = 'background: rgba(139, 92, 246, 0.15); border-radius: 10px; border: 2px solid #8b5cf6;';
+
+            liveContainer.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <span style="font-size: 18px;">🗣️</span>
+                        <strong style="color: #c4b5fd;">${data.topic || 'Project Discussion'}</strong>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge" style="background: rgba(139, 92, 246, 0.3); color: #c4b5fd; font-size: 10px;">
+                            ${data.conversation_type?.replace(/_/g, ' ') || 'discussion'}
+                        </span>
+                        <span class="badge" style="background: #22c55e; animation: pulse 1.5s infinite; font-size: 10px;">
+                            LIVE
+                        </span>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">
+                    👥 ${data.participants?.join(' & ') || 'Agents discussing...'}
+                </div>
+                <!-- Typing indicator -->
+                <div id="project-conv-typing-${projectId}" style="display: none;" class="mb-2 p-2"
+                    style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                    <span id="project-conv-typing-agent-${projectId}" style="color: #a78bfa;"></span>
+                    <span class="typing-dots" style="color: #8b5cf6;">
+                        <span>.</span><span>.</span><span>.</span>
+                    </span>
+                </div>
+                <!-- Live messages -->
+                <div id="project-conv-live-messages-${projectId}"></div>
+            `;
+
+            // Insert at the beginning of content area, after the header
+            const header = contentArea.querySelector('.d-flex.justify-content-between');
+            if (header && header.nextSibling) {
+                contentArea.insertBefore(liveContainer, header.nextSibling.nextSibling);
+            } else {
+                contentArea.prepend(liveContainer);
+            }
+        }
+
+        /**
+         * Session 332: Show typing indicator
+         */
+        function showProjectConvTypingIndicator(projectId, agentName) {
+            const typingEl = document.getElementById(`project-conv-typing-${projectId}`);
+            const agentEl = document.getElementById(`project-conv-typing-agent-${projectId}`);
+
+            if (typingEl && agentEl) {
+                agentEl.textContent = `${agentName} is thinking`;
+                typingEl.style.display = 'block';
+            }
+        }
+
+        /**
+         * Session 332: Hide typing indicator
+         */
+        function hideProjectConvTypingIndicator(projectId) {
+            const typingEl = document.getElementById(`project-conv-typing-${projectId}`);
+            if (typingEl) {
+                typingEl.style.display = 'none';
+            }
+        }
+
+        /**
+         * Session 332: Append a live message to the conversation
+         */
+        function appendProjectConvLiveMessage(projectId, msgData) {
+            const messagesDiv = document.getElementById(`project-conv-live-messages-${projectId}`);
+            if (!messagesDiv) return;
+
+            // Assign colors based on sequence (alternating)
+            const colorPalette = ['#ec4899', '#06b6d4', '#22c55e', '#f59e0b', '#8b5cf6', '#6366f1'];
+            const agentColor = colorPalette[msgData.sequence % colorPalette.length];
+
+            // Alternate alignment
+            const isLeft = msgData.sequence % 2 === 1;
+            const alignStyle = isLeft ? 'margin-right: 15%;' : 'margin-left: 15%;';
+
+            // Message type badge
+            const msgTypeBadge = msgData.message_type && msgData.message_type !== 'statement' ?
+                `<span class="badge ms-1" style="font-size: 9px; background: rgba(255,255,255,0.1);">${msgData.message_type}</span>` : '';
+
+            const msgHtml = `
+                <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.08); border-radius: 12px; border-left: 3px solid ${agentColor}; ${alignStyle} animation: fadeIn 0.3s;">
+                    <div style="font-size: 11px; color: ${agentColor}; font-weight: 600; margin-bottom: 4px;">
+                        ${msgData.agent} ${msgTypeBadge}
+                    </div>
+                    <div style="color: #e5e7eb; font-size: 13px; line-height: 1.4;">${msgData.content}</div>
+                </div>
+            `;
+
+            messagesDiv.insertAdjacentHTML('beforeend', msgHtml);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        /**
+         * Session 332: Mark live conversation as complete
+         */
+        function completeProjectConvLiveContainer(projectId, data) {
+            const liveContainer = document.getElementById(`project-conv-live-${projectId}`);
+            if (!liveContainer) return;
+
+            liveContainer.style.borderColor = '#22c55e';
+
+            const liveBadge = liveContainer.querySelector('.badge[style*="animation"]');
+            if (liveBadge) {
+                liveBadge.style.animation = 'none';
+                liveBadge.textContent = 'Complete';
+                liveBadge.style.background = '#22c55e';
+            }
+
+            if (data.conclusion) {
+                const messagesDiv = document.getElementById(`project-conv-live-messages-${projectId}`);
+                if (messagesDiv) {
+                    messagesDiv.insertAdjacentHTML('beforeend', `
+                        <div class="mt-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; border-left: 2px solid #22c55e;">
+                            <div style="font-size: 11px; color: #22c55e;">💡 Conclusion:</div>
+                            <div style="color: #d1d5db; font-size: 12px;">${data.conclusion}</div>
+                        </div>
+                    `);
+                }
+            }
+        }
+
+        /**
+         * Session 332: Update Dreams tab UI from WebSocket data
+         */
+        function updateProjectDreamsUI(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!contentArea) return;
+
+            // Check if we're on the dreams tab
+            if (contentArea.innerHTML.includes('💭') || contentArea.innerHTML.includes('dream')) {
+                renderProjectDreams(projectId, {
+                    success: true,
+                    dreams: data.dreams || [],
+                    count: data.count || 0
+                });
+            }
+        }
+
+        /**
+         * Session 332: Append a new dream to the UI
+         */
+        function appendProjectDream(projectId, data) {
+            const dreamList = document.getElementById(`project-dreams-list-${projectId}`);
+            if (!dreamList) return;
 
             const dreamTypeIcons = {
                 'creative_idea': '💡',
                 'what_if': '🤔',
                 'mashup': '🔀',
                 'prediction': '🔮',
-                'improvement': '📈',
-                'observation': '👁️',
-                'wild_thought': '🌀'
+                'wild_thought': '🌈'
+            };
+            const icon = dreamTypeIcons[data.dream_type] || '💭';
+
+            const html = `
+                <div class="mb-2 p-2" style="background: rgba(168, 85, 247, 0.15); border-radius: 8px; border-left: 3px solid #a855f7; animation: fadeIn 0.3s;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span style="font-size: 18px;">${icon}</span>
+                            <strong style="color: #c4b5fd;">${data.title || 'New Dream'}</strong>
+                        </div>
+                        <span class="badge" style="background: rgba(168, 85, 247, 0.3); color: #c4b5fd; font-size: 10px;">
+                            ${(data.creativity_score * 100).toFixed(0)}% creative
+                        </span>
+                    </div>
+                    <div class="small" style="color: rgba(255,255,255,0.6); margin: 4px 0;">
+                        🤖 ${data.agent || 'Agent'} • just now
+                    </div>
+                    <p class="mb-0" style="color: #d1d5db; font-size: 13px;">${data.content || ''}</p>
+                </div>
+            `;
+            dreamList.insertAdjacentHTML('afterbegin', html);
+        }
+
+        /**
+         * Session 332: Update Boardroom tab UI from WebSocket data
+         */
+        function updateProjectBoardroomUI(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+            if (!contentArea) return;
+
+            if (contentArea.innerHTML.includes('🏛️') || contentArea.innerHTML.includes('decision')) {
+                renderProjectBoardroom(projectId, {
+                    success: true,
+                    decisions: data.decisions || [],
+                    count: data.count || 0,
+                    canonical_count: data.canonical_count || 0
+                });
+            }
+        }
+
+        /**
+         * Session 332: Append a new decision to the UI
+         */
+        function appendProjectDecision(projectId, data) {
+            const decisionList = document.getElementById(`project-decisions-list-${projectId}`);
+            if (!decisionList) return;
+
+            const html = `
+                <div class="mb-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border-left: 3px solid ${data.is_canonical ? '#f59e0b' : '#22c55e'}; animation: fadeIn 0.3s;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span style="font-size: 18px;">🏛️</span>
+                            <strong style="color: #86efac;">${data.topic || 'New Decision'}</strong>
+                        </div>
+                        <div>
+                            ${data.is_canonical ? '<span class="badge bg-warning" style="font-size: 10px;">⭐ Canonical</span>' : ''}
+                            <span class="badge" style="background: rgba(34, 197, 94, 0.3); font-size: 10px;">${data.decision_type || 'policy'}</span>
+                        </div>
+                    </div>
+                    <p class="mb-0 mt-1" style="color: #d1d5db; font-size: 13px;">${data.key_insights || ''}</p>
+                </div>
+            `;
+            decisionList.insertAdjacentHTML('afterbegin', html);
+        }
+
+        /**
+         * Session 327: Render project dreams
+         */
+        function renderProjectDreams(projectId, data) {
+            const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+
+            // Session 332: Connect to unified WebSocket for real-time updates
+            connectProjectIntelligenceWs(projectId);
+
+            // Session 333: Dream type icons and colors (like Agent/Social)
+            const dreamTypeConfig = {
+                'creative_idea': { icon: '💡', color: '#8b5cf6', label: 'Creative Idea' },
+                'what_if': { icon: '🤔', color: '#06b6d4', label: 'What If' },
+                'mashup': { icon: '🔀', color: '#f97316', label: 'Mashup' },
+                'prediction': { icon: '🔮', color: '#22c55e', label: 'Prediction' },
+                'improvement': { icon: '📈', color: '#eab308', label: 'Improvement' },
+                'observation': { icon: '👁️', color: '#6366f1', label: 'Observation' },
+                'wild_thought': { icon: '🌀', color: '#ec4899', label: 'Wild Thought' }
             };
 
-            let html = `<div class="small mb-2" style="color: rgba(255,255,255,0.7);">${data.count} dreams</div>`;
+            // Header with Trigger Dream button
+            let html = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size: 20px; animation: float 3s ease-in-out infinite;">💭</span>
+                        <span class="small" style="color: #ec4899; font-weight: 600;">Dream Journal</span>
+                        <span class="badge" style="background: #ec4899; font-size: 9px;">${data.count || 0} dreams</span>
+                        <span id="project-dreams-ws-status-${projectId}" class="badge" style="font-size: 9px; padding: 2px 6px; background: rgba(34, 197, 94, 0.2);">
+                            <span style="color: #22c55e;">● Live</span>
+                        </span>
+                    </div>
+                    <button class="btn btn-sm" onclick="triggerProjectDream('${projectId}')"
+                        style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; font-size: 10px; padding: 4px 10px;">
+                        <span class="spinner-border spinner-border-sm d-none me-1" id="project-dream-spinner-${projectId}" role="status"></span>
+                        ✨ Trigger Dream
+                    </button>
+                </div>
+                <p class="text-muted small mb-3" style="font-style: italic; color: rgba(255,255,255,0.5) !important;">
+                    "While you were away, your agents were dreaming up creative ideas about this project..."
+                </p>
+            `;
+
+            if (!data.dreams || data.dreams.length === 0) {
+                html += `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5; animation: float 3s ease-in-out infinite;">💭</span>
+                        <p class="text-light mt-2">No agent dreams yet for this project.</p>
+                        <p class="small" style="color: rgba(255,255,255,0.6);">Click "Trigger Dream" or wait for agents to dream during idle time.</p>
+                    </div>
+                `;
+                contentArea.innerHTML = html;
+                return;
+            }
+
+            html += `<div id="project-dreams-list-${projectId}">`;
 
             data.dreams.forEach(dream => {
-                const icon = dreamTypeIcons[dream.dream_type] || '💭';
-                const timeAgo = formatTimeAgo(dream.dreamed_at);
+                const config = dreamTypeConfig[dream.dream_type] || { icon: '💭', color: '#ec4899', label: 'Dream' };
+                const timeAgo = formatTimeAgo(dream.dreamed_at || dream.created_at);
+                const content = dream.content || dream.dream_content || '';
                 html += `
-                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #06b6d4;">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span style="font-size: 16px; margin-right: 4px;">${icon}</span>
-                                <strong style="color: #67e8f9; font-size: 12px;">${dream.title}</strong>
-                                <div class="small" style="color: rgba(255,255,255,0.6);">
-                                    🤖 ${dream.agent_name}
+                    <div class="mb-3 p-3" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;"
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(236, 72, 153, 0.2)';"
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-size: 20px;">${config.icon}</span>
+                                <div>
+                                    <strong style="color: #f9a8d4; font-size: 13px;">${dream.title || 'Untitled Dream'}</strong>
+                                    <div class="small" style="color: rgba(255,255,255,0.6);">
+                                        🤖 ${dream.agent_name || dream.agent || 'Unknown Agent'}
+                                    </div>
                                 </div>
                             </div>
-                            <span class="small" style="color: rgba(255,255,255,0.5);">${timeAgo}</span>
+                            <div class="text-end">
+                                <span class="badge" style="background: ${config.color}; font-size: 9px; padding: 2px 8px; border-radius: 12px;">
+                                    ${config.label}
+                                </span>
+                                <div class="small" style="color: rgba(255,255,255,0.4); margin-top: 4px;">${timeAgo}</div>
+                            </div>
                         </div>
-                        <div class="mt-1 small" style="color: rgba(255,255,255,0.8);">${dream.content.substring(0, 120)}...</div>
+                        <div class="small" style="color: rgba(255,255,255,0.85); line-height: 1.5;">
+                            ${content.length > 200 ? content.substring(0, 200) + '...' : content}
+                        </div>
                     </div>
                 `;
             });
 
+            html += `</div>`;
+            html += `
+                <div class="text-center mt-3">
+                    <small style="color: rgba(255,255,255,0.5);">
+                        Agents dream every 15 minutes when idle - generating creative ideas, predictions, and wild thoughts!
+                    </small>
+                </div>
+            `;
             contentArea.innerHTML = html;
         }
 
         /**
-         * Session 327: Render project boardroom decisions
+         * Session 327/333: Render project boardroom decisions with enhanced styling
          */
         function renderProjectBoardroom(projectId, data) {
             const contentArea = document.getElementById(`intelligence-content-${projectId}`);
+
+            // Session 332: Connect to unified WebSocket for real-time updates
+            connectProjectIntelligenceWs(projectId);
+
+            // Session 333: Decision type icons and colors (like Agent/Social)
+            const decisionTypeConfig = {
+                'strategy': { icon: '🎯', color: '#f59e0b', label: 'Strategy' },
+                'technical': { icon: '⚙️', color: '#06b6d4', label: 'Technical' },
+                'creative': { icon: '🎨', color: '#ec4899', label: 'Creative' },
+                'resource': { icon: '💰', color: '#22c55e', label: 'Resource' },
+                'process': { icon: '📊', color: '#8b5cf6', label: 'Process' },
+                'priority': { icon: '🔥', color: '#ef4444', label: 'Priority' }
+            };
+
+            // Header with title and live status
+            let html = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size: 20px;">📋</span>
+                        <span class="small" style="color: #f59e0b; font-weight: 600;">Boardroom Decisions</span>
+                        <span class="badge" style="background: #f59e0b; font-size: 9px;">${data.count || 0} decisions</span>
+                        ${data.canonical_count ? `<span class="badge" style="background: rgba(34, 197, 94, 0.3); color: #86efac; font-size: 9px;">✅ ${data.canonical_count} canonical</span>` : ''}
+                        <span id="project-boardroom-ws-status-${projectId}" class="badge" style="font-size: 9px; padding: 2px 6px; background: rgba(34, 197, 94, 0.2);">
+                            <span style="color: #22c55e;">● Live</span>
+                        </span>
+                    </div>
+                </div>
+                <p class="text-muted small mb-3" style="font-style: italic; color: rgba(255,255,255,0.5) !important;">
+                    "The agents' collective wisdom on key project decisions..."
+                </p>
+            `;
+
             if (!data.decisions || data.decisions.length === 0) {
-                contentArea.innerHTML = `
+                html += `
                     <div class="text-center py-4">
                         <span style="font-size: 48px; opacity: 0.5;">📋</span>
                         <p class="text-light mt-2">No boardroom decisions yet for this project.</p>
                         <p class="small" style="color: rgba(255,255,255,0.6);">Decisions are created when agent conversations reach conclusions.</p>
                     </div>
                 `;
+                contentArea.innerHTML = html;
                 return;
             }
 
-            let html = `
-                <div class="small mb-2" style="color: rgba(255,255,255,0.7);">
-                    ${data.count} decisions • ${data.canonical_count} canonical
-                </div>
-            `;
+            html += `<div id="project-decisions-list-${projectId}">`;
 
             data.decisions.forEach(d => {
                 const timeAgo = formatTimeAgo(d.created_at);
+                const decisionType = d.decision_type || 'strategy';
+                const config = decisionTypeConfig[decisionType] || { icon: '📋', color: '#f59e0b', label: 'Decision' };
+                const impactArea = d.impact_area_display || d.impact_area || '';
+                const stance = d.recommended_stance || '';
+
+                // Gradient and styling based on canonical status
+                const gradient = d.is_canonical
+                    ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%)'
+                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(234, 88, 12, 0.08) 100%)';
+                const borderColor = d.is_canonical ? '#22c55e' : '#f59e0b';
+
                 html += `
-                    <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid ${d.is_canonical ? '#22c55e' : '#f59e0b'};">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong style="color: ${d.is_canonical ? '#86efac' : '#fcd34d'}; font-size: 12px;">
-                                    ${d.is_canonical ? '✅' : '📋'} ${d.topic}
-                                </strong>
-                                <div class="small" style="color: rgba(255,255,255,0.6);">
-                                    ${d.decision_type_display} • ${d.impact_area_display}
+                    <div class="mb-3 p-3" style="background: ${gradient}; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;"
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245, 158, 11, 0.2)';"
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-size: 20px;">${config.icon}</span>
+                                <div>
+                                    <strong style="color: ${d.is_canonical ? '#86efac' : '#fcd34d'}; font-size: 13px;">
+                                        ${d.is_canonical ? '✅ ' : ''}${d.topic || 'Untitled Decision'}
+                                    </strong>
+                                    <div class="small" style="color: rgba(255,255,255,0.6);">
+                                        ${impactArea ? `🎯 ${impactArea}` : ''}
+                                    </div>
                                 </div>
                             </div>
-                            <span class="small" style="color: rgba(255,255,255,0.5);">${timeAgo}</span>
+                            <div class="text-end">
+                                <span class="badge" style="background: ${config.color}; font-size: 9px; padding: 2px 8px; border-radius: 12px;">
+                                    ${d.decision_type_display || config.label}
+                                </span>
+                                ${d.is_canonical ? '<span class="badge ms-1" style="background: rgba(34, 197, 94, 0.3); color: #86efac; font-size: 9px;">Canonical</span>' : ''}
+                                <div class="small" style="color: rgba(255,255,255,0.4); margin-top: 4px;">${timeAgo}</div>
+                            </div>
                         </div>
-                        <div class="mt-1 small" style="color: rgba(255,255,255,0.8);">${d.recommended_stance.substring(0, 100)}...</div>
+                        <div class="small" style="color: rgba(255,255,255,0.85); line-height: 1.5; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            ${stance.length > 200 ? stance.substring(0, 200) + '...' : stance}
+                        </div>
+                        ${!d.is_canonical ? `
+                            <div class="mt-2 text-end">
+                                <button class="btn btn-sm" onclick="promoteProjectDecision('${projectId}', '${d.id}')"
+                                    style="background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 10px; padding: 2px 8px;">
+                                    ⬆️ Promote to Canonical
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             });
 
+            html += `</div>`;
+            html += `
+                <div class="text-center mt-3">
+                    <small style="color: rgba(255,255,255,0.5);">
+                        Canonical decisions represent the agents' official stance on project matters.
+                    </small>
+                </div>
+            `;
             contentArea.innerHTML = html;
+        }
+
+        /**
+         * Session 333: Promote a decision to canonical status
+         */
+        async function promoteProjectDecision(projectId, decisionId) {
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/boardroom/promote/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ decision_id: decisionId })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('✅ Decision promoted to canonical status!', 'success');
+                    loadProjectIntelligence(projectId, 'boardroom');
+                } else {
+                    showNotification(`❌ ${data.error || 'Failed to promote decision'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error promoting decision:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            }
         }
 
         /**
@@ -38136,6 +38973,41 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } catch (error) {
                 console.error('Error triggering conversation:', error);
                 showNotification(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        /**
+         * Session 333: Trigger a project-scoped agent dream
+         */
+        async function triggerProjectDream(projectId) {
+            const spinner = document.getElementById(`project-dream-spinner-${projectId}`);
+            if (spinner) spinner.classList.remove('d-none');
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}/intelligence/dreams/trigger/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`💭 Dream triggered! An agent is now dreaming about this project...`, 'success');
+                    // Refresh dreams tab after a short delay to allow dream to be created
+                    setTimeout(() => {
+                        loadProjectIntelligence(projectId, 'dreams');
+                    }, 3000);
+                } else {
+                    showNotification(`❌ ${data.error || 'Failed to trigger dream'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error triggering dream:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                if (spinner) spinner.classList.add('d-none');
             }
         }
 
