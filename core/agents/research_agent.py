@@ -392,15 +392,14 @@ If asked to create content, explain you can only research and suggest using the 
             try:
                 from core.tools.web_search import WebSearchTool
                 search_tool = WebSearchTool()
-                results = search_tool.search(
+                # Session 348: Fixed - method is 'execute' not 'search'
+                results = search_tool.execute(
                     query=arguments.get('query', ''),
                     max_results=arguments.get('num_results', 10),
-                    search_type=arguments.get('search_type', 'search')
+                    search_type=arguments.get('search_type', 'text')  # 'text' not 'search'
                 )
-                return {
-                    'success': True,
-                    'data': results
-                }
+                # execute() returns a dict with 'success' already
+                return results
             except Exception as e:
                 return {
                     'success': False,
