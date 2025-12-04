@@ -4,6 +4,7 @@ Research Orchestrator - The Brain of the Autonomous Business Pipeline
 
 Session 338: End-to-End Autonomous Business Idea Pipeline
 Session 340: Added TrendAnalysisAgent and OpportunityScoringAgent
+Session 341: Added ResearchAgent for initial web/spider data gathering
 
 This orchestrator chains research agents together to create a complete
 business intelligence package from a raw business idea.
@@ -13,17 +14,19 @@ Flow:
         ↓
     ResearchOrchestrator.execute_full_research()
         ↓
-    1. TrendAnalysisAgent → Current market trends and patterns
+    1. ResearchAgent → Initial web/spider data gathering (NEW - Session 341)
         ↓ (passes context)
-    2. CompetitorAnalysisAgent → Market landscape, competitors, SWOT
+    2. TrendAnalysisAgent → Current market trends and patterns
         ↓ (passes context)
-    3. CustomerResearchAgent → Personas, pain points, opportunities
+    3. CompetitorAnalysisAgent → Market landscape, competitors, SWOT
         ↓ (passes context)
-    4. BrandStrategyAgent → Positioning, messaging, visual direction
+    4. CustomerResearchAgent → Personas, pain points, opportunities
+        ↓ (passes context)
+    5. BrandStrategyAgent → Positioning, messaging, visual direction
         ↓
-    5. OpportunityScoringAgent → Score the opportunity (0-100)
+    6. OpportunityScoringAgent → Score the opportunity (0-100)
         ↓
-    6. Synthesis → Complete business plan with recommendations
+    7. Synthesis → Complete business plan with recommendations
         ↓
     Return: BusinessPlan with all research + actionable next steps + opportunity score
 
@@ -65,6 +68,7 @@ class FullResearchResult:
     project_id: Optional[str] = None
     business_idea: str = ""
     phases_completed: List[str] = field(default_factory=list)
+    initial_research: Dict[str, Any] = field(default_factory=dict)  # Session 341
     trend_analysis: Dict[str, Any] = field(default_factory=dict)
     competitor_analysis: Dict[str, Any] = field(default_factory=dict)
     customer_research: Dict[str, Any] = field(default_factory=dict)
@@ -82,6 +86,7 @@ class FullResearchResult:
             'project_id': self.project_id,
             'business_idea': self.business_idea,
             'phases_completed': self.phases_completed,
+            'initial_research': self.initial_research,  # Session 341
             'trend_analysis': self.trend_analysis,
             'competitor_analysis': self.competitor_analysis,
             'customer_research': self.customer_research,
@@ -120,6 +125,7 @@ class ResearchOrchestrator:
         self.user = user
         self.project = None
         # Research agents
+        self._research_agent = None  # Session 341: General research agent
         self._trend_agent = None
         self._competitor_agent = None
         self._customer_agent = None
@@ -128,6 +134,17 @@ class ResearchOrchestrator:
         self._openai_client = None
 
     # ==================== Lazy-Loaded Agents ====================
+
+    @property
+    def research_agent(self):
+        """Lazy-load ResearchAgent for web/spider search."""
+        if self._research_agent is None:
+            try:
+                from core.agents import ResearchAgent
+                self._research_agent = ResearchAgent(user=self.user)
+            except ImportError:
+                logger.warning("ResearchAgent not available")
+        return self._research_agent
 
     @property
     def trend_agent(self):
@@ -227,6 +244,17 @@ class ResearchOrchestrator:
                 self.project = self._create_project(business_idea, constraints)
                 result.project_id = str(self.project.id)
                 logger.info(f"Created project: {self.project.id}")
+
+            # Step 1.5: Run initial research (Session 341)
+            # ResearchAgent gathers web/spider data before specialized analysis
+            if self.research_agent:
+                initial_result = self._run_initial_research(business_idea)
+                if initial_result.success:
+                    result.initial_research = initial_result.data
+                    result.phases_completed.append('initial_research')
+                    logger.info("Initial research complete")
+                else:
+                    logger.warning(f"Initial research failed: {initial_result.error}")
 
             # Step 2: Run trend analysis (Session 340)
             if self.trend_agent:
@@ -338,6 +366,58 @@ class ResearchOrchestrator:
         return result
 
     # ==================== Phase Execution ====================
+
+    def _run_initial_research(self, business_idea: str) -> ResearchPhaseResult:
+        """
+        Session 341: Run initial research phase using ResearchAgent.
+
+        This gathers web search and spider data before specialized analysis.
+        Provides foundational data that enriches all subsequent phases.
+        """
+        start_time = time.time()
+
+        try:
+            task = f"""Research this business idea thoroughly: {business_idea}
+
+Use your web search and spider network tools to gather:
+1. Current market information and industry landscape
+2. Recent news and developments in this space
+3. Existing solutions and products
+4. Community discussions (Reddit, forums)
+5. Relevant data from tech, jobs, and creative sources
+
+Compile a comprehensive summary of findings that will inform:
+- Trend analysis
+- Competitor identification
+- Customer research
+- Brand positioning
+
+Be thorough but focused on actionable insights."""
+
+            result = self.research_agent.execute(
+                task=task,
+                context={'project_id': str(self.project.id) if self.project else None},
+                scifi_context={},
+                spider_context={}
+            )
+
+            return ResearchPhaseResult(
+                phase='initial_research',
+                agent_name='ResearchAgent',
+                success=result.success,
+                data=result.data if result.success else {},
+                error=result.error,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            return ResearchPhaseResult(
+                phase='initial_research',
+                agent_name='ResearchAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
 
     def _run_trend_analysis(self, business_idea: str) -> ResearchPhaseResult:
         """Run trend analysis phase using TrendAnalysisAgent."""
@@ -845,6 +925,7 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
             self.project.metadata = self.project.metadata or {}
             self.project.metadata['research_completed'] = True
             self.project.metadata['phases_completed'] = result.phases_completed
+            self.project.metadata['initial_research'] = result.initial_research  # Session 341
             self.project.metadata['trend_analysis'] = result.trend_analysis
             self.project.metadata['competitor_analysis'] = result.competitor_analysis
             self.project.metadata['customer_research'] = result.customer_research
