@@ -1544,16 +1544,22 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
     def _extract_research_articles(self, initial_research: Dict[str, Any]) -> List[Dict]:
         """
         Session 343: Extract research articles from initial research for UI display.
-        Session 348: Skip spider_query results - they contain cached tech/devops content
-        that's not relevant for most business ideas. Only use web_search and reddit_search.
+        Session 348: Include spider_query results but only if relevance >= 0.5
+        (at least half of search terms match). This filters out low-relevance
+        generic tech content while keeping relevant spider data.
 
         Returns:
             List of article dicts with url, title, source, description
         """
         articles = []
+        spider_articles = []  # Separate list for spider results (added after web results)
 
         if not initial_research:
             return articles
+
+        # Session 348: Relevance threshold for spider_query results
+        # 0.5 = at least half of search terms must match
+        SPIDER_RELEVANCE_THRESHOLD = 0.5
 
         try:
             # Check for results array
@@ -1565,27 +1571,34 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
                 if not isinstance(result, dict):
                     continue
 
-                # Session 348: Skip spider_query results - they contain generic tech content
-                # from local spider database that's not relevant for most business ideas
                 result_source = result.get('source', '')
-                if result_source == 'spider_query':
-                    logger.debug("Skipping spider_query results for Source Articles")
-                    continue
 
-                # Handle web_search and reddit_search results
+                # Handle web_search and reddit_search results (always include)
+                # Handle spider_query results (only if high relevance)
                 data = result.get('data', [])
                 if isinstance(data, list):
-                    for item in data[:30]:  # Limit to 30 articles
+                    for item in data[:30]:  # Limit to 30 articles per source
                         if not isinstance(item, dict):
                             continue
+
+                        # Session 348: For spider_query, filter by relevance score
+                        if result_source == 'spider_query':
+                            relevance = item.get('relevance', 0)
+                            if relevance < SPIDER_RELEVANCE_THRESHOLD:
+                                continue  # Skip low-relevance spider results
+
                         article = {
                             'url': item.get('url', item.get('link', '')),
                             'title': item.get('title', 'Article'),
                             'source': item.get('source', result_source or 'Unknown'),
-                            'description': item.get('description', item.get('content', ''))[:300]
+                            'description': item.get('description', item.get('content', ''))[:300],
+                            'relevance': item.get('relevance', 1.0)  # Track relevance for sorting
                         }
                         if article['url'] or article['title'] != 'Article':
-                            articles.append(article)
+                            if result_source == 'spider_query':
+                                spider_articles.append(article)
+                            else:
+                                articles.append(article)
 
                 # Handle direct articles (from web_search or reddit_search)
                 elif result.get('url') or result.get('title'):
@@ -1593,14 +1606,26 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
                         'url': result.get('url', result.get('link', '')),
                         'title': result.get('title', 'Article'),
                         'source': result.get('source', 'Unknown'),
-                        'description': result.get('description', result.get('content', ''))[:300]
+                        'description': result.get('description', result.get('content', ''))[:300],
+                        'relevance': 1.0
                     }
                     articles.append(article)
 
         except Exception as e:
             logger.warning(f"Error extracting research articles: {e}")
 
-        return articles[:30]  # Limit total to 30
+        # Session 348: Combine results - web/reddit first, then high-relevance spider data
+        # Sort spider articles by relevance (highest first)
+        spider_articles.sort(key=lambda x: x.get('relevance', 0), reverse=True)
+
+        # Take up to 10 spider articles (to not overwhelm with cached data)
+        combined = articles + spider_articles[:10]
+
+        # Remove the relevance field from final output (not needed in UI)
+        for article in combined:
+            article.pop('relevance', None)
+
+        return combined[:30]  # Limit total to 30
 
 
 # ==================== Convenience Function ====================
