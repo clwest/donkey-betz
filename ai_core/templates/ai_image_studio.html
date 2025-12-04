@@ -34549,12 +34549,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             console.log(`🔧 Executing ${operation} on asset #${asset.sequential_number}`);
             console.log(`📝 Prompt: ${prompt}`);
 
-            const response = await fetch('/api/agents/editing/execute/', {
+            const response = await authenticatedFetch('/api/agents/editing/execute/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
                 body: JSON.stringify({
                     image_id: asset.sequential_number.toString(),
                     operation: 'image_to_image',
@@ -37317,12 +37313,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (toolName === 'refine_image') {
                 // Call the EditingOrchestratorAgent directly with image_to_image operation
                 // This is more reliable than the IterationAgent's parser
-                const refineResponse = await fetch('/api/agents/editing/execute/', {
+                const refineResponse = await authenticatedFetch('/api/agents/editing/execute/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         image_id: args.image_id,
                         operation: 'image_to_image',
@@ -45133,8 +45125,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 // Load stats and all preferences in parallel
                 const [statsRes, prefsRes] = await Promise.all([
-                    fetch('/api/agent-learning/stats/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/agent-learning/all-preferences/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                    authenticatedFetch('/api/agent-learning/stats/'),
+                    authenticatedFetch('/api/agent-learning/all-preferences/')
                 ]);
 
                 const statsData = await statsRes.json();
@@ -45221,9 +45213,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 219: Show Agent Adaptive Context
         async function showAgentContext(agentName) {
             try {
-                const response = await fetch(`/api/agent-learning/context/${agentName}/`, {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch(`/api/agent-learning/context/${agentName}/`);
                 const data = await response.json();
 
                 if (data.success && data.context) {
@@ -45241,9 +45231,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 219: Share Agent Learning to Collaboration Hub
         async function shareAgentLearning(agentName) {
             try {
-                const response = await fetch(`/api/agent-learning/share/${agentName}/`, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': getCsrfToken() }
+                const response = await authenticatedFetch(`/api/agent-learning/share/${agentName}/`, {
+                    method: 'POST'
                 });
                 const data = await response.json();
 
@@ -45263,9 +45252,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         async function shareAllAgentLearning() {
             try {
                 // Get all agents with preferences
-                const response = await fetch('/api/agent-learning/all-preferences/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/agent-learning/all-preferences/');
                 const data = await response.json();
 
                 if (data.success && data.agents) {
@@ -45274,9 +45261,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                     for (const agentName of agents) {
                         try {
-                            await fetch(`/api/agent-learning/share/${agentName}/`, {
-                                method: 'POST',
-                                headers: { 'X-CSRFToken': getCsrfToken() }
+                            await authenticatedFetch(`/api/agent-learning/share/${agentName}/`, {
+                                method: 'POST'
                             });
                             sharedCount++;
                         } catch (e) {
@@ -45980,9 +45966,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 console.log('🤖 Session 310: Fetching /api/collective/dashboard/...');
                 // Fetch dashboard data
-                const response = await fetch('/api/collective/dashboard/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/collective/dashboard/');
                 const data = await response.json();
 
                 // Update stats
@@ -46792,9 +46776,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // Session 244: Load Agent Conversations from API (fallback)
+        // Session 346: Updated to use authenticatedFetch
         async function loadAgentConversations() {
             try {
-                const response = await fetch('/api/agent-conversations/?limit=5');
+                const response = await authenticatedFetch('/api/agent-conversations/?limit=5');
                 const data = await response.json();
 
                 if (data.success) {
@@ -46904,7 +46889,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Fallback: Load learning feed from API (used if WebSocket fails)
         async function loadLearningFeed() {
             try {
-                const response = await fetch('/api/agent-learning/activity/');
+                const response = await authenticatedFetch('/api/agent-learning/activity/');
                 const data = await response.json();
 
                 if (data.feed_items || data.error === undefined) {
@@ -46990,7 +46975,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agent dreams from API
         async function loadAgentDreams() {
             try {
-                const response = await fetch('/api/agent-dreams/?limit=10');
+                const response = await authenticatedFetch('/api/agent-dreams/?limit=10');
                 const data = await response.json();
 
                 if (data.success) {
@@ -47104,7 +47089,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         async function markDreamsAsShown(dreamIds) {
             if (!dreamIds || dreamIds.length === 0) return;
             try {
-                await fetch('/api/agent-dreams/mark-shown/', {
+                await authenticatedFetch('/api/agent-dreams/mark-shown/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -47130,7 +47115,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     }, 200);
                 }
 
-                const response = await fetch(`/api/agent-dreams/${dreamId}/react/`, {
+                const response = await authenticatedFetch(`/api/agent-dreams/${dreamId}/react/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -47208,7 +47193,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             btn.disabled = true;
 
             try {
-                const response = await fetch('/api/agent-dreams/trigger/', {
+                const response = await authenticatedFetch('/api/agent-dreams/trigger/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -47424,7 +47409,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Analyzing...';
 
             try {
-                const response = await fetch('/api/hive-mind/preview/', {
+                const response = await authenticatedFetch('/api/hive-mind/preview/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -47500,7 +47485,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             spinner.classList.remove('d-none');
 
             try {
-                const response = await fetch('/api/hive-mind/start/', {
+                const response = await authenticatedFetch('/api/hive-mind/start/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -47683,7 +47668,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (!currentHiveMindSession) return;
 
             try {
-                const response = await fetch(`/api/hive-mind/session/${currentHiveMindSession}/`);
+                const response = await authenticatedFetch(`/api/hive-mind/session/${currentHiveMindSession}/`);
                 const data = await response.json();
 
                 if (data.success && data.session.status === 'completed') {
@@ -47795,7 +47780,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load a previous Hive Mind session
         async function loadHiveMindSession(sessionId) {
             try {
-                const response = await fetch(`/api/hive-mind/session/${sessionId}/`);
+                const response = await authenticatedFetch(`/api/hive-mind/session/${sessionId}/`);
                 const data = await response.json();
 
                 if (data.success) {
@@ -47864,7 +47849,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load all agent moods
         async function loadAgentMoods() {
             try {
-                const response = await fetch('/api/agent-mood/');
+                const response = await authenticatedFetch('/api/agent-mood/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -47938,7 +47923,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/agent-mood/agent/${agentId}/set/`, {
+                const response = await authenticatedFetch(`/api/agent-mood/agent/${agentId}/set/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -47997,7 +47982,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agent relationships overview
         async function loadAgentRelationships() {
             try {
-                const response = await fetch('/api/agent-relationships/');
+                const response = await authenticatedFetch('/api/agent-relationships/');
                 const data = await response.json();
 
                 if (data.success) {
@@ -48100,7 +48085,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Populate agent dropdowns for create modal
         async function populateAgentDropdowns() {
             try {
-                const response = await fetch('/api/agent-mood/');
+                const response = await authenticatedFetch('/api/agent-mood/');
                 const data = await response.json();
 
                 if (data.success && data.agents) {
@@ -48132,7 +48117,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/agent-relationships/create/', {
+                const response = await authenticatedFetch('/api/agent-relationships/create/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -48163,7 +48148,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/agent-relationships/auto-generate/', {
+                const response = await authenticatedFetch('/api/agent-relationships/auto-generate/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'}
                 });
@@ -48197,7 +48182,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         async function loadEvolutionOverview() {
             try {
-                const response = await fetch('/api/agent-evolution/');
+                const response = await authenticatedFetch('/api/agent-evolution/');
                 const data = await response.json();
 
                 if (data.success) {
@@ -48234,7 +48219,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         async function loadEvolutionLeaderboard() {
             try {
-                const response = await fetch('/api/agent-evolution/leaderboard/?limit=10');
+                const response = await authenticatedFetch('/api/agent-evolution/leaderboard/?limit=10');
                 const data = await response.json();
 
                 const container = document.getElementById('evolution-leaderboard');
@@ -48271,7 +48256,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         async function loadRecentXPGains() {
             try {
-                const response = await fetch('/api/agent-evolution/xp-gains/?limit=10');
+                const response = await authenticatedFetch('/api/agent-evolution/xp-gains/?limit=10');
                 const data = await response.json();
 
                 const container = document.getElementById('evolution-recent-xp');
@@ -48304,7 +48289,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         async function initializeEvolution() {
             try {
-                const response = await fetch('/api/agent-evolution/initialize/', {
+                const response = await authenticatedFetch('/api/agent-evolution/initialize/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -48604,7 +48589,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load Personality overview stats
         async function loadPersonalityOverview() {
             try {
-                const response = await fetch('/api/personality/');
+                const response = await authenticatedFetch('/api/personality/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -48637,7 +48622,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agents for personality dropdowns
         async function loadPersonalityAgents() {
             try {
-                const response = await fetch('/api/hive-mind/agents/');
+                const response = await authenticatedFetch('/api/hive-mind/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     const agents = data.agents || [];
@@ -48677,7 +48662,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load archetypes gallery
         async function loadPersonalityArchetypes() {
             try {
-                const response = await fetch('/api/personality/archetypes/');
+                const response = await authenticatedFetch('/api/personality/archetypes/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -48717,7 +48702,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/personality/agent/${agentId}/`);
+                const response = await authenticatedFetch(`/api/personality/agent/${agentId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.personality) {
@@ -48811,7 +48796,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Generate personality for single agent
         async function generateAgentPersonality(agentId) {
             try {
-                const response = await fetch(`/api/personality/agent/${agentId}/generate/`, {
+                const response = await authenticatedFetch(`/api/personality/agent/${agentId}/generate/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -48834,7 +48819,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (!confirm('Generate personality profiles for all agents without one?')) return;
 
             try {
-                const response = await fetch('/api/personality/generate-all/', {
+                const response = await authenticatedFetch('/api/personality/generate-all/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -48867,7 +48852,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/personality/compatibility/${agent1}/${agent2}/`);
+                const response = await authenticatedFetch(`/api/personality/compatibility/${agent1}/${agent2}/`);
                 const data = await response.json();
 
                 const resultDiv = document.getElementById('personality-compat-result');
@@ -48917,7 +48902,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load overview of all memory clusters
         async function loadMemoryClustersOverview() {
             try {
-                const response = await fetch('/api/memory-clusters/');
+                const response = await authenticatedFetch('/api/memory-clusters/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -48951,7 +48936,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Populate agent dropdown for cluster view
         async function populateClusterAgentSelect() {
             try {
-                const response = await fetch('/api/agents/');
+                const response = await authenticatedFetch('/api/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     const select = document.getElementById('cluster-agent-select');
@@ -48994,7 +48979,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/memory-clusters/agent/${agentId}/`);
+                const response = await authenticatedFetch(`/api/memory-clusters/agent/${agentId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49114,7 +49099,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // View details of a specific cluster
         async function viewClusterDetails(clusterId) {
             try {
-                const response = await fetch(`/api/memory-clusters/cluster/${clusterId}/`);
+                const response = await authenticatedFetch(`/api/memory-clusters/cluster/${clusterId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49166,7 +49151,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Generate clusters for a specific agent
         async function generateAgentClusters(agentId) {
             try {
-                const response = await fetch(`/api/memory-clusters/agent/${agentId}/`, {
+                const response = await authenticatedFetch(`/api/memory-clusters/agent/${agentId}/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ method: 'semantic' })
@@ -49194,7 +49179,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/memory-clusters/generate-all/', {
+                const response = await authenticatedFetch('/api/memory-clusters/generate-all/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ method: 'semantic', min_memories: 5 })
@@ -49235,7 +49220,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load predictions overview
         async function loadPredictionsOverview() {
             try {
-                const response = await fetch('/api/predictions/');
+                const response = await authenticatedFetch('/api/predictions/');
                 if (response.ok) {
                     const data = await response.json();
                     // Session 293: Add null check for overview data
@@ -49271,7 +49256,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agent selector for predictions
         async function loadPredictionsAgentSelect() {
             try {
-                const response = await fetch('/api/agents/');
+                const response = await authenticatedFetch('/api/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success || data.agents) {
@@ -49309,7 +49294,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/predictions/agent/${agentId}/`);
+                const response = await authenticatedFetch(`/api/predictions/agent/${agentId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49387,7 +49372,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             currentPredictionId = predictionId;
 
             try {
-                const response = await fetch(`/api/predictions/${predictionId}/`);
+                const response = await authenticatedFetch(`/api/predictions/${predictionId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49436,7 +49421,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const notes = prompt('Add verification notes (optional):');
 
             try {
-                const response = await fetch(`/api/predictions/${currentPredictionId}/verify/`, {
+                const response = await authenticatedFetch(`/api/predictions/${currentPredictionId}/verify/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -49467,7 +49452,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (!currentPredictionId) return;
 
             try {
-                const response = await fetch(`/api/predictions/${currentPredictionId}/upvote/`, {
+                const response = await authenticatedFetch(`/api/predictions/${currentPredictionId}/upvote/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -49486,7 +49471,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Show prediction leaderboard
         async function showPredictionLeaderboard() {
             try {
-                const response = await fetch('/api/predictions/leaderboard/');
+                const response = await authenticatedFetch('/api/predictions/leaderboard/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.leaderboard.length > 0) {
@@ -49542,7 +49527,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/predictions/generate-from-dreams/', {
+                const response = await authenticatedFetch('/api/predictions/generate-from-dreams/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ days: 7 })
@@ -49582,7 +49567,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load time capsules overview
         async function loadCapsulesOverview() {
             try {
-                const response = await fetch('/api/time-capsules/');
+                const response = await authenticatedFetch('/api/time-capsules/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49608,7 +49593,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agent selector for capsules
         async function loadCapsulesAgentSelect() {
             try {
-                const response = await fetch('/api/agents/');
+                const response = await authenticatedFetch('/api/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success || data.agents) {
@@ -49646,7 +49631,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/time-capsules/agent/${agentId}/`);
+                const response = await authenticatedFetch(`/api/time-capsules/agent/${agentId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49784,7 +49769,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             currentCapsuleId = capsuleId;
 
             try {
-                const response = await fetch(`/api/time-capsules/${capsuleId}/`);
+                const response = await authenticatedFetch(`/api/time-capsules/${capsuleId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49869,9 +49854,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/time-capsules/${currentCapsuleId}/reveal/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                const response = await authenticatedFetch(`/api/time-capsules/${currentCapsuleId}/reveal/`, {
+                    method: 'POST'
                 });
 
                 if (response.ok) {
@@ -49895,9 +49879,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (!currentCapsuleId) return;
 
             try {
-                const response = await fetch(`/api/time-capsules/${currentCapsuleId}/react/`, {
+                const response = await authenticatedFetch(`/api/time-capsules/${currentCapsuleId}/react/`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reaction })
                 });
 
@@ -49924,7 +49907,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Show ready to reveal capsules
         async function showReadyToReveal() {
             try {
-                const response = await fetch('/api/time-capsules/ready-to-reveal/');
+                const response = await authenticatedFetch('/api/time-capsules/ready-to-reveal/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -49967,9 +49950,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/time-capsules/generate/', {
+                const response = await authenticatedFetch('/api/time-capsules/generate/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
 
@@ -50005,7 +49987,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load overview of all agents' memories
         async function loadMemoryPalaceOverview() {
             try {
-                const response = await fetch('/api/memory-palace/');
+                const response = await authenticatedFetch('/api/memory-palace/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -50035,7 +50017,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load agents for dropdown
         async function loadMemoryPalaceAgents() {
             try {
-                const response = await fetch('/api/hive-mind/agents/');
+                const response = await authenticatedFetch('/api/hive-mind/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     const select = document.getElementById('memory-palace-agent-select');
@@ -50069,7 +50051,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Load rooms for the agent
-                const response = await fetch(`/api/memory-palace/agent/${agentId}/rooms/`);
+                const response = await authenticatedFetch(`/api/memory-palace/agent/${agentId}/rooms/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -50109,7 +50091,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Open a memory room to view its contents
         async function openMemoryRoom(roomId, roomName) {
             try {
-                const response = await fetch(`/api/memory-palace/room/${roomId}/memories/`);
+                const response = await authenticatedFetch(`/api/memory-palace/room/${roomId}/memories/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -50157,7 +50139,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Open memory detail modal
         async function openMemoryDetail(memoryId) {
             try {
-                const response = await fetch(`/api/memory-palace/memory/${memoryId}/`);
+                const response = await authenticatedFetch(`/api/memory-palace/memory/${memoryId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -50216,9 +50198,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/memory-palace/search/', {
+                const response = await authenticatedFetch('/api/memory-palace/search/', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({agent_id: agentId, query: query, limit: 10})
                 });
 
@@ -50256,7 +50237,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load recent memories for an agent
         async function loadRecentMemories(agentId) {
             try {
-                const response = await fetch(`/api/memory-palace/agent/${agentId}/memories/?limit=5`);
+                const response = await authenticatedFetch(`/api/memory-palace/agent/${agentId}/memories/?limit=5`);
                 if (response.ok) {
                     const data = await response.json();
                     const listEl = document.getElementById('memory-palace-recent-list');
@@ -50302,9 +50283,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/memory-palace/create/', {
+                const response = await authenticatedFetch('/api/memory-palace/create/', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         agent_id: agentId,
                         title: title,
@@ -50385,9 +50365,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const listEl = document.getElementById('knowledge-gaps-list');
 
             try {
-                const response = await fetch('/api/collective/knowledge-gaps/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/collective/knowledge-gaps/');
                 const data = await response.json();
 
                 const gaps = data.gaps || [];
@@ -50425,9 +50403,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const listEl = document.getElementById('improvements-list');
 
             try {
-                const response = await fetch('/api/collective/improvements/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/collective/improvements/');
                 const data = await response.json();
 
                 const improvements = data.improvements || [];
@@ -50461,9 +50437,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const gridEl = document.getElementById('top-collaborators-grid');
 
             try {
-                const response = await fetch('/api/collective/stats/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/collective/stats/');
                 const data = await response.json();
 
                 const collaborators = data.top_collaborators || [];
@@ -50497,9 +50471,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const placeholder = document.getElementById('network-placeholder');
 
             try {
-                const response = await fetch('/api/collective/network/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/collective/network/');
                 const data = await response.json();
 
                 const nodes = data.nodes || [];
@@ -50602,9 +50574,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             results.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Searching...</p>';
 
             try {
-                const response = await fetch(`/api/collective/insights/?topic=${encodeURIComponent(topic)}`, {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch(`/api/collective/insights/?topic=${encodeURIComponent(topic)}`);
                 const data = await response.json();
 
                 if (data.insights && data.insights.length > 0) {
@@ -50647,12 +50617,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             results.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Orchestrating agents...</p>';
 
             try {
-                const response = await fetch('/api/collective/orchestrate/', {
+                const response = await authenticatedFetch('/api/collective/orchestrate/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({ task_description: task })
                 });
                 const data = await response.json();
