@@ -239,6 +239,164 @@ async function searchSpiderIntelligence() {
     }
 }
 
+// ============================================================
+// SESSION 343: SPIDER NETWORK MANAGEMENT FUNCTIONS
+// ============================================================
+
+// Load spider network status
+async function loadSpiderStatus() {
+    const listContainer = document.getElementById('spider-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading spiders...</p>';
+
+    try {
+        const response = await fetch('/api/spider-intelligence/registry/', {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const spiders = data.spiders;
+            const categories = {};
+
+            // Group by category
+            Object.entries(spiders).forEach(([name, info]) => {
+                const cat = info.category || 'other';
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push({ name, ...info });
+            });
+
+            let html = '<div class="accordion" id="spiderAccordion">';
+            Object.entries(categories).sort((a, b) => b[1].length - a[1].length).forEach(([cat, spiders], idx) => {
+                const catId = cat.replace(/[^a-z0-9]/gi, '');
+                html += `
+                    <div class="accordion-item" style="background: #1a1a1a; border: 1px solid #333;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button ${idx > 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${catId}" style="background: rgba(249, 115, 22, 0.1); color: #f97316;">
+                                ${cat.replace(/_/g, ' ').toUpperCase()} <span class="badge bg-secondary ms-2">${spiders.length}</span>
+                            </button>
+                        </h2>
+                        <div id="collapse${catId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" data-bs-parent="#spiderAccordion">
+                            <div class="accordion-body p-2">
+                                ${spiders.map(s => `
+                                    <div class="d-flex justify-content-between align-items-center p-2 mb-1" style="background: rgba(255,255,255,0.03); border-radius: 4px;">
+                                        <div>
+                                            <span class="text-light">${s.name}</span>
+                                            <small class="text-muted ms-2">${s.class_name || ''}</small>
+                                        </div>
+                                        <button class="btn btn-sm" onclick="testSpider('${s.name}')" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; font-size: 11px; padding: 2px 8px;">
+                                            Test
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            listContainer.innerHTML = html;
+        } else {
+            listContainer.innerHTML = '<p class="text-muted text-center">Could not load spider registry</p>';
+        }
+    } catch (error) {
+        console.error('Error loading spider status:', error);
+        listContainer.innerHTML = '<p class="text-danger text-center">Failed to load spiders</p>';
+    }
+}
+
+// Test a specific spider
+async function testSpider(spiderName) {
+    const resultsContainer = document.getElementById('spider-test-results');
+    const contentContainer = document.getElementById('spider-test-content');
+
+    resultsContainer.style.display = 'block';
+    contentContainer.innerHTML = `<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Testing ${spiderName} spider...</p>`;
+
+    try {
+        const response = await fetch(`/api/spider-intelligence/test/?spider=${encodeURIComponent(spiderName)}`, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const result = data.result;
+            contentContainer.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 text-light">${spiderName}</h6>
+                    <span class="badge" style="background: ${result.success ? '#22c55e' : '#ef4444'};">
+                        ${result.success ? '✓ Working' : '✗ Failed'}
+                    </span>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 text-center">
+                        <h4 class="mb-0 text-light">${result.articles_count || 0}</h4>
+                        <small class="text-muted">Articles</small>
+                    </div>
+                    <div class="col-4 text-center">
+                        <h4 class="mb-0 text-light">${result.feeds_tested || 0}</h4>
+                        <small class="text-muted">Feeds</small>
+                    </div>
+                    <div class="col-4 text-center">
+                        <h4 class="mb-0 text-light">${result.response_time || 'N/A'}</h4>
+                        <small class="text-muted">Time (ms)</small>
+                    </div>
+                </div>
+                ${result.sample_titles && result.sample_titles.length > 0 ? `
+                    <div class="mt-2">
+                        <small class="text-muted">Sample Headlines:</small>
+                        <ul class="list-unstyled mt-1" style="font-size: 12px;">
+                            ${result.sample_titles.slice(0, 5).map(t => `<li class="text-light">• ${t.substring(0, 80)}${t.length > 80 ? '...' : ''}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                ${result.error ? `<p class="text-danger mt-2 mb-0"><small>Error: ${result.error}</small></p>` : ''}
+                <button class="btn btn-sm btn-outline-secondary mt-2" onclick="document.getElementById('spider-test-results').style.display='none'">Close</button>
+            `;
+        } else {
+            contentContainer.innerHTML = `<p class="text-danger">Test failed: ${data.error || 'Unknown error'}</p>`;
+        }
+    } catch (error) {
+        console.error('Error testing spider:', error);
+        contentContainer.innerHTML = '<p class="text-danger">Test request failed</p>';
+    }
+}
+
+// Test a random spider from the new batch
+async function testRandomSpider() {
+    const newSpiders = [
+        'cnn', 'reuters_rss', 'science', 'health', 'education_rss', 'library',
+        'business_news', 'government', 'parenting', 'food', 'travel', 'real_estate',
+        'npr', 'bbc', 'arstechnica', 'variety', 'polygon_gaming', 'smashingmagazine', 'lifehacker'
+    ];
+    const randomSpider = newSpiders[Math.floor(Math.random() * newSpiders.length)];
+    await testSpider(randomSpider);
+}
+
+// Run all spiders (triggers backend task)
+async function runAllSpiders() {
+    if (!confirm('This will trigger all spiders to fetch fresh data. Continue?')) return;
+
+    try {
+        const response = await fetch('/api/spider-intelligence/run-all/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            alert(`Spider collection started! Task ID: ${data.task_id || 'N/A'}`);
+        } else {
+            alert('Failed to start spider collection: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error running spiders:', error);
+        alert('Failed to start spider collection');
+    }
+}
+
 // Generate Daily Report
 async function generateDailyReport() {
     const container = document.getElementById('daily-report-container');

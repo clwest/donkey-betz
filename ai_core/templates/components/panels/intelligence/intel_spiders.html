@@ -1,7 +1,7 @@
 {% comment %}
 Session 275: Intelligence Spiders Sub-Tab
-Spider network status and management
-Note: Placeholder - full extraction in next session
+Session 343: Updated to 102 spiders across 36 categories
+Spider network status and management with live testing
 {% endcomment %}
 
 <!-- ========== SPIDERS SUB-TAB ========== -->
@@ -10,8 +10,11 @@ Note: Placeholder - full extraction in next session
         <div class="col-md-12">
             <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(249, 115, 22, 0.3);">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
-                    <h5 class="mb-0" style="color: #f97316;">&#128375; Spider Network (70 Spiders)</h5>
+                    <h5 class="mb-0" style="color: #f97316;">&#128375; Spider Network (102 Spiders | 36 Categories)</h5>
                     <div>
+                        <button class="btn btn-sm me-2" onclick="testRandomSpider()" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4);">
+                            &#128171; Test Random
+                        </button>
                         <button class="btn btn-sm me-2" onclick="runAllSpiders()" style="background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.4);">
                             &#9654; Run All
                         </button>
@@ -21,38 +24,118 @@ Note: Placeholder - full extraction in next session
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Spider Categories -->
-                    <div class="row mb-4">
-                        <div class="col-md-3">
+                    <!-- Spider Categories - Top Row -->
+                    <div class="row mb-2">
+                        <div class="col">
                             <div class="card text-center" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
                                 <div class="card-body py-2">
-                                    <h4 class="mb-0" style="color: #93c5fd;">9</h4>
+                                    <h4 class="mb-0" style="color: #93c5fd;">10</h4>
                                     <small style="color: #60a5fa;">Tech</small>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col">
                             <div class="card text-center" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
                                 <div class="card-body py-2">
-                                    <h4 class="mb-0" style="color: #86efac;">8</h4>
+                                    <h4 class="mb-0" style="color: #86efac;">10</h4>
                                     <small style="color: #4ade80;">Financial</small>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col">
                             <div class="card text-center" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
                                 <div class="card-body py-2">
-                                    <h4 class="mb-0" style="color: #f9a8d4;">5</h4>
-                                    <small style="color: #ec4899;">Creative</small>
+                                    <h4 class="mb-0" style="color: #f9a8d4;">8</h4>
+                                    <small style="color: #ec4899;">News</small>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col">
                             <div class="card text-center" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
                                 <div class="card-body py-2">
-                                    <h4 class="mb-0" style="color: #fcd34d;">48</h4>
-                                    <small style="color: #fbbf24;">Others</small>
+                                    <h4 class="mb-0" style="color: #fcd34d;">5</h4>
+                                    <small style="color: #fbbf24;">Digital</small>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #c4b5fd;">5</h4>
+                                    <small style="color: #a78bfa;">Creative</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #67e8f9;">5</h4>
+                                    <small style="color: #22d3ee;">Freelance</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spider Categories - Bottom Row (New Categories) -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #fda4af;">4</h4>
+                                    <small style="color: #fb7185;">Education</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #6ee7b7;">4</h4>
+                                    <small style="color: #34d399;">Legal</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #fcd34d;">4</h4>
+                                    <small style="color: #fbbf24;">AI/Creative</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #d8b4fe;">3</h4>
+                                    <small style="color: #c084fc;">Innovation</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(20, 184, 166, 0.1); border: 1px solid rgba(20, 184, 166, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #5eead4;">3</h4>
+                                    <small style="color: #2dd4bf;">Community</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card text-center" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+                                <div class="card-body py-2">
+                                    <h4 class="mb-0" style="color: #a5b4fc;">35</h4>
+                                    <small style="color: #818cf8;">+23 More</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spider Test Results -->
+                    <div id="spider-test-results" class="mb-4" style="display: none;">
+                        <div class="card" style="background: #0d0d0d; border: 1px solid #333;">
+                            <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                <h6 class="mb-0" style="color: #a78bfa;">&#128171; Spider Test Results</h6>
+                            </div>
+                            <div class="card-body" id="spider-test-content">
+                                <!-- Test results will appear here -->
                             </div>
                         </div>
                     </div>

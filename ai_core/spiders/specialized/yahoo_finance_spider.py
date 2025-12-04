@@ -2,18 +2,17 @@
 Yahoo Finance Stock Market Data Spider
 =======================================
 
-Fetches stock market data from Yahoo Finance (free, no API key required).
+Session 344: Uses the yfinance library for reliable stock data fetching.
 
-Data Sources:
-- Yahoo Finance trending stocks
-- Market indices (S&P 500, Dow, NASDAQ)
-- Top gainers/losers
+Fetches stock market data from Yahoo Finance:
+- Market indices (S&P 500, Dow Jones, NASDAQ)
+- Major tech stocks (AAPL, MSFT, GOOGL, etc.)
+- Trending/popular stocks
 
-No API key required - uses public web scraping.
+No API key required - uses yfinance library.
 """
 
-import requests
-from bs4 import BeautifulSoup
+import yfinance as yf
 from typing import Dict, List, Any
 from datetime import datetime
 import logging
@@ -23,243 +22,154 @@ logger = logging.getLogger(__name__)
 
 
 class YahooFinanceSpider:
-    """Spider for fetching stock market data from Yahoo Finance"""
+    """Spider for fetching stock market data using yfinance library"""
 
     name = "yahoo_finance"
-    base_url = "https://finance.yahoo.com"
+
+    # Default symbols to track
+    DEFAULT_SYMBOLS = [
+        # Market Indices
+        "^GSPC",   # S&P 500
+        "^DJI",    # Dow Jones
+        "^IXIC",   # NASDAQ
+        # Tech Giants
+        "AAPL",    # Apple
+        "MSFT",    # Microsoft
+        "GOOGL",   # Alphabet
+        "AMZN",    # Amazon
+        "META",    # Meta
+        "NVDA",    # NVIDIA
+        "TSLA",    # Tesla
+        # Other Popular
+        "JPM",     # JPMorgan
+        "V",       # Visa
+        "WMT",     # Walmart
+        "JNJ",     # Johnson & Johnson
+        "DIS",     # Disney
+    ]
 
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        })
+        pass
 
-    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+    def fetch_data(self, max_results: int = 50, symbols: List[str] = None) -> List[Dict[str, Any]]:
         """
-        Fetch stock market data
+        Fetch stock market data from Yahoo Finance using yfinance
 
         Args:
             max_results: Maximum number of stocks to fetch
+            symbols: Optional list of specific symbols to fetch
 
         Returns:
-            List of stock data
+            List of stock data dictionaries
         """
+        target_symbols = symbols or self.DEFAULT_SYMBOLS
+
+        # Limit symbols to max_results
+        target_symbols = target_symbols[:max_results]
+
         all_data = []
 
-        # Fetch trending stocks
-        all_data.extend(self._fetch_trending_stocks(max_results // 3))
-
-        # Fetch top gainers
-        all_data.extend(self._fetch_gainers_losers('gainers', max_results // 3))
-
-        # Fetch market indices
-        all_data.extend(self._fetch_market_indices())
-
-        return all_data[:max_results]
-
-    def _fetch_trending_stocks(self, limit: int = 15) -> List[Dict[str, Any]]:
-        """Fetch trending stocks from Yahoo Finance"""
+        # Fetch quotes using yfinance
         try:
-            url = f"{self.base_url}/trending-tickers"
-            logger.info("Fetching trending stocks from Yahoo Finance")
+            logger.info(f"Fetching {len(target_symbols)} symbols from Yahoo Finance")
 
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
+            # Use yfinance Tickers to batch fetch
+            tickers = yf.Tickers(" ".join(target_symbols))
 
-            soup = BeautifulSoup(response.content, 'html.parser')
-            stocks = []
-
-            # Find trending stock table rows
-            table = soup.find('table')
-            if table:
-                rows = table.find_all('tr')[1:limit+1]  # Skip header row
-
-                for row in rows:
-                    try:
-                        cells = row.find_all('td')
-                        if len(cells) >= 5:
-                            symbol = cells[0].get_text(strip=True)
-                            name = cells[1].get_text(strip=True) if len(cells) > 1 else ''
-                            price_text = cells[2].get_text(strip=True) if len(cells) > 2 else '0'
-                            change_text = cells[3].get_text(strip=True) if len(cells) > 3 else '0'
-                            pct_change_text = cells[4].get_text(strip=True) if len(cells) > 4 else '0'
-
-                            # Parse numeric values
-                            try:
-                                price = float(price_text.replace(',', ''))
-                            except:
-                                price = 0
-
-                            try:
-                                change = float(change_text.replace('+', '').replace(',', ''))
-                            except:
-                                change = 0
-
-                            try:
-                                pct_change = float(pct_change_text.replace('%', '').replace('+', ''))
-                            except:
-                                pct_change = 0
-
-                            stocks.append({
-                                'symbol': symbol,
-                                'name': name,
-                                'price': price,
-                                'change': change,
-                                'percent_change': pct_change,
-                                'data_type': 'trending_stock',
-                                'source': 'Yahoo Finance Trending',
-                                'tags': self._extract_tags(symbol, pct_change),
-                                'timestamp': datetime.now().isoformat(),
-                            })
-
-                    except Exception as e:
-                        logger.warning(f"Error parsing trending stock row: {e}")
+            for symbol in target_symbols:
+                try:
+                    ticker = tickers.tickers.get(symbol)
+                    if not ticker:
                         continue
 
-            logger.info(f"Fetched {len(stocks)} trending stocks from Yahoo Finance")
-            return stocks
+                    info = ticker.info
+
+                    # Get price data
+                    price = info.get('regularMarketPrice') or info.get('currentPrice', 0)
+                    prev_close = info.get('regularMarketPreviousClose') or info.get('previousClose', 0)
+                    change = price - prev_close if price and prev_close else 0
+                    pct_change = (change / prev_close * 100) if prev_close else 0
+
+                    # Determine if this is an index
+                    is_index = symbol.startswith('^')
+                    data_type = 'market_index' if is_index else 'stock'
+
+                    # Get name
+                    name = info.get('shortName') or info.get('longName') or symbol
+
+                    all_data.append({
+                        'symbol': symbol.replace('^', ''),  # Clean up index symbols for display
+                        'name': name,
+                        'current_price': price,
+                        'price': price,  # Alias
+                        'change': round(change, 2) if change else 0,
+                        'change_percent': round(pct_change, 2) if pct_change else 0,
+                        'percent_change': round(pct_change, 2) if pct_change else 0,  # Alias
+                        'market_cap': info.get('marketCap'),
+                        'volume': info.get('regularMarketVolume') or info.get('volume'),
+                        'high_24h': info.get('regularMarketDayHigh') or info.get('dayHigh'),
+                        'low_24h': info.get('regularMarketDayLow') or info.get('dayLow'),
+                        'open': info.get('regularMarketOpen') or info.get('open'),
+                        'previous_close': prev_close,
+                        'fifty_two_week_high': info.get('fiftyTwoWeekHigh'),
+                        'fifty_two_week_low': info.get('fiftyTwoWeekLow'),
+                        'sector': info.get('sector', 'N/A'),
+                        'industry': info.get('industry', 'N/A'),
+                        'data_type': data_type,
+                        'source': 'yahoo_finance',
+                        'type': 'item',
+                        'tags': self._extract_tags(symbol, pct_change, is_index),
+                        'fetched_at': datetime.now().isoformat(),
+                    })
+
+                except Exception as e:
+                    logger.warning(f"Error fetching {symbol}: {e}")
+                    continue
+
+            logger.info(f"Yahoo Finance spider fetched {len(all_data)} stock quotes")
 
         except Exception as e:
-            logger.error(f"Error fetching trending stocks: {e}")
-            return []
+            logger.error(f"Error in Yahoo Finance fetch: {e}")
 
-    def _fetch_gainers_losers(self, category: str = 'gainers', limit: int = 15) -> List[Dict[str, Any]]:
-        """Fetch top gainers or losers"""
-        try:
-            url = f"{self.base_url}/{category}"
-            logger.info(f"Fetching {category} from Yahoo Finance")
+        return all_data
 
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
+    def _extract_tags(self, symbol: str, pct_change: float, is_index: bool = False) -> List[str]:
+        """Extract relevant tags for the stock"""
+        tags = ['equity']
 
-            soup = BeautifulSoup(response.content, 'html.parser')
-            stocks = []
-
-            # Find gainers/losers table
-            table = soup.find('table')
-            if table:
-                rows = table.find_all('tr')[1:limit+1]  # Skip header
-
-                for row in rows:
-                    try:
-                        cells = row.find_all('td')
-                        if len(cells) >= 5:
-                            symbol = cells[0].get_text(strip=True)
-                            name = cells[1].get_text(strip=True) if len(cells) > 1 else ''
-                            price_text = cells[2].get_text(strip=True) if len(cells) > 2 else '0'
-                            change_text = cells[3].get_text(strip=True) if len(cells) > 3 else '0'
-                            pct_change_text = cells[4].get_text(strip=True) if len(cells) > 4 else '0'
-
-                            try:
-                                price = float(price_text.replace(',', ''))
-                            except:
-                                price = 0
-
-                            try:
-                                change = float(change_text.replace('+', '').replace(',', ''))
-                            except:
-                                change = 0
-
-                            try:
-                                pct_change = float(pct_change_text.replace('%', '').replace('+', ''))
-                            except:
-                                pct_change = 0
-
-                            stocks.append({
-                                'symbol': symbol,
-                                'name': name,
-                                'price': price,
-                                'change': change,
-                                'percent_change': pct_change,
-                                'data_type': f'stock_{category}',
-                                'source': f'Yahoo Finance {category.title()}',
-                                'tags': self._extract_tags(symbol, pct_change, category),
-                                'timestamp': datetime.now().isoformat(),
-                            })
-
-                    except Exception as e:
-                        logger.warning(f"Error parsing {category} row: {e}")
-                        continue
-
-            logger.info(f"Fetched {len(stocks)} {category} from Yahoo Finance")
-            return stocks
-
-        except Exception as e:
-            logger.error(f"Error fetching {category}: {e}")
-            return []
-
-    def _fetch_market_indices(self) -> List[Dict[str, Any]]:
-        """Fetch major market indices"""
-        indices_symbols = [
-            ('^GSPC', 'S&P 500'),
-            ('^DJI', 'Dow Jones'),
-            ('^IXIC', 'NASDAQ'),
-            ('^RUT', 'Russell 2000'),
-        ]
-
-        indices_data = []
-
-        for symbol, name in indices_symbols:
-            try:
-                url = f"{self.base_url}/quote/{symbol}"
-                response = self.session.get(url, timeout=20)
-                response.raise_for_status()
-
-                soup = BeautifulSoup(response.content, 'html.parser')
-
-                # Try to extract index data from page
-                price_elem = soup.find('fin-streamer', {'data-symbol': symbol, 'data-field': 'regularMarketPrice'})
-                change_elem = soup.find('fin-streamer', {'data-symbol': symbol, 'data-field': 'regularMarketChange'})
-                pct_elem = soup.find('fin-streamer', {'data-symbol': symbol, 'data-field': 'regularMarketChangePercent'})
-
-                price = float(price_elem.get_text(strip=True).replace(',', '')) if price_elem else 0
-                change = float(change_elem.get_text(strip=True).replace('+', '').replace(',', '')) if change_elem else 0
-                pct_change = float(pct_elem.get_text(strip=True).replace('%', '').replace('+', '')) if pct_elem else 0
-
-                indices_data.append({
-                    'symbol': symbol,
-                    'name': name,
-                    'price': price,
-                    'change': change,
-                    'percent_change': pct_change,
-                    'data_type': 'market_index',
-                    'source': 'Yahoo Finance',
-                    'tags': ['index', 'market', name.lower().replace(' ', '_')],
-                    'timestamp': datetime.now().isoformat(),
-                })
-
-            except Exception as e:
-                logger.warning(f"Error fetching {name} ({symbol}): {e}")
-                continue
-
-        logger.info(f"Fetched {len(indices_data)} market indices")
-        return indices_data
-
-    def _extract_tags(self, symbol: str, pct_change: float, category: str = '') -> List[str]:
-        """Extract relevant tags"""
-        tags = ['stock', 'equity']
+        if is_index:
+            tags.append('index')
+            tags.append('market')
+        else:
+            tags.append('stock')
 
         if symbol:
-            tags.append(symbol)
+            tags.append(symbol.replace('^', '').lower())
 
         # Performance tags
-        if pct_change > 5:
-            tags.append('strong_gainer')
-        elif pct_change > 2:
-            tags.append('gainer')
-        elif pct_change < -5:
-            tags.append('strong_loser')
-        elif pct_change < -2:
-            tags.append('loser')
+        if pct_change:
+            if pct_change > 5:
+                tags.append('strong_gainer')
+            elif pct_change > 2:
+                tags.append('gainer')
+            elif pct_change < -5:
+                tags.append('strong_loser')
+            elif pct_change < -2:
+                tags.append('loser')
 
-        if category:
-            tags.append(category)
-
-        # Volatility
-        if abs(pct_change) > 10:
-            tags.append('highly_volatile')
-        elif abs(pct_change) > 5:
-            tags.append('volatile')
+            # Volatility
+            if abs(pct_change) > 10:
+                tags.append('highly_volatile')
+            elif abs(pct_change) > 5:
+                tags.append('volatile')
 
         return tags
+
+
+# For direct testing
+if __name__ == "__main__":
+    spider = YahooFinanceSpider()
+    data = spider.fetch_data(max_results=10)
+    print(f"Fetched {len(data)} stocks")
+    for d in data[:5]:
+        print(f"{d['symbol']}: ${d['current_price']:,.2f} ({d['change_percent']:+.2f}%)")

@@ -371,3 +371,341 @@ def daily_report(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+# ============================================================
+# SESSION 344: ENHANCED MARKET RESEARCH DASHBOARD
+# ============================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def market_research_dashboard(request):
+    """
+    Session 344: Enhanced market research endpoint.
+    Returns crypto and stocks with related news articles.
+
+    Query params:
+        hours: Look back period (default: 24)
+        crypto_limit: Max crypto assets (default: 10)
+        stock_limit: Max stocks (default: 10)
+        news_limit: Max news per asset (default: 3)
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from core.models_unified_system import SpiderData
+
+    try:
+        hours = int(request.GET.get('hours', 24))
+        crypto_limit = int(request.GET.get('crypto_limit', 10))
+        stock_limit = int(request.GET.get('stock_limit', 10))
+        news_limit = int(request.GET.get('news_limit', 3))
+
+        # Cap limits
+        hours = min(hours, 168)
+        crypto_limit = min(crypto_limit, 20)
+        stock_limit = min(stock_limit, 20)
+        news_limit = min(news_limit, 5)
+
+        since = timezone.now() - timedelta(hours=hours)
+
+        # ========== CRYPTO SECTION ==========
+        crypto_data = SpiderData.objects.filter(
+            spider_name__in=['coingecko', 'etherscan'],
+            created_at__gte=since
+        ).order_by('-created_at')
+
+        crypto_assets = []
+        seen_crypto = set()
+
+        for entry in crypto_data:
+            if not entry.raw_data:
+                continue
+            items = entry.raw_data.get('items', [])
+            for item in items:
+                symbol = item.get('symbol', '').upper()
+                if symbol and symbol not in seen_crypto and len(crypto_assets) < crypto_limit:
+                    seen_crypto.add(symbol)
+
+                    # Calculate price change - coingecko uses price_change_percentage_24h
+                    change = item.get('price_change_percentage_24h') or item.get('change_24h') or 0
+                    try:
+                        change = float(change)
+                    except:
+                        change = 0
+
+                    # Get price - coingecko uses current_price
+                    price = item.get('current_price') or item.get('price') or 0
+
+                    crypto_assets.append({
+                        'symbol': symbol,
+                        'name': item.get('name', symbol),
+                        'price': price,
+                        'change_24h': round(change, 2),
+                        'change_pct': round(change, 2),  # Alias for template
+                        'change_direction': 'up' if change > 0 else 'down' if change < 0 else 'neutral',
+                        'market_cap': item.get('market_cap'),
+                        'volume_24h': item.get('total_volume'),
+                        'high_24h': item.get('high_24h'),
+                        'low_24h': item.get('low_24h'),
+                        'image': item.get('image'),
+                        'source': entry.spider_name
+                    })
+
+        # ========== STOCKS SECTION (Live via yfinance) ==========
+        # Session 344: Use Yahoo Finance spider for live stock data
+        stock_assets = []
+        try:
+            from ai_core.spiders.specialized.yahoo_finance_spider import YahooFinanceSpider
+            yahoo_spider = YahooFinanceSpider()
+            live_stocks = yahoo_spider.fetch_data(max_results=stock_limit)
+
+            for item in live_stocks:
+                symbol = item.get('symbol', '').upper()
+                change = item.get('change_percent') or item.get('percent_change') or 0
+                price = item.get('current_price') or item.get('price') or 0
+
+                stock_assets.append({
+                    'symbol': symbol,
+                    'name': item.get('name', symbol),
+                    'price': price,
+                    'change': round(change, 2) if change else 0,
+                    'change_pct': round(change, 2) if change else 0,
+                    'change_direction': 'up' if change > 0 else 'down' if change < 0 else 'neutral',
+                    'sector': item.get('sector', 'N/A'),
+                    'volume': item.get('volume'),
+                    'source': 'yahoo_finance'
+                })
+
+        except Exception as e:
+            logger.warning(f"Error fetching live stock data: {e}")
+
+        # ========== FINANCIAL NEWS ==========
+        # Get news from financial news sources
+        news_spiders = ['business_news', 'reuters_rss', 'seekingalpha', 'newsapi', 'bbc', 'cnn']
+        news_data = SpiderData.objects.filter(
+            spider_name__in=news_spiders,
+            created_at__gte=since
+        ).order_by('-created_at')
+
+        # Collect all financial news
+        all_news = []
+        seen_urls = set()
+
+        # Keywords for financial news
+        crypto_keywords = ['bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'blockchain', 'defi', 'nft', 'binance', 'coinbase']
+        stock_keywords = ['stock', 'market', 'trading', 'nasdaq', 'dow', 'nyse', 's&p', 'fed', 'inflation', 'earnings', 'ipo']
+
+        for entry in news_data:
+            if not entry.raw_data:
+                continue
+            items = entry.raw_data.get('items', [])
+            for item in items:
+                title = item.get('title', '')
+                url = item.get('url', '') or item.get('link', '')
+
+                if not title or not url or url in seen_urls:
+                    continue
+
+                seen_urls.add(url)
+                title_lower = title.lower()
+                description = (item.get('description', '') or item.get('summary', ''))[:200]
+
+                # Classify news as crypto, stock, or general finance
+                is_crypto = any(kw in title_lower for kw in crypto_keywords)
+                is_stock = any(kw in title_lower for kw in stock_keywords)
+
+                # Also check for specific asset mentions
+                mentioned_cryptos = [c['symbol'] for c in crypto_assets if c['symbol'].lower() in title_lower or c['name'].lower() in title_lower]
+                mentioned_stocks = [s['symbol'] for s in stock_assets if s['symbol'].lower() in title_lower or (s['name'] and s['name'].lower() in title_lower)]
+
+                if is_crypto or is_stock or mentioned_cryptos or mentioned_stocks:
+                    all_news.append({
+                        'title': title,
+                        'description': description,
+                        'url': url,
+                        'source': entry.spider_name,
+                        'published': item.get('published') or item.get('date') or item.get('pubDate'),
+                        'category': 'crypto' if is_crypto or mentioned_cryptos else 'stock',
+                        'mentioned_cryptos': mentioned_cryptos[:3],
+                        'mentioned_stocks': mentioned_stocks[:3]
+                    })
+
+        # Split news by category
+        crypto_news = [n for n in all_news if n['category'] == 'crypto'][:news_limit * 3]
+        stock_news = [n for n in all_news if n['category'] == 'stock'][:news_limit * 3]
+
+        # ========== BUILD RESPONSE ==========
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'crypto': {
+                    'assets': crypto_assets,
+                    'news': crypto_news,
+                    'total_assets': len(crypto_assets),
+                    'total_news': len(crypto_news)
+                },
+                'stocks': {
+                    'assets': stock_assets,
+                    'news': stock_news,
+                    'total_assets': len(stock_assets),
+                    'total_news': len(stock_news)
+                },
+                'summary': {
+                    'period_hours': hours,
+                    'last_updated': timezone.now().isoformat(),
+                    'sources': list(set([a['source'] for a in crypto_assets + stock_assets]))
+                }
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+# ============================================================
+# SESSION 343: SPIDER REGISTRY AND TEST ENDPOINTS
+# ============================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def spider_registry(request):
+    """
+    Get the full spider registry with all 102 spiders.
+    Returns spider names, classes, categories, and configuration.
+    """
+    try:
+        from ai_core.spiders.spider_registry import get_spider_registry
+
+        registry = get_spider_registry()
+        spiders = registry.list_spiders()
+
+        return JsonResponse({
+            'status': 'success',
+            'spiders': spiders,
+            'total': len(spiders),
+            'categories': registry.get_spider_count()['by_category']
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def test_spider(request):
+    """
+    Test a specific spider by fetching live RSS data.
+
+    Query params:
+        spider: The spider name to test (required)
+    """
+    import time
+    import feedparser
+
+    spider_name = request.GET.get('spider', '').strip()
+    if not spider_name:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Parameter "spider" is required'
+        }, status=400)
+
+    try:
+        from ai_core.spiders.spider_registry import get_spider_registry
+
+        registry = get_spider_registry()
+        spider_class = registry.get_spider_class(spider_name)
+
+        if not spider_class:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Spider "{spider_name}" not found'
+            }, status=404)
+
+        # Try to get RSS feeds from the spider class
+        rss_feeds = getattr(spider_class, 'RSS_FEEDS', {})
+
+        if not rss_feeds:
+            return JsonResponse({
+                'status': 'success',
+                'result': {
+                    'success': True,
+                    'spider': spider_name,
+                    'articles_count': 0,
+                    'feeds_tested': 0,
+                    'message': 'Spider does not use RSS feeds (likely uses API)',
+                    'sample_titles': []
+                }
+            })
+
+        # Test the RSS feeds
+        start_time = time.time()
+        all_titles = []
+        feeds_working = 0
+        total_articles = 0
+
+        for feed_name, feed_url in list(rss_feeds.items())[:3]:  # Test max 3 feeds
+            try:
+                feed = feedparser.parse(feed_url)
+                if feed.entries:
+                    feeds_working += 1
+                    for entry in feed.entries[:5]:
+                        title = entry.get('title', '')
+                        if title:
+                            all_titles.append(title)
+                            total_articles += 1
+            except Exception:
+                pass
+
+        elapsed_ms = int((time.time() - start_time) * 1000)
+
+        return JsonResponse({
+            'status': 'success',
+            'result': {
+                'success': feeds_working > 0,
+                'spider': spider_name,
+                'articles_count': total_articles,
+                'feeds_tested': len(rss_feeds),
+                'feeds_working': feeds_working,
+                'response_time': elapsed_ms,
+                'sample_titles': all_titles[:5],
+                'error': None if feeds_working > 0 else 'No feeds returned data'
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def run_all_spiders(request):
+    """
+    Trigger all spiders to fetch fresh data.
+    Returns a task ID for tracking.
+    """
+    try:
+        from core.tasks import run_spider_network
+
+        # Trigger the Celery task
+        task = run_spider_network.delay()
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Spider collection started',
+            'task_id': str(task.id) if task else None
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)

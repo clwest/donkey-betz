@@ -419,6 +419,7 @@ websocket_urlpatterns.extend(agent_slack_patterns)
 
 # Session 324: Learning Feed WebSocket - Real-time agent learning activity
 from .learning_feed_consumer import LearningFeedConsumer
+from .pipeline_progress_consumer import PipelineProgressConsumer
 
 learning_feed_patterns = [
     # Learning Feed WebSocket - stream live learning events
@@ -427,6 +428,15 @@ learning_feed_patterns = [
 ]
 
 websocket_urlpatterns.extend(learning_feed_patterns)
+
+# Session 342: Pipeline Progress WebSocket - Real-time pipeline visualization
+pipeline_progress_patterns = [
+    # Pipeline Progress WebSocket - stream live pipeline stage updates
+    re_path(r'^ws/pipeline-progress/$', PipelineProgressConsumer.as_asgi()),
+    re_path(r'^ws/pipeline/$', PipelineProgressConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(pipeline_progress_patterns)
 
 # Session 332: Project Intelligence Hub WebSocket - Real-time updates for all tabs
 from .project_intelligence_consumer import ProjectIntelligenceConsumer

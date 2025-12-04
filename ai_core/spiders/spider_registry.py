@@ -121,6 +121,70 @@ from .specialized.bluesky_spider import BlueSkySpider
 from .specialized.youtube_spider import YouTubeSpider
 from .specialized.discord_spider import DiscordSpider
 
+# Session 343: PHASE 1 SPIDER EXPANSION (10 new spiders)
+# Major News Outlets (RSS - No Auth Required)
+from .specialized.npr_spider import NPRSpider
+from .specialized.bbc_spider import BBCSpider
+from .specialized.arstechnica_spider import ArsTechnicaSpider
+
+# Financial APIs (Free Tier)
+from .specialized.polygon_spider import PolygonSpider
+from .specialized.finnhub_spider import FinnhubSpider
+
+# Weather API (No Auth Required)
+from .specialized.openmeteo_spider import OpenMeteoSpider
+
+# Entertainment & Gaming
+from .specialized.variety_spider import VarietySpider
+from .specialized.polygon_gaming_spider import PolygonGamingSpider
+
+# Web Development & Lifestyle
+from .specialized.smashingmagazine_spider import SmashingMagazineSpider
+from .specialized.lifehacker_spider import LifehackerSpider
+
+# Session 343: Phase 1 RSS Expansion - Batch 2 (12 new RSS spiders)
+# Major News (RSS - No Auth Required)
+from .specialized.cnn_spider import CNNSpider
+from .specialized.reuters_rss_spider import ReutersRSSSpider
+
+# Science & Health (RSS - No Auth Required)
+from .specialized.science_spider import ScienceSpider
+from .specialized.health_spider import HealthSpider
+
+# Education & Library (RSS - No Auth Required)
+from .specialized.education_rss_spider import EducationRSSSpider
+from .specialized.library_spider import LibrarySpider
+
+# Business News (RSS - No Auth Required)
+from .specialized.business_news_spider import BusinessNewsSpider
+
+# Government (RSS - No Auth Required)
+from .specialized.government_spider import GovernmentSpider
+
+# Lifestyle & Family (RSS - No Auth Required)
+from .specialized.parenting_spider import ParentingSpider
+from .specialized.food_spider import FoodSpider
+from .specialized.travel_spider import TravelSpider
+from .specialized.real_estate_spider import RealEstateSpider
+
+# Session 343: HIGH-VALUE API SPIDERS (3 new - using configured API keys)
+# SEC EDGAR - Company filings (SEC_API_KEY)
+from .specialized.sec_spider import SECSpider
+# GitHub - Developer trends (GITHUB_TOKEN)
+from .specialized.github_spider import GitHubSpider
+# HuggingFace - AI/ML models and datasets (HUGGING_FACE_API)
+from .specialized.huggingface_spider import HuggingFaceSpider
+
+# Session 343: ADDITIONAL API SPIDERS (4 new - reaching 100 spiders!)
+# NewsAPI - Breaking news from 80k+ sources (NEWS_API_KEY)
+from .specialized.newsapi_spider import NewsAPISpider
+# Spotify - Music and podcast trends (SPOTIFY_CLIENT_ID/SECRET)
+from .specialized.spotify_spider import SpotifySpider
+# NOAA - Weather alerts and forecasts (No auth required for weather.gov)
+from .specialized.noaa_spider import NOAASpider
+# Giphy - GIF and meme trends (GIPHY_API_Key)
+from .specialized.giphy_spider import GiphySpider
+
 # Import base spider for fallbacks
 from .base_spider import BaseIntelligenceSpider
 
@@ -136,11 +200,11 @@ class SpiderRegistry:
     - Last verification timestamp
     """
 
-    # Verification status from Session 290 (2025-11-29)
+    # Verification status from Session 343 (2025-12-04)
     SPIDER_STATUS = {
-        # All 70 spiders verified working on 2025-11-29
-        'verified_at': '2025-11-29T20:03:39',
-        'total_working': 70,
+        # Session 343: Expanded to 102 spiders! (+7 high-value API spiders)
+        'verified_at': '2025-12-04T00:00:00',
+        'total_working': 102,
         'total_placeholder': 0,
         'total_error': 0,
     }
@@ -720,6 +784,263 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['discord.com/api/v10']
+        })
+
+        # === SESSION 343: PHASE 1 SPIDER EXPANSION (10 new) ===
+
+        # NPR - National Public Radio news (NO AUTH REQUIRED)
+        self.register_spider('npr', NPRSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['feeds.npr.org']
+        })
+
+        # BBC - British Broadcasting Corporation (NO AUTH REQUIRED)
+        self.register_spider('bbc', BBCSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['feeds.bbci.co.uk/news']
+        })
+
+        # Ars Technica - In-depth tech news (NO AUTH REQUIRED)
+        self.register_spider('arstechnica', ArsTechnicaSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['feeds.arstechnica.com']
+        })
+
+        # Polygon.io - Stock market data (FREE TIER - POLYGON_API_KEY)
+        self.register_spider('polygon_finance', PolygonSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 2.0,
+            'targets': ['api.polygon.io']
+        })
+
+        # Finnhub - Financial data (FREE TIER - FINNHUB_API_KEY)
+        self.register_spider('finnhub', FinnhubSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['finnhub.io/api']
+        })
+
+        # Open-Meteo - Weather data (NO AUTH REQUIRED)
+        self.register_spider('openmeteo', OpenMeteoSpider, {
+            'category': 'weather',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['api.open-meteo.com']
+        })
+
+        # Variety - Entertainment industry news (NO AUTH REQUIRED)
+        self.register_spider('variety', VarietySpider, {
+            'category': 'entertainment',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['variety.com/feed']
+        })
+
+        # Polygon Gaming - Video game news (NO AUTH REQUIRED)
+        self.register_spider('polygon_gaming', PolygonGamingSpider, {
+            'category': 'gaming',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['polygon.com/rss']
+        })
+
+        # Smashing Magazine - Web development (NO AUTH REQUIRED)
+        self.register_spider('smashingmagazine', SmashingMagazineSpider, {
+            'category': 'web_development',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['smashingmagazine.com/feed']
+        })
+
+        # Lifehacker - Productivity & lifestyle (NO AUTH REQUIRED)
+        self.register_spider('lifehacker', LifehackerSpider, {
+            'category': 'lifestyle',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['lifehacker.com/rss']
+        })
+
+        # === SESSION 343: PHASE 1 RSS EXPANSION - BATCH 2 (12 new) ===
+
+        # CNN - Major news outlet (NO AUTH REQUIRED)
+        self.register_spider('cnn', CNNSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['rss.cnn.com/rss']
+        })
+
+        # Reuters RSS - International news (NO AUTH REQUIRED)
+        self.register_spider('reuters_rss', ReutersRSSSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['reuters.com/rssFeed']
+        })
+
+        # Science - Multi-source science aggregator (NO AUTH REQUIRED)
+        self.register_spider('science', ScienceSpider, {
+            'category': 'science',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['nature.com', 'sciencedaily.com', 'arxiv.org', 'newscientist.com']
+        })
+
+        # Health - Medical & health news (NO AUTH REQUIRED)
+        self.register_spider('health', HealthSpider, {
+            'category': 'health',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['webmd.com', 'healthline.com', 'medicalxpress.com', 'nih.gov']
+        })
+
+        # Education RSS - Education news (NO AUTH REQUIRED)
+        self.register_spider('education_rss', EducationRSSSpider, {
+            'category': 'education',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['edweek.org', 'edsurge.com', 'insidehighered.com', 'chronicle.com']
+        })
+
+        # Library - Libraries & archives (NO AUTH REQUIRED)
+        self.register_spider('library', LibrarySpider, {
+            'category': 'library',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['archive.org', 'gutenberg.org', 'arxiv.org', 'plos.org', 'ala.org']
+        })
+
+        # Business News - Business publications (NO AUTH REQUIRED)
+        self.register_spider('business_news', BusinessNewsSpider, {
+            'category': 'business',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['hbr.org', 'forbes.com', 'entrepreneur.com', 'inc.com', 'fastcompany.com']
+        })
+
+        # Government - Federal agencies & data (NO AUTH REQUIRED)
+        self.register_spider('government', GovernmentSpider, {
+            'category': 'government',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['whitehouse.gov', 'federalregister.gov', 'bls.gov', 'sec.gov', 'sba.gov']
+        })
+
+        # Parenting - Family & childcare (NO AUTH REQUIRED)
+        self.register_spider('parenting', ParentingSpider, {
+            'category': 'parenting',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['parents.com', 'babycenter.com', 'fatherly.com', 'mother.ly']
+        })
+
+        # Food - Recipes & restaurant industry (NO AUTH REQUIRED)
+        self.register_spider('food', FoodSpider, {
+            'category': 'food',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['seriouseats.com', 'bonappetit.com', 'epicurious.com', 'eater.com']
+        })
+
+        # Travel - Travel & tourism (NO AUTH REQUIRED)
+        self.register_spider('travel', TravelSpider, {
+            'category': 'travel',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['lonelyplanet.com', 'cntraveler.com', 'thepointsguy.com', 'skift.com']
+        })
+
+        # Real Estate - Property & housing (NO AUTH REQUIRED)
+        self.register_spider('real_estate', RealEstateSpider, {
+            'category': 'real_estate',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['realtor.com', 'zillow.com', 'inman.com', 'biggerpockets.com']
+        })
+
+        # ============================================================
+        # SESSION 343: HIGH-VALUE API SPIDERS (3 new)
+        # ============================================================
+
+        # SEC EDGAR - Company filings for competitor research (SEC_API_KEY required)
+        self.register_spider('sec_edgar', SECSpider, {
+            'category': 'financial',
+            'priority': 1,
+            'rate_limit': 2.0,
+            'requires_auth': True,
+            'api_key_env': 'SEC_API_KEY',
+            'targets': ['sec.gov/edgar']
+        })
+
+        # GitHub - Developer trends and open source intelligence (GITHUB_TOKEN required)
+        self.register_spider('github', GitHubSpider, {
+            'category': 'tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': True,
+            'api_key_env': 'GITHUB_TOKEN',
+            'targets': ['github.com', 'api.github.com']
+        })
+
+        # HuggingFace - AI/ML models, datasets, and spaces (HUGGING_FACE_API optional)
+        self.register_spider('huggingface', HuggingFaceSpider, {
+            'category': 'ai_ml',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': False,  # Works without auth, better with auth
+            'api_key_env': 'HUGGING_FACE_API',
+            'targets': ['huggingface.co']
+        })
+
+        # ============================================================
+        # SESSION 343: REACHING 100 SPIDERS! (4 additional API spiders)
+        # ============================================================
+
+        # NewsAPI - Breaking news from 80k+ sources (NEWS_API_KEY required)
+        self.register_spider('newsapi', NewsAPISpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': True,
+            'api_key_env': 'NEWS_API_KEY',
+            'targets': ['newsapi.org']
+        })
+
+        # Spotify - Music and podcast trends (SPOTIFY_CLIENT_ID/SECRET required)
+        self.register_spider('spotify', SpotifySpider, {
+            'category': 'entertainment',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'requires_auth': True,
+            'api_key_env': 'SPOTIFY_CLIENT_ID',
+            'targets': ['spotify.com', 'api.spotify.com']
+        })
+
+        # NOAA - Weather alerts and forecasts (No auth required)
+        self.register_spider('noaa_weather', NOAASpider, {
+            'category': 'weather',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'requires_auth': False,
+            'targets': ['weather.gov', 'api.weather.gov']
+        })
+
+        # Giphy - GIF and meme culture trends (GIPHY_API_Key required)
+        self.register_spider('giphy', GiphySpider, {
+            'category': 'social',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'requires_auth': True,
+            'api_key_env': 'GIPHY_API_Key',
+            'targets': ['giphy.com', 'api.giphy.com']
         })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")
