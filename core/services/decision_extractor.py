@@ -99,8 +99,10 @@ class DecisionExtractor:
         )
 
         try:
+            # Session 338: Use gpt-5-mini for cost efficiency
+            # Note: reasoning models don't support temperature parameter
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",
@@ -109,8 +111,7 @@ class DecisionExtractor:
                     {"role": "user", "content": prompt}
                 ],
                 response_format={"type": "json_object"},
-                max_tokens=1000,
-                temperature=0.3
+                max_completion_tokens=2000,  # For reasoning + JSON output
             )
 
             import json
