@@ -745,7 +745,7 @@ def dashboard_stats(request):
         total_agents = legacy_agents + clean_agents
 
         # === DATA STATS ===
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import SpiderData, Collaboration, CollaborationSession, AgentMemory, AgentKnowledgeSource, AgentExecution
 
         # Total data points
         total_data_points = SpiderData.objects.count()
@@ -756,6 +756,20 @@ def dashboard_stats(request):
 
         # Success rate (approximate based on recent runs)
         success_rate = 98
+
+        # === SESSION 346: AGENT LEARNING STATS ===
+        try:
+            collaborations_count = Collaboration.objects.count()
+            collaboration_sessions_count = CollaborationSession.objects.count()
+            learning_events_count = AgentExecution.objects.count()
+            agent_memories_count = AgentMemory.objects.count()
+            knowledge_sources_count = AgentKnowledgeSource.objects.count()
+        except Exception:
+            collaborations_count = 0
+            collaboration_sessions_count = 0
+            learning_events_count = 0
+            agent_memories_count = 0
+            knowledge_sources_count = 0
 
         # === TOP CATEGORIES ===
         top_categories = sorted(
@@ -780,6 +794,14 @@ def dashboard_stats(request):
                     'total_points': total_data_points,
                     'last_24h': recent_data_points,
                     'success_rate': success_rate,
+                },
+                # Session 346: Agent learning/collaboration stats
+                'learning': {
+                    'collaborations': collaborations_count,
+                    'collaboration_sessions': collaboration_sessions_count,
+                    'learning_events': learning_events_count,
+                    'agent_memories': agent_memories_count,
+                    'knowledge_sources': knowledge_sources_count,
                 },
                 'timestamp': timezone.now().isoformat(),
             }

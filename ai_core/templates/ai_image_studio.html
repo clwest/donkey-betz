@@ -46006,31 +46006,38 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
-        // Session 310: Load architecture and memory stats for Overview tab
+        // Session 310/346: Load architecture and memory stats for Overview tab
+        // Now uses the public dashboard-stats endpoint (no auth required)
         async function loadSession310Stats() {
-            console.log('🤖 Session 310: loadSession310Stats() started');
+            console.log('🤖 Session 346: loadSession310Stats() started - using dashboard-stats API');
             try {
-                const response = await fetch('/api/agent-learning/stats/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                // Session 346: Use the unified dashboard-stats endpoint (no auth required)
+                const response = await fetch('/api/spider-intelligence/dashboard-stats/');
                 const data = await response.json();
-                console.log('🤖 Session 310: API response:', data);
+                console.log('🤖 Session 346: Dashboard stats response:', data);
 
-                if (data.success && data.stats) {
-                    console.log('🤖 Session 310: Stats received:', data.stats);
+                if (data.status === 'success' && data.stats) {
+                    console.log('🤖 Session 346: Stats received:', data.stats);
                     // Update Agent Stats cards in Overview tab
                     const totalEl = document.getElementById('agent-total-count');
                     const learningEl = document.getElementById('agent-learning-count');
                     const memoryEl = document.getElementById('agent-memory-count');
                     const knowledgeEl = document.getElementById('agent-knowledge-sources');
+                    const knowledgeCountEl = document.getElementById('agent-knowledge-count');
+                    const collaborationsEl = document.getElementById('agent-collaborations-count');
+                    const successRateEl = document.getElementById('agent-success-rate');
 
-                    if (totalEl) totalEl.textContent = data.stats.agents?.total || data.stats.agents?.connected_tools || 27;
-                    if (learningEl) learningEl.textContent = data.stats.learning_events || 0;
-                    if (memoryEl) memoryEl.textContent = data.stats.agent_memories || 0;
-                    if (knowledgeEl) knowledgeEl.textContent = data.stats.knowledge_sources || 0;
+                    // Session 346: Use unified stats from dashboard-stats endpoint
+                    if (totalEl) totalEl.textContent = data.stats.agents?.total || '--';
+                    if (learningEl) learningEl.textContent = data.stats.learning?.learning_events || 0;
+                    if (memoryEl) memoryEl.textContent = data.stats.learning?.agent_memories || 0;
+                    if (knowledgeEl) knowledgeEl.textContent = data.stats.learning?.knowledge_sources || 0;
+                    if (knowledgeCountEl) knowledgeCountEl.textContent = data.stats.learning?.knowledge_sources || 0;
+                    if (collaborationsEl) collaborationsEl.textContent = data.stats.learning?.collaborations || data.stats.learning?.collaboration_sessions || 0;
+                    if (successRateEl) successRateEl.textContent = (data.stats.data?.success_rate || 0) + '%';
                 }
             } catch (err) {
-                console.error('🤖 Session 310 stats error:', err);
+                console.error('🤖 Session 346 stats error:', err);
             }
         }
 
