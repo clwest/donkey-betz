@@ -4,6 +4,7 @@ Creative Orchestrator - Asset Generation from Research
 
 Session 339: Wire Up Creation Agents to Autonomous Pipeline
 Session 340: Added VideoAgent, AudioAgent, ThreeDAgent, Editing Agents
+Session 341: Added CreativeDirectorAgent and ContentAuditAgent
 
 This orchestrator takes completed research and generates assets:
     - Logos, thumbnails, banners (ImageAgent)
@@ -11,6 +12,9 @@ This orchestrator takes completed research and generates assets:
     - Voiceovers, jingles (AudioAgent)
     - 3D product mockups (ThreeDAgent)
     - Polish/upscale (ImageEditingAgent, VideoEditingAgent)
+    - Creative direction (CreativeDirectorAgent) - NEW Session 341
+    - Bias/ethics audit (ContentAuditAgent) - NEW Session 341
+    - Trained character/LoRA generation (TrainedCreationAgent) - NEW Session 341
 
 Flow:
     Research Complete (from ResearchOrchestrator)
@@ -19,17 +23,21 @@ Flow:
         ↓
     1. Extract creative brief from brand_strategy
         ↓
-    2. ImageAgent → Logo, thumbnail, banner
+    2. CreativeDirectorAgent → Enhanced creative direction (Session 341)
         ↓
-    3. VideoAgent → Promo video, logo animation
+    3. ImageAgent → Logo, thumbnail, banner
         ↓
-    4. AudioAgent → Voiceover, jingle
+    4. VideoAgent → Promo video, logo animation
         ↓
-    5. ThreeDAgent → 3D mockups (if images available)
+    5. AudioAgent → Voiceover, jingle
         ↓
-    6. ImageEditingAgent → Upscale best images
+    6. ThreeDAgent → 3D mockups (if images available)
         ↓
-    7. SEOOptimizerAgent → Metadata optimization
+    7. ImageEditingAgent → Upscale best images
+        ↓
+    8. SEOOptimizerAgent → Metadata optimization
+        ↓
+    9. ContentAuditAgent → Bias/ethics audit (Session 341)
         ↓
     Return: Generated assets linked to project
 
@@ -174,6 +182,12 @@ class CreativeOrchestrator:
         self._content_strategy_agent = None
         self._brand_identity_agent = None
         self._social_media_agent = None
+        # Session 341: Executive and Security agents
+        self._creative_director_agent = None
+        self._content_audit_agent = None
+        # Session 341: Training agents
+        self._character_training_agent = None
+        self._trained_creation_agent = None
 
     # ==================== Lazy-Loaded Agents ====================
 
@@ -284,6 +298,50 @@ class CreativeOrchestrator:
                 logger.warning("SocialMediaAgent not available")
         return self._social_media_agent
 
+    @property
+    def creative_director_agent(self):
+        """Session 341: Lazy-load CreativeDirectorAgent for creative oversight."""
+        if self._creative_director_agent is None:
+            try:
+                from core.agents.executive import CreativeDirectorAgent
+                self._creative_director_agent = CreativeDirectorAgent(user=self.user)
+            except ImportError:
+                logger.warning("CreativeDirectorAgent not available")
+        return self._creative_director_agent
+
+    @property
+    def content_audit_agent(self):
+        """Session 341: Lazy-load ContentAuditAgent for bias/ethics checking."""
+        if self._content_audit_agent is None:
+            try:
+                from core.agents.security import ContentAuditAgent
+                self._content_audit_agent = ContentAuditAgent(user=self.user)
+            except ImportError:
+                logger.warning("ContentAuditAgent not available")
+        return self._content_audit_agent
+
+    @property
+    def character_training_agent(self):
+        """Session 341: Lazy-load CharacterTrainingAgent for LoRA/character training."""
+        if self._character_training_agent is None:
+            try:
+                from core.agents.training import CharacterTrainingAgent
+                self._character_training_agent = CharacterTrainingAgent(user=self.user)
+            except ImportError:
+                logger.warning("CharacterTrainingAgent not available")
+        return self._character_training_agent
+
+    @property
+    def trained_creation_agent(self):
+        """Session 341: Lazy-load TrainedCreationAgent for generating with trained characters."""
+        if self._trained_creation_agent is None:
+            try:
+                from core.agents.training import TrainedCreationAgent
+                self._trained_creation_agent = TrainedCreationAgent(user=self.user)
+            except ImportError:
+                logger.warning("TrainedCreationAgent not available")
+        return self._trained_creation_agent
+
     # ==================== Main Entry Point ====================
 
     def execute_asset_generation(
@@ -343,6 +401,13 @@ class CreativeOrchestrator:
             )
 
             logger.info(f"Creative brief extracted: {creative_brief.get('style', 'default')}")
+
+            # Step 2.5: Session 341 - Get creative direction enhancement (optional)
+            if self.creative_director_agent:
+                enhanced_brief = self._get_creative_direction(creative_brief)
+                if enhanced_brief:
+                    creative_brief.update(enhanced_brief)
+                    logger.info("Creative direction enhanced")
 
             # Step 3: Generate each asset type
             if "logo" in asset_types:
@@ -429,6 +494,15 @@ class CreativeOrchestrator:
                     result.assets_generated.append("upscaled")
                     logger.info(f"Upscaled {len(upscaled)} images")
 
+            # Step 7.5: Session 341 - Generate with trained character (if available)
+            if "trained_character" in asset_types and self.trained_creation_agent:
+                trained_result = self._generate_with_trained_character(creative_brief)
+                if trained_result and trained_result.get('success'):
+                    trained_images = trained_result.get('images', [])
+                    result.all_images.extend(trained_images)
+                    result.assets_generated.append("trained_character")
+                    logger.info(f"Trained character images generated: {len(trained_images)}")
+
             # Step 8: Generate SEO metadata for assets
             if result.all_images and self.seo_agent:
                 seo_result = self._generate_seo_metadata(
@@ -437,7 +511,17 @@ class CreativeOrchestrator:
                 )
                 result.seo_metadata = seo_result
 
-            # Step 5: Update project with generated assets
+            # Step 9: Session 341 - Content audit for bias/ethics (optional)
+            if self.content_audit_agent and result.all_images:
+                audit_result = self._audit_generated_content(
+                    creative_brief=creative_brief,
+                    assets=result.all_images
+                )
+                if audit_result:
+                    result.seo_metadata['content_audit'] = audit_result
+                    logger.info("Content audit complete")
+
+            # Step 10: Update project with generated assets
             if result.all_images:
                 self._update_project_with_assets(result)
 
@@ -542,6 +626,169 @@ class CreativeOrchestrator:
                 brief['industry'] = 'health'
 
         return brief
+
+    # ==================== Session 341: Creative Direction & Audit ====================
+
+    def _get_creative_direction(self, creative_brief: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Session 341: Get creative direction enhancement from CreativeDirectorAgent.
+
+        Returns enhanced brief with additional creative guidance.
+        """
+        if not self.creative_director_agent:
+            return None
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            style = creative_brief.get('style', 'modern')
+            industry = creative_brief.get('industry', 'technology')
+
+            task = f"""Provide creative direction for brand assets for "{brand_name}".
+
+Current brief:
+- Style: {style}
+- Industry: {industry}
+- Tone: {creative_brief.get('tone', 'professional')}
+
+Suggest:
+1. Color palette recommendations (2-3 colors)
+2. Visual motifs that work for this brand
+3. Specific style elements to incorporate
+4. What to avoid for this type of brand
+
+Keep suggestions concise and actionable."""
+
+            result = self.creative_director_agent.execute(
+                task=task,
+                context={'project_id': str(self.project.id) if self.project else None},
+                scifi_context={},
+                spider_context={}
+            )
+
+            if result.success and result.data:
+                # Extract enhancements from response
+                return {
+                    'creative_direction': result.data.get('analysis', result.message),
+                    'enhanced': True
+                }
+
+            return None
+
+        except Exception as e:
+            logger.warning(f"Creative direction enhancement failed: {e}")
+            return None
+
+    def _audit_generated_content(
+        self,
+        creative_brief: Dict[str, Any],
+        assets: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Session 341: Audit generated content for bias and ethics.
+
+        Uses ContentAuditAgent to check generated assets for potential issues.
+        """
+        if not self.content_audit_agent:
+            return None
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+
+            # Collect asset prompts/descriptions for audit
+            asset_descriptions = []
+            for asset in assets[:5]:  # Limit to first 5 assets
+                if isinstance(asset, dict):
+                    prompt = asset.get('prompt', asset.get('description', ''))
+                    if prompt:
+                        asset_descriptions.append(prompt)
+
+            if not asset_descriptions:
+                return {'status': 'skipped', 'reason': 'No asset descriptions to audit'}
+
+            task = f"""Audit these generated asset prompts for "{brand_name}" for potential bias or ethical concerns:
+
+{chr(10).join(f'- {desc[:200]}' for desc in asset_descriptions)}
+
+Check for:
+1. Unintended stereotypes
+2. Cultural sensitivity issues
+3. Inclusivity considerations
+4. Potential misrepresentation
+
+If all looks good, confirm as "passed". If issues found, provide brief recommendations."""
+
+            result = self.content_audit_agent.execute(
+                task=task,
+                context={'project_id': str(self.project.id) if self.project else None},
+                scifi_context={},
+                spider_context={}
+            )
+
+            if result.success:
+                return {
+                    'status': 'audited',
+                    'audit_result': result.data.get('analysis', result.message),
+                    'assets_audited': len(asset_descriptions)
+                }
+
+            return {'status': 'audit_failed', 'error': result.error}
+
+        except Exception as e:
+            logger.warning(f"Content audit failed: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _generate_with_trained_character(
+        self,
+        creative_brief: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Session 341: Generate images using trained character/LoRA.
+
+        Uses TrainedCreationAgent to generate brand assets with
+        a previously trained character or style.
+        """
+        if not self.trained_creation_agent:
+            return None
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            style = creative_brief.get('style', 'modern')
+            industry = creative_brief.get('industry', 'technology')
+
+            # Check if there's a trained character/model available
+            task = f"""Generate brand assets for "{brand_name}" using any available trained characters or styles.
+
+Brand context:
+- Style: {style}
+- Industry: {industry}
+- Tone: {creative_brief.get('tone', 'professional')}
+
+If a trained character/mascot is available, create:
+1. Character in a professional pose
+2. Character with brand elements
+3. Character in action relevant to the industry
+
+If no trained character exists, return a message suggesting training one."""
+
+            result = self.trained_creation_agent.execute(
+                task=task,
+                context={'project_id': str(self.project.id) if self.project else None},
+                scifi_context={},
+                spider_context={}
+            )
+
+            if result.success:
+                return {
+                    'success': True,
+                    'images': result.data.get('images', []),
+                    'message': result.message
+                }
+
+            return {'success': False, 'error': result.error}
+
+        except Exception as e:
+            logger.warning(f"Trained character generation failed: {e}")
+            return {'success': False, 'error': str(e)}
 
     # ==================== Asset Generation ====================
 

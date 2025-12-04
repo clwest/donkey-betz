@@ -4,12 +4,21 @@ Workflow Agent - Specialized for Multi-Step Orchestration
 
 Session 268: Phase 2 - Orchestration Agents
 Session 304: Learning Infrastructure Integration
+Session 341: Expanded agent roster (21 agents total)
 
 This agent coordinates multi-step workflows by delegating to other agents.
 It is the ONLY agent that can call other agents.
 
 Tools Available:
     - delegate_to_agent: Delegate a subtask to a specialized agent
+
+Available Agents (Session 341):
+    Creation: ImageAgent, VideoAgent, AudioAgent, ThreeDAgent
+    Editing: ImageEditingAgent, VideoEditingAgent
+    Research: ResearchAgent, TrendAnalysisAgent, CompetitorAnalysisAgent, CustomerResearchAgent
+    Strategy: BrandStrategyAgent, SEOOptimizerAgent, ContentStrategyAgent, SocialMediaAgent
+    Executive: CreativeDirectorAgent, ContentAuditAgent
+    Training: CharacterTrainingAgent, TrainedCreationAgent
 
 This agent:
 1. Breaks complex tasks into steps
@@ -48,13 +57,36 @@ You have ONE tool:
 - delegate_to_agent: Send a subtask to a specialized agent
 
 Available agents to delegate to:
+
+**Creation Agents:**
 - ImageAgent: Create NEW images (logos, banners, illustrations)
 - VideoAgent: Create NEW videos (text-to-video, image animation)
 - AudioAgent: Create audio (text-to-speech, voiceovers)
 - ThreeDAgent: Create 3D models from images
+
+**Editing Agents:**
 - ImageEditingAgent: EDIT existing images (upscale, remove bg, variations)
 - VideoEditingAgent: EDIT existing videos (trim, effects, text)
+
+**Research Agents:**
 - ResearchAgent: Search web and spider network for information
+- TrendAnalysisAgent: Analyze market and design trends
+- CompetitorAnalysisAgent: Research competitors and market landscape
+- CustomerResearchAgent: Research customer personas and pain points
+
+**Strategy Agents:**
+- BrandStrategyAgent: Create brand positioning and strategy
+- SEOOptimizerAgent: Optimize content for search engines
+- ContentStrategyAgent: Plan content strategy
+- SocialMediaAgent: Create social media content plans
+
+**Executive Agents (Session 341):**
+- CreativeDirectorAgent: High-level creative direction
+- ContentAuditAgent: Check content for bias/ethics issues
+
+**Training Agents (Session 341):**
+- CharacterTrainingAgent: Train new character/style models
+- TrainedCreationAgent: Generate with trained characters
 
 When given a complex task:
 1. Identify the steps needed
@@ -89,7 +121,18 @@ You orchestrate. You don't create content directly."""
                                 "ThreeDAgent",
                                 "ImageEditingAgent",
                                 "VideoEditingAgent",
-                                "ResearchAgent"
+                                "ResearchAgent",
+                                "TrendAnalysisAgent",
+                                "CompetitorAnalysisAgent",
+                                "CustomerResearchAgent",
+                                "BrandStrategyAgent",
+                                "SEOOptimizerAgent",
+                                "ContentStrategyAgent",
+                                "SocialMediaAgent",
+                                "CreativeDirectorAgent",
+                                "ContentAuditAgent",
+                                "CharacterTrainingAgent",
+                                "TrainedCreationAgent"
                             ]
                         },
                         "task": {
