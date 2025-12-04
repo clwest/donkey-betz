@@ -1,38 +1,38 @@
 # Start Next Session Here
 
-**Last Session:** 345 - Intelligence Hub Dynamic Stats & Auto-Loading
+**Last Session:** 347 - Complete authenticatedFetch Migration
 **Date:** December 4, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | Dynamic UI Stats
+**Status:** 102 spiders | 36 categories | 79 agents | Consistent Auth Handling
 
 ---
 
-## What Happened in Session 345
+## What Happened in Session 347
 
-### Intelligence Hub UI Componentization
-Fixed hardcoded/wrong values throughout the Intelligence Hub UI:
+### Complete authenticatedFetch Migration
+Migrated ALL frontend API calls to use the `authenticatedFetch()` helper for consistent CSRF token and authentication handling across the entire platform.
 
 #### Problem
-- Agent count showed 14 or 197 (should be 79)
-- Categories showed 21 (should be 36)
-- Data points showed 914 (should be 9,779)
-- All values were hardcoded, never updated
+- API calls inconsistently handled authentication
+- Some used `authenticatedFetch()`, others had manual `X-CSRFToken` headers
+- Code duplication and maintenance burden
+- Potential security inconsistencies
 
-#### Solution: Single Source of Truth API
-Created `/api/spider-intelligence/dashboard-stats/` endpoint that returns all stats dynamically:
-- Spider counts (102 total, 36 categories)
-- Agent counts (79 total: 69 legacy + 10 clean)
-- Data stats (9,779 points, 1,246 last 24h, 98% success rate)
+#### Solution
+Migrated 91 total API calls to use `authenticatedFetch()`:
 
-#### Frontend Changes
-1. **Removed all hardcoded values** - Replaced with `--` placeholder until API loads
-2. **Created `loadDashboardStats()`** - Fetches stats with 30-second caching
-3. **Created `updateDashboardStatsUI()`** - Updates all stat elements across the UI
-4. **Auto-loading on tab show** - Stats load when Intelligence Hub panel opens
+**Session 346-347 Commit 1: Agent APIs (67 calls)**
+- Time Capsules, Memory Palace, Collective Intelligence
+- Agent Learning, Agent Editing
 
-### Files Modified
-- `core/views_spider_intelligence.py` - Added `dashboard_stats()` endpoint
-- `core/urls.py` - Added route with import alias to avoid name conflict
-- `ai_core/templates/ai_image_studio.html` - Removed hardcoded values, added JS functions, auto-loading
+**Session 347 Commit 2: Intelligence Hub + Marketplace (24 calls)**
+- Spider Intelligence: trends, dashboard-stats, tech, market, jobs
+- Spider Dashboard: network, activity, execute
+- Marketplace: stats, workflows, featured, published, installed, install
+
+#### Results
+- **Lines removed:** 58 (redundant header configurations)
+- **Lines added:** 26 (cleaner authenticatedFetch calls)
+- **Remaining manual CSRF:** 0 (zero!)
 
 ---
 
@@ -45,36 +45,48 @@ Created `/api/spider-intelligence/dashboard-stats/` endpoint that returns all st
 | **Agents** | **79** (69 legacy + 10 clean) |
 | **Data Points** | **9,779** |
 | **Success Rate** | **98%** |
+| **API Calls Migrated** | **91** |
 
 ---
 
-## Intelligence Hub Stats (Live)
+## authenticatedFetch Helper
 
-| Stat | Old (Hardcoded) | Now (Live API) |
-|------|-----------------|----------------|
-| Spiders | 102 | 102 |
-| Categories | 21 | **36** (was wrong!) |
-| Agents | 14 or 197 | **79** (was wrong!) |
-| Data Points | 914 | **9,779** |
-| Success Rate | -- | **98%** |
+Location: `ai_core/templates/ai_image_studio.html` (lines 13391-13418)
 
----
-
-## API Endpoints
-
-```bash
-# Dashboard stats (single source of truth)
-curl http://localhost:8000/api/spider-intelligence/dashboard-stats/
-
-# Response:
-{
-  "status": "success",
-  "stats": {
-    "spiders": {"total": 102, "categories": 36, "by_category": {...}},
-    "agents": {"total": 79, "legacy": 69, "clean": 10},
-    "data": {"total_points": 9779, "last_24h": 1246, "success_rate": 98}
-  }
+```javascript
+async function authenticatedFetch(url, options = {}) {
+    const defaultHeaders = {
+        'X-CSRFToken': getCsrfToken()
+    };
+    if (!(options.body instanceof FormData)) {
+        defaultHeaders['Content-Type'] = 'application/json';
+    }
+    const defaultOptions = {
+        headers: defaultHeaders,
+        credentials: 'same-origin'
+    };
+    // ... merges options and returns fetch
 }
+```
+
+**Before:**
+```javascript
+fetch('/api/endpoint/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+```
+
+**After:**
+```javascript
+authenticatedFetch('/api/endpoint/')
+```
+
+---
+
+## Verification
+
+To verify all API calls use authenticatedFetch:
+```bash
+# Should return no matches
+grep -n "fetch.*X-CSRFToken" ai_core/templates/ai_image_studio.html
 ```
 
 ---
@@ -89,30 +101,27 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Next Session Priorities
+## Commits (Session 347)
 
-1. **Test auto-loading** - Verify Intelligence Hub loads data when panel opens
-2. **Add more subtab auto-loading** - Markets, Opportunities, Spiders tabs
-3. **Performance optimization** - Consider longer cache TTL or lazy loading
-
----
-
-## Key Files Modified (Session 345)
-
-- `core/views_spider_intelligence.py` - Added unified dashboard stats endpoint (lines 714-792)
-- `core/urls.py` - Added import alias and route (line 138, 2215)
-- `ai_core/templates/ai_image_studio.html`:
-  - Removed hardcoded values at lines 10197, 10212, 10220, 10228, 10236, 1865, 1869
-  - Added `loadDashboardStats()` and `updateDashboardStatsUI()` (lines 15712-15782)
-  - Added auto-loading event listeners (lines 16043-16062)
+1. `887d451` - feat(Session 347): Complete authenticatedFetch migration for Agent APIs
+2. `e2b5cbf` - feat(Session 347): Complete authenticatedFetch migration for Intelligence Hub + Marketplace
 
 ---
 
 ## Key Documentation
 
-- Session 345 Details: `docs/handoffs/SESSION_345_INTELLIGENCE_HUB_STATS.md`
+- Session 347 Details: `docs/handoffs/SESSION_347_AUTHENTICATED_FETCH_MIGRATION.md`
+- Session 345-346 Details: `docs/handoffs/SESSION_345_INTELLIGENCE_HUB_STATS.md`
 - Architecture: `docs/ARCHITECTURE.md`
 
 ---
 
-**Intelligence Hub now shows live, accurate stats from a single source of truth API!**
+## Next Session Priorities
+
+1. **Test all tabs** - Verify Intelligence Hub, Marketplace, and Spider tabs work correctly
+2. **Monitor for 403 errors** - Watch for any endpoints that might have been missed
+3. **Consider caching improvements** - Add request caching to authenticatedFetch if needed
+
+---
+
+**All frontend API calls now use consistent authentication handling!**
