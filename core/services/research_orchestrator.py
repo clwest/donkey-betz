@@ -338,9 +338,11 @@ class ResearchOrchestrator:
                 logger.warning(f"Customer research failed: {customer_result.error}")
 
             # Step 5: Run brand strategy (with all prior context)
+            # Session 348: Now includes trend_analysis data too
             brand_context = self._extract_brand_context(
                 result.competitor_analysis,
-                result.customer_research
+                result.customer_research,
+                result.trend_analysis  # Session 348: Added trend data
             )
             broadcast_stage_started('brand_strategy', 'research', 'BrandStrategyAgent',
                                    result.project_id, business_idea)
@@ -958,22 +960,55 @@ You MUST respond with ONLY valid JSON in this exact format (no markdown, no expl
     def _extract_brand_context(
         self,
         competitor_data: Dict[str, Any],
-        customer_data: Dict[str, Any]
+        customer_data: Dict[str, Any],
+        trend_data: Dict[str, Any] = None
     ) -> str:
-        """Extract relevant context for brand strategy from prior research."""
+        """
+        Extract relevant context for brand strategy from prior research.
+
+        Session 348: Enhanced to include full analysis data (not just 300 chars)
+        and trend analysis data which was previously missing.
+        """
         context_parts = []
 
-        # From competitor analysis
+        # From trend analysis (Session 348: Added - was missing!)
+        if trend_data:
+            analysis = trend_data.get('analysis', '')
+            if isinstance(analysis, str) and analysis:
+                # Include full trend analysis (up to 3000 chars)
+                context_parts.append(f"**TREND ANALYSIS:**\n{analysis[:3000]}")
+            elif isinstance(analysis, dict):
+                # Try to extract from nested structure
+                inner = analysis.get('analysis', analysis.get('summary', ''))
+                if inner:
+                    context_parts.append(f"**TREND ANALYSIS:**\n{str(inner)[:3000]}")
+
+        # From competitor analysis (Session 348: Increased from 300 to 3000 chars)
         if competitor_data:
             analysis = competitor_data.get('analysis', '')
             if isinstance(analysis, str) and analysis:
-                context_parts.append(f"Competitor landscape: {analysis[:300]}")
+                context_parts.append(f"**COMPETITOR ANALYSIS:**\n{analysis[:3000]}")
+            elif isinstance(analysis, dict):
+                # Handle nested analysis structure
+                inner = analysis.get('analysis', '')
+                if isinstance(inner, str) and inner:
+                    context_parts.append(f"**COMPETITOR ANALYSIS:**\n{inner[:3000]}")
+                else:
+                    # Try to serialize the dict
+                    context_parts.append(f"**COMPETITOR ANALYSIS:**\n{json.dumps(analysis, indent=2)[:3000]}")
 
-        # From customer research
+        # From customer research (Session 348: Increased from 300 to 3000 chars)
         if customer_data:
             analysis = customer_data.get('analysis', '')
             if isinstance(analysis, str) and analysis:
-                context_parts.append(f"Customer insights: {analysis[:300]}")
+                context_parts.append(f"**CUSTOMER RESEARCH:**\n{analysis[:3000]}")
+            elif isinstance(analysis, dict):
+                # Handle nested analysis structure
+                inner = analysis.get('analysis', '')
+                if isinstance(inner, str) and inner:
+                    context_parts.append(f"**CUSTOMER RESEARCH:**\n{inner[:3000]}")
+                else:
+                    context_parts.append(f"**CUSTOMER RESEARCH:**\n{json.dumps(analysis, indent=2)[:3000]}")
 
         return "\n\n".join(context_parts)
 
