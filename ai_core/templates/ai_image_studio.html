@@ -14091,12 +14091,8 @@
                     showStatus('✨ Auto-enhancing your prompt with AI...', 'info');
 
                     try {
-                        const optimizeResponse = await fetch('/api/v1/gallery/optimize-prompt/', {
+                        const optimizeResponse = await authenticatedFetch('/api/v1/gallery/optimize-prompt/', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCsrfToken()
-                            },
                             body: JSON.stringify({
                                 prompt: finalPrompt,
                                 style: styleValue,
@@ -14321,11 +14317,8 @@
                 const formData = new FormData();
                 formData.append('image', uploadedImageFile);
 
-                const response = await fetch('/api/stability/remove-background/', {
+                const response = await authenticatedFetch('/api/stability/remove-background/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -14373,11 +14366,8 @@
                 formData.append('select_prompt', prompt);
                 formData.append('color', colorName);
 
-                const response = await fetch('/api/stability/recolor/', {
+                const response = await authenticatedFetch('/api/stability/recolor/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -14415,11 +14405,8 @@
                 formData.append('image', uploadedImageFile);
                 formData.append('method', 'fast');
 
-                const response = await fetch('/api/stability/upscale/', {
+                const response = await authenticatedFetch('/api/stability/upscale/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -14464,11 +14451,8 @@
                 formData.append('image', uploadedImageFile);
                 formData.append('method', method);
 
-                const response = await fetch('/api/stability/upscale/', {
+                const response = await authenticatedFetch('/api/stability/upscale/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -14705,11 +14689,8 @@
                 const maskBlob = await new Promise(resolve => eraseMaskCanvas.toBlob(resolve, 'image/png'));
                 formData.append('mask', maskBlob, 'mask.png');
 
-                const response = await fetch('/api/stability/erase/', {
+                const response = await authenticatedFetch('/api/stability/erase/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -14781,11 +14762,8 @@
                 const maskBlob = await new Promise(resolve => inpaintMaskCanvas.toBlob(resolve, 'image/png'));
                 formData.append('mask', maskBlob, 'mask.png');
 
-                const response = await fetch('/api/stability/inpaint/', {
+                const response = await authenticatedFetch('/api/stability/inpaint/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -14868,11 +14846,8 @@
                 formData.append('directions', checkedDirections.join(',')); // Session 64: Send as comma-separated
                 formData.append('pixels', pixels);
 
-                const response = await fetch('/api/stability/outpaint/', {
+                const response = await authenticatedFetch('/api/stability/outpaint/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -15073,11 +15048,7 @@
                 if (filterStyle) params.append('style', filterStyle);
                 if (filterFavorites) params.append('is_favorite', 'true');
 
-                const response = await fetch(`/api/images/history/?${params}`, {
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
+                const response = await authenticatedFetch(`/api/images/history/?${params}`);
 
                 const data = await response.json();
 
@@ -15295,11 +15266,8 @@
 
         async function toggleFavorite(imageId, button) {
             try {
-                const response = await fetch(`/api/images/${imageId}/favorite/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/images/${imageId}/favorite/`, {
+                    method: 'POST'
                 });
 
                 const data = await response.json();
@@ -15362,12 +15330,8 @@
 
                 // Send to Style Memory API
                 // Session 172: Include project_id for project-focused learning
-                const response = await fetch('/api/v1/style-memory/', {
+                const response = await authenticatedFetch('/api/v1/style-memory/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({
                         content_id: contentId,
                         content_type: contentType,
@@ -15461,13 +15425,7 @@
         async function loadStyleInsights() {
             console.log('🧠 Loading style insights...');
             try {
-                const response = await fetch('/api/v1/style-memory/insights/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
+                const response = await authenticatedFetch('/api/v1/style-memory/insights/');
 
                 if (response.ok) {
                     const data = await response.json();
@@ -16174,7 +16132,7 @@
             if (sort) url += `&sort=${sort}`;
 
             try {
-                const response = await fetch(url, { headers: { 'X-CSRFToken': getCsrfToken() } });
+                const response = await authenticatedFetch(url);
                 if (response.ok) {
                     const data = await response.json();
                     renderMarketplaceWorkflows(data.workflows || []);
@@ -16451,13 +16409,7 @@
 
         async function loadProjectStyleInsights(projectId) {
             try {
-                const response = await fetch('/api/v1/style-memory/insights/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
+                const response = await authenticatedFetch('/api/v1/style-memory/insights/');
                 if (!response.ok) {
                     console.log('Style insights not available');
                     return;
@@ -16517,11 +16469,8 @@
             }
 
             try {
-                const response = await fetch(`/api/images/${imageId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/images/${imageId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -16637,11 +16586,8 @@
             }
 
             try {
-                const response = await fetch(`/api/images/${imageId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/images/${imageId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -16676,11 +16622,8 @@
             }
 
             try {
-                const response = await fetch(`/api/v1/video/history/${videoId}/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/v1/video/history/${videoId}/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -16712,11 +16655,8 @@
             }
 
             try {
-                const response = await fetch(`/api/v1/content/minifigs/${modelId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/v1/content/minifigs/${modelId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -16751,12 +16691,8 @@
             document.body.appendChild(loadingToast);
 
             try {
-                const response = await fetch(`/api/v1/content/minifigs/${modelId}/prepare-for-print/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken(),
-                        'Content-Type': 'application/json'
-                    }
+                const response = await authenticatedFetch(`/api/v1/content/minifigs/${modelId}/prepare-for-print/`, {
+                    method: 'POST'
                 });
 
                 const data = await response.json();
@@ -16902,11 +16838,8 @@
                         endpoint = `/api/v1/content/minifigs/${assetId}/delete/`;
                     }
 
-                    const response = await fetch(endpoint, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRFToken': getCsrfToken()
-                        }
+                    const response = await authenticatedFetch(endpoint, {
+                        method: 'DELETE'
                     });
 
                     const data = await response.json();
@@ -16939,11 +16872,8 @@
             }
 
             try {
-                const response = await fetch(`/api/images/${imageId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/images/${imageId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -17068,12 +16998,8 @@
             try {
                 const imageIds = Array.from(selectedImages).map(img => img.id);
 
-                const response = await fetch('/api/images/batch-download/', {
+                const response = await authenticatedFetch('/api/images/batch-download/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({ image_ids: imageIds })
                 });
 
@@ -17269,9 +17195,7 @@
             modal.style.display = 'block';
 
             // Load gallery images
-            fetch('/api/images/history/', {
-                headers: {'X-CSRFToken': getCsrfToken()}
-            })
+            authenticatedFetch('/api/images/history/')
             .then(response => response.json())
             .then(data => {
                 const grid = document.getElementById('editGalleryGrid');
@@ -17372,11 +17296,8 @@
                     formData.append('negative_prompt', negPrompt);
                 }
 
-                const response = await fetch('/api/stability/control/sketch/', {
+                const response = await authenticatedFetch('/api/stability/control/sketch/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -17437,11 +17358,8 @@
                     formData.append('negative_prompt', negPrompt);
                 }
 
-                const response = await fetch('/api/stability/control/structure/', {
+                const response = await authenticatedFetch('/api/stability/control/structure/', {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: formData
                 });
 
@@ -17543,11 +17461,7 @@
 
             try {
                 console.log('📡 Fetching gallery data...');
-                const response = await fetch('/api/images/history/', {
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
+                const response = await authenticatedFetch('/api/images/history/');
 
                 console.log('📥 Response status:', response.status);
                 const data = await response.json();
@@ -17962,13 +17876,7 @@
         async function fetchUserPreferences() {
             try {
                 console.log('🧠 Fetching user preferences...');
-                const response = await fetch('/api/assistant/preferences/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()  // Session 59: Fixed function name
-                    }
-                });
+                const response = await authenticatedFetch('/api/assistant/preferences/');
 
                 if (response.ok) {
                     userPreferences = await response.json();
@@ -18120,9 +18028,7 @@
             console.log('✅ [WORKFLOW] Custom modal displayed');
 
             // Load gallery images
-            fetch('/api/images/history/', {
-                headers: {'X-CSRFToken': getCsrfToken()}
-            })
+            authenticatedFetch('/api/images/history/')
             .then(response => response.json())
             .then(data => {
                 console.log('📊 [WORKFLOW] API response:', data);
@@ -18233,9 +18139,7 @@
             console.log('✅ [EDIT] Custom modal displayed');
 
             // Load gallery images
-            fetch('/api/images/history/', {
-                headers: {'X-CSRFToken': getCsrfToken()}
-            })
+            authenticatedFetch('/api/images/history/')
             .then(response => response.json())
             .then(data => {
                 console.log('📊 [EDIT] API response:', data);
@@ -21672,9 +21576,7 @@
             console.log('✅ [VIDEO] Custom modal displayed');
 
             // Load gallery images
-            fetch('/api/images/history/', {
-                headers: {'X-CSRFToken': getCsrfToken()}
-            })
+            authenticatedFetch('/api/images/history/')
             .then(response => response.json())
             .then(data => {
                 console.log('📊 [VIDEO] API response:', data);
@@ -23622,9 +23524,7 @@
             modal.dataset.endpoint = endpoint;
 
             // Load videos from gallery
-            fetch('/api/v1/video/history/?limit=50', {
-                headers: {'X-CSRFToken': getCsrfToken()}
-            })
+            authenticatedFetch('/api/v1/video/history/?limit=50')
             .then(response => response.json())
             .then(data => {
                 console.log('📊 [GALLERY] API response:', data);
@@ -23785,9 +23685,7 @@
             modal.dataset.endpoint = endpoint;
 
             // Load images from gallery
-            fetch('/api/images/history/', {
-                headers: {'X-CSRFToken': getCsrfToken()}
-            })
+            authenticatedFetch('/api/images/history/')
             .then(response => response.json())
             .then(data => {
                 console.log('📊 [GALLERY] API response:', data);
@@ -30182,11 +30080,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     params.append('favorite', 'true');
                 }
 
-                const response = await fetch(`/api/v1/gallery/all/?${params}`, {
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
+                const response = await authenticatedFetch(`/api/v1/gallery/all/?${params}`);
 
                 const data = await response.json();
 
@@ -30510,12 +30404,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     btn.innerHTML = '⏳ Creating ZIP...';
 
                     // Call batch download API
-                    const response = await fetch('/api/v1/gallery/batch-download/', {
+                    const response = await authenticatedFetch('/api/v1/gallery/batch-download/', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCsrfToken()
-                        },
                         body: JSON.stringify({ items })
                     });
 
@@ -30572,12 +30462,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         button.textContent = newIcon;
 
                         // Call API
-                        const response = await fetch('/api/v1/gallery/toggle-favorite/', {
+                        const response = await authenticatedFetch('/api/v1/gallery/toggle-favorite/', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCsrfToken()
-                            },
                             body: JSON.stringify({
                                 id: itemId,
                                 type: itemType
@@ -30623,11 +30509,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             ? `/api/images/${itemId}/delete/`
                             : `/api/v1/video/history/${itemId}/`;
 
-                        const response = await fetch(endpoint, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-CSRFToken': getCsrfToken()
-                            }
+                        const response = await authenticatedFetch(endpoint, {
+                            method: 'DELETE'
                         });
 
                         if (response.ok) {
@@ -30680,9 +30563,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     if (searchTerm) params.append('search', searchTerm);
                     if (favoritesOnly) params.append('favorite', 'true');
 
-                    const response = await fetch(`/api/v1/gallery/all/?${params}`, {
-                        headers: { 'X-CSRFToken': getCsrfToken() }
-                    });
+                    const response = await authenticatedFetch(`/api/v1/gallery/all/?${params}`);
 
                     const data = await response.json();
                     const item = data.results.find(i => i.id === itemId);
@@ -30815,12 +30696,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 btn.disabled = true;
                 btn.textContent = '⏳ Updating...';
 
-                const response = await fetch('/api/v1/gallery/toggle-favorite/', {
+                const response = await authenticatedFetch('/api/v1/gallery/toggle-favorite/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({
                         id: item.id,
                         type: item.type
@@ -30857,11 +30734,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     ? `/api/images/view/${itemId}/`
                     : `/api/v1/video/history/${itemId}/view/`;
 
-                await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                await authenticatedFetch(endpoint, {
+                    method: 'POST'
                 });
                 console.log(`✅ View tracked: ${itemType} ${itemId}`);
             } catch (error) {
@@ -30876,11 +30750,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     ? `/api/images/download/${itemId}/`
                     : `/api/v1/video/history/${itemId}/download/`;
 
-                await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                await authenticatedFetch(endpoint, {
+                    method: 'POST'
                 });
                 console.log(`✅ Download tracked: ${itemType} ${itemId}`);
             } catch (error) {
@@ -31239,12 +31110,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     method = 'POST';
                 }
 
-                const response = await fetch(url, {
+                const response = await authenticatedFetch(url, {
                     method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify(data)
                 });
 
@@ -31279,11 +31146,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             `;
 
             try {
-                const response = await fetch('/api/creative-projects/', {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch('/api/creative-projects/');
                 const data = await response.json();
 
                 if (data.projects) {
@@ -31430,11 +31293,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             projectManagement.detailModal.show();
 
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/`);
                 const data = await response.json();
 
                 if (data.project) {
@@ -34231,12 +34090,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/update/`, {
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/update/`, {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({ name: newName })
                 });
 
@@ -34280,12 +34135,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const deadlineInput = document.getElementById(`project-deadline-${projectId}`).value;
                 const deadline = deadlineInput ? new Date(deadlineInput).toISOString() : null;
 
-                const response = await fetch(`/api/creative-projects/${projectId}/update/`, {
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/update/`, {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         status,
                         goal,
@@ -34320,9 +34171,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Get current project data
-                const response = await fetch(`/api/creative-projects/${projectId}/`, {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/`);
                 const data = await response.json();
                 const project = data.project;
 
@@ -34332,12 +34181,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     tags.push(tagName.trim());
 
                     // Update project
-                    const updateResponse = await fetch(`/api/creative-projects/${projectId}/update/`, {
+                    const updateResponse = await authenticatedFetch(`/api/creative-projects/${projectId}/update/`, {
                         method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
                         body: JSON.stringify({ tags })
                     });
 
@@ -34364,9 +34209,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Get current project data
-                const response = await fetch(`/api/creative-projects/${projectId}/`, {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/`);
                 const data = await response.json();
                 const project = data.project;
 
@@ -34374,12 +34217,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const tags = (project.tags || []).filter(tag => tag !== tagToRemove);
 
                 // Update project
-                const updateResponse = await fetch(`/api/creative-projects/${projectId}/update/`, {
+                const updateResponse = await authenticatedFetch(`/api/creative-projects/${projectId}/update/`, {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({ tags })
                 });
 
@@ -34424,9 +34263,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 statusDiv.innerHTML = `🔍 Found: ${parsed.assetType} #${parsed.assetNumber}<br>📝 Operation: ${parsed.operation}`;
 
                 // Get project assets to find the specific asset
-                const portfolioResponse = await fetch(`/api/portfolio/?project_id=${projectId}`, {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const portfolioResponse = await authenticatedFetch(`/api/portfolio/?project_id=${projectId}`);
                 const portfolioData = await portfolioResponse.json();
 
                 if (!portfolioData.success || !portfolioData.portfolio) {
@@ -34592,12 +34429,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 console.log(`🤖 Routing through Assistant for project ${projectId}:`, assistantMessage);
 
-                const response = await fetch('/api/assistant/chat/', {
+                const response = await authenticatedFetch('/api/assistant/chat/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         message: assistantMessage,
                         project_id: projectId  // KEY: Pass project context to Assistant!
@@ -34653,10 +34486,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
                 // Fetch agent data from API
-                const response = await fetch(`/api/projects/${projectId}/contributions/agents/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
+                const response = await authenticatedFetch(`/api/projects/${projectId}/contributions/agents/`, {
                     signal: controller.signal
                 });
 
@@ -34792,11 +34622,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 `;
 
                 try {
-                    const response = await fetch(`/api/projects/${projectId}/contributions/timeline/`, {
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    });
+                    const response = await authenticatedFetch(`/api/projects/${projectId}/contributions/timeline/`);
 
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}`);
@@ -34874,9 +34700,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
          */
         async function showBrandingModeModal(projectId) {
             // Fetch project images for source selection
-            const response = await fetch(`/api/portfolio/?project_id=${projectId}`, {
-                headers: { 'X-CSRFToken': getCookie('csrftoken') }
-            });
+            const response = await authenticatedFetch(`/api/portfolio/?project_id=${projectId}`);
             const data = await response.json();
             const images = (data.portfolio || []).filter(a => a.type === 'image');
 
@@ -35035,11 +34859,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Step 1: Fetch project sessions to resume conversation history
-                const sessionsResponse = await fetch(`/api/v1/sessions/project/${projectId}/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const sessionsResponse = await authenticatedFetch(`/api/v1/sessions/project/${projectId}/`);
 
                 let sessionToResume = null;
                 if (sessionsResponse.ok) {
@@ -35068,11 +34888,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 document.getElementById(`workflow-status-${projectId}`).textContent = 'Analyzing project style...';
 
                 // Session 132: Fixed parameter name - should be project_id, not project
-                const projectResponse = await fetch(`/api/portfolio/?project_id=${projectId}`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const projectResponse = await authenticatedFetch(`/api/portfolio/?project_id=${projectId}`);
 
                 if (!projectResponse.ok) {
                     throw new Error(`Failed to fetch project data: HTTP ${projectResponse.status}`);
@@ -35100,9 +34916,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Try 4: Session 173 - Fetch from creative-projects API directly
                 if (projectName === 'Project') {
                     try {
-                        const projectsResponse = await fetch('/api/creative-projects/', {
-                            headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                        });
+                        const projectsResponse = await authenticatedFetch('/api/creative-projects/');
                         if (projectsResponse.ok) {
                             const projectsData = await projectsResponse.json();
                             const projects = projectsData.projects || projectsData || [];
@@ -35213,9 +35027,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 173: Check for trained LoRA model for this project
                 let trainedModelContext = '';
                 try {
-                    const trainedModelsResponse = await fetch('/api/characters/', {
-                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                    });
+                    const trainedModelsResponse = await authenticatedFetch('/api/characters/');
                     if (trainedModelsResponse.ok) {
                         const modelsData = await trainedModelsResponse.json();
                         const characters = modelsData.characters || modelsData || [];
@@ -35445,12 +35257,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 let workflowHistoryId = null;
                 const workflowStartTime = Date.now();
                 try {
-                    const startResponse = await fetch('/api/workflows/execution/start/', {
+                    const startResponse = await authenticatedFetch('/api/workflows/execution/start/', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
                         body: JSON.stringify({
                             workflow_type: dbWorkflowType,
                             workflow_name: workflow.name,
@@ -35507,12 +35315,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         }
 
                         try {
-                            const toolResponse = await fetch('/api/executor/run-tool/', {
+                            const toolResponse = await authenticatedFetch('/api/executor/run-tool/', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': getCookie('csrftoken')
-                                },
                                 body: JSON.stringify({
                                     tool_name: step.tool,
                                     parameters: step.params,
@@ -35565,12 +35369,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 if (workflowHistoryId) {
                     const executionTime = (Date.now() - workflowStartTime) / 1000;  // seconds
                     try {
-                        await fetch(`/api/workflows/execution/${workflowHistoryId}/complete/`, {
+                        await authenticatedFetch(`/api/workflows/execution/${workflowHistoryId}/complete/`, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            },
                             body: JSON.stringify({
                                 status: 'completed',
                                 execution_time: executionTime,
@@ -35606,12 +35406,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Session 183: Mark workflow as failed if we were tracking it
                 if (workflowHistoryId) {
                     try {
-                        await fetch(`/api/workflows/execution/${workflowHistoryId}/complete/`, {
+                        await authenticatedFetch(`/api/workflows/execution/${workflowHistoryId}/complete/`, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            },
                             body: JSON.stringify({
                                 status: 'failed',
                                 execution_time: (Date.now() - workflowStartTime) / 1000,
@@ -35640,11 +35436,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Get all project assets
-                const response = await fetch(`/api/portfolio/?project=${projectId}`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/portfolio/?project=${projectId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -35713,11 +35505,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Fetch project data
-                const response = await fetch(`/api/portfolio/?project=${projectId}`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/portfolio/?project=${projectId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -35838,11 +35626,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load current share status for a project
         async function loadProjectShareStatus(projectId) {
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/share/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/share/`);
 
                 const data = await response.json();
 
@@ -35881,12 +35665,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Enable public sharing for a project
         async function enableProjectShare(projectId) {
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/share/create/`, {
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/share/create/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         is_public: true
                     })
@@ -35959,11 +35739,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 document.getElementById('current-share-settings').style.display = 'none';
 
                 // Load current settings if share exists
-                const response = await fetch(`/api/creative-projects/${projectId}/share/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/share/`);
 
                 if (response.ok) {
                     const data = await response.json();
@@ -36007,12 +35783,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     body.expires_in_days = parseInt(expiresIn);
                 }
 
-                const response = await fetch(`/api/creative-projects/${projectId}/share/create/`, {
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/share/create/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify(body)
                 });
 
@@ -36048,11 +35820,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/share/revoke/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/share/revoke/`, {
+                    method: 'POST'
                 });
 
                 if (!response.ok) {
@@ -36117,12 +35886,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 console.log('🎨 Generating images with args:', args);
 
-                const response = await fetch('/api/v1/gallery/generate/', {
+                const response = await authenticatedFetch('/api/v1/gallery/generate/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         prompt: args.prompt,
                         width: args.width || 1024,
@@ -36180,9 +35945,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 statusDiv.innerHTML = `🔍 Finding image #${imageNumber}...`;
 
-                const portfolioResponse = await fetch(`/api/portfolio/?project_id=${projectId}`, {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const portfolioResponse = await authenticatedFetch(`/api/portfolio/?project_id=${projectId}`);
                 const portfolioData = await portfolioResponse.json();
 
                 if (!portfolioData.success || !portfolioData.portfolio) {
@@ -36205,12 +35968,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 statusDiv.innerHTML = `⚙️ Executing ${operation}...`;
 
                 // Execute the operation
-                const opResponse = await fetch(endpoint, {
+                const opResponse = await authenticatedFetch(endpoint, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         image_id: targetImage.id,
                         project_id: projectId
@@ -36268,12 +36027,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 // Call Enhanced Assistant API with project context
                 // This ensures proper routing through agent orchestrators
-                const response = await fetch('/api/assistant/chat/', {
+                const response = await authenticatedFetch('/api/assistant/chat/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         message: message,
                         project_id: projectId  // KEY: Project context for session tracking
@@ -36379,9 +36134,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 trainingModalState.selectedImages = new Set();
 
                 // Get project assets
-                const response = await fetch(`/api/portfolio/?project_id=${projectId}`, {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const response = await authenticatedFetch(`/api/portfolio/?project_id=${projectId}`);
 
                 if (!response.ok) throw new Error(`Failed to fetch project assets: ${response.status}`);
 
@@ -36616,9 +36369,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 if (!tracker) return;
 
                 // Get list of characters and find the one matching our style name
-                const listResponse = await fetch('/api/characters/', {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const listResponse = await authenticatedFetch('/api/characters/');
 
                 if (!listResponse.ok) {
                     console.log('📊 Could not fetch characters list');
@@ -36660,9 +36411,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 tracker.characterId = matchingChar.id;
 
                 // Now get detailed status
-                const statusResponse = await fetch(`/api/characters/${matchingChar.id}/training-status/`, {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const statusResponse = await authenticatedFetch(`/api/characters/${matchingChar.id}/training-status/`);
 
                 if (!statusResponse.ok) return;
 
@@ -36767,9 +36516,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 const styleName = `${projectName.replace(/\s+/g, '-').toLowerCase()}-style`;
 
-                const listResponse = await fetch('/api/characters/', {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const listResponse = await authenticatedFetch('/api/characters/');
 
                 if (!listResponse.ok) return;
 
@@ -37238,11 +36985,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.log('🎤 Sending to Whisper:', `recording.${extension}`, audioBlob.size, 'bytes');
 
                 try {
-                    const response = await fetch('/api/assistant/transcribe/', {
+                    const response = await authenticatedFetch('/api/assistant/transcribe/', {
                         method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
                         body: formData
                     });
 
@@ -37325,12 +37069,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return refineResult;
             } else if (toolName === 'upscale_image') {
                 // Call the upscale API
-                const upscaleResponse = await fetch('/api/images/upscale/', {
+                const upscaleResponse = await authenticatedFetch('/api/images/upscale/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         image_id: args.image_id
                     })
@@ -37425,11 +37165,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     </div>
                 `;
 
-                const response = await fetch(`/api/portfolio/?${params}`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/portfolio/?${params}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -37594,10 +37330,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         async function loadAgentFiltersForProject(projectId) {
             try {
                 // Get project stats to find unique agents
-                const response = await fetch(`/api/creative-projects/${projectId}/`, {
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                     }
                 });
 
@@ -37653,11 +37388,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 `;
 
                 // Fetch project assets
-                const response = await fetch(`/api/portfolio/?project_id=${projectId}`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/portfolio/?project_id=${projectId}`);
 
                 const data = await response.json();
 
@@ -37849,11 +37580,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                     for (const modelId of modelIds) {
                         // Poll each pending model's status
-                        const response = await fetch(`/api/v1/content/minifigs/${modelId}/`, {
-                            headers: {
-                                'X-CSRFToken': getCookie('csrftoken')
-                            }
-                        });
+                        const response = await authenticatedFetch(`/api/v1/content/minifigs/${modelId}/`);
 
                         if (response.ok) {
                             const data = await response.json();
@@ -37918,11 +37645,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 `;
 
                 // Fetch project sessions
-                const response = await fetch(`/api/v1/sessions/project/${projectId}/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/v1/sessions/project/${projectId}/`);
 
                 const data = await response.json();
 
@@ -38040,11 +37763,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 `;
 
                 // Fetch project decisions
-                const response = await fetch(`/api/v1/coleadership/projects/${projectId}/decisions/`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/v1/coleadership/projects/${projectId}/decisions/`);
 
                 const data = await response.json();
 
@@ -38510,9 +38229,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             `;
 
             try {
-                const response = await fetch(`/api/projects/${projectId}/intelligence/${type}/`, {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch(`/api/projects/${projectId}/intelligence/${type}/`);
                 const data = await response.json();
 
                 if (data.success) {
@@ -38887,12 +38604,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             // Fallback to REST API
             try {
-                const response = await fetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
+                const response = await authenticatedFetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({ topic })
                 });
 
@@ -39690,12 +39403,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
          */
         async function promoteProjectDecision(projectId, decisionId) {
             try {
-                const response = await fetch(`/api/projects/${projectId}/intelligence/boardroom/promote/`, {
+                const response = await authenticatedFetch(`/api/projects/${projectId}/intelligence/boardroom/promote/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({ decision_id: decisionId })
                 });
                 const data = await response.json();
@@ -39720,12 +39429,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (!topic) return;
 
             try {
-                const response = await fetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
+                const response = await authenticatedFetch(`/api/projects/${projectId}/intelligence/conversations/trigger/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({ topic })
                 });
                 const data = await response.json();
@@ -39751,12 +39456,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (spinner) spinner.classList.remove('d-none');
 
             try {
-                const response = await fetch(`/api/projects/${projectId}/intelligence/dreams/trigger/`, {
+                const response = await authenticatedFetch(`/api/projects/${projectId}/intelligence/dreams/trigger/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({})
                 });
                 const data = await response.json();
@@ -41435,9 +41136,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 formData.append('project_id', projectId);
                 if (desc) formData.append('description', desc);
 
-                const response = await fetch('/api/v1/images/upload/', {
+                const response = await authenticatedFetch('/api/v1/images/upload/', {
                     method: 'POST',
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
                     body: formData
                 });
 
@@ -41519,12 +41219,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                     // Call the erase API
                     console.log('🎨 Calling /api/stability/erase/...');
-                    const response = await fetch('/api/stability/erase/', {
+                    const response = await authenticatedFetch('/api/stability/erase/', {
                         method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-CSRFToken': getCsrfToken()
-                        }
+                        body: formData
                     });
 
                     const result = await response.json();
@@ -42300,12 +41997,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/v1/coleadership/decisions/${decisionId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken'),
-                        'Content-Type': 'application/json'
-                    }
+                const response = await authenticatedFetch(`/api/v1/coleadership/decisions/${decisionId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -42342,12 +42035,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 // Fetch agent contributions
                 // Uses session authentication (no token needed - user already logged in)
-                const response = await fetch(`/api/projects/${projectId}/contributions/agents/`, {
-                    credentials: 'same-origin',  // Include session cookie
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/projects/${projectId}/contributions/agents/`);
 
                 const data = await response.json();
 
@@ -42448,10 +42136,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
          */
         async function showAgentTimeline(projectId) {
             try {
-                const response = await fetch(`/api/projects/${projectId}/contributions/timeline/`, {
+                const response = await authenticatedFetch(`/api/projects/${projectId}/contributions/timeline/`, {
                     headers: {
-                        'Authorization': 'Token ' + getCookie('auth_token'),
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': 'Token ' + getCookie('auth_token')
                     }
                 });
 
@@ -42523,11 +42210,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const container = document.getElementById('analytics-content');
 
             try {
-                const response = await fetch('/api/v1/sessions/analytics/', {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch('/api/v1/sessions/analytics/');
 
                 const data = await response.json();
 
@@ -42892,11 +42575,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const result = await response.json();
@@ -42934,11 +42614,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Fetch completed workflows
-                const response = await fetch('/api/workflows/history/?status=completed&limit=100', {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch('/api/workflows/history/?status=completed&limit=100');
 
                 const data = await response.json();
 
@@ -43038,12 +42714,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 // Add each workflow to the project
                 for (const workflowId of workflowIds) {
-                    await fetch(`/api/creative-projects/${projectId}/workflows/`, {
+                    await authenticatedFetch(`/api/creative-projects/${projectId}/workflows/`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
                         body: JSON.stringify({
                             workflow_history_id: workflowId
                         })
@@ -43071,11 +42743,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (!confirm('Remove this workflow from the project?')) return;
 
             try {
-                const response = await fetch(`/api/creative-projects/${projectId}/workflows/${workflowId}/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
+                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/workflows/${workflowId}/`, {
+                    method: 'DELETE'
                 });
 
                 const result = await response.json();
@@ -43452,12 +43121,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 // Session 63: Use workflow-specific improvement endpoint!
                 // This uses the logo-specific GPT-5 system prompt with examples
-                const response = await fetch('/api/workflows/improve-prompt/', {
+                const response = await authenticatedFetch('/api/workflows/improve-prompt/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         prompt: prompt,
                         workflow_type: workflowType.replace('-', '_')  // Convert logo-creator -> logo_creator
@@ -43796,12 +43461,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
 
                 // Call backend to execute workflow
-                const response = await fetch('/api/workflows/execute-for-project/', {
+                const response = await authenticatedFetch('/api/workflows/execute-for-project/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         project_id: projectId,
                         workflow_type: workflowType,
@@ -43970,12 +43631,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     const step = config.steps[i];
 
                     // Call workflow execution endpoint
-                    const stepResponse = await fetch('/api/workflows/execute/', {
+                    const stepResponse = await authenticatedFetch('/api/workflows/execute/', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
                         body: JSON.stringify({
                             workflow_type: workflow.workflow_type,
                             step: step,
@@ -44119,11 +43776,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     params.append('search', portfolioSystem.currentFilters.search);
                 }
 
-                const response = await fetch(`/api/portfolio/?${params.toString()}`, {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch(`/api/portfolio/?${params.toString()}`);
 
                 const data = await response.json();
 
@@ -44334,11 +43987,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/portfolio/${itemType}/${itemId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
+                const response = await authenticatedFetch(`/api/portfolio/${itemType}/${itemId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -44369,12 +44019,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch('/api/portfolio/bulk-delete/', {
+                const response = await authenticatedFetch('/api/portfolio/bulk-delete/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({ items: portfolioSystem.selectedItems })
                 });
 
@@ -44401,11 +44047,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             btn.disabled = true;
 
             try {
-                const response = await fetch('/api/portfolio/check-broken/', {
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
+                const response = await authenticatedFetch('/api/portfolio/check-broken/');
 
                 const data = await response.json();
 
@@ -44557,9 +44199,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Load projects for filter dropdown
         async function loadProjectsForFilter() {
             try {
-                const response = await fetch('/api/creative-projects/', {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const response = await authenticatedFetch('/api/creative-projects/');
                 const data = await response.json();
 
                 if (data.projects) {
@@ -44636,11 +44276,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 loadingEl.style.display = 'block';
                 container.style.display = 'none';
 
-                const response = await fetch('/api/preferences/', {
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
+                const response = await authenticatedFetch('/api/preferences/');
 
                 if (!response.ok) throw new Error('Failed to load preferences');
 
@@ -59026,9 +58662,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // This catches trainings that completed while the user was away
         async function syncPendingTrainings() {
             try {
-                const response = await fetch('/api/characters/', {
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                });
+                const response = await authenticatedFetch('/api/characters/');
                 if (!response.ok) return;
 
                 const data = await response.json();
@@ -59049,9 +58683,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Check each one for updated status
                 for (const character of pendingCharacters) {
                     try {
-                        const statusResponse = await fetch(`/api/characters/${character.id}/training-status/`, {
-                            headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                        });
+                        const statusResponse = await authenticatedFetch(`/api/characters/${character.id}/training-status/`);
 
                         if (statusResponse.ok) {
                             const statusData = await statusResponse.json();
@@ -59240,12 +58872,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             document.getElementById('createCharacterBtnText').textContent = 'Creating Character...';
 
             try {
-                const response = await fetch('/api/characters/create/', {
+                const response = await authenticatedFetch('/api/characters/create/', {
                     method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
+                    body: formData
                 });
 
                 const data = await response.json();
@@ -59455,12 +59084,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         window.toggleCharacterFavorite = async function(characterId) {
             try {
-                const response = await fetch(`/api/characters/${characterId}/toggle-favorite/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken'),
-                        'Content-Type': 'application/json'
-                    }
+                const response = await authenticatedFetch(`/api/characters/${characterId}/toggle-favorite/`, {
+                    method: 'POST'
                 });
 
                 if (response.ok) {
@@ -59498,12 +59123,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/characters/${characterId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken'),
-                        'Content-Type': 'application/json'
-                    }
+                const response = await authenticatedFetch(`/api/characters/${characterId}/delete/`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -59605,10 +59226,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 });
 
                 // Fetch sessions from API
-                const response = await fetch(`/api/v1/sessions/list/?${params}`, {
+                const response = await authenticatedFetch(`/api/v1/sessions/list/?${params}`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                     }
                 });
 
@@ -59797,10 +59417,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             emptyState.style.display = 'none';
 
             try {
-                const response = await fetch(`/api/v1/gallery/session/?session_id=${sessionId}`, {
+                const response = await authenticatedFetch(`/api/v1/gallery/session/?session_id=${sessionId}`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                     }
                 });
 
@@ -59885,12 +59504,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const finalProjectName = projectName.trim() || sessionTitle;
 
             try {
-                const response = await fetch(`/api/v1/sessions/${sessionId}/promote/`, {
+                const response = await authenticatedFetch(`/api/v1/sessions/${sessionId}/promote/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
                     body: JSON.stringify({
                         project_name: finalProjectName
                     })
@@ -59977,11 +59592,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             console.log(`🗑️ Deleting session: ${sessionId} (delete_content: ${deleteContentParam})`);
 
             try {
-                const response = await fetch(`/api/v1/sessions/${sessionId}/delete/?delete_content=${deleteContentParam}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
+                const response = await authenticatedFetch(`/api/v1/sessions/${sessionId}/delete/?delete_content=${deleteContentParam}`, {
+                    method: 'DELETE'
                 });
 
                 const data = await response.json();
@@ -60038,10 +59650,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Fetch session data including conversation transcript
-                const response = await fetch(`/api/v1/gallery/session/?session_id=${sessionId}`, {
+                const response = await authenticatedFetch(`/api/v1/gallery/session/?session_id=${sessionId}`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                     }
                 });
 
