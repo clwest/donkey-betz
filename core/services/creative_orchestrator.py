@@ -3,12 +3,14 @@ Creative Orchestrator - Asset Generation from Research
 =======================================================
 
 Session 339: Wire Up Creation Agents to Autonomous Pipeline
+Session 340: Added VideoAgent, AudioAgent, ThreeDAgent, Editing Agents
 
 This orchestrator takes completed research and generates assets:
-    - Logos based on brand strategy
-    - Thumbnails for social media
-    - Banners for marketing
-    - (Optional) Videos, audio
+    - Logos, thumbnails, banners (ImageAgent)
+    - Promo videos, logo animations (VideoAgent)
+    - Voiceovers, jingles (AudioAgent)
+    - 3D product mockups (ThreeDAgent)
+    - Polish/upscale (ImageEditingAgent, VideoEditingAgent)
 
 Flow:
     Research Complete (from ResearchOrchestrator)
@@ -17,13 +19,17 @@ Flow:
         ↓
     1. Extract creative brief from brand_strategy
         ↓
-    2. ImageAgent → Logo generation
+    2. ImageAgent → Logo, thumbnail, banner
         ↓
-    3. ImageAgent → Thumbnail generation
+    3. VideoAgent → Promo video, logo animation
         ↓
-    4. ImageAgent → Banner generation
+    4. AudioAgent → Voiceover, jingle
         ↓
-    5. SEOOptimizerAgent → Metadata optimization
+    5. ThreeDAgent → 3D mockups (if images available)
+        ↓
+    6. ImageEditingAgent → Upscale best images
+        ↓
+    7. SEOOptimizerAgent → Metadata optimization
         ↓
     Return: Generated assets linked to project
 
@@ -33,7 +39,7 @@ Usage:
     orchestrator = CreativeOrchestrator(user=request.user)
     result = orchestrator.execute_asset_generation(
         project_id="uuid",
-        asset_types=["logo", "thumbnail", "banner"]
+        asset_types=["logo", "thumbnail", "banner", "video", "audio"]
     )
 """
 
@@ -64,10 +70,22 @@ class FullAssetResult:
     success: bool
     project_id: Optional[str] = None
     assets_generated: List[str] = field(default_factory=list)
+    # Image assets
     logo: AssetResult = None
     thumbnail: AssetResult = None
     banner: AssetResult = None
+    # Video assets
+    promo_video: AssetResult = None
+    logo_animation: AssetResult = None
+    # Audio assets
+    voiceover: AssetResult = None
+    jingle: AssetResult = None
+    # 3D assets
+    product_mockup: AssetResult = None
+    # All generated content
     all_images: List[Dict[str, Any]] = field(default_factory=list)
+    all_videos: List[Dict[str, Any]] = field(default_factory=list)
+    all_audio: List[Dict[str, Any]] = field(default_factory=list)
     seo_metadata: Dict[str, Any] = field(default_factory=dict)
     total_execution_time_ms: int = 0
     error: Optional[str] = None
@@ -79,6 +97,8 @@ class FullAssetResult:
             'project_id': self.project_id,
             'assets_generated': self.assets_generated,
             'all_images': self.all_images,
+            'all_videos': self.all_videos,
+            'all_audio': self.all_audio,
             'seo_metadata': self.seo_metadata,
             'total_execution_time_ms': self.total_execution_time_ms,
             'error': self.error,
@@ -102,6 +122,18 @@ class FullAssetResult:
                 'success': self.banner.success,
                 'images': self.banner.images,
                 'error': self.banner.error
+            }
+        if self.promo_video:
+            result['promo_video'] = {
+                'success': self.promo_video.success,
+                'metadata': self.promo_video.metadata,
+                'error': self.promo_video.error
+            }
+        if self.voiceover:
+            result['voiceover'] = {
+                'success': self.voiceover.success,
+                'metadata': self.voiceover.metadata,
+                'error': self.voiceover.error
             }
 
         return result
@@ -129,8 +161,19 @@ class CreativeOrchestrator:
         """
         self.user = user
         self.project = None
+        # Creation agents
         self._image_agent = None
+        self._video_agent = None
+        self._audio_agent = None
+        self._three_d_agent = None
+        # Editing agents
+        self._image_editing_agent = None
+        self._video_editing_agent = None
+        # Strategy agents
         self._seo_agent = None
+        self._content_strategy_agent = None
+        self._brand_identity_agent = None
+        self._social_media_agent = None
 
     # ==================== Lazy-Loaded Agents ====================
 
@@ -143,16 +186,103 @@ class CreativeOrchestrator:
         return self._image_agent
 
     @property
+    def video_agent(self):
+        """Lazy-load VideoAgent."""
+        if self._video_agent is None:
+            try:
+                from core.agents import VideoAgent
+                self._video_agent = VideoAgent(user=self.user)
+            except ImportError:
+                logger.warning("VideoAgent not available")
+        return self._video_agent
+
+    @property
+    def audio_agent(self):
+        """Lazy-load AudioAgent."""
+        if self._audio_agent is None:
+            try:
+                from core.agents import AudioAgent
+                self._audio_agent = AudioAgent(user=self.user)
+            except ImportError:
+                logger.warning("AudioAgent not available")
+        return self._audio_agent
+
+    @property
+    def three_d_agent(self):
+        """Lazy-load ThreeDAgent."""
+        if self._three_d_agent is None:
+            try:
+                from core.agents import ThreeDAgent
+                self._three_d_agent = ThreeDAgent(user=self.user)
+            except ImportError:
+                logger.warning("ThreeDAgent not available")
+        return self._three_d_agent
+
+    @property
+    def image_editing_agent(self):
+        """Lazy-load ImageEditingAgent."""
+        if self._image_editing_agent is None:
+            try:
+                from core.agents import ImageEditingAgent
+                self._image_editing_agent = ImageEditingAgent(user=self.user)
+            except ImportError:
+                logger.warning("ImageEditingAgent not available")
+        return self._image_editing_agent
+
+    @property
+    def video_editing_agent(self):
+        """Lazy-load VideoEditingAgent."""
+        if self._video_editing_agent is None:
+            try:
+                from core.agents import VideoEditingAgent
+                self._video_editing_agent = VideoEditingAgent(user=self.user)
+            except ImportError:
+                logger.warning("VideoEditingAgent not available")
+        return self._video_editing_agent
+
+    @property
     def seo_agent(self):
-        """Lazy-load SEOOptimizerAgent (if available)."""
+        """Lazy-load SEOOptimizerAgent."""
         if self._seo_agent is None:
             try:
                 from core.agents.strategy import SEOOptimizerAgent
                 self._seo_agent = SEOOptimizerAgent(user=self.user)
             except ImportError:
                 logger.warning("SEOOptimizerAgent not available")
-                self._seo_agent = None
         return self._seo_agent
+
+    @property
+    def content_strategy_agent(self):
+        """Lazy-load ContentStrategyAgent."""
+        if self._content_strategy_agent is None:
+            try:
+                from core.agents.strategy import ContentStrategyAgent
+                self._content_strategy_agent = ContentStrategyAgent(user=self.user)
+            except ImportError:
+                logger.warning("ContentStrategyAgent not available")
+        return self._content_strategy_agent
+
+    @property
+    def brand_identity_agent(self):
+        """Lazy-load BrandIdentityAgent."""
+        if self._brand_identity_agent is None:
+            try:
+                from core.agents.strategy import BrandIdentityAgent
+                self._brand_identity_agent = BrandIdentityAgent(user=self.user)
+            except ImportError:
+                logger.warning("BrandIdentityAgent not available")
+        return self._brand_identity_agent
+
+    @property
+    def social_media_agent(self):
+        """Lazy-load SocialMediaAgent."""
+        if self._social_media_agent is None:
+            try:
+                from core.agents.strategy import SocialMediaAgent
+                self._social_media_agent = SocialMediaAgent(user=self.user)
+            except ImportError:
+                logger.warning("SocialMediaAgent not available")
+        return self._social_media_agent
 
     # ==================== Main Entry Point ====================
 
@@ -239,7 +369,67 @@ class CreativeOrchestrator:
                     result.all_images.extend(banner_result.images)
                     logger.info(f"Banner generated: {len(banner_result.images)} images")
 
-            # Step 4: Generate SEO metadata for assets
+            # Step 4: Generate video assets
+            if "video" in asset_types or "promo_video" in asset_types:
+                video_result = self._generate_promo_video(creative_brief)
+                result.promo_video = video_result
+                if video_result.success:
+                    result.assets_generated.append("promo_video")
+                    videos = video_result.metadata.get('videos', [])
+                    result.all_videos.extend(videos)
+                    logger.info(f"Promo video generated: {len(videos)} videos")
+
+            # Animate logo if we generated one and video was requested
+            if "logo_animation" in asset_types and result.logo and result.logo.success:
+                if result.logo.images:
+                    first_logo_url = result.logo.images[0].get('url')
+                    if first_logo_url:
+                        animation_result = self._generate_logo_animation(
+                            creative_brief, first_logo_url
+                        )
+                        result.logo_animation = animation_result
+                        if animation_result.success:
+                            result.assets_generated.append("logo_animation")
+                            videos = animation_result.metadata.get('videos', [])
+                            result.all_videos.extend(videos)
+                            logger.info("Logo animation generated")
+
+            # Step 5: Generate audio assets
+            if "audio" in asset_types or "voiceover" in asset_types:
+                voiceover_result = self._generate_voiceover(creative_brief)
+                result.voiceover = voiceover_result
+                if voiceover_result.success:
+                    result.assets_generated.append("voiceover")
+                    audio = voiceover_result.metadata.get('audio', [])
+                    result.all_audio.extend(audio)
+                    logger.info("Voiceover generated")
+
+            if "jingle" in asset_types:
+                jingle_result = self._generate_jingle(creative_brief)
+                result.jingle = jingle_result
+                if jingle_result.success:
+                    result.assets_generated.append("jingle")
+                    audio = jingle_result.metadata.get('audio', [])
+                    result.all_audio.extend(audio)
+                    logger.info("Jingle generated")
+
+            # Step 6: Generate 3D assets
+            if "3d" in asset_types or "product_mockup" in asset_types:
+                mockup_result = self._generate_product_mockup(creative_brief)
+                result.product_mockup = mockup_result
+                if mockup_result.success:
+                    result.assets_generated.append("product_mockup")
+                    logger.info("Product mockup generated")
+
+            # Step 7: Upscale best images if editing requested
+            if "upscale" in asset_types and result.all_images:
+                upscaled = self._upscale_best_images(result.all_images, count=1)
+                if upscaled:
+                    result.all_images.extend(upscaled)
+                    result.assets_generated.append("upscaled")
+                    logger.info(f"Upscaled {len(upscaled)} images")
+
+            # Step 8: Generate SEO metadata for assets
             if result.all_images and self.seo_agent:
                 seo_result = self._generate_seo_metadata(
                     creative_brief=creative_brief,
@@ -527,6 +717,387 @@ Requirements:
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
 
+    # ==================== Video Generation ====================
+
+    def _generate_promo_video(self, creative_brief: Dict[str, Any]) -> AssetResult:
+        """Generate promotional video using VideoAgent."""
+        start_time = time.time()
+
+        if not self.video_agent:
+            return AssetResult(
+                asset_type='promo_video',
+                agent_name='VideoAgent',
+                success=False,
+                error='VideoAgent not available',
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            style = creative_brief.get('style', 'modern')
+            industry = creative_brief.get('industry', 'technology')
+            tone = creative_brief.get('tone', 'professional')
+
+            task = f"""Create a short promotional video for "{brand_name}".
+
+Style: {style}, cinematic, engaging
+Industry: {industry}
+Tone: {tone}
+Duration: 5 seconds
+
+Requirements:
+- Dynamic, attention-grabbing motion
+- Subtle brand elements
+- Professional production quality
+- Suitable for social media ads
+"""
+
+            agent_result = self.video_agent.execute(
+                task=task,
+                context={
+                    'duration': 5,
+                    'style': style,
+                    'project_id': str(self.project.id) if self.project else None
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            videos = agent_result.data.get('videos', []) if agent_result.success else []
+
+            return AssetResult(
+                asset_type='promo_video',
+                agent_name='VideoAgent',
+                success=agent_result.success,
+                images=[],  # Videos stored separately
+                metadata={'prompt': task, 'videos': videos},
+                error=agent_result.error if not agent_result.success else None,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            logger.error(f"Promo video generation failed: {e}")
+            return AssetResult(
+                asset_type='promo_video',
+                agent_name='VideoAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    def _generate_logo_animation(
+        self,
+        creative_brief: Dict[str, Any],
+        logo_image_url: str
+    ) -> AssetResult:
+        """Animate the logo using VideoAgent."""
+        start_time = time.time()
+
+        if not self.video_agent:
+            return AssetResult(
+                asset_type='logo_animation',
+                agent_name='VideoAgent',
+                success=False,
+                error='VideoAgent not available',
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            style = creative_brief.get('style', 'modern')
+
+            task = f"""Animate this logo for "{brand_name}" with a professional reveal animation.
+
+Style: {style}, elegant motion
+Duration: 3 seconds
+
+Requirements:
+- Smooth, professional reveal
+- Subtle motion (zoom, fade, particles)
+- Loop-friendly ending
+- Suitable for video intros
+"""
+
+            agent_result = self.video_agent.execute(
+                task=task,
+                context={
+                    'image_url': logo_image_url,
+                    'animation_type': 'image_to_video',
+                    'duration': 3,
+                    'project_id': str(self.project.id) if self.project else None
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            videos = agent_result.data.get('videos', []) if agent_result.success else []
+
+            return AssetResult(
+                asset_type='logo_animation',
+                agent_name='VideoAgent',
+                success=agent_result.success,
+                images=[],
+                metadata={'prompt': task, 'videos': videos, 'source_image': logo_image_url},
+                error=agent_result.error if not agent_result.success else None,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            logger.error(f"Logo animation failed: {e}")
+            return AssetResult(
+                asset_type='logo_animation',
+                agent_name='VideoAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    # ==================== Audio Generation ====================
+
+    def _generate_voiceover(self, creative_brief: Dict[str, Any]) -> AssetResult:
+        """Generate voiceover using AudioAgent."""
+        start_time = time.time()
+
+        if not self.audio_agent:
+            return AssetResult(
+                asset_type='voiceover',
+                agent_name='AudioAgent',
+                success=False,
+                error='AudioAgent not available',
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            tagline = creative_brief.get('tagline', '')
+            industry = creative_brief.get('industry', 'technology')
+            tone = creative_brief.get('tone', 'professional')
+
+            # Create a short brand intro script
+            script = tagline if tagline else f"Introducing {brand_name}. Innovation meets {industry}."
+
+            task = f"""Generate a professional voiceover for this brand intro:
+
+Script: "{script}"
+Tone: {tone}, confident, warm
+Brand: {brand_name}
+
+Requirements:
+- Clear, professional voice
+- Natural pacing
+- Suitable for video ads
+"""
+
+            agent_result = self.audio_agent.execute(
+                task=task,
+                context={
+                    'script': script,
+                    'voice_style': tone,
+                    'project_id': str(self.project.id) if self.project else None
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            audio_files = agent_result.data.get('audio', []) if agent_result.success else []
+
+            return AssetResult(
+                asset_type='voiceover',
+                agent_name='AudioAgent',
+                success=agent_result.success,
+                images=[],
+                metadata={'prompt': task, 'script': script, 'audio': audio_files},
+                error=agent_result.error if not agent_result.success else None,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            logger.error(f"Voiceover generation failed: {e}")
+            return AssetResult(
+                asset_type='voiceover',
+                agent_name='AudioAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    def _generate_jingle(self, creative_brief: Dict[str, Any]) -> AssetResult:
+        """Generate brand jingle/sound effect using AudioAgent."""
+        start_time = time.time()
+
+        if not self.audio_agent:
+            return AssetResult(
+                asset_type='jingle',
+                agent_name='AudioAgent',
+                success=False,
+                error='AudioAgent not available',
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            style = creative_brief.get('style', 'modern')
+            tone = creative_brief.get('tone', 'professional')
+
+            task = f"""Create a short audio logo/jingle for "{brand_name}".
+
+Style: {style}, memorable, distinctive
+Tone: {tone}
+Duration: 3-5 seconds
+
+Requirements:
+- Catchy, memorable sound
+- Professional production quality
+- Suitable for video outros
+- Brand-appropriate mood
+"""
+
+            agent_result = self.audio_agent.execute(
+                task=task,
+                context={
+                    'type': 'sound_effect',
+                    'duration': 5,
+                    'project_id': str(self.project.id) if self.project else None
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            audio_files = agent_result.data.get('audio', []) if agent_result.success else []
+
+            return AssetResult(
+                asset_type='jingle',
+                agent_name='AudioAgent',
+                success=agent_result.success,
+                images=[],
+                metadata={'prompt': task, 'audio': audio_files},
+                error=agent_result.error if not agent_result.success else None,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            logger.error(f"Jingle generation failed: {e}")
+            return AssetResult(
+                asset_type='jingle',
+                agent_name='AudioAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    # ==================== 3D Generation ====================
+
+    def _generate_product_mockup(self, creative_brief: Dict[str, Any]) -> AssetResult:
+        """Generate 3D product mockup using ThreeDAgent."""
+        start_time = time.time()
+
+        if not self.three_d_agent:
+            return AssetResult(
+                asset_type='product_mockup',
+                agent_name='ThreeDAgent',
+                success=False,
+                error='ThreeDAgent not available',
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        try:
+            brand_name = creative_brief.get('brand_name', 'Brand')
+            style = creative_brief.get('style', 'modern')
+            industry = creative_brief.get('industry', 'technology')
+
+            task = f"""Create a 3D product mockup for "{brand_name}".
+
+Style: {style}, realistic, professional
+Industry: {industry}
+
+Requirements:
+- High-quality 3D render
+- Professional lighting
+- Suitable for marketing materials
+- Clean, modern aesthetic
+"""
+
+            agent_result = self.three_d_agent.execute(
+                task=task,
+                context={
+                    'render_quality': 'high',
+                    'project_id': str(self.project.id) if self.project else None
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            models = agent_result.data.get('models', []) if agent_result.success else []
+
+            return AssetResult(
+                asset_type='product_mockup',
+                agent_name='ThreeDAgent',
+                success=agent_result.success,
+                images=[],
+                metadata={'prompt': task, 'models': models},
+                error=agent_result.error if not agent_result.success else None,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            logger.error(f"Product mockup generation failed: {e}")
+            return AssetResult(
+                asset_type='product_mockup',
+                agent_name='ThreeDAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    # ==================== Image Editing ====================
+
+    def _upscale_best_images(
+        self,
+        images: List[Dict[str, Any]],
+        count: int = 1
+    ) -> List[Dict[str, Any]]:
+        """Upscale the best images using ImageEditingAgent."""
+        if not self.image_editing_agent or not images:
+            return []
+
+        try:
+            # Take first N images to upscale
+            to_upscale = images[:count]
+            upscaled = []
+
+            for img in to_upscale:
+                image_url = img.get('url')
+                if not image_url:
+                    continue
+
+                task = f"Upscale this image to 2x resolution while maintaining quality."
+
+                result = self.image_editing_agent.execute(
+                    task=task,
+                    context={
+                        'image_url': image_url,
+                        'operation': 'upscale',
+                        'scale': 2
+                    },
+                    scifi_context={},
+                    spider_context={}
+                )
+
+                if result.success:
+                    upscaled_data = result.data.get('image', {})
+                    upscaled.append({
+                        'original_url': image_url,
+                        'upscaled_url': upscaled_data.get('url'),
+                        'id': upscaled_data.get('id')
+                    })
+
+            logger.info(f"Upscaled {len(upscaled)} images")
+            return upscaled
+
+        except Exception as e:
+            logger.warning(f"Image upscaling failed: {e}")
+            return []
+
     # ==================== SEO Metadata ====================
 
     def _generate_seo_metadata(
@@ -617,7 +1188,14 @@ Include:
             self.project.metadata = self.project.metadata or {}
             self.project.metadata['assets_generated'] = True
             self.project.metadata['asset_types'] = result.assets_generated
-            self.project.metadata['asset_count'] = len(result.all_images)
+
+            # Count all assets
+            total_assets = (
+                len(result.all_images) +
+                len(result.all_videos) +
+                len(result.all_audio)
+            )
+            self.project.metadata['asset_count'] = total_assets
             self.project.metadata['seo_metadata'] = result.seo_metadata
 
             # Store image references
@@ -631,16 +1209,53 @@ Include:
                     })
             self.project.metadata['asset_images'] = image_refs
 
+            # Store video references
+            video_refs = []
+            for vid in result.all_videos:
+                if isinstance(vid, dict):
+                    video_refs.append({
+                        'id': vid.get('id'),
+                        'url': vid.get('url'),
+                        'type': 'video'
+                    })
+            self.project.metadata['asset_videos'] = video_refs
+
+            # Store audio references
+            audio_refs = []
+            for aud in result.all_audio:
+                if isinstance(aud, dict):
+                    audio_refs.append({
+                        'id': aud.get('id'),
+                        'url': aud.get('url'),
+                        'type': 'audio'
+                    })
+            self.project.metadata['asset_audio'] = audio_refs
+
+            # Calculate time saved based on asset types
+            time_saved = 0.0
+            if result.all_images:
+                time_saved += 1.0  # 1 hour for image design
+            if result.all_videos:
+                time_saved += 2.0  # 2 hours for video production
+            if result.all_audio:
+                time_saved += 0.5  # 30 min for audio
+
             # Add AI contribution
+            asset_summary = f"{len(result.all_images)} images"
+            if result.all_videos:
+                asset_summary += f", {len(result.all_videos)} videos"
+            if result.all_audio:
+                asset_summary += f", {len(result.all_audio)} audio"
+
             self.project.add_ai_contribution(
                 agent_name='CreativeOrchestrator',
                 task='Generate brand assets from research',
-                time_saved_hours=1.0,  # Estimate: 1 hour of design work
-                output_summary=f"Generated {len(result.all_images)} assets: {', '.join(result.assets_generated)}"
+                time_saved_hours=time_saved,
+                output_summary=f"Generated {asset_summary}: {', '.join(result.assets_generated)}"
             )
 
             self.project.save()
-            logger.info(f"Updated project {self.project.id} with {len(result.all_images)} assets")
+            logger.info(f"Updated project {self.project.id} with {total_assets} assets")
 
         except Exception as e:
             logger.warning(f"Failed to update project with assets: {e}")
