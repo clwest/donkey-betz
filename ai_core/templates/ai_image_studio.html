@@ -15766,9 +15766,14 @@
             // Update agent counts (multiple locations)
             const agentEls = [
                 document.getElementById('trending-agents-count'),
-                document.getElementById('intAgentsActive')
+                document.getElementById('intAgentsActive'),
+                document.getElementById('agent-total-count')  // Session 346: Agents Overview tab
             ];
             agentEls.forEach(el => el && (el.textContent = stats.agents.total));
+
+            // Session 346: Update agent success rate
+            const agentSuccessEl = document.getElementById('agent-success-rate');
+            if (agentSuccessEl) agentSuccessEl.textContent = stats.data.success_rate + '%';
 
             // Update data points
             const dataPointsEl = document.getElementById('trending-datapoints-count');
@@ -15777,6 +15782,31 @@
             // Update success rate
             const successEl = document.getElementById('intel-success-rate');
             if (successEl) successEl.textContent = stats.data.success_rate + '%';
+
+            // Session 346: Update Row 3 - Learning Activity stats
+            if (stats.learning) {
+                const learningConnectionsEl = document.getElementById('agent-learning-connections');
+                if (learningConnectionsEl) learningConnectionsEl.textContent = stats.learning.learning_connections || 0;
+
+                const transfersEl = document.getElementById('agent-transfers-count');
+                if (transfersEl) transfersEl.textContent = stats.learning.knowledge_transfers || 0;
+
+                const synthesizedEl = document.getElementById('agent-synthesized-count');
+                if (synthesizedEl) synthesizedEl.textContent = stats.learning.synthesized_insights || 0;
+
+                // Also update other learning stats on Overview tab
+                const collaborationsEl = document.getElementById('agent-collaborations-count');
+                if (collaborationsEl) collaborationsEl.textContent = stats.learning.collaborations || 0;
+
+                const learningEventsEl = document.getElementById('agent-learning-count');
+                if (learningEventsEl) learningEventsEl.textContent = stats.learning.learning_events || 0;
+
+                const memoriesEl = document.getElementById('agent-memory-count');
+                if (memoriesEl) memoriesEl.textContent = stats.learning.agent_memories || 0;
+
+                const knowledgeSourcesEl = document.getElementById('agent-knowledge-sources');
+                if (knowledgeSourcesEl) knowledgeSourcesEl.textContent = stats.learning.knowledge_sources || 0;
+            }
 
             console.log('Dashboard stats updated:', stats);
         }
@@ -16057,6 +16087,15 @@
                 trendingTab.addEventListener('shown.bs.tab', function() {
                     console.log('📈 Trending subtab shown - loading data...');
                     loadTrendingTab();
+                });
+            }
+
+            // Session 346: Load Overview stats when Agents Overview tab is shown
+            const agentsOverviewTab = document.getElementById('agents-overview-tab');
+            if (agentsOverviewTab) {
+                agentsOverviewTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🤖 Agents Overview tab shown - loading stats...');
+                    loadDashboardStats();
                 });
             }
         });
@@ -47713,9 +47752,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Load recent Hive Mind sessions
+        // Session 346: Updated to use authenticatedFetch
         async function loadHiveMindSessions() {
             try {
-                const response = await fetch('/api/hive-mind/sessions/?limit=5');
+                const response = await authenticatedFetch('/api/hive-mind/sessions/?limit=5');
                 const data = await response.json();
 
                 const listEl = document.getElementById('hive-mind-sessions-list');
@@ -48308,9 +48348,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // Load Time Travel overview stats
+        // Session 346: Updated to use authenticatedFetch
         async function loadTimeTravelOverview() {
             try {
-                const response = await fetch('/api/time-travel/');
+                const response = await authenticatedFetch('/api/time-travel/');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -48332,9 +48373,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Load agents for time travel dropdown
+        // Session 346: Updated to use authenticatedFetch
         async function loadTimeTravelAgents() {
             try {
-                const response = await fetch('/api/hive-mind/agents/');
+                const response = await authenticatedFetch('/api/hive-mind/agents/');
                 if (response.ok) {
                     const data = await response.json();
                     const select = document.getElementById('time-travel-agent-select');
@@ -48361,7 +48403,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/time-travel/agent/${agentId}/sessions/`);
+                // Session 346: Updated to use authenticatedFetch
+                const response = await authenticatedFetch(`/api/time-travel/agent/${agentId}/sessions/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -48419,9 +48462,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Open a session for detailed viewing
+        // Session 346: Updated to use authenticatedFetch
         async function openTimeTravelSession(sessionId) {
             try {
-                const response = await fetch(`/api/time-travel/session/${sessionId}/`);
+                const response = await authenticatedFetch(`/api/time-travel/session/${sessionId}/`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -48523,9 +48567,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await fetch(`/api/time-travel/agent/${agentId}/simulate/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                // Session 346: Updated to use authenticatedFetch
+                const response = await authenticatedFetch(`/api/time-travel/agent/${agentId}/simulate/`, {
+                    method: 'POST'
                 });
                 const data = await response.json();
 
