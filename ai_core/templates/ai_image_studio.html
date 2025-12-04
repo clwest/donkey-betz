@@ -15603,9 +15603,7 @@
             try {
                 // Fetch trends from spider-intelligence API
                 // Note: insights endpoint requires a prompt, so we only call it when user provides one
-                const trendsRes = await fetch('/api/spider-intelligence/trends/?limit=10', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const trendsRes = await authenticatedFetch('/api/spider-intelligence/trends/?limit=10');
 
                 const loading = document.getElementById('intelligenceLoading');
                 const dataDiv = document.getElementById('intelligenceFeedData');
@@ -15725,9 +15723,7 @@
             }
 
             try {
-                const res = await fetch('/api/spider-intelligence/dashboard-stats/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const res = await authenticatedFetch('/api/spider-intelligence/dashboard-stats/');
 
                 if (!res.ok) throw new Error('Failed to load dashboard stats');
 
@@ -15837,10 +15833,10 @@
 
                 // Session 241: Fetch all data sources in parallel
                 const [trendsRes, techRes, marketRes, jobsRes] = await Promise.all([
-                    fetch(trendsUrl, { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/spider-intelligence/tech/?limit=10', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/spider-intelligence/market/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/spider-intelligence/jobs/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                    authenticatedFetch(trendsUrl),
+                    authenticatedFetch('/api/spider-intelligence/tech/?limit=10'),
+                    authenticatedFetch('/api/spider-intelligence/market/'),
+                    authenticatedFetch('/api/spider-intelligence/jobs/')
                 ]);
 
                 if (!trendsRes.ok) throw new Error('Failed to load trends');
@@ -16115,11 +16111,11 @@
             try {
                 // Load stats, featured, workflows, and user data in parallel
                 const [statsRes, featuredRes, workflowsRes, myPublishedRes, myInstalledRes] = await Promise.all([
-                    fetch('/api/marketplace/stats/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/marketplace/workflows/featured/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/marketplace/workflows/?page=1&page_size=12', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/marketplace/my-published/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/marketplace/my-installed/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                    authenticatedFetch('/api/marketplace/stats/'),
+                    authenticatedFetch('/api/marketplace/workflows/featured/'),
+                    authenticatedFetch('/api/marketplace/workflows/?page=1&page_size=12'),
+                    authenticatedFetch('/api/marketplace/my-published/'),
+                    authenticatedFetch('/api/marketplace/my-installed/')
                 ]);
 
                 // Update stats
@@ -16320,9 +16316,7 @@
 
         async function viewWorkflowDetails(workflowId) {
             try {
-                const response = await fetch(`/api/marketplace/workflows/${workflowId}/`, {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch(`/api/marketplace/workflows/${workflowId}/`);
                 if (response.ok) {
                     const workflow = await response.json();
                     showWorkflowDetailsModal(workflow);
@@ -16397,12 +16391,8 @@
 
         async function installWorkflow(workflowId) {
             try {
-                const response = await fetch(`/api/marketplace/workflows/${workflowId}/install/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                const response = await authenticatedFetch(`/api/marketplace/workflows/${workflowId}/install/`, {
+                    method: 'POST'
                 });
                 const data = await response.json();
                 if (data.success) {
@@ -45299,8 +45289,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 // Load network data and activity in parallel
                 const [networkRes, activityRes] = await Promise.all([
-                    fetch('/api/spider-dashboard/network/', { headers: { 'X-CSRFToken': getCsrfToken() } }),
-                    fetch('/api/spider-dashboard/activity/', { headers: { 'X-CSRFToken': getCsrfToken() } })
+                    authenticatedFetch('/api/spider-dashboard/network/'),
+                    authenticatedFetch('/api/spider-dashboard/activity/')
                 ]);
 
                 const networkData = await networkRes.json();
@@ -45514,12 +45504,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 206: Execute Spider (with alert for single spider execution)
         async function executeSpider(spiderId, spiderName) {
             try {
-                const response = await fetch('/api/spider-dashboard/execute/', {
+                const response = await authenticatedFetch('/api/spider-dashboard/execute/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
                     body: JSON.stringify({ spider_id: spiderId, spider_name: spiderName })
                 });
 
@@ -45538,12 +45524,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // Session 209: Silent spider execution (no alerts, for batch runs)
         async function executeSpiderSilent(spiderId, spiderName) {
-            const response = await fetch('/api/spider-dashboard/execute/', {
+            const response = await authenticatedFetch('/api/spider-dashboard/execute/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
                 body: JSON.stringify({ spider_id: spiderId, spider_name: spiderName })
             });
             const data = await response.json();
@@ -45565,9 +45547,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             try {
                 // Get all active spiders
-                const response = await fetch('/api/spider-dashboard/network/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/spider-dashboard/network/');
                 const data = await response.json();
 
                 const activeSpiders = (data.spiders || []).filter(s => s.status === 'Active');
@@ -45660,9 +45640,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return;
             }
             try {
-                const response = await fetch('/api/spider-intelligence/trends/?limit=10', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/spider-intelligence/trends/?limit=10');
                 const data = await response.json();
 
                 if (data.status === 'success' && data.trends.length > 0) {
@@ -45695,9 +45673,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return;
             }
             try {
-                const response = await fetch('/api/spider-intelligence/market/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/spider-intelligence/market/');
                 const data = await response.json();
 
                 if (data.status === 'success' && data.insights.crypto.length > 0) {
@@ -45737,9 +45713,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return;
             }
             try {
-                const response = await fetch('/api/spider-intelligence/tech/?limit=10', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/spider-intelligence/tech/?limit=10');
                 const data = await response.json();
 
                 if (data.status === 'success') {
@@ -45788,9 +45762,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 return;
             }
             try {
-                const response = await fetch('/api/spider-intelligence/jobs/?limit=10', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/spider-intelligence/jobs/?limit=10');
                 const data = await response.json();
 
                 if (data.status === 'success' && data.job_market.jobs.length > 0) {
@@ -45833,9 +45805,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             resultsContainer.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Searching...</p>';
 
             try {
-                const response = await fetch(`/api/spider-intelligence/search/?q=${encodeURIComponent(query)}&limit=20`, {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch(`/api/spider-intelligence/search/?q=${encodeURIComponent(query)}&limit=20`);
                 const data = await response.json();
 
                 if (data.status === 'success' && data.results.length > 0) {
@@ -45879,9 +45849,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             content.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Generating report...</p>';
 
             try {
-                const response = await fetch('/api/spider-intelligence/report/', {
-                    headers: { 'X-CSRFToken': getCsrfToken() }
-                });
+                const response = await authenticatedFetch('/api/spider-intelligence/report/');
                 const data = await response.json();
 
                 if (data.status === 'success') {
@@ -46035,7 +46003,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             console.log('🤖 Session 346: loadSession310Stats() started - using dashboard-stats API');
             try {
                 // Session 346: Use the unified dashboard-stats endpoint (no auth required)
-                const response = await fetch('/api/spider-intelligence/dashboard-stats/');
+                const response = await authenticatedFetch('/api/spider-intelligence/dashboard-stats/');
                 const data = await response.json();
                 console.log('🤖 Session 346: Dashboard stats response:', data);
 
