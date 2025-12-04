@@ -1,17 +1,17 @@
 {% comment %}
-Session 275: Agents Overview Sub-Tab
-Network stats and learning activity metrics
+Session 275/346: Agents Overview Sub-Tab
+Network stats and learning activity metrics - consolidated single source of truth
 {% endcomment %}
 
 <!-- ========== OVERVIEW SUB-TAB ========== -->
 <div class="tab-pane fade show active" id="agents-overview" role="tabpanel">
 
-    <!-- Network Stats Row -->
+    <!-- Session 346: Consolidated Agent Stats (single row, no duplicates) -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
                 <div class="card-body">
-                    <h2 class="mb-0" id="agent-total-count">0</h2>
+                    <h2 class="mb-0" id="agent-total-count">--</h2>
                     <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Agents</small>
                 </div>
             </div>
@@ -19,59 +19,51 @@ Network stats and learning activity metrics
         <div class="col-md-3">
             <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
                 <div class="card-body">
-                    <h2 class="mb-0" id="agent-collaborations-count">0</h2>
+                    <h2 class="mb-0" id="agent-collaborations-count">--</h2>
                     <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Collaborations</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+            <div class="card text-center" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none;">
                 <div class="card-body">
-                    <h2 class="mb-0" id="agent-knowledge-count">0</h2>
-                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Knowledge Items</small>
+                    <h2 class="mb-0" id="agent-learning-count">--</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Learning Events</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
                 <div class="card-body">
-                    <h2 class="mb-0" id="agent-success-rate">0%</h2>
+                    <h2 class="mb-0" id="agent-success-rate">--%</h2>
                     <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Success Rate</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Agent Stats Overview -->
+    <!-- Secondary Stats Row -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+        <div class="col-md-4">
+            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
                 <div class="card-body py-2">
-                    <h3 class="mb-0" id="agent-total-count">27</h3>
-                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Agents</small>
+                    <h3 class="mb-0" id="agent-knowledge-count">--</h3>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Knowledge Items</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none;">
-                <div class="card-body py-2">
-                    <h3 class="mb-0" id="agent-learning-count">0</h3>
-                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Learning Events</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
                 <div class="card-body py-2">
-                    <h3 class="mb-0" id="agent-memory-count">0</h3>
+                    <h3 class="mb-0" id="agent-memory-count">--</h3>
                     <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Agent Memories</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+        <div class="col-md-4">
+            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
                 <div class="card-body py-2">
-                    <h3 class="mb-0" id="agent-knowledge-sources">0</h3>
+                    <h3 class="mb-0" id="agent-knowledge-sources">--</h3>
                     <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Knowledge Sources</small>
                 </div>
             </div>

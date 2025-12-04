@@ -171,19 +171,53 @@ def get_learning_stats(request):
         service = get_learning_service()
         stats = service.get_learning_stats(user_id=request.user.id)
 
-        # Session 309: Add memory and knowledge source counts
+        # Session 309/346: Add memory, knowledge, collaboration, and agent counts
         try:
-            from core.models_unified_system import AgentMemory, AgentKnowledgeSource, Agent
+            from core.models_unified_system import AgentMemory, AgentKnowledgeSource, Collaboration, CollaborationSession
+            from content.models import AgentExecution
+            import os
+
+            # Agent counts from filesystem (same logic as dashboard_stats)
+            legacy_agents_dir = os.path.join(os.path.dirname(__file__), '..', 'agents')
+            clean_agents_dir = os.path.join(os.path.dirname(__file__), 'agents')
+
+            legacy_count = 0
+            if os.path.exists(legacy_agents_dir):
+                legacy_count = len([f for f in os.listdir(legacy_agents_dir)
+                                   if f.endswith('_agent.py') and not f.startswith('_')])
+
+            clean_count = 0
+            if os.path.exists(clean_agents_dir):
+                clean_count = len([f for f in os.listdir(clean_agents_dir)
+                                  if f.endswith('_agent.py') and not f.startswith('_')])
+
+            total_agents = legacy_count + clean_count
+
             stats['agent_memories'] = AgentMemory.objects.count()
             stats['knowledge_sources'] = AgentKnowledgeSource.objects.count()
-            stats['clean_agents'] = 11  # core/agents/ count
-            stats['deprecated_agents'] = Agent.objects.filter(agent_type='deprecated').count() or 14
+            stats['clean_agents'] = clean_count
+            stats['deprecated_agents'] = legacy_count
+            stats['agents'] = {
+                'total': total_agents,
+                'legacy': legacy_count,
+                'clean': clean_count
+            }
+
+            # Session 346: Add collaboration and learning event counts
+            stats['collaborations'] = Collaboration.objects.count()
+            stats['collaboration_sessions'] = CollaborationSession.objects.count()
+            stats['learning_events'] = AgentExecution.objects.count()  # Agent executions as learning events
+
         except Exception as db_err:
-            logger.debug(f"Could not fetch Session 309 stats: {db_err}")
+            logger.debug(f"Could not fetch Session 309/346 stats: {db_err}")
             stats['agent_memories'] = 0
             stats['knowledge_sources'] = 0
-            stats['clean_agents'] = 11
-            stats['deprecated_agents'] = 14
+            stats['clean_agents'] = 10
+            stats['deprecated_agents'] = 69
+            stats['agents'] = {'total': 79, 'legacy': 69, 'clean': 10}
+            stats['collaborations'] = 0
+            stats['collaboration_sessions'] = 0
+            stats['learning_events'] = 0
 
         return JsonResponse({
             'success': True,
