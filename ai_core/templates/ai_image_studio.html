@@ -1862,11 +1862,11 @@
                                             <small style="color: #f9a8d4; font-size: 9px;">Trends</small>
                                         </div>
                                         <div style="flex: 1; background: rgba(34, 197, 94, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
-                                            <div id="intSpidersActive" style="font-size: 18px; font-weight: 700; color: #bbf7d0;">67</div>
+                                            <div id="intSpidersActive" style="font-size: 18px; font-weight: 700; color: #bbf7d0;">--</div>
                                             <small style="color: #86efac; font-size: 9px;">Spiders</small>
                                         </div>
                                         <div style="flex: 1; background: rgba(168, 85, 247, 0.2); padding: 8px; border-radius: 8px; text-align: center;">
-                                            <div id="intAgentsActive" style="font-size: 18px; font-weight: 700; color: #e9d5ff;">14</div>
+                                            <div id="intAgentsActive" style="font-size: 18px; font-weight: 700; color: #e9d5ff;">--</div>
                                             <small style="color: #c4b5fd; font-size: 9px;">Agents</small>
                                         </div>
                                     </div>
@@ -10194,7 +10194,7 @@
             <!-- SESSION 241: UNIFIED INTELLIGENCE TAB (Merged Spiders + Trending) -->
             <div class="tab-pane fade" id="trending" role="tabpanel">
                 <h3 class="mb-4">🔮 Intelligence Hub</h3>
-                <p class="text-muted mb-4">Real-time intelligence from 67 spiders feeding 14 AI Content agents. Discover trending styles, topics, and opportunities.</p>
+                <p class="text-muted mb-4">Real-time intelligence from <strong style="color: #f97316;"><span id="intel-header-spider-count">--</span> spiders</strong> across <strong style="color: #22c55e;"><span id="intel-header-categories-count">--</span> categories</strong> feeding AI Content agents. Discover trending styles, topics, and opportunities.</p>
 
                 <!-- Stats Cards Row -->
                 <div class="row mb-4">
@@ -10209,7 +10209,7 @@
                     <div class="col-md-2">
                         <div class="card text-center" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none;">
                             <div class="card-body py-3">
-                                <h2 class="mb-0" id="intel-spider-count">67</h2>
+                                <h2 class="mb-0" id="intel-spider-count">--</h2>
                                 <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Spiders</small>
                             </div>
                         </div>
@@ -10217,7 +10217,7 @@
                     <div class="col-md-2">
                         <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
                             <div class="card-body py-3">
-                                <h2 class="mb-0" id="trending-agents-count">14</h2>
+                                <h2 class="mb-0" id="trending-agents-count">--</h2>
                                 <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Agents</small>
                             </div>
                         </div>
@@ -10225,7 +10225,7 @@
                     <div class="col-md-2">
                         <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
                             <div class="card-body py-3">
-                                <h2 class="mb-0" id="trending-datapoints-count">914</h2>
+                                <h2 class="mb-0" id="trending-datapoints-count">--</h2>
                                 <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Data Points</small>
                             </div>
                         </div>
@@ -10233,8 +10233,8 @@
                     <div class="col-md-2">
                         <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
                             <div class="card-body py-3">
-                                <h2 class="mb-0">21</h2>
-                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Sources</small>
+                                <h2 class="mb-0" id="intel-categories-count">--</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Categories</small>
                             </div>
                         </div>
                     </div>
@@ -15596,6 +15596,9 @@
         }
 
         async function loadIntelligenceFeed() {
+            // Session 345: Load dashboard stats first (updates all counts)
+            loadDashboardStats();
+
             // Session 237: Fixed to use correct /api/spider-intelligence/ endpoints
             try {
                 // Fetch trends from spider-intelligence API
@@ -15622,7 +15625,7 @@
                 // Update stats - use actual trend count
                 const trendsCount = trendsData.trends ? trendsData.trends.length : 0;
                 document.getElementById('intTrendsCount').textContent = trendsCount;
-                document.getElementById('intAgentsActive').textContent = 14; // 14 AI Content agents
+                // Session 345: Agent count handled by loadDashboardStats()
 
                 // Render trends from spider-intelligence API
                 const trendsContainer = document.getElementById('intelligenceTrends');
@@ -15709,6 +15712,78 @@
         window.toggleIntelligenceFeed = toggleIntelligenceFeed;
         window.useIntelligenceSuggestion = useIntelligenceSuggestion;
 
+        // Session 345: Dashboard Stats API - Single source of truth for all stats
+        // Caches stats for 30 seconds to avoid redundant API calls
+        let dashboardStatsCache = { data: null, timestamp: 0 };
+        const STATS_CACHE_TTL = 30000; // 30 seconds
+
+        async function loadDashboardStats() {
+            // Check cache first
+            const now = Date.now();
+            if (dashboardStatsCache.data && (now - dashboardStatsCache.timestamp) < STATS_CACHE_TTL) {
+                return dashboardStatsCache.data;
+            }
+
+            try {
+                const res = await fetch('/api/spider-intelligence/dashboard-stats/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+
+                if (!res.ok) throw new Error('Failed to load dashboard stats');
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    // Cache the response
+                    dashboardStatsCache = { data: data.stats, timestamp: now };
+
+                    // Update all stat elements across Intelligence Hub
+                    updateDashboardStatsUI(data.stats);
+
+                    return data.stats;
+                }
+            } catch (e) {
+                console.error('Dashboard stats error:', e);
+            }
+            return null;
+        }
+
+        function updateDashboardStatsUI(stats) {
+            // Update spider counts (multiple locations)
+            const spiderEls = [
+                document.getElementById('intel-spider-count'),
+                document.getElementById('intel-header-spider-count'),
+                document.getElementById('intSpidersActive')
+            ];
+            spiderEls.forEach(el => el && (el.textContent = stats.spiders.total));
+
+            // Update categories (multiple locations)
+            const categoryEls = [
+                document.getElementById('intel-categories-count'),
+                document.getElementById('intel-header-categories-count')
+            ];
+            categoryEls.forEach(el => el && (el.textContent = stats.spiders.categories));
+
+            // Update agent counts (multiple locations)
+            const agentEls = [
+                document.getElementById('trending-agents-count'),
+                document.getElementById('intAgentsActive')
+            ];
+            agentEls.forEach(el => el && (el.textContent = stats.agents.total));
+
+            // Update data points
+            const dataPointsEl = document.getElementById('trending-datapoints-count');
+            if (dataPointsEl) dataPointsEl.textContent = stats.data.total_points.toLocaleString();
+
+            // Update success rate
+            const successEl = document.getElementById('intel-success-rate');
+            if (successEl) successEl.textContent = stats.data.success_rate + '%';
+
+            console.log('Dashboard stats updated:', stats);
+        }
+
+        // Make loadDashboardStats globally accessible
+        window.loadDashboardStats = loadDashboardStats;
+
         // Session 219: Load Trending Tab Content
         // Session 241: Fixed insightsData bug, added market/jobs sections
         async function loadTrendingTab(category = null) {
@@ -15723,6 +15798,9 @@
             if (container) container.style.display = 'none';
 
             try {
+                // Session 345: Load dashboard stats first (uses cache)
+                loadDashboardStats();
+
                 // Build trends URL with optional category filter
                 let trendsUrl = '/api/spider-intelligence/trends/?limit=20';
                 if (category) trendsUrl += `&category=${category}`;
@@ -15750,10 +15828,9 @@
                 const trendsCountEl = document.getElementById('trending-trends-count');
                 if (trendsCountEl) trendsCountEl.textContent = trendsCount;
 
-                const agentsCountEl = document.getElementById('trending-agents-count');
-                if (agentsCountEl) agentsCountEl.textContent = 14;
+                // Session 345: Agent count is now handled by loadDashboardStats()
 
-                // Update data points count
+                // Update data points count (also handled by loadDashboardStats, but kept as fallback)
                 const dataPointsEl = document.getElementById('trending-datapoints-count');
                 if (dataPointsEl && trendsData.params?.total_records) {
                     dataPointsEl.textContent = trendsData.params.total_records;
@@ -15962,6 +16039,27 @@
         window.loadTrendingTab = loadTrendingTab;
         window.useTrendingPrompt = useTrendingPrompt;
         window.filterTrendsByCategory = filterTrendsByCategory;
+
+        // Session 345: Auto-load subtab content when tab becomes visible
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load Trending when parent Intelligence Hub panel is shown
+            const intelligenceHubTab = document.getElementById('agents-intelligence-tab');
+            if (intelligenceHubTab) {
+                intelligenceHubTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🕸️ Intelligence Hub panel shown - loading Trending data...');
+                    loadTrendingTab();
+                });
+            }
+
+            // Also load when switching between subtabs within Intelligence Hub
+            const trendingTab = document.getElementById('intel-trending-tab');
+            if (trendingTab) {
+                trendingTab.addEventListener('shown.bs.tab', function() {
+                    console.log('📈 Trending subtab shown - loading data...');
+                    loadTrendingTab();
+                });
+            }
+        });
         // ============================================================
 
         // ============================================================

@@ -135,6 +135,7 @@ from core.views_spider_intelligence import (
     test_spider,
     run_all_spiders,
     market_research_dashboard,  # Session 344
+    dashboard_stats as spider_dashboard_stats,  # Session 345
 )
 
 # Session 219: Import agent intelligence views (Phase A)
@@ -2209,6 +2210,9 @@ urlpatterns = [
 
     # Session 344: Enhanced market research dashboard
     path('api/spider-intelligence/market-research/', market_research_dashboard, name='spider-intelligence-market-research'),
+
+    # Session 345: Unified dashboard stats endpoint
+    path('api/spider-intelligence/dashboard-stats/', spider_dashboard_stats, name='spider-intelligence-dashboard-stats'),
 
     # Session 219: Agent Intelligence API - Phase A Spider-Agent Integration
     path('api/agent-intelligence/agents/', ai_agents_list, name='ai-agents-list'),
