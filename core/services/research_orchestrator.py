@@ -1544,6 +1544,8 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
     def _extract_research_articles(self, initial_research: Dict[str, Any]) -> List[Dict]:
         """
         Session 343: Extract research articles from initial research for UI display.
+        Session 348: Skip spider_query results - they contain cached tech/devops content
+        that's not relevant for most business ideas. Only use web_search and reddit_search.
 
         Returns:
             List of article dicts with url, title, source, description
@@ -1563,7 +1565,14 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
                 if not isinstance(result, dict):
                     continue
 
-                # Handle spider_query results
+                # Session 348: Skip spider_query results - they contain generic tech content
+                # from local spider database that's not relevant for most business ideas
+                result_source = result.get('source', '')
+                if result_source == 'spider_query':
+                    logger.debug("Skipping spider_query results for Source Articles")
+                    continue
+
+                # Handle web_search and reddit_search results
                 data = result.get('data', [])
                 if isinstance(data, list):
                     for item in data[:30]:  # Limit to 30 articles
@@ -1572,13 +1581,13 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
                         article = {
                             'url': item.get('url', item.get('link', '')),
                             'title': item.get('title', 'Article'),
-                            'source': item.get('source', 'Unknown'),
+                            'source': item.get('source', result_source or 'Unknown'),
                             'description': item.get('description', item.get('content', ''))[:300]
                         }
                         if article['url'] or article['title'] != 'Article':
                             articles.append(article)
 
-                # Handle direct articles
+                # Handle direct articles (from web_search or reddit_search)
                 elif result.get('url') or result.get('title'):
                     article = {
                         'url': result.get('url', result.get('link', '')),
