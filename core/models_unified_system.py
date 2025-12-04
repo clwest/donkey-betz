@@ -12977,6 +12977,20 @@ class AgentDecisionSummary(models.Model):
         self.promoted_by = promoted_by
         self.save()
 
+        # Session 335: Notify Living Projects
+        try:
+            from core.services.living_project_service import get_living_project_service
+            living_service = get_living_project_service()
+            insights = living_service.process_canonical_decision(self)
+            if insights:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"🏛️ [LIVING] Created {len(insights)} insights from canonical decision")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not process canonical decision for living projects: {e}")
+
     def get_policy_context(self):
         """Get this decision formatted for injection into agent prompts."""
         insights = '\n'.join(f'  - {i}' for i in self.key_insights[:3])
@@ -13212,4 +13226,270 @@ class ProjectSpiderPriority(models.Model):
         self.data_used_count += 1
         if was_useful:
             self.useful_data_count += 1
+        self.save()
+
+
+# =============================================================================
+# Session 335: LIVING PROJECT SYSTEM
+# =============================================================================
+# Projects that autonomously learn from the agent ecosystem.
+# Connects spider data, agent conversations, and decisions TO user projects.
+# =============================================================================
+
+class ProjectInsight(models.Model):
+    """
+    An insight surfaced to a project from the agent ecosystem.
+
+    This is the bridge between:
+    - Spider data collection
+    - Agent learning/conversations
+    - Agent decisions
+    AND user projects.
+
+    Session 335: Living Projects - Projects that learn autonomously
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The project this insight belongs to
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        on_delete=models.CASCADE,
+        related_name='insights'
+    )
+
+    # What type of insight is this?
+    insight_type = models.CharField(max_length=50, choices=[
+        ('spider_data', 'Spider Data'),           # New relevant data from spiders
+        ('competitor', 'Competitor Alert'),        # New/changed competitor detected
+        ('trend', 'Market Trend'),                 # Trending topic in project's domain
+        ('pain_point', 'Pain Point'),              # Customer pain point discovered
+        ('opportunity', 'Opportunity'),            # New opportunity identified
+        ('agent_insight', 'Agent Insight'),        # From agent conversation
+        ('decision', 'Decision'),                  # From canonical decision
+        ('dream', 'Creative Idea'),                # From agent dream (if revived)
+        ('learning', 'Learning'),                  # From agent learning transfer
+    ])
+
+    # The content
+    title = models.CharField(max_length=300)
+    summary = models.TextField()
+    details = models.JSONField(default=dict)  # Full data for drill-down
+
+    # Source tracking
+    source_type = models.CharField(max_length=50, choices=[
+        ('spider', 'Spider Network'),
+        ('agent_conversation', 'Agent Conversation'),
+        ('agent_decision', 'Agent Decision'),
+        ('agent_learning', 'Agent Learning'),
+        ('agent_dream', 'Agent Dream'),
+        ('user_research', 'User Research'),
+        ('system', 'System Generated'),
+    ])
+    source_id = models.UUIDField(null=True, blank=True)  # ID of source record
+    source_name = models.CharField(max_length=200, blank=True)  # Human-readable source
+
+    # Relevance scoring
+    relevance_score = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How relevant is this to the project (0-1)"
+    )
+    confidence_score = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How confident are we in this insight (0-1)"
+    )
+
+    # Topic matching (why this was matched to project)
+    matched_topics = models.JSONField(
+        default=list,
+        help_text="Which project topics triggered this match"
+    )
+
+    # Status
+    status = models.CharField(max_length=20, choices=[
+        ('new', 'New'),
+        ('seen', 'Seen'),
+        ('acted_on', 'Acted On'),
+        ('dismissed', 'Dismissed'),
+        ('archived', 'Archived'),
+    ], default='new')
+
+    # User interaction
+    is_pinned = models.BooleanField(default=False)
+    user_rating = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="User's rating of this insight (1-5)"
+    )
+    user_notes = models.TextField(blank=True)
+
+    # Actions taken
+    actions_taken = models.JSONField(
+        default=list,
+        help_text="Actions user took based on this insight"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    seen_at = models.DateTimeField(null=True, blank=True)
+    acted_on_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', 'status']),
+            models.Index(fields=['project', 'insight_type']),
+            models.Index(fields=['project', '-created_at']),
+            models.Index(fields=['source_type', 'source_id']),
+        ]
+
+    def __str__(self):
+        return f"[{self.insight_type}] {self.title[:50]}..."
+
+    def mark_seen(self):
+        """Mark this insight as seen."""
+        if self.status == 'new':
+            self.status = 'seen'
+            self.seen_at = timezone.now()
+            self.save()
+
+    def mark_acted_on(self, action_description: str = None):
+        """Mark this insight as acted on."""
+        self.status = 'acted_on'
+        self.acted_on_at = timezone.now()
+        if action_description:
+            self.actions_taken.append({
+                'action': action_description,
+                'timestamp': timezone.now().isoformat()
+            })
+        self.save()
+
+    def dismiss(self, reason: str = None):
+        """Dismiss this insight."""
+        self.status = 'dismissed'
+        if reason:
+            self.user_notes = reason
+        self.save()
+
+    def rate(self, rating: int, notes: str = None):
+        """Rate this insight."""
+        self.user_rating = rating
+        if notes:
+            self.user_notes = notes
+        self.save()
+
+
+class LivingProjectConfig(models.Model):
+    """
+    Configuration for a project's autonomous learning behavior.
+
+    Defines what the project "pays attention to" and how
+    aggressively it surfaces insights.
+
+    Session 335: Living Projects
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # One config per project
+    project = models.OneToOneField(
+        'core.PartnershipProject',
+        on_delete=models.CASCADE,
+        related_name='living_config'
+    )
+
+    # Is this project "alive"?
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Is this project actively learning?"
+    )
+
+    # Topic configuration (what to watch for)
+    watch_topics = models.JSONField(
+        default=list,
+        help_text="Topics to monitor across the ecosystem"
+    )
+    watch_competitors = models.JSONField(
+        default=list,
+        help_text="Competitor names to track"
+    )
+    watch_keywords = models.JSONField(
+        default=list,
+        help_text="Keywords to watch for in spider data"
+    )
+
+    # Source configuration (where to look)
+    enabled_sources = models.JSONField(
+        default=list,  # Will default to [] but we handle defaults in code
+        help_text="Which sources to pull insights from"
+    )
+    spider_categories = models.JSONField(
+        default=list,
+        help_text="Which spider categories to prioritize"
+    )
+
+    # Thresholds (when to surface)
+    min_relevance_score = models.FloatField(
+        default=0.6,
+        help_text="Minimum relevance score to surface insight"
+    )
+    min_confidence_score = models.FloatField(
+        default=0.5,
+        help_text="Minimum confidence score to surface insight"
+    )
+
+    # Notification preferences
+    notify_on_competitor = models.BooleanField(default=True)
+    notify_on_opportunity = models.BooleanField(default=True)
+    notify_on_trend = models.BooleanField(default=True)
+    max_daily_insights = models.IntegerField(
+        default=10,
+        help_text="Maximum insights to surface per day"
+    )
+
+    # Learning preferences
+    auto_expand_topics = models.BooleanField(
+        default=True,
+        help_text="Automatically add related topics based on insights"
+    )
+    learn_from_ratings = models.BooleanField(
+        default=True,
+        help_text="Adjust relevance scoring based on user ratings"
+    )
+
+    # Stats
+    total_insights_surfaced = models.IntegerField(default=0)
+    total_insights_acted_on = models.IntegerField(default=0)
+    average_rating = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_insight_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+
+    def __str__(self):
+        status = "🟢 Active" if self.is_active else "⚪ Inactive"
+        return f"{self.project.project_name} - {status}"
+
+    @property
+    def effectiveness_rate(self):
+        """What percentage of insights were acted on?"""
+        if self.total_insights_surfaced == 0:
+            return 0.0
+        return self.total_insights_acted_on / self.total_insights_surfaced
+
+    def record_insight(self, was_acted_on: bool = False, rating: int = None):
+        """Record insight metrics."""
+        self.total_insights_surfaced += 1
+        if was_acted_on:
+            self.total_insights_acted_on += 1
+        if rating:
+            # Running average
+            current_total = self.average_rating * (self.total_insights_surfaced - 1)
+            self.average_rating = (current_total + rating) / self.total_insights_surfaced
+        self.last_insight_at = timezone.now()
         self.save()

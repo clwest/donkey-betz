@@ -7911,6 +7911,24 @@ def execute_tool(request):
                 parameters['project_id'] = str(project.id)
             result = assistant._handle_brand_strategy_agent(parameters)
 
+        # Session 338: Content Strategy Agent
+        elif tool_name == 'content_strategy_agent':
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_content_strategy_agent(parameters)
+
+        # Session 338: Marketing Strategy Agent
+        elif tool_name == 'marketing_strategy_agent':
+            from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+            assistant = EnhancedPersonalAIAssistant(user=request.user)
+            if project:
+                assistant.project = project
+                parameters['project_id'] = str(project.id)
+            result = assistant._handle_marketing_strategy_agent(parameters)
+
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'

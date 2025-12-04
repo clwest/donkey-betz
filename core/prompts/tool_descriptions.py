@@ -343,6 +343,65 @@ IMPORTANT: This is for STRATEGIC RESEARCH - no image/video generation.
 Uses existing project research as foundation, enhances with fresh spider/web data.""",
 
 
+    "content_strategy_agent": """Strategic content planning agent that READS existing project research.
+
+⭐ BEST FOR: "What content should I create?" or "Plan my content strategy" when INSIDE a project
+that already has competitor/customer/brand research.
+
+Use this for CONTENT STRATEGY requests like:
+- "What content should I create for this project?"
+- "Plan my content strategy based on the research"
+- "What topics should I write about?"
+- "Create a content calendar"
+- "What content pillars should I focus on?"
+
+This agent:
+1. READS existing project research (competitor, customer, brand strategy)
+2. Analyzes current content trends from spider network
+3. Provides comprehensive content recommendations
+
+Output includes:
+- Content Pillars (3-5 main themes to focus on)
+- Recommended Formats (blog, video, social, email, etc.)
+- Topic Ideas (10-15 specific content pieces with details)
+- Content Calendar (publishing cadence, best times)
+- Quick Wins (content that can be created immediately)
+- SEO Opportunities (keywords and topics with high potential)
+
+IMPORTANT: This is for STRATEGIC PLANNING - no image/video generation.
+Uses existing project research as foundation, enhances with fresh spider/web data.""",
+
+
+    "marketing_strategy_agent": """Strategic marketing planning agent that READS existing project research.
+
+⭐ BEST FOR: "How should I market this?" or "Create a marketing plan" when INSIDE a project
+that already has competitor/customer/brand/content research.
+
+Use this for MARKETING STRATEGY requests like:
+- "How should I market this product?"
+- "Create a marketing strategy based on the research"
+- "What marketing channels should I focus on?"
+- "Plan my marketing campaigns"
+- "How do I reach my target audience?"
+
+This agent:
+1. READS existing project research (competitor, customer, brand, content strategy)
+2. Analyzes current marketing trends from spider network
+3. Provides comprehensive marketing recommendations
+
+Output includes:
+- Target Audience Summary (from customer research)
+- Channel Strategy (organic social, paid, search, email, partnerships)
+- Campaign Ideas (3-5 campaigns with names, channels, messaging)
+- Marketing Funnel (awareness, consideration, conversion, retention)
+- Budget Recommendations (channel allocation, priorities)
+- Key Metrics (what to track, ROI approach)
+- Quick Wins (marketing actions to start immediately)
+
+IMPORTANT: This is for STRATEGIC PLANNING - no image/video generation.
+Uses existing project research as foundation, enhances with fresh spider/web data.""",
+
+
     "strategic_review": """IMPORTANT: Call this AFTER web_search but BEFORE image_generation_agent.
 
 Get strategic review and creative direction from the executive team (CTO, COO, Creative Director) based on research findings.
