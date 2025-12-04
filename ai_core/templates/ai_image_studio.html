@@ -9231,6 +9231,16 @@
                                         ⚡ Executions
                                     </button>
                                 </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="wf-pipeline-tab" data-bs-toggle="pill" data-bs-target="#wf-pipeline" type="button" role="tab" style="color: #ec4899;">
+                                        🔄 Pipeline
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="wf-network-tab" data-bs-toggle="pill" data-bs-target="#wf-network" type="button" role="tab" style="color: #10b981;">
+                                        🕸️ Network
+                                    </button>
+                                </li>
                             </ul>
                             <style>
                                 #workflows-nested-tabs .nav-link { background: transparent; border: 1px solid #444; font-size: 12px; padding: 8px 16px; }
@@ -9616,6 +9626,528 @@
 
                                 </div>
                                 <!-- END EXECUTIONS NESTED TAB -->
+
+                                <!-- ===== PIPELINE VISUALIZER NESTED TAB (Session 342) ===== -->
+                                <div class="tab-pane fade" id="wf-pipeline" role="tabpanel">
+                                    <h4 class="mb-3" style="color: #ec4899;">🔄 Agent Pipeline Visualizer</h4>
+                                    <p class="text-muted mb-4">
+                                        Watch your business ideas flow through the 7-phase research pipeline and 10-phase creative pipeline in real-time.
+                                    </p>
+
+                                    <!-- Pipeline Status Summary -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-3">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="pipeline-active-count">0</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Active Pipelines</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="pipeline-completed-count">0</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Completed Today</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="pipeline-agents-wired">24</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Agents Wired</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="pipeline-success-rate">89%</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Wiring Complete</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Research Pipeline Visualization -->
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                            <h5 class="mb-0" style="color: #8b5cf6;">🔬 Research Pipeline (7 Phases)</h5>
+                                            <span class="badge" style="background: #8b5cf6;">Business Idea → Business Plan</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="pipeline-flow" id="research-pipeline-flow">
+                                                <div class="pipeline-stage" data-stage="initial_research">
+                                                    <div class="stage-icon">🔍</div>
+                                                    <div class="stage-name">ResearchAgent</div>
+                                                    <div class="stage-desc">Web + Spider Data</div>
+                                                    <div class="stage-status" id="stage-initial-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="trend_analysis">
+                                                    <div class="stage-icon">📈</div>
+                                                    <div class="stage-name">TrendAnalysis</div>
+                                                    <div class="stage-desc">Market Trends</div>
+                                                    <div class="stage-status" id="stage-trend-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="competitor_analysis">
+                                                    <div class="stage-icon">🏢</div>
+                                                    <div class="stage-name">Competitor</div>
+                                                    <div class="stage-desc">SWOT Analysis</div>
+                                                    <div class="stage-status" id="stage-competitor-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="customer_research">
+                                                    <div class="stage-icon">👥</div>
+                                                    <div class="stage-name">Customer</div>
+                                                    <div class="stage-desc">Personas</div>
+                                                    <div class="stage-status" id="stage-customer-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="brand_strategy">
+                                                    <div class="stage-icon">🎯</div>
+                                                    <div class="stage-name">BrandStrategy</div>
+                                                    <div class="stage-desc">Positioning</div>
+                                                    <div class="stage-status" id="stage-brand-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="opportunity_scoring">
+                                                    <div class="stage-icon">💯</div>
+                                                    <div class="stage-name">Scoring</div>
+                                                    <div class="stage-desc">0-100 Score</div>
+                                                    <div class="stage-status" id="stage-scoring-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="synthesis">
+                                                    <div class="stage-icon">📋</div>
+                                                    <div class="stage-name">Synthesis</div>
+                                                    <div class="stage-desc">Business Plan</div>
+                                                    <div class="stage-status" id="stage-synthesis-status">Ready</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Creative Pipeline Visualization -->
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid #333;">
+                                            <h5 class="mb-0" style="color: #ec4899;">🎨 Creative Pipeline (10 Phases)</h5>
+                                            <span class="badge" style="background: #ec4899;">Research → Brand Assets</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="pipeline-flow pipeline-flow-wrap" id="creative-pipeline-flow">
+                                                <div class="pipeline-stage" data-stage="creative_brief">
+                                                    <div class="stage-icon">📝</div>
+                                                    <div class="stage-name">Brief</div>
+                                                    <div class="stage-desc">Extract</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="creative_direction">
+                                                    <div class="stage-icon">🎬</div>
+                                                    <div class="stage-name">Director</div>
+                                                    <div class="stage-desc">Creative Direction</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="image_generation">
+                                                    <div class="stage-icon">🖼️</div>
+                                                    <div class="stage-name">ImageAgent</div>
+                                                    <div class="stage-desc">Logos, Banners</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="video_generation">
+                                                    <div class="stage-icon">🎥</div>
+                                                    <div class="stage-name">VideoAgent</div>
+                                                    <div class="stage-desc">Promo Videos</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="audio_generation">
+                                                    <div class="stage-icon">🎵</div>
+                                                    <div class="stage-name">AudioAgent</div>
+                                                    <div class="stage-desc">Voiceovers</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow-wrap">↓</div>
+                                                <div class="pipeline-stage" data-stage="3d_generation">
+                                                    <div class="stage-icon">🧊</div>
+                                                    <div class="stage-name">3DAgent</div>
+                                                    <div class="stage-desc">Mockups</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="image_editing">
+                                                    <div class="stage-icon">✨</div>
+                                                    <div class="stage-name">EditAgent</div>
+                                                    <div class="stage-desc">Upscale</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="trained_creation">
+                                                    <div class="stage-icon">🤖</div>
+                                                    <div class="stage-name">Trained</div>
+                                                    <div class="stage-desc">Characters</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="seo_optimization">
+                                                    <div class="stage-icon">🔎</div>
+                                                    <div class="stage-name">SEOAgent</div>
+                                                    <div class="stage-desc">Metadata</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                                <div class="pipeline-arrow">→</div>
+                                                <div class="pipeline-stage" data-stage="content_audit">
+                                                    <div class="stage-icon">✅</div>
+                                                    <div class="stage-name">AuditAgent</div>
+                                                    <div class="stage-desc">Ethics Check</div>
+                                                    <div class="stage-status">Ready</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Live Activity Feed -->
+                                    <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                                            <h5 class="mb-0" style="color: #22c55e;">⚡ Live Agent Activity</h5>
+                                            <span class="badge bg-success" id="activity-live-badge">Live</span>
+                                        </div>
+                                        <div class="card-body" style="max-height: 300px; overflow-y: auto;" id="pipeline-activity-feed">
+                                            <div class="activity-item d-flex align-items-center mb-2 p-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                                                <span class="activity-time text-muted me-3" style="font-size: 11px; min-width: 50px;">Now</span>
+                                                <span class="activity-icon me-2">🚀</span>
+                                                <span class="activity-message">Pipeline Visualizer initialized - watching for agent activity...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pipeline CSS -->
+                                    <style>
+                                        .pipeline-flow {
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: flex-start;
+                                            gap: 8px;
+                                            overflow-x: auto;
+                                            padding: 15px 0;
+                                        }
+                                        .pipeline-flow-wrap {
+                                            flex-wrap: wrap;
+                                            justify-content: center;
+                                        }
+                                        .pipeline-stage {
+                                            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+                                            border: 2px solid #444;
+                                            border-radius: 12px;
+                                            padding: 12px 16px;
+                                            text-align: center;
+                                            min-width: 100px;
+                                            transition: all 0.3s ease;
+                                        }
+                                        .pipeline-stage:hover {
+                                            border-color: #8b5cf6;
+                                            transform: translateY(-2px);
+                                        }
+                                        .pipeline-stage.active {
+                                            border-color: #f59e0b;
+                                            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+                                            animation: pulse 1.5s infinite;
+                                        }
+                                        .pipeline-stage.completed {
+                                            border-color: #22c55e;
+                                            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, #1a1a1a 100%);
+                                        }
+                                        .pipeline-stage.failed {
+                                            border-color: #ef4444;
+                                            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, #1a1a1a 100%);
+                                        }
+                                        .stage-icon {
+                                            font-size: 24px;
+                                            margin-bottom: 4px;
+                                        }
+                                        .stage-name {
+                                            font-weight: 600;
+                                            font-size: 12px;
+                                            color: #e5e5e5;
+                                        }
+                                        .stage-desc {
+                                            font-size: 10px;
+                                            color: #888;
+                                        }
+                                        .stage-status {
+                                            font-size: 9px;
+                                            margin-top: 4px;
+                                            padding: 2px 8px;
+                                            border-radius: 10px;
+                                            background: #333;
+                                            color: #888;
+                                        }
+                                        .pipeline-stage.active .stage-status {
+                                            background: #f59e0b;
+                                            color: #000;
+                                        }
+                                        .pipeline-stage.completed .stage-status {
+                                            background: #22c55e;
+                                            color: #000;
+                                        }
+                                        .pipeline-arrow {
+                                            color: #444;
+                                            font-size: 20px;
+                                            font-weight: bold;
+                                        }
+                                        .pipeline-arrow-wrap {
+                                            color: #444;
+                                            font-size: 20px;
+                                            font-weight: bold;
+                                            width: 100%;
+                                            text-align: center;
+                                            margin: 10px 0;
+                                        }
+                                        @keyframes pulse {
+                                            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+                                            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.6); }
+                                        }
+                                        .activity-item {
+                                            animation: slideIn 0.3s ease;
+                                        }
+                                        @keyframes slideIn {
+                                            from { opacity: 0; transform: translateX(-20px); }
+                                            to { opacity: 1; transform: translateX(0); }
+                                        }
+                                    </style>
+                                </div>
+                                <!-- END PIPELINE VISUALIZER NESTED TAB -->
+
+                                <!-- ===== AGENT NETWORK GRAPH NESTED TAB (Session 342) ===== -->
+                                <div class="tab-pane fade" id="wf-network" role="tabpanel">
+                                    <h4 class="mb-3" style="color: #10b981;">🕸️ Agent Network Graph</h4>
+                                    <p class="text-muted mb-4">
+                                        Interactive visualization of how 24 agents connect, delegate, and collaborate with each other.
+                                    </p>
+
+                                    <!-- Network Stats -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h4 class="mb-0">24</h4>
+                                                    <small style="font-size: 10px; text-transform: uppercase;">Agents</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h4 class="mb-0">7</h4>
+                                                    <small style="font-size: 10px; text-transform: uppercase;">Research</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h4 class="mb-0">14</h4>
+                                                    <small style="font-size: 10px; text-transform: uppercase;">Creative</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h4 class="mb-0">3</h4>
+                                                    <small style="font-size: 10px; text-transform: uppercase;">Executive</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h4 class="mb-0">1</h4>
+                                                    <small style="font-size: 10px; text-transform: uppercase;">Meta</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h4 class="mb-0">89%</h4>
+                                                    <small style="font-size: 10px; text-transform: uppercase;">Wired</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Network Graph Container -->
+                                    <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                                            <h5 class="mb-0" style="color: #10b981;">Agent Delegation Network</h5>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-success me-2" onclick="filterNetwork('all')">All</button>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="filterNetwork('research')">Research</button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="filterNetwork('creative')">Creative</button>
+                                                <button class="btn btn-sm btn-outline-warning" onclick="filterNetwork('executive')">Executive</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body" id="agent-network-container" style="height: 500px; position: relative; overflow: hidden;">
+                                            <!-- SVG Network Graph -->
+                                            <svg id="agent-network-svg" width="100%" height="100%" style="background: radial-gradient(circle at center, #1a1a1a 0%, #0d0d0d 100%);">
+                                                <!-- Center: WorkflowAgent -->
+                                                <g class="network-node" transform="translate(400, 250)">
+                                                    <circle r="40" fill="url(#gradient-workflow)" stroke="#ef4444" stroke-width="3"/>
+                                                    <text y="5" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Workflow</text>
+                                                    <text y="18" text-anchor="middle" fill="#888" font-size="8">Meta Orchestrator</text>
+                                                </g>
+
+                                                <!-- Research Agents (Left Arc) -->
+                                                <g class="network-group research-group">
+                                                    <g class="network-node" transform="translate(120, 100)">
+                                                        <circle r="28" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="9">Research</text>
+                                                    </g>
+                                                    <line x1="148" y1="100" x2="360" y2="230" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(80, 180)">
+                                                        <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Trends</text>
+                                                    </g>
+                                                    <line x1="105" y1="180" x2="360" y2="240" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(70, 270)">
+                                                        <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Competitor</text>
+                                                    </g>
+                                                    <line x1="95" y1="270" x2="360" y2="250" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(80, 360)">
+                                                        <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Customer</text>
+                                                    </g>
+                                                    <line x1="105" y1="360" x2="360" y2="260" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(120, 430)">
+                                                        <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Brand</text>
+                                                    </g>
+                                                    <line x1="145" y1="430" x2="360" y2="270" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+                                                </g>
+
+                                                <!-- Creative Agents (Right Arc) -->
+                                                <g class="network-group creative-group">
+                                                    <g class="network-node" transform="translate(680, 80)">
+                                                        <circle r="28" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="9">Image</text>
+                                                    </g>
+                                                    <line x1="652" y1="80" x2="440" y2="230" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(720, 150)">
+                                                        <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Video</text>
+                                                    </g>
+                                                    <line x1="695" y1="150" x2="440" y2="240" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(730, 230)">
+                                                        <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Audio</text>
+                                                    </g>
+                                                    <line x1="705" y1="230" x2="440" y2="250" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(720, 310)">
+                                                        <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">3D</text>
+                                                    </g>
+                                                    <line x1="695" y1="310" x2="440" y2="260" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(680, 380)">
+                                                        <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">SEO</text>
+                                                    </g>
+                                                    <line x1="655" y1="380" x2="440" y2="270" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(620, 440)">
+                                                        <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Audit</text>
+                                                    </g>
+                                                    <line x1="595" y1="440" x2="430" y2="280" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+                                                </g>
+
+                                                <!-- Executive Agents (Top) -->
+                                                <g class="network-group executive-group">
+                                                    <g class="network-node" transform="translate(300, 50)">
+                                                        <circle r="25" fill="url(#gradient-executive)" stroke="#f59e0b" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">CTO</text>
+                                                    </g>
+                                                    <line x1="325" y1="50" x2="380" y2="210" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(400, 30)">
+                                                        <circle r="25" fill="url(#gradient-executive)" stroke="#f59e0b" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">COO</text>
+                                                    </g>
+                                                    <line x1="400" y1="55" x2="400" y2="210" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+
+                                                    <g class="network-node" transform="translate(500, 50)">
+                                                        <circle r="25" fill="url(#gradient-executive)" stroke="#f59e0b" stroke-width="2"/>
+                                                        <text y="4" text-anchor="middle" fill="white" font-size="8">Director</text>
+                                                    </g>
+                                                    <line x1="475" y1="50" x2="420" y2="210" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
+                                                </g>
+
+                                                <!-- Gradients -->
+                                                <defs>
+                                                    <radialGradient id="gradient-workflow">
+                                                        <stop offset="0%" stop-color="#ef4444"/>
+                                                        <stop offset="100%" stop-color="#991b1b"/>
+                                                    </radialGradient>
+                                                    <radialGradient id="gradient-research">
+                                                        <stop offset="0%" stop-color="#8b5cf6"/>
+                                                        <stop offset="100%" stop-color="#5b21b6"/>
+                                                    </radialGradient>
+                                                    <radialGradient id="gradient-creative">
+                                                        <stop offset="0%" stop-color="#ec4899"/>
+                                                        <stop offset="100%" stop-color="#9d174d"/>
+                                                    </radialGradient>
+                                                    <radialGradient id="gradient-executive">
+                                                        <stop offset="0%" stop-color="#f59e0b"/>
+                                                        <stop offset="100%" stop-color="#b45309"/>
+                                                    </radialGradient>
+                                                </defs>
+                                            </svg>
+
+                                            <!-- Legend -->
+                                            <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px;">
+                                                <div class="d-flex gap-3" style="font-size: 11px;">
+                                                    <span><span style="color: #ef4444;">●</span> Meta Orchestrator</span>
+                                                    <span><span style="color: #8b5cf6;">●</span> Research (7)</span>
+                                                    <span><span style="color: #ec4899;">●</span> Creative (14)</span>
+                                                    <span><span style="color: #f59e0b;">●</span> Executive (3)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Network CSS -->
+                                    <style>
+                                        .network-node {
+                                            cursor: pointer;
+                                            transition: all 0.3s ease;
+                                        }
+                                        .network-node:hover circle {
+                                            stroke-width: 4;
+                                            filter: drop-shadow(0 0 10px currentColor);
+                                        }
+                                        .network-node:hover {
+                                            transform: scale(1.1);
+                                        }
+                                        .network-group.hidden {
+                                            opacity: 0.2;
+                                        }
+                                    </style>
+                                </div>
+                                <!-- END AGENT NETWORK GRAPH NESTED TAB -->
 
                             </div>
                             <!-- END Workflows Nested Tab Content -->
@@ -55909,6 +56441,85 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             // Reload charts
             loadAnalyticsCharts();
+        }
+
+        // Session 342: Filter agent network by group
+        function filterNetwork(group) {
+            const researchGroup = document.querySelector('.research-group');
+            const creativeGroup = document.querySelector('.creative-group');
+            const executiveGroup = document.querySelector('.executive-group');
+
+            if (!researchGroup || !creativeGroup || !executiveGroup) return;
+
+            // Remove hidden class from all
+            researchGroup.classList.remove('hidden');
+            creativeGroup.classList.remove('hidden');
+            executiveGroup.classList.remove('hidden');
+
+            if (group === 'research') {
+                creativeGroup.classList.add('hidden');
+                executiveGroup.classList.add('hidden');
+            } else if (group === 'creative') {
+                researchGroup.classList.add('hidden');
+                executiveGroup.classList.add('hidden');
+            } else if (group === 'executive') {
+                researchGroup.classList.add('hidden');
+                creativeGroup.classList.add('hidden');
+            }
+            // 'all' shows everything (no hidden classes)
+        }
+
+        // Session 342: Add activity to pipeline feed
+        function addPipelineActivity(icon, message, color = '#8b5cf6') {
+            const feed = document.getElementById('pipeline-activity-feed');
+            if (!feed) return;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            const item = document.createElement('div');
+            item.className = 'activity-item d-flex align-items-center mb-2 p-2';
+            item.style.cssText = `background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid ${color};`;
+            item.innerHTML = `
+                <span class="activity-time text-muted me-3" style="font-size: 11px; min-width: 50px;">${timeStr}</span>
+                <span class="activity-icon me-2">${icon}</span>
+                <span class="activity-message">${message}</span>
+            `;
+
+            // Add to top of feed
+            feed.insertBefore(item, feed.firstChild);
+
+            // Keep only last 20 items
+            while (feed.children.length > 20) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Session 342: Update pipeline stage status
+        function updatePipelineStage(stageId, status, statusText) {
+            const stage = document.querySelector(`[data-stage="${stageId}"]`);
+            if (!stage) return;
+
+            // Remove all status classes
+            stage.classList.remove('active', 'completed', 'failed');
+
+            // Add new status class
+            if (status === 'active') {
+                stage.classList.add('active');
+                addPipelineActivity('⚡', `${stage.querySelector('.stage-name').textContent} is processing...`, '#f59e0b');
+            } else if (status === 'completed') {
+                stage.classList.add('completed');
+                addPipelineActivity('✅', `${stage.querySelector('.stage-name').textContent} completed`, '#22c55e');
+            } else if (status === 'failed') {
+                stage.classList.add('failed');
+                addPipelineActivity('❌', `${stage.querySelector('.stage-name').textContent} failed`, '#ef4444');
+            }
+
+            // Update status text
+            const statusEl = stage.querySelector('.stage-status');
+            if (statusEl && statusText) {
+                statusEl.textContent = statusText;
+            }
         }
 
         // Load all analytics charts
