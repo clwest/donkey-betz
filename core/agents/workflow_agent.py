@@ -4,7 +4,7 @@ Workflow Agent - Specialized for Multi-Step Orchestration
 
 Session 268: Phase 2 - Orchestration Agents
 Session 304: Learning Infrastructure Integration
-Session 341: Expanded agent roster (21 agents total)
+Session 341: Expanded agent roster (24 agents total)
 
 This agent coordinates multi-step workflows by delegating to other agents.
 It is the ONLY agent that can call other agents.
@@ -83,6 +83,11 @@ Available agents to delegate to:
 **Executive Agents (Session 341):**
 - CreativeDirectorAgent: High-level creative direction
 - ContentAuditAgent: Check content for bias/ethics issues
+- CTOAgent: Technical planning and analysis
+- COOAgent: Operations planning and risk assessment
+
+**Security Agents (Session 341):**
+- MemoryIsolationAgent: Audit memory isolation and security
 
 **Training Agents (Session 341):**
 - CharacterTrainingAgent: Train new character/style models
@@ -131,6 +136,9 @@ You orchestrate. You don't create content directly."""
                                 "SocialMediaAgent",
                                 "CreativeDirectorAgent",
                                 "ContentAuditAgent",
+                                "CTOAgent",
+                                "COOAgent",
+                                "MemoryIsolationAgent",
                                 "CharacterTrainingAgent",
                                 "TrainedCreationAgent"
                             ]
