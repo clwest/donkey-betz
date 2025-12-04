@@ -1,100 +1,110 @@
 # Start Next Session Here
 
-**Last Session:** 339 - CreativeOrchestrator (Research → Assets)
+**Last Session:** 340 - Agent Wiring Expansion
 **Date:** December 4, 2025
-**Status:** FULL PIPELINE WIRED (Research + Assets)
+**Status:** 16 of 27 agents wired (59%)
 
 ---
 
-## What Happened in Session 339
+## What Happened in Session 340
 
-Wired the **CreativeOrchestrator** to bridge Research → Asset Generation:
+Massively expanded the autonomous pipeline by wiring **13 additional agents**:
 
+### ResearchOrchestrator (+2 agents)
 ```
-"I have a business idea"
-     ↓
-POST /api/business-ideas/
-     ↓
-ResearchOrchestrator: CompetitorAnalysis → CustomerResearch → BrandStrategy → Synthesis
-     ↓
-Complete Business Plan + Next Actions
-     ↓
-POST /api/business-ideas/<id>/generate-assets/
-     ↓
-CreativeOrchestrator: Extract Brief → ImageAgent (Logo/Thumbnail/Banner) → SEO Metadata
-     ↓
-Generated Assets Linked to Project
+Business Idea
+    ↓
+1. TrendAnalysisAgent → Market trends (NEW)
+    ↓
+2. CompetitorAnalysisAgent → Competitors, SWOT
+    ↓
+3. CustomerResearchAgent → Personas, pain points
+    ↓
+4. BrandStrategyAgent → Positioning
+    ↓
+5. OpportunityScoringAgent → Score 0-100 (NEW)
+    ↓
+6. Synthesis → Business plan + score-based actions
 ```
 
-**Agent Wiring Progress:**
-- Session 338: 3 agents wired (11% of 27 total)
-- Session 339: **6 agents wired** (22% of 27 total)
-  - +ImageAgent (logo, thumbnail, banner generation)
-  - +SEOOptimizerAgent (metadata generation)
-  - +CreativeOrchestrator (asset orchestration)
+### CreativeOrchestrator (+8 agents)
+```
+Completed Research
+    ↓
+1. ImageAgent → Logo, thumbnail, banner
+    ↓
+2. VideoAgent → Promo video, logo animation (NEW)
+    ↓
+3. AudioAgent → Voiceover, jingle (NEW)
+    ↓
+4. ThreeDAgent → 3D mockups (NEW)
+    ↓
+5. ImageEditingAgent → Upscale (NEW)
+    ↓
+6. SEOOptimizerAgent → Metadata
+```
 
----
-
-## What Was Built
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| CreativeOrchestrator | `core/services/creative_orchestrator.py` | Chains ImageAgent for asset generation |
-| Updated Business Ideas API | `core/views_business_ideas.py` | Now calls CreativeOrchestrator |
-| gpt-5-mini Migration | Multiple files | Changed all gpt-4o → gpt-5-mini with max_completion_tokens |
+**Progress: 22% → 59% agents wired!**
 
 ---
 
 ## API Usage
 
 ```bash
-# Submit a business idea (takes ~10 min for full research)
+# Submit business idea (now with trend analysis + opportunity score)
 curl -X POST http://localhost:8000/api/business-ideas/ \
   -H "Content-Type: application/json" \
-  -d '{"idea": "Your business idea here"}'
+  -d '{"idea": "AI-powered podcast platform"}'
 
-# Generate assets from completed research
-curl -X POST http://localhost:8000/api/business-ideas/<project_id>/generate-assets/ \
+# Generate comprehensive assets
+curl -X POST http://localhost:8000/api/business-ideas/<id>/generate-assets/ \
   -H "Content-Type: application/json" \
-  -d '{"asset_types": ["logo", "thumbnail", "banner"]}'
-
-# Check status
-curl http://localhost:8000/api/business-ideas/<project_id>/
-
-# List all business ideas
-curl http://localhost:8000/api/business-ideas/list/
+  -d '{
+    "asset_types": [
+        "logo", "thumbnail", "banner",
+        "video", "voiceover", "jingle",
+        "3d", "upscale"
+    ]
+  }'
 ```
 
 ---
 
-## Model Migration (gpt-4o → gpt-5-mini)
+## Agents Wired (16 of 27)
 
-All files now use the cheaper `gpt-5-mini` model with correct parameters:
-- `max_completion_tokens` instead of `max_tokens`
-- No `temperature` parameter (not supported)
+| Agent | Orchestrator | Status |
+|-------|-------------|--------|
+| TrendAnalysisAgent | Research | Wired (340) |
+| CompetitorAnalysisAgent | Research | Wired (338) |
+| CustomerResearchAgent | Research | Wired (338) |
+| BrandStrategyAgent | Research | Wired (338) |
+| OpportunityScoringAgent | Research | Wired (340) |
+| ImageAgent | Creative | Wired (339) |
+| VideoAgent | Creative | Wired (340) |
+| AudioAgent | Creative | Wired (340) |
+| ThreeDAgent | Creative | Wired (340) |
+| ImageEditingAgent | Creative | Wired (340) |
+| VideoEditingAgent | Creative | Wired (340) |
+| SEOOptimizerAgent | Creative | Wired (339) |
+| ContentStrategyAgent | Creative | Wired (340) |
+| BrandIdentityAgent | Creative | Wired (340) |
+| SocialMediaAgent | Creative | Wired (340) |
+| CreativeOrchestrator | - | Wired (339) |
 
-Files updated:
-- `core/services/research_orchestrator.py`
-- `core/agents/business/base_business_research_agent.py`
-- `core/services/decision_extractor.py`
-- `core/services/agent_training.py`
-
----
-
-## Known Issues
-
-1. Stability AI returning 503 errors (external, temporary)
-2. `BusinessResearchResult 'user' field` warning - brand strategy not persisted
-3. `core_coordinatoroutcome` table missing - learning loop outcome not saved
+**Still Not Wired (11):**
+- ResearchAgent, WorkflowAgent, PersonalAssistantAgent
+- CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent
+- CharacterTrainingAgent, TrainedCreationAgent
+- MemoryIsolationAgent
 
 ---
 
 ## Next Session Priorities
 
-1. **Wire more agents** - VideoAgent, AudioAgent, ContentStrategyAgent
-2. **Frontend Integration** - UI for business ideas workflow
-3. **Test with Real Users** - Get 5-10 people to try the pipeline
-4. **Fix DB warnings** - Missing tables and field mismatches
+1. **Wire remaining agents** - ResearchAgent, WorkflowAgent, Executive agents
+2. **Test full pipeline** - End-to-end with all asset types
+3. **Frontend integration** - UI for new asset types
+4. **Celery tasks** - Async generation for longer operations
 
 ---
 
@@ -102,33 +112,12 @@ Files updated:
 
 | Component | Count |
 |-----------|-------|
-| Agents | 199 (6 wired to pipeline) |
+| Agents | 199 (16 wired to pipeline) |
 | Learning Transfers | 194,627 |
 | Conversations | 324 |
-| Decisions | 259 (12 canonical) |
+| Decisions | 259 |
 | Spiders | 74 |
-| Business Ideas Pipeline | **WORKING** |
-| Asset Generation Pipeline | **WORKING** (when Stability AI is up) |
-
----
-
-## Agents Wired to Pipeline
-
-| Agent | Role | Status |
-|-------|------|--------|
-| CompetitorAnalysisAgent | Market research | Wired |
-| CustomerResearchAgent | Customer personas | Wired |
-| BrandStrategyAgent | Brand positioning | Wired |
-| ImageAgent | Logo/thumbnail/banner | Wired |
-| SEOOptimizerAgent | Metadata generation | Wired |
-| CreativeOrchestrator | Asset orchestration | Wired |
-
-**Still Not Wired (21 agents):**
-- VideoAgent, AudioAgent, ThreeDAgent
-- ImageEditingAgent, VideoEditingAgent
-- ContentStrategyAgent, BrandIdentityAgent, SocialMediaAgent
-- CTOAgent, COOAgent, CreativeDirectorAgent
-- And more...
+| **Agent Wiring Progress** | **59%** |
 
 ---
 
@@ -144,10 +133,11 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
+- Session 340 Details: `docs/handoffs/SESSION_340_AGENT_WIRING_EXPANSION.md`
 - Session 339 Details: `docs/handoffs/SESSION_339_CREATIVE_ORCHESTRATOR.md`
 - Session 338 Details: `docs/handoffs/SESSION_338_AUTONOMOUS_BUSINESS_PIPELINE.md`
 - Architecture: `docs/ARCHITECTURE.md`
 
 ---
 
-**The pipeline is now end-to-end:** Research → Business Plan → Assets
+**Pipeline: Research → Trends → Competitors → Customers → Brand → Score → Assets**

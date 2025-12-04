@@ -3,6 +3,7 @@ Research Orchestrator - The Brain of the Autonomous Business Pipeline
 ======================================================================
 
 Session 338: End-to-End Autonomous Business Idea Pipeline
+Session 340: Added TrendAnalysisAgent and OpportunityScoringAgent
 
 This orchestrator chains research agents together to create a complete
 business intelligence package from a raw business idea.
@@ -12,15 +13,19 @@ Flow:
         ↓
     ResearchOrchestrator.execute_full_research()
         ↓
-    1. CompetitorAnalysisAgent → Market landscape, competitors, SWOT
+    1. TrendAnalysisAgent → Current market trends and patterns
         ↓ (passes context)
-    2. CustomerResearchAgent → Personas, pain points, opportunities
+    2. CompetitorAnalysisAgent → Market landscape, competitors, SWOT
         ↓ (passes context)
-    3. BrandStrategyAgent → Positioning, messaging, visual direction
+    3. CustomerResearchAgent → Personas, pain points, opportunities
+        ↓ (passes context)
+    4. BrandStrategyAgent → Positioning, messaging, visual direction
         ↓
-    4. Synthesis → Complete business plan with recommendations
+    5. OpportunityScoringAgent → Score the opportunity (0-100)
         ↓
-    Return: BusinessPlan with all research + actionable next steps
+    6. Synthesis → Complete business plan with recommendations
+        ↓
+    Return: BusinessPlan with all research + actionable next steps + opportunity score
 
 Usage:
     from core.services.research_orchestrator import ResearchOrchestrator
@@ -60,9 +65,11 @@ class FullResearchResult:
     project_id: Optional[str] = None
     business_idea: str = ""
     phases_completed: List[str] = field(default_factory=list)
+    trend_analysis: Dict[str, Any] = field(default_factory=dict)
     competitor_analysis: Dict[str, Any] = field(default_factory=dict)
     customer_research: Dict[str, Any] = field(default_factory=dict)
     brand_strategy: Dict[str, Any] = field(default_factory=dict)
+    opportunity_score: Dict[str, Any] = field(default_factory=dict)
     business_plan: Dict[str, Any] = field(default_factory=dict)
     next_actions: List[str] = field(default_factory=list)
     total_execution_time_ms: int = 0
@@ -75,9 +82,11 @@ class FullResearchResult:
             'project_id': self.project_id,
             'business_idea': self.business_idea,
             'phases_completed': self.phases_completed,
+            'trend_analysis': self.trend_analysis,
             'competitor_analysis': self.competitor_analysis,
             'customer_research': self.customer_research,
             'brand_strategy': self.brand_strategy,
+            'opportunity_score': self.opportunity_score,
             'business_plan': self.business_plan,
             'next_actions': self.next_actions,
             'total_execution_time_ms': self.total_execution_time_ms,
@@ -110,12 +119,26 @@ class ResearchOrchestrator:
         """
         self.user = user
         self.project = None
+        # Research agents
+        self._trend_agent = None
         self._competitor_agent = None
         self._customer_agent = None
         self._brand_agent = None
+        self._opportunity_agent = None
         self._openai_client = None
 
     # ==================== Lazy-Loaded Agents ====================
+
+    @property
+    def trend_agent(self):
+        """Lazy-load TrendAnalysisAgent."""
+        if self._trend_agent is None:
+            try:
+                from core.agents.analysis import TrendAnalysisAgent
+                self._trend_agent = TrendAnalysisAgent(user=self.user)
+            except ImportError:
+                logger.warning("TrendAnalysisAgent not available")
+        return self._trend_agent
 
     @property
     def competitor_agent(self):
@@ -140,6 +163,17 @@ class ResearchOrchestrator:
             from core.agents.business import BrandStrategyAgent
             self._brand_agent = BrandStrategyAgent(user=self.user)
         return self._brand_agent
+
+    @property
+    def opportunity_agent(self):
+        """Lazy-load OpportunityScoringAgent."""
+        if self._opportunity_agent is None:
+            try:
+                from core.agents.analysis import OpportunityScoringAgent
+                self._opportunity_agent = OpportunityScoringAgent(user=self.user)
+            except ImportError:
+                logger.warning("OpportunityScoringAgent not available")
+        return self._opportunity_agent
 
     @property
     def openai_client(self):
@@ -194,8 +228,22 @@ class ResearchOrchestrator:
                 result.project_id = str(self.project.id)
                 logger.info(f"Created project: {self.project.id}")
 
-            # Step 2: Run competitor analysis
-            competitor_result = self._run_competitor_analysis(business_idea)
+            # Step 2: Run trend analysis (Session 340)
+            if self.trend_agent:
+                trend_result = self._run_trend_analysis(business_idea)
+                if trend_result.success:
+                    result.trend_analysis = trend_result.data
+                    result.phases_completed.append('trend_analysis')
+                    logger.info("Trend analysis complete")
+                else:
+                    logger.warning(f"Trend analysis failed: {trend_result.error}")
+
+            # Step 3: Run competitor analysis
+            trend_context = self._extract_trend_context(result.trend_analysis)
+            competitor_result = self._run_competitor_analysis(
+                business_idea,
+                prior_context=trend_context
+            )
             if competitor_result.success:
                 result.competitor_analysis = competitor_result.data
                 result.phases_completed.append('competitor_analysis')
@@ -203,7 +251,7 @@ class ResearchOrchestrator:
             else:
                 logger.warning(f"Competitor analysis failed: {competitor_result.error}")
 
-            # Step 3: Run customer research (with competitor context)
+            # Step 4: Run customer research (with competitor context)
             customer_context = self._extract_customer_context(result.competitor_analysis)
             customer_result = self._run_customer_research(
                 business_idea,
@@ -216,7 +264,7 @@ class ResearchOrchestrator:
             else:
                 logger.warning(f"Customer research failed: {customer_result.error}")
 
-            # Step 4: Run brand strategy (with all prior context)
+            # Step 5: Run brand strategy (with all prior context)
             brand_context = self._extract_brand_context(
                 result.competitor_analysis,
                 result.customer_research
@@ -232,22 +280,40 @@ class ResearchOrchestrator:
             else:
                 logger.warning(f"Brand strategy failed: {brand_result.error}")
 
-            # Step 5: Synthesize into business plan
+            # Step 6: Score the opportunity (Session 340)
+            if self.opportunity_agent and len(result.phases_completed) >= 2:
+                opportunity_result = self._run_opportunity_scoring(
+                    business_idea=business_idea,
+                    trend_analysis=result.trend_analysis,
+                    competitor_analysis=result.competitor_analysis,
+                    customer_research=result.customer_research
+                )
+                if opportunity_result.success:
+                    result.opportunity_score = opportunity_result.data
+                    result.phases_completed.append('opportunity_scoring')
+                    logger.info(f"Opportunity scoring complete: {opportunity_result.data.get('score', 'N/A')}")
+                else:
+                    logger.warning(f"Opportunity scoring failed: {opportunity_result.error}")
+
+            # Step 7: Synthesize into business plan
             if len(result.phases_completed) >= 2:  # Need at least 2 phases
                 business_plan = self._synthesize_business_plan(
                     business_idea=business_idea,
+                    trend_analysis=result.trend_analysis,
                     competitor_analysis=result.competitor_analysis,
                     customer_research=result.customer_research,
                     brand_strategy=result.brand_strategy,
+                    opportunity_score=result.opportunity_score,
                     constraints=constraints
                 )
                 result.business_plan = business_plan
                 result.phases_completed.append('synthesis')
                 logger.info("Business plan synthesis complete")
 
-            # Step 6: Generate next actions
+            # Step 8: Generate next actions
             result.next_actions = self._generate_next_actions(
                 business_plan=result.business_plan,
+                opportunity_score=result.opportunity_score,
                 constraints=constraints
             )
 
@@ -273,12 +339,58 @@ class ResearchOrchestrator:
 
     # ==================== Phase Execution ====================
 
-    def _run_competitor_analysis(self, business_idea: str) -> ResearchPhaseResult:
+    def _run_trend_analysis(self, business_idea: str) -> ResearchPhaseResult:
+        """Run trend analysis phase using TrendAnalysisAgent."""
+        start_time = time.time()
+
+        try:
+            # Detect industry/sector from business idea
+            task = f"""Analyze current market trends relevant to this business idea: {business_idea}
+
+Focus on:
+- What are the hot trends in this space?
+- What technologies are gaining traction?
+- What are consumers/businesses looking for?
+- Any timing considerations (seasonal, economic, etc.)?
+"""
+
+            result = self.trend_agent.execute(
+                task=task,
+                context={'project_id': str(self.project.id) if self.project else None},
+                scifi_context={},
+                spider_context={}
+            )
+
+            return ResearchPhaseResult(
+                phase='trend_analysis',
+                agent_name='TrendAnalysisAgent',
+                success=result.success,
+                data=result.data if result.success else {},
+                error=result.error,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            return ResearchPhaseResult(
+                phase='trend_analysis',
+                agent_name='TrendAnalysisAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    def _run_competitor_analysis(
+        self,
+        business_idea: str,
+        prior_context: str = ""
+    ) -> ResearchPhaseResult:
         """Run competitor analysis phase."""
         start_time = time.time()
 
         try:
             task = f"Analyze competitors for: {business_idea}"
+            if prior_context:
+                task += f"\n\nContext from trend analysis:\n{prior_context}"
 
             result = self.competitor_agent.execute(
                 task=task,
@@ -381,7 +493,90 @@ class ResearchOrchestrator:
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
 
+    def _run_opportunity_scoring(
+        self,
+        business_idea: str,
+        trend_analysis: Dict[str, Any],
+        competitor_analysis: Dict[str, Any],
+        customer_research: Dict[str, Any]
+    ) -> ResearchPhaseResult:
+        """Run opportunity scoring phase using OpportunityScoringAgent."""
+        start_time = time.time()
+
+        try:
+            # Build context from all research
+            context_summary = f"""
+Business Idea: {business_idea}
+
+Trend Insights: {self._format_research_for_synthesis(trend_analysis) if trend_analysis else 'N/A'}
+
+Competitor Landscape: {self._format_research_for_synthesis(competitor_analysis) if competitor_analysis else 'N/A'}
+
+Customer Insights: {self._format_research_for_synthesis(customer_research) if customer_research else 'N/A'}
+"""
+
+            task = f"""Score this business opportunity based on the research conducted.
+
+{context_summary}
+
+Provide:
+1. Overall opportunity score (0-100)
+2. Key strengths
+3. Key risks
+4. Market timing assessment
+5. Recommendation (pursue/refine/pivot)
+"""
+
+            result = self.opportunity_agent.execute(
+                task=task,
+                context={'project_id': str(self.project.id) if self.project else None},
+                scifi_context={},
+                spider_context={}
+            )
+
+            return ResearchPhaseResult(
+                phase='opportunity_scoring',
+                agent_name='OpportunityScoringAgent',
+                success=result.success,
+                data=result.data if result.success else {},
+                error=result.error,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        except Exception as e:
+            return ResearchPhaseResult(
+                phase='opportunity_scoring',
+                agent_name='OpportunityScoringAgent',
+                success=False,
+                error=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
     # ==================== Context Extraction ====================
+
+    def _extract_trend_context(self, trend_data: Dict[str, Any]) -> str:
+        """Extract relevant context from trend analysis for competitor research."""
+        if not trend_data:
+            return ""
+
+        analysis = trend_data.get('analysis', '')
+        if isinstance(analysis, str):
+            return analysis[:500]
+
+        # Extract key points
+        context_parts = []
+        if isinstance(analysis, dict):
+            if 'trends' in analysis:
+                trends = analysis['trends']
+                if isinstance(trends, list):
+                    trend_names = [t.get('name', '') for t in trends[:5] if t.get('name')]
+                    if trend_names:
+                        context_parts.append(f"Key trends: {', '.join(trend_names)}")
+
+            if 'timing' in analysis:
+                context_parts.append(f"Timing factors: {analysis['timing'][:200]}")
+
+        return "\n".join(context_parts) if context_parts else str(trend_data)[:500]
 
     def _extract_customer_context(self, competitor_data: Dict[str, Any]) -> str:
         """Extract relevant context for customer research from competitor analysis."""
@@ -435,9 +630,11 @@ class ResearchOrchestrator:
     def _synthesize_business_plan(
         self,
         business_idea: str,
+        trend_analysis: Dict[str, Any],
         competitor_analysis: Dict[str, Any],
         customer_research: Dict[str, Any],
         brand_strategy: Dict[str, Any],
+        opportunity_score: Dict[str, Any],
         constraints: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -457,6 +654,9 @@ BUSINESS IDEA: {business_idea}
 CONSTRAINTS:
 {json.dumps(constraints, indent=2) if constraints else "None specified"}
 
+MARKET TRENDS:
+{self._format_research_for_synthesis(trend_analysis) if trend_analysis else "Not available"}
+
 COMPETITOR ANALYSIS:
 {self._format_research_for_synthesis(competitor_analysis)}
 
@@ -465,6 +665,9 @@ CUSTOMER RESEARCH:
 
 BRAND STRATEGY:
 {self._format_research_for_synthesis(brand_strategy)}
+
+OPPORTUNITY SCORE:
+{self._format_research_for_synthesis(opportunity_score) if opportunity_score else "Not available"}
 
 Based on ALL of this research, create a comprehensive but concise business plan with:
 
@@ -550,15 +753,40 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
     def _generate_next_actions(
         self,
         business_plan: Dict[str, Any],
+        opportunity_score: Dict[str, Any],
         constraints: Dict[str, Any]
     ) -> List[str]:
-        """Generate specific next actions based on the business plan."""
+        """Generate specific next actions based on the business plan and opportunity score."""
         actions = []
 
-        # Default actions regardless of plan
-        actions.append("Review the business plan and validate key assumptions")
-        actions.append("Create logo and brand assets using the brand strategy")
-        actions.append("Set up landing page to test market interest")
+        # Check opportunity score for recommendation-based actions
+        score = 0
+        recommendation = ""
+        if opportunity_score:
+            score_data = opportunity_score.get('analysis', opportunity_score)
+            if isinstance(score_data, dict):
+                score = score_data.get('score', 0)
+                recommendation = score_data.get('recommendation', '')
+            elif isinstance(score_data, str):
+                # Try to extract score from text
+                if 'score' in score_data.lower():
+                    recommendation = score_data
+
+        # High score actions (80+)
+        if score >= 80:
+            actions.append("PRIORITY: Move fast - this is a strong opportunity")
+            actions.append("Create logo and brand assets immediately")
+            actions.append("Set up landing page to capture early interest")
+        # Medium score actions (50-79)
+        elif score >= 50:
+            actions.append("Review the business plan and validate key assumptions")
+            actions.append("Create logo and brand assets using the brand strategy")
+            actions.append("Set up landing page to test market interest")
+        # Low score actions (<50)
+        else:
+            actions.append("Review opportunity score risks before proceeding")
+            actions.append("Consider pivoting based on research insights")
+            actions.append("Conduct additional customer discovery to validate assumptions")
 
         # Budget-specific actions
         budget = constraints.get('budget', '').lower() if constraints else ''
@@ -617,6 +845,11 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
             self.project.metadata = self.project.metadata or {}
             self.project.metadata['research_completed'] = True
             self.project.metadata['phases_completed'] = result.phases_completed
+            self.project.metadata['trend_analysis'] = result.trend_analysis
+            self.project.metadata['competitor_analysis'] = result.competitor_analysis
+            self.project.metadata['customer_research'] = result.customer_research
+            self.project.metadata['brand_strategy'] = result.brand_strategy
+            self.project.metadata['opportunity_score'] = result.opportunity_score
             self.project.metadata['business_plan'] = result.business_plan
             self.project.metadata['next_actions'] = result.next_actions
             self.project.metadata['research_time_ms'] = result.total_execution_time_ms
@@ -624,11 +857,14 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
             # Update status
             self.project.status = 'in_progress'
 
+            # Calculate time saved based on phases
+            time_saved = 2.0 + (len(result.phases_completed) * 0.5)
+
             # Add AI contribution
             self.project.add_ai_contribution(
                 agent_name='ResearchOrchestrator',
                 task='Complete business research pipeline',
-                time_saved_hours=2.0,  # Estimate: 2 hours of manual research
+                time_saved_hours=time_saved,
                 output_summary=f"Completed {len(result.phases_completed)} research phases"
             )
 
