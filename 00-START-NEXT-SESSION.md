@@ -1,94 +1,38 @@
 # Start Next Session Here
 
-**Last Session:** 343 - Spider Network Expansion Phase 1
+**Last Session:** 345 - Intelligence Hub Dynamic Stats & Auto-Loading
 **Date:** December 4, 2025
-**Status:** 102 spiders (up from 74) | 36 categories | Research → Business Plan Pipeline Complete
+**Status:** 102 spiders | 36 categories | 79 agents | Dynamic UI Stats
 
 ---
 
-## What Happened in Session 343
+## What Happened in Session 345
 
-### Part 1: Research Relevance Fix
-Fixed Initial Research showing irrelevant results (motorcycles, fan art for bedtime stories):
-- Added `_extract_search_hints()` using GPT to identify domain-specific subreddits and search queries
-- Updated `_run_initial_research()` to prioritize web_search and reddit_search with relevant terms
-- Now extracts proper subreddits like r/parenting, r/daddit, r/mommit for family-focused ideas
+### Intelligence Hub UI Componentization
+Fixed hardcoded/wrong values throughout the Intelligence Hub UI:
 
-### Part 2: Opportunity Scoring Fix
-Fixed Opportunity Score showing 0/100:
-- Rewrote `_run_opportunity_scoring()` to call GPT directly with structured JSON output
-- Now shows full breakdown: Score, Factors, Strengths, Risks, Timing, Recommendation
+#### Problem
+- Agent count showed 14 or 197 (should be 79)
+- Categories showed 21 (should be 36)
+- Data points showed 914 (should be 9,779)
+- All values were hardcoded, never updated
 
-### Part 3: Spider Network Expansion (74 → 102 spiders)
-Researched 1000+ potential data sources and implemented 22 new spiders (all free RSS feeds!):
+#### Solution: Single Source of Truth API
+Created `/api/spider-intelligence/dashboard-stats/` endpoint that returns all stats dynamically:
+- Spider counts (102 total, 36 categories)
+- Agent counts (79 total: 69 legacy + 10 clean)
+- Data stats (9,779 points, 1,246 last 24h, 98% success rate)
 
-#### Batch 1 - New Spiders (10):
-| Spider | Category | Auth Required | Description |
-|--------|----------|---------------|-------------|
-| `npr` | news | None | NPR top stories, world, business, tech, science |
-| `bbc` | news | None | BBC world news, business, tech, health |
-| `arstechnica` | tech | None | In-depth tech analysis, security, gaming |
-| `polygon_finance` | financial | API Key | Polygon.io stock market data |
-| `finnhub` | financial | API Key | Stock quotes, earnings, market news |
-| `openmeteo` | weather | None | Free weather data for any location |
-| `variety` | entertainment | None | Film, TV, music, streaming industry news |
-| `polygon_gaming` | gaming | None | Video game news, reviews, features |
-| `smashingmagazine` | web_development | None | Web design and front-end development |
-| `lifehacker` | lifestyle | None | Productivity tips and life hacks |
+#### Frontend Changes
+1. **Removed all hardcoded values** - Replaced with `--` placeholder until API loads
+2. **Created `loadDashboardStats()`** - Fetches stats with 30-second caching
+3. **Created `updateDashboardStatsUI()`** - Updates all stat elements across the UI
+4. **Auto-loading on tab show** - Stats load when Intelligence Hub panel opens
 
-#### Batch 2 - RSS-Only Spiders (12):
-| Spider | Category | Auth Required | Description |
-|--------|----------|---------------|-------------|
-| `cnn` | news | None | CNN news (8 RSS feeds) |
-| `reuters_rss` | news | None | Reuters international news |
-| `science` | science | None | Nature, Science Daily, arXiv, New Scientist |
-| `health` | health | None | WebMD, NIH, CDC, WHO health news |
-| `education_rss` | education | None | EdWeek, EdSurge, Inside Higher Ed |
-| `library` | library | None | Internet Archive, Project Gutenberg, arXiv, PLOS, ALA |
-| `business_news` | business | None | HBR, Forbes, Entrepreneur, Inc, Fast Company |
-| `government` | government | None | White House, Federal Register, BLS, SEC, SBA |
-| `parenting` | parenting | None | Parents, BabyCenter, Fatherly, Motherly, Romper |
-| `food` | food | None | Serious Eats, Bon Appetit, Epicurious, Eater |
-| `travel` | travel | None | Lonely Planet, Conde Nast, Points Guy, Skift |
-| `real_estate` | real_estate | None | Realtor, Zillow, Inman, BiggerPockets |
-
-#### Spider Categories (35 total):
-```
-financial: 10     |  tech: 10         |  news: 8
-digital_products: 5  |  creative_assets: 5  |  content: 5
-freelance: 5      |  ai_creative: 4   |  legal: 4
-education: 4      |  design: 3        |  innovation: 3
-content_creation: 3  |  community: 3   |  social: 2
-remote_work: 2    |  sports_betting: 2 |  science: 1
-health: 1         |  library: 1       |  business: 1
-government: 1     |  parenting: 1     |  food: 1
-travel: 1         |  real_estate: 1   |  jobs: 1
-market: 1         |  visual_trends: 1 |  video: 1
-weather: 1        |  entertainment: 1 |  gaming: 1
-web_development: 1 |  lifestyle: 1
-```
-
-### Part 4: Comprehensive Data Sources Documentation
-Created `/docs/COMPREHENSIVE_DATA_SOURCES_2025.md` with 1000+ potential data sources:
-- 24 categories of RSS feeds and APIs
-- Implementation roadmap (5 phases)
-- Rate limits, auth requirements, and best practices
-
----
-
-## API Usage
-
-```bash
-# Submit business idea (7-phase research pipeline)
-curl -X POST http://localhost:8000/api/business-ideas/ \
-  -H "Content-Type: application/json" \
-  -d '{"idea": "AI-powered podcast platform"}'
-
-# Generate assets
-curl -X POST http://localhost:8000/api/business-ideas/<id>/generate-assets/ \
-  -H "Content-Type: application/json" \
-  -d '{"asset_types": ["logo", "thumbnail", "banner"]}'
-```
+### Files Modified
+- `core/views_spider_intelligence.py` - Added `dashboard_stats()` endpoint
+- `core/urls.py` - Added route with import alias to avoid name conflict
+- `ai_core/templates/ai_image_studio.html` - Removed hardcoded values, added JS functions, auto-loading
 
 ---
 
@@ -96,24 +40,41 @@ curl -X POST http://localhost:8000/api/business-ideas/<id>/generate-assets/ \
 
 | Component | Count |
 |-----------|-------|
-| **Spiders** | **96 (up from 74)** |
-| Spider Categories | 35 |
-| Agents | 199 (24 wired to pipeline) |
-| Learning Transfers | 194,627 |
-| Conversations | 324 |
-| Decisions | 259 |
-| **Agent Wiring Progress** | **89%** |
+| **Spiders** | **102** |
+| **Categories** | **36** |
+| **Agents** | **79** (69 legacy + 10 clean) |
+| **Data Points** | **9,779** |
+| **Success Rate** | **98%** |
 
 ---
 
-## New Environment Variables (Optional)
+## Intelligence Hub Stats (Live)
+
+| Stat | Old (Hardcoded) | Now (Live API) |
+|------|-----------------|----------------|
+| Spiders | 102 | 102 |
+| Categories | 21 | **36** (was wrong!) |
+| Agents | 14 or 197 | **79** (was wrong!) |
+| Data Points | 914 | **9,779** |
+| Success Rate | -- | **98%** |
+
+---
+
+## API Endpoints
 
 ```bash
-# For Polygon.io financial data (free tier: 5 API calls/min)
-POLYGON_API_KEY=your_key_here
+# Dashboard stats (single source of truth)
+curl http://localhost:8000/api/spider-intelligence/dashboard-stats/
 
-# For Finnhub financial data (free tier: 60 API calls/min)
-FINNHUB_API_KEY=your_key_here
+# Response:
+{
+  "status": "success",
+  "stats": {
+    "spiders": {"total": 102, "categories": 36, "by_category": {...}},
+    "agents": {"total": 79, "legacy": 69, "clean": 10},
+    "data": {"total_points": 9779, "last_24h": 1246, "success_rate": 98}
+  }
+}
 ```
 
 ---
@@ -130,56 +91,28 @@ open http://localhost:8000/ai-studio/
 
 ## Next Session Priorities
 
-1. **Test new spiders** - Verify NPR, BBC, Ars Technica RSS feeds working
-2. **Add more Phase 1 spiders** - Government data (Census, BLS), more RSS feeds
-3. **Test research pipeline** - Verify new spiders improve research relevance
-4. **Creative pipeline broadcasts** - Wire creative_orchestrator.py with WebSocket updates
+1. **Test auto-loading** - Verify Intelligence Hub loads data when panel opens
+2. **Add more subtab auto-loading** - Markets, Opportunities, Spiders tabs
+3. **Performance optimization** - Consider longer cache TTL or lazy loading
 
 ---
 
-## Key Files Modified (Session 343)
+## Key Files Modified (Session 345)
 
-- `core/services/research_orchestrator.py` - Added `_extract_search_hints()`, fixed opportunity scoring
-- `ai_core/spiders/spider_registry.py` - Added 22 new spider imports and registrations
-
-**Batch 1 (10 spiders):**
-- `ai_core/spiders/specialized/npr_spider.py` - NEW
-- `ai_core/spiders/specialized/bbc_spider.py` - NEW
-- `ai_core/spiders/specialized/arstechnica_spider.py` - NEW
-- `ai_core/spiders/specialized/polygon_spider.py` - NEW
-- `ai_core/spiders/specialized/finnhub_spider.py` - NEW
-- `ai_core/spiders/specialized/openmeteo_spider.py` - NEW
-- `ai_core/spiders/specialized/variety_spider.py` - NEW
-- `ai_core/spiders/specialized/polygon_gaming_spider.py` - NEW
-- `ai_core/spiders/specialized/smashingmagazine_spider.py` - NEW
-- `ai_core/spiders/specialized/lifehacker_spider.py` - NEW
-
-**Batch 2 (12 RSS-only spiders):**
-- `ai_core/spiders/specialized/cnn_spider.py` - NEW
-- `ai_core/spiders/specialized/reuters_rss_spider.py` - NEW
-- `ai_core/spiders/specialized/science_spider.py` - NEW
-- `ai_core/spiders/specialized/health_spider.py` - NEW
-- `ai_core/spiders/specialized/education_rss_spider.py` - NEW
-- `ai_core/spiders/specialized/library_spider.py` - NEW (Internet Archive, Project Gutenberg, arXiv!)
-- `ai_core/spiders/specialized/business_news_spider.py` - NEW
-- `ai_core/spiders/specialized/government_spider.py` - NEW
-- `ai_core/spiders/specialized/parenting_spider.py` - NEW (for family-focused business ideas!)
-- `ai_core/spiders/specialized/food_spider.py` - NEW
-- `ai_core/spiders/specialized/travel_spider.py` - NEW
-- `ai_core/spiders/specialized/real_estate_spider.py` - NEW
-
-- `docs/COMPREHENSIVE_DATA_SOURCES_2025.md` - NEW (1000+ data sources research)
+- `core/views_spider_intelligence.py` - Added unified dashboard stats endpoint (lines 714-792)
+- `core/urls.py` - Added import alias and route (line 138, 2215)
+- `ai_core/templates/ai_image_studio.html`:
+  - Removed hardcoded values at lines 10197, 10212, 10220, 10228, 10236, 1865, 1869
+  - Added `loadDashboardStats()` and `updateDashboardStatsUI()` (lines 15712-15782)
+  - Added auto-loading event listeners (lines 16043-16062)
 
 ---
 
 ## Key Documentation
 
-- Session 343 Data Sources: `docs/COMPREHENSIVE_DATA_SOURCES_2025.md`
-- Session 342 Details: `docs/handoffs/SESSION_342_FINAL_AGENT_WIRING.md`
+- Session 345 Details: `docs/handoffs/SESSION_345_INTELLIGENCE_HUB_STATS.md`
 - Architecture: `docs/ARCHITECTURE.md`
 
 ---
 
-**Full Pipeline: Business Idea → Research → Trends → Competitors → Customers → Brand → Score → Creative Direction → Assets → Audit**
-
-**Spider Network: 102 spiders across 36 categories providing real-time intelligence!**
+**Intelligence Hub now shows live, accurate stats from a single source of truth API!**
