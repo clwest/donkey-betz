@@ -771,6 +771,17 @@ def dashboard_stats(request):
             agent_memories_count = 0
             knowledge_sources_count = 0
 
+        # === SESSION 346: ROW 3 STATS (Learning Activity) ===
+        try:
+            from core.models_unified_system import AgentLearningConnection, KnowledgeTransfer, ProjectInsight
+            learning_connections_count = AgentLearningConnection.objects.count()
+            knowledge_transfers_count = KnowledgeTransfer.objects.count()
+            synthesized_insights_count = ProjectInsight.objects.count()
+        except Exception:
+            learning_connections_count = 0
+            knowledge_transfers_count = 0
+            synthesized_insights_count = 0
+
         # === TOP CATEGORIES ===
         top_categories = sorted(
             spider_counts.get('by_category', {}).items(),
@@ -802,6 +813,10 @@ def dashboard_stats(request):
                     'learning_events': learning_events_count,
                     'agent_memories': agent_memories_count,
                     'knowledge_sources': knowledge_sources_count,
+                    # Row 3 stats
+                    'learning_connections': learning_connections_count,
+                    'knowledge_transfers': knowledge_transfers_count,
+                    'synthesized_insights': synthesized_insights_count,
                 },
                 'timestamp': timezone.now().isoformat(),
             }
