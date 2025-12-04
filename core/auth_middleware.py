@@ -65,6 +65,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/super-platform/',  # Session 271: Super Platform - supports session auth
         '/api/boardroom/',  # Session 323: Boardroom Decisions - supports session auth
         '/api/agent-conversations/',  # Session 244: Agent Conversations - supports session auth
+        '/api/business-ideas/',  # Session 338: Autonomous Business Pipeline - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

@@ -78,6 +78,14 @@ from core.views_agent_tracking import (
     mark_contribution_selected
 )
 
+# Session 338: Business Ideas API - Autonomous Pipeline Entry Point
+from core.views_business_ideas import (
+    create_business_idea,
+    get_business_idea,
+    generate_assets,
+    list_business_ideas,
+)
+
 # Import image/export views (Session 148/149)
 from core import views_image, views_share
 
@@ -1104,6 +1112,13 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/activate-living/', activate_living_project, name='activate-living-project'),
     path('api/projects/<uuid:project_id>/insights/<uuid:insight_id>/status/', update_insight_status, name='update-insight-status'),
     path('api/projects/<uuid:project_id>/living-config/', update_living_config, name='update-living-config'),
+
+    # Session 338: Business Ideas API - Autonomous Pipeline
+    # THE entry point: "I have a business idea" -> Complete research -> Business plan -> Assets
+    path('api/business-ideas/', create_business_idea, name='create-business-idea'),
+    path('api/business-ideas/list/', list_business_ideas, name='list-business-ideas'),
+    path('api/business-ideas/<uuid:project_id>/', get_business_idea, name='get-business-idea'),
+    path('api/business-ideas/<uuid:project_id>/generate-assets/', generate_assets, name='generate-assets'),
 
     # Session 327: Project-Scoped Agent Intelligence APIs
     path('api/projects/<uuid:project_id>/intelligence/', get_project_intelligence_overview, name='project-intelligence'),

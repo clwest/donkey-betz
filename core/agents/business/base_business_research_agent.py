@@ -451,12 +451,14 @@ class BaseBusinessResearchAgent:
         for iteration in range(max_iterations):
             logger.debug(f"{self.name}: GPT iteration {iteration + 1}")
 
+            # Session 338: Use gpt-5-mini for cost efficiency
+            # Reasoning models need max_completion_tokens (not max_tokens)
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=messages,
                 tools=self.tools,
                 tool_choice="auto",
-                max_tokens=4000
+                max_completion_tokens=6000,  # High for reasoning + output
             )
 
             choice = response.choices[0]

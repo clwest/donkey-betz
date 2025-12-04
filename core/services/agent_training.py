@@ -32,9 +32,11 @@ class AgentConfig:
     description: str
     capabilities: List[str] = field(default_factory=list)
     domains: List[str] = field(default_factory=list)
-    model: str = "gpt-4"
+    model: str = "gpt-5-mini"  # Session 338: Cost-optimized default
+    # Note: temperature is ignored for reasoning models like gpt-5-mini
     temperature: float = 0.7
-    max_tokens: int = 4000
+    # Session 338: gpt-5-mini uses max_completion_tokens, not max_tokens
+    max_completion_tokens: int = 6000
     system_prompt: str = ""
     is_active: bool = True
     created_at: datetime = None
@@ -49,7 +51,7 @@ class AgentConfig:
             'domains': self.domains,
             'model': self.model,
             'temperature': self.temperature,
-            'max_tokens': self.max_tokens,
+            'max_completion_tokens': self.max_completion_tokens,  # Session 338: gpt-5-mini
             'system_prompt': self.system_prompt,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -137,13 +139,13 @@ AVAILABLE_CAPABILITIES = {
 
 # Agent templates
 AGENT_TEMPLATES = {
+    # Session 338: All agents use gpt-5-mini for cost optimization
     'creative_assistant': {
         'display_name': 'Creative Assistant',
         'description': 'Versatile creative agent for images, videos, and design',
         'capabilities': ['image_generation', 'video_generation', 'brand_identity'],
         'domains': ['creative', 'design'],
-        'model': 'gpt-4',
-        'temperature': 0.8,
+        'model': 'gpt-5-mini',
         'system_prompt': 'You are a creative assistant specializing in visual content creation.'
     },
     'research_analyst': {
@@ -151,8 +153,7 @@ AGENT_TEMPLATES = {
         'description': 'Agent specialized in research and data analysis',
         'capabilities': ['research', 'data_analysis'],
         'domains': ['research', 'analysis'],
-        'model': 'gpt-4',
-        'temperature': 0.3,
+        'model': 'gpt-5-mini',
         'system_prompt': 'You are a research analyst providing accurate, data-driven insights.'
     },
     'content_writer': {
@@ -160,8 +161,7 @@ AGENT_TEMPLATES = {
         'description': 'Agent for creating written content',
         'capabilities': ['text_generation', 'seo_optimization', 'social_media'],
         'domains': ['content', 'marketing'],
-        'model': 'gpt-4',
-        'temperature': 0.7,
+        'model': 'gpt-5-mini',
         'system_prompt': 'You are a skilled content writer creating engaging content.'
     },
     'developer_assistant': {
@@ -169,8 +169,7 @@ AGENT_TEMPLATES = {
         'description': 'Agent for code generation and development',
         'capabilities': ['code_generation', 'data_analysis'],
         'domains': ['development', 'code'],
-        'model': 'gpt-4',
-        'temperature': 0.2,
+        'model': 'gpt-5-mini',
         'system_prompt': 'You are a skilled developer helping with code generation and review.'
     },
     'workflow_orchestrator': {
@@ -178,8 +177,7 @@ AGENT_TEMPLATES = {
         'description': 'Agent for coordinating multi-step workflows',
         'capabilities': ['workflow_execution', 'collaboration'],
         'domains': ['orchestration', 'workflow'],
-        'model': 'gpt-4',
-        'temperature': 0.5,
+        'model': 'gpt-5-mini',
         'system_prompt': 'You orchestrate complex workflows across multiple agents.'
     }
 }
