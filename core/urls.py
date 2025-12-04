@@ -63,6 +63,11 @@ from core.views_projects_api import (
     export_research_pdf,  # Session 325: Export research as PDF
     add_creative_content_to_project,  # Session 334: Add creative content to existing project
     create_project_from_creative_content,  # Session 334: Create project from creative content
+    # Session 335: Living Project API
+    project_feed,
+    activate_living_project,
+    update_insight_status,
+    update_living_config,
 )
 
 # Import agent tracking API views (Session 120)
@@ -1093,6 +1098,12 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/add-creative-content/', add_creative_content_to_project, name='add-creative-content-to-project'),  # Session 334
     path('api/projects/from-creative-content/', create_project_from_creative_content, name='create-project-from-creative-content'),  # Session 334
     path('api/projects/<uuid:project_id>/learning/', get_project_learning_stats, name='project-learning-stats'),  # Session 326
+
+    # Session 335: Living Project APIs
+    path('api/projects/<uuid:project_id>/feed/', project_feed, name='project-feed'),
+    path('api/projects/<uuid:project_id>/activate-living/', activate_living_project, name='activate-living-project'),
+    path('api/projects/<uuid:project_id>/insights/<uuid:insight_id>/status/', update_insight_status, name='update-insight-status'),
+    path('api/projects/<uuid:project_id>/living-config/', update_living_config, name='update-living-config'),
 
     # Session 327: Project-Scoped Agent Intelligence APIs
     path('api/projects/<uuid:project_id>/intelligence/', get_project_intelligence_overview, name='project-intelligence'),

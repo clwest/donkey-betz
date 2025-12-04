@@ -437,6 +437,20 @@ def collect_spider_data():
     except Exception as e:
         logger.error(f"Error initializing connector: {e}")
 
+    # Session 335: Process spider data for Living Projects
+    try:
+        from core.services.living_project_service import get_living_project_service
+        living_service = get_living_project_service()
+        for item in created_items:
+            try:
+                insights = living_service.process_spider_data(item)
+                if insights:
+                    logger.info(f"📡 [LIVING] Created {len(insights)} insights from spider data")
+            except Exception as e:
+                logger.error(f"Error processing spider data for living projects: {e}")
+    except Exception as e:
+        logger.error(f"Error initializing living project service: {e}")
+
     logger.info(f"Collected and processed {len(created_items)} spider data items")
     return f"Collected {len(created_items)} items"
 
@@ -3910,6 +3924,17 @@ Guidelines:
                         stats['decisions_extracted'] = stats.get('decisions_extracted', 0) + 1
                 except Exception as e:
                     logger.warning(f"Could not extract decision from conversation: {e}")
+
+                # Session 335: Process conversation for Living Projects
+                try:
+                    from core.services.living_project_service import get_living_project_service
+                    living_service = get_living_project_service()
+                    insights = living_service.process_agent_conversation(conversation)
+                    if insights:
+                        logger.info(f"💬 [LIVING] Created {len(insights)} insights from conversation")
+                        stats['living_insights'] = stats.get('living_insights', 0) + len(insights)
+                except Exception as e:
+                    logger.warning(f"Could not process conversation for living projects: {e}")
 
         # Broadcast the update
         try:

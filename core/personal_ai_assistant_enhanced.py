@@ -1233,14 +1233,16 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_competitor_analysis_agent(arguments)
             elif function_name == 'customer_research_agent':
                 result = self._handle_customer_research_agent(arguments)
-            # Session 337: Brand strategy agent
+            # Session 337: Business research agents (use BaseBusinessResearchAgent)
             elif function_name == 'brand_strategy_agent':
                 result = self._handle_brand_strategy_agent(arguments)
-            # Session 312: Strategy agents (connected to router)
+            elif function_name == 'content_strategy_agent':
+                result = self._handle_content_strategy_agent(arguments)
+            elif function_name == 'marketing_strategy_agent':
+                result = self._handle_marketing_strategy_agent(arguments)
+            # Session 312: Strategy agents (connected to router - legacy)
             elif function_name == 'brand_identity_agent':
                 result = self._handle_strategy_agent('brand_identity_agent', arguments)
-            elif function_name == 'content_strategy_agent':
-                result = self._handle_strategy_agent('content_strategy_agent', arguments)
             elif function_name == 'seo_optimizer_agent':
                 result = self._handle_strategy_agent('seo_optimizer_agent', arguments)
             elif function_name == 'trend_analysis_agent':
@@ -3601,6 +3603,258 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return {
                 'success': False,
                 'error': f"Brand strategy failed: {str(e)}"
+            }
+
+    # Session 337: Content Strategy Agent (NEW - uses BaseBusinessResearchAgent)
+    def _handle_content_strategy_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle content_strategy_agent tool - Session 337.
+
+        Strategic content planning that reads existing project research
+        (competitor, customer, brand) and provides actionable content recommendations.
+        """
+        logger.info(f"📝 CONTENT_STRATEGY_AGENT TOOL CALLED!")
+        logger.info(f"📝 Arguments: {arguments}")
+
+        try:
+            from core.agents.business import ContentStrategyAgent
+
+            project_id = arguments.get('project_id')
+            topic = arguments.get('topic', '')
+            user_context = arguments.get('user_context', '')
+
+            if not project_id:
+                return {
+                    'success': False,
+                    'error': 'Project ID is required for content strategy. This agent reads existing project research.'
+                }
+
+            logger.info(f"📝 Creating content strategy for project: {project_id}")
+
+            # Get project context
+            project_context_str = ""
+            project_name = topic
+            try:
+                from core.models_partnership import PartnershipProject
+                project = PartnershipProject.objects.get(id=project_id)
+                if not project_name:
+                    project_name = project.project_name
+                project_context_str = f"Project: {project.project_name}"
+                if project.description:
+                    project_context_str += f" - {project.description[:200]}"
+                logger.info(f"📝 Project context: {project_context_str[:100]}...")
+            except Exception as e:
+                logger.warning(f"Failed to get project context: {e}")
+
+            # Instantiate and execute the agent
+            # Session 340: Pass project_id so agent can look up project context internally
+            agent = ContentStrategyAgent(user=self.user, project_id=project_id)
+
+            # Build task description
+            task = f"Create comprehensive content strategy for '{project_name}'"
+            if user_context:
+                task += f". Context: {user_context}"
+            if project_context_str:
+                task += f" {project_context_str}"
+
+            logger.info(f"📝 Task: {task}")
+
+            # Execute the agent
+            # Session 339: BaseBusinessResearchAgent.execute() only takes task and context
+            result = agent.execute(
+                task=task,
+                context={
+                    'project_id': project_id,
+                    'topic': project_name,
+                    'user_context': user_context
+                }
+            )
+
+            logger.info(f"📝 Agent result: success={result.success}")
+            logger.info(f"📝 Session 340 DEBUG: result.data = {result.data}")
+            logger.info(f"📝 Session 340 DEBUG: result.data type = {type(result.data)}")
+            logger.info(f"📝 Session 340 DEBUG: result.data keys = {result.data.keys() if result.data else 'None'}")
+            if result.data and result.data.get('analysis'):
+                logger.info(f"📝 Session 340 DEBUG: analysis type = {type(result.data.get('analysis'))}")
+                logger.info(f"📝 Session 340 DEBUG: analysis[:200] = {str(result.data.get('analysis'))[:200]}")
+
+            if result.success:
+                # Session 339: Build data structure for frontend
+                # The frontend expects data.analysis to contain the synthesis
+                result_data = result.data or {}
+
+                # Session 339: Wrap analysis in structure frontend expects
+                # Frontend looks for r.data.analysis.analysis (nested)
+                # or r.data.analysis as a string
+                if isinstance(result_data.get('analysis'), str):
+                    # Wrap string analysis in expected structure
+                    result_data['analysis'] = {
+                        'analysis': result_data.get('analysis', ''),
+                        'raw_data': result_data.get('raw_data', []),
+                        'query': result_data.get('query', project_name),
+                        'sources_used': result_data.get('sources_used', []),
+                        'data_points_analyzed': result_data.get('data_points_analyzed', 0)
+                    }
+
+                return {
+                    'success': True,
+                    'message': result.message,
+                    'agents_used': ['ContentStrategyAgent'],
+                    'metadata': {
+                        'agent_result': {
+                            'success': result.success,
+                            'message': result.message,
+                            'data': result_data,
+                            'agent_name': result.agent_name,
+                            'execution_time_ms': result.execution_time_ms,
+                            'decisions_made': getattr(result, 'decisions_made', 0),
+                            'tool_calls': getattr(result, 'tool_calls', [])
+                        }
+                    },
+                    'project_id': project_id,
+                    'topic': project_name,
+                    'data': result_data
+                }
+            else:
+                logger.error(f"📝 Agent returned failure: {result.error}")
+                return {
+                    'success': False,
+                    'error': result.error or 'Content strategy creation failed'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Content strategy error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Content strategy failed: {str(e)}"
+            }
+
+    # Session 337: Marketing Strategy Agent (NEW - uses BaseBusinessResearchAgent)
+    def _handle_marketing_strategy_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle marketing_strategy_agent tool - Session 337.
+
+        Strategic marketing planning that reads existing project research
+        (competitor, customer, brand, content) and provides actionable marketing recommendations.
+        """
+        logger.info(f"📣 MARKETING_STRATEGY_AGENT TOOL CALLED!")
+        logger.info(f"📣 Arguments: {arguments}")
+
+        try:
+            from core.agents.business import MarketingStrategyAgent
+
+            project_id = arguments.get('project_id')
+            topic = arguments.get('topic', '')
+            user_context = arguments.get('user_context', '')
+            budget = arguments.get('budget', '')
+
+            if not project_id:
+                return {
+                    'success': False,
+                    'error': 'Project ID is required for marketing strategy. This agent reads existing project research.'
+                }
+
+            logger.info(f"📣 Creating marketing strategy for project: {project_id}")
+
+            # Get project context
+            project_context_str = ""
+            project_name = topic
+            try:
+                from core.models_partnership import PartnershipProject
+                project = PartnershipProject.objects.get(id=project_id)
+                if not project_name:
+                    project_name = project.project_name
+                project_context_str = f"Project: {project.project_name}"
+                if project.description:
+                    project_context_str += f" - {project.description[:200]}"
+                logger.info(f"📣 Project context: {project_context_str[:100]}...")
+            except Exception as e:
+                logger.warning(f"Failed to get project context: {e}")
+
+            # Instantiate and execute the agent
+            # Session 340: Pass project_id so agent can look up project context internally
+            agent = MarketingStrategyAgent(user=self.user, project_id=project_id)
+
+            # Build task description
+            task = f"Create comprehensive marketing strategy for '{project_name}'"
+            if budget:
+                task += f" with budget considerations: {budget}"
+            if user_context:
+                task += f". Context: {user_context}"
+            if project_context_str:
+                task += f" {project_context_str}"
+
+            logger.info(f"📣 Task: {task}")
+
+            # Execute the agent
+            # Session 339: BaseBusinessResearchAgent.execute() only takes task and context
+            result = agent.execute(
+                task=task,
+                context={
+                    'project_id': project_id,
+                    'topic': project_name,
+                    'user_context': user_context,
+                    'budget': budget
+                }
+            )
+
+            logger.info(f"📣 Agent result: success={result.success}")
+            logger.info(f"📣 Session 340 DEBUG: result.data = {result.data}")
+            logger.info(f"📣 Session 340 DEBUG: result.data type = {type(result.data)}")
+            logger.info(f"📣 Session 340 DEBUG: result.data keys = {result.data.keys() if result.data else 'None'}")
+            if result.data and result.data.get('analysis'):
+                logger.info(f"📣 Session 340 DEBUG: analysis type = {type(result.data.get('analysis'))}")
+                logger.info(f"📣 Session 340 DEBUG: analysis[:200] = {str(result.data.get('analysis'))[:200]}")
+
+            if result.success:
+                # Session 339: Build data structure for frontend
+                # The frontend expects data.analysis to contain the synthesis
+                result_data = result.data or {}
+
+                # Session 339: Wrap analysis in structure frontend expects
+                # Frontend looks for r.data.analysis.analysis (nested)
+                # or r.data.analysis as a string
+                if isinstance(result_data.get('analysis'), str):
+                    # Wrap string analysis in expected structure
+                    result_data['analysis'] = {
+                        'analysis': result_data.get('analysis', ''),
+                        'raw_data': result_data.get('raw_data', []),
+                        'query': result_data.get('query', project_name),
+                        'sources_used': result_data.get('sources_used', []),
+                        'data_points_analyzed': result_data.get('data_points_analyzed', 0)
+                    }
+
+                return {
+                    'success': True,
+                    'message': result.message,
+                    'agents_used': ['MarketingStrategyAgent'],
+                    'metadata': {
+                        'agent_result': {
+                            'success': result.success,
+                            'message': result.message,
+                            'data': result_data,
+                            'agent_name': result.agent_name,
+                            'execution_time_ms': result.execution_time_ms,
+                            'decisions_made': getattr(result, 'decisions_made', 0),
+                            'tool_calls': getattr(result, 'tool_calls', [])
+                        }
+                    },
+                    'project_id': project_id,
+                    'topic': project_name,
+                    'data': result_data
+                }
+            else:
+                logger.error(f"📣 Agent returned failure: {result.error}")
+                return {
+                    'success': False,
+                    'error': result.error or 'Marketing strategy creation failed'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Marketing strategy error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Marketing strategy failed: {str(e)}"
             }
 
     # Session 312: Unified strategy agent handler
@@ -6440,6 +6694,43 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         # Build dynamic context sections
         project_id = self._current_context.get('project_id') if hasattr(self, '_current_context') and self._current_context else None
 
+        # Session 340: Build FULL project context from PartnershipProject (not just UUID)
+        # Extract meaningful context from AI contributions to understand what the project is ACTUALLY about
+        project_context_section = ""
+        if project_id:
+            try:
+                from core.models_partnership import PartnershipProject
+                partnership_project = PartnershipProject.objects.get(id=project_id)
+
+                # Extract meaningful context from AI contributions
+                ai_context_summary = ""
+                if partnership_project.ai_contributions:
+                    # Get the first AI analysis output (contains the actual research)
+                    for contribution in partnership_project.ai_contributions:
+                        if contribution.get('output'):
+                            # Take first 500 chars of the analysis for context
+                            ai_context_summary = contribution['output'][:500]
+                            break
+
+                # Build rich project context
+                project_context_section = f"""- **Project Name:** {partnership_project.project_name}
+- **Project Type:** {partnership_project.project_type or 'Not specified'}
+- **Project Description:** {partnership_project.description or 'No description provided'}
+- **Project ID:** {project_id}
+
+**AI Analysis Context (from prior research):**
+{ai_context_summary if ai_context_summary else 'No prior analysis available'}
+
+**CRITICAL INSTRUCTIONS FOR TOOL CALLS:**
+1. The project "{partnership_project.project_name}" should be understood by its RESEARCH CONTEXT above, NOT by interpreting the project name literally.
+2. "Donkey Betz" is a PODCAST NAME - it has NOTHING to do with sports betting or gambling!
+3. When generating tool parameters (like "niche", "market", "topic"), use the AI Analysis Context to understand the actual subject matter.
+4. Do NOT infer topics from creative/branded project names - always rely on the description and research context."""
+                logger.info(f"📁 Session 340: Injected rich project context: {partnership_project.project_name} - Type: {partnership_project.project_type}")
+            except Exception as e:
+                logger.warning(f"Failed to get PartnershipProject for prompt: {e}")
+                project_context_section = f"Active Project ID: {project_id} (could not load details)"
+
         # Construct the system prompt from registry + dynamic context
         system_prompt = f"""{build_personal_assistant_prompt(user_first_name)}
 
@@ -6465,7 +6756,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 {assets_context}
 
 ## Project Context
-{f'Active Project: {project_id}' if project_id else 'No active project'}
+{project_context_section if project_context_section else 'No active project'}
 
 {('## Project Brief' + chr(10) + project_brief_context) if project_brief_context else ''}
 """
@@ -6538,7 +6829,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'cyberpunk', 'cinematic style', 'modern style', 'playful style',
                 # Session 337: Brand Strategy keywords (force tool usage)
                 'brand strategy', 'brand identity', 'brand positioning', 'brand guidelines',
-                'branding strategy', 'develop brand', 'create a brand'
+                'branding strategy', 'develop brand', 'create a brand',
+                # Session 338: Content Strategy keywords (force tool usage)
+                'content strategy', 'content plan', 'content calendar', 'content pillars',
+                'what content should i', 'topics should i write', 'topics to write',
+                # Session 338: Marketing Strategy keywords (force tool usage)
+                'marketing strategy', 'marketing plan', 'marketing channels', 'marketing campaign',
+                'how should i market', 'market this', 'reach my audience', 'marketing approach'
             ]
             is_operation = any(keyword in message.lower() for keyword in operation_keywords)
 

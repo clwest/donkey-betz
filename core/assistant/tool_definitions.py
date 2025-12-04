@@ -57,6 +57,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_competitor_analysis_agent_definition(),  # Session 293: Business research
         _get_customer_research_agent_definition(),    # Session 293: Customer research
         _get_brand_strategy_agent_definition(),       # Session 335: Brand strategy research
+        _get_content_strategy_agent_definition(),     # Session 337: Content strategy research
+        _get_marketing_strategy_agent_definition(),   # Session 337: Marketing strategy research
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -738,6 +740,72 @@ def _get_brand_strategy_agent_definition() -> Dict:
                 "user_context": {
                     "type": "string",
                     "description": "Additional context about brand goals, preferences, or constraints"
+                }
+            },
+            "required": ["project_id"]
+        }
+    }
+
+
+def _get_content_strategy_agent_definition() -> Dict:
+    """
+    Session 337: Content strategy agent that analyzes existing research
+    and trends to recommend what content to create.
+    """
+    return {
+        "type": "function",
+        "name": "content_strategy_agent",
+        "description": get_tool_description("content_strategy_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "REQUIRED: Project ID to read existing research from. Works best with prior competitor/customer/brand research."
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The content strategy request, e.g., 'Create a content strategy for our podcast' or 'What content should we create next?'"
+                },
+                "focus_areas": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional areas to focus on: 'pillars', 'formats', 'topics', 'calendar', 'seo'. Defaults to comprehensive strategy."
+                }
+            },
+            "required": ["project_id"]
+        }
+    }
+
+
+def _get_marketing_strategy_agent_definition() -> Dict:
+    """
+    Session 337: Marketing strategy agent that creates comprehensive
+    marketing plans based on existing research.
+    """
+    return {
+        "type": "function",
+        "name": "marketing_strategy_agent",
+        "description": get_tool_description("marketing_strategy_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "REQUIRED: Project ID to read existing research from. Works best with prior competitor/customer/brand/content research."
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The marketing strategy request, e.g., 'Create a marketing plan' or 'How should we promote our content?'"
+                },
+                "budget": {
+                    "type": "string",
+                    "description": "Optional budget context: 'bootstrap' (minimal), 'moderate', 'significant'. Affects recommendations."
+                },
+                "channels": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional specific channels to focus on: 'social', 'email', 'paid', 'seo', 'partnerships'."
                 }
             },
             "required": ["project_id"]

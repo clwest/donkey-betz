@@ -27101,16 +27101,35 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 message += `⚠️ **Error:** ${r.error}\n\n`;
                             }
 
-                        } else if (result.tool === 'competitor_analysis_agent' || result.tool === 'customer_research_agent' || result.tool === 'brand_strategy_agent') {
+                        } else if (result.tool === 'competitor_analysis_agent' || result.tool === 'customer_research_agent' || result.tool === 'brand_strategy_agent' || result.tool === 'content_strategy_agent' || result.tool === 'marketing_strategy_agent') {
                             // Session 324: Business Research Agents - Show full analysis report
                             // Session 336: Added BrandStrategyAgent support
+                            // Session 337: Added ContentStrategyAgent and MarketingStrategyAgent support
                             const r = result.result;
-                            const agentName = result.tool === 'competitor_analysis_agent' ? 'CompetitorAnalysisAgent' :
-                                              result.tool === 'brand_strategy_agent' ? 'BrandStrategyAgent' : 'CustomerResearchAgent';
-                            const icon = result.tool === 'competitor_analysis_agent' ? '🎯' :
-                                         result.tool === 'brand_strategy_agent' ? '🎨' : '👥';
-                            const title = result.tool === 'competitor_analysis_agent' ? 'Competitive Analysis' :
-                                          result.tool === 'brand_strategy_agent' ? 'Brand Strategy' : 'Customer Research';
+                            const agentNameMap = {
+                                'competitor_analysis_agent': 'CompetitorAnalysisAgent',
+                                'customer_research_agent': 'CustomerResearchAgent',
+                                'brand_strategy_agent': 'BrandStrategyAgent',
+                                'content_strategy_agent': 'ContentStrategyAgent',
+                                'marketing_strategy_agent': 'MarketingStrategyAgent'
+                            };
+                            const iconMap = {
+                                'competitor_analysis_agent': '🎯',
+                                'customer_research_agent': '👥',
+                                'brand_strategy_agent': '🎨',
+                                'content_strategy_agent': '📝',
+                                'marketing_strategy_agent': '📣'
+                            };
+                            const titleMap = {
+                                'competitor_analysis_agent': 'Competitive Analysis',
+                                'customer_research_agent': 'Customer Research',
+                                'brand_strategy_agent': 'Brand Strategy',
+                                'content_strategy_agent': 'Content Strategy',
+                                'marketing_strategy_agent': 'Marketing Strategy'
+                            };
+                            const agentName = agentNameMap[result.tool] || 'BusinessResearchAgent';
+                            const icon = iconMap[result.tool] || '📊';
+                            const title = titleMap[result.tool] || 'Business Research';
 
                             // Check for analysis data in result.data or result.metadata.agent_result.data
                             // Structure: r.data = { analysis: {query, analysis, raw_data, sources_used, ...}, raw_data: [...], query: "..." }
@@ -27119,11 +27138,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             // The 'analysis' field is the synthesis object containing the GPT report
                             const synthesisObj = resultData?.analysis;
 
+                            // Session 340: Enhanced debug logging
+                            console.log('📊 Session 340 DEBUG - Full result object:', result);
+                            console.log('📊 Session 340 DEBUG - r (result.result):', r);
+                            console.log('📊 Session 340 DEBUG - r.data:', r?.data);
+                            console.log('📊 Session 340 DEBUG - r.metadata:', r?.metadata);
                             console.log('📊 Session 324 - Business research result:', {
                                 hasResultData: !!resultData,
                                 hasSynthesis: !!synthesisObj,
                                 synthesisKeys: synthesisObj ? Object.keys(synthesisObj) : [],
-                                query: resultData?.query
+                                query: resultData?.query,
+                                rDataKeys: r?.data ? Object.keys(r.data) : 'r.data is null/undefined'
                             });
 
                             if (synthesisObj && (synthesisObj.analysis || typeof synthesisObj === 'string')) {
@@ -30927,8 +30952,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <!-- Analysis Header -->
                             <div class="d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleResearchSection('${project.id}', 'analysis', ${idx})">
                                 <div style="color: #a855f7; font-weight: 600; font-size: 13px;">
-                                    ${research.type === 'customer_research' ? '👥' : research.type === 'competitor_analysis' ? '🎯' : research.type === 'brand_strategy' ? '🎨' : '📊'}
-                                    Analysis: ${research.type === 'customer_research' ? 'Customer Research' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : research.type === 'brand_strategy' ? 'Brand Strategy' : 'Business Research'}
+                                    ${research.type === 'customer_research' ? '👥' : research.type === 'competitor_analysis' ? '🎯' : research.type === 'brand_strategy' ? '🎨' : research.type === 'content_strategy' ? '📝' : research.type === 'marketing_strategy' ? '📣' : '📊'}
+                                    Analysis: ${research.type === 'customer_research' ? 'Customer Research' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : research.type === 'brand_strategy' ? 'Brand Strategy' : research.type === 'content_strategy' ? 'Content Strategy' : research.type === 'marketing_strategy' ? 'Marketing Strategy' : 'Business Research'}
                                     <span id="toggle-analysis-${project.id}-${idx}" style="font-size: 10px; margin-left: 5px;">▶</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
@@ -51560,6 +51585,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             // Determine research type from agent name
+            // Session 337: Added ContentStrategy and MarketingStrategy support
             let researchType = 'business_research';
             if (researchData.agent_name?.includes('Competitor')) {
                 researchType = 'competitor_analysis';
@@ -51567,6 +51593,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 researchType = 'customer_research';
             } else if (researchData.agent_name?.includes('BrandStrategy') || researchData.research_type === 'brand_strategy') {
                 researchType = 'brand_strategy';
+            } else if (researchData.agent_name?.includes('ContentStrategy') || researchData.research_type === 'content_strategy') {
+                researchType = 'content_strategy';
+            } else if (researchData.agent_name?.includes('MarketingStrategy') || researchData.research_type === 'marketing_strategy') {
+                researchType = 'marketing_strategy';
             }
 
             // Direct API call - bypasses GPT routing entirely (Session 302)
@@ -51630,6 +51660,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             });
 
             // Determine research type from agent name
+            // Session 337: Added ContentStrategy and MarketingStrategy support
             let researchType = 'business_research';
             if (researchData.agent_name?.includes('Competitor')) {
                 researchType = 'competitor_analysis';
@@ -51637,6 +51668,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 researchType = 'customer_research';
             } else if (researchData.agent_name?.includes('BrandStrategy') || researchData.research_type === 'brand_strategy') {
                 researchType = 'brand_strategy';
+            } else if (researchData.agent_name?.includes('ContentStrategy') || researchData.research_type === 'content_strategy') {
+                researchType = 'content_strategy';
+            } else if (researchData.agent_name?.includes('MarketingStrategy') || researchData.research_type === 'marketing_strategy') {
+                researchType = 'marketing_strategy';
             }
 
             showToast('📁 Adding research to project...', 'info');

@@ -1264,3 +1264,338 @@ def create_project_from_creative_content(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# SESSION 335: LIVING PROJECT API
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def project_feed(request, project_id):
+    """
+    Get the insight feed for a living project.
+
+    GET /api/projects/<project_id>/feed/
+
+    Query params:
+        - limit: Number of insights (default 20)
+        - status: Filter by status (new, seen, acted_on, dismissed)
+        - type: Filter by insight type (spider_data, agent_insight, decision, etc.)
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "insights": [...],
+            "stats": {
+                "total_insights": 42,
+                "new_insights": 5,
+                "avg_relevance": 0.78
+            },
+            "config": {
+                "is_active": true,
+                "watch_topics": ["AI", "podcasting"],
+                "min_relevance_score": 0.6
+            }
+        }
+    }
+    """
+    try:
+        from core.services.living_project_service import get_living_project_service
+
+        project = PartnershipProject.objects.get(id=project_id, user=request.user)
+        living_service = get_living_project_service()
+
+        # Get query params
+        limit = int(request.GET.get('limit', 20))
+        status_filter = request.GET.get('status')
+        type_filter = request.GET.get('type')
+
+        # Get feed
+        insights = living_service.get_project_feed(
+            project,
+            limit=limit,
+            status_filter=status_filter,
+            type_filter=type_filter
+        )
+
+        # Get stats
+        stats = living_service.get_project_stats(project)
+
+        # Get config
+        config_data = None
+        try:
+            config = project.living_config
+            config_data = {
+                'is_active': config.is_active,
+                'watch_topics': config.watch_topics,
+                'watch_competitors': config.watch_competitors,
+                'watch_keywords': config.watch_keywords,
+                'min_relevance_score': config.min_relevance_score,
+            }
+        except Exception:
+            # No config yet - return defaults
+            topics = list(living_service.get_project_topics(project))
+            config_data = {
+                'is_active': False,
+                'watch_topics': topics,
+                'watch_competitors': [],
+                'watch_keywords': [],
+                'min_relevance_score': 0.6,
+            }
+
+        return Response({
+            'success': True,
+            'data': {
+                'insights': insights,
+                'stats': stats,
+                'config': config_data
+            }
+        })
+
+    except PartnershipProject.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error getting project feed: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def activate_living_project(request, project_id):
+    """
+    Activate a project as a living project.
+
+    POST /api/projects/<project_id>/activate-living/
+
+    Optional body:
+    {
+        "watch_topics": ["AI", "podcasting"],
+        "watch_competitors": ["Competitor A"],
+        "watch_keywords": ["keyword1"],
+        "min_relevance_score": 0.6
+    }
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "message": "Project activated as living project",
+            "config": {...},
+            "detected_topics": ["topic1", "topic2"]
+        }
+    }
+    """
+    try:
+        from core.services.living_project_service import get_living_project_service
+
+        project = PartnershipProject.objects.get(id=project_id, user=request.user)
+        living_service = get_living_project_service()
+
+        # Activate the project
+        config = living_service.activate_living_project(project)
+
+        # Apply any custom settings from request
+        data = request.data or {}
+        if 'watch_topics' in data:
+            config.watch_topics = list(set(config.watch_topics + data['watch_topics']))
+        if 'watch_competitors' in data:
+            config.watch_competitors = data['watch_competitors']
+        if 'watch_keywords' in data:
+            config.watch_keywords = data['watch_keywords']
+        if 'min_relevance_score' in data:
+            config.min_relevance_score = float(data['min_relevance_score'])
+        config.save()
+
+        logger.info(f"🟢 [LIVING] Activated project: {project.project_name}")
+
+        return Response({
+            'success': True,
+            'data': {
+                'message': f'Project "{project.project_name}" activated as living project',
+                'config': {
+                    'is_active': config.is_active,
+                    'watch_topics': config.watch_topics,
+                    'watch_competitors': config.watch_competitors,
+                    'watch_keywords': config.watch_keywords,
+                    'min_relevance_score': config.min_relevance_score,
+                },
+                'detected_topics': list(living_service.get_project_topics(project))
+            }
+        })
+
+    except PartnershipProject.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error activating living project: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_insight_status(request, project_id, insight_id):
+    """
+    Update the status of a project insight.
+
+    POST /api/projects/<project_id>/insights/<insight_id>/status/
+
+    Body:
+    {
+        "status": "seen" | "acted_on" | "dismissed" | "archived",
+        "rating": 1-5,  # optional
+        "notes": "User notes"  # optional
+    }
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "insight_id": "uuid",
+            "new_status": "acted_on"
+        }
+    }
+    """
+    try:
+        from core.models_unified_system import ProjectInsight
+
+        # Verify project belongs to user
+        project = PartnershipProject.objects.get(id=project_id, user=request.user)
+
+        # Get and update insight
+        insight = ProjectInsight.objects.get(id=insight_id, project=project)
+
+        data = request.data
+        if 'status' in data:
+            insight.status = data['status']
+        if 'rating' in data:
+            insight.user_rating = int(data['rating'])
+        if 'notes' in data:
+            insight.user_notes = data['notes']
+        if 'is_pinned' in data:
+            insight.is_pinned = bool(data['is_pinned'])
+
+        insight.save()
+
+        logger.info(f"📝 [LIVING] Updated insight {insight_id} to status: {insight.status}")
+
+        return Response({
+            'success': True,
+            'data': {
+                'insight_id': str(insight.id),
+                'new_status': insight.status,
+                'is_pinned': insight.is_pinned
+            }
+        })
+
+    except PartnershipProject.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Project not found'
+        }, status=404)
+    except ProjectInsight.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Insight not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error updating insight status: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_living_config(request, project_id):
+    """
+    Update the living project configuration.
+
+    POST /api/projects/<project_id>/living-config/
+
+    Body:
+    {
+        "is_active": true,
+        "watch_topics": ["AI", "podcasting"],
+        "watch_competitors": ["Competitor A"],
+        "watch_keywords": ["keyword1"],
+        "min_relevance_score": 0.6
+    }
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "config": {...}
+        }
+    }
+    """
+    try:
+        from core.models_unified_system import LivingProjectConfig
+        from core.services.living_project_service import get_living_project_service
+
+        project = PartnershipProject.objects.get(id=project_id, user=request.user)
+        living_service = get_living_project_service()
+
+        # Get or create config
+        config, created = LivingProjectConfig.objects.get_or_create(
+            project=project,
+            defaults={
+                'watch_topics': list(living_service.get_project_topics(project))
+            }
+        )
+
+        # Update fields
+        data = request.data
+        if 'is_active' in data:
+            config.is_active = bool(data['is_active'])
+        if 'watch_topics' in data:
+            config.watch_topics = data['watch_topics']
+        if 'watch_competitors' in data:
+            config.watch_competitors = data['watch_competitors']
+        if 'watch_keywords' in data:
+            config.watch_keywords = data['watch_keywords']
+        if 'min_relevance_score' in data:
+            config.min_relevance_score = float(data['min_relevance_score'])
+
+        config.save()
+
+        logger.info(f"⚙️ [LIVING] Updated config for project: {project.project_name}")
+
+        return Response({
+            'success': True,
+            'data': {
+                'config': {
+                    'is_active': config.is_active,
+                    'watch_topics': config.watch_topics,
+                    'watch_competitors': config.watch_competitors,
+                    'watch_keywords': config.watch_keywords,
+                    'min_relevance_score': config.min_relevance_score,
+                }
+            }
+        })
+
+    except PartnershipProject.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error updating living config: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
