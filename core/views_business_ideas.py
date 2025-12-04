@@ -58,9 +58,13 @@ def get_user_from_request(request):
     if request.user.is_authenticated:
         return request.user
 
-    # For development: use first superuser or first user
+    # Session 343: For development, prefer 'admin' user specifically
     try:
-        user = User.objects.filter(is_superuser=True).first()
+        # Try to get 'admin' user first
+        user = User.objects.filter(username='admin').first()
+        if not user:
+            # Fallback to any superuser
+            user = User.objects.filter(is_superuser=True).first()
         if not user:
             user = User.objects.first()
         return user
@@ -321,6 +325,82 @@ def list_business_ideas(request):
 
     except Exception as e:
         logger.error(f"Failed to list business ideas: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def pipeline_stats(request):
+    """
+    Session 343: Get pipeline statistics for the Pipeline UI.
+
+    GET /api/business-ideas/stats/
+
+    Returns counts for today's completed pipelines (in local timezone MST).
+    Optionally filters by authenticated user, or shows all if no auth.
+    """
+    try:
+        from core.models_partnership import PartnershipProject
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+
+        # Get today's start in local timezone (MST/America/Denver)
+        now = timezone.localtime(timezone.now())
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Base queryset - filter by source
+        base_qs = PartnershipProject.objects.filter(
+            metadata__source='research_orchestrator'
+        )
+
+        # Try to get user from session/request for user-specific stats
+        user = get_user_from_request(request)
+        if user:
+            base_qs = base_qs.filter(user=user)
+            user_filter = user.username
+        else:
+            # No auth - show all projects (for demo/dev)
+            user_filter = 'all'
+
+        # Count projects created today
+        completed_today = base_qs.filter(
+            metadata__research_completed=True,
+            created_at__gte=today_start
+        ).count()
+
+        # Total all-time
+        total_completed = base_qs.filter(
+            metadata__research_completed=True
+        ).count()
+
+        # Recent projects (last 5)
+        recent_projects = base_qs.order_by('-created_at')[:5]
+
+        recent = []
+        for p in recent_projects:
+            recent.append({
+                'id': str(p.id),
+                'name': p.project_name[:50],
+                'status': p.status,
+                'created_at': timezone.localtime(p.created_at).isoformat(),
+                'has_research_summaries': 'research_summaries' in (p.metadata or {})
+            })
+
+        return JsonResponse({
+            'success': True,
+            'completed_today': completed_today,
+            'total_completed': total_completed,
+            'recent_projects': recent,
+            'local_time': now.isoformat(),
+            'timezone': str(timezone.get_current_timezone()),
+            'user_filter': user_filter
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to get pipeline stats: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': str(e)

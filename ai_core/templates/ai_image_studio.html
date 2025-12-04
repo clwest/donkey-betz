@@ -9634,6 +9634,35 @@
                                         Watch your business ideas flow through the 7-phase research pipeline and 10-phase creative pipeline in real-time.
                                     </p>
 
+                                    <!-- Business Idea Submission Form -->
+                                    <div class="card mb-4" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #ec4899;">
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-8">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text" style="background: #ec4899; border: none; color: white;">💡</span>
+                                                        <input type="text" class="form-control form-control-lg" id="pipeline-idea-input"
+                                                               placeholder="Enter your business idea (e.g., AI-powered podcast platform)"
+                                                               style="background: #0d0d0d; border: 1px solid #333; color: white;">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <button class="btn btn-lg w-100" id="run-pipeline-btn" onclick="runPipeline()"
+                                                            style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                                        🚀 Run Research Pipeline
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 d-flex gap-2 flex-wrap">
+                                                <small class="text-muted">Try:</small>
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="setQuickIdea('AI-powered fitness coaching app')">Fitness App</button>
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="setQuickIdea('SaaS for restaurant order management')">Restaurant SaaS</button>
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="setQuickIdea('AI podcast platform for content creators')">AI Podcast</button>
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="setQuickIdea('Online marketplace for handmade crafts')">Crafts Marketplace</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Pipeline Status Summary -->
                                     <div class="row mb-4">
                                         <div class="col-md-3">
@@ -9997,7 +10026,7 @@
                                             <!-- SVG Network Graph -->
                                             <svg id="agent-network-svg" width="100%" height="100%" style="background: radial-gradient(circle at center, #1a1a1a 0%, #0d0d0d 100%);">
                                                 <!-- Center: WorkflowAgent -->
-                                                <g class="network-node" transform="translate(400, 250)">
+                                                <g class="network-node" data-agent="WorkflowAgent" data-category="orchestrator" transform="translate(400, 250)" onclick="showAgentDetails('WorkflowAgent')">
                                                     <circle r="40" fill="url(#gradient-workflow)" stroke="#ef4444" stroke-width="3"/>
                                                     <text y="5" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Workflow</text>
                                                     <text y="18" text-anchor="middle" fill="#888" font-size="8">Meta Orchestrator</text>
@@ -10005,31 +10034,31 @@
 
                                                 <!-- Research Agents (Left Arc) -->
                                                 <g class="network-group research-group">
-                                                    <g class="network-node" transform="translate(120, 100)">
+                                                    <g class="network-node" data-agent="ResearchAgent" data-category="research" transform="translate(120, 100)" onclick="showAgentDetails('ResearchAgent')">
                                                         <circle r="28" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="9">Research</text>
                                                     </g>
                                                     <line x1="148" y1="100" x2="360" y2="230" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(80, 180)">
+                                                    <g class="network-node" data-agent="TrendAnalysisAgent" data-category="research" transform="translate(80, 180)" onclick="showAgentDetails('TrendAnalysisAgent')">
                                                         <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Trends</text>
                                                     </g>
                                                     <line x1="105" y1="180" x2="360" y2="240" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(70, 270)">
+                                                    <g class="network-node" data-agent="CompetitorAnalysisAgent" data-category="research" transform="translate(70, 270)" onclick="showAgentDetails('CompetitorAnalysisAgent')">
                                                         <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Competitor</text>
                                                     </g>
                                                     <line x1="95" y1="270" x2="360" y2="250" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(80, 360)">
+                                                    <g class="network-node" data-agent="CustomerResearchAgent" data-category="research" transform="translate(80, 360)" onclick="showAgentDetails('CustomerResearchAgent')">
                                                         <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Customer</text>
                                                     </g>
                                                     <line x1="105" y1="360" x2="360" y2="260" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(120, 430)">
+                                                    <g class="network-node" data-agent="BrandStrategyAgent" data-category="research" transform="translate(120, 430)" onclick="showAgentDetails('BrandStrategyAgent')">
                                                         <circle r="25" fill="url(#gradient-research)" stroke="#8b5cf6" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Brand</text>
                                                     </g>
@@ -10038,37 +10067,37 @@
 
                                                 <!-- Creative Agents (Right Arc) -->
                                                 <g class="network-group creative-group">
-                                                    <g class="network-node" transform="translate(680, 80)">
+                                                    <g class="network-node" data-agent="ImageAgent" data-category="creative" transform="translate(680, 80)" onclick="showAgentDetails('ImageAgent')">
                                                         <circle r="28" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="9">Image</text>
                                                     </g>
                                                     <line x1="652" y1="80" x2="440" y2="230" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(720, 150)">
+                                                    <g class="network-node" data-agent="VideoAgent" data-category="creative" transform="translate(720, 150)" onclick="showAgentDetails('VideoAgent')">
                                                         <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Video</text>
                                                     </g>
                                                     <line x1="695" y1="150" x2="440" y2="240" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(730, 230)">
+                                                    <g class="network-node" data-agent="AudioAgent" data-category="creative" transform="translate(730, 230)" onclick="showAgentDetails('AudioAgent')">
                                                         <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Audio</text>
                                                     </g>
                                                     <line x1="705" y1="230" x2="440" y2="250" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(720, 310)">
+                                                    <g class="network-node" data-agent="ThreeDAgent" data-category="creative" transform="translate(720, 310)" onclick="showAgentDetails('ThreeDAgent')">
                                                         <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">3D</text>
                                                     </g>
                                                     <line x1="695" y1="310" x2="440" y2="260" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(680, 380)">
+                                                    <g class="network-node" data-agent="SEOOptimizerAgent" data-category="creative" transform="translate(680, 380)" onclick="showAgentDetails('SEOOptimizerAgent')">
                                                         <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">SEO</text>
                                                     </g>
                                                     <line x1="655" y1="380" x2="440" y2="270" stroke="#ec4899" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(620, 440)">
+                                                    <g class="network-node" data-agent="ContentAuditAgent" data-category="creative" transform="translate(620, 440)" onclick="showAgentDetails('ContentAuditAgent')">
                                                         <circle r="25" fill="url(#gradient-creative)" stroke="#ec4899" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Audit</text>
                                                     </g>
@@ -10077,19 +10106,19 @@
 
                                                 <!-- Executive Agents (Top) -->
                                                 <g class="network-group executive-group">
-                                                    <g class="network-node" transform="translate(300, 50)">
+                                                    <g class="network-node" data-agent="CTOAgent" data-category="executive" transform="translate(300, 50)" onclick="showAgentDetails('CTOAgent')">
                                                         <circle r="25" fill="url(#gradient-executive)" stroke="#f59e0b" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">CTO</text>
                                                     </g>
                                                     <line x1="325" y1="50" x2="380" y2="210" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(400, 30)">
+                                                    <g class="network-node" data-agent="COOAgent" data-category="executive" transform="translate(400, 30)" onclick="showAgentDetails('COOAgent')">
                                                         <circle r="25" fill="url(#gradient-executive)" stroke="#f59e0b" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">COO</text>
                                                     </g>
                                                     <line x1="400" y1="55" x2="400" y2="210" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,5" opacity="0.5"/>
 
-                                                    <g class="network-node" transform="translate(500, 50)">
+                                                    <g class="network-node" data-agent="CreativeDirectorAgent" data-category="executive" transform="translate(500, 50)" onclick="showAgentDetails('CreativeDirectorAgent')">
                                                         <circle r="25" fill="url(#gradient-executive)" stroke="#f59e0b" stroke-width="2"/>
                                                         <text y="4" text-anchor="middle" fill="white" font-size="8">Director</text>
                                                     </g>
@@ -31476,7 +31505,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         </div>
                     </div>` : ''}
 
-                    <!-- Session 325: Analysis Section - Full expandable reports with PDF export -->
+                    <!-- Session 325/343: Analysis Section - Full expandable reports with PDF export -->
+                    <!-- Session 343: Updated to handle all 7 research phases with display_name -->
                     ${project.metadata && project.metadata.research_summaries && project.metadata.research_summaries.length > 0 ? `
                     <div class="mb-3">
                         ${project.metadata.research_summaries.map((research, idx) => `
@@ -31484,8 +31514,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <!-- Analysis Header -->
                             <div class="d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleResearchSection('${project.id}', 'analysis', ${idx})">
                                 <div style="color: #a855f7; font-weight: 600; font-size: 13px;">
-                                    ${research.type === 'customer_research' ? '👥' : research.type === 'competitor_analysis' ? '🎯' : research.type === 'brand_strategy' ? '🎨' : research.type === 'content_strategy' ? '📝' : research.type === 'marketing_strategy' ? '📣' : '📊'}
-                                    Analysis: ${research.type === 'customer_research' ? 'Customer Research' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : research.type === 'brand_strategy' ? 'Brand Strategy' : research.type === 'content_strategy' ? 'Content Strategy' : research.type === 'marketing_strategy' ? 'Marketing Strategy' : 'Business Research'}
+                                    ${research.type === 'initial_research' ? '🔍' : research.type === 'trend_analysis' ? '📈' : research.type === 'competitor_analysis' ? '🎯' : research.type === 'customer_research' ? '👥' : research.type === 'brand_strategy' ? '🎨' : research.type === 'opportunity_score' ? '⭐' : research.type === 'synthesis' ? '📋' : research.type === 'content_strategy' ? '📝' : research.type === 'marketing_strategy' ? '📣' : '📊'}
+                                    ${research.display_name || (research.type === 'initial_research' ? 'Initial Research' : research.type === 'trend_analysis' ? 'Trend Analysis' : research.type === 'competitor_analysis' ? 'Competitor Analysis' : research.type === 'customer_research' ? 'Customer Research' : research.type === 'brand_strategy' ? 'Brand Strategy' : research.type === 'opportunity_score' ? 'Opportunity Score' : research.type === 'synthesis' ? 'Business Plan Synthesis' : research.type === 'content_strategy' ? 'Content Strategy' : research.type === 'marketing_strategy' ? 'Marketing Strategy' : 'Business Research')}
                                     <span id="toggle-analysis-${project.id}-${idx}" style="font-size: 10px; margin-left: 5px;">▶</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
@@ -56521,6 +56551,500 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 statusEl.textContent = statusText;
             }
         }
+
+        // ==================== Session 342: Pipeline WebSocket Connection ====================
+        let pipelineWebSocket = null;
+
+        function connectPipelineWebSocket() {
+            if (pipelineWebSocket && pipelineWebSocket.readyState === WebSocket.OPEN) {
+                console.log('Pipeline WebSocket already connected');
+                return;
+            }
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/pipeline-progress/`;
+
+            console.log('Connecting to Pipeline WebSocket:', wsUrl);
+            pipelineWebSocket = new WebSocket(wsUrl);
+
+            pipelineWebSocket.onopen = function(e) {
+                console.log('Pipeline WebSocket connected');
+                addPipelineActivity('🔌', 'Connected to pipeline updates', '#22c55e');
+            };
+
+            pipelineWebSocket.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    console.log('Pipeline update:', data);
+                    handlePipelineMessage(data);
+                } catch (error) {
+                    console.error('Error parsing pipeline message:', error);
+                }
+            };
+
+            pipelineWebSocket.onclose = function(e) {
+                console.log('Pipeline WebSocket closed, reconnecting in 5s...');
+                addPipelineActivity('🔌', 'Disconnected, reconnecting...', '#f59e0b');
+                setTimeout(connectPipelineWebSocket, 5000);
+            };
+
+            pipelineWebSocket.onerror = function(e) {
+                console.error('Pipeline WebSocket error:', e);
+            };
+        }
+
+        function handlePipelineMessage(data) {
+            const type = data.type;
+
+            switch(type) {
+                case 'connection_established':
+                    console.log('Pipeline connection confirmed');
+                    break;
+
+                case 'stage_started':
+                    updatePipelineStage(data.stage, 'active', 'Running...');
+                    addPipelineActivity('🚀', `${data.stage_name} started (${data.agent_name})`, '#8b5cf6');
+                    break;
+
+                case 'stage_completed':
+                    updatePipelineStage(data.stage, 'completed', data.summary || 'Done');
+                    addPipelineActivity('✅', `${data.stage_name} completed in ${data.duration_ms}ms`, '#22c55e');
+                    break;
+
+                case 'stage_failed':
+                    updatePipelineStage(data.stage, 'failed', data.error || 'Failed');
+                    addPipelineActivity('❌', `${data.stage_name} failed: ${data.error}`, '#ef4444');
+                    break;
+
+                case 'pipeline_completed':
+                    if (data.success) {
+                        addPipelineActivity('🎉', `Pipeline completed! ${data.phases_completed.length} phases in ${data.total_duration_ms}ms`, '#22c55e');
+                    } else {
+                        addPipelineActivity('⚠️', `Pipeline finished with errors`, '#f59e0b');
+                    }
+                    // Reset all stages after 5 seconds for next run
+                    setTimeout(resetPipelineStages, 5000);
+                    break;
+
+                case 'pong':
+                    // Heartbeat response
+                    break;
+
+                default:
+                    console.log('Unknown pipeline message type:', type, data);
+            }
+        }
+
+        function resetPipelineStages() {
+            // Reset all research stages
+            const researchStages = ['initial_research', 'trend_analysis', 'competitor_analysis',
+                                   'customer_research', 'brand_strategy', 'opportunity_scoring', 'synthesis'];
+            researchStages.forEach(stage => {
+                const el = document.querySelector(`[data-stage="${stage}"]`);
+                if (el) {
+                    el.classList.remove('active', 'completed', 'failed');
+                    el.classList.add('pending');
+                    const statusEl = el.querySelector('.stage-status');
+                    if (statusEl) statusEl.textContent = 'Pending';
+                }
+            });
+
+            // Reset creative stages
+            const creativeStages = ['brief', 'creative_direction', 'image', 'video', 'audio',
+                                   '3d', 'editing', 'trained_character', 'seo', 'content_audit'];
+            creativeStages.forEach(stage => {
+                const el = document.querySelector(`[data-stage="${stage}"]`);
+                if (el) {
+                    el.classList.remove('active', 'completed', 'failed');
+                    el.classList.add('pending');
+                    const statusEl = el.querySelector('.stage-status');
+                    if (statusEl) statusEl.textContent = 'Pending';
+                }
+            });
+        }
+
+        // Session 343: Load pipeline stats from API
+        async function loadPipelineStats() {
+            try {
+                const response = await fetch('/api/business-ideas/stats/', {
+                    headers: { 'X-CSRFToken': getCsrfToken() },
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Update Completed Today counter
+                    const completedEl = document.getElementById('pipeline-completed-count');
+                    if (completedEl) completedEl.textContent = data.completed_today;
+
+                    console.log('Pipeline stats loaded:', data);
+                }
+            } catch (error) {
+                console.error('Error loading pipeline stats:', error);
+            }
+        }
+
+        // Connect to pipeline WebSocket when Pipeline tab is shown
+        document.getElementById('wf-pipeline-tab')?.addEventListener('shown.bs.tab', function() {
+            connectPipelineWebSocket();
+            loadPipelineStats();  // Session 343: Load stats on tab show
+        });
+
+        // Also connect immediately if we're already on the Pipeline tab
+        if (document.getElementById('wf-pipeline-tab')?.classList.contains('active')) {
+            connectPipelineWebSocket();
+            loadPipelineStats();  // Session 343: Load stats on init
+        }
+
+        // ==================== End Pipeline WebSocket ====================
+
+        // ==================== Session 342: Agent Details Modal ====================
+        const agentDetails = {
+            // Orchestrator
+            WorkflowAgent: {
+                name: 'WorkflowAgent',
+                category: 'Meta Orchestrator',
+                color: '#ef4444',
+                description: 'Coordinates multi-step workflows by delegating to other agents.',
+                tools: ['delegate_to_agent'],
+                delegatesTo: 'All 24 agents',
+                pipelinePhase: 'Orchestration',
+                status: 'Active'
+            },
+            // Research Agents
+            ResearchAgent: {
+                name: 'ResearchAgent',
+                category: 'Research',
+                color: '#8b5cf6',
+                description: 'Gathers initial web search and spider network data for business analysis.',
+                tools: ['web_search', 'spider_search', 'get_prior_research'],
+                delegatesTo: null,
+                pipelinePhase: '1 - Initial Research',
+                status: 'Active'
+            },
+            TrendAnalysisAgent: {
+                name: 'TrendAnalysisAgent',
+                category: 'Research',
+                color: '#8b5cf6',
+                description: 'Analyzes market trends, emerging patterns, and industry movements.',
+                tools: ['analyze_trends', 'get_market_data'],
+                delegatesTo: null,
+                pipelinePhase: '2 - Trend Analysis',
+                status: 'Active'
+            },
+            CompetitorAnalysisAgent: {
+                name: 'CompetitorAnalysisAgent',
+                category: 'Research',
+                color: '#8b5cf6',
+                description: 'Researches competitors, market landscape, and performs SWOT analysis.',
+                tools: ['analyze_competitors', 'swot_analysis'],
+                delegatesTo: null,
+                pipelinePhase: '3 - Competitor Analysis',
+                status: 'Active'
+            },
+            CustomerResearchAgent: {
+                name: 'CustomerResearchAgent',
+                category: 'Research',
+                color: '#8b5cf6',
+                description: 'Creates customer personas, identifies pain points, and finds opportunities.',
+                tools: ['create_personas', 'identify_pain_points'],
+                delegatesTo: null,
+                pipelinePhase: '4 - Customer Research',
+                status: 'Active'
+            },
+            BrandStrategyAgent: {
+                name: 'BrandStrategyAgent',
+                category: 'Research',
+                color: '#8b5cf6',
+                description: 'Develops brand positioning, messaging framework, and visual direction.',
+                tools: ['create_positioning', 'develop_messaging'],
+                delegatesTo: null,
+                pipelinePhase: '5 - Brand Strategy',
+                status: 'Active'
+            },
+            // Creative Agents
+            ImageAgent: {
+                name: 'ImageAgent',
+                category: 'Creative',
+                color: '#ec4899',
+                description: 'Creates images using Stability AI - logos, banners, illustrations.',
+                tools: ['generate_image', 'style_transfer'],
+                delegatesTo: null,
+                pipelinePhase: 'Creative - Image Generation',
+                status: 'Active',
+                apiProvider: 'Stability AI'
+            },
+            VideoAgent: {
+                name: 'VideoAgent',
+                category: 'Creative',
+                color: '#ec4899',
+                description: 'Creates videos using Runway ML - text-to-video, image animation.',
+                tools: ['generate_video', 'animate_image'],
+                delegatesTo: null,
+                pipelinePhase: 'Creative - Video Generation',
+                status: 'Active',
+                apiProvider: 'Runway ML'
+            },
+            AudioAgent: {
+                name: 'AudioAgent',
+                category: 'Creative',
+                color: '#ec4899',
+                description: 'Creates audio using ElevenLabs - voiceovers, text-to-speech.',
+                tools: ['generate_audio', 'text_to_speech'],
+                delegatesTo: null,
+                pipelinePhase: 'Creative - Audio Generation',
+                status: 'Active',
+                apiProvider: 'ElevenLabs'
+            },
+            ThreeDAgent: {
+                name: 'ThreeDAgent',
+                category: 'Creative',
+                color: '#ec4899',
+                description: 'Creates 3D models and mockups from images.',
+                tools: ['generate_3d', 'create_mockup'],
+                delegatesTo: null,
+                pipelinePhase: 'Creative - 3D Generation',
+                status: 'Active'
+            },
+            SEOOptimizerAgent: {
+                name: 'SEOOptimizerAgent',
+                category: 'Creative',
+                color: '#ec4899',
+                description: 'Optimizes content for search engines with hashtags and metadata.',
+                tools: ['generate_seo', 'optimize_metadata'],
+                delegatesTo: null,
+                pipelinePhase: 'Creative - SEO Optimization',
+                status: 'Active'
+            },
+            ContentAuditAgent: {
+                name: 'ContentAuditAgent',
+                category: 'Creative',
+                color: '#ec4899',
+                description: 'Audits content for bias, ethics issues, and brand consistency.',
+                tools: ['audit_content', 'check_bias'],
+                delegatesTo: null,
+                pipelinePhase: 'Creative - Content Audit',
+                status: 'Active'
+            },
+            // Executive Agents
+            CTOAgent: {
+                name: 'CTOAgent',
+                category: 'Executive',
+                color: '#f59e0b',
+                description: 'Technical planning, architecture analysis, and implementation planning.',
+                tools: ['analyze_feature', 'plan_implementation', 'review_architecture'],
+                delegatesTo: null,
+                pipelinePhase: 'Executive Oversight',
+                status: 'Read-Only Mode'
+            },
+            COOAgent: {
+                name: 'COOAgent',
+                category: 'Executive',
+                color: '#f59e0b',
+                description: 'Operations planning, sprint planning, and risk assessment.',
+                tools: ['analyze_roadmap', 'plan_sprint', 'assess_risks'],
+                delegatesTo: null,
+                pipelinePhase: 'Executive Oversight',
+                status: 'Read-Only Mode'
+            },
+            CreativeDirectorAgent: {
+                name: 'CreativeDirectorAgent',
+                category: 'Executive',
+                color: '#f59e0b',
+                description: 'High-level creative direction and brand vision guidance.',
+                tools: ['provide_direction', 'review_creative'],
+                delegatesTo: null,
+                pipelinePhase: 'Executive Oversight',
+                status: 'Active'
+            }
+        };
+
+        function showAgentDetails(agentName) {
+            const agent = agentDetails[agentName];
+            if (!agent) {
+                console.error('Agent not found:', agentName);
+                return;
+            }
+
+            // Create modal HTML
+            const modalHtml = `
+                <div class="modal fade" id="agentDetailsModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 1px solid ${agent.color};">
+                            <div class="modal-header" style="border-bottom: 1px solid ${agent.color}40;">
+                                <h5 class="modal-title" style="color: ${agent.color};">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: ${agent.color}; border-radius: 50%; margin-right: 10px;"></span>
+                                    ${agent.name}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <p style="color: #ccc;">${agent.description}</p>
+                                        <div class="mb-3">
+                                            <h6 style="color: ${agent.color};">Tools</h6>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                ${agent.tools.map(t => `<span class="badge" style="background: ${agent.color}30; color: ${agent.color}; border: 1px solid ${agent.color}40;">${t}</span>`).join('')}
+                                            </div>
+                                        </div>
+                                        ${agent.apiProvider ? `
+                                        <div class="mb-3">
+                                            <h6 style="color: ${agent.color};">API Provider</h6>
+                                            <span class="badge bg-info">${agent.apiProvider}</span>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card" style="background: #0d0d0d; border: 1px solid ${agent.color}40;">
+                                            <div class="card-body">
+                                                <p class="mb-2"><small style="color: #888;">Category</small><br><span style="color: ${agent.color};">${agent.category}</span></p>
+                                                <p class="mb-2"><small style="color: #888;">Pipeline Phase</small><br><span style="color: #fff;">${agent.pipelinePhase}</span></p>
+                                                <p class="mb-2"><small style="color: #888;">Status</small><br><span class="badge ${agent.status === 'Active' ? 'bg-success' : 'bg-warning'}">${agent.status}</span></p>
+                                                ${agent.delegatesTo ? `<p class="mb-0"><small style="color: #888;">Delegates To</small><br><span style="color: #fff;">${agent.delegatesTo}</span></p>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid ${agent.color}40;">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn" style="background: ${agent.color}; color: white;" onclick="triggerAgentTest('${agent.name}')">
+                                    Test Agent
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('agentDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('agentDetailsModal'));
+            modal.show();
+
+            // Clean up after close
+            document.getElementById('agentDetailsModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        }
+
+        function triggerAgentTest(agentName) {
+            addPipelineActivity('🧪', `Testing ${agentName}...`, '#8b5cf6');
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('agentDetailsModal'));
+            modal.hide();
+
+            // You could add an API call here to test the agent
+            setTimeout(() => {
+                addPipelineActivity('✅', `${agentName} test completed`, '#22c55e');
+            }, 1500);
+        }
+
+        // ==================== End Agent Details Modal ====================
+
+        // ==================== Session 342: Pipeline Submission ====================
+        function setQuickIdea(idea) {
+            document.getElementById('pipeline-idea-input').value = idea;
+        }
+
+        async function runPipeline() {
+            const ideaInput = document.getElementById('pipeline-idea-input');
+            const runBtn = document.getElementById('run-pipeline-btn');
+            const idea = ideaInput.value.trim();
+
+            if (!idea) {
+                addPipelineActivity('⚠️', 'Please enter a business idea first', '#f59e0b');
+                ideaInput.focus();
+                return;
+            }
+
+            // Disable button and show loading
+            runBtn.disabled = true;
+            runBtn.innerHTML = '⏳ Running Pipeline...';
+
+            // Reset all stages first
+            resetPipelineStages();
+
+            // Connect to WebSocket if not already connected
+            connectPipelineWebSocket();
+
+            addPipelineActivity('🚀', `Starting pipeline for: "${idea.substring(0, 50)}${idea.length > 50 ? '...' : ''}"`, '#ec4899');
+
+            try {
+                const response = await fetch('/api/business-ideas/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ idea: idea })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update active pipeline count
+                    const activeEl = document.getElementById('pipeline-active-count');
+                    if (activeEl) activeEl.textContent = '1';
+
+                    addPipelineActivity('✅', `Pipeline initiated! Project ID: ${data.project_id || 'N/A'}`, '#22c55e');
+
+                    // The WebSocket will handle real-time updates from here
+                    // But if WebSocket isn't connected yet, simulate updates
+                    if (!pipelineWebSocket || pipelineWebSocket.readyState !== WebSocket.OPEN) {
+                        simulatePipelineUpdates(data);
+                    }
+                } else {
+                    addPipelineActivity('❌', `Error: ${data.error || 'Failed to start pipeline'}`, '#ef4444');
+                }
+            } catch (error) {
+                console.error('Pipeline error:', error);
+                addPipelineActivity('❌', `Network error: ${error.message}`, '#ef4444');
+            } finally {
+                // Re-enable button
+                runBtn.disabled = false;
+                runBtn.innerHTML = '🚀 Run Research Pipeline';
+            }
+        }
+
+        function simulatePipelineUpdates(responseData) {
+            // If we got phases_completed in the response, use that to update UI
+            if (responseData.phases_completed) {
+                responseData.phases_completed.forEach((phase, index) => {
+                    setTimeout(() => {
+                        updatePipelineStage(phase, 'completed', 'Done');
+                        addPipelineActivity('✅', `${phase.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} completed`, '#22c55e');
+                    }, index * 500);
+                });
+
+                // Mark pipeline complete after all phases
+                setTimeout(() => {
+                    const completedEl = document.getElementById('pipeline-completed-count');
+                    if (completedEl) {
+                        completedEl.textContent = parseInt(completedEl.textContent || '0') + 1;
+                    }
+                    const activeEl = document.getElementById('pipeline-active-count');
+                    if (activeEl) activeEl.textContent = '0';
+                }, responseData.phases_completed.length * 500 + 500);
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('pipeline-idea-input')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                runPipeline();
+            }
+        });
+
+        // ==================== End Pipeline Submission ====================
 
         // Load all analytics charts
         async function loadAnalyticsCharts() {

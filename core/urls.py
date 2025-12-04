@@ -84,6 +84,7 @@ from core.views_business_ideas import (
     get_business_idea,
     generate_assets,
     list_business_ideas,
+    pipeline_stats,  # Session 343: Pipeline stats for UI
 )
 
 # Import image/export views (Session 148/149)
@@ -120,6 +121,7 @@ from core.views_spider_dashboard import (
 )
 
 # Session 208: Import spider intelligence views
+# Session 343: Added spider_registry, test_spider, run_all_spiders
 from core.views_spider_intelligence import (
     trending_topics,
     market_insights,
@@ -128,7 +130,11 @@ from core.views_spider_intelligence import (
     search_data,
     data_summary,
     prompt_insights,
-    daily_report
+    daily_report,
+    spider_registry,
+    test_spider,
+    run_all_spiders,
+    market_research_dashboard,  # Session 344
 )
 
 # Session 219: Import agent intelligence views (Phase A)
@@ -1117,6 +1123,7 @@ urlpatterns = [
     # THE entry point: "I have a business idea" -> Complete research -> Business plan -> Assets
     path('api/business-ideas/', create_business_idea, name='create-business-idea'),
     path('api/business-ideas/list/', list_business_ideas, name='list-business-ideas'),
+    path('api/business-ideas/stats/', pipeline_stats, name='pipeline-stats'),  # Session 343
     path('api/business-ideas/<uuid:project_id>/', get_business_idea, name='get-business-idea'),
     path('api/business-ideas/<uuid:project_id>/generate-assets/', generate_assets, name='generate-assets'),
 
@@ -2194,6 +2201,14 @@ urlpatterns = [
     path('api/spider-intelligence/summary/', data_summary, name='spider-intelligence-summary'),
     path('api/spider-intelligence/insights/', prompt_insights, name='spider-intelligence-insights'),
     path('api/spider-intelligence/report/', daily_report, name='spider-intelligence-report'),
+
+    # Session 343: Spider registry and testing endpoints
+    path('api/spider-intelligence/registry/', spider_registry, name='spider-intelligence-registry'),
+    path('api/spider-intelligence/test/', test_spider, name='spider-intelligence-test'),
+    path('api/spider-intelligence/run-all/', run_all_spiders, name='spider-intelligence-run-all'),
+
+    # Session 344: Enhanced market research dashboard
+    path('api/spider-intelligence/market-research/', market_research_dashboard, name='spider-intelligence-market-research'),
 
     # Session 219: Agent Intelligence API - Phase A Spider-Agent Integration
     path('api/agent-intelligence/agents/', ai_agents_list, name='ai-agents-list'),
