@@ -6706,23 +6706,23 @@ class ConversationArtifact(models.Model):
 
 class AgentDream(models.Model):
     """
-    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
+    Session 247: Agent Dreams - Creative Ideation Engine
+    Session 366: UN-DEPRECATED - Dream Productization Pipeline
 
-    This model is deprecated and will be removed in a future version.
-    No new AgentDream records should be created.
-
-    Original Purpose (Session 247):
     When agents are idle, they "dream" - generating creative ideas,
-    speculative concepts, and "what if" scenarios unprompted.
+    speculative concepts, and "what if" scenarios based on their knowledge.
 
-    Reason for Deprecation:
-    - Unclear user value
-    - Adds complexity to SciFiIntegrationService
-    - 534 records exist but feature rarely surfaced in UI
+    Session 366 Updates:
+    - Removed deprecation - dreams now feed into actionable pipeline
+    - Added actionability_score for prioritizing implementable ideas
+    - Added relevance_score for project matching
+    - Added promoted_to_decision flag for Boardroom surfacing
+    - Added directed_topic for user-requested dream focus
+    - 10% of dreams are based on [Learned] knowledge from other agents
     """
 
-    # Deprecation flag - set True to completely disable
-    _deprecated = True
+    # Session 366: UN-DEPRECATED - Dreams are now productized
+    _deprecated = False
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='dreams')
 
@@ -6764,6 +6764,56 @@ class AgentDream(models.Model):
         help_text="How creative/novel the dream is (0.0-1.0)"
     )
 
+    # Session 366: Dream Productization Scores
+    actionability_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How implementable/actionable this dream is (0.0-1.0)"
+    )
+    relevance_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Relevance to active projects (0.0-1.0)"
+    )
+    composite_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Combined score: (creativity + actionability + relevance) / 3"
+    )
+
+    # Session 366: Productization Pipeline
+    promoted_to_decision = models.BooleanField(
+        default=False,
+        help_text="Whether this dream was promoted to Boardroom for decision"
+    )
+    promoted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the dream was promoted to Boardroom"
+    )
+    decision_outcome = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=[
+            ('pending', 'Pending Review'),
+            ('approved', 'Approved for Implementation'),
+            ('deferred', 'Deferred for Later'),
+            ('rejected', 'Rejected'),
+        ],
+        help_text="Outcome from Boardroom decision"
+    )
+
+    # Session 366: Directed Dreaming
+    directed_topic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="User-requested topic for focused dreaming"
+    )
+    is_directed = models.BooleanField(
+        default=False,
+        help_text="Whether this was a directed dream (user requested)"
+    )
+
     # User interaction
     shown_to_user = models.BooleanField(default=False)
     shown_at = models.DateTimeField(null=True, blank=True)
@@ -6796,25 +6846,23 @@ class AgentDream(models.Model):
         indexes = [
             models.Index(fields=['agent', '-dreamed_at']),
             models.Index(fields=['dream_type', 'shown_to_user']),
+            # Session 366: Productization indexes
+            models.Index(fields=['-composite_score', '-dreamed_at']),
+            models.Index(fields=['promoted_to_decision', 'decision_outcome']),
+            models.Index(fields=['is_directed', '-dreamed_at']),
         ]
 
     def __str__(self):
         return f"{self.agent.name}'s dream: {self.title}"
 
     def save(self, *args, **kwargs):
-        """Override save to log deprecation warning."""
-        if not self.pk:  # Only warn on new records
-            warnings.warn(
-                "AgentDream is deprecated (Session 284). "
-                "This model will be removed in a future version. "
-                "Do not create new dreams.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            logger.warning(
-                f"DEPRECATED: Creating new AgentDream for agent {self.agent_id}. "
-                "AgentDream is deprecated and should not be used."
-            )
+        """Session 366: Calculate composite score on save."""
+        # Calculate composite score from component scores
+        self.composite_score = (
+            self.creativity_score +
+            self.actionability_score +
+            self.relevance_score
+        ) / 3.0
         super().save(*args, **kwargs)
 
     def mark_as_shown(self):
@@ -6843,6 +6891,60 @@ class AgentDream(models.Model):
             dreamed_at__gte=since_datetime,
             shown_to_user=False
         ).select_related('agent').order_by('-dreamed_at')[:limit]
+
+    # Session 366: Productization Pipeline Methods
+    def promote_to_boardroom(self):
+        """Promote this dream to the Boardroom for decision-making."""
+        self.promoted_to_decision = True
+        self.promoted_at = timezone.now()
+        self.decision_outcome = 'pending'
+        self.save(update_fields=['promoted_to_decision', 'promoted_at', 'decision_outcome'])
+        return self
+
+    def record_decision(self, outcome, feedback=''):
+        """Record the Boardroom decision for this dream."""
+        self.decision_outcome = outcome
+        if feedback:
+            self.user_feedback = feedback
+        self.save(update_fields=['decision_outcome', 'user_feedback'])
+        return self
+
+    def link_to_project(self, project):
+        """Link this dream to a project for implementation."""
+        self.project = project
+        self.save(update_fields=['project'])
+        return self
+
+    @classmethod
+    def get_top_actionable_dreams(cls, limit=10, min_score=0.5):
+        """Get highest-scoring actionable dreams not yet promoted."""
+        return cls.objects.filter(
+            composite_score__gte=min_score,
+            promoted_to_decision=False
+        ).select_related('agent').order_by('-composite_score', '-dreamed_at')[:limit]
+
+    @classmethod
+    def get_dreams_for_project(cls, project, limit=10):
+        """Get dreams relevant to a specific project."""
+        return cls.objects.filter(
+            project=project
+        ).select_related('agent').order_by('-composite_score', '-dreamed_at')[:limit]
+
+    @classmethod
+    def get_pending_boardroom_dreams(cls, limit=10):
+        """Get dreams pending Boardroom decision."""
+        return cls.objects.filter(
+            promoted_to_decision=True,
+            decision_outcome='pending'
+        ).select_related('agent').order_by('-composite_score', '-promoted_at')[:limit]
+
+    @classmethod
+    def get_directed_dreams(cls, topic=None, limit=10):
+        """Get directed dreams, optionally filtered by topic."""
+        qs = cls.objects.filter(is_directed=True)
+        if topic:
+            qs = qs.filter(directed_topic__icontains=topic)
+        return qs.select_related('agent').order_by('-dreamed_at')[:limit]
 
 
 class DreamFeedbackPreference(models.Model):

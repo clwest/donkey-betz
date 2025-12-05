@@ -6201,6 +6201,392 @@ def broadcast_dream_journal(self):
         return {'status': 'failed', 'error': str(e)}
 
 
+# =============================================================================
+# Session 366: Dream Productization Pipeline
+# =============================================================================
+
+@shared_task(bind=True)
+def score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold: float = 0.7):
+    """
+    Session 366: Score unscored dreams and promote high-value ones to Boardroom.
+
+    This is the core of the Dream Productization Pipeline:
+    1. Score dreams for actionability (can this be implemented?)
+    2. Score dreams for relevance (does this match active projects?)
+    3. Calculate composite score
+    4. Link dreams to relevant projects
+    5. Promote top dreams to Boardroom for decision
+
+    Args:
+        max_dreams: Maximum dreams to score per cycle
+        promote_threshold: Minimum composite score to auto-promote to Boardroom
+
+    Returns:
+        Stats about dreams scored and promoted
+    """
+    from django.utils import timezone
+    from core.models import AgentDream
+    from core.models_unified_system import LivingProjectConfig
+    import openai
+    import os
+    import re
+
+    logger.info("🎯 [DREAM-PRODUCTIZATION] Starting dream scoring cycle...")
+
+    try:
+        # Get unscored dreams (actionability_score = 0.0 and created recently)
+        # Focus on recent dreams that haven't been scored yet
+        unscored_dreams = AgentDream.objects.filter(
+            actionability_score=0.0,  # Not yet scored
+            promoted_to_decision=False,
+            dreamed_at__gte=timezone.now() - timezone.timedelta(days=7)  # Last 7 days
+        ).select_related('agent').order_by('-creativity_score', '-dreamed_at')[:max_dreams]
+
+        if not unscored_dreams.exists():
+            logger.info("🎯 [DREAM-PRODUCTIZATION] No unscored dreams found")
+            return {'status': 'skipped', 'reason': 'no_unscored_dreams'}
+
+        # Get active projects for relevance matching
+        active_projects = LivingProjectConfig.objects.filter(
+            is_active=True
+        ).select_related('project').prefetch_related()
+
+        # Build project context for matching
+        project_contexts = []
+        for config in active_projects:
+            project_contexts.append({
+                'id': str(config.project.id),
+                'name': config.project.project_name,
+                'topics': config.watch_topics or [],
+                'keywords': config.watch_keywords or [],
+                'competitors': config.watch_competitors or [],
+            })
+
+        logger.info(f"🎯 [DREAM-PRODUCTIZATION] Scoring {unscored_dreams.count()} dreams against {len(project_contexts)} active projects")
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        stats = {
+            'dreams_scored': 0,
+            'dreams_promoted': 0,
+            'dreams_linked_to_projects': 0,
+            'avg_actionability': 0.0,
+            'avg_relevance': 0.0,
+            'avg_composite': 0.0,
+        }
+
+        actionability_scores = []
+        relevance_scores = []
+        composite_scores = []
+
+        for dream in unscored_dreams:
+            try:
+                # Step 1: Score for Actionability
+                # Can this dream be implemented/acted upon?
+                actionability_prompt = f"""Rate the actionability of this creative idea on a scale of 0.0 to 1.0.
+
+Dream from {dream.agent.name if dream.agent else 'Unknown Agent'}:
+Type: {dream.dream_type}
+Title: {dream.title}
+Content: {dream.content[:500]}
+
+Actionability means: Can this be implemented? Is it a concrete idea vs abstract musing?
+- 0.0-0.3: Very abstract, philosophical, or too vague to act on
+- 0.4-0.6: Has some concrete elements but needs significant refinement
+- 0.7-0.9: Clear, actionable idea with specific implementation path
+- 1.0: Immediately actionable with clear next steps
+
+Respond with ONLY a number between 0.0 and 1.0, nothing else."""
+
+                actionability_response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": actionability_prompt}],
+                    max_tokens=10,
+                    temperature=0.3
+                )
+
+                actionability_text = actionability_response.choices[0].message.content.strip()
+                # Extract number from response
+                actionability_match = re.search(r'(\d+\.?\d*)', actionability_text)
+                actionability = float(actionability_match.group(1)) if actionability_match else 0.5
+                actionability = max(0.0, min(1.0, actionability))
+
+                # Step 2: Score for Relevance to Projects
+                relevance = 0.0
+                matched_project_id = None
+
+                if project_contexts:
+                    relevance_prompt = f"""Rate how relevant this dream is to any of these active projects.
+
+Dream:
+- Title: {dream.title}
+- Content: {dream.content[:300]}
+- Topics: {', '.join(dream.related_topics or [])}
+
+Active Projects:
+{chr(10).join([f"- {p['name']}: topics={p['topics']}, keywords={p['keywords']}" for p in project_contexts])}
+
+Respond with:
+1. A relevance score (0.0-1.0) where 1.0 = highly relevant to at least one project
+2. The name of the most relevant project (or "none" if < 0.3)
+
+Format: SCORE|PROJECT_NAME
+Example: 0.8|AI Content Studio"""
+
+                    relevance_response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": relevance_prompt}],
+                        max_tokens=50,
+                        temperature=0.3
+                    )
+
+                    relevance_text = relevance_response.choices[0].message.content.strip()
+                    if '|' in relevance_text:
+                        parts = relevance_text.split('|')
+                        relevance_match = re.search(r'(\d+\.?\d*)', parts[0])
+                        relevance = float(relevance_match.group(1)) if relevance_match else 0.0
+                        relevance = max(0.0, min(1.0, relevance))
+
+                        # Find matching project
+                        if len(parts) > 1 and parts[1].strip().lower() != 'none':
+                            project_name = parts[1].strip()
+                            for p in project_contexts:
+                                if p['name'].lower() in project_name.lower() or project_name.lower() in p['name'].lower():
+                                    matched_project_id = p['id']
+                                    break
+
+                # Step 3: Calculate composite score
+                composite = (dream.creativity_score + actionability + relevance) / 3.0
+
+                # Update dream scores
+                dream.actionability_score = actionability
+                dream.relevance_score = relevance
+                dream.composite_score = composite
+
+                # Step 4: Link to matched project
+                if matched_project_id and relevance >= 0.5:
+                    try:
+                        from core.models import PartnershipProject
+                        project = PartnershipProject.objects.get(id=matched_project_id)
+                        dream.project = project
+                        stats['dreams_linked_to_projects'] += 1
+                        logger.debug(f"🎯 [DREAM-PRODUCTIZATION] Linked dream '{dream.title[:30]}' to project '{project.project_name}'")
+                    except Exception:
+                        pass
+
+                # Step 5: Auto-promote high-scoring dreams
+                if composite >= promote_threshold:
+                    dream.promoted_to_decision = True
+                    dream.promoted_at = timezone.now()
+                    dream.decision_outcome = 'pending'
+                    stats['dreams_promoted'] += 1
+                    logger.info(f"🎯 [DREAM-PRODUCTIZATION] Promoted dream '{dream.title[:40]}' (score: {composite:.2f})")
+
+                dream.save()
+                stats['dreams_scored'] += 1
+
+                # Track for averages
+                actionability_scores.append(actionability)
+                relevance_scores.append(relevance)
+                composite_scores.append(composite)
+
+                logger.debug(f"🎯 [DREAM-PRODUCTIZATION] Scored '{dream.title[:30]}': action={actionability:.2f}, relevance={relevance:.2f}, composite={composite:.2f}")
+
+            except Exception as e:
+                logger.warning(f"🎯 [DREAM-PRODUCTIZATION] Failed to score dream {dream.id}: {e}")
+                continue
+
+        # Calculate averages
+        if actionability_scores:
+            stats['avg_actionability'] = sum(actionability_scores) / len(actionability_scores)
+            stats['avg_relevance'] = sum(relevance_scores) / len(relevance_scores)
+            stats['avg_composite'] = sum(composite_scores) / len(composite_scores)
+
+        # Broadcast update via WebSocket
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'dream_productization',
+                'stats': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except Exception:
+            pass
+
+        logger.info(
+            f"🎯 [DREAM-PRODUCTIZATION] Cycle complete: "
+            f"{stats['dreams_scored']} scored, {stats['dreams_promoted']} promoted, "
+            f"{stats['dreams_linked_to_projects']} linked to projects"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🎯 [DREAM-PRODUCTIZATION] Scoring failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(bind=True)
+def generate_directed_dreams(self, topic: str, agent_ids: list = None, dreams_per_agent: int = 2):
+    """
+    Session 366: Generate directed dreams about a specific topic.
+
+    Users can request agents to dream about specific topics for their projects.
+    This is "intentional" dreaming vs the background emergent dreaming.
+
+    Args:
+        topic: The topic to dream about (e.g., "AI marketing automation")
+        agent_ids: Specific agent IDs to dream, or None for all
+        dreams_per_agent: How many dreams per agent
+
+    Returns:
+        Stats about directed dreams generated
+    """
+    from django.utils import timezone
+    from core.models import Agent, AgentDream, AgentKnowledgeSource
+    import openai
+    import os
+    import random
+
+    logger.info(f"🎯 [DIRECTED-DREAMS] Starting directed dream cycle for topic: {topic}")
+
+    try:
+        # Get agents to dream
+        if agent_ids:
+            agents = Agent.objects.filter(id__in=agent_ids, is_active=True)
+        else:
+            # Get agents with relevant knowledge
+            agents = Agent.objects.filter(
+                is_active=True,
+                knowledge_sources__isnull=False
+            ).distinct()[:10]
+
+        if not agents.exists():
+            logger.info("🎯 [DIRECTED-DREAMS] No eligible agents found")
+            return {'status': 'skipped', 'reason': 'no_agents'}
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        stats = {
+            'dreams_generated': 0,
+            'agents_dreaming': 0,
+            'topic': topic
+        }
+
+        # Directed dream templates - more focused than regular dreams
+        directed_templates = [
+            {
+                'type': 'creative_idea',
+                'prompt': f"Generate a creative and innovative idea about {topic}. How could your expertise in {{specialty}} create something novel here?"
+            },
+            {
+                'type': 'improvement',
+                'prompt': f"What improvement or enhancement related to {topic} would have the biggest impact? Use your knowledge of {{specialty}} to suggest something specific."
+            },
+            {
+                'type': 'mashup',
+                'prompt': f"Create a mashup idea that combines {topic} with {{specialty}}. What unexpected synergy could emerge?"
+            },
+            {
+                'type': 'prediction',
+                'prompt': f"Based on your knowledge, make a bold prediction about how {topic} will evolve. What trend do you see emerging?"
+            },
+        ]
+
+        for agent in agents:
+            stats['agents_dreaming'] += 1
+
+            for _ in range(dreams_per_agent):
+                template = random.choice(directed_templates)
+
+                system_prompt = f"""You are {agent.name}, an AI agent specialized in {agent.specialization or 'creative thinking'}.
+You've been asked to focus your creative thinking on a specific topic.
+
+Guidelines:
+- Be creative, imaginative, but focused on the given topic
+- Keep dreams concise (2-4 sentences)
+- Make it feel like a genuine creative insight
+- Reference your specialty naturally
+- Don't use bullet points or lists"""
+
+                user_prompt = template['prompt'].format(
+                    specialty=agent.specialization or 'creative analysis'
+                )
+
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        max_tokens=300,
+                        temperature=0.8
+                    )
+
+                    dream_content = response.choices[0].message.content.strip()
+
+                    # Generate title
+                    title_response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": "Generate a short, catchy title (3-7 words). No quotes."},
+                            {"role": "user", "content": dream_content}
+                        ],
+                        max_tokens=20,
+                        temperature=0.7
+                    )
+
+                    title = title_response.choices[0].message.content.strip().strip('"\'')[:200]
+
+                    # Create the directed dream with higher initial scores
+                    AgentDream.objects.create(
+                        agent=agent,
+                        title=title,
+                        content=dream_content,
+                        dream_type=template['type'],
+                        inspiration_source=topic[:200],
+                        related_topics=[topic, agent.specialization or 'general'],
+                        vividness_score=random.uniform(0.7, 1.0),
+                        creativity_score=random.uniform(0.7, 1.0),
+                        # Session 366: Mark as directed
+                        is_directed=True,
+                        directed_topic=topic[:200],
+                        # Directed dreams start with higher actionability
+                        actionability_score=0.6,  # Start higher since they're focused
+                    )
+
+                    stats['dreams_generated'] += 1
+                    logger.debug(f"🎯 [DIRECTED-DREAMS] {agent.name} dreamed: {title}")
+
+                except Exception as e:
+                    logger.warning(f"🎯 [DIRECTED-DREAMS] Failed for {agent.name}: {e}")
+                    continue
+
+        logger.info(
+            f"🎯 [DIRECTED-DREAMS] Complete: {stats['dreams_generated']} dreams "
+            f"from {stats['agents_dreaming']} agents about '{topic}'"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🎯 [DIRECTED-DREAMS] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def explore_dream_topic(self, exploration_id: str):
     """
