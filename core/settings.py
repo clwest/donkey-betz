@@ -957,6 +957,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.auto_promote_decisions',
         'schedule': 1800.0,  # Every 30 minutes
     },
+    # Session 363: Spider-Triggered Conversations (new data → agent discussion)
+    'trigger-spider-conversations': {
+        'task': 'core.tasks.trigger_spider_conversations',
+        'schedule': 900.0,  # Every 15 minutes - check for new high-relevance spider data
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
