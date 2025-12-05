@@ -17,6 +17,13 @@ from intelligence.agent_instruction_parser import AgentInstruction, AgentInstruc
 from intelligence.real_agents import AgentFactory
 from agents.registry import get_agent_registry
 
+# Session 352: Pipeline Visualizer integration
+from core.pipeline_progress_consumer import (
+    broadcast_stage_started,
+    broadcast_stage_completed,
+    broadcast_stage_failed
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -215,9 +222,43 @@ class PersonalAssistantAgentIntegration:
 
     async def _execute_single_agent(self, agent_name: str, task: str) -> Dict[str, Any]:
         """
-        Execute a single agent with a task
+        Execute a single agent with a task.
+
+        Session 352: Now broadcasts to Pipeline Visualizer for real-time UI updates!
         """
+        start_time = datetime.now()
+
+        # Session 352: Map agent names to pipeline stage types
+        agent_to_stage = {
+            'image_generation_agent': 'image',
+            'video_generation_agent': 'video',
+            'audio_generation_agent': 'audio',
+            '3d_generation_agent': '3d',
+            'research_agent': 'initial_research',
+            'trend_analysis_agent': 'trend_analysis',
+            'competitor_analysis_agent': 'competitor_analysis',
+            'customer_research_agent': 'customer_research',
+            'brand_identity_agent': 'brand_strategy',
+            'seo_optimizer_agent': 'seo',
+            'content_strategy_agent': 'content_audit',
+            'workflow_orchestration_agent': 'creative_direction',
+            'prompt_engineering_agent': 'brief',
+        }
+
+        # Determine stage and pipeline type
+        stage = agent_to_stage.get(agent_name, agent_name.replace('_agent', ''))
+        pipeline_type = 'creative' if stage in ['image', 'video', 'audio', '3d', 'editing', 'brief', 'creative_direction', 'seo'] else 'research'
+
         try:
+            # Session 352: Broadcast stage STARTED to Pipeline Visualizer
+            broadcast_stage_started(
+                stage=stage,
+                pipeline_type=pipeline_type,
+                agent_name=agent_name,
+                business_idea=task[:100] if task else None
+            )
+            logger.info(f"🚀 [Pipeline] Agent started: {agent_name} ({stage})")
+
             # Create an agent instance
             agent = AgentFactory.create_agent(agent_name)
 
@@ -235,11 +276,26 @@ class PersonalAssistantAgentIntegration:
             # Execute the agent
             result = await agent.execute(instruction)
 
+            execution_time = (datetime.now() - start_time).total_seconds()
+            execution_time_ms = int(execution_time * 1000)
+            success = 'error' not in result
+
+            # Session 352: Broadcast stage COMPLETED to Pipeline Visualizer
+            broadcast_stage_completed(
+                stage=stage,
+                pipeline_type=pipeline_type,
+                agent_name=agent_name,
+                success=success,
+                duration_ms=execution_time_ms,
+                summary=str(result)[:200] if result else f'{agent_name} completed'
+            )
+            logger.info(f"✅ [Pipeline] Agent completed: {agent_name} in {execution_time:.1f}s")
+
             # Log execution
             execution_log = {
                 'agent_name': agent_name,
                 'task': task[:100],
-                'success': 'error' not in result,
+                'success': success,
                 'timestamp': datetime.now().isoformat(),
                 'result_summary': str(result)[:200]
             }
@@ -248,13 +304,23 @@ class PersonalAssistantAgentIntegration:
             return {
                 'agent_name': agent_name,
                 'task': task,
-                'success': 'error' not in result,
+                'success': success,
                 'result': result,
                 'execution_time': datetime.now().isoformat()
             }
 
         except Exception as e:
             logger.error(f"Error executing agent {agent_name}: {str(e)}")
+
+            # Session 352: Broadcast stage FAILED to Pipeline Visualizer
+            broadcast_stage_failed(
+                stage=stage,
+                pipeline_type=pipeline_type,
+                agent_name=agent_name,
+                error=str(e)[:200]
+            )
+            logger.warning(f"❌ [Pipeline] Agent failed: {agent_name} - {str(e)[:100]}")
+
             return {
                 'agent_name': agent_name,
                 'task': task,
