@@ -384,6 +384,15 @@ app.conf.beat_schedule = {
             'expires': 1200,  # 20 minutes
         }
     },
+    # Session 367: Dream Implementation Pipeline
+    # Process approved dreams and create implementation tasks
+    'dream-implementation-cycle': {
+        'task': 'core.tasks.process_approved_dreams',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes - process approved dreams
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
     # Session 252: Agent Mood System
     # Check for expired moods and reset them periodically
     'check-mood-expirations': {
