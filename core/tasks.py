@@ -6588,6 +6588,179 @@ Guidelines:
 
 
 @shared_task(bind=True)
+def process_approved_dreams(self, max_dreams: int = 10):
+    """
+    Session 367: Process approved dreams and create implementation tasks.
+
+    When dreams are approved in the Boardroom (decision_outcome='approved'),
+    this task:
+    1. Creates a DreamImplementation record
+    2. Assigns the most appropriate agent
+    3. Generates an implementation plan
+    4. Kicks off the implementation
+
+    Args:
+        max_dreams: Maximum approved dreams to process per cycle
+
+    Returns:
+        Stats about implementations created
+    """
+    from django.utils import timezone
+    from core.models import AgentDream, Agent
+    from core.models_unified_system import DreamImplementation
+    import openai
+    import os
+
+    logger.info("🚀 [DREAM-IMPLEMENTATION] Starting approved dream processing...")
+
+    try:
+        # Get approved dreams that don't have implementations yet
+        approved_dreams = AgentDream.objects.filter(
+            decision_outcome='approved'
+        ).exclude(
+            implementation__isnull=False  # Skip dreams that already have implementations
+        ).select_related('agent', 'project').order_by('-composite_score')[:max_dreams]
+
+        if not approved_dreams.exists():
+            logger.info("🚀 [DREAM-IMPLEMENTATION] No approved dreams to process")
+            return {'status': 'skipped', 'reason': 'no_approved_dreams'}
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        stats = {
+            'dreams_processed': 0,
+            'implementations_created': 0,
+            'agents_assigned': 0,
+        }
+
+        # Map dream types to implementation types
+        type_mapping = {
+            'creative_idea': 'feature',
+            'improvement': 'improvement',
+            'mashup': 'feature',
+            'prediction': 'research',
+            'what_if': 'experiment',
+            'observation': 'research',
+            'wild_thought': 'experiment',
+        }
+
+        for dream in approved_dreams:
+            try:
+                # Determine implementation type
+                impl_type = type_mapping.get(dream.dream_type, 'other')
+
+                # Create implementation record
+                implementation = DreamImplementation.create_from_approved_dream(
+                    dream=dream,
+                    implementation_type=impl_type
+                )
+                stats['implementations_created'] += 1
+
+                # Find the best agent to implement this
+                # First try the dreaming agent, then find one with relevant skills
+                assigned_agent = dream.agent
+
+                # If dream has no agent or we want a specialist, find one
+                if not assigned_agent or impl_type in ['feature', 'improvement']:
+                    # Try to find a specialist based on implementation type
+                    if impl_type in ['feature', 'improvement', 'workflow']:
+                        # Look for workflow or creation agents
+                        candidates = Agent.objects.filter(
+                            is_active=True,
+                            name__in=['WorkflowOrchestrationAgent', 'CreationAgent', 'CreativeDirectorAgent']
+                        ).first()
+                        if candidates:
+                            assigned_agent = candidates
+
+                    elif impl_type == 'content':
+                        candidates = Agent.objects.filter(
+                            is_active=True,
+                            name__in=['ContentStrategyAgent', 'CreationAgent', 'ImageAgent']
+                        ).first()
+                        if candidates:
+                            assigned_agent = candidates
+
+                    elif impl_type == 'research':
+                        candidates = Agent.objects.filter(
+                            is_active=True,
+                            name__in=['ResearchAgent', 'TrendAnalysisAgent', 'CompetitorAnalysisAgent']
+                        ).first()
+                        if candidates:
+                            assigned_agent = candidates
+
+                if assigned_agent:
+                    implementation.assign_agent(assigned_agent)
+                    stats['agents_assigned'] += 1
+
+                    # Generate implementation plan
+                    plan_prompt = f"""Create a brief implementation plan for this approved idea.
+
+Dream Title: {dream.title}
+Dream Content: {dream.content[:500]}
+Dream Type: {dream.dream_type}
+Implementation Type: {impl_type}
+Agent: {assigned_agent.name}
+Agent Specialty: {assigned_agent.specialization or 'General'}
+
+Create a 3-5 step implementation plan. Be specific and actionable.
+Format: numbered list of steps."""
+
+                    try:
+                        plan_response = client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            messages=[{"role": "user", "content": plan_prompt}],
+                            max_tokens=500,
+                            temperature=0.7
+                        )
+
+                        plan = plan_response.choices[0].message.content.strip()
+                        implementation.start_implementation(plan=plan)
+
+                        logger.info(f"🚀 [DREAM-IMPLEMENTATION] Created implementation for '{dream.title[:40]}' -> {assigned_agent.name}")
+
+                    except Exception as plan_error:
+                        logger.warning(f"🚀 [DREAM-IMPLEMENTATION] Failed to generate plan: {plan_error}")
+                        # Still mark as in_progress even without plan
+                        implementation.start_implementation(plan="Implementation plan pending")
+
+                stats['dreams_processed'] += 1
+
+            except Exception as e:
+                logger.warning(f"🚀 [DREAM-IMPLEMENTATION] Failed to process dream {dream.id}: {e}")
+                continue
+
+        # Broadcast update
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'dream_implementation',
+                'stats': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except Exception:
+            pass
+
+        logger.info(
+            f"🚀 [DREAM-IMPLEMENTATION] Complete: "
+            f"{stats['implementations_created']} implementations created, "
+            f"{stats['agents_assigned']} agents assigned"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🚀 [DREAM-IMPLEMENTATION] Processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(bind=True)
 def explore_dream_topic(self, exploration_id: str):
     """
     Session 249: Deep exploration of a dream topic when user clicks "Explore".
