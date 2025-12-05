@@ -12963,6 +12963,8 @@ class AgentDecisionSummary(models.Model):
     is_canonical = models.BooleanField(default=False)
     promoted_at = models.DateTimeField(null=True, blank=True)
     promoted_by = models.CharField(max_length=100, blank=True)  # 'human' or agent name
+    # Session 363: Track when policy was propagated to agents
+    propagated_at = models.DateTimeField(null=True, blank=True)
 
     # If this supersedes a previous decision
     supersedes = models.ForeignKey(
