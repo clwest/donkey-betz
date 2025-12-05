@@ -63,6 +63,10 @@ from core.views_projects_api import (
     export_research_pdf,  # Session 325: Export research as PDF
     export_comprehensive_pdf,  # Session 352: Export ALL research as single PDF
     add_creative_content_to_project,  # Session 334: Add creative content to existing project
+    # Session 353: Research → Creative Pipeline
+    generate_brand_assets,
+    analyze_brand_styles,
+    get_available_styles,
     create_project_from_creative_content,  # Session 334: Create project from creative content
     # Session 335: Living Project API
     project_feed,
@@ -1113,6 +1117,10 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/export-research-pdf/', export_research_pdf, name='export-research-pdf'),  # Session 325
     path('api/projects/<uuid:project_id>/export-comprehensive-pdf/', export_comprehensive_pdf, name='export-comprehensive-pdf'),  # Session 352
     path('api/projects/<uuid:project_id>/add-creative-content/', add_creative_content_to_project, name='add-creative-content-to-project'),  # Session 334
+    # Session 353: Research → Creative Pipeline
+    path('api/projects/<uuid:project_id>/generate-brand-assets/', generate_brand_assets, name='generate-brand-assets'),
+    path('api/projects/<uuid:project_id>/analyze-brand-styles/', analyze_brand_styles, name='analyze-brand-styles'),
+    path('api/styles/available/', get_available_styles, name='get-available-styles'),
     path('api/projects/from-creative-content/', create_project_from_creative_content, name='create-project-from-creative-content'),  # Session 334
     path('api/projects/<uuid:project_id>/learning/', get_project_learning_stats, name='project-learning-stats'),  # Session 326
 
