@@ -1,64 +1,33 @@
 # Start Next Session Here
 
-**Last Session:** 363 - Autonomy Expansion (3 New Reactive Pipelines)
+**Last Session:** 364 - Conversation Quality Fixes
 **Date:** December 5, 2025
 **Status:** 102 spiders | 36 categories | 24 agents | 16 AUTONOMOUS TASKS!
 
 ---
 
-## Session 363 Accomplishments
+## Session 364 Accomplishments
 
-### Three New Reactive Pipelines!
+### Fixed 3 Critical Conversation Issues!
 
-We expanded the autonomous system with three new reactive pipelines that create truly self-improving behavior:
+| Issue | Problem | Solution |
+|-------|---------|----------|
+| **Self-Response Bug** | Agents responding to themselves | Fixed speaker swap logic, added consecutive_empty counter |
+| **Repetitive Content** | All agents making same points | Added 6 diversity prompts that rotate per message |
+| **Multi-Agent Empty** | Panel conversations generating 0 messages | Increased tokens 500→2000, added retry logic |
 
-| Pipeline | Trigger | Action | Schedule |
-|----------|---------|--------|----------|
-| **Spider-Triggered Conversations** | New high-relevance spider data | Creates agent discussions | Every 15 min |
-| **Project-Triggered Research** | Project research needs | Prioritizes relevant spiders | Every 20 min |
-| **Decision-Triggered Propagation** | New canonical policy | Creates implementation conversations | Every 10 min |
-
-### Fully Connected Autonomous Loop
+### Before vs After
 
 ```
-[Spider Network] ─── 30 min ───────────────────────────────────────────────────┐
-       │                                                                        │
-       v                                                                        │
-[SpiderData] ───────────────────────┐                                           │
-       │                            │                                           │
-       │ (15 min)                   │                                           │
-       v                            │                                           │
-[trigger_spider_conversations] ←NEW │                                           │
-       │                            │                                           │
-       v                            v                                           │
-[Agent Conversations] ──> [Conclusions] ──> [DecisionExtractor]                 │
-       │ (5 min)                                   │                            │
-       │                                           v                            │
-       │                           [AgentDecisionSummary]                       │
-       │                                           │ (30 min)                   │
-       │                                           v                            │
-       │                           [auto_promote_decisions]                     │
-       │                                           │                            │
-       │                                           v                            │
-       │                           [Canonical Policies]                         │
-       │                                           │ (10 min)                   │
-       │                                           v                            │
-       │                           [propagate_new_policies] ←NEW                │
-       │                                           │                            │
-       │                                           v                            │
-       │                           [Implementation Conversations]               │
-       │                                                                        │
-       v                                                                        │
-[LivingProjectConfig] ←─────────────────────────────────────────────────────────┤
-       │                                                                        │
-       │ (20 min)                                                               │
-       v                                                                        │
-[trigger_project_research] ←NEW                                                 │
-       │                                                                        │
-       v                                                                        │
-[SpiderPriority boost] ─────────────────────────────────────────────────────────┘
+BEFORE:
+- Multi-agent panels: 0 messages generated
+- PromptEngineeringAgent critiquing its own opening statement
+- "11 data points is too small" repeated by all 5 speakers
 
-                        FULLY CONNECTED AUTONOMOUS LOOP
+AFTER:
+- Multi-agent panels: 24 messages (12 per conversation)
+- Proper speaker alternation
+- Diverse perspectives (opportunities, risks, next steps, etc.)
 ```
 
 ---
@@ -70,9 +39,9 @@ We expanded the autonomous system with three new reactive pipelines that create 
 | **Spiders** | **102** | Active |
 | **Agents** | **24** | Active |
 | **Autonomous Tasks** | **16** | Running |
-| **Agent Conversations** | **1,300+** | Growing |
+| **Agent Conversations** | **1,300+** | Higher quality now! |
 | **Boardroom Decisions** | **122+** | Growing |
-| **Canonical Policies** | **5+** | Auto-promoting & propagating! |
+| **Canonical Policies** | **5+** | Auto-promoting & propagating |
 | **Project Insights** | **321+** | Growing |
 | **LivingProjectConfig** | **10** | All active |
 
@@ -85,11 +54,11 @@ We expanded the autonomous system with three new reactive pipelines that create 
 | `run-spider-network` | 30 min | Collect external data |
 | `run-agent-learning-cycle` | 10 min | Knowledge propagation |
 | `agent-conversation-cycle` | 5 min | 2-agent discussions |
-| `multi-agent-panel-cycle` | 20 min | 3-5 agent panels |
+| `multi-agent-panel-cycle` | 20 min | 3-5 agent panels (NOW WORKING!) |
 | `auto-promote-decisions` | 30 min | Promote to canonical policies |
-| **`trigger-spider-conversations`** | **15 min** | **NEW: Data → Discussion** |
-| **`trigger-project-research`** | **20 min** | **NEW: Project → Spider** |
-| **`propagate-new-policies`** | **10 min** | **NEW: Policy → Agents** |
+| `trigger-spider-conversations` | 15 min | Data → Discussion |
+| `trigger-project-research` | 20 min | Project → Spider |
+| `propagate-new-policies` | 10 min | Policy → Agents |
 | `agent-dream-cycle` | 15 min | Creative thinking |
 | `broadcast-learning-status` | 1 min | WebSocket updates |
 | `broadcast-conversation-status` | 2 min | WebSocket updates |
@@ -101,22 +70,22 @@ We expanded the autonomous system with three new reactive pipelines that create 
 
 ---
 
-## What's Next (Session 364)
+## What's Next (Session 365)
 
-### Option A: More Diversity
-- Mood variety (23/24 agents are "calm")
-- Relationship evolution (more rivalries/alliances)
-- Specialized conversation topics
+### Option A: More Mood Diversity
+- 23/24 agents are "calm" - add variety
+- Implement mood-influenced conversation styles
+- Mood transitions based on conversation outcomes
 
-### Option B: Pipeline Monitoring
-- Dashboard for autonomous activity
+### Option B: Pipeline Monitoring Dashboard
 - Real-time view of which tasks are firing
 - Success/failure metrics
+- Conversation quality scores
 
-### Option C: Cross-Agent Learning
-- Agents share knowledge from conversations
-- Transfer learning between specialists
-- Collective memory improvements
+### Option C: Agent Relationship Effects
+- Use rivalries/alliances to influence conversation tone
+- More competitive dynamics in debates
+- Track relationship changes from conversation outcomes
 
 ---
 
@@ -130,27 +99,23 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 363 Files Changed
+## Session 364 Files Changed
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added 3 new autonomous tasks (~370 lines) |
-| `core/settings.py` | Added 3 tasks to CELERY_BEAT_SCHEDULE |
-| `core/models_unified_system.py` | Added `propagated_at` field, new trigger_type choices |
-| `core/migrations/0070_*` | Migration for new field |
+| `core/tasks.py` | Fixed speaker swap, added diversity prompts, increased tokens, added retry |
 
 ---
 
-## Session 363 Commits
+## Session 364 Commits
 
-1. `f3d2d57` - feat(Session 363): Add spider-triggered autonomous conversations
-2. `8557ad6` - feat(Session 363): Add project-triggered research autonomy
-3. `5f1b7b4` - feat(Session 363): Add decision-triggered policy propagation
+1. `626ba3a` - fix(Session 364): Improve conversation quality and multi-agent panel reliability
 
 ---
 
 ## Related Documentation
 
-- `docs/handoffs/SESSION_363_AUTONOMY_EXPANSION.md` - Full implementation details
+- `docs/handoffs/SESSION_364_CONVERSATION_QUALITY.md` - Full fix details
+- `docs/handoffs/SESSION_363_AUTONOMY_EXPANSION.md` - 3 new reactive pipelines
 - `docs/handoffs/SESSION_362_CONVERSATION_VALUE_AUDIT.md` - Pipeline fixes
 - `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` - Multi-agent panels
