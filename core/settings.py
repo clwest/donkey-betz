@@ -962,6 +962,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.trigger_spider_conversations',
         'schedule': 900.0,  # Every 15 minutes - check for new high-relevance spider data
     },
+    # Session 363: Project-Triggered Research (project needs → spider query)
+    'trigger-project-research': {
+        'task': 'core.tasks.trigger_project_research',
+        'schedule': 1200.0,  # Every 20 minutes - check what projects need
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
