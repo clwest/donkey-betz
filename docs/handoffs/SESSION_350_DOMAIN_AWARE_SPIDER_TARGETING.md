@@ -258,12 +258,33 @@ print(f"Warning: {result['warning']}")  # "This appears to be impractical..."
 
 ---
 
-## Next Session Priorities
+## Bug Fix: [Learned] Prefix Accumulation
 
-1. **Test Domain-Aware Research**: Create a fitness app project and verify spider data is more relevant
-2. **Expand Domain Definitions**: Add more domains as needed (healthcare, legal, etc.)
-3. **Domain-Specific Subreddit Search**: Actually query the recommended subreddits
-4. **PDF Export Updates**: Show domain relevance metrics in exported PDFs
+**Problem:** Agent Learning Activity feed showed accumulated `[Learned]` prefixes:
+```
+📖 [Learned] [Learned] [Learned] Guru - Freelance Int
+```
+
+**Root Cause:** When knowledge is transferred A → B → C, each transfer added a new `[Learned]` prefix.
+
+**Fixes:**
+1. `core/tasks.py`: Strip existing prefixes before adding new one
+2. `core/tasks.py`: Clean title in `transfer_summary`
+3. `core/services/collective_intelligence.py`: Strip prefixes in API response
+4. `ai_core/templates/ai_image_studio.html`: Strip prefixes in UI display
+5. Database cleanup: Fixed 20 existing entries
+
+**Result:**
+- Before: `[Learned] [Learned] [Learned] Guru - Freelance Int`
+- After: `Guru - Freelance Intelligence`
+
+---
+
+## Next Session Priorities (Session 351)
+
+1. **Agent Knowledge Application to Research**: Investigate if agent-shared knowledge and conversations are being applied to business research
+2. **Boardroom Integration**: Apply Boardroom discussions/decisions to business research when relevant
+3. **Agent Conversation → Research Pipeline**: Ensure insights from agent discussions feed into research synthesis
 
 ---
 
