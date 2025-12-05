@@ -2868,13 +2868,20 @@ def run_agent_learning_cycle():
                 ).exists()
 
                 if not student_has_similar:
+                    # Session 350: Strip existing [Learned] prefixes to prevent accumulation
+                    import re
+                    clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title).strip()
+                    # Also strip from beginning multiple times in case of nested
+                    while clean_title.startswith('[Learned]'):
+                        clean_title = clean_title[9:].strip()
+
                     # Create knowledge transfer record
                     usefulness = random.uniform(0.6, 1.0)  # Simulate usefulness
 
                     transfer = KnowledgeTransfer.objects.create(
                         connection=connection,
                         source_knowledge=knowledge,
-                        transfer_summary=f"{teacher.name} shared '{knowledge.title[:50]}' with {student.name}",
+                        transfer_summary=f"{teacher.name} shared '{clean_title[:50]}' with {student.name}",
                         key_points=knowledge.key_insights[:3] if knowledge.key_insights else [],
                         was_useful=usefulness > 0.7,
                         usefulness_score=usefulness,
@@ -2882,12 +2889,13 @@ def run_agent_learning_cycle():
                     )
 
                     # Create new knowledge for student (adapted from teacher's)
+
                     new_knowledge = AgentKnowledgeSource.objects.create(
                         agent=student,
                         knowledge_type=knowledge.knowledge_type,
                         spider_category=knowledge.spider_category,
                         source_spider_names=knowledge.source_spider_names + [f'learned_from_{teacher.name}'],
-                        title=f"[Learned] {knowledge.title}",
+                        title=f"[Learned] {clean_title}",
                         summary=f"Learned from {teacher.name}: {knowledge.summary[:200]}",
                         key_insights=knowledge.key_insights,
                         data_points_count=knowledge.data_points_count,

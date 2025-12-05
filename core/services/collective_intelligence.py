@@ -1088,10 +1088,15 @@ class CollectiveIntelligenceService:
                 ).order_by('-created_at')[:10]
 
                 for t in recent_transfers:
+                    # Session 350: Clean up [Learned] prefixes from knowledge titles
+                    import re
+                    knowledge_title = t.source_knowledge.title if t.source_knowledge else 'Unknown'
+                    knowledge_title = re.sub(r'^(\[Learned\]\s*)+', '', knowledge_title).strip()
+
                     recent_transfer_list.append({
                         'teacher': t.connection.teacher_agent.name if t.connection.teacher_agent else 'Unknown',
                         'student': t.connection.student_agent.name if t.connection.student_agent else 'Unknown',
-                        'knowledge': t.source_knowledge.title[:50] if t.source_knowledge else 'Unknown',
+                        'knowledge': knowledge_title[:50],
                         'usefulness': round(t.usefulness_score, 2),
                         'time': t.created_at.isoformat() if t.created_at else None
                     })

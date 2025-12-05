@@ -46536,6 +46536,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     ? `<span class="text-success">+${(item.effectiveness_gain * 100).toFixed(1)}%</span>`
                     : '';
 
+                // Session 350: Clean up knowledge display - strip [Learned] prefixes
+                let cleanKnowledge = (item.knowledge || '').replace(/^\[Learned\]\s*/g, '').trim();
+                // Also strip multiple accumulated prefixes
+                while (cleanKnowledge.startsWith('[Learned]')) {
+                    cleanKnowledge = cleanKnowledge.substring(9).trim();
+                }
+                // Truncate for display
+                if (cleanKnowledge.length > 60) {
+                    cleanKnowledge = cleanKnowledge.substring(0, 57) + '...';
+                }
+
                 return `
                     <div class="learning-item p-2 mb-2" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid #ec4899;">
                         <div class="d-flex justify-content-between align-items-start">
@@ -46550,7 +46561,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         </div>
                         <p class="mb-1 mt-1" style="color: #d1d5db; font-size: 13px;">${item.description}</p>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small style="color: #9ca3af;">📖 ${item.knowledge}</small>
+                            <small style="color: #9ca3af;">📖 ${cleanKnowledge}</small>
                             ${gainText}
                         </div>
                     </div>
