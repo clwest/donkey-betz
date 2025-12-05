@@ -16,6 +16,7 @@ This session addressed critical feedback from reviewing business research PDFs: 
 2. **Domain Extraction Service**: Extracts business domain from project descriptions
 3. **Domain-Targeted Spider Queries**: Business agents now use domain-specific search terms
 4. **Honest Data Reporting**: When domain-specific data is limited, the system honestly reports this
+5. **Trend Analysis Fix**: Fixed extraction of trend data for UI display (was showing "1 data point", now shows actual trend count)
 
 ---
 
@@ -146,6 +147,7 @@ When domain-specific data is limited, the analysis honestly acknowledges this li
 | `core/models_partnership.py` | Added domain targeting methods (lines 432-523) |
 | `core/agents/business/competitor_analysis_agent.py` | Viability check + domain targeting |
 | `core/agents/business/customer_research_agent.py` | Viability check + domain targeting |
+| `core/services/research_orchestrator.py` | **Fixed** `_extract_research_summary()` for trend_analysis |
 
 ---
 
@@ -196,6 +198,32 @@ CREATE TABLE core_projectspiderpriority (
     ...
 );
 ```
+
+---
+
+## Bug Fix: Trend Analysis UI Display
+
+**Problem:** Trend Analysis section showed "1 data point" and just echoed the task text instead of displaying actual trend data.
+
+**Root Cause:** `_extract_research_summary()` in `research_orchestrator.py` was:
+1. Using `len(tool_results)` = 1 as the data point count (instead of extracting `result['data_points']`)
+2. Displaying the task text as summary instead of extracting trend topics
+
+**Fix:** Updated `_extract_research_summary()` for `trend_analysis` type to:
+1. Navigate into `tool_results[0]['result']` to get actual trend data
+2. Extract `data_points`, `sources`, `trends`, and `discussions` from the result
+3. Build a formatted summary with trend topics and relevance scores
+
+**Before:**
+- 1 data point
+- "Analyzed trends: Analyze current market trends..."
+
+**After:**
+- 21 data points
+- **Top Trends (15 found):**
+  - InterviewFlowAI - AI Interviews (relevance: 47%) - producthunt
+  - Building a Clinical AI Assistant... (relevance: 45%) - devto
+  - etc.
 
 ---
 
