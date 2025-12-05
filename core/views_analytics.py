@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Avg, Count, Q, F
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from datetime import datetime, timedelta
@@ -896,55 +896,84 @@ def get_confidence_metrics(user, days):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def learning_stats(request):
     """
     Get learning system statistics for AI Production Hub
     Returns aggregate metrics about the learning system
 
     Phase 1: Learning Loop Integration - Frontend Reality Fix
+    Session 349: Allow anonymous access - return system-wide stats for unauthenticated users
     """
     try:
-        user = request.user
+        user = request.user if request.user.is_authenticated else None
 
-        # Total learning entries
-        total_learnings = UserAgentLearning.objects.filter(user=user).count()
+        # Total learning entries (user-specific if authenticated, else system-wide)
+        if user:
+            total_learnings = UserAgentLearning.objects.filter(user=user).count()
+        else:
+            total_learnings = UserAgentLearning.objects.count()
 
-        # Active agents count
+        # Active agents count (system-wide)
         active_agents = Agent.objects.filter(is_active=True).count()
 
-        # Projects completed (using Revenue as proxy for completed work)
-        projects_completed = Revenue.objects.filter(user=user).values('source_type').distinct().count()
+        # Projects completed (user-specific if authenticated)
+        if user:
+            projects_completed = Revenue.objects.filter(user=user).values('source_type').distinct().count()
+        else:
+            projects_completed = 0
 
         # Success rate calculation
-        successful_learnings = UserAgentLearning.objects.filter(
-            user=user,
-            confidence_score__gte=0.7
-        ).count()
+        if user:
+            successful_learnings = UserAgentLearning.objects.filter(
+                user=user,
+                confidence_score__gte=0.7
+            ).count()
+        else:
+            successful_learnings = UserAgentLearning.objects.filter(
+                confidence_score__gte=0.7
+            ).count()
         success_rate = successful_learnings / total_learnings if total_learnings > 0 else 0
 
         # Recent learning activity (last 7 days)
         last_week = timezone.now() - timedelta(days=7)
-        recent_learnings = UserAgentLearning.objects.filter(
-            user=user,
-            created_at__gte=last_week
-        ).count()
+        if user:
+            recent_learnings = UserAgentLearning.objects.filter(
+                user=user,
+                created_at__gte=last_week
+            ).count()
+        else:
+            recent_learnings = UserAgentLearning.objects.filter(
+                created_at__gte=last_week
+            ).count()
 
         # Learning by domain breakdown
-        learning_by_domain = UserAgentLearning.objects.filter(
-            user=user
-        ).values('learning_domain').annotate(
-            count=Count('id'),
-            avg_confidence=Avg('confidence_score')
-        ).order_by('-count')[:5]
+        if user:
+            learning_by_domain = UserAgentLearning.objects.filter(
+                user=user
+            ).values('learning_domain').annotate(
+                count=Count('id'),
+                avg_confidence=Avg('confidence_score')
+            ).order_by('-count')[:5]
+        else:
+            learning_by_domain = UserAgentLearning.objects.values('learning_domain').annotate(
+                count=Count('id'),
+                avg_confidence=Avg('confidence_score')
+            ).order_by('-count')[:5]
 
         # Top performing agents (by learning entries)
-        top_agents = UserAgentLearning.objects.filter(
-            user=user
-        ).values('agent_name').annotate(
-            learning_count=Count('id'),
-            avg_confidence=Avg('confidence_score')
-        ).order_by('-learning_count')[:5]
+        if user:
+            top_agents = UserAgentLearning.objects.filter(
+                user=user
+            ).values('agent_name').annotate(
+                learning_count=Count('id'),
+                avg_confidence=Avg('confidence_score')
+            ).order_by('-learning_count')[:5]
+        else:
+            top_agents = UserAgentLearning.objects.values('agent_name').annotate(
+                learning_count=Count('id'),
+                avg_confidence=Avg('confidence_score')
+            ).order_by('-learning_count')[:5]
 
         # Session 310: Agent architecture and memory stats
         agent_memories = AgentMemory.objects.count()

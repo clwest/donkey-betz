@@ -19,7 +19,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def aggregate_insights(request):
     """
     GET /api/collective/insights/
@@ -61,7 +61,7 @@ def aggregate_insights(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def generate_report(request):
     """
     POST /api/collective/report/
@@ -100,7 +100,7 @@ def generate_report(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_knowledge_gaps(request):
     """
     GET /api/collective/knowledge-gaps/
@@ -131,7 +131,7 @@ def get_knowledge_gaps(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_agent_improvements(request):
     """
     GET /api/collective/improvements/
@@ -175,7 +175,7 @@ def get_agent_improvements(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_collaboration_monitor(request):
     """
     GET /api/collective/monitor/
@@ -201,7 +201,7 @@ def get_collaboration_monitor(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_collaboration_network(request):
     """
     GET /api/collective/network/
@@ -220,7 +220,7 @@ def get_collaboration_network(request):
 # =============================================================================
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def orchestrate_task(request):
     """
     POST /api/collective/orchestrate/
@@ -258,7 +258,7 @@ def orchestrate_task(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_collective_stats(request):
     """
     GET /api/collective/stats/
@@ -276,7 +276,7 @@ def get_collective_stats(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_dashboard_data(request):
     """
     GET /api/collective/dashboard/
@@ -324,7 +324,7 @@ def get_dashboard_data(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_agent_collective_profile(request, agent_name):
     """
     GET /api/collective/agents/{agent_name}/
