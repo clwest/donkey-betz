@@ -6300,10 +6300,9 @@ Actionability means: Can this be implemented? Is it a concrete idea vs abstract 
 Respond with ONLY a number between 0.0 and 1.0, nothing else."""
 
                 actionability_response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": actionability_prompt}],
-                    max_tokens=10,
-                    temperature=0.3
+                    max_completion_tokens=50  # Higher for reasoning models
                 )
 
                 actionability_text = actionability_response.choices[0].message.content.strip()
@@ -6335,10 +6334,9 @@ Format: SCORE|PROJECT_NAME
 Example: 0.8|AI Content Studio"""
 
                     relevance_response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[{"role": "user", "content": relevance_prompt}],
-                        max_tokens=50,
-                        temperature=0.3
+                        max_completion_tokens=100  # Higher for reasoning models
                     )
 
                     relevance_text = relevance_response.choices[0].message.content.strip()
@@ -6523,26 +6521,24 @@ Guidelines:
 
                 try:
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        max_tokens=300,
-                        temperature=0.8
+                        max_completion_tokens=500  # Higher for reasoning models
                     )
 
                     dream_content = response.choices[0].message.content.strip()
 
                     # Generate title
                     title_response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": "Generate a short, catchy title (3-7 words). No quotes."},
                             {"role": "user", "content": dream_content}
                         ],
-                        max_tokens=20,
-                        temperature=0.7
+                        max_completion_tokens=50  # Higher for reasoning models
                     )
 
                     title = title_response.choices[0].message.content.strip().strip('"\'')[:200]
@@ -6708,10 +6704,9 @@ Format: numbered list of steps."""
 
                     try:
                         plan_response = client.chat.completions.create(
-                            model="gpt-4o-mini",
+                            model="gpt-5-mini",
                             messages=[{"role": "user", "content": plan_prompt}],
-                            max_tokens=500,
-                            temperature=0.7
+                            max_completion_tokens=800  # Higher for reasoning models
                         )
 
                         plan = plan_response.choices[0].message.content.strip()
@@ -6940,10 +6935,9 @@ Create a detailed FEATURE SPECIFICATION that includes:
 Write in a professional, actionable format. Be specific and creative."""
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
-        temperature=0.7
+        max_completion_tokens=2500  # Higher for reasoning models
     )
     return response.choices[0].message.content.strip()
 
@@ -6971,10 +6965,9 @@ Create a detailed CONTENT STRATEGY that includes:
 Write in a professional, actionable format. Be creative and specific."""
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
-        temperature=0.7
+        max_completion_tokens=2500  # Higher for reasoning models
     )
     return response.choices[0].message.content.strip()
 
@@ -7003,10 +6996,9 @@ Create a comprehensive RESEARCH REPORT that includes:
 Write in a professional research format. Be thorough and analytical."""
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
-        temperature=0.7
+        max_completion_tokens=2500  # Higher for reasoning models
     )
     return response.choices[0].message.content.strip()
 
@@ -7035,10 +7027,9 @@ Create an EXPERIMENT REPORT that includes:
 Write in a scientific format. Be creative but rigorous."""
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
-        temperature=0.7
+        max_completion_tokens=2500  # Higher for reasoning models
     )
     return response.choices[0].message.content.strip()
 
@@ -7067,10 +7058,9 @@ Create a comprehensive IMPLEMENTATION DOCUMENT that includes:
 Write in a professional, actionable format."""
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
-        temperature=0.7
+        max_completion_tokens=2500  # Higher for reasoning models
     )
     return response.choices[0].message.content.strip()
 
