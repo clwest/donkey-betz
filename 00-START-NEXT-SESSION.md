@@ -1,14 +1,14 @@
 # Start Next Session Here
 
-**Last Session:** 357 - Mythology Validation for Agent Communication
+**Last Session:** 357 - Mythology Validation + Learning Cycle Fix
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | Agents Tab FULLY WORKING | Mythology Validated
+**Status:** 102 spiders | 36 categories | 79 agents | Agents Tab FULLY WORKING | Learning ACTIVE
 
 ---
 
 ## What Happened in Session 357
 
-### Mythology Validation for Agent-to-Agent Communication
+### Part 1: Mythology Validation for Agent-to-Agent Communication
 
 Added mythology validation to prevent agents from hallucinating unrealistic claims when communicating with each other.
 
@@ -24,6 +24,20 @@ Added mythology validation to prevent agents from hallucinating unrealistic clai
 | Hive Mind | Yes | Problem-solving should be grounded |
 | Conversations | Yes | Discussions should be factual |
 | Dreams | No | Intentionally creative/speculative |
+
+### Part 2: Learning Cycle Fix
+
+Fixed Live Agent Learning Activity not updating (was showing 10+ hours old data).
+
+**Root Causes Fixed:**
+1. **Restrictive knowledge types** - Only 2-3 types per connection (expanded to 10)
+2. **Crude duplicate detection** - 30-char prefix matching (changed to full title matching)
+
+**Knowledge Types Now Shared:**
+- `trend`, `opportunity`, `market`, `user_behavior`, `content_idea`
+- `tool_discovery`, `pricing`, `research`, `insight`, `strategy`
+
+**Result:** 12+ new transfers generated, learning activity now shows fresh data
 
 ---
 
@@ -97,7 +111,8 @@ curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added mythology validation to `run_agent_conversation`, exemption comment for dreams |
+| `core/tasks.py` | Mythology validation, expanded knowledge types (10), improved duplicate detection |
+| `ai_core/templates/ai_image_studio.html` | Fixed duplicate "Total Agents" → changed to "Hive Sessions" |
 | `docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md` | Session documentation |
 
 ---
