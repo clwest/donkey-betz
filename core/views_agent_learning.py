@@ -1244,6 +1244,437 @@ def reject_decision(request, decision_id):
         }, status=500)
 
 
+# =============================================================================
+# Session 368: Dream Validation & Implementation UI APIs
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_boardroom_dreams(request):
+    """
+    Get dreams promoted to the Boardroom pending user decision.
+
+    GET /api/boardroom/dreams/
+
+    Query params:
+    - limit: Max dreams to return (default 20)
+    - status: Filter by decision_outcome (pending/approved/deferred/rejected)
+    - min_score: Minimum composite score (default 0)
+    """
+    try:
+        from core.models import AgentDream
+
+        limit = int(request.GET.get('limit', 20))
+        status = request.GET.get('status', 'pending')
+        min_score = float(request.GET.get('min_score', 0))
+
+        queryset = AgentDream.objects.filter(
+            promoted_to_decision=True
+        ).select_related('agent', 'project').order_by('-composite_score', '-dreamed_at')
+
+        if status:
+            queryset = queryset.filter(decision_outcome=status)
+        if min_score > 0:
+            queryset = queryset.filter(composite_score__gte=min_score)
+
+        dreams = queryset[:limit]
+
+        dreams_data = []
+        for dream in dreams:
+            # Check if implementation exists
+            has_implementation = hasattr(dream, 'implementation')
+
+            dreams_data.append({
+                'id': str(dream.id),
+                'title': dream.title,
+                'content': dream.content,
+                'dream_type': dream.dream_type,
+                'dream_type_display': dream.get_dream_type_display() if hasattr(dream, 'get_dream_type_display') else dream.dream_type,
+                'agent_id': str(dream.agent.id) if dream.agent else None,
+                'agent_name': dream.agent.name if dream.agent else None,
+                'project_id': str(dream.project.id) if dream.project else None,
+                'project_name': dream.project.title if dream.project else None,
+                'creativity_score': dream.creativity_score,
+                'actionability_score': dream.actionability_score,
+                'relevance_score': dream.relevance_score,
+                'composite_score': dream.composite_score,
+                'decision_outcome': dream.decision_outcome,
+                'promoted_at': dream.promoted_at.isoformat() if dream.promoted_at else None,
+                'dreamed_at': dream.dreamed_at.isoformat() if dream.dreamed_at else None,
+                'has_implementation': has_implementation,
+            })
+
+        # Get counts by status
+        status_counts = {
+            'pending': AgentDream.objects.filter(promoted_to_decision=True, decision_outcome='pending').count(),
+            'approved': AgentDream.objects.filter(promoted_to_decision=True, decision_outcome='approved').count(),
+            'deferred': AgentDream.objects.filter(promoted_to_decision=True, decision_outcome='deferred').count(),
+            'rejected': AgentDream.objects.filter(promoted_to_decision=True, decision_outcome='rejected').count(),
+        }
+
+        return JsonResponse({
+            'success': True,
+            'dreams': dreams_data,
+            'count': len(dreams_data),
+            'total_promoted': AgentDream.objects.filter(promoted_to_decision=True).count(),
+            'status_counts': status_counts,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting boardroom dreams: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def decide_dream(request, dream_id):
+    """
+    Make a decision on a promoted dream.
+
+    POST /api/boardroom/dreams/{dream_id}/decide/
+
+    Body: { "decision": "approved|deferred|rejected", "notes": "optional" }
+    """
+    try:
+        from core.models import AgentDream
+        import json
+
+        body = json.loads(request.body) if request.body else {}
+        decision = body.get('decision', 'pending')
+        notes = body.get('notes', '')
+
+        if decision not in ['approved', 'deferred', 'rejected']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid decision: {decision}. Must be approved, deferred, or rejected.'
+            }, status=400)
+
+        dream = AgentDream.objects.get(id=dream_id)
+
+        if not dream.promoted_to_decision:
+            return JsonResponse({
+                'success': False,
+                'error': 'Dream has not been promoted to the Boardroom'
+            }, status=400)
+
+        # Record the decision
+        dream.record_decision(decision, notes)
+
+        logger.info(f"🏛️ [BOARDROOM] Dream decision recorded: {dream.title[:40]} -> {decision}")
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Dream "{dream.title[:40]}" marked as {decision}',
+            'dream_id': str(dream.id),
+            'decision': decision
+        })
+
+    except AgentDream.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Dream not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error deciding on dream: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_dream_implementations(request):
+    """
+    Get dream implementations for tracking and validation.
+
+    GET /api/dream-implementations/
+
+    Query params:
+    - limit: Max implementations to return (default 20)
+    - status: Filter by status (pending/assigned/in_progress/completed/validated/rejected)
+    - agent_id: Filter by assigned agent
+    """
+    try:
+        from core.models_unified_system import DreamImplementation
+
+        limit = int(request.GET.get('limit', 20))
+        status = request.GET.get('status')
+        agent_id = request.GET.get('agent_id')
+
+        queryset = DreamImplementation.objects.select_related(
+            'dream', 'dream__agent', 'assigned_agent', 'project'
+        ).order_by('-created_at')
+
+        if status:
+            queryset = queryset.filter(status=status)
+        if agent_id:
+            queryset = queryset.filter(assigned_agent_id=agent_id)
+
+        implementations = queryset[:limit]
+
+        impl_data = []
+        for impl in implementations:
+            impl_data.append({
+                'id': str(impl.id),
+                'dream_id': str(impl.dream.id) if impl.dream else None,
+                'dream_title': impl.dream.title if impl.dream else None,
+                'dream_content': impl.dream.content if impl.dream else None,
+                'dreaming_agent_name': impl.dream.agent.name if impl.dream and impl.dream.agent else None,
+                'assigned_agent_id': str(impl.assigned_agent.id) if impl.assigned_agent else None,
+                'assigned_agent_name': impl.assigned_agent.name if impl.assigned_agent else None,
+                'project_id': str(impl.project.id) if impl.project else None,
+                'project_name': impl.project.title if impl.project else None,
+                'status': impl.status,
+                'status_display': impl.get_status_display(),
+                'implementation_type': impl.implementation_type,
+                'implementation_type_display': impl.get_implementation_type_display(),
+                'implementation_plan': impl.implementation_plan,
+                'deliverable_type': impl.deliverable_type,
+                'deliverable_path': impl.deliverable_path,
+                'deliverable_summary': impl.deliverable_summary,
+                'quality_rating': impl.quality_rating,
+                'user_feedback': impl.user_feedback,
+                'created_at': impl.created_at.isoformat(),
+                'assigned_at': impl.assigned_at.isoformat() if impl.assigned_at else None,
+                'started_at': impl.started_at.isoformat() if impl.started_at else None,
+                'completed_at': impl.completed_at.isoformat() if impl.completed_at else None,
+                'validated_at': impl.validated_at.isoformat() if impl.validated_at else None,
+            })
+
+        # Get counts by status
+        status_counts = {}
+        for status_choice, _ in DreamImplementation.STATUS_CHOICES:
+            status_counts[status_choice] = DreamImplementation.objects.filter(status=status_choice).count()
+
+        return JsonResponse({
+            'success': True,
+            'implementations': impl_data,
+            'count': len(impl_data),
+            'total': DreamImplementation.objects.count(),
+            'status_counts': status_counts,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting dream implementations: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def validate_implementation(request, implementation_id):
+    """
+    Validate or reject a completed dream implementation.
+
+    POST /api/dream-implementations/{implementation_id}/validate/
+
+    Body: {
+        "action": "validate|reject",
+        "rating": 0.0-1.0 (optional, for validate),
+        "feedback": "string" (optional)
+    }
+    """
+    try:
+        from core.models_unified_system import DreamImplementation
+        import json
+
+        body = json.loads(request.body) if request.body else {}
+        action = body.get('action', 'validate')
+        rating = body.get('rating')
+        feedback = body.get('feedback', '')
+
+        impl = DreamImplementation.objects.select_related('dream', 'assigned_agent').get(id=implementation_id)
+
+        if action == 'validate':
+            if rating is not None:
+                rating = float(rating)
+                if rating < 0 or rating > 1:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Rating must be between 0 and 1'
+                    }, status=400)
+
+            impl.validate(rating=rating, feedback=feedback)
+
+            logger.info(f"✅ [VALIDATION] Implementation validated: {impl.dream.title[:40]} (rating: {rating})")
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Implementation validated with rating {rating}',
+                'implementation_id': str(impl.id),
+                'status': impl.status
+            })
+
+        elif action == 'reject':
+            impl.reject(reason=feedback)
+
+            logger.info(f"❌ [VALIDATION] Implementation rejected: {impl.dream.title[:40]}")
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Implementation rejected',
+                'implementation_id': str(impl.id),
+                'status': impl.status
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid action: {action}. Must be validate or reject.'
+            }, status=400)
+
+    except DreamImplementation.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Implementation not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error validating implementation: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def rate_dream(request, dream_id):
+    """
+    Quick thumbs up/down rating for dreams (simpler than full reaction).
+
+    POST /api/agent-dreams/{dream_id}/rate/
+
+    Body: { "rating": "up|down" }
+    """
+    try:
+        from core.models import AgentDream
+        import json
+
+        body = json.loads(request.body) if request.body else {}
+        rating = body.get('rating', 'up')
+
+        if rating not in ['up', 'down']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Rating must be "up" or "down"'
+            }, status=400)
+
+        dream = AgentDream.objects.get(id=dream_id)
+
+        # Map to existing reaction types
+        reaction_type = 'like' if rating == 'up' else 'boring'
+        dream.user_reaction = reaction_type
+        dream.save(update_fields=['user_reaction'])
+
+        logger.info(f"👍 [DREAM] Rated {rating}: {dream.title[:40]}")
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Dream rated: {rating}',
+            'dream_id': str(dream.id),
+            'rating': rating
+        })
+
+    except AgentDream.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Dream not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error rating dream: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_validation_metrics(request):
+    """
+    Get validation metrics per agent for tracking performance.
+
+    GET /api/dream-implementations/metrics/
+
+    Query params:
+    - agent_id: Filter by specific agent (optional)
+    """
+    try:
+        from core.models_unified_system import DreamImplementation
+        from core.models import Agent
+        from django.db.models import Count, Avg, Q
+
+        agent_id = request.GET.get('agent_id')
+
+        # Build queryset
+        if agent_id:
+            agents = Agent.objects.filter(id=agent_id)
+        else:
+            # Get agents that have implementations
+            agent_ids = DreamImplementation.objects.values_list('assigned_agent_id', flat=True).distinct()
+            agents = Agent.objects.filter(id__in=agent_ids)
+
+        metrics = []
+        for agent in agents:
+            impls = DreamImplementation.objects.filter(assigned_agent=agent)
+
+            total = impls.count()
+            if total == 0:
+                continue
+
+            validated = impls.filter(status='validated').count()
+            rejected = impls.filter(status='rejected').count()
+            in_progress = impls.filter(status='in_progress').count()
+            completed = impls.filter(status='completed').count()
+
+            avg_rating = impls.filter(
+                quality_rating__isnull=False
+            ).aggregate(avg=Avg('quality_rating'))['avg']
+
+            metrics.append({
+                'agent_id': str(agent.id),
+                'agent_name': agent.name,
+                'total_implementations': total,
+                'validated': validated,
+                'rejected': rejected,
+                'in_progress': in_progress,
+                'pending_validation': completed,  # Completed but not yet validated
+                'success_rate': validated / (validated + rejected) if (validated + rejected) > 0 else None,
+                'avg_quality_rating': avg_rating,
+            })
+
+        # Sort by total implementations
+        metrics.sort(key=lambda x: x['total_implementations'], reverse=True)
+
+        # Overall stats
+        all_impls = DreamImplementation.objects.all()
+        overall = {
+            'total_implementations': all_impls.count(),
+            'validated': all_impls.filter(status='validated').count(),
+            'rejected': all_impls.filter(status='rejected').count(),
+            'in_progress': all_impls.filter(status='in_progress').count(),
+            'pending_validation': all_impls.filter(status='completed').count(),
+            'avg_quality_rating': all_impls.filter(
+                quality_rating__isnull=False
+            ).aggregate(avg=Avg('quality_rating'))['avg'],
+        }
+
+        return JsonResponse({
+            'success': True,
+            'agent_metrics': metrics,
+            'overall': overall,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting validation metrics: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

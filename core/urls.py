@@ -203,6 +203,13 @@ from core.views_agent_learning import (
     get_boardroom_decisions,
     promote_decision,
     reject_decision,
+    # Session 368: Dream Validation UI
+    get_boardroom_dreams,
+    decide_dream,
+    get_dream_implementations,
+    validate_implementation,
+    rate_dream,
+    get_validation_metrics,
 )
 
 # Session 250: Hive Mind Mode
@@ -2287,6 +2294,14 @@ urlpatterns = [
     path('api/boardroom/decisions/', get_boardroom_decisions, name='boardroom-decisions'),
     path('api/boardroom/decisions/<uuid:decision_id>/promote/', promote_decision, name='promote-decision'),
     path('api/boardroom/decisions/<uuid:decision_id>/reject/', reject_decision, name='reject-decision'),
+
+    # Session 368: Dream Validation UI API
+    path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),
+    path('api/boardroom/dreams/<uuid:dream_id>/decide/', decide_dream, name='decide-dream'),
+    path('api/dream-implementations/', get_dream_implementations, name='dream-implementations'),
+    path('api/dream-implementations/<uuid:implementation_id>/validate/', validate_implementation, name='validate-implementation'),
+    path('api/dream-implementations/metrics/', get_validation_metrics, name='validation-metrics'),
+    path('api/agent-dreams/<uuid:dream_id>/rate/', rate_dream, name='rate-dream'),
 
     # Session 250: Hive Mind Mode API
     path('api/hive-mind/start/', start_hive_mind_session, name='hive-mind-start'),
