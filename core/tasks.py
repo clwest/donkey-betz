@@ -6859,18 +6859,16 @@ def execute_dream_implementations(self, max_implementations: int = 5):
                 stats['executed'] += 1
 
                 if deliverable:
-                    # Store the deliverable in the implementation's deliverable_summary field
-                    # (In a full system, we'd save to actual files)
+                    # Store the deliverable in the implementation
                     impl.complete_implementation(
                         deliverable_type=deliverable_type,
                         deliverable_path=deliverable_path,
                         summary=deliverable_summary
                     )
 
-                    # Store the full deliverable content in user_feedback for now
-                    # (This is a workaround - in production we'd save to files)
-                    impl.user_feedback = f"[DELIVERABLE]\n\n{deliverable[:2000]}"
-                    impl.save(update_fields=['user_feedback'])
+                    # Store the full deliverable content in the dedicated field
+                    impl.deliverable_content = deliverable
+                    impl.save(update_fields=['deliverable_content'])
 
                     stats['completed'] += 1
                     stats['deliverables_generated'] += 1

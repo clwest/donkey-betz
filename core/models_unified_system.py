@@ -7045,6 +7045,10 @@ class DreamImplementation(models.Model):
         blank=True,
         help_text="Summary of what was delivered"
     )
+    deliverable_content = models.TextField(
+        blank=True,
+        help_text="Full content of the deliverable (report, spec, etc.)"
+    )
 
     # Quality metrics
     effort_estimate = models.CharField(
