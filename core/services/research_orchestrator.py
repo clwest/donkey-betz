@@ -1405,27 +1405,91 @@ Return this as a structured analysis. Be specific and actionable, not generic.""
                     summary_text = '\n'.join(summary_parts)
 
             # 2. Trend Analysis - has 'task' and 'tool_results' fields
+            # Session 350: Fixed to extract actual trend data from tool_results
             elif research_type == 'trend_analysis':
                 # Handle the actual structure: {'task': '...', 'tool_results': [...]}
                 task = research_data.get('task', '')
                 tool_results = research_data.get('tool_results', [])
 
-                # Build summary from task and count tool results
-                if task:
-                    summary_text = f"Analyzed trends: {task}"
-                elif tool_results:
-                    summary_text = f"Gathered {len(tool_results)} trend data sources"
+                summary_parts = []
+                total_data_points = 0
+                sources = set()
 
-                data_points = len(tool_results) if isinstance(tool_results, list) else 1
-                sources = []
-                # Extract sources from tool_results
+                # Extract actual trend data from tool_results
                 if isinstance(tool_results, list):
-                    for tr in tool_results[:5]:
-                        if isinstance(tr, dict):
-                            tool_name = tr.get('tool', tr.get('name', 'Unknown'))
-                            sources.append(tool_name)
-                if not sources:
-                    sources = ['Trend Analysis', 'Market Research']
+                    for tr in tool_results:
+                        if not isinstance(tr, dict):
+                            continue
+
+                        tool_name = tr.get('tool', 'Unknown')
+                        result = tr.get('result', {})
+
+                        if not isinstance(result, dict) or not result.get('success'):
+                            continue
+
+                        # Get data points count from result
+                        result_data_points = result.get('data_points', 0)
+                        total_data_points += result_data_points
+
+                        # Extract sources
+                        result_sources = result.get('sources', [])
+                        if isinstance(result_sources, list):
+                            sources.update(result_sources)
+
+                        # Build summary from trends
+                        trends = result.get('trends', [])
+                        if trends and isinstance(trends, list):
+                            summary_parts.append(f"**Top Trends ({len(trends)} found):**")
+                            for trend in trends[:10]:  # Top 10 trends
+                                if isinstance(trend, dict):
+                                    topic = trend.get('topic', '')[:100]
+                                    relevance = trend.get('relevance', 0)
+                                    source = trend.get('source', '')
+                                    # Handle fallback trends format (from get_trending_topics)
+                                    mentions = trend.get('mentions', 0)
+                                    score = trend.get('score', 0)
+                                    if topic:
+                                        if relevance:
+                                            summary_parts.append(f"• {topic} (relevance: {relevance:.0%}) - {source}")
+                                        elif mentions:
+                                            summary_parts.append(f"• {topic} ({mentions} mentions, score: {score:.0f})")
+                                        else:
+                                            summary_parts.append(f"• {topic} - {source}")
+
+                        # Extract discussions
+                        discussions = result.get('discussions', [])
+                        if discussions and isinstance(discussions, list):
+                            summary_parts.append(f"\n**Related Discussions ({len(discussions)} found):**")
+                            for disc in discussions[:5]:  # Top 5 discussions
+                                if isinstance(disc, dict):
+                                    title = disc.get('title', '')[:100]
+                                    desc = disc.get('description', '')[:150]
+                                    source = disc.get('source', '')
+                                    if title:
+                                        summary_parts.append(f"• {title}")
+                                        if desc:
+                                            summary_parts.append(f"   {desc}")
+
+                        # Add market context if available
+                        market_context = result.get('market_context', {})
+                        if market_context:
+                            tech_highlights = market_context.get('tech_highlights', [])
+                            if tech_highlights:
+                                summary_parts.append("\n**Tech Highlights:**")
+                                for highlight in tech_highlights[:3]:
+                                    if highlight:
+                                        summary_parts.append(f"• {highlight}")
+
+                # Build final summary
+                if summary_parts:
+                    summary_text = '\n'.join(summary_parts)
+                elif task:
+                    summary_text = f"Trend analysis performed for: {task[:200]}"
+                else:
+                    summary_text = "Trend analysis completed"
+
+                data_points = total_data_points if total_data_points > 0 else len(tool_results)
+                sources = list(sources)[:10] if sources else ['Trend Analysis', 'Market Research']
 
             # 3. Opportunity Score - has 'score' and 'factors' fields
             # Session 343: Updated to handle new structured scoring format
