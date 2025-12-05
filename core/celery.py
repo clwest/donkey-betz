@@ -375,6 +375,15 @@ app.conf.beat_schedule = {
             'expires': 175,
         }
     },
+    # Session 366: Dream Productization Pipeline
+    # Score dreams for actionability/relevance and promote to Boardroom
+    'dream-productization-cycle': {
+        'task': 'core.tasks.score_and_promote_dreams',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes - score and promote dreams
+        'options': {
+            'expires': 1200,  # 20 minutes
+        }
+    },
     # Session 252: Agent Mood System
     # Check for expired moods and reset them periodically
     'check-mood-expirations': {

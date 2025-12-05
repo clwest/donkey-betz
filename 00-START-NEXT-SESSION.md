@@ -1,40 +1,31 @@
 # Start Next Session Here
 
-**Last Session:** 365 - Agent Mood Diversity
+**Last Session:** 366 - Dream Productization Pipeline
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 24 agents | 16 AUTONOMOUS TASKS!
+**Status:** 102 spiders | 36 categories | 24 agents | 17 AUTONOMOUS TASKS!
 
 ---
 
-## Session 365 Accomplishments
+## Session 366 Accomplishments
 
-### Added Agent Mood Diversity!
+### Dream Productization Pipeline!
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| **Mood Types Used** | 1 (calm) | 8 different moods |
-| **Agents with calm** | 23/24 | 2/24 |
-| **Mood Context in Prompts** | No | Yes |
-| **Mood Transitions** | No | Yes |
+| **Dreams Scored** | 0 | 50+ |
+| **Dreams in Boardroom** | 0 | 19 |
+| **Actionability Scoring** | No | Yes |
+| **Relevance to Projects** | No | Yes |
+| **Directed Dreaming** | No | Yes |
 
-### New Mood Distribution
+### What Changed
 
-| Mood | Count | Agents |
-|------|-------|--------|
-| confident | 5 | Strategy/leadership agents |
-| curious | 5 | Research/exploration agents |
-| focused | 5 | Analytical/precision agents |
-| calm | 2 | Coordination agents |
-| inspired | 2 | Creative generation agents |
-| contemplative | 2 | Strategic thinking agents |
-| energetic | 2 | Fast-paced/dynamic agents |
-| playful | 1 | AudioAgent |
+Dreams were previously "background emergent noise" - now they're a **creative accelerator**:
 
-### Features Implemented
-
-1. **Personality-Based Mood Assignment** - Each agent's mood matches their role
-2. **Mood Context Injection** - Prompts include mood modifiers
-3. **Mood Transitions** - Moods evolve based on conversation outcomes
+1. **Dream Scoring Task** - GPT scores each dream for actionability and project relevance
+2. **Auto-Promotion** - High-scoring dreams (>= 0.7) automatically surface to Boardroom
+3. **Directed Dreaming** - Request agents to dream about specific topics for projects
+4. **Project Linking** - Dreams auto-link to relevant projects
 
 ---
 
@@ -44,28 +35,30 @@
 |-----------|-------|--------|
 | **Spiders** | **102** | Active |
 | **Agents** | **24** | Active with diverse moods! |
-| **Autonomous Tasks** | **16** | Running |
-| **Agent Conversations** | **1,300+** | Mood-influenced now! |
-| **Boardroom Decisions** | **122+** | Growing |
+| **Autonomous Tasks** | **17** | Running (NEW: dream-productization!) |
+| **Agent Conversations** | **1,300+** | Mood-influenced |
+| **Agent Dreams** | **1,479+** | NOW PRODUCTIZED! |
+| **Boardroom Decisions** | **122+** | Includes 19 dream proposals |
 | **Canonical Policies** | **5+** | Auto-promoting & propagating |
 | **Project Insights** | **321+** | Growing |
 | **LivingProjectConfig** | **10** | All active |
 
 ---
 
-## Celery Beat Schedule (16 Autonomous Tasks)
+## Celery Beat Schedule (17 Autonomous Tasks)
 
 | Task | Frequency | Purpose |
 |------|-----------|---------|
 | `run-spider-network` | 30 min | Collect external data |
 | `run-agent-learning-cycle` | 10 min | Knowledge propagation |
-| `agent-conversation-cycle` | 5 min | 2-agent discussions (mood-influenced!) |
-| `multi-agent-panel-cycle` | 20 min | 3-5 agent panels (mood-influenced!) |
+| `agent-conversation-cycle` | 5 min | 2-agent discussions |
+| `multi-agent-panel-cycle` | 20 min | 3-5 agent panels |
 | `auto-promote-decisions` | 30 min | Promote to canonical policies |
 | `trigger-spider-conversations` | 15 min | Data -> Discussion |
 | `trigger-project-research` | 20 min | Project -> Spider |
 | `propagate-new-policies` | 10 min | Policy -> Agents |
 | `agent-dream-cycle` | 15 min | Creative thinking |
+| `dream-productization-cycle` | 20 min | **NEW! Score & promote dreams** |
 | `broadcast-learning-status` | 1 min | WebSocket updates |
 | `broadcast-conversation-status` | 2 min | WebSocket updates |
 | `broadcast-dream-journal` | 3 min | WebSocket updates |
@@ -76,22 +69,22 @@
 
 ---
 
-## What's Next (Session 366)
+## What's Next (Session 367)
 
-### Option A: Mood-Triggered Conversations
-- Certain moods trigger specific conversation types
-- "inspired" agents start brainstorming sessions
-- "frustrated" agents request help from others
+### Option A: Dream Validation UI
+- Add thumbs up/down reactions to dreams in UI
+- Track which dream types users prefer
+- Weight future dream generation by preferences
 
-### Option B: Relationship-Mood Interactions
-- Rivalries make agents more defensive/competitive
-- Alliances boost collaborative moods
-- Relationship history influences mood transitions
+### Option B: Dream -> Implementation Pipeline
+- When dream is approved in Boardroom, create project task
+- Assign to appropriate agent for implementation
+- Track from dream -> deliverable
 
-### Option C: Time-Based Mood Cycles
-- Morning = energetic, afternoon = focused, evening = contemplative
-- Idle time gradually shifts moods
-- Success streaks create persistent positive moods
+### Option C: Multi-Agent Dream Sessions
+- Multiple agents collaborate on a dream topic
+- Build on each other's ideas
+- Generate more sophisticated proposals
 
 ---
 
@@ -105,23 +98,26 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 365 Files Changed
+## Session 366 Files Changed
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added mood context injection, mood transitions |
+| `core/models_unified_system.py` | UN-deprecated AgentDream, added productization fields |
+| `core/migrations/0071_session_366_dream_productization.py` | New migration |
+| `core/tasks.py` | Added `score_and_promote_dreams`, `generate_directed_dreams` |
+| `core/celery.py` | Added `dream-productization-cycle` schedule |
 
 ---
 
-## Session 365 Commits
+## Session 366 Commits
 
-1. `feat(Session 365): Add agent mood diversity and conversation influence`
+1. `feat(Session 366): Dream Productization Pipeline`
 
 ---
 
 ## Related Documentation
 
-- `docs/handoffs/SESSION_365_MOOD_DIVERSITY.md` - Full mood diversity details
-- `docs/handoffs/SESSION_364_CONVERSATION_QUALITY.md` - Previous session fixes
-- `docs/handoffs/SESSION_363_AUTONOMY_EXPANSION.md` - 3 new reactive pipelines
-- `docs/handoffs/SESSION_362_CONVERSATION_VALUE_AUDIT.md` - Pipeline fixes
+- `docs/handoffs/SESSION_366_DREAM_PRODUCTIZATION.md` - Full dream productization details
+- `docs/handoffs/SESSION_365_MOOD_DIVERSITY.md` - Previous session: mood diversity
+- `docs/handoffs/SESSION_364_CONVERSATION_QUALITY.md` - Conversation quality fixes
+- `docs/handoffs/SESSION_363_AUTONOMY_EXPANSION.md` - 3 reactive pipelines
