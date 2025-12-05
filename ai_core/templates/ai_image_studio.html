@@ -9241,6 +9241,11 @@
                                         🕸️ Network
                                     </button>
                                 </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="wf-dreams-tab" data-bs-toggle="pill" data-bs-target="#wf-dreams" type="button" role="tab" style="color: #a855f7;">
+                                        💭 Dreams
+                                    </button>
+                                </li>
                             </ul>
                             <style>
                                 #workflows-nested-tabs .nav-link { background: transparent; border: 1px solid #444; font-size: 12px; padding: 8px 16px; }
@@ -10177,6 +10182,132 @@
                                     </style>
                                 </div>
                                 <!-- END AGENT NETWORK GRAPH NESTED TAB -->
+
+                                <!-- ===== DREAMS NESTED TAB (Session 369) ===== -->
+                                <div class="tab-pane fade" id="wf-dreams" role="tabpanel">
+                                    <h4 class="mb-3" style="color: #a855f7;">💭 Dream Implementations</h4>
+                                    <p class="text-muted mb-4">
+                                        Track agent dreams from ideation to validated deliverables. The complete autonomous dream pipeline.
+                                    </p>
+
+                                    <!-- Dream Pipeline Status Summary -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="dream-total-count">-</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Dreams</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="dream-promoted-count">-</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Promoted</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="dream-pending-count">-</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Pending</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="dream-approved-count">-</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Approved</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="dream-impl-count">-</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Implementations</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                                                <div class="card-body py-2">
+                                                    <h3 class="mb-0" id="dream-validated-count">-</h3>
+                                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Validated</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dream Implementations List -->
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.1); border-bottom: 1px solid #333;">
+                                            <h6 class="mb-0" style="color: #a855f7;">📋 Dream Implementations</h6>
+                                            <div>
+                                                <select id="dream-impl-status-filter" class="form-select form-select-sm me-2" style="width: auto; display: inline-block; background: #2a2a2a; color: #e0e0e0; border-color: #444;" onchange="loadDreamImplementations()">
+                                                    <option value="">All Status</option>
+                                                    <option value="pending">Pending</option>
+                                                    <option value="assigned">Assigned</option>
+                                                    <option value="in_progress">In Progress</option>
+                                                    <option value="completed">Completed</option>
+                                                    <option value="validated">Validated</option>
+                                                    <option value="rejected">Rejected</option>
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-purple" onclick="loadDreamImplementations()" style="border-color: #a855f7; color: #a855f7;">🔄 Refresh</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                            <div id="dream-implementations-list">
+                                                <p class="text-muted text-center">Loading dream implementations...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Boardroom Dreams (Pending Decision) -->
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid #333;">
+                                            <h6 class="mb-0" style="color: #f59e0b;">🏛️ Boardroom Dreams (Pending Decisions)</h6>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="loadBoardroomDreams()">🔄 Refresh</button>
+                                        </div>
+                                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                            <div id="boardroom-dreams-list">
+                                                <p class="text-muted text-center">Loading boardroom dreams...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Agent Implementation Metrics -->
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                                            <h6 class="mb-0" style="color: #10b981;">📊 Agent Implementation Metrics</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-dark table-striped table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Agent</th>
+                                                            <th>Total</th>
+                                                            <th>Validated</th>
+                                                            <th>In Progress</th>
+                                                            <th>Rejected</th>
+                                                            <th>Success Rate</th>
+                                                            <th>Avg Quality</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="dream-metrics-table-body">
+                                                        <tr><td colspan="7" class="text-center text-muted">Loading metrics...</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <!-- END DREAMS NESTED TAB -->
 
                             </div>
                             <!-- END Workflows Nested Tab Content -->
@@ -47071,7 +47202,358 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadBoardroomDecisions();  // Session 323
                 });
             }
+
+            // Session 369: Load Dreams tab data when switching to it
+            const dreamsTabTrigger = document.getElementById('wf-dreams-tab');
+            if (dreamsTabTrigger) {
+                dreamsTabTrigger.addEventListener('shown.bs.tab', function() {
+                    loadDreamImplementations();
+                    loadBoardroomDreams();
+                    loadDreamMetrics();
+                });
+            }
         });
+
+        // =========================================================================
+        // Session 369: Dream Implementations UI
+        // =========================================================================
+
+        // Load dream implementations from API
+        async function loadDreamImplementations() {
+            try {
+                const statusFilter = document.getElementById('dream-impl-status-filter')?.value || '';
+                let url = '/api/dream-implementations/?limit=50';
+                if (statusFilter) {
+                    url += `&status=${statusFilter}`;
+                }
+
+                const response = await authenticatedFetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update counts
+                    const counts = data.status_counts || {};
+                    document.getElementById('dream-impl-count').textContent =
+                        (counts.pending || 0) + (counts.assigned || 0) + (counts.in_progress || 0) + (counts.completed || 0) + (counts.validated || 0);
+                    document.getElementById('dream-validated-count').textContent = counts.validated || 0;
+
+                    // Render implementations list
+                    const container = document.getElementById('dream-implementations-list');
+                    if (!data.implementations || data.implementations.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center text-muted py-4">
+                                <h4>💭 No dream implementations yet</h4>
+                                <p>Approve dreams in the Boardroom to start implementations</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = data.implementations.map(impl => `
+                        <div class="card mb-3" style="background: #0d0d0d; border: 1px solid ${getStatusColor(impl.status)}40;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-0" style="color: #e0e0e0;">
+                                        ${impl.dream_title || 'Untitled Dream'}
+                                    </h6>
+                                    <span class="badge" style="background: ${getStatusColor(impl.status)}; color: white;">
+                                        ${impl.status_display || impl.status}
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Assigned to:</small>
+                                    <span class="badge bg-secondary">${impl.assigned_agent_name || 'Unassigned'}</span>
+                                    ${impl.deliverable_type ? `<span class="badge bg-info ms-2">${impl.deliverable_type}</span>` : ''}
+                                </div>
+                                ${impl.implementation_plan ? `
+                                    <div class="mb-2">
+                                        <small class="text-muted">Plan:</small>
+                                        <p class="mb-0 small" style="color: #aaa; max-height: 60px; overflow: hidden;">${impl.implementation_plan.substring(0, 200)}...</p>
+                                    </div>
+                                ` : ''}
+                                ${impl.deliverable_summary ? `
+                                    <div class="mb-2">
+                                        <small class="text-muted">Deliverable:</small>
+                                        <p class="mb-0 small" style="color: #4ade80;">${impl.deliverable_summary}</p>
+                                    </div>
+                                ` : ''}
+                                ${impl.quality_rating ? `
+                                    <div class="mb-2">
+                                        <small class="text-muted">Quality Rating:</small>
+                                        <span style="color: #22c55e;">${(impl.quality_rating * 100).toFixed(0)}%</span>
+                                    </div>
+                                ` : ''}
+                                <div class="d-flex gap-2 mt-3">
+                                    ${impl.status === 'completed' ? `
+                                        <button class="btn btn-sm btn-success" onclick="validateImplementation('${impl.id}', 'validate')">
+                                            ✅ Validate
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="validateImplementation('${impl.id}', 'reject')">
+                                            ❌ Reject
+                                        </button>
+                                    ` : ''}
+                                    ${impl.deliverable_content ? `
+                                        <button class="btn btn-sm btn-outline-info" onclick="showDeliverableModal('${impl.id}')">
+                                            📄 View Deliverable
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading dream implementations:', error);
+                document.getElementById('dream-implementations-list').innerHTML = `
+                    <p class="text-danger text-center">Error loading implementations</p>
+                `;
+            }
+        }
+
+        // Get status color for implementations
+        function getStatusColor(status) {
+            const colors = {
+                'pending': '#f59e0b',
+                'assigned': '#0ea5e9',
+                'in_progress': '#8b5cf6',
+                'completed': '#22c55e',
+                'validated': '#10b981',
+                'rejected': '#ef4444'
+            };
+            return colors[status] || '#6b7280';
+        }
+
+        // Load boardroom dreams (pending decisions)
+        async function loadBoardroomDreams() {
+            try {
+                const response = await authenticatedFetch('/api/boardroom/dreams/?limit=20&status=pending');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update counts
+                    const counts = data.status_counts || {};
+                    document.getElementById('dream-pending-count').textContent = counts.pending || 0;
+                    document.getElementById('dream-approved-count').textContent = counts.approved || 0;
+
+                    // Render boardroom dreams
+                    const container = document.getElementById('boardroom-dreams-list');
+                    if (!data.dreams || data.dreams.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center text-muted py-4">
+                                <h5>🏛️ No pending dream decisions</h5>
+                                <p>High-scoring dreams will appear here for approval</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = data.dreams.map(dream => `
+                        <div class="card mb-3" style="background: #0d0d0d; border: 1px solid #f59e0b40;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-0" style="color: #f59e0b;">
+                                        💭 ${dream.title}
+                                    </h6>
+                                    <span class="badge" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                        Score: ${(dream.composite_score * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                                <p class="small text-muted mb-2">${dream.content?.substring(0, 150) || ''}...</p>
+                                <div class="mb-2">
+                                    <span class="badge bg-secondary">${dream.agent_name}</span>
+                                    <span class="badge bg-info ms-1">${dream.dream_type}</span>
+                                </div>
+                                <div class="d-flex gap-2 mt-3">
+                                    <button class="btn btn-sm btn-success" onclick="decideDream('${dream.id}', 'approved')">
+                                        ✅ Approve
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="decideDream('${dream.id}', 'deferred')">
+                                        ⏸️ Defer
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="decideDream('${dream.id}', 'rejected')">
+                                        ❌ Reject
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading boardroom dreams:', error);
+                document.getElementById('boardroom-dreams-list').innerHTML = `
+                    <p class="text-danger text-center">Error loading boardroom dreams</p>
+                `;
+            }
+        }
+
+        // Load dream implementation metrics
+        async function loadDreamMetrics() {
+            try {
+                const response = await authenticatedFetch('/api/dream-implementations/metrics/');
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update total dreams count (from agent dreams)
+                    const dreamsResponse = await authenticatedFetch('/api/agent-dreams/?limit=1');
+                    const dreamsData = await dreamsResponse.json();
+                    document.getElementById('dream-total-count').textContent = dreamsData.total || '-';
+
+                    // Update promoted count
+                    const promotedResponse = await authenticatedFetch('/api/boardroom/dreams/?limit=1');
+                    const promotedData = await promotedResponse.json();
+                    const promotedCounts = promotedData.status_counts || {};
+                    document.getElementById('dream-promoted-count').textContent =
+                        (promotedCounts.pending || 0) + (promotedCounts.approved || 0) + (promotedCounts.deferred || 0);
+
+                    // Render metrics table
+                    const tbody = document.getElementById('dream-metrics-table-body');
+                    if (!data.agent_metrics || data.agent_metrics.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No metrics available yet</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = data.agent_metrics.map(metric => `
+                        <tr>
+                            <td><span class="badge bg-secondary">${metric.agent_name}</span></td>
+                            <td>${metric.total_implementations}</td>
+                            <td style="color: #22c55e;">${metric.validated}</td>
+                            <td style="color: #8b5cf6;">${metric.in_progress}</td>
+                            <td style="color: #ef4444;">${metric.rejected}</td>
+                            <td>
+                                <span style="color: ${metric.success_rate >= 0.7 ? '#22c55e' : metric.success_rate >= 0.5 ? '#f59e0b' : '#ef4444'};">
+                                    ${(metric.success_rate * 100).toFixed(0)}%
+                                </span>
+                            </td>
+                            <td>
+                                ${metric.avg_quality_rating ? `${(metric.avg_quality_rating * 100).toFixed(0)}%` : '-'}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading dream metrics:', error);
+            }
+        }
+
+        // Decide on a boardroom dream
+        async function decideDream(dreamId, decision) {
+            try {
+                const response = await authenticatedFetch(`/api/boardroom/dreams/${dreamId}/decide/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ decision: decision })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const emoji = decision === 'approved' ? '✅' : decision === 'deferred' ? '⏸️' : '❌';
+                    showNotification(`${emoji} Dream ${decision}!`, decision === 'approved' ? 'success' : 'info');
+                    loadBoardroomDreams();
+                    loadDreamImplementations();
+                } else {
+                    showNotification(data.error || 'Failed to process decision', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deciding dream:', error);
+                showNotification('Error processing decision', 'danger');
+            }
+        }
+
+        // Validate or reject an implementation
+        async function validateImplementation(implId, action) {
+            const rating = action === 'validate' ? 0.85 : 0.3;
+            const feedback = action === 'validate' ? 'Approved via UI' : 'Rejected via UI';
+
+            try {
+                const response = await authenticatedFetch(`/api/dream-implementations/${implId}/validate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        rating: rating,
+                        feedback: feedback
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const emoji = action === 'validate' ? '✅' : '❌';
+                    showNotification(`${emoji} Implementation ${action}d!`, action === 'validate' ? 'success' : 'warning');
+                    loadDreamImplementations();
+                    loadDreamMetrics();
+                } else {
+                    showNotification(data.error || 'Failed to process validation', 'danger');
+                }
+            } catch (error) {
+                console.error('Error validating implementation:', error);
+                showNotification('Error processing validation', 'danger');
+            }
+        }
+
+        // Show deliverable content in a modal
+        async function showDeliverableModal(implId) {
+            try {
+                const response = await authenticatedFetch(`/api/dream-implementations/?limit=1`);
+                const data = await response.json();
+
+                // Find the specific implementation
+                const impl = data.implementations?.find(i => i.id === implId);
+                if (!impl || !impl.deliverable_content) {
+                    showNotification('Deliverable content not found', 'warning');
+                    return;
+                }
+
+                // Create and show modal
+                const modalHtml = `
+                    <div class="modal fade" id="deliverableModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content" style="background: #1a1a1a; border: 1px solid #a855f7;">
+                                <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                    <h5 class="modal-title" style="color: #a855f7;">📄 ${impl.dream_title}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <span class="badge bg-info">${impl.deliverable_type || 'document'}</span>
+                                        <span class="badge bg-secondary ms-2">${impl.assigned_agent_name}</span>
+                                    </div>
+                                    <div style="background: #0d0d0d; padding: 1rem; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 12px; color: #e0e0e0; max-height: 500px; overflow-y: auto;">
+${impl.deliverable_content}
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    ${impl.status === 'completed' ? `
+                                        <button type="button" class="btn btn-success" onclick="validateImplementation('${impl.id}', 'validate'); bootstrap.Modal.getInstance(document.getElementById('deliverableModal')).hide();">
+                                            ✅ Validate
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Remove existing modal if present
+                const existingModal = document.getElementById('deliverableModal');
+                if (existingModal) existingModal.remove();
+
+                // Add and show new modal
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modal = new bootstrap.Modal(document.getElementById('deliverableModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error showing deliverable:', error);
+                showNotification('Error loading deliverable', 'danger');
+            }
+        }
 
         // =========================================================================
         // Session 323: Boardroom Decisions - Agent Governance System
