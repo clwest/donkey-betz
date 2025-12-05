@@ -253,7 +253,19 @@ class QueryClassifier:
     # Session 300: Priority phrases that OVERRIDE keyword-based classification
     # These phrases are checked first and immediately return the specified type
     # This prevents "generate a competitor analysis" from being classified as CREATION
+    # Session 349: Priority phrases override keyword-based classification
+    # These are checked FIRST and take precedence over keyword matching
     PRIORITY_PHRASES = {
+        QueryType.QUESTION: [
+            # Style/advice questions should NOT trigger tools
+            'what style', 'which style', 'best style', 'what works best',
+            'what would work', 'what do you recommend', 'what should i use',
+            'what colors', 'which colors', 'what fonts', 'which fonts',
+            'ideas for', 'suggestions for', 'recommend for', 'advice on',
+            'how should', 'how would', 'how do i', 'what are trending',
+            'what is trending', "what's trending", 'help me decide',
+            'help me choose', 'opinion on', 'thoughts on',
+        ],
         QueryType.ANALYSIS: [
             'competitor analysis', 'competitive analysis', 'market analysis',
             'swot analysis', 'analyze competitors', 'research the market',
@@ -263,7 +275,11 @@ class QueryClassifier:
             'pain point analysis', 'sentiment analysis', 'user research',
         ],
         QueryType.WORKFLOW: [
-            'research and create', 'brand identity package', 'thumbnail package',
+            # Session 349: Expanded patterns for research+create combinations
+            'research and create', 'research and make', 'research and generate',
+            'research then create', 'research then make',
+            'research competitors and create', 'research market and create',
+            'brand identity package', 'thumbnail package',
             'logo package', 'full brand kit', 'complete package',
         ],
     }

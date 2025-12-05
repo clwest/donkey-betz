@@ -429,6 +429,99 @@ class PartnershipProject(UnifiedBaseModel):
 
         self.save()
 
+    # ==========================================================================
+    # Session 350: Domain-Aware Spider Targeting
+    # ==========================================================================
+
+    def extract_and_save_domains(self, use_gpt: bool = True) -> dict:
+        """
+        Extract domain information from project description and save to metadata.
+
+        Uses DomainExtractionService to analyze the project and extract:
+        - Primary domain (e.g., 'fitness_health', 'saas_b2b')
+        - Domain tags for targeted spider queries
+        - Suggested search queries
+        - Relevant subreddits
+
+        Args:
+            use_gpt: Whether to use GPT for enhanced extraction (default True)
+
+        Returns:
+            Dict with domain information
+        """
+        from core.services.domain_extraction_service import get_domain_extraction_service
+
+        service = get_domain_extraction_service()
+
+        # Use project name + description + goal for extraction
+        business_idea = f"{self.project_name}"
+        if self.description:
+            business_idea += f": {self.description}"
+        if self.goal:
+            business_idea += f". Goal: {self.goal}"
+
+        result = service.extract_domains(business_idea, use_gpt=use_gpt)
+
+        # Save to metadata
+        if self.metadata is None:
+            self.metadata = {}
+
+        self.metadata['domain_targeting'] = {
+            'primary_domain': result.primary_domain,
+            'domain_tags': result.domain_tags,
+            'spider_queries': result.spider_queries,
+            'spider_categories': result.spider_categories,
+            'subreddits': result.subreddits,
+            'confidence': result.confidence,
+            'reasoning': result.reasoning,
+            'extracted_at': timezone.now().isoformat()
+        }
+
+        self.save()
+
+        return self.metadata['domain_targeting']
+
+    def get_domain_targeting(self) -> dict:
+        """
+        Get domain targeting info, extracting if not already present.
+
+        Returns:
+            Dict with domain targeting information
+        """
+        if self.metadata and 'domain_targeting' in self.metadata:
+            return self.metadata['domain_targeting']
+
+        # Extract if not present
+        return self.extract_and_save_domains()
+
+    @property
+    def primary_domain(self) -> str:
+        """Get the primary business domain for this project."""
+        targeting = self.get_domain_targeting()
+        return targeting.get('primary_domain', 'general_startup')
+
+    @property
+    def domain_tags(self) -> list:
+        """Get domain tags for spider targeting."""
+        targeting = self.get_domain_targeting()
+        return targeting.get('domain_tags', [])
+
+    @property
+    def spider_queries(self) -> list:
+        """Get suggested spider queries for this project's domain."""
+        targeting = self.get_domain_targeting()
+        return targeting.get('spider_queries', [])
+
+    @property
+    def domain_subreddits(self) -> list:
+        """Get relevant subreddits for this project's domain."""
+        targeting = self.get_domain_targeting()
+        return targeting.get('subreddits', [])
+
+    # ==========================================================================
+    # End Session 350 Domain Targeting
+    # ==========================================================================
+
     def mark_completed(self, payment_received):
         """
         Mark project as completed and track payment

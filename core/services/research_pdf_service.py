@@ -359,10 +359,11 @@ class ResearchPDFService:
                 url = article.get('url', article.get('link', ''))
                 source = article.get('source', 'Unknown')
 
-                article_text = f"{i}. <b>{title}</b> ({source})"
-                if url:
-                    article_text = f"{i}. <link href='{url}'><b>{title}</b></link> ({source})"
+                # Session 349: Sanitize title - remove HTML and special characters
+                title = self._clean_markdown(title)
+                title = title[:100]  # Limit length
 
+                article_text = f"{i}. \"{title}\" ({source})"
                 story.append(Paragraph(article_text, self.styles['ReportBody']))
 
     def _add_footer(self, story: List, project):
@@ -385,20 +386,40 @@ class ResearchPDFService:
         if not text:
             return ""
 
-        # Remove markdown headers (we handle them separately)
         import re
+
+        # Session 349: Strip ALL HTML tags that break ReportLab PDF generation
+        # Spider data from Medium RSS feeds contains raw/malformed HTML
+        # ReportLab's Paragraph parser only supports: b, i, u, link, br, para
+
+        # First, strip ALL HTML tags aggressively (including malformed ones)
+        # This catches <a href="..., <div class="..., etc.
+        text = re.sub(r'<[^>]*>', '', text)  # Remove all HTML tags
+        text = re.sub(r'<[^>]*$', '', text)  # Remove incomplete tags at end
+        text = re.sub(r'^[^<]*>', '', text)  # Remove incomplete tags at start
+
+        # Remove HTML entities
+        text = re.sub(r'&#x[0-9a-fA-F]+;', '', text)  # Hex entities
+        text = re.sub(r'&#\d+;', '', text)  # Decimal entities
+        text = re.sub(r'&[a-zA-Z]+;', ' ', text)  # Named entities like &nbsp;
+
+        # Remove any remaining angle brackets that might cause issues
+        text = text.replace('<', '').replace('>', '')
+
+        # Remove markdown headers (we handle them separately)
         text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
 
-        # Convert bold
-        text = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', text)
-        text = re.sub(r'__([^_]+)__', r'<b>\1</b>', text)
+        # Convert bold (only if we're sure there's no HTML contamination)
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # Just remove ** markers
+        text = re.sub(r'__([^_]+)__', r'\1', text)
 
         # Convert italic
-        text = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', text)
-        text = re.sub(r'_([^_]+)_', r'<i>\1</i>', text)
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+        text = re.sub(r'_([^_]+)_', r'\1', text)
 
         # Clean up extra whitespace
         text = re.sub(r'\n{3,}', '\n\n', text)
+        text = re.sub(r' {2,}', ' ', text)
 
         return text.strip()
 
