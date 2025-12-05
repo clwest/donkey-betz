@@ -1653,3 +1653,239 @@ def update_living_config(request, project_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ==================== Session 353: Research → Creative Pipeline ====================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_brand_assets(request, project_id):
+    """
+    Generate a comprehensive brand asset pack from research.
+
+    Session 353: Connects Research Pipeline to Creative Pipeline.
+    Uses intelligent style selection from 78 available styles based on:
+    - Brand personality detected in research
+    - Industry vertical
+    - Target audience demographics
+
+    POST /api/projects/<project_id>/generate-brand-assets/
+
+    Body:
+    {
+        "asset_types": ["logo", "social_media", "marketing", "mood_board"],
+        "custom_styles": ["cyberpunk", "minimalist"],  // optional override
+        "num_variations": 3
+    }
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "total_assets": 12,
+            "styles_used": ["minimalist", "digital_art", "vector"],
+            "style_rationale": "Based on tech industry and professional tone...",
+            "logos": [...],
+            "social_media": [...],
+            "marketing_materials": [...],
+            "mood_board": [...]
+        }
+    }
+    """
+    try:
+        from core.services.research_to_creative_pipeline import get_research_to_creative_pipeline
+
+        user = request.user
+        data = request.data
+
+        # Verify project ownership
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Get parameters
+        asset_types = data.get('asset_types', ['logo', 'social_media', 'marketing'])
+        custom_styles = data.get('custom_styles')
+        num_variations = data.get('num_variations', 3)
+
+        # Initialize pipeline connector
+        pipeline = get_research_to_creative_pipeline(user=user)
+
+        # Generate brand asset pack
+        result = pipeline.generate_brand_asset_pack(
+            project_id=str(project_id),
+            asset_types=asset_types,
+            custom_styles=custom_styles,
+            num_variations=num_variations
+        )
+
+        if not result.success:
+            return Response({
+                'success': False,
+                'error': result.error or 'Failed to generate brand assets'
+            }, status=400)
+
+        # Update project metadata with generated assets
+        metadata = project.metadata or {}
+        metadata['brand_assets_generated'] = True
+        metadata['brand_asset_pack'] = {
+            'styles_used': result.styles_used,
+            'total_assets': result.total_assets,
+            'generated_at': datetime.now().isoformat()
+        }
+        project.metadata = metadata
+        project.save(update_fields=['metadata'])
+
+        # Add AI contribution
+        ai_contributions = project.ai_contributions or []
+        ai_contributions.append({
+            'agent': 'Research→Creative Pipeline',
+            'task': f'Generated {result.total_assets} brand assets using {len(result.styles_used)} styles',
+            'timestamp': datetime.now().isoformat(),
+            'output': result.style_rationale,
+            'styles': result.styles_used[:5]
+        })
+        project.ai_contributions = ai_contributions
+        project.save(update_fields=['ai_contributions'])
+
+        logger.info(f"🎨 Generated {result.total_assets} brand assets for project {project.project_name}")
+
+        return Response({
+            'success': True,
+            'data': result.to_dict()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error generating brand assets: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def analyze_brand_styles(request, project_id):
+    """
+    Analyze brand strategy research and recommend styles.
+
+    Session 353: Preview which styles would be recommended before generating assets.
+
+    GET /api/projects/<project_id>/analyze-brand-styles/
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "project_name": "My AI Startup",
+            "personality_traits": ["innovative", "modern"],
+            "industry": "ai",
+            "target_audiences": ["entrepreneurs", "developers"],
+            "recommended_styles": [
+                {"style": "cyberpunk", "rationale": "...", "confidence": 0.9, "asset_type": "logo"},
+                ...
+            ],
+            "style_rationale": "Based on innovative tech brand..."
+        }
+    }
+    """
+    try:
+        from core.services.research_to_creative_pipeline import get_research_to_creative_pipeline
+
+        user = request.user
+
+        # Verify project ownership
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Initialize pipeline connector
+        pipeline = get_research_to_creative_pipeline(user=user)
+
+        # Analyze brand strategy
+        analysis = pipeline.analyze_brand_strategy(str(project_id))
+
+        if analysis.get('error'):
+            return Response({
+                'success': False,
+                'error': analysis['error']
+            }, status=400)
+
+        # Convert StyleRecommendation objects to dicts
+        recommendations = []
+        for rec in analysis.get('recommended_styles', []):
+            if hasattr(rec, 'style'):
+                recommendations.append({
+                    'style': rec.style,
+                    'rationale': rec.rationale,
+                    'confidence': rec.confidence,
+                    'asset_type': rec.asset_type
+                })
+            else:
+                recommendations.append(rec)
+
+        analysis['recommended_styles'] = recommendations
+
+        logger.info(f"📊 Brand style analysis for {project.project_name}: {len(recommendations)} styles recommended")
+
+        return Response({
+            'success': True,
+            'data': analysis
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error analyzing brand styles: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+def get_available_styles(request):
+    """
+    Get all available image styles grouped by category.
+
+    Session 353: Returns the 78 available styles for style picker UI.
+
+    GET /api/styles/available/
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "photography": ["photorealistic", "portrait", ...],
+            "animation": ["anime", "pixar", "disney", ...],
+            "artistic_movements": ["impressionist", "surreal", ...],
+            ...
+        }
+    }
+    """
+    try:
+        from core.services.research_to_creative_pipeline import get_research_to_creative_pipeline
+
+        pipeline = get_research_to_creative_pipeline()
+        styles = pipeline.get_available_styles()
+
+        return Response({
+            'success': True,
+            'data': styles,
+            'total_styles': sum(len(v) for v in styles.values())
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error getting available styles: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
