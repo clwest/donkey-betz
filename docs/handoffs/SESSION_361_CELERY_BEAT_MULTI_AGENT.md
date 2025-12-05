@@ -92,6 +92,8 @@ result = run_multi_agent_conversation(max_conversations=1, participants_per_conv
 | File | Changes |
 |------|---------|
 | `core/celery.py` | Added `multi-agent-panel-cycle` to `CELERY_BEAT_SCHEDULE` |
+| `ai_core/templates/ai_image_studio.html` | Added panel UI differentiation (icons, badge, styling) |
+| `ai_core/templates/partials/js/agent_dashboard.html` | Added panel UI differentiation (icons, badge, styling) |
 
 ---
 

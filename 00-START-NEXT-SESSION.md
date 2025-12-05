@@ -30,6 +30,22 @@ Added the `run_multi_agent_conversation()` task to Celery Beat so panel discussi
 }
 ```
 
+### UI Differentiation for Multi-Agent Panels
+
+Added visual differentiation in the Agents tab for multi-agent panel discussions:
+
+**Visual Changes:**
+- **Orange gradient border** for panel conversations (vs purple for regular)
+- **"PANEL" badge** with orange gradient styling
+- **Unique icons** for each panel type:
+  - Roundtable: 🪑
+  - Expert Panel: 👥
+  - Brainstorm Session: 🧠
+  - Debate Panel: ⚖️
+  - Strategy Session: 🎯
+- **Yellow/amber title color** for panels (vs purple for regular)
+- **"Panel:" label** instead of "Participants:" for panels
+
 ---
 
 ## Session 360 Summary
@@ -145,6 +161,8 @@ curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
 | File | Changes |
 |------|---------|
 | `core/celery.py` | Added `multi-agent-panel-cycle` Celery Beat schedule |
+| `ai_core/templates/ai_image_studio.html` | Added panel UI differentiation |
+| `ai_core/templates/partials/js/agent_dashboard.html` | Added panel UI differentiation |
 | `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` | Session documentation |
 
 ---
@@ -152,7 +170,7 @@ curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
 ## What's Next (Session 362)
 
 ### Remaining from Session 360:
-1. **UI Display** - Show multi-agent panels differently in Agents tab
+1. ~~**UI Display** - Show multi-agent panels differently in Agents tab~~ **DONE in Session 361**
 2. **Panel Analytics** - Track which panel types generate best insights
 
 ### Remaining Items from Session 356:
