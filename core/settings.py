@@ -947,6 +947,16 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.broadcast_dream_journal',
         'schedule': 180.0,  # Every 3 minutes
     },
+    # Session 360/361: Multi-Agent Panel Conversations
+    'multi-agent-panel-cycle': {
+        'task': 'core.tasks.run_multi_agent_conversation',
+        'schedule': 1200.0,  # Every 20 minutes
+    },
+    # Session 362: Auto-Promote High-Quality Decisions to Canonical Policies
+    'auto-promote-decisions': {
+        'task': 'core.tasks.auto_promote_decisions',
+        'schedule': 1800.0,  # Every 30 minutes
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
