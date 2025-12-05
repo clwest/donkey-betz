@@ -6369,6 +6369,8 @@ class AgentConversation(models.Model):
             ('user_triggered', 'User Initiated'),
             ('anomaly', 'Anomaly Detected'),
             ('opportunity', 'New Opportunity'),
+            ('spider_data', 'New Spider Data'),  # Session 362: Spider-triggered
+            ('project_need', 'Project Research Need'),  # Session 362: Project-triggered
         ],
         default='scheduled'
     )

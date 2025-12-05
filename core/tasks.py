@@ -4647,6 +4647,197 @@ def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions:
         return {'status': 'failed', 'error': str(e)}
 
 
+# =============================================================================
+# Session 362: Spider-Triggered Conversations
+# =============================================================================
+
+@shared_task(bind=True)
+def trigger_spider_conversations(self, min_relevance: int = 70, max_conversations: int = 2):
+    """
+    Session 362: Trigger agent conversations based on interesting new spider data.
+
+    When spiders collect high-relevance data, this task:
+    1. Finds recent high-relevance spider data that hasn't been discussed
+    2. Picks relevant agents based on the data type
+    3. Creates conversations about the new intelligence
+
+    This creates a reactive autonomous system where new data triggers discussion.
+
+    Args:
+        min_relevance: Minimum relevance score to trigger discussion (0-100)
+        max_conversations: Maximum conversations to trigger per run
+
+    Returns:
+        Stats about conversations triggered
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import SpiderData, AgentKnowledgeSource
+    from core.models import Agent, AgentConversation, ConversationMessage
+    import random
+    import openai
+    import os
+
+    logger.info("🕷️ [SPIDER-TRIGGER] Checking for conversation-worthy spider data...")
+
+    try:
+        stats = {
+            'spider_data_checked': 0,
+            'conversations_triggered': 0,
+            'agents_involved': set()
+        }
+
+        # Find recent high-relevance spider data (last 2 hours)
+        cutoff = timezone.now() - timedelta(hours=2)
+        interesting_data = SpiderData.objects.filter(
+            created_at__gte=cutoff,
+            relevance_score__gte=min_relevance,
+            is_processed=True
+        ).exclude(
+            # Exclude data already discussed (check by spider_name in recent conversations)
+            spider_name__in=AgentConversation.objects.filter(
+                trigger_type='spider_data',
+                started_at__gte=cutoff
+            ).values_list('topic', flat=True)
+        ).order_by('-relevance_score')[:max_conversations * 2]
+
+        stats['spider_data_checked'] = interesting_data.count()
+
+        if not interesting_data:
+            logger.info("🕷️ [SPIDER-TRIGGER] No new high-relevance data to discuss")
+            return {'status': 'success', 'message': 'No new data', 'stats': stats}
+
+        # Get agents that could discuss this data
+        # Map spider data types to agent specializations
+        data_type_to_agents = {
+            'tech': ['ResearchAgent', 'CTOAgent', 'InnovationScoutAgent'],
+            'financial': ['ResearchAgent', 'COOAgent', 'OpportunityScannerAgent'],
+            'jobs': ['ResearchAgent', 'ContentStrategyAgent'],
+            'creative': ['DesignAssistantAgent', 'BrandIdentityAgent', 'ContentStrategyAgent'],
+            'market': ['ResearchAgent', 'TrendAnalysisAgent', 'OpportunityScannerAgent'],
+            'news': ['ResearchAgent', 'CTOAgent', 'InnovationScoutAgent'],
+        }
+
+        # Initialize OpenAI
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        conversations_created = 0
+        for spider_data in interesting_data:
+            if conversations_created >= max_conversations:
+                break
+
+            # Determine which agents should discuss this
+            data_type = spider_data.data_type.lower()
+            agent_names = data_type_to_agents.get(data_type, ['ResearchAgent', 'CTOAgent'])
+
+            # Get actual agent objects
+            agents = list(Agent.objects.filter(
+                name__in=agent_names,
+                is_active=True
+            )[:3])
+
+            if len(agents) < 2:
+                # Fallback to any agents with knowledge
+                agents = list(Agent.objects.filter(
+                    is_active=True,
+                    knowledge_sources__isnull=False
+                ).distinct()[:2])
+
+            if len(agents) < 2:
+                continue
+
+            # Pick 2 agents for discussion
+            selected_agents = random.sample(agents, min(2, len(agents)))
+            initiator, responder = selected_agents[0], selected_agents[1]
+
+            # Build topic from spider data
+            spider_summary = ""
+            if spider_data.raw_data:
+                items = spider_data.raw_data.get('items', [])[:3]
+                titles = [item.get('title', '')[:50] for item in items if item.get('title')]
+                spider_summary = "; ".join(titles)
+
+            topic = f"New {spider_data.spider_name} Intelligence: {spider_summary[:80]}"
+
+            # Create the conversation
+            conversation = AgentConversation.objects.create(
+                topic=topic,
+                conversation_type='critical_review',  # Review new data critically
+                initiator=initiator,
+                trigger_type='spider_data',
+                status='active'
+            )
+            conversation.participants.add(initiator, responder)
+
+            # Generate initial messages
+            system_prompt = f"""You are {initiator.name}, an AI agent specializing in {initiator.specialization or 'analysis'}.
+
+New intelligence has arrived from the {spider_data.spider_name} spider (relevance: {spider_data.relevance_score}/100).
+
+Data summary: {spider_summary[:300]}
+
+Your task: Analyze this new data critically. What opportunities or risks does it present?
+Keep your response to 2-3 sentences. Be specific about actionable insights."""
+
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"Analyze this new {spider_data.spider_name} data and share your initial assessment."}
+                    ],
+                    max_completion_tokens=500,
+                )
+
+                content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                if content:
+                    # Validate output
+                    content = validate_agent_output(initiator.name, content)
+
+                    ConversationMessage.objects.create(
+                        conversation=conversation,
+                        agent=initiator,
+                        content=content,
+                        message_type='statement',
+                        sequence_number=1
+                    )
+
+                    conversations_created += 1
+                    stats['conversations_triggered'] += 1
+                    stats['agents_involved'].add(initiator.name)
+                    stats['agents_involved'].add(responder.name)
+
+                    logger.info(
+                        f"🕷️ [SPIDER-TRIGGER] Created conversation about {spider_data.spider_name} "
+                        f"with {initiator.name} and {responder.name}"
+                    )
+
+            except Exception as e:
+                logger.warning(f"🕷️ [SPIDER-TRIGGER] Failed to generate message: {e}")
+                conversation.delete()
+                continue
+
+        logger.info(
+            f"🕷️ [SPIDER-TRIGGER] Complete: {stats['conversations_triggered']} conversations "
+            f"triggered from {stats['spider_data_checked']} data items"
+        )
+
+        return {
+            'status': 'success',
+            'stats': {
+                'spider_data_checked': stats['spider_data_checked'],
+                'conversations_triggered': stats['conversations_triggered'],
+                'agents_involved': list(stats['agents_involved'])
+            },
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🕷️ [SPIDER-TRIGGER] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def broadcast_conversation_status(self):
     """
