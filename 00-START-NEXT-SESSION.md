@@ -1,18 +1,44 @@
 # Start Next Session Here
 
-**Last Session:** 360 - Multi-Agent Conversations
+**Last Session:** 361 - Celery Beat Integration for Multi-Agent Panels
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | MULTI-AGENT PANELS | Learning SMARTER
+**Status:** 102 spiders | 36 categories | 79 agents | MULTI-AGENT PANELS SCHEDULED | Learning SMARTER
 
 ---
 
-## What Happened in Session 360
+## What Happened in Session 361
+
+### Celery Beat Integration for Multi-Agent Panels
+
+Added the `run_multi_agent_conversation()` task to Celery Beat so panel discussions run automatically every 20 minutes.
+
+**Changes Made:**
+- Added `multi-agent-panel-cycle` schedule to `core/celery.py`
+- Runs every 20 minutes with 1 panel, 4 agents, 3 rounds per cycle
+- Tested successfully - panel conversations generating insights
+
+**Celery Beat Schedule Entry:**
+```python
+'multi-agent-panel-cycle': {
+    'task': 'core.tasks.run_multi_agent_conversation',
+    'schedule': crontab(minute='*/20'),  # Every 20 minutes
+    'kwargs': {
+        'max_conversations': 1,
+        'participants_per_conversation': 4,
+        'max_rounds': 3,
+    }
+}
+```
+
+---
+
+## Session 360 Summary
 
 ### Multi-Agent Conversations (Panel Discussions)
 
 Extended agent conversations from 2-agent dialogues to 3-5 agent panel discussions with round-robin turns.
 
-**New Features:**
+**Features:**
 - `run_multi_agent_conversation()` task for panel-style discussions
 - 5 panel templates: roundtable, expert_panel, brainstorm_session, debate_panel, strategy_session
 - Tension levels (low/medium/high) affect prompt selection
@@ -30,19 +56,6 @@ Extended agent conversations from 2-agent dialogues to 3-5 agent panel discussio
 
 ---
 
-## Session 359 Summary
-
-### Mythology Validation Expansion
-
-Extended mythology validation to cover ALL 7 agent output points (from 2):
-- Agent Conversation Messages + Conclusions
-- Project Conversation Messages + Conclusions
-- Memory Palace Explorations
-- Hive Mind Contributions + Synthesis
-- Agent Dreams remain EXEMPT (intentional for creativity)
-
----
-
 ## Current System State
 
 | Component | Count |
@@ -51,7 +64,7 @@ Extended mythology validation to cover ALL 7 agent output points (from 2):
 | **Categories** | **36** |
 | **Agents** | **79** |
 | **Data Points** | **8,879+** |
-| **Agent Conversations** | **1,238+** |
+| **Agent Conversations** | **1,272+** |
 | **Alliances** | **13** |
 | **Rivalries** | **1** |
 | **Predictions** | **10** |
@@ -63,7 +76,7 @@ Extended mythology validation to cover ALL 7 agent output points (from 2):
 
 | Tab | Metric | Value |
 |-----|--------|-------|
-| **Overview** | Collaborations | **1,238+** |
+| **Overview** | Collaborations | **1,272+** |
 | | Collaboration Sessions | **3** |
 | | Learning Events | **55** |
 | | Agent Memories | 59 |
@@ -85,7 +98,7 @@ Extended mythology validation to cover ALL 7 agent output points (from 2):
 
 ```bash
 make start
-make celery  # For background tasks + learning cycles
+make celery  # For background tasks + learning cycles + multi-agent panels
 open http://localhost:8000/ai-studio/
 ```
 
@@ -127,21 +140,20 @@ curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
 
 ---
 
-## Key Files Changed in Session 360
+## Key Files Changed in Session 361
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added `run_multi_agent_conversation()` (~420 lines) |
-| `docs/handoffs/SESSION_360_MULTI_AGENT_CONVERSATIONS.md` | Session documentation |
+| `core/celery.py` | Added `multi-agent-panel-cycle` Celery Beat schedule |
+| `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` | Session documentation |
 
 ---
 
-## What's Next (Session 361)
+## What's Next (Session 362)
 
-### Multi-Agent Enhancements:
-1. **Add to Celery Beat** - Schedule multi-agent panels periodically
-2. **UI Display** - Show multi-agent panels differently in Agents tab
-3. **Panel Analytics** - Track which panel types generate best insights
+### Remaining from Session 360:
+1. **UI Display** - Show multi-agent panels differently in Agents tab
+2. **Panel Analytics** - Track which panel types generate best insights
 
 ### Remaining Items from Session 356:
 1. **Agent Conversations API** - `/api/agent-conversations/` returns empty (investigate)
@@ -161,13 +173,16 @@ curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
 
 ```
 2-Agent Conversations (Original):
-  Initiator → Responder → Initiator → Responder → Conclusion
+  Initiator -> Responder -> Initiator -> Responder -> Conclusion
 
-Multi-Agent Panel (NEW - Session 360):
-  Agent1 → Agent2 → Agent3 → Agent4 → (round 1)
-  Agent1 → Agent2 → Agent3 → Agent4 → (round 2)
-  Agent1 → Agent2 → Agent3 → Agent4 → (round 3)
-  → Panel Synthesis (conclusion)
+Multi-Agent Panel (Sessions 360-361):
+  Agent1 -> Agent2 -> Agent3 -> Agent4 -> (round 1)
+  Agent1 -> Agent2 -> Agent3 -> Agent4 -> (round 2)
+  Agent1 -> Agent2 -> Agent3 -> Agent4 -> (round 3)
+  -> Panel Synthesis (conclusion)
+
+Celery Beat Schedule (Session 361):
+  Every 20 minutes: 1 panel, 4 agents, 3 rounds
 
 All outputs validated via validate_agent_output()
 ```
@@ -176,7 +191,8 @@ All outputs validated via validate_agent_output()
 
 ## Related Documentation
 
-- `docs/handoffs/SESSION_360_MULTI_AGENT_CONVERSATIONS.md` - This session
+- `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` - This session
+- `docs/handoffs/SESSION_360_MULTI_AGENT_CONVERSATIONS.md` - Multi-agent panels
 - `docs/handoffs/SESSION_359_MYTHOLOGY_EXPANSION.md` - Full mythology coverage
 - `docs/handoffs/SESSION_358_ENHANCED_DELTA_DETECTION.md` - Semantic similarity
 - `docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md` - Initial validation
