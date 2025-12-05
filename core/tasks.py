@@ -5020,6 +5020,186 @@ def trigger_project_research(self, max_projects: int = 3, max_spiders_per_projec
         return {'status': 'failed', 'error': str(e)}
 
 
+# =============================================================================
+# Session 363: Decision-Triggered Actions
+# =============================================================================
+
+@shared_task(bind=True)
+def propagate_new_policies(self, hours_back: int = 2, max_actions: int = 3):
+    """
+    Session 363: Propagate newly promoted policies to relevant agents.
+
+    When a decision becomes canonical policy, this task:
+    1. Finds recently promoted policies
+    2. Identifies agents affected by the policy's impact area
+    3. Creates implementation conversations
+    4. Logs policy adoption for tracking
+
+    This completes the feedback loop: Conversations → Decisions → Policies → Agent Behavior
+
+    Args:
+        hours_back: How far back to look for new policies
+        max_actions: Maximum actions to trigger per run
+
+    Returns:
+        Stats about policy propagation
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentDecisionSummary
+    from core.models import Agent, AgentConversation, ConversationMessage
+    from core.services.policy_context import PolicyContextService
+    import openai
+    import os
+
+    logger.info("🏛️ [POLICY-PROPAGATE] Checking for new policies to propagate...")
+
+    try:
+        stats = {
+            'policies_checked': 0,
+            'actions_triggered': 0,
+            'agents_notified': [],
+            'conversations_created': []
+        }
+
+        # Find recently promoted policies that haven't been propagated
+        cutoff = timezone.now() - timedelta(hours=hours_back)
+        new_policies = AgentDecisionSummary.objects.filter(
+            is_canonical=True,
+            promoted_at__gte=cutoff,
+            propagated_at__isnull=True  # Not yet propagated
+        ).order_by('-promoted_at')[:max_actions]
+
+        stats['policies_checked'] = new_policies.count()
+
+        if not new_policies:
+            logger.info("🏛️ [POLICY-PROPAGATE] No new policies to propagate")
+            return {'status': 'success', 'message': 'No new policies', 'stats': stats}
+
+        # Get agent-to-area mapping
+        policy_service = PolicyContextService()
+
+        # Initialize OpenAI
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        for policy in new_policies:
+            # Find agents affected by this policy's impact area
+            affected_agents = []
+            for agent_name, areas in policy_service.AGENT_IMPACT_AREAS.items():
+                if policy.impact_area in areas:
+                    affected_agents.append(agent_name)
+
+            if not affected_agents:
+                # Mark as propagated even if no affected agents
+                policy.propagated_at = timezone.now()
+                policy.save(update_fields=['propagated_at'])
+                continue
+
+            # Get actual agent objects (limit to 3)
+            agents = list(Agent.objects.filter(
+                name__in=affected_agents,
+                is_active=True
+            )[:3])
+
+            if len(agents) < 2:
+                # Need at least 2 agents for a conversation
+                policy.propagated_at = timezone.now()
+                policy.save(update_fields=['propagated_at'])
+                continue
+
+            # Create implementation discussion
+            topic = f"New Policy Implementation: {policy.topic[:50]}"
+
+            conversation = AgentConversation.objects.create(
+                topic=topic,
+                conversation_type='implementation_planning',
+                initiator=agents[0],
+                trigger_type='scheduled',  # Policy-triggered
+                status='active'
+            )
+            conversation.participants.add(*agents[:2])
+
+            # Generate initial implementation discussion
+            policy_summary = f"""
+New Canonical Policy:
+- Topic: {policy.topic}
+- Decision: {policy.recommended_stance[:200] if policy.recommended_stance else 'Not specified'}
+- Impact Area: {policy.impact_area}
+- Key Insights: {', '.join(policy.key_insights[:3]) if policy.key_insights else 'None specified'}
+"""
+
+            system_prompt = f"""You are {agents[0].name}, an AI agent specializing in {agents[0].specialization or 'analysis'}.
+
+A new policy has been established through agent governance:
+
+{policy_summary}
+
+Your task: Discuss how this policy should affect your work and what concrete steps you'll take to implement it.
+Keep response to 2-3 sentences. Be specific about implementation."""
+
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": "How will you implement this new policy in your work?"}
+                    ],
+                    max_completion_tokens=500,
+                )
+
+                content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                if content:
+                    # Validate output
+                    content = validate_agent_output(agents[0].name, content)
+
+                    ConversationMessage.objects.create(
+                        conversation=conversation,
+                        agent=agents[0],
+                        content=content,
+                        message_type='statement',
+                        sequence_number=1
+                    )
+
+                    stats['actions_triggered'] += 1
+                    stats['agents_notified'].extend([a.name for a in agents[:2]])
+                    stats['conversations_created'].append(conversation.id)
+
+                    logger.info(
+                        f"🏛️ [POLICY-PROPAGATE] Created implementation conversation for "
+                        f"'{policy.topic[:30]}' with {len(agents)} agents"
+                    )
+
+            except Exception as e:
+                logger.warning(f"🏛️ [POLICY-PROPAGATE] Failed to generate message: {e}")
+                conversation.delete()
+                continue
+
+            # Mark policy as propagated
+            policy.propagated_at = timezone.now()
+            policy.save(update_fields=['propagated_at'])
+
+        logger.info(
+            f"🏛️ [POLICY-PROPAGATE] Complete: {stats['policies_checked']} policies checked, "
+            f"{stats['actions_triggered']} implementation conversations created"
+        )
+
+        return {
+            'status': 'success',
+            'stats': {
+                'policies_checked': stats['policies_checked'],
+                'actions_triggered': stats['actions_triggered'],
+                'agents_notified': list(set(stats['agents_notified'])),
+                'conversations_created': len(stats['conversations_created'])
+            },
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🏛️ [POLICY-PROPAGATE] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def broadcast_conversation_status(self):
     """

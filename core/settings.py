@@ -967,6 +967,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.trigger_project_research',
         'schedule': 1200.0,  # Every 20 minutes - check what projects need
     },
+    # Session 363: Decision-Triggered Actions (policy → agent behavior)
+    'propagate-new-policies': {
+        'task': 'core.tasks.propagate_new_policies',
+        'schedule': 600.0,  # Every 10 minutes - propagate new policies to agents
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
