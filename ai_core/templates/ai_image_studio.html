@@ -47292,9 +47292,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                             ❌ Reject
                                         </button>
                                     ` : ''}
-                                    ${impl.deliverable_content ? `
+                                    ${(impl.deliverable_content || (impl.user_feedback && impl.user_feedback.includes('[DELIVERABLE]'))) ? `
                                         <button class="btn btn-sm btn-outline-info" onclick="showDeliverableModal('${impl.id}')">
-                                            📄 View Deliverable
+                                            View Full Report
                                         </button>
                                     ` : ''}
                                 </div>
@@ -47499,39 +47499,75 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Show deliverable content in a modal
         async function showDeliverableModal(implId) {
             try {
-                const response = await authenticatedFetch(`/api/dream-implementations/?limit=1`);
+                // Fetch all implementations to find the one we need
+                const response = await authenticatedFetch(`/api/dream-implementations/?limit=50`);
                 const data = await response.json();
 
                 // Find the specific implementation
                 const impl = data.implementations?.find(i => i.id === implId);
-                if (!impl || !impl.deliverable_content) {
-                    showNotification('Deliverable content not found', 'warning');
+                if (!impl) {
+                    showNotification('Implementation not found', 'warning');
                     return;
                 }
 
-                // Create and show modal
+                // Get content from deliverable_content or fall back to user_feedback
+                let content = impl.deliverable_content || '';
+                if (!content && impl.user_feedback) {
+                    // Strip the [DELIVERABLE] prefix from old format
+                    content = impl.user_feedback.replace(/^\[DELIVERABLE\]\n\n/, '');
+                }
+
+                if (!content) {
+                    showNotification('No deliverable content available yet', 'info');
+                    return;
+                }
+
+                // Escape HTML to display as plain text
+                const escapeHtml = (text) => {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                };
+
+                // Store content globally for download
+                window._currentDeliverable = {
+                    title: impl.dream_title || 'Deliverable',
+                    type: impl.deliverable_type || 'document',
+                    content: content
+                };
+
+                // Create and show modal with plain text content
                 const modalHtml = `
                     <div class="modal fade" id="deliverableModal" tabindex="-1">
-                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-dialog modal-xl modal-dialog-scrollable">
                             <div class="modal-content" style="background: #1a1a1a; border: 1px solid #a855f7;">
                                 <div class="modal-header" style="border-bottom: 1px solid #333;">
-                                    <h5 class="modal-title" style="color: #a855f7;">📄 ${impl.dream_title}</h5>
+                                    <h5 class="modal-title" style="color: #a855f7;">
+                                        ${escapeHtml(impl.dream_title || 'Deliverable')}
+                                    </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <div class="mb-3">
-                                        <span class="badge bg-info">${impl.deliverable_type || 'document'}</span>
-                                        <span class="badge bg-secondary ms-2">${impl.assigned_agent_name}</span>
+                                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge bg-info">${escapeHtml(impl.deliverable_type || 'document')}</span>
+                                            <span class="badge bg-secondary ms-2">${escapeHtml(impl.assigned_agent_name || 'Unknown')}</span>
+                                            <span class="badge bg-dark ms-2">${content.length.toLocaleString()} chars</span>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary" onclick="downloadDeliverable()">
+                                            Download as TXT
+                                        </button>
                                     </div>
-                                    <div style="background: #0d0d0d; padding: 1rem; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 12px; color: #e0e0e0; max-height: 500px; overflow-y: auto;">
-${impl.deliverable_content}
-                                    </div>
+                                    <pre style="background: #0d0d0d; padding: 1.5rem; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 13px; color: #e0e0e0; max-height: 600px; overflow-y: auto; line-height: 1.6; border: 1px solid #333;">${escapeHtml(content)}</pre>
                                 </div>
                                 <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-outline-primary" onclick="downloadDeliverable()">
+                                        Download as TXT
+                                    </button>
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                     ${impl.status === 'completed' ? `
                                         <button type="button" class="btn btn-success" onclick="validateImplementation('${impl.id}', 'validate'); bootstrap.Modal.getInstance(document.getElementById('deliverableModal')).hide();">
-                                            ✅ Validate
+                                            Validate
                                         </button>
                                     ` : ''}
                                 </div>
@@ -47553,6 +47589,32 @@ ${impl.deliverable_content}
                 console.error('Error showing deliverable:', error);
                 showNotification('Error loading deliverable', 'danger');
             }
+        }
+
+        // Download deliverable as plain text file
+        function downloadDeliverable() {
+            if (!window._currentDeliverable) {
+                showNotification('No deliverable to download', 'warning');
+                return;
+            }
+
+            const { title, type, content } = window._currentDeliverable;
+
+            // Create filename from title
+            const filename = `${title.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}_${type}.txt`;
+
+            // Create blob and download
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showNotification(`Downloaded: ${filename}`, 'success');
         }
 
         // =========================================================================
