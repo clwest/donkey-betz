@@ -12981,6 +12981,13 @@ class AgentDecisionSummary(models.Model):
         help_text='Session 327: Optional project context for this decision'
     )
 
+    # Session 362: Quality scoring for auto-promotion
+    quality_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Quality score (0-1) for auto-promotion eligibility"
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -12994,6 +13001,7 @@ class AgentDecisionSummary(models.Model):
             models.Index(fields=['decision_type', 'impact_area']),
             models.Index(fields=['status']),
             models.Index(fields=['is_canonical']),
+            models.Index(fields=['quality_score']),  # Session 362
         ]
 
     def __str__(self):
@@ -13032,6 +13040,76 @@ Key Points:
 {insights}
 Stance: {self.recommended_stance}
 """
+
+    def calculate_quality_score(self) -> float:
+        """
+        Session 362: Calculate quality score for auto-promotion eligibility.
+
+        Scoring factors:
+        - Recommended stance length (longer = more detailed = better)
+        - Number of key insights (more = better, up to 5)
+        - Rationale provided (bonus)
+        - Suggested feature provided (bonus)
+        - Conversation depth (message count from source conversation)
+        - Participant diversity (more participants = better)
+
+        Returns:
+            Float between 0.0 and 1.0
+        """
+        score = 0.0
+
+        # 1. Recommended stance quality (0-0.3)
+        stance_len = len(self.recommended_stance or '')
+        if stance_len >= 200:
+            score += 0.3
+        elif stance_len >= 100:
+            score += 0.2
+        elif stance_len >= 50:
+            score += 0.1
+
+        # 2. Key insights count (0-0.25)
+        insights_count = len(self.key_insights or [])
+        if insights_count >= 4:
+            score += 0.25
+        elif insights_count >= 3:
+            score += 0.2
+        elif insights_count >= 2:
+            score += 0.1
+
+        # 3. Rationale provided (0-0.15)
+        if self.rationale and len(self.rationale) >= 50:
+            score += 0.15
+        elif self.rationale and len(self.rationale) >= 20:
+            score += 0.1
+
+        # 4. Suggested feature provided (0-0.1)
+        if self.suggested_feature and len(self.suggested_feature) >= 20:
+            score += 0.1
+
+        # 5. Conversation depth (0-0.1)
+        try:
+            if self.conversation:
+                msg_count = self.conversation.message_count or 0
+                if msg_count >= 6:
+                    score += 0.1
+                elif msg_count >= 4:
+                    score += 0.05
+        except Exception:
+            pass
+
+        # 6. Participant diversity (0-0.1)
+        participants_count = len(self.participants or [])
+        if participants_count >= 3:
+            score += 0.1
+        elif participants_count >= 2:
+            score += 0.05
+
+        return min(1.0, score)
+
+    def update_quality_score(self):
+        """Calculate and save quality score."""
+        self.quality_score = self.calculate_quality_score()
+        self.save(update_fields=['quality_score'])
 
 
 # =============================================================================
