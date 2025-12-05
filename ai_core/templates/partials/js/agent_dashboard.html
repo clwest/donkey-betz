@@ -713,9 +713,13 @@
                             </div>
                         ` : ''}
                         <div class="mt-2 d-flex gap-2 align-items-center">
-                            <button class="btn btn-sm ${dream.user_reaction === 'like' ? 'btn-success' : 'btn-outline-light'}" onclick="reactToDream('${dream.id}', 'like')" title="I like this! Future dreams will be more like this.">
+                            <button class="btn btn-sm ${dream.user_reaction === 'like' ? 'btn-success' : 'btn-outline-light'}" onclick="rateDream('${dream.id}', 'up')" title="I like this! Future dreams will be more like this.">
                                 👍
                             </button>
+                            <button class="btn btn-sm ${dream.user_reaction === 'boring' ? 'btn-danger' : 'btn-outline-light'}" onclick="rateDream('${dream.id}', 'down')" title="Not interested. Less of this type.">
+                                👎
+                            </button>
+                            <span class="mx-2 text-muted">|</span>
                             <button class="btn btn-sm ${dream.user_reaction === 'interesting' ? 'btn-info' : 'btn-outline-light'}" onclick="reactToDream('${dream.id}', 'interesting')" title="Interesting! More dreams on this topic.">
                                 🤔
                             </button>
@@ -840,6 +844,45 @@
                     `;
                     setTimeout(() => indicator.remove(), 5000);
                 }, 15000);
+            }
+        }
+
+        // Session 368: Quick thumbs up/down rating for dreams
+        async function rateDream(dreamId, rating) {
+            try {
+                // Show immediate visual feedback
+                const btn = event.target.closest('button');
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        btn.style.transform = 'scale(1)';
+                    }, 200);
+                }
+
+                const response = await fetch(`/api/agent-dreams/${dreamId}/rate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ rating: rating })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const emoji = rating === 'up' ? '👍' : '👎';
+                        const message = rating === 'up'
+                            ? `${emoji} Great! More dreams like this coming...`
+                            : `${emoji} Got it! Fewer dreams like this.`;
+                        showNotification(message, rating === 'up' ? 'success' : 'info');
+                        loadAgentDreams(); // Refresh the list
+                    }
+                }
+            } catch (error) {
+                console.error('Error rating dream:', error);
+                showNotification('Error recording rating', 'danger');
             }
         }
 
