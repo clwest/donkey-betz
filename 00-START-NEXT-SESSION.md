@@ -1,31 +1,35 @@
 # Start Next Session Here
 
-**Last Session:** 367 - Dream Implementation Pipeline
+**Last Session:** 368 - Dream Validation UI
 **Date:** December 5, 2025
 **Status:** 102 spiders | 36 categories | 24 agents | 18 AUTONOMOUS TASKS!
 
 ---
 
-## Session 367 Accomplishments
+## Session 368 Accomplishments
 
-### Dream Implementation Pipeline Complete!
+### Dream Validation UI API Complete!
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| **Dream Lifecycle** | Generate -> Score -> Promote -> Decide | Generate -> Score -> Promote -> Decide -> **Implement** |
-| **Implementations Tracked** | 0 | 3 (and growing!) |
-| **Agent Assignment** | No | Yes (auto-assigned specialists) |
-| **Implementation Plans** | No | GPT-generated step-by-step plans |
-| **Autonomous Tasks** | 17 | **18** |
+| **Boardroom Dreams API** | No dedicated endpoint | GET /api/boardroom/dreams/ |
+| **Dream Decisions API** | No | POST /api/boardroom/dreams/{id}/decide/ |
+| **Implementations API** | No | GET /api/dream-implementations/ |
+| **Validation API** | No | POST /api/dream-implementations/{id}/validate/ |
+| **Metrics API** | No | GET /api/dream-implementations/metrics/ |
+| **Thumbs Up/Down** | No | POST /api/agent-dreams/{id}/rate/ |
+| **First Validation** | N/A | 0.85 rating! |
 
 ### What Changed
 
-Dreams now flow from Boardroom approval to active implementation:
+Added 6 new API endpoints for dream validation UI:
 
-1. **DreamImplementation Model** - Tracks dream -> deliverable lifecycle
-2. **process_approved_dreams Task** - Runs every 15 min
-3. **Smart Agent Assignment** - Matches implementation type to specialist
-4. **GPT Implementation Plans** - Step-by-step plans for each dream
+1. **get_boardroom_dreams** - List promoted dreams pending decision
+2. **decide_dream** - Approve/defer/reject a dream
+3. **get_dream_implementations** - List implementations with status
+4. **validate_implementation** - Rate and validate/reject implementations
+5. **get_validation_metrics** - Track agent performance
+6. **rate_dream** - Quick thumbs up/down for dreams
 
 ---
 
@@ -35,14 +39,13 @@ Dreams now flow from Boardroom approval to active implementation:
 |-----------|-------|--------|
 | **Spiders** | **102** | Active |
 | **Agents** | **24** | Active with diverse moods! |
-| **Autonomous Tasks** | **18** | Running (NEW: dream-implementation!) |
+| **Autonomous Tasks** | **18** | Running |
 | **Agent Conversations** | **1,300+** | Mood-influenced |
 | **Agent Dreams** | **1,479+** | Productized! |
-| **Dream Implementations** | **3** | In progress! |
+| **Dream Implementations** | **4** | 1 validated, 3 in progress |
 | **Boardroom Decisions** | **122+** | Including dream decisions |
+| **Promoted Dreams** | **19** | 5 approved, 14 pending |
 | **Canonical Policies** | **5+** | Auto-promoting & propagating |
-| **Project Insights** | **321+** | Growing |
-| **LivingProjectConfig** | **10** | All active |
 
 ---
 
@@ -58,56 +61,51 @@ Dreams now flow from Boardroom approval to active implementation:
 [PROMOTE] Auto-promote if composite >= 0.7
      |
      v
-[BOARDROOM] Dreams pending decision
+[BOARDROOM] GET /api/boardroom/dreams/
      |
      v
-[DECIDE] User approves/defers/rejects
+[DECIDE] POST /api/boardroom/dreams/{id}/decide/
      |
      v
-[IMPLEMENT] dream_implementation_cycle (15 min)  <-- NEW!
+[IMPLEMENT] dream_implementation_cycle (15 min)
      |
      v
-[DELIVER] Agent completes work
+[TRACK] GET /api/dream-implementations/
+     |
+     v
+[VALIDATE] POST /api/dream-implementations/{id}/validate/
+     |
+     v
+[METRICS] GET /api/dream-implementations/metrics/
 ```
 
 ---
 
-## Celery Beat Schedule (18 Autonomous Tasks)
+## New API Endpoints (Session 368)
 
-| Task | Frequency | Purpose |
-|------|-----------|---------|
-| `run-spider-network` | 30 min | Collect external data |
-| `run-agent-learning-cycle` | 10 min | Knowledge propagation |
-| `agent-conversation-cycle` | 5 min | 2-agent discussions |
-| `multi-agent-panel-cycle` | 20 min | 3-5 agent panels |
-| `auto-promote-decisions` | 30 min | Promote to canonical policies |
-| `trigger-spider-conversations` | 15 min | Data -> Discussion |
-| `trigger-project-research` | 20 min | Project -> Spider |
-| `propagate-new-policies` | 10 min | Policy -> Agents |
-| `agent-dream-cycle` | 15 min | Creative thinking |
-| `dream-productization-cycle` | 20 min | Score & promote dreams |
-| `dream-implementation-cycle` | 15 min | **NEW! Process approved dreams** |
-| `broadcast-learning-status` | 1 min | WebSocket updates |
-| `broadcast-conversation-status` | 2 min | WebSocket updates |
-| `broadcast-dream-journal` | 3 min | WebSocket updates |
-| `sync-workflow-schedules` | 5 min | Workflow sync |
-| `check-workflow-schedules` | 1 min | Execute due workflows |
-| `poll-pending-trainings` | 30s | Character training |
-| `cleanup-stale-trainings` | 60 min | Cleanup |
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/boardroom/dreams/` | GET | List promoted dreams |
+| `/api/boardroom/dreams/{id}/decide/` | POST | Approve/defer/reject |
+| `/api/dream-implementations/` | GET | List implementations |
+| `/api/dream-implementations/{id}/validate/` | POST | Validate/reject |
+| `/api/dream-implementations/metrics/` | GET | Agent metrics |
+| `/api/agent-dreams/{id}/rate/` | POST | Thumbs up/down |
 
 ---
 
-## What's Next (Session 368)
+## What's Next (Session 369)
 
-### Option A: Dream Validation UI
-- Show implementations in the UI
-- Allow users to rate and provide feedback
-- Track success metrics per agent
+### Option A: Frontend Integration
+- Add Boardroom Dreams section to UI
+- Show implementations with status badges
+- Thumbs up/down buttons on dream cards
+- Validation modal for completed implementations
 
 ### Option B: Agent Execution Engine
 - Agents actually execute their implementation plans
 - Generate real deliverables (images, content, research)
-- Close the loop to "validated" status
+- Auto-complete implementations
 
 ### Option C: Multi-Agent Dream Sessions
 - Multiple agents collaborate on a dream topic
@@ -126,26 +124,40 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 367 Files Changed
+## Quick API Tests
 
-| File | Changes |
-|------|---------|
-| `core/models_unified_system.py` | Added `DreamImplementation` model |
-| `core/migrations/0072_session_367_dream_implementation.py` | New migration |
-| `core/tasks.py` | Added `process_approved_dreams` task |
-| `core/celery.py` | Added `dream-implementation-cycle` schedule |
+```bash
+# List pending boardroom dreams
+curl http://localhost:8000/api/boardroom/dreams/
+
+# List implementations
+curl http://localhost:8000/api/dream-implementations/
+
+# Get validation metrics
+curl http://localhost:8000/api/dream-implementations/metrics/
+```
 
 ---
 
-## Session 367 Commits
+## Session 368 Files Changed
 
-1. `feat(Session 367): Dream Implementation Pipeline`
+| File | Changes |
+|------|---------|
+| `core/views_agent_learning.py` | Added 6 dream validation endpoints |
+| `core/urls.py` | Added imports and URL patterns |
+| `docs/handoffs/SESSION_368_DREAM_VALIDATION_UI.md` | Full documentation |
+
+---
+
+## Session 368 Commits
+
+1. `feat(Session 368): Dream Validation UI API`
 
 ---
 
 ## Related Documentation
 
-- `docs/handoffs/SESSION_367_DREAM_IMPLEMENTATION.md` - Full implementation details
+- `docs/handoffs/SESSION_368_DREAM_VALIDATION_UI.md` - This session
+- `docs/handoffs/SESSION_367_DREAM_IMPLEMENTATION.md` - Implementation pipeline
 - `docs/handoffs/SESSION_366_DREAM_PRODUCTIZATION.md` - Dream scoring & promotion
 - `docs/handoffs/SESSION_365_MOOD_DIVERSITY.md` - Mood diversity
-- `docs/handoffs/SESSION_364_CONVERSATION_QUALITY.md` - Conversation quality fixes
