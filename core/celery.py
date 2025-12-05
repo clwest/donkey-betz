@@ -339,6 +339,19 @@ app.conf.beat_schedule = {
             'max_rounds': 3,  # 3 discussion rounds
         }
     },
+    # Session 362: Auto-Promote High-Quality Decisions
+    # Promotes decisions to canonical policies to close the feedback loop
+    'auto-promote-decisions': {
+        'task': 'core.tasks.auto_promote_decisions',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes - check for promotions
+        'options': {
+            'expires': 1800,  # 30 minutes
+        },
+        'kwargs': {
+            'quality_threshold': 0.6,  # Minimum quality score (0-1)
+            'max_promotions': 3,  # Max decisions to promote per run
+        }
+    },
     'broadcast-conversation-status': {
         'task': 'core.tasks.broadcast_conversation_status',
         'schedule': 120.0,  # Every 2 minutes - show recent conversations

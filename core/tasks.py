@@ -4479,6 +4479,138 @@ Provide a 2-3 sentence summary highlighting the key insights and any points of c
         return {'status': 'failed', 'error': str(e)}
 
 
+# =============================================================================
+# Session 362: Auto-Promote High-Quality Decisions to Canonical Policies
+# =============================================================================
+
+@shared_task(bind=True)
+def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions: int = 3):
+    """
+    Session 362: Automatically promote high-quality decisions to canonical policies.
+
+    This closes the feedback loop:
+    1. Agents have conversations → conclusions generated
+    2. Conclusions extracted as AgentDecisionSummary (decisions)
+    3. This task promotes high-quality decisions to canonical policies
+    4. PolicyContextService injects canonical policies into future agent prompts
+    5. Future agents behave according to past wisdom
+
+    Args:
+        quality_threshold: Minimum quality_score to be eligible (0.0-1.0)
+        max_promotions: Maximum decisions to promote per run
+
+    Returns:
+        Stats about promotions made
+    """
+    from django.utils import timezone
+    from core.models_unified_system import AgentDecisionSummary
+
+    logger.info("🏛️ [AUTO-PROMOTE] Starting decision auto-promotion cycle...")
+
+    try:
+        stats = {
+            'scores_updated': 0,
+            'candidates_found': 0,
+            'promoted': 0,
+            'already_canonical': 0,
+            'promoted_decisions': []
+        }
+
+        # Step 1: Update quality scores for all unscored decisions
+        unscored = AgentDecisionSummary.objects.filter(
+            quality_score=0.0,
+            is_canonical=False
+        )
+
+        for decision in unscored:
+            decision.update_quality_score()
+            stats['scores_updated'] += 1
+
+        if stats['scores_updated'] > 0:
+            logger.info(f"🏛️ [AUTO-PROMOTE] Updated quality scores for {stats['scores_updated']} decisions")
+
+        # Step 2: Find high-quality unpromoted decisions
+        candidates = AgentDecisionSummary.objects.filter(
+            is_canonical=False,
+            quality_score__gte=quality_threshold
+        ).order_by('-quality_score', '-created_at')[:max_promotions * 2]  # Get extra for diversity
+
+        stats['candidates_found'] = candidates.count()
+
+        if not candidates:
+            logger.info(f"🏛️ [AUTO-PROMOTE] No candidates above threshold {quality_threshold}")
+            return {
+                'status': 'success',
+                'message': 'No candidates above threshold',
+                'stats': stats
+            }
+
+        # Step 3: Promote top candidates, ensuring diversity by impact_area
+        promoted_areas = set()
+        promoted_count = 0
+
+        for decision in candidates:
+            if promoted_count >= max_promotions:
+                break
+
+            # Skip if we already promoted a decision in this impact area this run
+            # (promotes diversity across areas)
+            if decision.impact_area in promoted_areas and promoted_count >= 1:
+                continue
+
+            # Promote the decision
+            decision.promote_to_canonical(promoted_by='auto_promote_task')
+            promoted_areas.add(decision.impact_area)
+            promoted_count += 1
+
+            stats['promoted'] += 1
+            stats['promoted_decisions'].append({
+                'id': str(decision.id),
+                'topic': decision.topic[:100],
+                'decision_type': decision.decision_type,
+                'impact_area': decision.impact_area,
+                'quality_score': decision.quality_score,
+            })
+
+            logger.info(
+                f"🏛️ [AUTO-PROMOTE] Promoted decision: {decision.topic[:50]}... "
+                f"(quality: {decision.quality_score:.2f}, area: {decision.impact_area})"
+            )
+
+        # Step 4: Broadcast the update
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'decisions_promoted',
+                'stats': {
+                    'promoted': stats['promoted'],
+                    'decisions': stats['promoted_decisions']
+                },
+                'timestamp': timezone.now().isoformat()
+            }))
+        except Exception:
+            pass
+
+        logger.info(
+            f"🏛️ [AUTO-PROMOTE] Cycle complete: "
+            f"{stats['scores_updated']} scores updated, "
+            f"{stats['candidates_found']} candidates, "
+            f"{stats['promoted']} promoted to canonical"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🏛️ [AUTO-PROMOTE] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def broadcast_conversation_status(self):
     """
