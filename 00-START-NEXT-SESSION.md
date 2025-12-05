@@ -1,14 +1,34 @@
 # Start Next Session Here
 
-**Last Session:** 361 - Celery Beat Integration for Multi-Agent Panels
+**Last Session:** 361 - Celery Beat Integration for Multi-Agent Panels + API Investigation
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | MULTI-AGENT PANELS SCHEDULED | Learning SMARTER
+**Status:** 102 spiders | 36 categories | 79 agents | 1,280 CONVERSATIONS | MULTI-AGENT PANELS SCHEDULED
+
+---
+
+## CRITICAL QUESTION FOR SESSION 362
+
+### Are 1,280 Agent Conversations Actually Being Used?
+
+**The Problem:**
+We have **1,280 agent conversations** being generated via GPT calls (every 5 minutes for 2-agent, every 20 minutes for multi-agent panels). But:
+
+1. **Do they get sent to the Boardroom for consideration?**
+2. **Are insights extracted and applied to decisions?**
+3. **Or are they just knowledge collected but never used?**
+
+If conversations are just stored in the database and displayed in the UI but never influence actual agent behavior or decision-making, then they represent **wasted API calls**.
+
+**Session 362 Goal:** Audit the conversation pipeline to determine:
+- Where conversation insights go after generation
+- Whether they feed into any decision-making process (Boardroom, Living Projects, etc.)
+- If not, design and implement a pipeline to make them actionable
 
 ---
 
 ## What Happened in Session 361
 
-### Celery Beat Integration for Multi-Agent Panels
+### 1. Celery Beat Integration for Multi-Agent Panels
 
 Added the `run_multi_agent_conversation()` task to Celery Beat so panel discussions run automatically every 20 minutes.
 
@@ -17,20 +37,7 @@ Added the `run_multi_agent_conversation()` task to Celery Beat so panel discussi
 - Runs every 20 minutes with 1 panel, 4 agents, 3 rounds per cycle
 - Tested successfully - panel conversations generating insights
 
-**Celery Beat Schedule Entry:**
-```python
-'multi-agent-panel-cycle': {
-    'task': 'core.tasks.run_multi_agent_conversation',
-    'schedule': crontab(minute='*/20'),  # Every 20 minutes
-    'kwargs': {
-        'max_conversations': 1,
-        'participants_per_conversation': 4,
-        'max_rounds': 3,
-    }
-}
-```
-
-### UI Differentiation for Multi-Agent Panels
+### 2. UI Differentiation for Multi-Agent Panels
 
 Added visual differentiation in the Agents tab for multi-agent panel discussions:
 
@@ -46,29 +53,13 @@ Added visual differentiation in the Agents tab for multi-agent panel discussions
 - **Yellow/amber title color** for panels (vs purple for regular)
 - **"Panel:" label** instead of "Participants:" for panels
 
----
+### 3. API Investigation (Resolved)
 
-## Session 360 Summary
-
-### Multi-Agent Conversations (Panel Discussions)
-
-Extended agent conversations from 2-agent dialogues to 3-5 agent panel discussions with round-robin turns.
-
-**Features:**
-- `run_multi_agent_conversation()` task for panel-style discussions
-- 5 panel templates: roundtable, expert_panel, brainstorm_session, debate_panel, strategy_session
-- Tension levels (low/medium/high) affect prompt selection
-- Diverse agent selection by specialization category
-- Mythology validation on all multi-agent outputs
-
-**Panel Templates:**
-| Template | Tension | Dynamic |
-|----------|---------|---------|
-| `roundtable` | Medium | Experts build on each other's points |
-| `expert_panel` | Low | Each presents from their specialty |
-| `brainstorm_session` | Low | Creative idea generation |
-| `debate_panel` | High | Structured arguments + counter-arguments |
-| `strategy_session` | Medium | Action-oriented planning |
+Investigated the `/api/agent-conversations/` "empty response" issue:
+- **Finding:** API requires `@login_required` - returns 302 redirect when accessed via curl
+- **Reality:** API works perfectly when accessed from browser with session cookies
+- **Database:** Contains 1,280 conversations (verified via Django shell)
+- **GPT Parameters:** Using `gpt-5-mini` with `max_completion_tokens=800` - correct for reasoning models
 
 ---
 
@@ -80,33 +71,11 @@ Extended agent conversations from 2-agent dialogues to 3-5 agent panel discussio
 | **Categories** | **36** |
 | **Agents** | **79** |
 | **Data Points** | **8,879+** |
-| **Agent Conversations** | **1,272+** |
+| **Agent Conversations** | **1,280** |
 | **Alliances** | **13** |
 | **Rivalries** | **1** |
 | **Predictions** | **10** |
 | **Mythology Patterns** | **30+** |
-
----
-
-## Agents Tab Stats (All Working!)
-
-| Tab | Metric | Value |
-|-----|--------|-------|
-| **Overview** | Collaborations | **1,272+** |
-| | Collaboration Sessions | **3** |
-| | Learning Events | **55** |
-| | Agent Memories | 59 |
-| | Knowledge Sources | 750 |
-| **Intelligence** | Alliances | **13** |
-| | Rivalries | **1** |
-| | Total Relationships | 552 |
-| | Agent Moods | 24 |
-| | Hive Mind Sessions | 3 |
-| **Growth** | Evolved Agents | **24** |
-| | Total XP | 875 |
-| | Top Agent | ResearchAgent (L2, 270 XP) |
-| **Memory** | Predictions | **10** |
-| | Time Capsules | 6 |
 
 ---
 
@@ -120,90 +89,57 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Testing Multi-Agent Conversations
+## Celery Beat Schedule (Agent Learning)
 
-```python
-# Run a multi-agent panel discussion
-from core.tasks import run_multi_agent_conversation
-result = run_multi_agent_conversation.delay(
-    max_conversations=2,
-    participants_per_conversation=4,
-    max_rounds=3
-)
-
-# Check result
-print(result.get())
-# {'status': 'success', 'stats': {'conversations_started': 2, 'messages_generated': 24, ...}}
-```
-
----
-
-## Testing APIs
-
-```bash
-# Dashboard Stats
-curl -s http://localhost:8000/api/spider-intelligence/dashboard-stats/ | python3 -m json.tool
-
-# Relationships (alliances: 13, rivalries: 1)
-curl -s http://localhost:8000/api/agent-relationships/ | python3 -m json.tool
-
-# Predictions (total: 10)
-curl -s http://localhost:8000/api/predictions/ | python3 -m json.tool
-
-# Evolution (24 evolved agents)
-curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
-```
-
----
-
-## Key Files Changed in Session 361
-
-| File | Changes |
-|------|---------|
-| `core/celery.py` | Added `multi-agent-panel-cycle` Celery Beat schedule |
-| `ai_core/templates/ai_image_studio.html` | Added panel UI differentiation |
-| `ai_core/templates/partials/js/agent_dashboard.html` | Added panel UI differentiation |
-| `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` | Session documentation |
+| Task | Frequency | Purpose |
+|------|-----------|---------|
+| `agent-learning-cycle` | Every 5 min | Knowledge propagation |
+| `agent-conversation-cycle` | Every 5 min | 2-agent discussions |
+| `multi-agent-panel-cycle` | Every 20 min | 3-5 agent panel discussions |
+| `agent-dream-cycle` | Every 15 min | Creative thinking |
+| `agent-mood-check` | Every 10 min | Emotional state updates |
+| `agent-relationship-evolution` | Every 10 min | Alliance/rivalry updates |
+| `broadcast-learning-status` | Every 3 min | WebSocket broadcasts |
+| `broadcast-conversation-status` | Every 3 min | WebSocket broadcasts |
 
 ---
 
 ## What's Next (Session 362)
 
-### Remaining from Session 360:
-1. ~~**UI Display** - Show multi-agent panels differently in Agents tab~~ **DONE in Session 361**
+### PRIMARY: Conversation Value Audit
+1. **Trace conversation output** - Where do `AgentConversation` records go after creation?
+2. **Check Boardroom integration** - Are conversation insights considered in decisions?
+3. **Check Living Projects** - Do conversations feed into project recommendations?
+4. **Design action pipeline** - If not connected, create a pipeline to make conversations actionable
+
+### Secondary Items:
+1. **Mood Variety** - 23 of 24 agents are "calm" - need more mood variety
 2. **Panel Analytics** - Track which panel types generate best insights
-
-### Remaining Items from Session 356:
-1. **Agent Conversations API** - `/api/agent-conversations/` returns empty (investigate)
-2. **Mood Variety** - 23 of 24 agents are "calm" - need more mood variety
 3. **Memory Clusters** - Test clustering functionality
-4. **WebSocket Testing** - Verify Slack workspace real-time features
-
-### Enhancement Options:
-1. **Learning Timeline UI** - Visual timeline of learning runs
-2. **AI Assistant Integration** - Inject mythology constraints into Personal Assistant
-3. **Prediction Accuracy Tracking** - Track how agent predictions perform over time
-4. **Agent Specialization** - Let agents focus on domains they're good at
 
 ---
 
-## Architecture: Agent Conversations
+## Key Files for Session 362 Investigation
 
-```
-2-Agent Conversations (Original):
-  Initiator -> Responder -> Initiator -> Responder -> Conclusion
+| File | Purpose |
+|------|---------|
+| `core/tasks.py:3630` | `run_agent_conversation()` - Creates conversations |
+| `core/tasks.py:4000+` | `run_multi_agent_conversation()` - Creates panel conversations |
+| `core/models_unified_system.py` | `AgentConversation`, `ConversationMessage` models |
+| `core/views_agent_learning.py` | API endpoints for conversations |
+| `core/agent_conversation_consumer.py` | WebSocket for real-time display |
 
-Multi-Agent Panel (Sessions 360-361):
-  Agent1 -> Agent2 -> Agent3 -> Agent4 -> (round 1)
-  Agent1 -> Agent2 -> Agent3 -> Agent4 -> (round 2)
-  Agent1 -> Agent2 -> Agent3 -> Agent4 -> (round 3)
-  -> Panel Synthesis (conclusion)
+**Key questions to answer:**
+- Does `AgentConversation.insights_generated` get used anywhere?
+- Does `AgentConversation.conclusion` feed into any decision process?
+- Are conversations linked to `LivingProject` or Boardroom decisions?
 
-Celery Beat Schedule (Session 361):
-  Every 20 minutes: 1 panel, 4 agents, 3 rounds
+---
 
-All outputs validated via validate_agent_output()
-```
+## Commits Made in Session 361
+
+1. `da0e2f5` - feat(Session 361): Add multi-agent panel conversations to Celery Beat
+2. `fad2219` - feat(Session 361): Add UI differentiation for multi-agent panels
 
 ---
 
@@ -213,5 +149,3 @@ All outputs validated via validate_agent_output()
 - `docs/handoffs/SESSION_360_MULTI_AGENT_CONVERSATIONS.md` - Multi-agent panels
 - `docs/handoffs/SESSION_359_MYTHOLOGY_EXPANSION.md` - Full mythology coverage
 - `docs/handoffs/SESSION_358_ENHANCED_DELTA_DETECTION.md` - Semantic similarity
-- `docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md` - Initial validation
-- `docs/handoffs/SESSION_356_AGENTS_TAB_COMPLETE.md` - Agents Tab complete
