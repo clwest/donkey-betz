@@ -3851,11 +3851,29 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 except Exception as e:
                     logger.debug(f"Could not get spider intelligence: {e}")
 
+                # Session 362: Build knowledge context with data source attribution
+                knowledge_context_parts = []
+                if knowledge_item.summary:
+                    knowledge_context_parts.append(f"Summary: {knowledge_item.summary[:500]}")
+                if knowledge_item.data_points_count:
+                    knowledge_context_parts.append(f"Based on: {knowledge_item.data_points_count} data points")
+                if knowledge_item.source_spider_names:
+                    spider_sources = ', '.join(knowledge_item.source_spider_names[:5])
+                    knowledge_context_parts.append(f"Data sources: {spider_sources}")
+                if knowledge_item.spider_category:
+                    knowledge_context_parts.append(f"Category: {knowledge_item.spider_category.name}")
+                if knowledge_item.key_insights:
+                    insights = '; '.join(knowledge_item.key_insights[:3])
+                    knowledge_context_parts.append(f"Key insights: {insights}")
+
+                knowledge_context = '\n'.join(knowledge_context_parts) if knowledge_context_parts else 'No specific context'
+
                 # Create the prompt for the current speaker
                 system_prompt = f"""You are {current_speaker.name}, an AI agent specialized in {current_speaker.specialization or 'general knowledge'}.
 You are having a {template['type'].replace('_', ' ')} with {other_speaker.name} about: {topic}
 
-Your knowledge context: {knowledge_item.summary[:500] if knowledge_item.summary else 'No specific context'}
+Your knowledge context:
+{knowledge_context}
 
 {behavior_guide}
 
@@ -3867,6 +3885,7 @@ Guidelines:
 - If you see a problem with their approach, say so
 - Ask probing questions, don't just accept statements
 - Real experts disagree sometimes - that's healthy
+- When citing data, mention the source (e.g., "from Notion spider data" or "based on HackerNews trends")
 {policy_context}
 {spider_context}"""
 
@@ -4271,12 +4290,28 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                         else:
                             prompt_type = random.choice(['respond', 'challenge'])
 
+                    # Session 362: Build knowledge context with data source attribution
+                    knowledge_context_parts = []
+                    if knowledge_item.summary:
+                        knowledge_context_parts.append(f"Summary: {knowledge_item.summary[:400]}")
+                    if knowledge_item.data_points_count:
+                        knowledge_context_parts.append(f"Based on: {knowledge_item.data_points_count} data points")
+                    if knowledge_item.source_spider_names:
+                        spider_sources = ', '.join(knowledge_item.source_spider_names[:5])
+                        knowledge_context_parts.append(f"Data sources: {spider_sources}")
+                    if knowledge_item.spider_category:
+                        knowledge_context_parts.append(f"Category: {knowledge_item.spider_category.name}")
+
+                    knowledge_context = '\n'.join(knowledge_context_parts) if knowledge_context_parts else ''
+
                     # Build system prompt
                     system_prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'general topics'}.
 
 You are participating in a {template['type']} discussion about "{topic}".
 
 Panel members: {', '.join([a.name for a in panel_agents])}
+
+{f"Knowledge being discussed:{chr(10)}{knowledge_context}" if knowledge_context else ""}
 
 Discussion style: {template['dynamic']}
 
@@ -4288,6 +4323,7 @@ Guidelines:
 - Reference what others have said when relevant
 - Add unique insights from your specialty
 - Be natural and conversational
+- When citing data, mention the specific source (e.g., "from the Notion data" or "looking at the 11 HackerNews data points")
 - {"Challenge assumptions and push back" if tension == 'high' else "Build on others' ideas collaboratively" if tension == 'low' else "Balance agreement and constructive criticism"}"""
 
                     # Build user prompt with context
