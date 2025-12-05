@@ -16,6 +16,36 @@ import os
 logger = logging.getLogger(__name__)
 
 
+# ==================== SESSION 356: MYTHOLOGY VALIDATION FOR AGENT OUTPUTS ====================
+
+def validate_agent_output(agent_name: str, output: str) -> str:
+    """
+    Session 356: Validate and correct agent output for mythology violations.
+
+    This ensures agents don't hallucinate unrealistic claims when communicating
+    with each other (Hive Mind, Conversations, Dreams).
+
+    Args:
+        agent_name: Name of the agent producing the output
+        output: The LLM-generated output to validate
+
+    Returns:
+        Corrected output (or original if no violations)
+    """
+    try:
+        from ai_core.agents.mythology_validator import mythology_enforcer
+        result = mythology_enforcer.enforce(agent_name, output)
+
+        if result.get('mythology_corrected'):
+            logger.warning(f"🚨 [MYTHOLOGY] {agent_name} output corrected: {result.get('violations', 0)} violations")
+            return result.get('result', output)
+
+        return output
+    except Exception as e:
+        logger.warning(f"⚠️ [MYTHOLOGY] Validation failed for {agent_name}: {e}")
+        return output  # Return original if validation fails
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 
@@ -3842,6 +3872,10 @@ Guidelines:
 
                     content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
+                    # Session 356: Validate output for mythology violations
+                    # Prevents agents from hallucinating unrealistic claims to each other
+                    content = validate_agent_output(current_speaker.name, content)
+
                     # Clean up the content (remove agent name prefix if present)
                     if content.startswith(f"{current_speaker.name}:"):
                         content = content[len(current_speaker.name)+1:].strip()
@@ -4642,6 +4676,11 @@ Guidelines:
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
+                    # Session 356 NOTE: Dreams are intentionally NOT mythology-validated
+                    # Dreams are meant to be creative, imaginative, and speculative
+                    # (what-if scenarios, predictions, wild thoughts, mashups)
+                    # Mythology validation would restrict their creative nature
+
                     # Clean up the content
                     # Remove any repeated prefixes
                     for prefix in [template['prefix'], f"{agent.name}:", "Dream:", "Idea:"]:
@@ -5050,6 +5089,10 @@ Respond as {agent.name}:"""
                 )
 
                 contribution_text = response.choices[0].message.content.strip()
+
+                # Session 356: Validate output for mythology violations
+                contribution_text = validate_agent_output(agent.name, contribution_text)
+
                 thinking_time = time.time() - start_time
 
                 # Determine perspective type based on agent specialization
@@ -6213,3 +6256,305 @@ def update_project_spider_priorities(project_id: str):
     except Exception as e:
         logger.exception(f"🎯 [SESSION 326] Priority update failed: {e}")
         return {'error': str(e)}
+
+
+# =============================================================================
+# Session 354: Project Learning Loop
+# Enable projects to autonomously learn and track their domain over time
+# =============================================================================
+
+@shared_task
+def run_project_learning_cycle():
+    """
+    Celery Beat task: Check all projects with learning enabled
+    and run research updates for those due.
+
+    Session 354: Project Learning Loop
+    Runs daily at 6 AM to check for due projects.
+    """
+    from core.models_partnership import PartnershipProject
+    from django.utils import timezone
+
+    logger.info("🧠 [SESSION 354] Starting project learning cycle check...")
+
+    try:
+        # Find projects with learning enabled that are due
+        due_projects = PartnershipProject.objects.filter(
+            learning_enabled=True,
+            next_learning_run__lte=timezone.now()
+        )
+
+        if not due_projects.exists():
+            logger.info("🧠 [SESSION 354] No projects due for learning")
+            return {'projects_queued': 0, 'results': []}
+
+        results = []
+        for project in due_projects:
+            try:
+                result = run_single_project_learning.delay(str(project.id))
+                results.append({
+                    'project_id': str(project.id),
+                    'project_name': project.project_name,
+                    'task_id': result.id
+                })
+                logger.info(f"🧠 [SESSION 354] Queued learning for: {project.project_name}")
+            except Exception as e:
+                logger.error(f"🧠 [SESSION 354] Failed to queue learning for {project.id}: {e}")
+
+        logger.info(f"🧠 [SESSION 354] Queued {len(results)} projects for learning")
+        return {
+            'projects_queued': len(results),
+            'results': results
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [SESSION 354] Learning cycle check failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def run_single_project_learning(project_id: str):
+    """
+    Run a learning cycle for a single project.
+
+    Session 354: Project Learning Loop
+
+    Steps:
+    1. Get current spider data for project topics
+    2. Run research agents (competitor/trend analysis)
+    3. Compare with previous findings (delta detection)
+    4. Store new learnings
+    5. Schedule next run
+    6. Create notification if significant changes
+    """
+    from core.models_partnership import PartnershipProject
+    from core.services.unified_intelligence_search import get_unified_intelligence_search
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info(f"🧠 [SESSION 354] Starting learning cycle for project {project_id}...")
+
+    try:
+        project = PartnershipProject.objects.get(id=project_id)
+        user = project.user
+
+        logger.info(f"🧠 [SESSION 354] Learning cycle for: {project.project_name}")
+
+        # Step 1: Determine topics to research
+        topics = project.learning_topics if project.learning_topics else []
+        if not topics:
+            # Auto-extract from project name and existing research
+            topics = _extract_topics_from_project(project)
+            logger.info(f"🧠 [SESSION 354] Auto-extracted topics: {topics}")
+
+        # Step 2: Refresh spider data for topics
+        search_service = get_unified_intelligence_search()
+        spider_data = []
+        for topic in topics[:3]:  # Limit to 3 topics
+            try:
+                search_service.refresh_spiders_for_query(topic)
+                results = search_service.unified_search(topic, limit=10)
+                spider_data.extend(results.get('results', []))
+            except Exception as e:
+                logger.warning(f"🧠 [SESSION 354] Spider refresh failed for '{topic}': {e}")
+
+        logger.info(f"🧠 [SESSION 354] Gathered {len(spider_data)} data points from spiders")
+
+        # Step 3: Run trend analysis using spider data
+        current_findings = _analyze_spider_data_for_trends(spider_data, project.project_name)
+
+        # Step 4: Delta detection - compare with previous
+        previous_findings = _get_previous_findings(project)
+        deltas = _detect_research_deltas(previous_findings, current_findings)
+
+        logger.info(
+            f"🧠 [SESSION 354] Delta detection: "
+            f"{len(deltas.get('new_items', []))} new, "
+            f"{len(deltas.get('removed_items', []))} removed"
+        )
+
+        # Step 5: Store learnings
+        learning_entry = {
+            'date': timezone.now().isoformat(),
+            'topics_researched': topics,
+            'findings_count': len(current_findings),
+            'deltas': deltas,
+            'new_trends': deltas.get('new_items', [])[:10],
+            'disappeared_trends': deltas.get('removed_items', [])[:10]
+        }
+
+        history = project.learning_history or []
+        history.append(learning_entry)
+        project.learning_history = history
+
+        # Step 6: Update metadata if significant changes
+        if deltas.get('new_items'):
+            metadata = project.metadata or {}
+            summaries = metadata.get('research_summaries', [])
+            summaries.append({
+                'type': 'learning_update',
+                'date': timezone.now().isoformat(),
+                'summary': f"Learning cycle: {len(deltas['new_items'])} new trends detected",
+                'new_trends': deltas['new_items'][:5],
+                'source': 'autonomous_learning'
+            })
+            metadata['research_summaries'] = summaries
+            metadata['last_learning_update'] = timezone.now().isoformat()
+            project.metadata = metadata
+
+        # Step 7: Schedule next run
+        freq_map = {'daily': 1, 'weekly': 7, 'biweekly': 14, 'monthly': 30}
+        days = freq_map.get(project.learning_frequency, 7)
+        project.last_learning_run = timezone.now()
+        project.next_learning_run = timezone.now() + timedelta(days=days)
+
+        project.save()
+
+        logger.info(
+            f"🧠 [SESSION 354] Learning cycle complete for {project.project_name}: "
+            f"{len(deltas.get('new_items', []))} new trends, next run: {project.next_learning_run}"
+        )
+
+        # Step 8: Create notification if significant changes
+        if deltas.get('new_items'):
+            _create_learning_notification(project, deltas)
+
+        return {
+            'success': True,
+            'project_id': project_id,
+            'project_name': project.project_name,
+            'topics': topics,
+            'findings_count': len(current_findings),
+            'new_trends': len(deltas.get('new_items', [])),
+            'next_run': project.next_learning_run.isoformat()
+        }
+
+    except PartnershipProject.DoesNotExist:
+        logger.error(f"🧠 [SESSION 354] Project {project_id} not found")
+        return {'error': 'Project not found'}
+    except Exception as e:
+        logger.exception(f"🧠 [SESSION 354] Learning cycle failed: {e}")
+        return {'error': str(e)}
+
+
+def _extract_topics_from_project(project):
+    """
+    Extract learning topics from project name and research.
+
+    Session 354: Auto-detect topics when none specified.
+    """
+    topics = []
+
+    # From project name
+    name_words = project.project_name.lower().split()
+    stop_words = {'the', 'a', 'an', 'and', 'or', 'for', 'in', 'on', 'at', 'to', 'of', 'is', 'my'}
+    topics.extend([w for w in name_words if w not in stop_words and len(w) > 3])
+
+    # From existing research summaries
+    if project.metadata:
+        for summary in project.metadata.get('research_summaries', []):
+            if summary.get('type') in ['competitor_analysis', 'customer_research', 'brand_strategy']:
+                # Extract key terms from summary
+                text = summary.get('summary', '')
+                words = text.lower().split()[:10]
+                topics.extend([w for w in words if w not in stop_words and len(w) > 4])
+
+    # Dedupe and limit
+    seen = set()
+    unique_topics = []
+    for t in topics:
+        if t not in seen:
+            seen.add(t)
+            unique_topics.append(t)
+
+    return unique_topics[:5]
+
+
+def _analyze_spider_data_for_trends(spider_data: list, project_name: str) -> list:
+    """
+    Analyze spider data to extract trends.
+
+    Session 354: Extract key terms and themes from spider data.
+    """
+    findings = []
+    stop_words = {'the', 'a', 'an', 'and', 'or', 'for', 'in', 'on', 'at', 'to', 'of', 'is', 'are', 'was', 'be', 'has'}
+
+    for item in spider_data[:50]:  # Limit to 50 items
+        if isinstance(item, dict):
+            title = item.get('title', '')
+            content = item.get('content', item.get('description', ''))
+
+            # Extract significant words from title
+            title_words = [w.lower() for w in title.split() if len(w) > 4 and w.lower() not in stop_words]
+            findings.extend(title_words[:5])
+
+            # Extract from content
+            content_words = [w.lower() for w in content.split()[:30] if len(w) > 4 and w.lower() not in stop_words]
+            findings.extend(content_words[:3])
+
+    return findings
+
+
+def _get_previous_findings(project) -> list:
+    """
+    Get findings from previous learning run.
+
+    Session 354: Retrieve previous findings for delta comparison.
+    """
+    history = project.learning_history or []
+    if not history:
+        return []
+
+    last_run = history[-1]
+    return last_run.get('new_trends', []) + last_run.get('topics_researched', [])
+
+
+def _detect_research_deltas(previous: list, current: list) -> dict:
+    """
+    Compare research findings to detect what's new/changed.
+
+    Session 354: Simple set-based delta detection.
+    """
+    prev_set = set(str(p).lower() for p in previous if p)
+    curr_set = set(str(c).lower() for c in current if c)
+
+    new_items = list(curr_set - prev_set)
+    removed_items = list(prev_set - curr_set)
+
+    return {
+        'new_items': new_items[:20],
+        'removed_items': removed_items[:20],
+        'total_previous': len(prev_set),
+        'total_current': len(curr_set),
+        'change_rate': len(new_items) / max(len(curr_set), 1) if curr_set else 0
+    }
+
+
+def _create_learning_notification(project, deltas):
+    """
+    Create a notification for significant learning updates.
+
+    Session 354: Alert user about new trends.
+    """
+    from core.models_unified_system import ProactiveAlert
+
+    try:
+        new_trends = deltas.get('new_items', [])[:3]
+        trend_preview = ', '.join(new_trends) if new_trends else 'trends'
+
+        ProactiveAlert.objects.create(
+            user=project.user,
+            alert_type='learning_update',
+            title=f"New trends for {project.project_name}",
+            message=f"Found {len(deltas.get('new_items', []))} new trends: {trend_preview}...",
+            priority='medium',
+            metadata={
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'new_trends': deltas.get('new_items', [])[:10],
+                'total_new': len(deltas.get('new_items', []))
+            }
+        )
+        logger.info(f"🧠 [SESSION 354] Created learning notification for {project.project_name}")
+    except Exception as e:
+        logger.warning(f"🧠 [SESSION 354] Failed to create notification: {e}")

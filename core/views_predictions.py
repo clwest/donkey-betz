@@ -7,6 +7,7 @@ System tracks accuracy over time to build trust in agent insights.
 
 import json
 import logging
+import uuid
 from datetime import timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -479,18 +480,22 @@ def generate_predictions_from_dreams(request):
     limit = data.get('limit', 10)
 
     # Get prediction-type dreams that haven't been converted
+    # Note: We get existing dream IDs from predictions and filter them out
+    existing_dream_ids = set()
+    for pred in AgentPrediction.objects.filter(source='dream'):
+        if pred.source_reference and 'dream_id' in pred.source_reference:
+            existing_dream_ids.add(pred.source_reference['dream_id'])
+
     dreams_query = AgentDream.objects.filter(
         dream_type='prediction'
     ).exclude(
-        id__in=AgentPrediction.objects.filter(
-            source='dream'
-        ).values_list('source_reference__dream_id', flat=True)
+        id__in=[uuid.UUID(did) for did in existing_dream_ids if did]
     )
 
     if agent_id:
         dreams_query = dreams_query.filter(agent_id=agent_id)
 
-    dreams = dreams_query.order_by('-created_at')[:limit]
+    dreams = dreams_query.order_by('-dreamed_at')[:limit]
 
     created_predictions = []
 
@@ -501,7 +506,7 @@ def generate_predictions_from_dreams(request):
             title=dream.title[:200],
             prediction=dream.content,
             category=map_dream_to_category(dream),
-            tags=dream.tags if dream.tags else [],
+            tags=dream.related_topics if dream.related_topics else [],
             source='dream',
             source_reference={'dream_id': str(dream.id)},
             confidence=0.6,  # Dreams get moderate confidence

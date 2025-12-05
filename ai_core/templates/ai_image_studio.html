@@ -7294,8 +7294,8 @@
                         <div class="col-md-3">
                             <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
                                 <div class="card-body py-2">
-                                    <h3 class="mb-0" id="agent-total-count">27</h3>
-                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Agents</small>
+                                    <h3 class="mb-0" id="agent-hive-sessions-count">0</h3>
+                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Hive Sessions</small>
                                 </div>
                             </div>
                         </div>
@@ -15724,6 +15724,10 @@
                 document.getElementById('agent-total-count')  // Session 346: Agents Overview tab
             ];
             agentEls.forEach(el => el && (el.textContent = stats.agents.total));
+
+            // Session 357: Update Hive Sessions count
+            const hiveSessionsEl = document.getElementById('agent-hive-sessions-count');
+            if (hiveSessionsEl) hiveSessionsEl.textContent = stats.learning.collaboration_sessions || 0;
 
             // Session 346: Update agent success rate
             const agentSuccessEl = document.getElementById('agent-success-rate');
@@ -31502,6 +31506,75 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <div class="small text-muted mb-1">📝 Description</div>
                         <div id="project-description-${project.id}" style="font-size: 13px;">${formatMarkdown(project.description)}</div>
                     </div>` : ''}
+
+                    <!-- Session 354: Continuous Learning Toggle -->
+                    <div class="mb-3 p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div style="color: #c4b5fd;">
+                                <span style="font-size: 18px;">🧠</span>
+                                <strong style="margin-left: 8px;">Continuous Learning</strong>
+                                <span class="ms-2 small text-muted" title="Projects autonomously track trends and discover new insights">(?)</span>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       id="learningEnabled_${project.id}"
+                                       ${project.learning_enabled ? 'checked' : ''}
+                                       onchange="toggleProjectLearning('${project.id}', this.checked)"
+                                       style="cursor: pointer; width: 50px; height: 25px;">
+                            </div>
+                        </div>
+                        <div id="learningDetails_${project.id}" style="margin-top: 12px; display: ${project.learning_enabled ? 'block' : 'none'};">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="small text-muted mb-1">Frequency</label>
+                                    <select class="form-select form-select-sm bg-dark text-light"
+                                            id="learningFrequency_${project.id}"
+                                            onchange="updateProjectLearningConfig('${project.id}')"
+                                            style="border-color: #6b7280;">
+                                        <option value="daily" ${project.learning_frequency === 'daily' ? 'selected' : ''}>Daily</option>
+                                        <option value="weekly" ${project.learning_frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+                                        <option value="biweekly" ${project.learning_frequency === 'biweekly' ? 'selected' : ''}>Every 2 Weeks</option>
+                                        <option value="monthly" ${project.learning_frequency === 'monthly' ? 'selected' : ''}>Monthly</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="small text-muted mb-1">Next Run</label>
+                                    <div class="small" style="color: #a78bfa; padding-top: 6px;">
+                                        ${project.next_learning_run ? new Date(project.next_learning_run).toLocaleDateString() : 'Pending...'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <label class="small text-muted mb-1">Topics (auto-detected from research)</label>
+                                <div class="small" style="color: #d8b4fe;">
+                                    ${project.learning_topics && project.learning_topics.length > 0
+                                        ? project.learning_topics.map(t => '<span class="badge me-1" style="background: rgba(139, 92, 246, 0.3);">' + t + '</span>').join('')
+                                        : '<span class="text-muted">Auto-detect from project name & research</span>'}
+                                </div>
+                            </div>
+                            ${project.learning_history && project.learning_history.length > 0 ? `
+                            <div class="mt-3 pt-2" style="border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small" style="color: #a78bfa;">
+                                        📊 ${project.learning_history.length} learning runs completed
+                                    </span>
+                                    <button class="btn btn-sm" onclick="triggerProjectLearning('${project.id}')"
+                                            style="background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #c4b5fd; font-size: 11px;">
+                                        ⚡ Run Now
+                                    </button>
+                                </div>
+                                <div class="mt-2 small" style="color: #9ca3af;">
+                                    Last run: ${project.last_learning_run ? new Date(project.last_learning_run).toLocaleString() : 'Never'}
+                                </div>
+                            </div>` : `
+                            <div class="mt-3 pt-2 text-center" style="border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                                <button class="btn btn-sm" onclick="triggerProjectLearning('${project.id}')"
+                                        style="background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #c4b5fd; font-size: 11px;">
+                                    ⚡ Run First Learning Cycle
+                                </button>
+                            </div>`}
+                        </div>
+                    </div>
 
                     <!-- Session 201: Research Sources (legacy format) -->
                     ${project.metadata && project.metadata.research_links && project.metadata.research_links.length > 0 ? `
@@ -52418,6 +52491,105 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
             })
             .catch(err => {
                 console.error('Error exporting comprehensive research PDF:', err);
+                showToast(`❌ Error: ${err.message}`, 'error');
+            });
+        }
+
+        // Session 354: Toggle project learning on/off
+        function toggleProjectLearning(projectId, enabled) {
+            const detailsDiv = document.getElementById(`learningDetails_${projectId}`);
+            const frequencySelect = document.getElementById(`learningFrequency_${projectId}`);
+            const frequency = frequencySelect ? frequencySelect.value : 'weekly';
+
+            // Show/hide details section
+            if (detailsDiv) {
+                detailsDiv.style.display = enabled ? 'block' : 'none';
+            }
+
+            // Call API
+            fetch(`/api/projects/${projectId}/learning/toggle/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    enabled: enabled,
+                    frequency: frequency,
+                    topics: []  // Auto-detect
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(enabled ? '🧠 Continuous learning enabled!' : '🧠 Learning disabled', 'success');
+                    // Update next run display if available
+                    const nextRunDiv = document.querySelector(`#learningDetails_${projectId} .col-6:last-child div.small`);
+                    if (nextRunDiv && data.next_run) {
+                        nextRunDiv.textContent = new Date(data.next_run).toLocaleDateString();
+                    }
+                } else {
+                    showToast(`❌ Error: ${data.error}`, 'error');
+                    // Revert checkbox
+                    const checkbox = document.getElementById(`learningEnabled_${projectId}`);
+                    if (checkbox) checkbox.checked = !enabled;
+                }
+            })
+            .catch(err => {
+                console.error('Error toggling project learning:', err);
+                showToast(`❌ Error: ${err.message}`, 'error');
+            });
+        }
+
+        // Session 354: Update learning frequency
+        function updateProjectLearningConfig(projectId) {
+            const frequencySelect = document.getElementById(`learningFrequency_${projectId}`);
+            const frequency = frequencySelect ? frequencySelect.value : 'weekly';
+
+            fetch(`/api/projects/${projectId}/learning/toggle/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    enabled: true,
+                    frequency: frequency,
+                    topics: []
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`📅 Learning frequency updated to ${frequency}`, 'success');
+                }
+            })
+            .catch(err => {
+                console.error('Error updating learning config:', err);
+            });
+        }
+
+        // Session 354: Manually trigger a learning cycle
+        function triggerProjectLearning(projectId) {
+            showToast('🧠 Starting learning cycle...', 'info');
+
+            fetch(`/api/projects/${projectId}/learning/trigger/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('⚡ Learning cycle queued! Results will appear shortly.', 'success');
+                } else {
+                    showToast(`❌ Error: ${data.error}`, 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Error triggering project learning:', err);
                 showToast(`❌ Error: ${err.message}`, 'error');
             });
         }

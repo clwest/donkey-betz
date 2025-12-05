@@ -73,6 +73,10 @@ from core.views_projects_api import (
     activate_living_project,
     update_insight_status,
     update_living_config,
+    # Session 354: Project Learning Loop
+    toggle_project_learning,
+    get_project_learning_status,
+    trigger_project_learning,
 )
 
 # Import agent tracking API views (Session 120)
@@ -1129,6 +1133,11 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/activate-living/', activate_living_project, name='activate-living-project'),
     path('api/projects/<uuid:project_id>/insights/<uuid:insight_id>/status/', update_insight_status, name='update-insight-status'),
     path('api/projects/<uuid:project_id>/living-config/', update_living_config, name='update-living-config'),
+
+    # Session 354: Project Learning Loop APIs
+    path('api/projects/<uuid:project_id>/learning/toggle/', toggle_project_learning, name='toggle-project-learning'),
+    path('api/projects/<uuid:project_id>/learning/status/', get_project_learning_status, name='project-learning-status'),
+    path('api/projects/<uuid:project_id>/learning/trigger/', trigger_project_learning, name='trigger-project-learning'),
 
     # Session 338: Business Ideas API - Autonomous Pipeline
     # THE entry point: "I have a business idea" -> Complete research -> Business plan -> Assets

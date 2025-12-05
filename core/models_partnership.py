@@ -522,6 +522,56 @@ class PartnershipProject(UnifiedBaseModel):
     # End Session 350 Domain Targeting
     # ==========================================================================
 
+    # ==========================================================================
+    # Session 354: Project Learning Loop
+    # Enable projects to autonomously learn and track their domain over time
+    # ==========================================================================
+
+    learning_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable continuous learning for this project"
+    )
+
+    learning_topics = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Topics to track: ['coffee trends', 'specialty drinks']"
+    )
+
+    learning_frequency = models.CharField(
+        max_length=20,
+        choices=[
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly'),
+            ('biweekly', 'Every 2 Weeks'),
+            ('monthly', 'Monthly'),
+        ],
+        default='weekly',
+        help_text="How often to run learning cycles"
+    )
+
+    last_learning_run = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the last learning cycle ran"
+    )
+
+    next_learning_run = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the next learning cycle should run"
+    )
+
+    learning_history = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="History of learning runs: [{date, findings_count, deltas}]"
+    )
+
+    # ==========================================================================
+    # End Session 354 Learning Loop
+    # ==========================================================================
+
     def mark_completed(self, payment_received):
         """
         Mark project as completed and track payment
