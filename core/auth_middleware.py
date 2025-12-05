@@ -69,6 +69,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agents/',  # Session 349: Agents Registry - supports session auth
         '/api/agent-dashboard/',  # Session 349: Agent Dashboard - supports session auth
         '/api/collective/',  # Session 349: Collective Intelligence API - supports session auth
+        '/api/creative-projects/',  # Session 350: Creative Projects - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

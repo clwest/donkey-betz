@@ -110,31 +110,62 @@ class TrendAnalysisAgent(BaseAgent):
     system_prompt = """You are TrendAnalysisAgent, the Spider Intelligence Analyst.
 
 Your job is to transform raw spider data into actionable intelligence:
+- Search for trends relevant to specific business ideas or topics
 - Generate daily and weekly trend reports
 - Analyze specific sectors (tech, financial, jobs, creative)
-- Identify emerging opportunities
-- Detect market shifts and tech trends
+- Identify emerging opportunities and market signals
 
-When given a task:
+CRITICAL: When given a business idea or specific topic to analyze:
+1. ALWAYS use search_trends FIRST with the business idea as the query
+2. Extract key themes: gig economy, van life, mobile services, etc.
+3. Look for relevant discussions and market signals
+
+When given a general request:
 1. Determine the type of analysis needed
-2. Gather data from spider intelligence
-3. Analyze patterns and generate insights
-4. Present findings with confidence scores
+2. Use appropriate tools (generate_briefing, analyze_sector, find_opportunities)
+3. Present findings with confidence scores
 
-Available analysis types:
-- Daily Briefing: Last 24 hours of intelligence
-- Weekly Report: 7-day trend analysis
-- Sector Analysis: Deep dive into tech/financial/jobs/creative
-- Opportunity Scan: Find emerging opportunities
+Available tools:
+- search_trends: USE FIRST for specific business ideas/topics - searches spider data semantically
+- generate_briefing: General daily/weekly intelligence briefings
+- analyze_sector: Deep dive into tech/financial/jobs/creative sectors
+- find_opportunities: Find emerging opportunities from trends
 
 You analyze and report - you do NOT create content or execute workflows."""
 
     tools = [
+        # Session 349: Primary tool for query-specific trend analysis
+        {
+            "type": "function",
+            "function": {
+                "name": "search_trends",
+                "description": "Search for trends relevant to a specific business idea, market, or topic. USE THIS FIRST when given a business idea to analyze.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The business idea, market, or topic to find trends for (e.g., 'van life gig economy app', 'AI podcast tools', 'mobile handyman services')"
+                        },
+                        "categories": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["tech", "jobs", "financial", "creative", "news", "community"]
+                            },
+                            "description": "Categories to search (defaults to all relevant)",
+                            "default": []
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
         {
             "type": "function",
             "function": {
                 "name": "generate_briefing",
-                "description": "Generate an intelligence briefing (daily or weekly)",
+                "description": "Generate a general intelligence briefing (daily or weekly) - use search_trends instead for specific business ideas",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -203,6 +234,7 @@ You analyze and report - you do NOT create content or execute workflows."""
         """Initialize TrendAnalysisAgent."""
         super().__init__(user=user)
         self._intelligence_service = None
+        self._semantic_search = None
 
     @property
     def intelligence_service(self):
@@ -211,6 +243,14 @@ You analyze and report - you do NOT create content or execute workflows."""
             from core.services.spider_intelligence import SpiderIntelligenceService
             self._intelligence_service = SpiderIntelligenceService()
         return self._intelligence_service
+
+    @property
+    def semantic_search(self):
+        """Session 349: Lazy load Spider Semantic Search for query-specific trends."""
+        if self._semantic_search is None:
+            from core.services.spider_semantic_search import get_spider_semantic_search
+            self._semantic_search = get_spider_semantic_search()
+        return self._semantic_search
 
     def execute(
         self,
@@ -309,7 +349,14 @@ You analyze and report - you do NOT create content or execute workflows."""
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Execute a trend analysis tool call."""
-        if tool_name == "generate_briefing":
+        # Session 349: Added search_trends as primary tool for business idea analysis
+        if tool_name == "search_trends":
+            return self._search_trends(
+                query=arguments.get('query', ''),
+                categories=arguments.get('categories', [])
+            )
+
+        elif tool_name == "generate_briefing":
             return self._generate_briefing(
                 briefing_type=arguments.get('briefing_type', 'daily')
             )
@@ -329,6 +376,98 @@ You analyze and report - you do NOT create content or execute workflows."""
             return {
                 'success': False,
                 'error': f"Unknown tool: {tool_name}"
+            }
+
+    def _search_trends(self, query: str, categories: List[str] = None) -> Dict[str, Any]:
+        """
+        Session 349: Search for trends relevant to a specific business idea.
+
+        Uses semantic search across spider data to find relevant trends,
+        discussions, and market signals for the given query.
+        """
+        logger.info(f"Searching trends for: {query[:50]}...")
+
+        try:
+            from django.utils import timezone
+
+            # Search spider data semantically
+            results = self.semantic_search.semantic_search(
+                query=query,
+                category=categories[0] if categories else None,
+                hours=168,  # Last 7 days
+                limit=25,
+                min_similarity=0.3
+            )
+
+            if not results:
+                # Fallback to general trending topics
+                logger.info("No semantic results, falling back to general trends")
+                trends = self.intelligence_service.get_trending_topics(hours=168, limit=15)
+                return {
+                    'success': True,
+                    'query': query,
+                    'trends': trends[:10] if trends else [],
+                    'discussions': [],
+                    'sources': [],
+                    'data_points': 0,
+                    'note': 'No specific matches found, showing general trends'
+                }
+
+            # Process results into trend insights
+            trends = []
+            discussions = []
+            sources_used = set()
+
+            for item in results:
+                sources_used.add(item.source)
+
+                discussion = {
+                    'title': item.title,
+                    'description': item.description[:300] if item.description else '',
+                    'url': item.url,
+                    'source': item.source,
+                    'category': item.category,
+                    'similarity': round(item.similarity, 2) if hasattr(item, 'similarity') else 0.5
+                }
+                discussions.append(discussion)
+
+                # Extract trend topics from titles
+                if item.title:
+                    trends.append({
+                        'topic': item.title[:100],
+                        'source': item.source,
+                        'relevance': discussion['similarity']
+                    })
+
+            # Also get general market context
+            market = self.intelligence_service.get_market_insights()
+            tech = self.intelligence_service.get_tech_trends(hours=72, limit=5)
+
+            return {
+                'success': True,
+                'query': query,
+                'trends': trends[:15],
+                'discussions': discussions[:20],
+                'sources': list(sources_used),
+                'data_points': len(results),
+                'market_context': {
+                    'crypto_highlights': [
+                        f"{c.get('name')}: ${c.get('price', 0):,.2f} ({c.get('change_24h', 0):+.1f}%)"
+                        for c in (market.get('crypto', []) if market else [])[:3]
+                    ],
+                    'tech_highlights': [
+                        d.get('title', '')[:80]
+                        for d in (tech.get('discussions', []) if tech else [])[:3]
+                    ]
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error searching trends: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'query': query
             }
 
     def _generate_briefing(self, briefing_type: str) -> Dict[str, Any]:

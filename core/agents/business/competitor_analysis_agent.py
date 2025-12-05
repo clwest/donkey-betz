@@ -314,6 +314,7 @@ If asked to create content, explain you can only research and suggest using the 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
         Session 302: Fetch project context when project_id is provided.
+        Session 350: Enhanced with domain targeting for spider queries.
 
         This enables users to say "Analyze competitors for this project"
         and have the agent automatically use the project's topic/description.
@@ -322,7 +323,7 @@ If asked to create content, explain you can only research and suggest using the 
             project_id: UUID of the PartnershipProject
 
         Returns:
-            Dict with project context (name, description, type) or empty dict
+            Dict with project context (name, description, type, domain targeting) or empty dict
         """
         if not project_id:
             return {}
@@ -330,11 +331,26 @@ If asked to create content, explain you can only research and suggest using the 
         try:
             from core.models_partnership import PartnershipProject
             project = PartnershipProject.objects.get(id=project_id)
+
+            # Session 350: Get or extract domain targeting
+            domain_targeting = {}
+            try:
+                domain_targeting = project.get_domain_targeting()
+                logger.info(f"Domain targeting for project: {domain_targeting.get('primary_domain')}, tags: {domain_targeting.get('domain_tags', [])[:5]}")
+            except Exception as e:
+                logger.warning(f"Failed to get domain targeting: {e}")
+
             return {
                 'project_name': project.project_name,
                 'project_description': project.description,
                 'project_type': project.project_type,
-                'project_id': str(project.id)
+                'project_id': str(project.id),
+                # Session 350: Domain targeting for spider queries
+                'domain_targeting': domain_targeting,
+                'primary_domain': domain_targeting.get('primary_domain', 'general_startup'),
+                'domain_tags': domain_targeting.get('domain_tags', []),
+                'spider_queries': domain_targeting.get('spider_queries', []),
+                'domain_subreddits': domain_targeting.get('subreddits', [])
             }
         except Exception as e:
             logger.warning(f"Failed to fetch project context: {e}")
@@ -374,6 +390,71 @@ If asked to create content, explain you can only research and suggest using the 
 
         return task
 
+    def _check_business_viability(self, task: str) -> Dict[str, Any]:
+        """
+        Session 350: "Idiot Protector" - Check if business idea is viable.
+
+        Uses GPT to quickly assess if the business idea is:
+        1. Viable - Proceed normally
+        2. Questionable - Add warning but proceed
+        3. Absurd/Joke - Strong warning, still proceed (user might be testing)
+
+        Args:
+            task: The business idea or research request
+
+        Returns:
+            Dict with viability_score (0-100), assessment, warning (if any)
+        """
+        try:
+            from openai import OpenAI
+            client = OpenAI()
+
+            check_prompt = f"""Evaluate this business idea/research request for basic viability.
+
+Business Idea: {task}
+
+Score from 0-100:
+- 80-100: Viable, reasonable business idea
+- 50-79: Questionable but possible (niche, risky, or unusual)
+- 20-49: Highly impractical or likely to fail
+- 0-19: Joke/absurd/impossible (e.g., "selling air", "restaurant for invisible food")
+
+Respond in JSON format:
+{{
+    "viability_score": <0-100>,
+    "assessment": "<one sentence assessment>",
+    "is_joke": <true/false>,
+    "warning": "<warning message if score < 50, otherwise null>",
+    "proceed": <true/false - always true, we analyze anyway>
+}}
+
+Be direct and honest. Don't sugarcoat absurd ideas."""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": check_prompt}],
+                temperature=0.3,
+                max_tokens=200,
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+            result['proceed'] = True  # Always proceed - we're warning, not blocking
+
+            logger.info(f"Viability check: score={result.get('viability_score')}, joke={result.get('is_joke')}")
+
+            return result
+
+        except Exception as e:
+            logger.warning(f"Viability check failed (proceeding anyway): {e}")
+            return {
+                'viability_score': 50,
+                'assessment': 'Unable to assess viability',
+                'is_joke': False,
+                'warning': None,
+                'proceed': True
+            }
+
     def execute(
         self,
         task: str,
@@ -404,6 +485,21 @@ If asked to create content, explain you can only research and suggest using the 
 
                 # Session 303: Store current task for tool access
                 self._current_task = task
+
+                # Session 350: "Idiot Protector" - Check business viability
+                viability = self._check_business_viability(task)
+                viability_warning = None
+                if viability.get('viability_score', 100) < 50:
+                    viability_warning = viability.get('warning') or viability.get('assessment')
+                    if viability.get('is_joke'):
+                        viability_warning = f"⚠️ This appears to be a joke or highly impractical idea. {viability_warning}"
+                    self.record_decision(
+                        decision_type="viability_check",
+                        action="Flagged low viability business idea",
+                        reasoning=f"Score: {viability.get('viability_score')}, Assessment: {viability.get('assessment')}",
+                        confidence=0.85
+                    )
+                    logger.warning(f"Low viability idea detected (score={viability.get('viability_score')}): {task[:50]}...")
 
                 # Session 303: Auto-trigger spider refresh for fresh data
                 try:
@@ -445,18 +541,35 @@ If asked to create content, explain you can only research and suggest using the 
                 if prior_context:
                     full_prompt += f"\n\n{prior_context}\n"
 
+                # Session 350: Add domain-aware spider targeting instructions
+                domain_instructions = ""
+                if project_context.get('domain_targeting'):
+                    targeting = project_context['domain_targeting']
+                    domain_instructions = f"""
+
+DOMAIN-SPECIFIC RESEARCH GUIDANCE (Session 350):
+Primary Domain: {targeting.get('primary_domain', 'general_startup')}
+Domain Tags: {', '.join(targeting.get('domain_tags', [])[:8])}
+Suggested Search Queries: {targeting.get('spider_queries', [])[:5]}
+Relevant Subreddits: {', '.join(targeting.get('subreddits', [])[:6])}
+
+CRITICAL: Use these DOMAIN-SPECIFIC search queries for spider_query and web_search!
+Do NOT use generic "AI tools" or "tech trends" queries.
+Your searches should match the SPECIFIC market: {project_context.get('project_name', task)[:100]}
+"""
+
                 # Add instruction to be comprehensive
-                full_prompt += """
+                full_prompt += f"""
 
 IMPORTANT: For a thorough competitive analysis:
 1. First check get_prior_research for existing analysis on this market
 2. Use refresh_spider_data if you need the absolute latest data
-3. Use web_search to find competitors in this market
-4. Use spider_query to find discussions and reviews
+3. Use web_search to find competitors in this market - USE DOMAIN-SPECIFIC QUERIES
+4. Use spider_query to find discussions and reviews - USE DOMAIN-SPECIFIC QUERIES
 5. For top 3-5 competitors, use analyze_competitor for deep dives
 6. Finally, use generate_swot to synthesize findings
-
-Return a comprehensive competitive landscape analysis."""
+{domain_instructions}
+Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data."""
 
                 # Make GPT call to determine tools to use
                 gpt_response = self._call_openai(full_prompt)
@@ -496,29 +609,55 @@ Return a comprehensive competitive landscape analysis."""
 
                 if all_competitor_data:
                     # Synthesize the competitive analysis
-                    synthesis = self._synthesize_analysis(task, all_competitor_data)
+                    # Session 350: Pass project_context for domain-aware synthesis
+                    synthesis = self._synthesize_analysis(task, all_competitor_data, project_context)
 
                     # Session 294: Save to database with embedding for semantic search
+                    # Session 349: Pass project_id to link research to project
                     saved_result = None
                     try:
                         from core.models_unified_system import BusinessResearchResult
+                        project_id = context.get('project_id')
                         saved_result = BusinessResearchResult.save_competitor_analysis(
                             query=task,
                             synthesis=synthesis,
-                            execution_time_ms=execution_time
+                            execution_time_ms=execution_time,
+                            project_id=project_id,  # Session 349: Link to project
+                            user=self.user  # Session 349: Link to user
                         )
-                        logger.info(f"Saved competitor analysis to database: {saved_result.id}")
+                        logger.info(f"Saved competitor analysis to database: {saved_result.id}, project_id={project_id}")
                     except Exception as e:
                         logger.warning(f"Failed to save competitor analysis: {e}")
 
+                    # Session 350: Include viability warning and domain relevance in result
+                    result_message = f"Competitive analysis completed with {len(all_competitor_data)} data sources"
+
+                    # Add domain relevance info to message
+                    domain_relevance = synthesis.get('domain_relevance', {})
+                    if domain_relevance.get('score', 100) < 30:
+                        result_message += f"\n⚠️ DATA QUALITY: {synthesis.get('data_quality_warning', 'Limited domain-specific data found.')}"
+
+                    if viability_warning:
+                        result_message = f"⚠️ VIABILITY WARNING: {viability_warning}\n\n{result_message}"
+
                     result = AgentResult(
                         success=True,
-                        message=f"Competitive analysis completed with {len(all_competitor_data)} data sources",
+                        message=result_message,
                         data={
                             'analysis': synthesis,
                             'raw_data': all_competitor_data,
                             'query': task,
-                            'saved_id': str(saved_result.id) if saved_result else None
+                            'saved_id': str(saved_result.id) if saved_result else None,
+                            # Session 350: Viability assessment
+                            'viability': {
+                                'score': viability.get('viability_score', 100),
+                                'assessment': viability.get('assessment'),
+                                'is_joke': viability.get('is_joke', False),
+                                'warning': viability_warning
+                            } if viability_warning else None,
+                            # Session 350: Domain relevance tracking
+                            'domain_relevance': domain_relevance,
+                            'domain_targeting': project_context.get('domain_targeting') if project_context else None
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
@@ -932,27 +1071,53 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
     def _synthesize_analysis(
         self,
         task: str,
-        all_data: List[Dict[str, Any]]
+        all_data: List[Dict[str, Any]],
+        project_context: Dict[str, Any] = None
     ) -> Dict[str, Any]:
-        """Synthesize all gathered data into a coherent analysis using GPT."""
+        """
+        Synthesize all gathered data into a coherent analysis using GPT.
+
+        Session 350: Enhanced with domain targeting and data relevance tracking.
+        """
 
         # Collect all data points for analysis
         all_items = []
+        domain_relevant_items = []
+        domain_tags = (project_context or {}).get('domain_tags', [])
+
         for source in all_data:
             data = source.get('data', {})
             source_name = source.get('source', 'unknown')
             if isinstance(data, list):
                 for item in data[:15]:  # Limit per source
                     # Session 293: Strip HTML from titles and descriptions
-                    all_items.append({
-                        'title': strip_html_tags(item.get('title', '')),
-                        'description': strip_html_tags(item.get('description', ''))[:200],
+                    title = strip_html_tags(item.get('title', ''))
+                    description = strip_html_tags(item.get('description', ''))[:200]
+
+                    item_dict = {
+                        'title': title,
+                        'description': description,
                         'source': item.get('source', source_name),
                         'url': item.get('url', '')
-                    })
+                    }
+                    all_items.append(item_dict)
+
+                    # Session 350: Track domain-relevant items
+                    if domain_tags:
+                        combined_text = f"{title} {description}".lower()
+                        for tag in domain_tags:
+                            if tag.lower() in combined_text:
+                                domain_relevant_items.append(item_dict)
+                                break
 
         # Limit total items to avoid token limits
         all_items = all_items[:30]
+        domain_relevant_count = len(domain_relevant_items)
+
+        # Session 350: Calculate data relevance score
+        data_relevance_score = 0
+        if len(all_items) > 0:
+            data_relevance_score = min(100, int((domain_relevant_count / len(all_items)) * 100))
 
         # Build analysis prompt
         items_text = "\n".join([
@@ -960,13 +1125,31 @@ Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an
             for item in all_items if item['title']
         ])
 
+        # Session 350: Add domain context if available
+        domain_context = ""
+        if project_context and project_context.get('domain_targeting'):
+            targeting = project_context['domain_targeting']
+            domain_context = f"""
+TARGET DOMAIN: {targeting.get('primary_domain', 'general')}
+DOMAIN TAGS: {', '.join(targeting.get('domain_tags', [])[:6])}
+DATA RELEVANCE: {data_relevance_score}% of data points appear domain-relevant ({domain_relevant_count}/{len(all_items)})
+"""
+
+        # Session 350: Add honest data source disclosure
+        data_quality_note = ""
+        if data_relevance_score < 30:
+            data_quality_note = """
+NOTE: Limited domain-specific data was found. This analysis is based on general market patterns
+and trends. For more accurate insights, consider conducting targeted primary research in this niche.
+"""
+
         analysis_prompt = f"""You are a competitive intelligence analyst. Analyze the following market research data and provide actionable insights.
 
 RESEARCH QUERY: {task}
-
+{domain_context}
 DATA COLLECTED ({len(all_items)} articles/mentions):
 {items_text}
-
+{data_quality_note}
 Based on this data, provide a comprehensive competitive analysis with:
 
 1. **MARKET OVERVIEW** (2-3 sentences about this market)
@@ -994,13 +1177,31 @@ Be specific and reference actual data points where possible. This analysis will 
 
             analysis_text = response.choices[0].message.content
 
-            return {
+            # Session 350: Include domain relevance metrics
+            result = {
                 'query': task,
                 'analysis': analysis_text,
                 'data_points_analyzed': len(all_items),
                 'sources_used': len(all_data),
-                'raw_data': all_items  # Include for reference
+                'raw_data': all_items,  # Include for reference
+                # Session 350: Domain relevance tracking
+                'domain_relevance': {
+                    'score': data_relevance_score,
+                    'domain_relevant_items': domain_relevant_count,
+                    'total_items': len(all_items),
+                    'primary_domain': (project_context or {}).get('primary_domain', 'general_startup'),
+                    'is_domain_specific': data_relevance_score >= 30
+                }
             }
+
+            # Session 350: Add warning if data is mostly generic
+            if data_relevance_score < 30:
+                result['data_quality_warning'] = (
+                    f"Only {data_relevance_score}% of data points matched the target domain. "
+                    "Analysis is based on general market patterns. Consider targeted primary research."
+                )
+
+            return result
 
         except Exception as e:
             logger.error(f"GPT analysis failed: {e}")
@@ -1011,5 +1212,9 @@ Be specific and reference actual data points where possible. This analysis will 
                 'data_points_analyzed': len(all_items),
                 'sources_used': len(all_data),
                 'error': str(e),
-                'raw_data': all_items
+                'raw_data': all_items,
+                'domain_relevance': {
+                    'score': data_relevance_score,
+                    'is_domain_specific': False
+                }
             }

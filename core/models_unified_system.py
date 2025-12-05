@@ -11803,11 +11803,25 @@ class BusinessResearchResult(models.Model):
             return False
 
     @classmethod
-    def save_customer_research(cls, query: str, synthesis: dict, execution_time_ms: int = 0, market_topic: str = ''):
-        """Helper to save CustomerResearchAgent results with embedding."""
+    def save_customer_research(cls, query: str, synthesis: dict, execution_time_ms: int = 0, market_topic: str = '', project_id: str = None, user=None):
+        """
+        Helper to save CustomerResearchAgent results with embedding.
+
+        Session 349: Added project_id parameter to link research to projects.
+        Note: user parameter accepted but not used (model doesn't have user field).
+        """
         # Extract market topic from query if not provided
         if not market_topic:
             market_topic = cls._extract_market_topic(query)
+
+        # Session 349: Get project if project_id provided
+        project = None
+        if project_id:
+            try:
+                from core.models_partnership import PartnershipProject
+                project = PartnershipProject.objects.get(id=project_id)
+            except Exception:
+                pass
 
         instance = cls.objects.create(
             research_type='customer',
@@ -11823,6 +11837,7 @@ class BusinessResearchResult(models.Model):
             quotes=synthesis.get('customer_quotes', []),
             recommendations=synthesis.get('recommendations', []),
             execution_time_ms=execution_time_ms,
+            project=project,  # Session 349: Link to project
         )
         # Generate embedding for semantic search
         instance.generate_embedding()
@@ -11847,11 +11862,25 @@ class BusinessResearchResult(models.Model):
         return ''
 
     @classmethod
-    def save_competitor_analysis(cls, query: str, synthesis: dict, execution_time_ms: int = 0, market_topic: str = ''):
-        """Helper to save CompetitorAnalysisAgent results with embedding."""
+    def save_competitor_analysis(cls, query: str, synthesis: dict, execution_time_ms: int = 0, market_topic: str = '', project_id: str = None, user=None):
+        """
+        Helper to save CompetitorAnalysisAgent results with embedding.
+
+        Session 349: Added project_id parameter to link research to projects.
+        Note: user parameter accepted but not used (model doesn't have user field).
+        """
         # Extract market topic from query if not provided
         if not market_topic:
             market_topic = cls._extract_market_topic(query)
+
+        # Session 349: Get project if project_id provided
+        project = None
+        if project_id:
+            try:
+                from core.models_partnership import PartnershipProject
+                project = PartnershipProject.objects.get(id=project_id)
+            except Exception:
+                pass
 
         instance = cls.objects.create(
             research_type='competitor',
@@ -11868,6 +11897,7 @@ class BusinessResearchResult(models.Model):
             raw_data=synthesis.get('raw_data', []),
             recommendations=synthesis.get('recommendations', []),
             execution_time_ms=execution_time_ms,
+            project=project,  # Session 349: Link to project
         )
         # Generate embedding for semantic search
         instance.generate_embedding()

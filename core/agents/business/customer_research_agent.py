@@ -420,6 +420,7 @@ If asked to create content, explain you can only research and suggest using the 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
         Session 302: Fetch project context when project_id is provided.
+        Session 350: Enhanced with domain targeting for spider queries.
 
         This enables users to say "Research customer pain points for this project"
         and have the agent automatically use the project's topic/description.
@@ -428,7 +429,7 @@ If asked to create content, explain you can only research and suggest using the 
             project_id: UUID of the PartnershipProject
 
         Returns:
-            Dict with project context (name, description, type) or empty dict
+            Dict with project context (name, description, type, domain targeting) or empty dict
         """
         if not project_id:
             return {}
@@ -436,11 +437,26 @@ If asked to create content, explain you can only research and suggest using the 
         try:
             from core.models_partnership import PartnershipProject
             project = PartnershipProject.objects.get(id=project_id)
+
+            # Session 350: Get or extract domain targeting
+            domain_targeting = {}
+            try:
+                domain_targeting = project.get_domain_targeting()
+                logger.info(f"Domain targeting for project: {domain_targeting.get('primary_domain')}, tags: {domain_targeting.get('domain_tags', [])[:5]}")
+            except Exception as e:
+                logger.warning(f"Failed to get domain targeting: {e}")
+
             return {
                 'project_name': project.project_name,
                 'project_description': project.description,
                 'project_type': project.project_type,
-                'project_id': str(project.id)
+                'project_id': str(project.id),
+                # Session 350: Domain targeting for spider queries
+                'domain_targeting': domain_targeting,
+                'primary_domain': domain_targeting.get('primary_domain', 'general_startup'),
+                'domain_tags': domain_targeting.get('domain_tags', []),
+                'spider_queries': domain_targeting.get('spider_queries', []),
+                'domain_subreddits': domain_targeting.get('subreddits', [])
             }
         except Exception as e:
             logger.warning(f"Failed to fetch project context: {e}")
@@ -480,6 +496,71 @@ If asked to create content, explain you can only research and suggest using the 
 
         return task
 
+    def _check_business_viability(self, task: str) -> Dict[str, Any]:
+        """
+        Session 350: "Idiot Protector" - Check if business idea is viable.
+
+        Uses GPT to quickly assess if the business idea is:
+        1. Viable - Proceed normally
+        2. Questionable - Add warning but proceed
+        3. Absurd/Joke - Strong warning, still proceed (user might be testing)
+
+        Args:
+            task: The business idea or research request
+
+        Returns:
+            Dict with viability_score (0-100), assessment, warning (if any)
+        """
+        try:
+            from openai import OpenAI
+            client = OpenAI()
+
+            check_prompt = f"""Evaluate this business idea/research request for basic viability.
+
+Business Idea: {task}
+
+Score from 0-100:
+- 80-100: Viable, reasonable business idea
+- 50-79: Questionable but possible (niche, risky, or unusual)
+- 20-49: Highly impractical or likely to fail
+- 0-19: Joke/absurd/impossible (e.g., "selling air", "restaurant for invisible food")
+
+Respond in JSON format:
+{{
+    "viability_score": <0-100>,
+    "assessment": "<one sentence assessment>",
+    "is_joke": <true/false>,
+    "warning": "<warning message if score < 50, otherwise null>",
+    "proceed": <true/false - always true, we analyze anyway>
+}}
+
+Be direct and honest. Don't sugarcoat absurd ideas."""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": check_prompt}],
+                temperature=0.3,
+                max_tokens=200,
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+            result['proceed'] = True  # Always proceed - we're warning, not blocking
+
+            logger.info(f"Viability check: score={result.get('viability_score')}, joke={result.get('is_joke')}")
+
+            return result
+
+        except Exception as e:
+            logger.warning(f"Viability check failed (proceeding anyway): {e}")
+            return {
+                'viability_score': 50,
+                'assessment': 'Unable to assess viability',
+                'is_joke': False,
+                'warning': None,
+                'proceed': True
+            }
+
     def execute(
         self,
         task: str,
@@ -516,6 +597,21 @@ If asked to create content, explain you can only research and suggest using the 
 
                 # Session 303: Store current task for tool access
                 self._current_task = enhanced_task
+
+                # Session 350: "Idiot Protector" - Check business viability
+                viability = self._check_business_viability(enhanced_task)
+                viability_warning = None
+                if viability.get('viability_score', 100) < 50:
+                    viability_warning = viability.get('warning') or viability.get('assessment')
+                    if viability.get('is_joke'):
+                        viability_warning = f"⚠️ This appears to be a joke or highly impractical idea. {viability_warning}"
+                    self.record_decision(
+                        decision_type="viability_check",
+                        action="Flagged low viability business idea",
+                        reasoning=f"Score: {viability.get('viability_score')}, Assessment: {viability.get('assessment')}",
+                        confidence=0.85
+                    )
+                    logger.warning(f"Low viability idea detected (score={viability.get('viability_score')}): {enhanced_task[:50]}...")
 
                 # Session 303: Auto-trigger spider refresh for fresh community data
                 try:
@@ -557,6 +653,23 @@ If asked to create content, explain you can only research and suggest using the 
                 if prior_context:
                     full_prompt += f"\n\n{prior_context}\n"
 
+                # Session 350: Add domain-aware spider targeting instructions
+                domain_instructions = ""
+                if project_context.get('domain_targeting'):
+                    targeting = project_context['domain_targeting']
+                    domain_instructions = f"""
+
+DOMAIN-SPECIFIC RESEARCH GUIDANCE (Session 350):
+Primary Domain: {targeting.get('primary_domain', 'general_startup')}
+Domain Tags: {', '.join(targeting.get('domain_tags', [])[:8])}
+Suggested Subreddits: {', '.join(targeting.get('subreddits', [])[:6])}
+Suggested Search Queries: {targeting.get('spider_queries', [])[:5]}
+
+CRITICAL: Use these DOMAIN-SPECIFIC subreddits and search queries!
+Do NOT use generic developer or tech subreddits unless that's the target domain.
+Your research should match the SPECIFIC market: {project_context.get('project_name', enhanced_task)[:100]}
+"""
+
                 # Add instruction to be comprehensive - Session 325: Emphasize spider_query is MANDATORY
                 # Session 325b: Added explicit instruction to focus on the ACTUAL query topic
                 full_prompt += f"""
@@ -568,12 +681,12 @@ CRITICAL: For thorough customer research you MUST:
    - For content creators: search for podcasters, YouTubers, bloggers pain points
    - For SaaS: search for the specific tool category frustrations
 2. Use reddit_search for industry-specific subreddits matching the topic
-   - For podcasting/content: "podcasting+youtube+blogging+contentcreation"
+   - Use the DOMAIN-SPECIFIC subreddits listed above
    - For the user's actual industry, NOT generic developer communities
 3. Use web_search to find reviews of existing solutions in that SPECIFIC market
 4. Use analyze_pain_points to synthesize your findings
 5. Use build_persona to create 2-3 customer personas FOR THE SPECIFIC MARKET
-
+{domain_instructions}
 IMPORTANT: Focus your research on the ACTUAL topic requested: "{enhanced_task[:150]}"
 Do NOT drift to generic "developer tools" or "AI platforms" unless that's what was asked.
 Your personas and pain points must match the TARGET MARKET in the request.
@@ -621,28 +734,44 @@ Return comprehensive customer research with personas, pain points, and real quot
                     synthesis = self._synthesize_research(task, all_research_data)
 
                     # Session 294: Save to database with embedding for semantic search
+                    # Session 349: Pass project_id to link research to project
                     saved_result = None
                     try:
                         from core.models_unified_system import BusinessResearchResult
+                        project_id = context.get('project_id')
                         saved_result = BusinessResearchResult.save_customer_research(
                             query=task,
                             synthesis=synthesis,
-                            execution_time_ms=execution_time
+                            execution_time_ms=execution_time,
+                            project_id=project_id,  # Session 349: Link to project
+                            user=self.user  # Session 349: Link to user
                         )
-                        logger.info(f"Saved customer research to database: {saved_result.id}")
+                        logger.info(f"Saved customer research to database: {saved_result.id}, project_id={project_id}")
                     except Exception as e:
                         logger.warning(f"Failed to save customer research: {e}")
 
                     # Session 294: Return analysis at top level for frontend compatibility
                     # Frontend checks agentResult.analysis and agentResult.data?.analysis
+                    # Session 350: Include viability warning in result
+                    result_message = f"Customer research completed with {len(all_research_data)} data sources"
+                    if viability_warning:
+                        result_message = f"⚠️ VIABILITY WARNING: {viability_warning}\n\n{result_message}"
+
                     result = AgentResult(
                         success=True,
-                        message=f"Customer research completed with {len(all_research_data)} data sources",
+                        message=result_message,
                         data={
                             'analysis': synthesis,  # Match CompetitorAnalysisAgent pattern
                             'raw_data': all_research_data,
                             'query': task,
-                            'saved_id': str(saved_result.id) if saved_result else None
+                            'saved_id': str(saved_result.id) if saved_result else None,
+                            # Session 350: Viability assessment
+                            'viability': {
+                                'score': viability.get('viability_score', 100),
+                                'assessment': viability.get('assessment'),
+                                'is_joke': viability.get('is_joke', False),
+                                'warning': viability_warning
+                            } if viability_warning else None
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,

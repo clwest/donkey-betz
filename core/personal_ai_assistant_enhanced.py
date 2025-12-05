@@ -6778,93 +6778,98 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     logger.info(f"🔗 Using chain of thought from previous response: {previous_response_id[:20]}...")
 
             # Session 125: Pass tool definitions to enable GPT function calling
-            # Session 131: FORCE tool usage with "required" mode for operations
-            tools = self.get_tool_definitions()
+            # Session 349: Use ClassificationIntegrationService for intelligent routing
+            all_tools = self.get_tool_definitions()
 
-            # Session 131: Detect if this is an operation request (stronger tool forcing)
-            operation_keywords = [
-                # Image operations (broad keywords for workflow support)
-                'generate image', 'create image', 'draw', 'make image', 'picture of',
-                'create banner', 'create post', 'create avatar', 'create profile',  # Session 131: Workflow keywords
-                'social media banner', 'social media post', 'profile image', 'avatar image',  # Session 131: Workflow phrases
-                'upscale', 'remove background', 'create variation', 'erase', 'recolor', 'refine',
-                # Video operations - Generation
-                'animate', 'generate video', 'extend video', 'chain video', 'make video',
-                'create video', 'promo video', 'marketing video',  # Session 131: Workflow keywords
-                # Video operations - Phase 1 (Session 159-160)
-                'extract frame', 'reverse video', 'trim video', 'speed', 'slow motion', 'speed up',
-                'concatenate', 'combine videos', 'merge videos',
-                # Video operations - Phase 2 (Session 161) 🆕
-                'rotate', 'flip', 'turn upside', '90 degrees', '180 degrees', '270 degrees',  # Rotate/Flip
-                'fade in', 'fade out', 'add fade',  # Fade
-                'crop', 'resize', 'aspect ratio', 'make square', 'make portrait', 'make landscape', '16:9', '9:16', '1:1',  # Crop/Resize
-                'mute', 'volume', 'extract audio', 'audio control',  # Audio Controls
-                'picture in picture', 'pip', 'overlay video', 'put video in corner',  # Picture-in-Picture
-                # Session 163: Watermark/Logo
-                'watermark', 'add watermark', 'logo', 'add logo', 'overlay image', 'brand video',
-                # Session 163: Blur Region
-                'blur', 'add blur', 'blur region', 'privacy blur', 'censor', 'pixelate', 'hide face',
-                # Session 164: Video Stabilization
-                'stabilize', 'stabilize video', 'fix shaky', 'remove shake', 'smooth video', 'deshake', 'camera shake', 'shaky video',
-                # Session 164: Text Animations
-                'text animation', 'animated text', 'scrolling text', 'scroll text', 'add title', 'add credits', 'ticker', 'news ticker', 'rolling credits', 'fade text',
-                # Audio operations
-                'generate voice', 'voiceover', 'text to speech',
-                # 3D & editing
-                'convert to 3d', 'text overlay', 'color grading',
-                # Character training (Session 133) - Session 173: Added 'flux' keyword
-                'train style', 'train model', 'train lora', 'learn style', 'character training',
-                'create style model', 'learn visual style', 'train project style',
-                'flux lora', 'flux model', 'train a flux',
-                # Session 173: Co-Leadership / Opinion requests
-                'what do you think', 'what does the team think', 'get opinions', 'get the team',
-                'should we', 'should i', 'opinion on', 'thoughts on', 'feedback on',
-                'creative team', 'technical team', 'cto think', 'coo think',
-                'is this a good', 'worth pursuing', 'good direction', 'right approach',
-                'ask the agents', 'consult the team', 'team input', 'agent opinions',
-                # Session 184: Web Search & Brand Video keywords (restored autonomous workflow)
-                'research', 'search for', 'look up', 'find out', 'what are the latest',
-                'brand video', 'create brand', 'promotional video', 'promo videos',
-                'create logos', 'create logo', 'make logos', 'make logo',
-                'cyberpunk', 'cinematic style', 'modern style', 'playful style',
-                # Session 337: Brand Strategy keywords (force tool usage)
-                'brand strategy', 'brand identity', 'brand positioning', 'brand guidelines',
-                'branding strategy', 'develop brand', 'create a brand',
-                # Session 338: Content Strategy keywords (force tool usage)
-                'content strategy', 'content plan', 'content calendar', 'content pillars',
-                'what content should i', 'topics should i write', 'topics to write',
-                # Session 338: Marketing Strategy keywords (force tool usage)
-                'marketing strategy', 'marketing plan', 'marketing channels', 'marketing campaign',
-                'how should i market', 'market this', 'reach my audience', 'marketing approach'
-            ]
-            is_operation = any(keyword in message.lower() for keyword in operation_keywords)
+            # Session 349: Use classification to determine tool filtering and behavior
+            # This replaces the 100+ keyword matching with classification-based routing
+            is_operation = False
+            is_question = False
+            tools = all_tools  # Default to all tools
 
-            # Session 266: Detect QUESTIONS - these should NOT force tool execution
-            # Even if they contain keywords like "logo", questions are consultative
-            question_indicators = [
-                'what style', 'which style', 'best style', 'what works best',
-                'what would work', 'what should i', 'what do you recommend',
-                'what colors', 'which colors', 'what fonts', 'which fonts',
-                'ideas for', 'suggestions for', 'recommend for',
-                'how should', 'how would', 'how do i',
-                'what are trending', 'what is trending', "what's trending",
-                'advice on', 'advice for', 'help me decide', 'help me choose',
-            ]
-            message_lower = message.lower()
-            is_question = any(q in message_lower for q in question_indicators)
+            try:
+                from core.services.classification_integration import (
+                    get_classification_integration_service,
+                    ClarificationState
+                )
 
-            # Questions ending with ? are also consultative
-            if message.strip().endswith('?') and not any(
-                cmd in message_lower for cmd in ['create', 'make', 'generate', 'upscale', 'remove background']
-            ):
-                is_question = True
+                classification_service = get_classification_integration_service()
 
-            # Questions override operations - don't force tool calls for questions
-            if is_question:
-                is_operation = False
-                logger.info(f"🤔 Detected QUESTION - will not force tool execution")
+                # Get or create clarification state for this conversation
+                if not hasattr(self, '_clarification_state'):
+                    self._clarification_state = ClarificationState()
 
-            if is_operation:
+                # Use existing classification from earlier in this method
+                if classification:
+                    query_type = classification.primary_type.value
+                    confidence = classification.confidence
+
+                    # Determine behavior based on query type
+                    if query_type in ('question', 'conversation'):
+                        # QUESTIONS/CONVERSATION: No tools, answer directly
+                        is_question = True
+                        tools = []  # No tools for questions
+                        logger.info(f"🎯 Session 349: {query_type.upper()} detected (confidence: {confidence:.2f}) - NO TOOLS")
+
+                    elif query_type in ('creation', 'workflow', 'analysis'):
+                        # CREATION/WORKFLOW/ANALYSIS: Enable appropriate tools
+                        is_operation = True
+
+                        # Filter tools based on query type
+                        allowed_categories = classification_service.classifier.get_routing_decision(classification)
+                        tools = classification_service.filter_tools_by_categories(all_tools, set(allowed_categories.get('suggested_agents', [])))
+                        if not tools:
+                            tools = all_tools  # Fallback to all tools if filtering fails
+
+                        logger.info(f"🎯 Session 349: {query_type.upper()} detected (confidence: {confidence:.2f}) - TOOLS ENABLED ({len(tools)})")
+
+                        # Check if we should clarify (low confidence or missing info)
+                        if confidence < 0.6 and self._clarification_state.can_ask_clarification():
+                            # Return clarification instead of proceeding
+                            self._clarification_state.record_clarification('low_confidence')
+                            clarification_response = "I want to make sure I understand correctly. Could you tell me a bit more about what you're looking for?"
+                            logger.info(f"🤔 Session 349: Low confidence ({confidence:.2f}) - suggesting clarification")
+                            # Note: We continue anyway but with clarification logged
+
+                    elif query_type in ('memory', 'collaboration', 'opportunity', 'system'):
+                        # Other types: Enable tools but don't force
+                        is_operation = False
+                        tools = all_tools
+                        logger.info(f"🎯 Session 349: {query_type.upper()} detected - tools available")
+
+                    else:
+                        # Unknown type - use all tools in auto mode
+                        logger.info(f"🎯 Session 349: Unknown query type '{query_type}' - defaulting to auto mode")
+
+            except ImportError as e:
+                logger.warning(f"⚠️ Session 349: ClassificationIntegrationService not available: {e}")
+                # Fallback to legacy keyword detection if classification service unavailable
+                operation_keywords = [
+                    'create', 'generate', 'make', 'design', 'draw', 'build',
+                    'upscale', 'remove background', 'animate', 'edit',
+                    'research and create', 'workflow', 'brand identity',
+                ]
+                is_operation = any(kw in message.lower() for kw in operation_keywords)
+
+                question_keywords = ['what', 'how', 'why', 'which', 'ideas', 'suggest', 'recommend']
+                is_question = any(kw in message.lower() for kw in question_keywords) and message.strip().endswith('?')
+
+                if is_question:
+                    is_operation = False
+                    logger.info(f"🤔 Fallback: Detected QUESTION - will not force tool execution")
+
+            except Exception as e:
+                logger.warning(f"⚠️ Session 349: Classification error: {e}")
+                # Continue with all tools on error
+
+            # Session 349: Handle no-tool mode for questions/conversations
+            if not tools or is_question:
+                # NO TOOLS - direct response mode
+                tool_choice = None
+                tools = None  # Explicitly None to disable tools
+                logger.info(f"💬 Session 349: NO TOOLS mode - direct conversation response")
+
+            elif is_operation:
                 # FORCE tool execution for operations
                 tool_choice = {
                     "type": "allowed_tools",
@@ -6872,8 +6877,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     "tools": [{"type": "function", "name": t["name"]} for t in tools]
                 }
                 logger.info(f"🎯 FORCING tool execution (mode: required) - {len(tools)} tools available")
+
             else:
-                # Auto mode for general conversation
+                # Auto mode for other types (memory, system, etc.)
                 tool_choice = {
                     "type": "allowed_tools",
                     "mode": "auto",

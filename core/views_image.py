@@ -28,7 +28,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.utils import timezone  # Session 96 Weekend Project
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from PIL import Image as PILImage
 
@@ -10629,11 +10629,12 @@ def complete_workflow_execution(request, workflow_id):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def list_projects(request):
     """
     List all creative projects for current user
     Session 60: Phase C.1.2 - Project Management API
+    Session 350: Changed to AllowAny, made user-aware for session auth
 
     GET /api/projects/
 
@@ -10661,7 +10662,12 @@ def list_projects(request):
     try:
         from content.models import CreativeProject
 
-        projects = CreativeProject.objects.filter(user=request.user).order_by('-created_at')
+        # Session 350: Support both authenticated and anonymous users
+        if request.user.is_authenticated:
+            projects = CreativeProject.objects.filter(user=request.user).order_by('-created_at')
+        else:
+            # Anonymous users get empty list (no shared projects to show)
+            projects = CreativeProject.objects.none()
 
         project_data = []
         for project in projects:

@@ -307,6 +307,12 @@ class BaseBusinessResearchAgent:
         context = context or {}
         self._current_task = task
 
+        # Session 349: Extract project_id from context if not set in constructor
+        # This ensures research results are linked to the project
+        if not self.project_id and context.get('project_id'):
+            self.project_id = context.get('project_id')
+            logger.info(f"{self.name}: Set project_id from context: {self.project_id}")
+
         try:
             logger.info(f"{self.name}: Starting execution for task: {task[:100]}")
 

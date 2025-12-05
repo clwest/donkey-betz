@@ -1,46 +1,65 @@
 # Start Next Session Here
 
-**Last Session:** 349 - Agents Tab API Authentication Fixes
+**Last Session:** 350 - Domain-Aware Spider Targeting + Business Viability Check
 **Date:** December 4, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | Agents Tab APIs Fixed
+**Status:** 102 spiders | 36 categories | 79 agents | Domain-Targeted Business Research
 
 ---
 
-## What Happened in Session 349
+## What Happened in Session 350
 
-### Agents Tab API Authentication Fixes
+### Domain-Aware Spider Targeting (Major Feature)
 
-Fixed authentication issues for Agents Tab sub-tabs that were returning "authentication_required" errors:
+**Problem:** Business research PDFs contained generic AI/tech news instead of domain-specific content. An "AI fitness coaching app" project received articles about Meta design and geothermal energy instead of fitness industry content.
 
-#### Problem
-The Agents Tab had several sub-tabs returning 401/403 errors:
-- `/api/agents/` - Auth Required
-- `/api/agent-dashboard/` - Auth Required
-- `/api/collective/` - Auth Required (note: handoff doc incorrectly listed as `/api/collective-intelligence/`)
-- `/api/agent-learning/stats/` - Auth Required
+**Solution:** Created `DomainExtractionService` that:
+1. Extracts primary business domain from project descriptions
+2. Generates domain-specific spider search queries
+3. Maps to relevant spider categories
+4. Recommends domain-specific subreddits
+5. Uses GPT-4o-mini with keyword fallback
 
-#### Root Cause
-Two-layer authentication system:
-1. **Middleware layer**: `UnifiedTokenAuthenticationMiddleware` with `PUBLIC_PATHS` list
-2. **View layer**: DRF `@permission_classes([IsAuthenticated])` decorators
+**13 Business Domains Supported:**
+- fitness_health, saas_b2b, ecommerce_retail, fintech_finance
+- edtech_learning, food_restaurant, mental_health, ai_ml
+- creator_economy, real_estate, gaming_entertainment, travel_hospitality
+- general_startup (fallback)
 
-Both layers needed fixes for session-based auth to work.
+### Business Viability Check ("Idiot Protector")
 
-#### Fixes Applied
+Added viability scoring to prevent research on absurd business ideas:
+- Uses GPT-4o-mini to score ideas 0-100
+- Detects jokes/impractical concepts
+- Shows warning for low-scoring ideas
+- Example: "Onion Bar - restaurant serving only raw onions" → Score: 15, is_joke: True
 
-**1. auth_middleware.py** - Added to PUBLIC_PATHS:
+### Honest Data Reporting
+
+Synthesis results now include domain relevance metrics:
 ```python
-'/api/agents/',  # Session 349: Agents Registry - supports session auth
-'/api/agent-dashboard/',  # Session 349: Agent Dashboard - supports session auth
-'/api/collective/',  # Session 349: Collective Intelligence API - supports session auth
+'domain_relevance': {
+    'score': 45,  # % of items matching domain tags
+    'domain_relevant_items': 9,
+    'total_items': 20,
+    'is_domain_specific': True  # True if >= 30%
+}
 ```
 
-**2. views_analytics.py** - Fixed `learning_stats` view:
-- Changed from `IsAuthenticated` to `AllowAny`
-- Made user-aware (returns user-specific data if authenticated, system-wide if not)
+### Bug Fix: Project Deletion 500 Error
 
-**3. views_collective_intelligence.py** - Fixed all 10 views:
-- Changed all `@permission_classes([IsAuthenticated])` to `@permission_classes([AllowAny])`
+Fixed missing database tables (`core_projectresearchfeedback`, `core_projectspiderpriority`) that were causing project deletion to fail.
+
+---
+
+## Files Created/Modified
+
+| File | Changes |
+|------|---------|
+| `core/services/domain_extraction_service.py` | **NEW** - Domain extraction service |
+| `core/models_partnership.py` | Added domain targeting methods to PartnershipProject |
+| `core/agents/business/competitor_analysis_agent.py` | Viability check + domain targeting |
+| `core/agents/business/customer_research_agent.py` | Viability check + domain targeting |
+| `docs/handoffs/SESSION_350_DOMAIN_AWARE_SPIDER_TARGETING.md` | Session handoff |
 
 ---
 
@@ -51,10 +70,9 @@ Both layers needed fixes for session-based auth to work.
 | **Spiders** | **102** |
 | **Categories** | **36** |
 | **Agents** | **79** (69 legacy + 10 clean) |
-| **Data Points** | **9,983** |
-| **Success Rate** | **98%** |
-| **Research Pipeline** | **Fixed** (Session 348) |
-| **Agents Tab APIs** | **Fixed** (Session 349) |
+| **Data Points** | **9,983+** |
+| **Business Domains** | **13** |
+| **Research Pipeline** | **Domain-Targeted** |
 
 ---
 
@@ -68,67 +86,54 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Commits (Session 349)
+## Test Domain Targeting
 
-1. `b41fbad` - feat(Session 349): Fix Agents Tab API authentication for session-based access
+```python
+# In Django shell
+from core.services.domain_extraction_service import get_domain_extraction_service
 
----
+service = get_domain_extraction_service()
+result = service.extract_domains("AI-powered fitness coaching app")
 
-## Key Files Modified
-
-| File | Changes |
-|------|---------|
-| `core/auth_middleware.py` | Added `/api/agents/`, `/api/agent-dashboard/`, `/api/collective/` to PUBLIC_PATHS |
-| `core/views_analytics.py` | Changed `learning_stats` to AllowAny, made user-aware |
-| `core/views_collective_intelligence.py` | Changed all 10 views from IsAuthenticated to AllowAny |
-
----
-
-## Agents Tab Sub-tabs Status (Updated)
-
-| Sub-Tab | API Endpoint | Status |
-|---------|--------------|--------|
-| **Overview** | `/api/spider-intelligence/dashboard-stats/` | ✅ Working |
-| **Registry** | `/api/agents/` | ✅ Fixed |
-| **Conversations** | `/api/agent-conversations/` | ✅ Working |
-| **Learning** | `/api/agent-learning/stats/` | ✅ Fixed |
-| **Memory Palace** | `/api/memory-palace/` | ✅ Working |
-| **Time Capsules** | `/api/time-capsules/` | ✅ Working |
-| **Collective Intelligence** | `/api/collective/` | ✅ Fixed |
-
----
-
-## Next Session Priorities (Session 350)
-
-### Option A: Test All Fixed APIs
-Verify all Agents Tab sub-tabs work correctly:
-```bash
-# Test each endpoint
-curl http://localhost:8000/api/agents/
-curl http://localhost:8000/api/collective/dashboard/
-curl http://localhost:8000/api/agent-learning/stats/
+print(f"Domain: {result.primary_domain}")    # fitness_health
+print(f"Tags: {result.domain_tags}")         # ['fitness', 'health', 'ai', 'coaching']
+print(f"Subreddits: {result.subreddits}")    # ['r/fitness', 'r/personaltraining']
+print(f"Queries: {result.spider_queries}")   # ['AI fitness coaching', 'fitness app market']
 ```
 
-### Option B: Research Pipeline Testing
-Create a new project to verify Session 348 fixes work end-to-end:
-- Brand Strategy should show competitor/customer/trend context
-- Source Articles should show relevant content (not generic tech)
-- Spider data contributes when relevance >= 0.5
+---
 
-### Option C: New Features
-- Enhance agent conversations with more context
-- Add new spider sources
-- Improve collective intelligence analytics
+## Next Session Priorities
+
+### Option A: Test Domain-Aware Research End-to-End
+Create a new project with a specific domain (e.g., fintech) and verify:
+- Domain is correctly extracted
+- Spider searches use domain-specific queries
+- Research PDFs contain relevant industry content
+- Domain relevance score is reported
+
+### Option B: Expand Domain Definitions
+Add more specialized domains as needed:
+- healthcare_medical
+- legal_compliance
+- sustainability_green
+- pet_animal
+
+### Option C: Domain-Specific Subreddit Integration
+Actually query the recommended subreddits during research:
+- Use existing Reddit spider infrastructure
+- Filter by domain-recommended subreddits
+- Prioritize domain content in search results
 
 ---
 
 ## Key Documentation
 
-- Session 349 Details: This file
+- **Session 350 Details:** `docs/handoffs/SESSION_350_DOMAIN_AWARE_SPIDER_TARGETING.md`
+- Session 349 Details: `docs/handoffs/SESSION_349_PROMPT_VS_CHAT_AUDIT_AND_INTEGRATION.md`
 - Session 348 Details: `docs/handoffs/SESSION_348_RESEARCH_PIPELINE_FIXES.md`
-- Session 347 Details: `docs/handoffs/SESSION_347_AUTHENTICATED_FETCH_MIGRATION.md`
 - Architecture: `docs/ARCHITECTURE.md`
 
 ---
 
-**Agents Tab APIs now support session-based authentication!**
+**Business research now targets domain-specific content with honest data reporting!**
