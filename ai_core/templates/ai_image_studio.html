@@ -31133,6 +31133,36 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
+        // Session 352: Helper to validate and get a proper URL for research articles
+        // Fixes about:blank#blocked issue when URLs are empty or invalid like 'N/A'
+        function getValidArticleUrl(article) {
+            const possibleUrls = [article?.url, article?.link, article?.href];
+            for (const url of possibleUrls) {
+                if (url && typeof url === 'string' && url.trim() !== '' &&
+                    url.toLowerCase() !== 'n/a' && url.toLowerCase() !== 'none' &&
+                    (url.startsWith('http://') || url.startsWith('https://'))) {
+                    return url;
+                }
+            }
+            return null; // No valid URL found
+        }
+
+        // Session 352: Strip HTML tags from research summary content
+        // Prevents malformed <a> tags in spider data from breaking the page layout
+        function sanitizeResearchSummary(html) {
+            if (!html) return '';
+            // Remove all HTML tags but preserve text content and line breaks
+            return html
+                .replace(/<br\s*\/?>/gi, '\n')  // Convert <br> to newlines
+                .replace(/<\/p>/gi, '\n\n')     // Convert </p> to double newlines
+                .replace(/<[^>]*>/g, '')        // Strip all other HTML tags
+                .replace(/&amp;/g, '&')         // Decode common entities
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'");
+        }
+
         // Load all projects
         async function loadProjects() {
             const container = document.getElementById('projects-list');
@@ -31518,7 +31548,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <div id="content-analysis-${project.id}-${idx}" style="display: none; margin-top: 10px;">
                                 <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 12px; max-height: 400px; overflow-y: auto;">
                                     <div style="color: #e2e8f0; font-size: 12px; line-height: 1.6; white-space: pre-wrap;">
-                                        ${research.summary || 'No analysis available.'}
+                                        ${sanitizeResearchSummary(research.summary) || 'No analysis available.'}
                                     </div>
                                     ${research.sources && research.sources.length > 0 ? `
                                         <div class="mt-3 pt-2" style="border-top: 1px solid rgba(168, 85, 247, 0.3);">
@@ -31551,19 +31581,29 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <!-- Research Content (collapsed by default) -->
                         <div id="content-resources-${project.id}-0" style="display: none; margin-top: 10px;">
                             <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 12px; max-height: 400px; overflow-y: auto;">
-                                ${project.metadata.research_articles.map((article, idx) => `
+                                ${project.metadata.research_articles.map((article, idx) => {
+                                    // Session 352: Validate URL to prevent about:blank#blocked
+                                    const validUrl = getValidArticleUrl(article);
+                                    return `
                                     <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 4px;">
-                                        <a href="${article.url || article.link || '#'}" target="_blank" style="color: #86efac; font-size: 12px; font-weight: 500; text-decoration: none;">
-                                            ${idx + 1}. ${article.title || 'Article'}
-                                            <span style="font-size: 10px; color: #64748b;">↗</span>
-                                        </a>
+                                        ${validUrl ? `
+                                            <a href="${validUrl}" target="_blank" rel="noopener noreferrer" style="color: #86efac; font-size: 12px; font-weight: 500; text-decoration: none;">
+                                                ${idx + 1}. ${article.title || 'Article'}
+                                                <span style="font-size: 10px; color: #64748b;">↗</span>
+                                            </a>
+                                        ` : `
+                                            <span style="color: #86efac; font-size: 12px; font-weight: 500;">
+                                                ${idx + 1}. ${article.title || 'Article'}
+                                                <span style="font-size: 10px; color: #64748b;" title="No link available">📄</span>
+                                            </span>
+                                        `}
                                         <div class="d-flex align-items-center gap-2 mt-1">
                                             <span class="badge" style="background: rgba(34, 197, 94, 0.3); font-size: 9px;">${article.source || 'Unknown'}</span>
                                             ${article.score ? `<span class="badge" style="background: rgba(251, 191, 36, 0.3); font-size: 9px;">Score: ${article.score}</span>` : ''}
                                         </div>
                                         ${article.description ? `<div class="mt-1" style="color: #94a3b8; font-size: 11px; line-height: 1.4;">${article.description.substring(0, 200)}${article.description.length > 200 ? '...' : ''}</div>` : ''}
                                     </div>
-                                `).join('')}
+                                `}).join('')}
                             </div>
                         </div>
                     </div>` : ''}
@@ -46921,9 +46961,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     ? '<span class="badge bg-success ms-2">Canonical</span>'
                     : '';
 
+                // Session 351: Add "Start Research Project" button for product decisions
+                const researchButton = (d.decision_type === 'product' && d.suggested_feature) ? `
+                    <button class="btn btn-sm btn-outline-primary ms-1" onclick="startResearchFromDecision('${d.id}', '${encodeURIComponent(d.suggested_feature || d.topic)}')">
+                        🔬 Start Research Project
+                    </button>
+                ` : '';
+
                 const actionButtons = d.is_canonical ? `
                     <div class="mt-2">
                         <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active Policy</span>
+                        ${researchButton}
                     </div>
                 ` : `
                     <div class="mt-2">
@@ -46933,6 +46981,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <button class="btn btn-sm btn-outline-secondary" onclick="rejectDecision('${d.id}')">
                             ❌ Reject
                         </button>
+                        ${researchButton}
                     </div>
                 `;
 
@@ -47000,6 +47049,60 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } catch (error) {
                 console.error('Error rejecting decision:', error);
                 showNotification('Error rejecting decision', 'danger');
+            }
+        }
+
+        // Session 351: Start research project from boardroom product decision
+        async function startResearchFromDecision(decisionId, encodedFeature) {
+            try {
+                const featureTopic = decodeURIComponent(encodedFeature);
+
+                // Show notification that we're starting
+                showNotification(`Starting research for: ${featureTopic.substring(0, 50)}...`, 'info');
+
+                // Pre-fill the chat input with a research request
+                const chatInput = document.getElementById('personal-assistant-input') ||
+                                 document.querySelector('textarea[id*="chat"]') ||
+                                 document.querySelector('input[type="text"][id*="message"]');
+
+                if (chatInput) {
+                    // Create a research request referencing the boardroom decision
+                    chatInput.value = `Research the market for this product idea from our Boardroom discussions: "${featureTopic}"
+
+Please:
+1. Analyze competitors in this space
+2. Research customer pain points
+3. Provide actionable recommendations
+
+This idea came from agent discussions (Decision ID: ${decisionId}).`;
+
+                    // Scroll to chat and focus
+                    chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    chatInput.focus();
+
+                    // Optionally highlight the chat area
+                    chatInput.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)';
+                    setTimeout(() => {
+                        chatInput.style.boxShadow = '';
+                    }, 2000);
+
+                    showNotification('Research request ready! Press Enter or click Send.', 'success');
+                } else {
+                    // Fallback: use the send_message function if available
+                    const message = `Research the market for this product idea from Boardroom: "${featureTopic}"`;
+                    if (typeof send_message === 'function') {
+                        send_message(message);
+                        showNotification('Research request sent!', 'success');
+                    } else {
+                        // Last fallback: copy to clipboard
+                        navigator.clipboard.writeText(`Research product idea: ${featureTopic}`);
+                        showNotification('Research topic copied to clipboard. Paste in chat to start.', 'info');
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error starting research from decision:', error);
+                showNotification('Error starting research project', 'danger');
             }
         }
 
