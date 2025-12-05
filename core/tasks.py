@@ -3777,6 +3777,7 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             messages = []
             current_speaker = initiator
             other_speaker = responder
+            consecutive_empty = 0  # Session 364: Track consecutive empty responses
 
             for msg_num in range(max_messages):
                 # Build the conversation context
@@ -3897,15 +3898,25 @@ Guidelines:
                         "content": f"{prev_msg['agent']}: {prev_msg['content']}"
                     })
 
-                # Generate the message with dynamic-appropriate prompts
+                # Session 364: Generate diverse prompts to avoid repetitive responses
+                # Each message should focus on a DIFFERENT aspect to avoid echo chamber
+                diversity_prompts = [
+                    "Focus on OPPORTUNITIES in this data - what could we build or do with it?",
+                    "Focus on RISKS and what could go wrong - play devil's advocate.",
+                    "Focus on NEXT STEPS - what concrete actions should we take?",
+                    "Focus on WHO benefits from this and HOW - the user perspective.",
+                    "Focus on TECHNICAL implementation - how would this actually work?",
+                    "Focus on MARKET implications - what trends or competitive insights are here?",
+                ]
+                diversity_hint = diversity_prompts[msg_num % len(diversity_prompts)]
+
                 if msg_num == 0:
-                    user_content = f"Start a {template['type'].replace('_', ' ')} about {topic}. Be the first to speak and set the tone."
+                    user_content = f"Start a {template['type'].replace('_', ' ')} about {topic}. {diversity_hint}"
                 else:
-                    last_msg = messages[-1]['content'] if messages else ''
                     if tension == 'high':
-                        user_content = f"Respond to {other_speaker.name}. Challenge their point or defend your position. Don't just agree - push back if you see issues."
+                        user_content = f"Respond to {other_speaker.name}. Challenge their point or defend your position. IMPORTANT: {diversity_hint} - don't repeat what they already said."
                     else:
-                        user_content = f"Respond to {other_speaker.name}. Build on the discussion but don't hesitate to question or offer alternative perspectives."
+                        user_content = f"Respond to {other_speaker.name}. IMPORTANT: {diversity_hint} - add something NEW they didn't mention."
 
                 try:
                     # Use chat.completions for gpt-5-mini with high max_completion_tokens
@@ -3931,9 +3942,16 @@ Guidelines:
                         content = content[len(current_speaker.name)+1:].strip()
 
                     # Session 321: Skip empty messages - don't save if content is empty
+                    # Session 364: DON'T swap on empty - let next iteration try other speaker
+                    # This prevents the bug where initiator responds to themselves
                     if not content:
                         logger.warning(f"💬 [CONVERSATIONS] Empty content from {current_speaker.name}, skipping message {msg_num + 1}")
-                        # Still swap speakers to continue conversation
+                        consecutive_empty += 1
+                        if consecutive_empty >= 2:
+                            # Both agents failed to produce content, end conversation
+                            logger.warning(f"💬 [CONVERSATIONS] Both agents returned empty, ending conversation early")
+                            break
+                        # Swap to other speaker and try again
                         current_speaker, other_speaker = other_speaker, current_speaker
                         continue
 
@@ -3968,6 +3986,7 @@ Guidelines:
                     })
 
                     stats['messages_generated'] += 1
+                    consecutive_empty = 0  # Session 364: Reset on successful message
 
                     if msg_type == 'insight':
                         stats['insights_discovered'] += 1
@@ -4326,6 +4345,21 @@ Guidelines:
 - When citing data, mention the specific source (e.g., "from the Notion data" or "looking at the 11 HackerNews data points")
 - {"Challenge assumptions and push back" if tension == 'high' else "Build on others' ideas collaboratively" if tension == 'low' else "Balance agreement and constructive criticism"}"""
 
+                    # Session 364: Add diversity prompts to avoid repetitive agreement
+                    panel_diversity_prompts = [
+                        "Focus on OPPORTUNITIES - what could we build or monetize from this?",
+                        "Focus on RISKS and CHALLENGES - what could go wrong or block us?",
+                        "Focus on NEXT STEPS - what concrete actions should we prioritize?",
+                        "Focus on USER IMPACT - who benefits and how do we reach them?",
+                        "Focus on TECHNICAL FEASIBILITY - what would implementation require?",
+                        "Focus on MARKET POSITIONING - how does this compare to competitors?",
+                        "Focus on TIMELINE and RESOURCES - what's realistic to achieve?",
+                        "Focus on INNOVATION - what novel approaches could we try?",
+                    ]
+                    # Calculate message number from round and agent position
+                    msg_num = round_num * len(panel_agents) + agent_idx
+                    diversity_hint = panel_diversity_prompts[msg_num % len(panel_diversity_prompts)]
+
                     # Build user prompt with context
                     prompt_template = prompts.get(prompt_type, prompts.get('respond', ''))
                     user_prompt = prompt_template.format(
@@ -4334,6 +4368,9 @@ Guidelines:
                         topic=topic,
                         prev_agent=prev_agent_name
                     )
+
+                    # Session 364: Add diversity hint to prompt
+                    user_prompt = f"{user_prompt}\n\n[{diversity_hint}]"
 
                     # Add conversation history context
                     if messages:
@@ -4344,26 +4381,33 @@ Guidelines:
                         user_prompt = f"Recent discussion:\n{recent_context}\n\nNow respond: {user_prompt}"
 
                     try:
-                        response = client.chat.completions.create(
-                            model="gpt-5-mini",
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_prompt}
-                            ],
-                            max_completion_tokens=500,
-                        )
+                        # Session 364: Retry up to 2 times if empty response
+                        content = ""
+                        for retry in range(2):
+                            response = client.chat.completions.create(
+                                model="gpt-5-mini",
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt}
+                                ],
+                                max_completion_tokens=2000,  # Session 364: Increased from 500 for reasoning models
+                            )
 
-                        content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+                            content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
-                        # Session 360: Validate output for mythology violations
-                        content = validate_agent_output(current_agent.name, content)
+                            # Session 360: Validate output for mythology violations
+                            content = validate_agent_output(current_agent.name, content)
 
-                        # Clean up content
-                        if content.startswith(f"{current_agent.name}:"):
-                            content = content[len(current_agent.name)+1:].strip()
+                            # Clean up content
+                            if content.startswith(f"{current_agent.name}:"):
+                                content = content[len(current_agent.name)+1:].strip()
+
+                            if content:
+                                break  # Got content, exit retry loop
+                            logger.warning(f"👥 [MULTI-AGENT] Empty response from {current_agent.name}, retry {retry + 1}/2")
 
                         if not content:
-                            logger.warning(f"👥 [MULTI-AGENT] Empty content from {current_agent.name}, skipping")
+                            logger.warning(f"👥 [MULTI-AGENT] Empty content from {current_agent.name} after retries, skipping")
                             continue
 
                         # Determine message type
