@@ -338,6 +338,30 @@ Files modified:
 
 ---
 
+## GPT-5-mini Migration (Part 4)
+
+Updated all `gpt-4o-mini` references in `core/tasks.py` to use `gpt-5-mini` with proper parameters for reasoning models:
+
+| Task/Function | Changes |
+|--------------|---------|
+| `score_and_promote_dreams` (actionability) | `gpt-5-mini`, `max_completion_tokens=50` |
+| `score_and_promote_dreams` (relevance) | `gpt-5-mini`, `max_completion_tokens=100` |
+| `generate_directed_dreams` (content) | `gpt-5-mini`, `max_completion_tokens=500` |
+| `generate_directed_dreams` (title) | `gpt-5-mini`, `max_completion_tokens=50` |
+| `process_approved_dreams` | `gpt-5-mini`, `max_completion_tokens=800` |
+| `_execute_feature_implementation` | `gpt-5-mini`, `max_completion_tokens=2500` |
+| `_execute_content_implementation` | `gpt-5-mini`, `max_completion_tokens=2500` |
+| `_execute_research_implementation` | `gpt-5-mini`, `max_completion_tokens=2500` |
+| `_execute_experiment_implementation` | `gpt-5-mini`, `max_completion_tokens=2500` |
+| `_execute_generic_implementation` | `gpt-5-mini`, `max_completion_tokens=2500` |
+
+**Key changes for reasoning models:**
+- Changed `max_tokens` → `max_completion_tokens`
+- Removed `temperature` parameter (not supported)
+- Increased token limits to account for internal reasoning + output
+
+---
+
 ## What's Next (Session 369)
 
 ### Option A: Frontend UI Integration
