@@ -1,43 +1,47 @@
 # Start Next Session Here
 
-**Last Session:** 357 - Mythology Validation + Learning Cycle Fix
+**Last Session:** 358 - Enhanced Delta Detection
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | Agents Tab FULLY WORKING | Learning ACTIVE
+**Status:** 102 spiders | 36 categories | 79 agents | Semantic Similarity ACTIVE | Learning SMARTER
 
 ---
 
-## What Happened in Session 357
+## What Happened in Session 358
 
-### Part 1: Mythology Validation for Agent-to-Agent Communication
+### Enhanced Delta Detection for Agent Learning
 
-Added mythology validation to prevent agents from hallucinating unrealistic claims when communicating with each other.
+Implemented semantic similarity using OpenAI embeddings + cosine similarity to improve duplicate detection in the agent learning cycle.
 
-**Changes Made:**
-1. **Agent Conversations** - Added mythology validation after LLM response (line 3877)
-2. **Agent Dreams** - Intentionally NOT validated (they're meant to be creative)
-3. **Hive Mind** - Already validated in Session 356
+**Problem:**
+- Exact title matching missed semantic duplicates
+- "AI Content Tools" vs "Content Creation AI Tools" = treated as different
 
-**Validation Coverage:**
+**Solution:**
+- Created `KnowledgeSimilarityService` in `core/services/knowledge_similarity.py`
+- Uses OpenAI `text-embedding-3-small` for embeddings
+- Cosine similarity for comparison
+- 80% threshold = duplicate (configurable)
 
-| Feature | Validated? | Reason |
-|---------|------------|--------|
-| Hive Mind | Yes | Problem-solving should be grounded |
-| Conversations | Yes | Discussions should be factual |
-| Dreams | No | Intentionally creative/speculative |
+**Thresholds:**
+| Score | Classification | Action |
+|-------|---------------|--------|
+| 0.90+ | Very Similar | Skip (almost identical) |
+| 0.80+ | Similar | Skip (same topic) |
+| 0.70+ | Related | Allow (distinct) |
+| < 0.70 | Not Similar | Allow (new) |
 
-### Part 2: Learning Cycle Fix
+**Testing Results:**
+- Exact match: `is_similar=True, score=0.8124`
+- Modified title: `is_similar=False, score=0.7029`
 
-Fixed Live Agent Learning Activity not updating (was showing 10+ hours old data).
+---
 
-**Root Causes Fixed:**
-1. **Restrictive knowledge types** - Only 2-3 types per connection (expanded to 10)
-2. **Crude duplicate detection** - 30-char prefix matching (changed to full title matching)
+## Session 357 Summary
 
-**Knowledge Types Now Shared:**
-- `trend`, `opportunity`, `market`, `user_behavior`, `content_idea`
-- `tool_discovery`, `pricing`, `research`, `insight`, `strategy`
+### Mythology Validation + Learning Cycle Fix
 
-**Result:** 12+ new transfers generated, learning activity now shows fresh data
+1. **Mythology Validation** - Agent Conversations now validated (Dreams exempt)
+2. **Learning Cycle Fix** - Expanded knowledge types (10), improved duplicate detection
 
 ---
 
@@ -107,17 +111,17 @@ curl -s http://localhost:8000/api/agent-evolution/ | python3 -m json.tool
 
 ---
 
-## Key Files Changed in Session 357
+## Key Files Changed in Session 358
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Mythology validation, expanded knowledge types (10), improved duplicate detection |
-| `ai_core/templates/ai_image_studio.html` | Fixed duplicate "Total Agents" → changed to "Hive Sessions" |
-| `docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md` | Session documentation |
+| `core/services/knowledge_similarity.py` | NEW: Semantic similarity service (310 lines) |
+| `core/tasks.py` | Integrated semantic similarity into learning cycle |
+| `docs/handoffs/SESSION_358_ENHANCED_DELTA_DETECTION.md` | Session documentation |
 
 ---
 
-## What's Next (Session 358)
+## What's Next (Session 359)
 
 ### Remaining Items from Session 356:
 1. **Agent Conversations API** - `/api/agent-conversations/` returns empty (investigate)
@@ -152,6 +156,6 @@ Agent Dreams:
 
 ## Related Documentation
 
-- `docs/handoffs/SESSION_356_AGENTS_TAB_COMPLETE.md` - Previous session
-- `docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md` - This session
-- `docs/handoffs/SESSION_355_MYTHOLOGY_INTEGRATION.md` - Mythology system design
+- `docs/handoffs/SESSION_358_ENHANCED_DELTA_DETECTION.md` - This session
+- `docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md` - Previous session
+- `docs/handoffs/SESSION_356_AGENTS_TAB_COMPLETE.md` - Agents Tab complete
