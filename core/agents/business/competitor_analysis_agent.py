@@ -286,6 +286,7 @@ If asked to create content, explain you can only research and suggest using the 
         self._spider_service = None
         self._semantic_search = None
         self._unified_search = None
+        self._agent_intelligence = None  # Session 351: Agent intelligence context
 
     @property
     def spider_service(self):
@@ -310,6 +311,14 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.unified_intelligence_search import get_unified_intelligence_search
             self._unified_search = get_unified_intelligence_search()
         return self._unified_search
+
+    @property
+    def agent_intelligence(self):
+        """Session 351: Lazy-load Agent Intelligence Context Service."""
+        if self._agent_intelligence is None:
+            from core.services.agent_intelligence_context import get_agent_intelligence_context
+            self._agent_intelligence = get_agent_intelligence_context()
+        return self._agent_intelligence
 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
@@ -393,17 +402,18 @@ If asked to create content, explain you can only research and suggest using the 
     def _check_business_viability(self, task: str) -> Dict[str, Any]:
         """
         Session 350: "Idiot Protector" - Check if business idea is viable.
+        Session 351: Enhanced with improvement suggestions and pivot ideas.
 
         Uses GPT to quickly assess if the business idea is:
         1. Viable - Proceed normally
-        2. Questionable - Add warning but proceed
-        3. Absurd/Joke - Strong warning, still proceed (user might be testing)
+        2. Questionable - Add warning but proceed with suggestions
+        3. Absurd/Joke - Strong warning with pivot ideas
 
         Args:
             task: The business idea or research request
 
         Returns:
-            Dict with viability_score (0-100), assessment, warning (if any)
+            Dict with viability_score (0-100), assessment, improvement_suggestions, pivot_ideas
         """
         try:
             from openai import OpenAI
@@ -419,29 +429,48 @@ Score from 0-100:
 - 20-49: Highly impractical or likely to fail
 - 0-19: Joke/absurd/impossible (e.g., "selling air", "restaurant for invisible food")
 
+IMPORTANT: For ANY score below 80, provide actionable improvement suggestions.
+For scores below 50, also provide pivot ideas (alternative business concepts).
+
 Respond in JSON format:
 {{
     "viability_score": <0-100>,
     "assessment": "<one sentence assessment>",
     "is_joke": <true/false>,
+    "key_concerns": ["<concern 1>", "<concern 2>"],
+    "improvement_suggestions": [
+        "<specific actionable suggestion 1>",
+        "<specific actionable suggestion 2>",
+        "<specific actionable suggestion 3>"
+    ],
+    "pivot_ideas": [
+        "<alternative business concept 1>",
+        "<alternative business concept 2>"
+    ],
+    "target_market_tip": "<suggestion for better target market if applicable>",
     "warning": "<warning message if score < 50, otherwise null>",
-    "proceed": <true/false - always true, we analyze anyway>
+    "proceed": true
 }}
 
-Be direct and honest. Don't sugarcoat absurd ideas."""
+Be constructive! Even bad ideas often have a kernel of something useful.
+For questionable ideas, help them become viable.
+For absurd ideas, suggest what realistic version might work."""
 
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": check_prompt}],
                 temperature=0.3,
-                max_tokens=200,
+                max_tokens=500,  # Increased for improvement suggestions
                 response_format={"type": "json_object"}
             )
 
             result = json.loads(response.choices[0].message.content)
             result['proceed'] = True  # Always proceed - we're warning, not blocking
 
-            logger.info(f"Viability check: score={result.get('viability_score')}, joke={result.get('is_joke')}")
+            logger.info(
+                f"Viability check: score={result.get('viability_score')}, "
+                f"suggestions={len(result.get('improvement_suggestions', []))}"
+            )
 
             return result
 
@@ -451,6 +480,10 @@ Be direct and honest. Don't sugarcoat absurd ideas."""
                 'viability_score': 50,
                 'assessment': 'Unable to assess viability',
                 'is_joke': False,
+                'key_concerns': [],
+                'improvement_suggestions': [],
+                'pivot_ideas': [],
+                'target_market_tip': None,
                 'warning': None,
                 'proceed': True
             }
@@ -486,20 +519,85 @@ Be direct and honest. Don't sugarcoat absurd ideas."""
                 # Session 303: Store current task for tool access
                 self._current_task = task
 
-                # Session 350: "Idiot Protector" - Check business viability
+                # Session 350/352: "Idiot Protector" - Check business viability FIRST
+                # Session 352: Stop early for low scores to save API costs and give helpful feedback
                 viability = self._check_business_viability(task)
-                viability_warning = None
-                if viability.get('viability_score', 100) < 50:
-                    viability_warning = viability.get('warning') or viability.get('assessment')
-                    if viability.get('is_joke'):
-                        viability_warning = f"⚠️ This appears to be a joke or highly impractical idea. {viability_warning}"
+                viability_score = viability.get('viability_score', 100)
+
+                if viability_score < 50:
+                    # Early exit with constructive feedback - don't waste research on bad ideas
                     self.record_decision(
                         decision_type="viability_check",
-                        action="Flagged low viability business idea",
-                        reasoning=f"Score: {viability.get('viability_score')}, Assessment: {viability.get('assessment')}",
+                        action="Stopped research due to low viability",
+                        reasoning=f"Score: {viability_score}, Assessment: {viability.get('assessment')}",
                         confidence=0.85
                     )
-                    logger.warning(f"Low viability idea detected (score={viability.get('viability_score')}): {task[:50]}...")
+                    logger.warning(f"Low viability idea (score={viability_score}), returning early: {task[:50]}...")
+
+                    # Build helpful feedback message
+                    feedback_parts = []
+                    feedback_parts.append(f"## Business Idea Viability Check: {viability_score}/100")
+                    feedback_parts.append(f"\n**Assessment:** {viability.get('assessment', 'This idea needs significant improvement.')}")
+
+                    if viability.get('is_joke'):
+                        feedback_parts.append("\n⚠️ *This appears to be a joke or highly impractical concept.*")
+
+                    # Key concerns
+                    key_concerns = viability.get('key_concerns', [])
+                    if key_concerns:
+                        feedback_parts.append("\n### Key Concerns")
+                        for concern in key_concerns[:4]:
+                            feedback_parts.append(f"- {concern}")
+
+                    # Improvement suggestions
+                    suggestions = viability.get('improvement_suggestions', [])
+                    if suggestions:
+                        feedback_parts.append("\n### How to Improve This Idea")
+                        for i, suggestion in enumerate(suggestions[:5], 1):
+                            feedback_parts.append(f"{i}. {suggestion}")
+
+                    # Pivot ideas
+                    pivot_ideas = viability.get('pivot_ideas', [])
+                    if pivot_ideas:
+                        feedback_parts.append("\n### Alternative Business Ideas to Consider")
+                        for pivot in pivot_ideas[:3]:
+                            feedback_parts.append(f"- {pivot}")
+
+                    # Target market tip
+                    market_tip = viability.get('target_market_tip')
+                    if market_tip:
+                        feedback_parts.append(f"\n### Target Market Tip\n{market_tip}")
+
+                    feedback_parts.append("\n---\n*Refine your idea based on the suggestions above and try again!*")
+
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    return AgentResult(
+                        success=True,  # Not an error, just early feedback
+                        message="\n".join(feedback_parts),
+                        data={
+                            'type': 'viability_feedback',
+                            'viability': {
+                                'score': viability_score,
+                                'assessment': viability.get('assessment'),
+                                'is_joke': viability.get('is_joke', False),
+                                'key_concerns': key_concerns,
+                                'improvement_suggestions': suggestions,
+                                'pivot_ideas': pivot_ideas,
+                                'target_market_tip': market_tip
+                            },
+                            'query': task,
+                            'early_exit': True
+                        },
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
+                # For scores 50-79, add warning but continue with research
+                viability_warning = None
+                if viability_score < 80:
+                    viability_warning = viability.get('warning') or viability.get('assessment')
+                    logger.info(f"Moderate viability idea (score={viability_score}), proceeding with warning: {task[:50]}...")
 
                 # Session 303: Auto-trigger spider refresh for fresh data
                 try:
@@ -540,6 +638,36 @@ Be direct and honest. Don't sugarcoat absurd ideas."""
                 # Session 303: Inject prior research context if available
                 if prior_context:
                     full_prompt += f"\n\n{prior_context}\n"
+
+                # Session 351: Inject Agent Collective Intelligence
+                # This brings in: SharedKnowledge, KnowledgeTransfers, AgentConversations, BoardroomPolicies
+                try:
+                    # Get domain from project context if available
+                    domain = project_context.get('primary_domain') if project_context else None
+                    agent_intel_context = self.agent_intelligence.get_context_for_research(
+                        topic=task,
+                        domain=domain,
+                        max_items_per_category=5
+                    )
+                    agent_intel_prompt = agent_intel_context.to_prompt_context()
+                    if agent_intel_prompt:
+                        full_prompt += f"\n{agent_intel_prompt}"
+                        logger.info(
+                            f"🧠 [Session 351] Injected agent intelligence: "
+                            f"{agent_intel_context.total_knowledge_items} knowledge, "
+                            f"{agent_intel_context.total_conversations} conversations, "
+                            f"{agent_intel_context.total_policies} policies"
+                        )
+                        self.record_decision(
+                            decision_type="context_injection",
+                            action="Injected agent collective intelligence",
+                            reasoning=f"Added {agent_intel_context.total_knowledge_items} knowledge items, "
+                                      f"{agent_intel_context.total_conversations} conversation insights, "
+                                      f"{agent_intel_context.total_policies} canonical policies",
+                            confidence=0.95
+                        )
+                except Exception as e:
+                    logger.warning(f"Agent intelligence injection failed (continuing anyway): {e}")
 
                 # Session 350: Add domain-aware spider targeting instructions
                 domain_instructions = ""
@@ -629,7 +757,7 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                     except Exception as e:
                         logger.warning(f"Failed to save competitor analysis: {e}")
 
-                    # Session 350: Include viability warning and domain relevance in result
+                    # Session 352: Simplified - scores < 50 already return early with full feedback
                     result_message = f"Competitive analysis completed with {len(all_competitor_data)} data sources"
 
                     # Add domain relevance info to message
@@ -637,8 +765,9 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                     if domain_relevance.get('score', 100) < 30:
                         result_message += f"\n⚠️ DATA QUALITY: {synthesis.get('data_quality_warning', 'Limited domain-specific data found.')}"
 
+                    # Show warning for scores 50-79 (low scores already returned early)
                     if viability_warning:
-                        result_message = f"⚠️ VIABILITY WARNING: {viability_warning}\n\n{result_message}"
+                        result_message = f"⚠️ Note: {viability_warning}\n\n{result_message}"
 
                     result = AgentResult(
                         success=True,
@@ -648,11 +777,10 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                             'raw_data': all_competitor_data,
                             'query': task,
                             'saved_id': str(saved_result.id) if saved_result else None,
-                            # Session 350: Viability assessment
+                            # Session 352: Include viability for scores 50-79 (< 50 exits early)
                             'viability': {
-                                'score': viability.get('viability_score', 100),
+                                'score': viability_score,
                                 'assessment': viability.get('assessment'),
-                                'is_joke': viability.get('is_joke', False),
                                 'warning': viability_warning
                             } if viability_warning else None,
                             # Session 350: Domain relevance tracking
