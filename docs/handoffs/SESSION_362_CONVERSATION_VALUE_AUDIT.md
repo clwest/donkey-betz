@@ -198,9 +198,22 @@ Add `quality_score` field to AgentDecisionSummary based on:
 | File | Changes |
 |------|---------|
 | `core/models_unified_system.py` | Added `quality_score` field, `calculate_quality_score()`, `update_quality_score()` |
-| `core/tasks.py` | Added `auto_promote_decisions` Celery task |
+| `core/tasks.py` | Added `auto_promote_decisions` task + data source attribution in conversations |
 | `core/celery.py` | Added `auto-promote-decisions` to Beat schedule |
+| `core/settings.py` | Added `auto-promote-decisions` and `multi-agent-panel-cycle` to CELERY_BEAT_SCHEDULE |
 | `core/migrations/0069_*` | Migration for quality_score field |
+
+## Additional Fix: Data Source Attribution
+
+Agents were saying "11 data points" without explaining WHERE the data came from.
+
+**Before:** "my review of the 11 data points shows worrying gaps"
+**After:** "my review of the 11 data points from the Notion spider shows worrying gaps"
+
+Changes to both `run_agent_conversation()` and `run_multi_agent_conversation()`:
+- Added `source_spider_names` to knowledge context
+- Added `spider_category` to knowledge context
+- Added guideline: "When citing data, mention the source"
 
 ---
 
