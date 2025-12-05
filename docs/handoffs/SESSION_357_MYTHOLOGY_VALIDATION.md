@@ -1,13 +1,14 @@
-# Session 357: Mythology Validation for Agent Communication
+# Session 357: Mythology Validation + Learning Cycle Fix
 
 **Date:** December 5, 2025
-**Status:** COMPLETE - Agent-to-agent communication now mythology-validated
+**Status:** COMPLETE - Mythology validated + Learning cycle fixed
 
 ---
 
 ## Summary
 
-Added mythology validation to prevent agents from hallucinating unrealistic claims when communicating with each other. This ensures the Hive Mind and Conversation features produce grounded, factual outputs while preserving creative freedom in Dreams.
+1. Added mythology validation to prevent agents from hallucinating unrealistic claims when communicating with each other
+2. Fixed Live Agent Learning Activity not updating - expanded knowledge types and improved duplicate detection
 
 ---
 
@@ -108,7 +109,42 @@ Applying mythology validation would suppress the creative, imaginative nature of
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added mythology validation to `run_agent_conversation`, added exemption comment to `generate_agent_dreams` |
+| `core/tasks.py` | Mythology validation in `run_agent_conversation`, exemption in `generate_agent_dreams`, expanded knowledge types, improved duplicate detection |
+| `ai_core/templates/ai_image_studio.html` | Fixed duplicate "Total Agents" cards - changed second to "Hive Sessions" |
+
+---
+
+## Phase 2: Learning Cycle Fix
+
+### Problem
+Live Agent Learning Activity was not updating - last activity shown was 10+ hours ago despite the learning cycle running.
+
+### Root Causes
+1. **Restrictive knowledge types**: Only 2-3 types per connection (out of 10+ available)
+2. **Crude duplicate detection**: Used 30-char prefix matching which blocked too many transfers
+
+### Fixes Applied
+
+#### 1. Expanded Default Knowledge Types
+**File:** `core/tasks.py` (line 2883-2891)
+
+From 3 types to 10:
+- `trend`, `opportunity`, `market`, `user_behavior`, `content_idea`
+- `tool_discovery`, `pricing`, `research`, `insight`, `strategy`
+
+#### 2. Improved Duplicate Detection
+**File:** `core/tasks.py` (line 2893-2910)
+
+- Full title matching instead of 30-char prefix
+- Strips `[Learned]` prefixes before comparing
+- Uses exact match OR `[Learned]` version match
+
+#### 3. Updated All 37 Connections
+All `AgentLearningConnection` records updated to share all 10 knowledge types.
+
+### Result
+- 12+ new knowledge transfers generated in testing
+- Learning activity now shows fresh data
 
 ---
 
