@@ -325,6 +325,20 @@ app.conf.beat_schedule = {
             'expires': 300,  # 5 minutes
         }
     },
+    # Session 360/361: Multi-Agent Panel Conversations
+    # Panel discussions with 3-5 agents for richer insights
+    'multi-agent-panel-cycle': {
+        'task': 'core.tasks.run_multi_agent_conversation',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes - panels take longer
+        'options': {
+            'expires': 1200,  # 20 minutes
+        },
+        'kwargs': {
+            'max_conversations': 1,  # 1 panel per cycle
+            'participants_per_conversation': 4,  # 4 agents per panel
+            'max_rounds': 3,  # 3 discussion rounds
+        }
+    },
     'broadcast-conversation-status': {
         'task': 'core.tasks.broadcast_conversation_status',
         'schedule': 120.0,  # Every 2 minutes - show recent conversations
