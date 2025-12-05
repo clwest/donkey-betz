@@ -6,6 +6,7 @@ Session 293: Business Research Extension
 Session 303: Unified Intelligence Search + Auto Spider Refresh
 Session 304: Learning Infrastructure Integration
 Session 325: Unified Spider Network - Same semantic search as CompetitorAnalysisAgent
+Session 354: Mythology Validation - Prevents unrealistic claims in research output
 
 This agent researches potential customers for a business idea.
 It uses spider data (Reddit, HackerNews, YouTube, tech news) and web search to:
@@ -750,7 +751,8 @@ For absurd ideas, suggest what realistic version might work."""
                 )
 
                 # Build prompt with context
-                full_prompt = self._build_prompt(enhanced_task, scifi_context, spider_context)
+                # Session 354: Use mythology-guarded prompt to prevent unrealistic claims
+                full_prompt = self._build_prompt_with_mythology_guard(enhanced_task, scifi_context, spider_context)
 
                 # Session 303: Inject prior research context if available
                 if prior_context:
@@ -912,6 +914,9 @@ Return comprehensive customer research with personas, pain points, and real quot
                         decisions_made=self._tt_decision_count,
                         tool_calls=tool_calls_made
                     )
+
+                    # Session 354: Validate output for mythology (unrealistic claims)
+                    result = self._validate_output(result)
 
                     # === Session 304: Learning Infrastructure ===
                     self._record_learning_outcome(

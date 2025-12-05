@@ -745,7 +745,8 @@ def dashboard_stats(request):
         total_agents = legacy_agents + clean_agents
 
         # === DATA STATS ===
-        from core.models_unified_system import SpiderData, Collaboration, CollaborationSession, AgentMemory, AgentKnowledgeSource, AgentExecution
+        from core.models_unified_system import SpiderData, AgentMemory, AgentKnowledgeSource
+        from core.models_unified_system import AgentConversation, HiveMindSession, KnowledgeTransfer
 
         # Total data points
         total_data_points = SpiderData.objects.count()
@@ -757,11 +758,14 @@ def dashboard_stats(request):
         # Success rate (approximate based on recent runs)
         success_rate = 98
 
-        # === SESSION 346: AGENT LEARNING STATS ===
+        # === SESSION 356: AGENT LEARNING STATS (using correct models) ===
         try:
-            collaborations_count = Collaboration.objects.count()
-            collaboration_sessions_count = CollaborationSession.objects.count()
-            learning_events_count = AgentExecution.objects.count()
+            # AgentConversation represents agent-to-agent collaboration
+            collaborations_count = AgentConversation.objects.count()
+            # HiveMindSession represents collaborative problem-solving sessions
+            collaboration_sessions_count = HiveMindSession.objects.count()
+            # KnowledgeTransfer represents learning events (agent teaching agent)
+            learning_events_count = KnowledgeTransfer.objects.count()
             agent_memories_count = AgentMemory.objects.count()
             knowledge_sources_count = AgentKnowledgeSource.objects.count()
         except Exception:

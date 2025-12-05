@@ -216,7 +216,14 @@ def project_detail(request, project_id):
                 'has_features': has_features,
                 'feature_count': len(key_features),
                 'agent_count': len(agents_used)
-            }
+            },
+            # Session 354: Project Learning Loop
+            'learning_enabled': project.learning_enabled,
+            'learning_frequency': project.learning_frequency,
+            'learning_topics': project.learning_topics or [],
+            'last_learning_run': project.last_learning_run.isoformat() if project.last_learning_run else None,
+            'next_learning_run': project.next_learning_run.isoformat() if project.next_learning_run else None,
+            'learning_history': project.learning_history or [],
         }
 
         logger.info(f"📄 Loaded project details: {project.project_name}")
@@ -1933,6 +1940,203 @@ def get_available_styles(request):
 
     except Exception as e:
         logger.error(f"❌ Error getting available styles: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# Session 354: Project Learning Loop APIs
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_project_learning(request, project_id):
+    """
+    Enable/disable continuous learning for a project.
+
+    Session 354: Projects can autonomously learn and track their domain over time.
+
+    POST /api/projects/<project_id>/learning/toggle/
+
+    Request Body:
+    {
+        "enabled": true,
+        "frequency": "weekly",  // daily, weekly, biweekly, monthly
+        "topics": ["coffee trends", "specialty drinks"]  // optional, auto-detected if empty
+    }
+
+    Returns:
+    {
+        "success": true,
+        "learning_enabled": true,
+        "learning_frequency": "weekly",
+        "learning_topics": ["coffee trends"],
+        "next_run": "2025-12-12T06:00:00Z"
+    }
+    """
+    from django.utils import timezone
+    from django.shortcuts import get_object_or_404
+    from datetime import timedelta
+
+    try:
+        user = request.user
+        project = get_object_or_404(PartnershipProject, id=project_id, user=user)
+
+        enabled = request.data.get('enabled', False)
+        frequency = request.data.get('frequency', 'weekly')
+        topics = request.data.get('topics', [])
+
+        # Validate frequency
+        valid_frequencies = ['daily', 'weekly', 'biweekly', 'monthly']
+        if frequency not in valid_frequencies:
+            return Response({
+                'success': False,
+                'error': f'Invalid frequency. Must be one of: {valid_frequencies}'
+            }, status=400)
+
+        project.learning_enabled = enabled
+        project.learning_frequency = frequency
+        project.learning_topics = topics if topics else []
+
+        if enabled and not project.next_learning_run:
+            # Schedule first run based on frequency
+            freq_map = {'daily': 1, 'weekly': 7, 'biweekly': 14, 'monthly': 30}
+            days = freq_map.get(frequency, 7)
+            project.next_learning_run = timezone.now() + timedelta(days=days)
+
+        project.save()
+
+        logger.info(f"🧠 Learning {'enabled' if enabled else 'disabled'} for project {project.project_name}")
+
+        return Response({
+            'success': True,
+            'learning_enabled': project.learning_enabled,
+            'learning_frequency': project.learning_frequency,
+            'learning_topics': project.learning_topics,
+            'next_run': project.next_learning_run.isoformat() if project.next_learning_run else None,
+            'last_run': project.last_learning_run.isoformat() if project.last_learning_run else None
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error toggling project learning: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_project_learning_status(request, project_id):
+    """
+    Get the learning status and history for a project.
+
+    Session 354: View learning configuration and history.
+
+    GET /api/projects/<project_id>/learning/status/
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "learning_enabled": true,
+            "learning_frequency": "weekly",
+            "learning_topics": ["coffee trends"],
+            "last_run": "2025-12-05T06:00:00Z",
+            "next_run": "2025-12-12T06:00:00Z",
+            "history": [
+                {
+                    "date": "2025-12-05T06:00:00Z",
+                    "findings_count": 15,
+                    "new_trends": ["mushroom coffee", "oat milk"],
+                    "deltas": {...}
+                }
+            ],
+            "total_learning_runs": 5,
+            "total_trends_discovered": 23
+        }
+    }
+    """
+    from django.shortcuts import get_object_or_404
+
+    try:
+        user = request.user
+        project = get_object_or_404(PartnershipProject, id=project_id, user=user)
+
+        # Calculate stats from history
+        history = project.learning_history or []
+        total_trends = sum(
+            len(entry.get('new_trends', []))
+            for entry in history
+        )
+
+        return Response({
+            'success': True,
+            'data': {
+                'learning_enabled': project.learning_enabled,
+                'learning_frequency': project.learning_frequency,
+                'learning_topics': project.learning_topics,
+                'last_run': project.last_learning_run.isoformat() if project.last_learning_run else None,
+                'next_run': project.next_learning_run.isoformat() if project.next_learning_run else None,
+                'history': history[-10:],  # Last 10 runs
+                'total_learning_runs': len(history),
+                'total_trends_discovered': total_trends
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error getting project learning status: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_project_learning(request, project_id):
+    """
+    Manually trigger a learning cycle for a project.
+
+    Session 354: Run learning immediately instead of waiting for schedule.
+
+    POST /api/projects/<project_id>/learning/trigger/
+
+    Returns:
+    {
+        "success": true,
+        "message": "Learning cycle queued",
+        "task_id": "celery-task-id"
+    }
+    """
+    from django.shortcuts import get_object_or_404
+
+    try:
+        user = request.user
+        project = get_object_or_404(PartnershipProject, id=project_id, user=user)
+
+        if not project.learning_enabled:
+            return Response({
+                'success': False,
+                'error': 'Learning is not enabled for this project. Enable it first.'
+            }, status=400)
+
+        # Queue the learning task
+        from core.tasks import run_single_project_learning
+        result = run_single_project_learning.delay(str(project.id))
+
+        logger.info(f"🧠 Manual learning cycle triggered for project {project.project_name}")
+
+        return Response({
+            'success': True,
+            'message': 'Learning cycle queued',
+            'task_id': result.id
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error triggering project learning: {e}")
         return Response({
             'success': False,
             'error': str(e)

@@ -428,6 +428,15 @@ app.conf.beat_schedule = {
             'expires': 21600,  # 6 hours
         }
     },
+    # Session 354: Project Learning Loop
+    # Projects autonomously learn and track their domain over time
+    'project-learning-cycle': {
+        'task': 'core.tasks.run_project_learning_cycle',
+        'schedule': crontab(hour=6, minute=0),  # Daily at 6 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration

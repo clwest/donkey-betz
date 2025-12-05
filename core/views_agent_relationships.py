@@ -99,15 +99,23 @@ def get_relationships_overview(request):
                 'leader': leader_name,
             })
 
+        # Session 356: Use relationship_distribution for alliance/rivalry counts
+        # The separate Alliance/Rivalry models are rarely used - AgentRelationship.relationship_type is the source of truth
+        alliance_count = relationship_distribution.get('alliance', 0)
+        rivalry_count = relationship_distribution.get('rivalry', 0)
+
         return JsonResponse({
             'success': True,
             'relationship_distribution': relationship_distribution,
             'total_relationships': AgentRelationship.objects.count(),
-            'total_alliances': Alliance.objects.filter(is_active=True).count(),
-            'total_rivalries': Rivalry.objects.filter(is_active=True).count(),
+            'total_alliances': alliance_count,  # From relationship_type field
+            'total_rivalries': rivalry_count,   # From relationship_type field
+            'alliances': alliance_count,        # Also expose as 'alliances' for UI compatibility
+            'rivalries': rivalry_count,         # Also expose as 'rivalries' for UI compatibility
+            'total': AgentRelationship.objects.count(),  # For UI compatibility
             'relationships': relationships_data,
-            'alliances': alliances_data,
-            'rivalries': rivalries_data,
+            'alliances_data': alliances_data,   # Rename to avoid conflict
+            'rivalries_data': rivalries_data,   # Rename to avoid conflict
         })
 
     except Exception as e:

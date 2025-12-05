@@ -5,6 +5,7 @@ Base Agent Class for Clean Architecture
 Session 268: Phase 1 - Foundation
 Session 304: Added Learning Infrastructure Hooks
 Session 334: Added Project Context Support - All agents can now work within projects
+Session 354: Added Mythology Validation - All agents validate outputs for unrealistic claims
 
 This is the abstract base class for all clean architecture agents.
 Each agent inherits from this class and TimeTravelMixin for debugging.
@@ -16,6 +17,7 @@ Key Features:
 4. Prompt building helpers that combine context sources
 5. Learning hooks for memory, evolution, and knowledge sharing (Session 304)
 6. Project context support - agents can enhance prompts with project info (Session 334)
+7. Mythology validation - outputs checked for unrealistic claims (Session 354)
 
 Usage:
     class MyAgent(BaseAgent):
@@ -32,6 +34,9 @@ Usage:
             # Implementation
             # After execution, call learning hooks:
             # self._record_learning_outcome(result, task, context)
+            #
+            # Validate output for mythology (called automatically via _validate_output):
+            # validated_result = self._validate_output(result)
             pass
 """
 
@@ -112,6 +117,7 @@ class BaseAgent(ABC, TimeTravelMixin):
         self._learning_loop = None
         self._memory_service = None
         self._agent_model = None  # Cached Agent model instance
+        self._mythology_enforcer = None  # Session 354: Mythology validation
 
     # ==================== Lazy-Loaded Services ====================
 
@@ -162,6 +168,25 @@ class BaseAgent(ABC, TimeTravelMixin):
             except Exception as e:
                 logger.warning(f"Could not get/create Agent model: {e}")
         return self._agent_model
+
+    @property
+    def mythology_enforcer(self):
+        """
+        Session 354: Lazy-load MythologyEnforcer for reality validation.
+
+        Validates agent outputs to prevent unrealistic promises like:
+        - Financial myths ($10k/day guaranteed)
+        - Technical myths (100% accurate, never fails)
+        - Time myths (instant results)
+        - Dangerous myths (medical claims)
+        """
+        if self._mythology_enforcer is None:
+            try:
+                from ai_core.agents.mythology_validator import mythology_enforcer
+                self._mythology_enforcer = mythology_enforcer
+            except ImportError:
+                logger.warning("MythologyEnforcer not available")
+        return self._mythology_enforcer
 
     # ==================== Abstract Methods ====================
 
@@ -368,6 +393,136 @@ class BaseAgent(ABC, TimeTravelMixin):
             True if valid, False otherwise
         """
         return bool(task and task.strip())
+
+    # ==================== Mythology Validation (Session 354) ====================
+
+    def _validate_output(self, result: 'AgentResult') -> 'AgentResult':
+        """
+        Session 354: Validate agent output for unrealistic claims.
+
+        Checks the result message and data for mythology patterns like:
+        - Financial myths ($10k/day, guaranteed income)
+        - Technical myths (100% accurate, never fails)
+        - Time myths (instant results, learn in hours)
+        - Dangerous myths (medical claims, legal advice)
+
+        If violations are found, the output is corrected and flagged.
+
+        Args:
+            result: The AgentResult to validate
+
+        Returns:
+            Validated (and possibly corrected) AgentResult
+        """
+        if not self.mythology_enforcer:
+            return result
+
+        try:
+            # Validate the message
+            if result.message:
+                validated = self.mythology_enforcer.enforce(self.name, result.message)
+
+                if validated.get('mythology_corrected'):
+                    logger.warning(
+                        f"🚨 Mythology corrected in {self.name}: "
+                        f"{validated.get('violations', 0)} violations"
+                    )
+                    result.message = validated.get('result', result.message)
+                    result.data['mythology_corrected'] = True
+                    result.data['mythology_violations'] = validated.get('violations', 0)
+                    result.data['mythology_warning'] = validated.get('warning', '')
+
+            # Also validate any text in data
+            if result.data:
+                self._validate_data_dict(result.data)
+
+            return result
+
+        except Exception as e:
+            logger.warning(f"Mythology validation failed: {e}")
+            return result
+
+    def _validate_data_dict(self, data: Dict[str, Any]) -> None:
+        """
+        Session 354: Recursively validate data dict for mythology.
+
+        Modifies the data dict in place if violations are found.
+        """
+        if not self.mythology_enforcer:
+            return
+
+        for key, value in data.items():
+            if isinstance(value, str) and len(value) > 20:
+                validated = self.mythology_enforcer.enforce(self.name, value)
+                if validated.get('mythology_corrected'):
+                    data[key] = validated.get('result', value)
+            elif isinstance(value, dict):
+                self._validate_data_dict(value)
+            elif isinstance(value, list):
+                for i, item in enumerate(value):
+                    if isinstance(item, str) and len(item) > 20:
+                        validated = self.mythology_enforcer.enforce(self.name, item)
+                        if validated.get('mythology_corrected'):
+                            value[i] = validated.get('result', item)
+                    elif isinstance(item, dict):
+                        self._validate_data_dict(item)
+
+    def _guard_prompt(self, prompt: str) -> str:
+        """
+        Session 354: Guard prompt before sending to LLM.
+
+        Injects anti-mythology instructions to prevent the LLM from
+        generating unrealistic claims in the first place.
+
+        Args:
+            prompt: The prompt to guard
+
+        Returns:
+            Guarded prompt with anti-mythology instructions
+        """
+        anti_mythology_instructions = """
+
+## Reality Constraints (IMPORTANT)
+When generating responses, you MUST avoid:
+- Unrealistic financial promises (no "$X per day guaranteed", "risk-free income")
+- Impossible technical claims (no "100% accurate", "never fails", "unlimited")
+- Exaggerated time claims (no "instant results", "learn in hours")
+- Medical/legal claims without qualifications
+- Guarantees of specific outcomes
+
+Always be realistic and honest about capabilities, timelines, and potential results.
+Use phrases like "potential", "may help", "typically", "can vary" instead of absolutes.
+"""
+        # Insert before the task section
+        if "## Task" in prompt:
+            prompt = prompt.replace("## Task", f"{anti_mythology_instructions}\n## Task")
+        else:
+            prompt = prompt + anti_mythology_instructions
+
+        return prompt
+
+    def _build_prompt_with_mythology_guard(
+        self,
+        task: str,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> str:
+        """
+        Session 354: Build prompt with mythology guard included.
+
+        Combines base prompt building with anti-mythology instructions.
+        Use this instead of _build_prompt for full protection.
+
+        Args:
+            task: The user's task
+            scifi_context: Sci-fi system context
+            spider_context: Spider intelligence context
+
+        Returns:
+            Complete prompt string with mythology guard
+        """
+        base_prompt = self._build_prompt(task, scifi_context, spider_context)
+        return self._guard_prompt(base_prompt)
 
     # ==================== Project Context Support (Session 334) ====================
 

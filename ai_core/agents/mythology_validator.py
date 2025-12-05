@@ -54,6 +54,17 @@ class MythologyValidator:
         r'guaranteed\s+(?:approval|acceptance|qualification)',  # Guaranteed approvals
     ]
 
+    # Session 354: Spider data validation - catches unrealistic claims from web sources
+    SPIDER_DATA_MYTHS = [
+        r'(\d{2,})\s*%\s+(?:of|market|growth|increase)',  # Exaggerated percentages (99% market share)
+        r'(?:every|all)\s+(?:business|company|startup)\s+(?:uses?|needs?)',  # Universal claims
+        r'(?:million|billion)s?\s+(?:users?|customers?)\s+(?:in|within)\s+(?:\d+\s+)?(?:days?|weeks?|months?)',  # Unrealistic user growth
+        r'(?:dominate|dominates?|dominated?)\s+(?:the\s+)?(?:market|industry)',  # Domination claims
+        r'(?:no\s+)?competition',  # No competition claims
+        r'(?:first|only)\s+(?:ever|in the world|of its kind)',  # Unique claims
+        r'(?:viral|virality)\s+(?:guaranteed|certain)',  # Viral guarantees
+    ]
+
     def __init__(self):
         """Initialize the validator with myth patterns"""
         self.violation_log = []
@@ -117,6 +128,15 @@ class MythologyValidator:
                     'severity': 'critical'
                 })
 
+        # Session 354: Check for spider data myths (from web sources)
+        for pattern in self.SPIDER_DATA_MYTHS:
+            if re.search(pattern, output_str, re.IGNORECASE):
+                violations.append({
+                    'type': 'spider_data_myth',
+                    'pattern': pattern,
+                    'severity': 'medium'
+                })
+
         if violations:
             self.validation_stats['violations_found'] += len(violations)
             self.log_violation(agent_name, violations)
@@ -174,6 +194,16 @@ class MythologyValidator:
             'dangerous_myth': [
                 (r'(?:cure|heal|fix).*(?:disease|illness|condition)', 'may help with symptoms'),
                 (r'guaranteed\s+', 'potential '),
+            ],
+            # Session 354: Spider data myth corrections
+            'spider_data_myth': [
+                (r'(\d{2,})\s*%\s+(?:of|market)', 'significant market share'),
+                (r'(?:every|all)\s+(?:business|company|startup)\s+(?:uses?|needs?)', 'many businesses use'),
+                (r'(?:million|billion)s?\s+(?:users?|customers?)\s+(?:in|within)', 'rapid user growth'),
+                (r'(?:dominate|dominates?|dominated?)\s+(?:the\s+)?(?:market|industry)', 'has strong market presence'),
+                (r'(?:no\s+)?competition', 'limited direct competition'),
+                (r'(?:first|only)\s+(?:ever|in the world|of its kind)', 'innovative'),
+                (r'(?:viral|virality)\s+(?:guaranteed|certain)', 'viral potential'),
             ]
         }
 
@@ -237,7 +267,8 @@ class MythologyValidator:
             self.FINANCIAL_MYTHS +
             self.TECHNICAL_MYTHS +
             self.TIME_MYTHS +
-            self.DANGEROUS_MYTHS
+            self.DANGEROUS_MYTHS +
+            self.SPIDER_DATA_MYTHS  # Session 354: Include spider data myths
         )
 
         for pattern in all_patterns:

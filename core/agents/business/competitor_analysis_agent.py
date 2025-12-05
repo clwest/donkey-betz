@@ -5,6 +5,7 @@ Competitor Analysis Agent - Business Intelligence
 Session 293: Business Research Extension
 Session 303: Unified Intelligence Search + Auto Spider Refresh
 Session 304: Learning Infrastructure Integration
+Session 354: Mythology Validation - Prevents unrealistic claims in research output
 
 This agent analyzes competitors in a given market/industry.
 It uses web search and spider data to:
@@ -638,7 +639,8 @@ For absurd ideas, suggest what realistic version might work."""
                 )
 
                 # Build prompt with context
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                # Session 354: Use mythology-guarded prompt to prevent unrealistic claims
+                full_prompt = self._build_prompt_with_mythology_guard(task, scifi_context, spider_context)
 
                 # Session 303: Inject prior research context if available
                 if prior_context:
@@ -797,6 +799,9 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                         decisions_made=self._tt_decision_count,
                         tool_calls=tool_calls_made
                     )
+
+                    # Session 354: Validate output for mythology (unrealistic claims)
+                    result = self._validate_output(result)
 
                     # === Session 304: Learning Infrastructure ===
                     # Record outcome for XP and pattern learning
