@@ -4053,6 +4053,432 @@ Guidelines:
         return {'status': 'failed', 'error': str(e)}
 
 
+# ==================== SESSION 360: MULTI-AGENT CONVERSATIONS ====================
+
+
+@shared_task(bind=True, max_retries=2)
+def run_multi_agent_conversation(self, max_conversations: int = 2, participants_per_conversation: int = 4, max_rounds: int = 3):
+    """
+    Session 360: Generate panel-style conversations with 3-5 agents.
+
+    Multiple agents discuss topics together, creating richer insights through
+    diverse perspectives. Each agent takes turns in a round-robin fashion.
+
+    Args:
+        max_conversations: Maximum new panel conversations to start
+        participants_per_conversation: Number of agents per panel (3-5 recommended)
+        max_rounds: Number of complete rounds (each agent speaks once per round)
+
+    Returns:
+        Stats about multi-agent conversations generated
+    """
+    from django.utils import timezone
+    from core.models import (
+        Agent, AgentConversation, ConversationMessage,
+        AgentKnowledgeSource, AgentLearningConnection
+    )
+    import random
+    import openai
+    import os
+
+    logger.info(f"👥 [MULTI-AGENT] Starting multi-agent conversation cycle (participants={participants_per_conversation}, rounds={max_rounds})...")
+
+    try:
+        # Get agents that have knowledge
+        agents_with_knowledge = list(Agent.objects.filter(
+            is_active=True,
+            knowledge_sources__isnull=False
+        ).distinct()[:30])
+
+        min_agents = max(3, participants_per_conversation)
+        if len(agents_with_knowledge) < min_agents:
+            logger.warning(f"👥 [MULTI-AGENT] Need at least {min_agents} agents with knowledge, found {len(agents_with_knowledge)}")
+            return {'status': 'skipped', 'reason': 'insufficient_agents'}
+
+        stats = {
+            'conversations_started': 0,
+            'messages_generated': 0,
+            'insights_discovered': 0,
+            'agents_participated': set(),
+            'avg_participants': 0
+        }
+
+        # Multi-agent conversation templates (panel discussion styles)
+        panel_templates = [
+            {
+                'type': 'roundtable',
+                'tension_level': 'medium',
+                'dynamic': 'Each expert shares their perspective, building on others\' points',
+                'format': 'round_robin',
+                'intro': "Let's have a roundtable discussion on {topic}. Each of us brings unique expertise.",
+                'prompts': {
+                    'first': "As {agent_name} with expertise in {specialty}, I'll start by sharing my perspective on {topic}...",
+                    'respond': "Building on what {prev_agent} said, from my {specialty} background, I'd add...",
+                    'challenge': "I see it differently than {prev_agent}. From {specialty} perspective...",
+                    'synthesize': "Connecting the dots across our perspectives on {topic}..."
+                }
+            },
+            {
+                'type': 'expert_panel',
+                'tension_level': 'medium',
+                'dynamic': 'Experts analyze the topic from their specialized angles',
+                'format': 'round_robin',
+                'intro': "Welcome to our expert panel on {topic}. Let's hear from each specialist.",
+                'prompts': {
+                    'first': "From my expertise in {specialty}, the key insight about {topic} is...",
+                    'respond': "That's a great point, {prev_agent}. Adding the {specialty} perspective...",
+                    'challenge': "I'd push back on that slightly. In {specialty}, we see it as...",
+                    'synthesize': "Looking at {topic} holistically across our expertise areas..."
+                }
+            },
+            {
+                'type': 'brainstorm_session',
+                'tension_level': 'low',
+                'dynamic': 'Creative ideation where all ideas are welcome',
+                'format': 'round_robin',
+                'intro': "Let's brainstorm on {topic}. No idea is too wild - build on each other!",
+                'prompts': {
+                    'first': "Here's an initial idea from my {specialty} background: what if we...",
+                    'respond': "I love that, {prev_agent}! Building on it with {specialty} thinking...",
+                    'challenge': "Wild idea: what if we combined {prev_agent}'s point with...",
+                    'synthesize': "Synthesizing our brainstorm - the most promising directions are..."
+                }
+            },
+            {
+                'type': 'debate_panel',
+                'tension_level': 'high',
+                'dynamic': 'Respectful but vigorous debate with diverse viewpoints',
+                'format': 'round_robin',
+                'intro': "Today we debate {topic}. Make your case and challenge others!",
+                'prompts': {
+                    'first': "I'll argue that {topic} should be approached this way, based on my {specialty} expertise...",
+                    'respond': "While I see {prev_agent}'s point, the {specialty} evidence suggests otherwise...",
+                    'challenge': "I strongly disagree with {prev_agent}. Here's why from {specialty}...",
+                    'synthesize': "Despite our disagreements, the key tensions around {topic} are..."
+                }
+            },
+            {
+                'type': 'strategy_session',
+                'tension_level': 'medium',
+                'dynamic': 'Collaborative problem-solving with action focus',
+                'format': 'round_robin',
+                'intro': "We need to develop a strategy for {topic}. Let's combine our expertise.",
+                'prompts': {
+                    'first': "From {specialty}, the strategic priority for {topic} should be...",
+                    'respond': "Aligning with {prev_agent}, {specialty} suggests we should also...",
+                    'challenge': "I'd prioritize differently than {prev_agent}. {specialty} tells us...",
+                    'synthesize': "Our combined strategy for {topic} should focus on..."
+                }
+            }
+        ]
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        total_participants = 0
+
+        for conv_num in range(max_conversations):
+            # Select participants for this panel
+            num_participants = min(participants_per_conversation, len(agents_with_knowledge))
+            if num_participants < 3:
+                logger.warning("👥 [MULTI-AGENT] Not enough agents for panel")
+                break
+
+            # Select diverse agents (prefer different specializations)
+            panel_agents = []
+            available_agents = agents_with_knowledge.copy()
+            specializations_used = set()
+
+            while len(panel_agents) < num_participants and available_agents:
+                # Try to pick an agent with a new specialization
+                agent = None
+                for a in available_agents:
+                    spec = (a.specialization or 'general').lower()[:20]
+                    if spec not in specializations_used:
+                        agent = a
+                        specializations_used.add(spec)
+                        break
+
+                # If all specializations represented, just pick randomly
+                if agent is None:
+                    agent = random.choice(available_agents)
+
+                panel_agents.append(agent)
+                available_agents.remove(agent)
+
+            if len(panel_agents) < 3:
+                continue
+
+            total_participants += len(panel_agents)
+
+            # Get a knowledge item to discuss
+            moderator = panel_agents[0]
+            moderator_knowledge = AgentKnowledgeSource.objects.filter(
+                agent=moderator
+            ).order_by('-last_updated_at')[:10]
+
+            if not moderator_knowledge.exists():
+                continue
+
+            knowledge_item = random.choice(list(moderator_knowledge))
+            topic = knowledge_item.title or "recent insights"
+
+            # Choose panel template
+            template = random.choice(panel_templates)
+
+            # Create the conversation
+            conversation = AgentConversation.objects.create(
+                topic=f"Panel: {topic[:100]}",
+                conversation_type=template['type'],
+                initiator=moderator,
+                trigger_type='scheduled',
+                related_knowledge=knowledge_item,
+                status='active'
+            )
+            # Add all panel participants
+            conversation.participants.add(*panel_agents)
+
+            stats['conversations_started'] += 1
+            for agent in panel_agents:
+                stats['agents_participated'].add(agent.name)
+
+            logger.info(f"👥 [MULTI-AGENT] Starting {template['type']} panel with {len(panel_agents)} agents on '{topic[:50]}'")
+
+            # Generate conversation messages using round-robin
+            messages = []
+            tension = template.get('tension_level', 'medium')
+            prompts = template.get('prompts', {})
+
+            for round_num in range(max_rounds):
+                for agent_idx, current_agent in enumerate(panel_agents):
+                    # Determine message type based on position
+                    if round_num == 0 and agent_idx == 0:
+                        # First speaker opens
+                        prompt_type = 'first'
+                        prev_agent_name = ""
+                    elif round_num == max_rounds - 1 and agent_idx == len(panel_agents) - 1:
+                        # Last speaker synthesizes
+                        prompt_type = 'synthesize'
+                        prev_agent_name = panel_agents[agent_idx - 1].name if agent_idx > 0 else ""
+                    else:
+                        # Middle speakers respond or challenge
+                        prev_agent_name = panel_agents[agent_idx - 1].name if agent_idx > 0 else panel_agents[-1].name
+                        # Higher tension = more challenges
+                        if tension == 'high' and random.random() < 0.5:
+                            prompt_type = 'challenge'
+                        elif tension == 'low' and random.random() < 0.8:
+                            prompt_type = 'respond'
+                        else:
+                            prompt_type = random.choice(['respond', 'challenge'])
+
+                    # Build system prompt
+                    system_prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'general topics'}.
+
+You are participating in a {template['type']} discussion about "{topic}".
+
+Panel members: {', '.join([a.name for a in panel_agents])}
+
+Discussion style: {template['dynamic']}
+
+Your expertise: {current_agent.description or current_agent.specialization}
+
+Guidelines:
+- Speak as your character with your expertise
+- Keep responses focused (2-4 sentences)
+- Reference what others have said when relevant
+- Add unique insights from your specialty
+- Be natural and conversational
+- {"Challenge assumptions and push back" if tension == 'high' else "Build on others' ideas collaboratively" if tension == 'low' else "Balance agreement and constructive criticism"}"""
+
+                    # Build user prompt with context
+                    prompt_template = prompts.get(prompt_type, prompts.get('respond', ''))
+                    user_prompt = prompt_template.format(
+                        agent_name=current_agent.name,
+                        specialty=current_agent.specialization or 'general expertise',
+                        topic=topic,
+                        prev_agent=prev_agent_name
+                    )
+
+                    # Add conversation history context
+                    if messages:
+                        recent_context = "\n".join([
+                            f"{m['agent']}: {m['content'][:200]}"
+                            for m in messages[-4:]  # Last 4 messages for context
+                        ])
+                        user_prompt = f"Recent discussion:\n{recent_context}\n\nNow respond: {user_prompt}"
+
+                    try:
+                        response = client.chat.completions.create(
+                            model="gpt-5-mini",
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt}
+                            ],
+                            max_completion_tokens=500,
+                        )
+
+                        content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                        # Session 360: Validate output for mythology violations
+                        content = validate_agent_output(current_agent.name, content)
+
+                        # Clean up content
+                        if content.startswith(f"{current_agent.name}:"):
+                            content = content[len(current_agent.name)+1:].strip()
+
+                        if not content:
+                            logger.warning(f"👥 [MULTI-AGENT] Empty content from {current_agent.name}, skipping")
+                            continue
+
+                        # Determine message type
+                        msg_type = 'statement'
+                        content_lower = content.lower()
+                        if '?' in content:
+                            msg_type = 'question'
+                        elif 'agree' in content_lower or 'exactly' in content_lower:
+                            msg_type = 'agreement'
+                        elif 'however' in content_lower or 'but' in content_lower or 'disagree' in content_lower:
+                            msg_type = 'disagreement'
+                        elif 'building on' in content_lower or 'adding to' in content_lower:
+                            msg_type = 'elaboration'
+                        elif 'synthesiz' in content_lower or 'combining' in content_lower or 'overall' in content_lower:
+                            msg_type = 'synthesis'
+
+                        # Save the message
+                        sequence_num = len(messages) + 1
+                        ConversationMessage.objects.create(
+                            conversation=conversation,
+                            agent=current_agent,
+                            content=content,
+                            message_type=msg_type,
+                            sequence_number=sequence_num,
+                            reactions={'round': round_num + 1}  # Store round info in reactions field
+                        )
+
+                        messages.append({
+                            'agent': current_agent.name,
+                            'content': content,
+                            'type': msg_type,
+                            'round': round_num + 1
+                        })
+
+                        stats['messages_generated'] += 1
+
+                        if msg_type in ['insight', 'synthesis']:
+                            stats['insights_discovered'] += 1
+
+                        logger.debug(f"👥 [MULTI-AGENT] {current_agent.name} (R{round_num+1}): {content[:80]}...")
+
+                    except Exception as e:
+                        logger.error(f"👥 [MULTI-AGENT] Error generating message for {current_agent.name}: {e}")
+                        continue
+
+            # Generate conclusion
+            if messages:
+                try:
+                    participants_summary = ", ".join([a.name for a in panel_agents])
+                    conclusion_prompt = f"""Summarize this {template['type']} discussion between {participants_summary} about "{topic}".
+
+Discussion:
+{chr(10).join([f"{m['agent']}: {m['content']}" for m in messages[-8:]])}
+
+Provide a 2-3 sentence summary highlighting the key insights and any points of consensus or disagreement."""
+
+                    conclusion_response = client.chat.completions.create(
+                        model="gpt-5-mini",
+                        messages=[
+                            {"role": "system", "content": "Summarize multi-agent panel discussions concisely."},
+                            {"role": "user", "content": conclusion_prompt}
+                        ],
+                        max_completion_tokens=400,
+                    )
+                    conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive panel discussion about {topic}"
+
+                    # Session 360: Validate conclusion for mythology violations
+                    conclusion = validate_agent_output("MultiAgentSynthesizer", conclusion)
+                except Exception as e:
+                    logger.warning(f"👥 [MULTI-AGENT] Could not generate conclusion: {e}")
+                    conclusion = f"Panel discussion about {topic} with {len(panel_agents)} participants"
+
+                conversation.conclude(
+                    conclusion,
+                    insights=[m['content'] for m in messages if m['type'] in ['insight', 'synthesis']]
+                )
+                conversation.quality_score = min(1.0, len(messages) / (max_rounds * len(panel_agents)) * 0.8 + 0.2)
+                conversation.message_count = len(messages)
+                conversation.save()
+
+                # Extract decision if possible
+                try:
+                    from core.services.decision_extractor import get_decision_extractor
+                    extractor = get_decision_extractor()
+                    decision = extractor.create_decision_from_conversation(conversation)
+                    if decision:
+                        logger.info(f"🏛️ [BOARDROOM] Extracted decision from panel: {decision.topic}")
+                        stats['decisions_extracted'] = stats.get('decisions_extracted', 0) + 1
+                except Exception as e:
+                    logger.debug(f"Could not extract decision from panel: {e}")
+
+                # Process for Living Projects
+                try:
+                    from core.services.living_project_service import get_living_project_service
+                    living_service = get_living_project_service()
+                    insights = living_service.process_agent_conversation(conversation)
+                    if insights:
+                        logger.info(f"👥 [MULTI-AGENT] Created {len(insights)} insights from panel")
+                        stats['living_insights'] = stats.get('living_insights', 0) + len(insights)
+                except Exception as e:
+                    logger.debug(f"Could not process panel for living projects: {e}")
+
+        # Calculate average participants
+        if stats['conversations_started'] > 0:
+            stats['avg_participants'] = round(total_participants / stats['conversations_started'], 1)
+
+        # Broadcast the update
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'multi_agent_conversation_complete',
+                'stats': {
+                    'conversations_started': stats['conversations_started'],
+                    'messages_generated': stats['messages_generated'],
+                    'insights_discovered': stats['insights_discovered'],
+                    'agents_participated': list(stats['agents_participated']),
+                    'avg_participants': stats['avg_participants']
+                },
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(
+            f"👥 [MULTI-AGENT] Cycle complete: "
+            f"{stats['conversations_started']} panels, "
+            f"{stats['messages_generated']} messages, "
+            f"{stats['insights_discovered']} insights, "
+            f"{len(stats['agents_participated'])} agents, "
+            f"avg {stats['avg_participants']} per panel"
+        )
+
+        return {
+            'status': 'success',
+            'stats': {
+                'conversations_started': stats['conversations_started'],
+                'messages_generated': stats['messages_generated'],
+                'insights_discovered': stats['insights_discovered'],
+                'agents_participated': list(stats['agents_participated']),
+                'avg_participants': stats['avg_participants']
+            },
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"👥 [MULTI-AGENT] Conversation cycle failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def broadcast_conversation_status(self):
     """
