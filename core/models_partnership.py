@@ -591,6 +591,86 @@ class PartnershipProject(UnifiedBaseModel):
 
         self.save()
 
+    # ==========================================================================
+    # Session 362: Living Project Config Auto-Creation
+    # ==========================================================================
+
+    def ensure_living_config(self):
+        """
+        Ensure this project has a LivingProjectConfig for autonomous learning.
+
+        Session 362: Auto-creates config if missing, extracting topics from
+        project name, description, goal, and tags.
+
+        Returns:
+            LivingProjectConfig instance (created or existing)
+        """
+        from core.models_unified_system import LivingProjectConfig
+
+        # Check if config already exists
+        try:
+            return self.living_config
+        except LivingProjectConfig.DoesNotExist:
+            pass
+
+        # Extract topics from project data
+        watch_topics = []
+        watch_keywords = []
+
+        # Extract from project name (split on common separators)
+        if self.project_name:
+            name_parts = self.project_name.replace('-', ' ').replace('_', ' ').split()
+            # Filter out common words and short words
+            stop_words = {'a', 'an', 'the', 'for', 'and', 'or', 'to', 'in', 'on', 'of', 'with'}
+            name_topics = [w.lower() for w in name_parts if len(w) > 2 and w.lower() not in stop_words]
+            watch_topics.extend(name_topics[:5])
+
+        # Extract from tags
+        if self.tags:
+            watch_topics.extend([t.lower() for t in self.tags[:5] if isinstance(t, str)])
+
+        # Extract from learning_topics if set
+        if self.learning_topics:
+            watch_topics.extend([t.lower() for t in self.learning_topics[:5] if isinstance(t, str)])
+
+        # Extract keywords from description
+        if self.description:
+            # Simple extraction: take significant words from first 200 chars
+            desc_words = self.description[:200].replace('-', ' ').replace('_', ' ').split()
+            stop_words = {'a', 'an', 'the', 'for', 'and', 'or', 'to', 'in', 'on', 'of', 'with', 'is', 'are', 'that', 'this'}
+            desc_keywords = [w.lower().strip('.,!?()[]') for w in desc_words
+                           if len(w) > 3 and w.lower() not in stop_words]
+            watch_keywords.extend(desc_keywords[:10])
+
+        # Deduplicate
+        watch_topics = list(dict.fromkeys(watch_topics))[:10]
+        watch_keywords = list(dict.fromkeys(watch_keywords))[:15]
+
+        # Get spider categories from domain targeting if available
+        spider_categories = []
+        if self.metadata and 'domain_targeting' in self.metadata:
+            spider_categories = self.metadata['domain_targeting'].get('spider_categories', [])[:5]
+
+        # Create the config
+        config = LivingProjectConfig.objects.create(
+            project=self,
+            is_active=True,
+            watch_topics=watch_topics,
+            watch_keywords=watch_keywords,
+            spider_categories=spider_categories,
+            enabled_sources=['agent_conversation', 'spider_data', 'boardroom_decision'],
+            min_relevance_score=0.5,
+            min_confidence_score=0.4,
+            notify_on_competitor=True,
+            notify_on_opportunity=True,
+            notify_on_trend=True,
+            max_daily_insights=15,
+            auto_expand_topics=True,
+            learn_from_ratings=True,
+        )
+
+        return config
+
     def __str__(self):
         return f"{self.project_name} - {self.ai_contribution_percent}% AI / {self.human_contribution_percent}% Human"
 
@@ -788,3 +868,30 @@ class CollaborativeContent(UnifiedBaseModel):
 
     def __str__(self):
         return f"{self.title} ({self.content_type}) - {self.ai_contribution_percent}% AI"
+
+
+
+# =============================================================================
+# Session 362: Auto-Create LivingProjectConfig for New Projects
+# =============================================================================
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+@receiver(post_save, sender=PartnershipProject)
+def auto_create_living_config(sender, instance, created, **kwargs):
+    """
+    Automatically create a LivingProjectConfig when a new project is created.
+
+    Session 362: This closes the gap where projects couldn't receive insights
+    from agent conversations because no LivingProjectConfig existed.
+    """
+    if created:
+        try:
+            instance.ensure_living_config()
+        except Exception as e:
+            # Don't fail project creation if config creation fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to auto-create LivingProjectConfig for {instance.project_name}: {e}")
