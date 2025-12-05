@@ -1,105 +1,79 @@
 # Start Next Session Here
 
-**Last Session:** 352 - Enhanced Viability Scoring with Improvement Suggestions
-**Date:** December 4, 2025
-**Status:** 102 spiders | 36 categories | 79 agents | Smart Business Idea Feedback
+**Last Session:** 353 - Research → Creative Pipeline + Project Learning Loop Design
+**Date:** December 5, 2025
+**Status:** 102 spiders | 36 categories | 79 agents | SD3 for Logos | Context-Enriched Creation
 
 ---
 
-## What Happened in Session 352
+## What Happened in Session 353
 
-### 1. Enhanced Viability Scoring ("Idiot Protector" v2) - Early Exit!
-The business viability check now:
-- **Runs FIRST** - before any expensive research
-- **Stops early for scores < 50** - saves API costs
-- **Provides constructive feedback** instead of just warnings
+### 1. PDF Button Consolidation
+- Moved "Download All Research (PDF)" to top of research summaries section
+- Removed individual PDF buttons from each research card
+- Cleaner UI, single action to download everything
 
-**Before (Session 350):** Warns "This idea is risky" but still does full research
-**After (Session 352):** For bad ideas - stops immediately with actionable feedback:
-- Key Concerns (what's wrong)
-- Improvement Suggestions (how to fix it)
-- Pivot Ideas (alternative business concepts)
-- Target Market Tip (better audience suggestion)
+### 2. Brand Asset Persistence
+- "Generate Brand Assets" now saves images to `ImageHistory`
+- Assets linked to project via `project` ForeignKey
+- Generated assets persist and appear in project gallery
 
-### 2. Flow Logic
-- **Score >= 80:** Proceed normally (viable idea)
-- **Score 50-79:** Add warning but continue research (questionable but worth exploring)
-- **Score < 50:** **Stop immediately** with helpful feedback (save API costs!)
+### 3. Assistant Context Enrichment
+- When you say "Create 3 logos" in project AI Assistant:
+  - Prompt is enriched with brand colors from research
+  - Style keywords extracted (modern, minimalist, etc.)
+  - Industry context added from competitor analysis
+- File: `core/personal_ai_assistant_enhanced.py`
 
-### 3. Test Results
-For "A restaurant that only serves invisible food" (Score: 10):
-- **Execution time: 4.5s** (vs 30-60s for full research!)
-- **Early exit: True** - No expensive spider/GPT research performed
-- **Helpful output:**
-  - Key Concerns: No tangible product, no sensory experience
-  - Improvement: Try molecular gastronomy, dark dining experience
-  - Pivot Ideas: Art-inspired restaurant, mystery box pop-ups
-  - Target Market: Foodies seeking experiential dining
+### 4. SD3 for Logos (Quality Upgrade!)
+- Main Assistant auto-detects logo requests
+- Uses `quality='high'` (SD3) instead of default SDXL
+- SD3 produces significantly better logo quality
+- Triggers for: logo, logos, brand mark, wordmark, emblem, icon
 
----
-
-## What Happened in Session 351
-
-### 1. AgentIntelligenceContextService (Major Feature)
-Created new service (`core/services/agent_intelligence_context.py`) that aggregates:
-- AgentKnowledgeSource - What agents have learned (732 items!)
-- KnowledgeTransfer - What agents have taught each other
-- AgentConversation - What agents have discussed (1,164 conversations)
-- AgentDecisionSummary - Boardroom decisions and policies (43 decisions)
-
-Now business research agents inject this context into their prompts!
-
-### 2. Business Research Agent Integration
-- CompetitorAnalysisAgent now uses agent intelligence
-- CustomerResearchAgent now uses agent intelligence
-- Logs show: "🧠 [Session 351] Injected agent intelligence"
-
-### 3. "Start Research Project" Button
-- Added to Boardroom Decisions UI for product-type decisions
-- Pre-fills chat with research request referencing the boardroom discussion
-- One-click to start researching an agent-suggested product idea
-
-### 4. Fixed AgentConversation Query + Model Discovery
-- Changed `created_at` to `started_at` (correct field name)
-- Discovered `SharedKnowledge` (0 items) is unused legacy model
-- Actual data is in `AgentKnowledgeSource` (732 items!)
+### 5. Project Learning Loop - DETAILED DESIGN
+Created comprehensive handoff document for autonomous project learning:
+- `docs/handoffs/SESSION_353_PROJECT_LEARNING_LOOP.md`
+- 5 phases covering model changes → Celery tasks → delta detection → UI → knowledge accumulation
 
 ---
 
-## Session 352 Priority: Promote Canonical Policies
+## Next Session (354): Project Learning Loop - Phase 1
 
-**The intelligence pipeline is ready but needs canonical policies to be most effective!**
+### The Vision
+Projects that learn autonomously! Create "Coffee Shop Trends" and the system:
+1. Runs initial research
+2. Re-checks weekly for new trends
+3. Alerts you: "New trend: mushroom coffee is rising!"
+4. Accumulates knowledge over time
 
-### Key Tasks
+### Phase 1 Tasks
+1. **Add learning fields to PartnershipProject model:**
+   - `learning_enabled` (bool)
+   - `learning_topics` (list)
+   - `learning_frequency` (daily/weekly/monthly)
+   - `last_learning_run`, `next_learning_run`
+   - `learning_history` (list of runs)
 
-1. **Promote Boardroom Decisions**
-   - Navigate to: Agents/Social → Boardroom Decisions
-   - Review the 43 draft decisions
-   - Promote valuable ones to "Canonical Policy" status
-   - These will then appear in all business research prompts
+2. **Create migration and apply**
 
-2. **Test End-to-End Flow**
-   ```bash
-   # Watch for intelligence injection
-   tail -f /var/log/celery/*.log | grep "Session 351"
-   ```
-   - Run a business research request
-   - Check logs for "🧠 [Session 351] Injected agent intelligence"
-   - Verify research references agent insights in the output
+3. **Add UI toggle in project card**
 
-3. **Data is Already Flowing!**
-   - AgentKnowledgeSource has 732 items of learned knowledge
-   - Business research now injects this into prompts automatically
+4. **Add API endpoint for learning config**
 
-### Current Data State
-```
-AgentKnowledgeSource: 732 items (what agents learned!)
-KnowledgeTransfer: Active transfers happening
-AgentConversation: 1,164 conversations
-AgentDecisionSummary: 43 decisions (0 canonical)
-```
+### Full Implementation Guide
+See: `docs/handoffs/SESSION_353_PROJECT_LEARNING_LOOP.md`
 
-**Note:** `SharedKnowledge` (0 items) is an unused legacy model. The actual data is in `AgentKnowledgeSource`!
+---
+
+## Key Files Changed in Session 353
+
+| File | Purpose |
+|------|---------|
+| `core/personal_ai_assistant_enhanced.py` | SD3 for logos + context enrichment |
+| `core/views_projects_api.py` | Brand asset persistence to ImageHistory |
+| `ai_core/templates/ai_image_studio.html` | PDF button consolidation |
+| `docs/handoffs/SESSION_353_PROJECT_LEARNING_LOOP.md` | **NEW** - Full learning loop design |
 
 ---
 
@@ -109,11 +83,11 @@ AgentDecisionSummary: 43 decisions (0 canonical)
 |-----------|-------|
 | **Spiders** | **102** |
 | **Categories** | **36** |
-| **Agents** | **79** (69 legacy + 10 clean) |
+| **Agents** | **79** |
 | **Data Points** | **9,983+** |
 | **Business Domains** | **13** |
 | **Agent Conversations** | **1,164** |
-| **Boardroom Decisions** | **43** (0 canonical) |
+| **Boardroom Decisions** | **43** |
 
 ---
 
@@ -127,61 +101,50 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Key Files Changed in Session 352
+## Model Quality Reference
 
-| File | Purpose |
-|------|---------|
-| `core/agents/business/competitor_analysis_agent.py` | Enhanced viability scoring with improvement suggestions |
-| `core/agents/business/customer_research_agent.py` | Enhanced viability scoring with improvement suggestions |
+| Quality | Model | Best For |
+|---------|-------|----------|
+| `fast` | Core | Quick iterations |
+| `balanced` | SDXL | General images (default) |
+| `high` | **SD3** | **Logos, detailed work** |
+| `premium` | Ultra | Maximum quality |
 
-## Key Files Changed in Session 351
-
-| File | Purpose |
-|------|---------|
-| `core/services/agent_intelligence_context.py` | **NEW** - Aggregates agent intelligence |
-| `core/agents/business/competitor_analysis_agent.py` | Injects agent context into prompts |
-| `core/agents/business/customer_research_agent.py` | Injects agent context into prompts |
-| `ai_core/templates/ai_image_studio.html` | "Start Research Project" button |
-| `docs/handoffs/SESSION_351_AGENT_INTELLIGENCE_TO_RESEARCH.md` | Full handoff documentation |
+The Main Assistant now auto-uses SD3 for logo requests!
 
 ---
 
-## Testing the New Features
+## Testing Session 353 Changes
 
 ```bash
-# Test agent intelligence service
-.venv/bin/python manage.py shell -c "
-from core.services.agent_intelligence_context import get_agent_intelligence_context
+# Test logo quality upgrade - should use SD3
+# In project AI Assistant, type: "Create a logo for this project"
+# Check logs for: "Detected logo request - using SD3"
 
-service = get_agent_intelligence_context()
-context = service.get_context_for_research('AI content generation')
-
-print('Knowledge:', context.total_knowledge_items)
-print('Conversations:', context.total_conversations)
-print('Policies:', context.total_policies)
-print()
-print('Sample prompt context:')
-print(context.to_prompt_context()[:1000])
-"
+# Test context enrichment
+# Create a project with brand strategy research
+# Then ask AI Assistant: "Create 3 logos"
+# Check logs for: "Enriched prompt with project context"
 ```
 
 ---
 
-## Architecture Note
+## Architecture: Research → Creative Pipeline
 
-Intelligence flow now works like this:
 ```
-Agent Conversations (1,164) → AgentDecisionSummary (43)
-         ↓                              ↓
-    KnowledgeTransfer           SharedKnowledge
-         ↓                              ↓
-         └──────────┬──────────────────┘
-                    ↓
-    AgentIntelligenceContextService
-                    ↓
-    CompetitorAnalysisAgent / CustomerResearchAgent
-                    ↓
-             Enhanced Research Results
+Project Research             Creative Context
+     ↓                            ↓
+Brand Strategy ───────→ Colors, Style Keywords
+Competitor Analysis ──→ Industry Context
+Customer Research ────→ Target Audience
+     ↓                            ↓
+     └────────────┬───────────────┘
+                  ↓
+        Enriched Creation Prompt
+                  ↓
+        SD3 Image Generation
+                  ↓
+        ImageHistory (saved to project)
 ```
 
-**Agent conversations are now connected to research! Promote policies to maximize the value.**
+**The full Research → Creative flow now works end-to-end!**

@@ -1394,8 +1394,77 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         width = params.get('width', 1024)
         height = params.get('height', 1024)
         count = params.get('count', 1)
-        quality = params.get('quality', 'balanced')
         style = params.get('style', 'photorealistic')
+
+        # Session 353: Use SD3 (high quality) for logos - it's the best model for logo generation
+        prompt_lower = prompt.lower()
+        is_logo_request = any(word in prompt_lower for word in ['logo', 'logos', 'brand mark', 'wordmark', 'emblem', 'icon'])
+        quality = params.get('quality', 'high' if is_logo_request else 'balanced')
+
+        if is_logo_request:
+            logger.info(f"🎨 Detected logo request - using SD3 (high quality) for best results")
+
+        # Session 353: Enrich prompt with project research context if available
+        enriched_prompt = prompt
+        if project_id:
+            try:
+                from core.models_partnership import PartnershipProject
+                project = PartnershipProject.objects.get(id=project_id)
+
+                # Build context from research
+                context_parts = []
+
+                # Project name for branding
+                if project.project_name:
+                    context_parts.append(f"for '{project.project_name}'")
+
+                # Get brand strategy from research summaries
+                if project.metadata:
+                    research_summaries = project.metadata.get('research_summaries', [])
+
+                    # Find brand strategy
+                    brand_strategy = next(
+                        (r for r in research_summaries if r.get('type') == 'brand_strategy'),
+                        None
+                    )
+                    if brand_strategy:
+                        summary = brand_strategy.get('summary', '')
+                        # Extract key brand attributes
+                        if 'color' in summary.lower():
+                            # Try to extract color mentions
+                            import re
+                            colors = re.findall(r'\b(blue|red|green|yellow|orange|purple|pink|black|white|gold|silver|navy|teal|coral)\b', summary.lower())
+                            if colors:
+                                context_parts.append(f"brand colors: {', '.join(set(colors[:3]))}")
+
+                        # Look for style/personality keywords
+                        style_keywords = ['modern', 'minimalist', 'bold', 'professional', 'playful',
+                                        'elegant', 'luxury', 'tech', 'innovative', 'creative', 'friendly']
+                        found_styles = [kw for kw in style_keywords if kw in summary.lower()]
+                        if found_styles:
+                            context_parts.append(f"style: {', '.join(found_styles[:3])}")
+
+                    # Find competitor analysis for industry context
+                    competitor = next(
+                        (r for r in research_summaries if r.get('type') == 'competitor_analysis'),
+                        None
+                    )
+                    if competitor:
+                        summary = competitor.get('summary', '')
+                        # Extract industry mentions
+                        industries = ['tech', 'fintech', 'healthcare', 'ecommerce', 'saas', 'food',
+                                    'fashion', 'fitness', 'education', 'real estate', 'travel']
+                        found_industries = [ind for ind in industries if ind in summary.lower()]
+                        if found_industries:
+                            context_parts.append(f"industry: {found_industries[0]}")
+
+                # Enrich the prompt if we have context
+                if context_parts:
+                    enriched_prompt = f"{prompt} ({', '.join(context_parts)})"
+                    logger.info(f"🎨 Enriched prompt with project context: {enriched_prompt[:100]}...")
+
+            except Exception as e:
+                logger.warning(f"Failed to enrich prompt with project context: {e}")
 
         try:
             from agents.creation_agent import CreationAgent
@@ -1403,9 +1472,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Initialize agent
             agent = CreationAgent(user=self.user, project_id=project_id)
 
-            # Execute generation
+            # Execute generation with enriched prompt (Session 353)
             result = agent.execute(
-                prompt=prompt,
+                prompt=enriched_prompt,
                 size=f"{width}x{height}",
                 num_images=count,
                 quality=quality,

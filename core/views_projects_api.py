@@ -1729,12 +1729,60 @@ def generate_brand_assets(request, project_id):
                 'error': result.error or 'Failed to generate brand assets'
             }, status=400)
 
+        # Session 353: Save generated images to ImageHistory and link to project
+        from content.models import ImageHistory
+        saved_image_ids = []
+
+        # Helper to save images from result
+        def save_images_to_history(images_list, asset_type):
+            """Save list of generated images to ImageHistory."""
+            for item in images_list:
+                if isinstance(item, dict) and 'images' in item:
+                    for img in item['images']:
+                        if isinstance(img, dict) and 'url' in img:
+                            try:
+                                # Create ImageHistory record
+                                image_record = ImageHistory.objects.create(
+                                    user=user,
+                                    project=project,
+                                    prompt=img.get('prompt', f'{asset_type} for {project.project_name}'),
+                                    style=img.get('style', 'custom'),
+                                    image_url=img['url'],
+                                    provider=img.get('provider', 'stability'),
+                                    model_used=img.get('model', 'sd3-large'),
+                                    width=int(img.get('size', '1024x1024').split('x')[0]) if img.get('size') else 1024,
+                                    height=int(img.get('size', '1024x1024').split('x')[1]) if img.get('size') else 1024,
+                                    metadata={
+                                        'asset_type': asset_type,
+                                        'brand_asset_pack': True,
+                                        'generated_via': 'research_to_creative_pipeline'
+                                    }
+                                )
+                                saved_image_ids.append(str(image_record.id))
+                                logger.info(f"✅ Saved brand asset: {asset_type} ({image_record.id})")
+                            except Exception as e:
+                                logger.warning(f"⚠️ Failed to save image to history: {e}")
+
+        # Save all asset types
+        result_dict = result.to_dict()
+        if result_dict.get('logos'):
+            save_images_to_history(result_dict['logos'], 'logo')
+        if result_dict.get('social_media'):
+            save_images_to_history(result_dict['social_media'], 'social_media')
+        if result_dict.get('marketing_materials'):
+            save_images_to_history(result_dict['marketing_materials'], 'marketing')
+        if result_dict.get('mood_board'):
+            save_images_to_history(result_dict['mood_board'], 'mood_board')
+
+        logger.info(f"💾 Saved {len(saved_image_ids)} images to project {project.project_name}")
+
         # Update project metadata with generated assets
         metadata = project.metadata or {}
         metadata['brand_assets_generated'] = True
         metadata['brand_asset_pack'] = {
             'styles_used': result.styles_used,
             'total_assets': result.total_assets,
+            'saved_image_ids': saved_image_ids,
             'generated_at': datetime.now().isoformat()
         }
         project.metadata = metadata
