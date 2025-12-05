@@ -2891,96 +2891,112 @@ def run_agent_learning_cycle():
             ).order_by('-confidence_score', '-last_updated_at')[:5]
 
             for knowledge in teacher_knowledge:
-                # Session 357: Improved duplicate detection
-                # Use full title match (after stripping [Learned] prefix) instead of just first 30 chars
-                # This allows more knowledge sharing while preventing true duplicates
-                import re
-                clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title or '').strip()
-                # Also strip multiple [Learned] prefixes
-                while clean_title.startswith('[Learned]'):
-                    clean_title = clean_title[9:].strip()
+                # Session 358: Enhanced Delta Detection using semantic similarity
+                # Uses embeddings + cosine similarity to detect semantic duplicates
+                # This catches cases like "AI Content Tools" vs "Content Creation AI Tools"
+                try:
+                    from core.services.knowledge_similarity import get_knowledge_similarity_service
+                    similarity_service = get_knowledge_similarity_service()
 
-                # Check for exact title match OR if this specific knowledge was already transferred
-                from django.db.models import Q
-                student_has_similar = AgentKnowledgeSource.objects.filter(
-                    agent=student,
-                    knowledge_type=knowledge.knowledge_type
-                ).filter(
-                    # Match: exact clean title OR [Learned] version of the same title
-                    Q(title=clean_title) |
-                    Q(title=f"[Learned] {clean_title}") |
-                    Q(title__iexact=knowledge.title)
-                ).exists()
+                    should_transfer, reason = similarity_service.should_transfer_knowledge(
+                        student_agent=student,
+                        teacher_knowledge=knowledge,
+                        threshold=0.80  # 80% similarity = duplicate
+                    )
 
-                if not student_has_similar:
-                    # Session 350: Strip existing [Learned] prefixes to prevent accumulation
+                    if not should_transfer:
+                        logger.debug(f"[LEARNING] Skipping transfer: {reason}")
+                        continue
+
+                except Exception as e:
+                    # Fallback to Session 357 exact title matching if semantic fails
+                    logger.warning(f"Semantic similarity failed, using fallback: {e}")
                     import re
-                    clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title).strip()
-                    # Also strip from beginning multiple times in case of nested
+                    clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title or '').strip()
                     while clean_title.startswith('[Learned]'):
                         clean_title = clean_title[9:].strip()
 
-                    # Create knowledge transfer record
-                    usefulness = random.uniform(0.6, 1.0)  # Simulate usefulness
-
-                    transfer = KnowledgeTransfer.objects.create(
-                        connection=connection,
-                        source_knowledge=knowledge,
-                        transfer_summary=f"{teacher.name} shared '{clean_title[:50]}' with {student.name}",
-                        key_points=knowledge.key_insights[:3] if knowledge.key_insights else [],
-                        was_useful=usefulness > 0.7,
-                        usefulness_score=usefulness,
-                        was_applied=random.random() > 0.3,  # 70% chance of being applied
-                    )
-
-                    # Create new knowledge for student (adapted from teacher's)
-
-                    new_knowledge = AgentKnowledgeSource.objects.create(
+                    from django.db.models import Q
+                    student_has_similar = AgentKnowledgeSource.objects.filter(
                         agent=student,
-                        knowledge_type=knowledge.knowledge_type,
-                        spider_category=knowledge.spider_category,
-                        source_spider_names=knowledge.source_spider_names + [f'learned_from_{teacher.name}'],
-                        title=f"[Learned] {clean_title}",
-                        summary=f"Learned from {teacher.name}: {knowledge.summary[:200]}",
-                        key_insights=knowledge.key_insights,
-                        data_points_count=knowledge.data_points_count,
-                        confidence_score=knowledge.confidence_score * 0.9,  # Slightly lower confidence
-                        relevance_score=knowledge.relevance_score,
-                        freshness_score=1.0,  # Fresh for student
-                        is_active=True,
+                        knowledge_type=knowledge.knowledge_type
+                    ).filter(
+                        Q(title=clean_title) |
+                        Q(title=f"[Learned] {clean_title}") |
+                        Q(title__iexact=knowledge.title)
+                    ).exists()
+
+                    if student_has_similar:
+                        continue
+
+                # Knowledge is new - proceed with transfer
+                # Session 350: Strip existing [Learned] prefixes to prevent accumulation
+                import re
+                clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title).strip()
+                # Also strip from beginning multiple times in case of nested
+                while clean_title.startswith('[Learned]'):
+                    clean_title = clean_title[9:].strip()
+
+                # Create knowledge transfer record
+                usefulness = random.uniform(0.6, 1.0)  # Simulate usefulness
+
+                transfer = KnowledgeTransfer.objects.create(
+                    connection=connection,
+                    source_knowledge=knowledge,
+                    transfer_summary=f"{teacher.name} shared '{clean_title[:50]}' with {student.name}",
+                    key_points=knowledge.key_insights[:3] if knowledge.key_insights else [],
+                    was_useful=usefulness > 0.7,
+                    usefulness_score=usefulness,
+                    was_applied=random.random() > 0.3,  # 70% chance of being applied
+                )
+
+                # Create new knowledge for student (adapted from teacher's)
+                new_knowledge = AgentKnowledgeSource.objects.create(
+                    agent=student,
+                    knowledge_type=knowledge.knowledge_type,
+                    spider_category=knowledge.spider_category,
+                    source_spider_names=knowledge.source_spider_names + [f'learned_from_{teacher.name}'],
+                    title=f"[Learned] {clean_title}",
+                    summary=f"Learned from {teacher.name}: {knowledge.summary[:200]}",
+                    key_insights=knowledge.key_insights,
+                    data_points_count=knowledge.data_points_count,
+                    confidence_score=knowledge.confidence_score * 0.9,  # Slightly lower confidence
+                    relevance_score=knowledge.relevance_score,
+                    freshness_score=1.0,  # Fresh for student
+                    is_active=True,
+                )
+
+                transfers_made += 1
+                learning_events.append({
+                    'teacher': teacher.name,
+                    'student': student.name,
+                    'knowledge': knowledge.title[:50],
+                    'type': connection.learning_type,
+                    'usefulness': usefulness
+                })
+
+                # Update connection stats
+                connection.total_transfers += 1
+                if usefulness > 0.7:
+                    connection.successful_transfers += 1
+                connection.last_transfer_at = timezone.now()
+
+                # Update connection strength based on success
+                if connection.total_transfers > 0:
+                    success_rate = connection.successful_transfers / connection.total_transfers
+                    connection.strength = min(1.0, connection.strength + (success_rate * 0.05))
+                    connection.avg_improvement_score = (
+                        connection.avg_improvement_score * 0.9 + usefulness * 0.1
                     )
+                connection.save()
 
-                    transfers_made += 1
-                    learning_events.append({
-                        'teacher': teacher.name,
-                        'student': student.name,
-                        'knowledge': knowledge.title[:50],
-                        'type': connection.learning_type,
-                        'usefulness': usefulness
-                    })
+                logger.info(
+                    f"🎓 [LEARNING] {teacher.name} → {student.name}: "
+                    f"'{knowledge.title[:30]}...' (usefulness: {usefulness:.2f})"
+                )
 
-                    # Update connection stats
-                    connection.total_transfers += 1
-                    if usefulness > 0.7:
-                        connection.successful_transfers += 1
-                    connection.last_transfer_at = timezone.now()
-
-                    # Update connection strength based on success
-                    if connection.total_transfers > 0:
-                        success_rate = connection.successful_transfers / connection.total_transfers
-                        connection.strength = min(1.0, connection.strength + (success_rate * 0.05))
-                        connection.avg_improvement_score = (
-                            connection.avg_improvement_score * 0.9 + usefulness * 0.1
-                        )
-                    connection.save()
-
-                    logger.info(
-                        f"🎓 [LEARNING] {teacher.name} → {student.name}: "
-                        f"'{knowledge.title[:30]}...' (usefulness: {usefulness:.2f})"
-                    )
-
-                    # Only transfer one piece of knowledge per connection per cycle
-                    break
+                # Only transfer one piece of knowledge per connection per cycle
+                break
 
         # Broadcast learning events via Redis for real-time updates
         if learning_events:
