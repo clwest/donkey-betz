@@ -32,6 +32,13 @@ from content.ai_providers import AIProviderManager
 from mythology.services import MythologyPreventionService
 from core.services.spider_intelligence import SpiderIntelligenceService
 
+# Session 352: Pipeline Visualizer integration
+from core.pipeline_progress_consumer import (
+    broadcast_stage_started,
+    broadcast_stage_completed,
+    broadcast_stage_failed
+)
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -478,10 +485,43 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
     def execute_agent_with_memory(self, agent_name: str, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute an agent and record the performance for future recommendations.
+
+        Session 352: Now broadcasts to Pipeline Visualizer for real-time UI updates!
         """
         start_time = datetime.now()
 
+        # Session 352: Map agent names to pipeline stage types
+        agent_to_stage = {
+            'image_generation_agent': 'image',
+            'video_generation_agent': 'video',
+            'audio_generation_agent': 'audio',
+            '3d_generation_agent': '3d',
+            'research_agent': 'initial_research',
+            'trend_analysis_agent': 'trend_analysis',
+            'competitor_analysis_agent': 'competitor_analysis',
+            'customer_research_agent': 'customer_research',
+            'brand_identity_agent': 'brand_strategy',
+            'seo_optimizer_agent': 'seo',
+            'content_strategy_agent': 'content_audit',
+            'workflow_orchestration_agent': 'creative_direction',
+            'prompt_engineering_agent': 'brief',
+        }
+
+        # Determine stage and pipeline type
+        stage = agent_to_stage.get(agent_name, agent_name.replace('_agent', ''))
+        pipeline_type = 'creative' if stage in ['image', 'video', 'audio', '3d', 'editing', 'brief', 'creative_direction', 'seo'] else 'research'
+
         try:
+            # Session 352: Broadcast stage STARTED to Pipeline Visualizer
+            broadcast_stage_started(
+                stage=stage,
+                pipeline_type=pipeline_type,
+                agent_name=agent_name,
+                project_id=context.get('project_id'),
+                business_idea=task[:100] if task else None
+            )
+            logger.info(f"🚀 [Pipeline] Started: {agent_name} ({stage})")
+
             # Execute agent through the integration system (handle async)
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -496,9 +536,22 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
                 loop.close()
 
             execution_time = (datetime.now() - start_time).total_seconds()
+            execution_time_ms = int(execution_time * 1000)
 
             # Determine success score based on result
             success_score = self._calculate_success_score(result)
+
+            # Session 352: Broadcast stage COMPLETED to Pipeline Visualizer
+            broadcast_stage_completed(
+                stage=stage,
+                pipeline_type=pipeline_type,
+                agent_name=agent_name,
+                success=success_score >= 0.5,
+                duration_ms=execution_time_ms,
+                project_id=context.get('project_id'),
+                summary=result.get('summary', f'{agent_name} completed')[:200]
+            )
+            logger.info(f"✅ [Pipeline] Completed: {agent_name} in {execution_time:.1f}s (score: {success_score:.2f})")
 
             # Record this execution for future recommendations
             AgentExecutionMemory.objects.create(
@@ -533,6 +586,17 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
 
         except Exception as e:
             logger.error(f"Error executing agent with memory: {e}")
+
+            # Session 352: Broadcast stage FAILED to Pipeline Visualizer
+            broadcast_stage_failed(
+                stage=stage,
+                pipeline_type=pipeline_type,
+                agent_name=agent_name,
+                error=str(e)[:200],
+                project_id=context.get('project_id')
+            )
+            logger.warning(f"❌ [Pipeline] Failed: {agent_name} - {str(e)[:100]}")
+
             # Still record the failure for learning
             AgentExecutionMemory.objects.create(
                 user=self.user,

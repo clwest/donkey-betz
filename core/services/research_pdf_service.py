@@ -453,8 +453,267 @@ class ResearchPDFService:
         return sections
 
 
-# Convenience function
+    def generate_comprehensive_pdf(self, project_id: str) -> PDFResult:
+        """
+        Session 352: Generate a comprehensive PDF with ALL research summaries.
+
+        Combines all research (Trend Analysis, Competitor Analysis, Customer Research)
+        into one complete document.
+
+        Args:
+            project_id: UUID of the project
+
+        Returns:
+            PDFResult with PDF bytes containing all research
+        """
+        try:
+            from core.models_partnership import PartnershipProject
+
+            project = PartnershipProject.objects.get(id=project_id)
+            metadata = project.metadata or {}
+
+            research_summaries = metadata.get('research_summaries', [])
+            if not research_summaries:
+                return PDFResult(
+                    success=False,
+                    error='No research found in this project'
+                )
+
+            # Generate PDF
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(
+                buffer,
+                pagesize=letter,
+                rightMargin=0.75*inch,
+                leftMargin=0.75*inch,
+                topMargin=0.75*inch,
+                bottomMargin=0.75*inch
+            )
+
+            story = []
+
+            # Add comprehensive header
+            self._add_comprehensive_header(story, project, research_summaries)
+
+            # Add table of contents
+            self._add_table_of_contents(story, research_summaries)
+
+            # Add each research section
+            for idx, research in enumerate(research_summaries):
+                self._add_research_section(story, research, idx + 1)
+
+            # Add combined sources section
+            self._add_combined_sources(story, research_summaries, metadata)
+
+            # Add footer
+            self._add_footer(story, project)
+
+            # Build PDF
+            doc.build(story)
+
+            # Get PDF bytes
+            pdf_bytes = buffer.getvalue()
+            buffer.close()
+
+            # Generate filename
+            date_str = datetime.now().strftime('%Y%m%d')
+            filename = f"{project.project_name[:30]}-complete-research-{date_str}.pdf"
+            filename = filename.replace(' ', '-').replace('/', '-')
+
+            logger.info(f"Comprehensive research PDF generated for project {project_id} with {len(research_summaries)} sections")
+
+            return PDFResult(
+                success=True,
+                pdf_bytes=pdf_bytes,
+                filename=filename
+            )
+
+        except PartnershipProject.DoesNotExist:
+            return PDFResult(success=False, error='Project not found')
+        except Exception as e:
+            logger.error(f"Error generating comprehensive research PDF: {e}")
+            import traceback
+            traceback.print_exc()
+            return PDFResult(success=False, error=str(e))
+
+    def _add_comprehensive_header(self, story: List, project, research_summaries: List[Dict]):
+        """Add header for comprehensive report."""
+        story.append(Paragraph("Complete Business Research Report", self.styles['ReportTitle']))
+        story.append(Spacer(1, 10))
+
+        # Project info
+        story.append(Paragraph(
+            f"<b>Project:</b> {project.project_name}",
+            self.styles['ReportBody']
+        ))
+
+        # Project description if available
+        if project.description:
+            story.append(Paragraph(
+                f"<b>Description:</b> {project.description[:200]}",
+                self.styles['ReportBody']
+            ))
+
+        # Summary stats
+        total_data_points = sum(r.get('data_points', 0) for r in research_summaries)
+        all_sources = set()
+        for r in research_summaries:
+            all_sources.update(r.get('sources', []))
+
+        story.append(Paragraph(
+            f"<b>Total Analysis:</b> {len(research_summaries)} research sections, {total_data_points} data points, {len(all_sources)} unique sources",
+            self.styles['ReportBody']
+        ))
+
+        story.append(Paragraph(
+            f"<b>Generated:</b> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}",
+            self.styles['ReportBody']
+        ))
+
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("—" * 80, self.styles['ReportBody']))
+        story.append(Spacer(1, 10))
+
+    def _add_table_of_contents(self, story: List, research_summaries: List[Dict]):
+        """Add table of contents."""
+        story.append(Paragraph("Table of Contents", self.styles['SectionTitle']))
+        story.append(Spacer(1, 10))
+
+        for idx, research in enumerate(research_summaries, 1):
+            research_type = research.get('type', 'business_research')
+            type_labels = {
+                'trend_analysis': 'Trend Analysis',
+                'competitor_analysis': 'Competitive Analysis',
+                'customer_research': 'Customer Research',
+                'business_research': 'Business Research'
+            }
+            label = type_labels.get(research_type, research_type.replace('_', ' ').title())
+            data_points = research.get('data_points', 0)
+
+            story.append(Paragraph(
+                f"{idx}. {label} ({data_points} data points)",
+                self.styles['ReportBody']
+            ))
+
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("—" * 80, self.styles['ReportBody']))
+        story.append(Spacer(1, 15))
+
+    def _add_research_section(self, story: List, research: Dict, section_num: int):
+        """Add a single research section to the comprehensive report."""
+        research_type = research.get('type', 'business_research')
+
+        # Section header with icon
+        type_config = {
+            'trend_analysis': ('Trend Analysis', '📈'),
+            'competitor_analysis': ('Competitive Analysis', '🎯'),
+            'customer_research': ('Customer Research', '👥'),
+            'business_research': ('Business Research', '📊')
+        }
+        label, icon = type_config.get(research_type, ('Research', '📋'))
+
+        # Add section title
+        story.append(Paragraph(
+            f"Section {section_num}: {label}",
+            self.styles['SectionTitle']
+        ))
+
+        # Metadata line
+        data_points = research.get('data_points', 0)
+        sources = research.get('sources', [])
+        timestamp = research.get('timestamp', '')
+        try:
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            date_str = dt.strftime('%B %d, %Y')
+        except:
+            date_str = 'Unknown'
+
+        story.append(Paragraph(
+            f"<i>{data_points} data points from {len(sources)} sources • {date_str}</i>",
+            self.styles['ReportBody']
+        ))
+        story.append(Spacer(1, 10))
+
+        # Add the analysis content
+        summary = research.get('summary', '')
+        if summary:
+            sections = self._parse_sections(summary)
+
+            for section in sections:
+                if section.get('title'):
+                    story.append(Paragraph(
+                        section['title'],
+                        self.styles['SubSection']
+                    ))
+
+                content = self._clean_markdown(section.get('content', ''))
+
+                # Split into paragraphs
+                paragraphs = content.split('\n\n')
+                for para in paragraphs:
+                    para = para.strip()
+                    if not para:
+                        continue
+
+                    # Check for bullet points
+                    if para.startswith('- ') or para.startswith('• '):
+                        lines = para.split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if line.startswith('- ') or line.startswith('• '):
+                                line = '• ' + line[2:]
+                            story.append(Paragraph(line, self.styles['ReportBody']))
+                    else:
+                        story.append(Paragraph(para, self.styles['ReportBody']))
+
+                story.append(Spacer(1, 5))
+
+        # Section divider
+        story.append(Spacer(1, 15))
+        story.append(Paragraph("—" * 80, self.styles['ReportBody']))
+        story.append(Spacer(1, 15))
+
+    def _add_combined_sources(self, story: List, research_summaries: List[Dict], metadata: Dict):
+        """Add combined sources section."""
+        story.append(Paragraph("All Sources", self.styles['SectionTitle']))
+
+        # Collect all unique sources
+        all_sources = set()
+        for research in research_summaries:
+            all_sources.update(research.get('sources', []))
+
+        if all_sources:
+            sources_text = ", ".join(sorted(all_sources))
+            story.append(Paragraph(
+                f"<b>Data Sources:</b> {sources_text}",
+                self.styles['ReportBody']
+            ))
+
+        # Add research articles
+        articles = metadata.get('research_articles', [])
+        if articles:
+            story.append(Spacer(1, 10))
+            story.append(Paragraph("Referenced Articles:", self.styles['SubSection']))
+
+            for i, article in enumerate(articles[:15], 1):  # Show up to 15 articles
+                title = article.get('title', 'Untitled')
+                source = article.get('source', 'Unknown')
+
+                title = self._clean_markdown(title)
+                title = title[:100]
+
+                article_text = f"{i}. \"{title}\" ({source})"
+                story.append(Paragraph(article_text, self.styles['ReportBody']))
+
+
+# Convenience functions
 def generate_research_pdf(project_id: str, research_index: int = -1) -> PDFResult:
     """Generate a research PDF for a project."""
     service = ResearchPDFService()
     return service.generate_research_pdf(project_id, research_index)
+
+
+def generate_comprehensive_pdf(project_id: str) -> PDFResult:
+    """Session 352: Generate a comprehensive PDF with all research for a project."""
+    service = ResearchPDFService()
+    return service.generate_comprehensive_pdf(project_id)

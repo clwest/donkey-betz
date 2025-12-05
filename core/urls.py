@@ -61,6 +61,7 @@ from core.views_projects_api import (
     create_project_from_research,  # Session 302: Direct API endpoint
     add_research_to_project,  # Session 324: Add research to existing project
     export_research_pdf,  # Session 325: Export research as PDF
+    export_comprehensive_pdf,  # Session 352: Export ALL research as single PDF
     add_creative_content_to_project,  # Session 334: Add creative content to existing project
     create_project_from_creative_content,  # Session 334: Create project from creative content
     # Session 335: Living Project API
@@ -1110,6 +1111,7 @@ urlpatterns = [
     path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
     path('api/projects/<uuid:project_id>/add-research/', add_research_to_project, name='add-research-to-project'),  # Session 324
     path('api/projects/<uuid:project_id>/export-research-pdf/', export_research_pdf, name='export-research-pdf'),  # Session 325
+    path('api/projects/<uuid:project_id>/export-comprehensive-pdf/', export_comprehensive_pdf, name='export-comprehensive-pdf'),  # Session 352
     path('api/projects/<uuid:project_id>/add-creative-content/', add_creative_content_to_project, name='add-creative-content-to-project'),  # Session 334
     path('api/projects/from-creative-content/', create_project_from_creative_content, name='create-project-from-creative-content'),  # Session 334
     path('api/projects/<uuid:project_id>/learning/', get_project_learning_stats, name='project-learning-stats'),  # Session 326

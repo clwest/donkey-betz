@@ -880,6 +880,60 @@ def export_research_pdf(request, project_id):
         }, status=500)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_comprehensive_pdf(request, project_id):
+    """
+    Export ALL research analysis as a single comprehensive PDF.
+
+    Session 352: Generate downloadable PDF containing all research summaries
+    (Trend Analysis, Competitor Analysis, Customer Research) in one document.
+
+    GET /api/projects/<project_id>/export-comprehensive-pdf/
+    """
+    from django.http import HttpResponse
+    from core.services.research_pdf_service import ResearchPDFService
+
+    try:
+        user = request.user
+
+        # Verify project ownership
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Generate comprehensive PDF
+        service = ResearchPDFService()
+        result = service.generate_comprehensive_pdf(str(project_id))
+
+        if not result.success:
+            return Response({
+                'success': False,
+                'error': result.error
+            }, status=400)
+
+        # Return PDF as download
+        response = HttpResponse(result.pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{result.filename}"'
+
+        logger.info(f"📄 Comprehensive research PDF exported for project {project.project_name}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Error exporting comprehensive research PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_creative_content_to_project(request, project_id):

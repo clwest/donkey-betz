@@ -616,6 +616,15 @@ For absurd ideas, suggest what realistic version might work."""
                         agent_name=self.name
                     )
 
+                # Session 352: ALWAYS trigger spider refresh FIRST, before anything else
+                # This ensures we have fresh data for every research request
+                try:
+                    logger.info(f"🕷️ [Session 352] Auto-refreshing spiders at start of research: {task[:50]}...")
+                    refresh_result = self.unified_search.refresh_spiders_for_query(task)
+                    logger.info(f"🕷️ Spider refresh triggered: {refresh_result.get('categories', [])}")
+                except Exception as e:
+                    logger.warning(f"Initial spider refresh failed (continuing anyway): {e}")
+
                 # Session 302: Check for project_id in context and fetch project data
                 project_id = context.get('project_id')
                 project_context = self._get_project_context(project_id) if project_id else {}
@@ -711,18 +720,14 @@ For absurd ideas, suggest what realistic version might work."""
                     viability_warning = viability.get('warning') or viability.get('assessment')
                     logger.info(f"Moderate viability idea (score={viability_score}), proceeding with warning: {enhanced_task[:50]}...")
 
-                # Session 303: Auto-trigger spider refresh for fresh community data
-                try:
-                    refresh_result = self.unified_search.refresh_spiders_for_query(enhanced_task)
-                    logger.info(f"Auto-triggered spider refresh: {refresh_result.get('categories', [])}")
-                    self.record_decision(
-                        decision_type="data_refresh",
-                        action="Triggered spider network refresh",
-                        reasoning=f"Ensuring fresh community discussions for: {enhanced_task[:50]}",
-                        confidence=0.9
-                    )
-                except Exception as e:
-                    logger.warning(f"Auto spider refresh failed (continuing anyway): {e}")
+                # Session 352: Spider refresh already triggered at start of execute()
+                # Recording the decision for time travel debugging
+                self.record_decision(
+                    decision_type="data_refresh",
+                    action="Spider network refresh triggered at start",
+                    reasoning=f"Ensuring fresh community discussions for: {enhanced_task[:50]}",
+                    confidence=0.9
+                )
 
                 # Session 303: Get prior research context
                 prior_context = ""
