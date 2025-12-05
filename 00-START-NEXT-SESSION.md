@@ -1,61 +1,64 @@
 # Start Next Session Here
 
-**Last Session:** 362 - Complete Autonomy Pipeline Fix
+**Last Session:** 363 - Autonomy Expansion (3 New Reactive Pipelines)
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 24 agents | FULL AUTONOMY PIPELINE WORKING!
+**Status:** 102 spiders | 36 categories | 24 agents | 16 AUTONOMOUS TASKS!
 
 ---
 
-## Session 362 Accomplishments
+## Session 363 Accomplishments
 
-### The Autonomy Pipeline is Now Complete!
+### Three New Reactive Pipelines!
 
-We fixed THREE critical gaps that were breaking the autonomous feedback loop:
+We expanded the autonomous system with three new reactive pipelines that create truly self-improving behavior:
 
-| Gap | Before | After | Status |
-|-----|--------|-------|--------|
-| **Canonical Policies** | 1 | 4+ | ✅ Auto-promoting |
-| **Data Source Attribution** | None | Full context | ✅ Fixed |
-| **LivingProjectConfig** | 0 | 10 | ✅ All projects active |
+| Pipeline | Trigger | Action | Schedule |
+|----------|---------|--------|----------|
+| **Spider-Triggered Conversations** | New high-relevance spider data | Creates agent discussions | Every 15 min |
+| **Project-Triggered Research** | Project research needs | Prioritizes relevant spiders | Every 20 min |
+| **Decision-Triggered Propagation** | New canonical policy | Creates implementation conversations | Every 10 min |
 
-### Complete Data Flow (Now Working!)
+### Fully Connected Autonomous Loop
 
 ```
-[Spider Network] ──────────────────────────────────────────────────────┐
-       │                                                               │
-       v                                                               │
-[Agent Knowledge] ──> [Agent Conversations] ──> [Conclusions]          │
-                              │                       │                │
-                              │                       v                │
-                              │              [DecisionExtractor]       │
-                              │                       │                │
-                              │                       v                │
-                              │        [AgentDecisionSummary] (122)    │
-                              │                       │                │
-                              │                       v                │
-                              │        [auto_promote_decisions]        │
-                              │             (every 30 min)             │
-                              │                       │                │
-                              │                       v                │
-                              │        [Canonical Policies] (4+)       │
-                              │                       │                │
-                              │                       v                │
-                              │        [PolicyContextService]          │
-                              │                       │                │
-                              │                       v                │
-                              │        [Future Agent Prompts] ✅        │
-                              │                                        │
-                              v                                        │
-                   [LivingProjectService]                              │
-                              │                                        │
-                              v                                        │
-                   [LivingProjectConfig] (10 active)                   │
-                              │                                        │
-                              v                                        │
-                   [ProjectInsight] (321+) ──> [Project Notifications] │
-                                                                       │
-                              <───────────────────────────────────────-┘
-                              Continuous Learning Loop
+[Spider Network] ─── 30 min ───────────────────────────────────────────────────┐
+       │                                                                        │
+       v                                                                        │
+[SpiderData] ───────────────────────┐                                           │
+       │                            │                                           │
+       │ (15 min)                   │                                           │
+       v                            │                                           │
+[trigger_spider_conversations] ←NEW │                                           │
+       │                            │                                           │
+       v                            v                                           │
+[Agent Conversations] ──> [Conclusions] ──> [DecisionExtractor]                 │
+       │ (5 min)                                   │                            │
+       │                                           v                            │
+       │                           [AgentDecisionSummary]                       │
+       │                                           │ (30 min)                   │
+       │                                           v                            │
+       │                           [auto_promote_decisions]                     │
+       │                                           │                            │
+       │                                           v                            │
+       │                           [Canonical Policies]                         │
+       │                                           │ (10 min)                   │
+       │                                           v                            │
+       │                           [propagate_new_policies] ←NEW                │
+       │                                           │                            │
+       │                                           v                            │
+       │                           [Implementation Conversations]               │
+       │                                                                        │
+       v                                                                        │
+[LivingProjectConfig] ←─────────────────────────────────────────────────────────┤
+       │                                                                        │
+       │ (20 min)                                                               │
+       v                                                                        │
+[trigger_project_research] ←NEW                                                 │
+       │                                                                        │
+       v                                                                        │
+[SpiderPriority boost] ─────────────────────────────────────────────────────────┘
+
+                        FULLY CONNECTED AUTONOMOUS LOOP
 ```
 
 ---
@@ -66,24 +69,27 @@ We fixed THREE critical gaps that were breaking the autonomous feedback loop:
 |-----------|-------|--------|
 | **Spiders** | **102** | Active |
 | **Agents** | **24** | Active |
-| **Agent Conversations** | **1,296+** | Growing |
+| **Autonomous Tasks** | **16** | Running |
+| **Agent Conversations** | **1,300+** | Growing |
 | **Boardroom Decisions** | **122+** | Growing |
-| **Canonical Policies** | **4+** | Auto-promoting! |
+| **Canonical Policies** | **5+** | Auto-promoting & propagating! |
 | **Project Insights** | **321+** | Growing |
-| **LivingProjectConfig** | **10** | All active! |
-| **Projects** | **10** | All have configs |
+| **LivingProjectConfig** | **10** | All active |
 
 ---
 
-## Celery Beat Schedule (13 Autonomous Tasks)
+## Celery Beat Schedule (16 Autonomous Tasks)
 
 | Task | Frequency | Purpose |
 |------|-----------|---------|
 | `run-spider-network` | 30 min | Collect external data |
 | `run-agent-learning-cycle` | 10 min | Knowledge propagation |
 | `agent-conversation-cycle` | 5 min | 2-agent discussions |
-| `multi-agent-panel-cycle` | 20 min | 3-5 agent panel discussions |
+| `multi-agent-panel-cycle` | 20 min | 3-5 agent panels |
 | `auto-promote-decisions` | 30 min | Promote to canonical policies |
+| **`trigger-spider-conversations`** | **15 min** | **NEW: Data → Discussion** |
+| **`trigger-project-research`** | **20 min** | **NEW: Project → Spider** |
+| **`propagate-new-policies`** | **10 min** | **NEW: Policy → Agents** |
 | `agent-dream-cycle` | 15 min | Creative thinking |
 | `broadcast-learning-status` | 1 min | WebSocket updates |
 | `broadcast-conversation-status` | 2 min | WebSocket updates |
@@ -95,22 +101,22 @@ We fixed THREE critical gaps that were breaking the autonomous feedback loop:
 
 ---
 
-## What's Next (Session 363)
+## What's Next (Session 364)
 
-### Option A: End-to-End Verification
-- Watch the pipeline for 30+ minutes
-- Verify conversations → decisions → policies → prompts
-- Confirm insights reaching projects
-
-### Option B: Expand Autonomy
-- Add spider-triggered conversations (new data → discussion)
-- Add project-triggered research (project needs → spider query)
-- Add decision-triggered actions (policy → agent behavior change)
-
-### Option C: Add More Diversity
+### Option A: More Diversity
 - Mood variety (23/24 agents are "calm")
 - Relationship evolution (more rivalries/alliances)
 - Specialized conversation topics
+
+### Option B: Pipeline Monitoring
+- Dashboard for autonomous activity
+- Real-time view of which tasks are firing
+- Success/failure metrics
+
+### Option C: Cross-Agent Learning
+- Agents share knowledge from conversations
+- Transfer learning between specialists
+- Collective memory improvements
 
 ---
 
@@ -124,29 +130,27 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 362 Files Changed
+## Session 363 Files Changed
 
 | File | Changes |
 |------|---------|
-| `core/models_unified_system.py` | Added `quality_score` field and methods |
-| `core/tasks.py` | Added `auto_promote_decisions` + data source attribution |
-| `core/celery.py` | Added to Beat schedule |
-| `core/settings.py` | Added to CELERY_BEAT_SCHEDULE |
-| `core/models_partnership.py` | Added `ensure_living_config()` + signal |
+| `core/tasks.py` | Added 3 new autonomous tasks (~370 lines) |
+| `core/settings.py` | Added 3 tasks to CELERY_BEAT_SCHEDULE |
+| `core/models_unified_system.py` | Added `propagated_at` field, new trigger_type choices |
+| `core/migrations/0070_*` | Migration for new field |
 
 ---
 
-## Session 362 Commits
+## Session 363 Commits
 
-1. `70e2360` - feat: Add auto-promotion of high-quality decisions
-2. `5c8bbf6` - fix: Add tasks to settings.py
-3. `598a21d` - fix: Add data source attribution to conversations
-4. `84eace8` - docs: Update handoff
-5. `8ae08b1` - feat: Auto-create LivingProjectConfig for projects
+1. `f3d2d57` - feat(Session 363): Add spider-triggered autonomous conversations
+2. `8557ad6` - feat(Session 363): Add project-triggered research autonomy
+3. `5f1b7b4` - feat(Session 363): Add decision-triggered policy propagation
 
 ---
 
 ## Related Documentation
 
-- `docs/handoffs/SESSION_362_CONVERSATION_VALUE_AUDIT.md` - Complete audit + fixes
-- `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` - Multi-agent Celery Beat
+- `docs/handoffs/SESSION_363_AUTONOMY_EXPANSION.md` - Full implementation details
+- `docs/handoffs/SESSION_362_CONVERSATION_VALUE_AUDIT.md` - Pipeline fixes
+- `docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md` - Multi-agent panels
