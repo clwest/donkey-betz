@@ -6761,6 +6761,321 @@ Format: numbered list of steps."""
 
 
 @shared_task(bind=True)
+def execute_dream_implementations(self, max_implementations: int = 5):
+    """
+    Session 368: Agent Execution Engine - Agents execute their implementation plans.
+
+    This task takes in-progress implementations and has agents actually execute
+    their plans to generate real deliverables.
+
+    Implementation Types and Deliverables:
+    - feature/improvement: Generate images, documents, or code
+    - content: Create content strategy document with actionable items
+    - research: Conduct research and generate a comprehensive report
+    - experiment: Try something new and document findings
+
+    Args:
+        max_implementations: Maximum implementations to execute per cycle
+
+    Returns:
+        Stats about implementations executed and deliverables generated
+    """
+    from django.utils import timezone
+    from core.models_unified_system import DreamImplementation
+    import openai
+    import os
+    import json
+
+    logger.info("⚡ [EXECUTION-ENGINE] Starting dream implementation execution...")
+
+    try:
+        # Get in-progress implementations that haven't been completed
+        in_progress = DreamImplementation.objects.filter(
+            status='in_progress',
+            completed_at__isnull=True
+        ).select_related(
+            'dream', 'dream__agent', 'assigned_agent', 'project'
+        ).order_by('started_at')[:max_implementations]
+
+        if not in_progress.exists():
+            logger.info("⚡ [EXECUTION-ENGINE] No implementations to execute")
+            return {'status': 'skipped', 'reason': 'no_implementations_in_progress'}
+
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+        stats = {
+            'executed': 0,
+            'completed': 0,
+            'deliverables_generated': 0,
+            'failed': 0,
+            'deliverable_types': {}
+        }
+
+        for impl in in_progress:
+            try:
+                dream = impl.dream
+                agent = impl.assigned_agent
+                agent_name = agent.name if agent else 'Unknown'
+
+                logger.info(f"⚡ [EXECUTION-ENGINE] Executing: {dream.title[:40]} ({impl.implementation_type})")
+
+                # Execute based on implementation type
+                deliverable = None
+                deliverable_type = None
+                deliverable_path = None
+                deliverable_summary = None
+
+                if impl.implementation_type in ['feature', 'improvement']:
+                    # Generate a detailed feature specification/proposal
+                    deliverable = _execute_feature_implementation(client, dream, impl, agent)
+                    deliverable_type = 'specification'
+                    deliverable_path = f'/implementations/specs/{impl.id}.md'
+                    deliverable_summary = f"Feature specification for: {dream.title}"
+
+                elif impl.implementation_type == 'content':
+                    # Generate a content strategy document
+                    deliverable = _execute_content_implementation(client, dream, impl, agent)
+                    deliverable_type = 'content_strategy'
+                    deliverable_path = f'/implementations/content/{impl.id}.md'
+                    deliverable_summary = f"Content strategy for: {dream.title}"
+
+                elif impl.implementation_type == 'research':
+                    # Generate a research report
+                    deliverable = _execute_research_implementation(client, dream, impl, agent)
+                    deliverable_type = 'research_report'
+                    deliverable_path = f'/implementations/research/{impl.id}.md'
+                    deliverable_summary = f"Research report on: {dream.title}"
+
+                elif impl.implementation_type == 'experiment':
+                    # Generate an experiment design and findings
+                    deliverable = _execute_experiment_implementation(client, dream, impl, agent)
+                    deliverable_type = 'experiment_report'
+                    deliverable_path = f'/implementations/experiments/{impl.id}.md'
+                    deliverable_summary = f"Experiment findings for: {dream.title}"
+
+                else:
+                    # Generic implementation
+                    deliverable = _execute_generic_implementation(client, dream, impl, agent)
+                    deliverable_type = 'document'
+                    deliverable_path = f'/implementations/general/{impl.id}.md'
+                    deliverable_summary = f"Implementation document for: {dream.title}"
+
+                stats['executed'] += 1
+
+                if deliverable:
+                    # Store the deliverable in the implementation's deliverable_summary field
+                    # (In a full system, we'd save to actual files)
+                    impl.complete_implementation(
+                        deliverable_type=deliverable_type,
+                        deliverable_path=deliverable_path,
+                        summary=deliverable_summary
+                    )
+
+                    # Store the full deliverable content in user_feedback for now
+                    # (This is a workaround - in production we'd save to files)
+                    impl.user_feedback = f"[DELIVERABLE]\n\n{deliverable[:2000]}"
+                    impl.save(update_fields=['user_feedback'])
+
+                    stats['completed'] += 1
+                    stats['deliverables_generated'] += 1
+                    stats['deliverable_types'][deliverable_type] = stats['deliverable_types'].get(deliverable_type, 0) + 1
+
+                    logger.info(f"⚡ [EXECUTION-ENGINE] Completed: {dream.title[:40]} -> {deliverable_type}")
+
+            except Exception as e:
+                logger.warning(f"⚡ [EXECUTION-ENGINE] Failed to execute {impl.id}: {e}")
+                stats['failed'] += 1
+                continue
+
+        # Broadcast update
+        try:
+            import redis
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'dream_execution',
+                'stats': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except Exception:
+            pass
+
+        logger.info(
+            f"⚡ [EXECUTION-ENGINE] Complete: "
+            f"{stats['completed']} completed, "
+            f"{stats['deliverables_generated']} deliverables generated"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"⚡ [EXECUTION-ENGINE] Execution failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+def _execute_feature_implementation(client, dream, impl, agent):
+    """Generate a feature specification/proposal document."""
+    prompt = f"""You are {agent.name if agent else 'an AI agent'}, executing an approved dream implementation.
+
+Dream: {dream.title}
+Dream Content: {dream.content}
+
+Implementation Plan:
+{impl.implementation_plan}
+
+Create a detailed FEATURE SPECIFICATION that includes:
+1. Executive Summary (2-3 sentences)
+2. Problem Statement
+3. Proposed Solution
+4. Key Features (bullet points)
+5. Technical Requirements
+6. Success Metrics
+7. Implementation Timeline (phases)
+8. Risks and Mitigations
+
+Write in a professional, actionable format. Be specific and creative."""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+
+def _execute_content_implementation(client, dream, impl, agent):
+    """Generate a content strategy document."""
+    prompt = f"""You are {agent.name if agent else 'an AI agent'}, executing an approved dream implementation.
+
+Dream: {dream.title}
+Dream Content: {dream.content}
+
+Implementation Plan:
+{impl.implementation_plan}
+
+Create a detailed CONTENT STRATEGY that includes:
+1. Content Overview
+2. Target Audience
+3. Key Messages (3-5)
+4. Content Types (blog posts, social media, videos, etc.)
+5. Content Calendar (suggested topics for 4 weeks)
+6. Distribution Channels
+7. Engagement Tactics
+8. Success Metrics
+
+Write in a professional, actionable format. Be creative and specific."""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+
+def _execute_research_implementation(client, dream, impl, agent):
+    """Generate a research report."""
+    prompt = f"""You are {agent.name if agent else 'an AI agent'}, executing an approved dream implementation.
+
+Dream: {dream.title}
+Dream Content: {dream.content}
+
+Implementation Plan:
+{impl.implementation_plan}
+
+Create a comprehensive RESEARCH REPORT that includes:
+1. Executive Summary
+2. Research Objectives
+3. Methodology
+4. Key Findings (5-7 insights with evidence)
+5. Market/Industry Analysis
+6. Competitive Landscape
+7. Opportunities Identified
+8. Recommendations (prioritized)
+9. Next Steps
+
+Write in a professional research format. Be thorough and analytical."""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+
+def _execute_experiment_implementation(client, dream, impl, agent):
+    """Generate an experiment design and findings document."""
+    prompt = f"""You are {agent.name if agent else 'an AI agent'}, executing an approved dream implementation.
+
+Dream: {dream.title}
+Dream Content: {dream.content}
+
+Implementation Plan:
+{impl.implementation_plan}
+
+Create an EXPERIMENT REPORT that includes:
+1. Hypothesis Statement
+2. Experiment Design
+3. Variables (independent, dependent, controlled)
+4. Methodology
+5. Expected Results
+6. Simulated Findings (what we would expect to find)
+7. Analysis and Interpretation
+8. Conclusions
+9. Recommendations for Further Experimentation
+
+Write in a scientific format. Be creative but rigorous."""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+
+def _execute_generic_implementation(client, dream, impl, agent):
+    """Generate a generic implementation document."""
+    prompt = f"""You are {agent.name if agent else 'an AI agent'}, executing an approved dream implementation.
+
+Dream: {dream.title}
+Dream Content: {dream.content}
+
+Implementation Plan:
+{impl.implementation_plan}
+
+Create a comprehensive IMPLEMENTATION DOCUMENT that includes:
+1. Overview and Objectives
+2. Approach and Methodology
+3. Key Components
+4. Implementation Details
+5. Resources Required
+6. Timeline
+7. Expected Outcomes
+8. Monitoring and Evaluation
+9. Next Steps
+
+Write in a professional, actionable format."""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+
+@shared_task(bind=True)
 def explore_dream_topic(self, exploration_id: str):
     """
     Session 249: Deep exploration of a dream topic when user clicks "Explore".

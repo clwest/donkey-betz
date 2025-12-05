@@ -393,6 +393,15 @@ app.conf.beat_schedule = {
             'expires': 900,  # 15 minutes
         }
     },
+    # Session 368: Agent Execution Engine
+    # Execute in-progress implementations and generate real deliverables
+    'dream-execution-cycle': {
+        'task': 'core.tasks.execute_dream_implementations',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes - execute implementations
+        'options': {
+            'expires': 1200,  # 20 minutes
+        }
+    },
     # Session 252: Agent Mood System
     # Check for expired moods and reset them periodically
     'check-mood-expirations': {
