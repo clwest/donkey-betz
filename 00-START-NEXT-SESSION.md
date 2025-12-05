@@ -1,6 +1,6 @@
 # Start Next Session Here
 
-**Last Session:** 368 - Dream Validation UI + Agent Execution Engine
+**Last Session:** 368 - Dream Validation UI + Agent Execution Engine + GPT-5-mini Migration
 **Date:** December 5, 2025
 **Status:** 102 spiders | 36 categories | 24 agents | **19 AUTONOMOUS TASKS!**
 
@@ -8,7 +8,7 @@
 
 ## Session 368 Accomplishments
 
-### Dream Validation UI + Agent Execution Engine Complete!
+### Dream Validation UI + Agent Execution Engine + GPT-5-mini Migration Complete!
 
 | Aspect | Before | After |
 |--------|--------|-------|
@@ -19,6 +19,7 @@
 | **Metrics API** | No | GET /api/dream-implementations/metrics/ |
 | **Thumbs Up/Down** | No | POST /api/agent-dreams/{id}/rate/ |
 | **Agent Execution Engine** | No | execute_dream_implementations task |
+| **GPT Model** | gpt-4o-mini | **gpt-5-mini (reasoning model)** |
 | **Autonomous Tasks** | 18 | **19** |
 | **First Deliverables** | 0 | **3 generated!** |
 
@@ -34,8 +35,13 @@
 - Added to Celery Beat (every 20 min)
 
 **Part 3 - Frontend Thumbs Up/Down:**
-- Added 👎 button to dream cards
+- Added thumbs down button to dream cards
 - Quick rating feedback loop
+
+**Part 4 - GPT-5-mini Migration:**
+- Updated 10 GPT calls in core/tasks.py to use gpt-5-mini
+- Changed `max_tokens` to `max_completion_tokens`
+- Removed `temperature` parameter (not supported by reasoning models)
 
 ---
 
@@ -45,7 +51,7 @@
 |-----------|-------|--------|
 | **Spiders** | **102** | Active |
 | **Agents** | **24** | Active with diverse moods! |
-| **Autonomous Tasks** | **19** | Running (NEW: dream-execution!) |
+| **Autonomous Tasks** | **19** | Running (dream-execution!) |
 | **Agent Conversations** | **1,300+** | Mood-influenced |
 | **Agent Dreams** | **1,479+** | Productized! |
 | **Dream Implementations** | **4** | 1 validated, 3 completed |
@@ -76,7 +82,7 @@
 [IMPLEMENT] dream_implementation_cycle (15 min)
      |
      v
-[EXECUTE] dream_execution_cycle (20 min)  <-- NEW!
+[EXECUTE] dream_execution_cycle (20 min)
      |
      v
 [DELIVERABLE] specification/research/experiment/content
@@ -108,7 +114,7 @@
 | `agent-dream-cycle` | 15 min | Creative thinking |
 | `dream-productization-cycle` | 20 min | Score & promote dreams |
 | `dream-implementation-cycle` | 15 min | Process approved dreams |
-| `dream-execution-cycle` | 20 min | **NEW! Generate deliverables** |
+| `dream-execution-cycle` | 20 min | Generate deliverables |
 | `broadcast-learning-status` | 1 min | WebSocket updates |
 | `broadcast-conversation-status` | 2 min | WebSocket updates |
 | `broadcast-dream-journal` | 3 min | WebSocket updates |
@@ -176,7 +182,7 @@ print(result)
 |------|---------|
 | `core/views_agent_learning.py` | Added 6 dream validation endpoints |
 | `core/urls.py` | Added imports and URL patterns |
-| `core/tasks.py` | Added execute_dream_implementations task |
+| `core/tasks.py` | Added execute_dream_implementations + GPT-5-mini migration |
 | `core/celery.py` | Added dream-execution-cycle schedule |
 | `ai_core/templates/partials/js/agent_dashboard.html` | Thumbs up/down UI |
 | `ai_core/templates/ai_image_studio.html` | Thumbs up/down UI |
@@ -188,6 +194,7 @@ print(result)
 
 1. `feat(Session 368): Dream Validation UI API`
 2. `feat(Session 368): Agent Execution Engine + Thumbs Up/Down`
+3. `refactor(Session 368): Migrate dream tasks from gpt-4o-mini to gpt-5-mini`
 
 ---
 
