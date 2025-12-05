@@ -4838,6 +4838,188 @@ Keep your response to 2-3 sentences. Be specific about actionable insights."""
         return {'status': 'failed', 'error': str(e)}
 
 
+# =============================================================================
+# Session 363: Project-Triggered Research
+# =============================================================================
+
+@shared_task(bind=True)
+def trigger_project_research(self, max_projects: int = 3, max_spiders_per_project: int = 2):
+    """
+    Session 363: Trigger spider queries based on project research needs.
+
+    When projects have LivingProjectConfigs with watch_topics or watch_keywords,
+    this task:
+    1. Finds active projects that need fresh data
+    2. Determines which spiders can provide relevant data
+    3. Prioritizes those spiders for execution
+    4. Creates AgentConversation when new data arrives
+
+    This creates a demand-driven autonomous system where project needs
+    trigger data collection.
+
+    Args:
+        max_projects: Maximum projects to process per run
+        max_spiders_per_project: Maximum spiders to trigger per project
+
+    Returns:
+        Stats about research triggered
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import LivingProjectConfig, SpiderData, ProjectInsight
+    from core.models import AgentConversation
+    from core.models_partnership import PartnershipProject
+    import random
+
+    logger.info("📊 [PROJECT-RESEARCH] Checking for project research needs...")
+
+    try:
+        stats = {
+            'projects_checked': 0,
+            'research_triggered': 0,
+            'spiders_prioritized': [],
+            'topics_researched': []
+        }
+
+        # Find active projects with living configs that have watch topics
+        active_configs = LivingProjectConfig.objects.filter(
+            is_active=True
+        ).select_related('project').order_by('?')[:max_projects * 2]
+
+        # Map topics to spider categories
+        topic_to_spiders = {
+            'ai': ['techcrunch', 'theverge', 'hackernews', 'huggingface', 'devto'],
+            'ml': ['techcrunch', 'huggingface', 'hackernews', 'kaggle'],
+            'tech': ['techcrunch', 'theverge', 'wired', 'mit_tech_review', 'hackernews'],
+            'finance': ['yahoo_finance', 'coingecko', 'seekingalpha', 'business_news'],
+            'crypto': ['coingecko', 'reddit', 'hackernews'],
+            'design': ['dribbble', 'behance', 'creativemarket', 'figma'],
+            'jobs': ['remoteok', 'weworkremotely', 'adzuna', 'flexjobs'],
+            'freelance': ['toptal', 'guru', 'peopleperhour', 'remoteok'],
+            'marketing': ['reddit', 'producthunt', 'indiehackers', 'medium'],
+            'startup': ['producthunt', 'indiehackers', 'hackernews', 'techcrunch'],
+            'content': ['medium', 'substack', 'youtube', 'patreon'],
+            'education': ['udemy', 'teachable', 'skillshare', 'education_rss'],
+            'security': ['hackernews', 'reddit', 'arstechnica'],
+            'cloud': ['hackernews', 'devto', 'techcrunch'],
+        }
+
+        projects_processed = 0
+        for config in active_configs:
+            if projects_processed >= max_projects:
+                break
+
+            project = config.project
+            stats['projects_checked'] += 1
+
+            # Get topics from config
+            watch_topics = config.watch_topics or []
+            watch_keywords = config.watch_keywords or []
+            spider_categories = config.spider_categories or []
+
+            # Check if project needs fresh data (no insight in last 4 hours)
+            cutoff = timezone.now() - timedelta(hours=4)
+            recent_insights = ProjectInsight.objects.filter(
+                project=project,
+                created_at__gte=cutoff
+            ).count()
+
+            if recent_insights >= 3:
+                # Project has enough recent data
+                continue
+
+            # Determine which spiders to prioritize
+            spiders_to_run = set()
+
+            # From watch topics
+            for topic in watch_topics:
+                topic_lower = topic.lower()
+                for key, spiders in topic_to_spiders.items():
+                    if key in topic_lower or topic_lower in key:
+                        spiders_to_run.update(spiders[:2])
+
+            # From spider categories
+            for category in spider_categories:
+                for key, spiders in topic_to_spiders.items():
+                    if category.lower() in key:
+                        spiders_to_run.update(spiders[:2])
+
+            # If no specific spiders found, use generic research spiders
+            if not spiders_to_run:
+                spiders_to_run = {'techcrunch', 'hackernews', 'reddit'}
+
+            # Limit spiders per project
+            spiders_to_run = list(spiders_to_run)[:max_spiders_per_project]
+
+            # Trigger spider execution by setting priority
+            from core.models_unified_system import SpiderPriority
+
+            for spider_name in spiders_to_run:
+                try:
+                    priority, created = SpiderPriority.objects.get_or_create(
+                        spider_name=spider_name,
+                        defaults={
+                            'priority_score': 80,
+                            'boost_reason': f'Project need: {project.project_name}'
+                        }
+                    )
+                    if not created:
+                        # Boost existing priority
+                        priority.priority_score = min(100, priority.priority_score + 10)
+                        priority.boost_reason = f'Project need: {project.project_name}'
+                        priority.save()
+
+                    stats['spiders_prioritized'].append(spider_name)
+
+                except Exception as e:
+                    logger.warning(f"📊 [PROJECT-RESEARCH] Failed to prioritize {spider_name}: {e}")
+                    continue
+
+            # Also create a conversation about the project's research needs
+            if spiders_to_run and random.random() < 0.3:  # 30% chance
+                try:
+                    from core.models import Agent
+                    agents = list(Agent.objects.filter(is_active=True)[:3])
+                    if len(agents) >= 2:
+                        topic_summary = ", ".join(watch_topics[:3]) if watch_topics else project.project_name
+                        conversation = AgentConversation.objects.create(
+                            topic=f"Research needed for {project.project_name}: {topic_summary[:50]}",
+                            conversation_type='brainstorm',
+                            initiator=agents[0],
+                            trigger_type='project_need',
+                            status='pending'
+                        )
+                        conversation.participants.add(*agents[:2])
+                        stats['research_triggered'] += 1
+                        stats['topics_researched'].append(topic_summary[:30])
+
+                except Exception as e:
+                    logger.warning(f"📊 [PROJECT-RESEARCH] Failed to create conversation: {e}")
+
+            projects_processed += 1
+
+        logger.info(
+            f"📊 [PROJECT-RESEARCH] Complete: {stats['projects_checked']} projects checked, "
+            f"{len(set(stats['spiders_prioritized']))} spiders prioritized, "
+            f"{stats['research_triggered']} conversations created"
+        )
+
+        return {
+            'status': 'success',
+            'stats': {
+                'projects_checked': stats['projects_checked'],
+                'research_triggered': stats['research_triggered'],
+                'spiders_prioritized': list(set(stats['spiders_prioritized'])),
+                'topics_researched': stats['topics_researched']
+            },
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"📊 [PROJECT-RESEARCH] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def broadcast_conversation_status(self):
     """
