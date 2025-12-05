@@ -3975,6 +3975,8 @@ Guidelines:
                         max_completion_tokens=400,
                     )
                     conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
+                    # Session 359: Validate conclusion for mythology violations
+                    conclusion = validate_agent_output("ConversationSynthesizer", conclusion)
                 except:
                     conclusion = f"Productive discussion about {topic}"
 
@@ -4349,6 +4351,9 @@ Guidelines:
 
                 content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
+                # Session 359: Validate project conversation messages for mythology violations
+                content = validate_agent_output(current_speaker.name, content)
+
                 # Clean up content
                 if content.startswith(f"{current_speaker.name}:"):
                     content = content[len(current_speaker.name)+1:].strip()
@@ -4424,6 +4429,8 @@ Guidelines:
                     max_completion_tokens=500,
                 )
                 conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
+                # Session 359: Validate project conclusion for mythology violations
+                conclusion = validate_agent_output("ProjectConversationSynthesizer", conclusion)
             except:
                 conclusion = f"Productive discussion about {topic}"
 
@@ -4937,6 +4944,9 @@ NEXT_STEPS:
 
             full_response = response.choices[0].message.content.strip()
 
+            # Session 359: Validate Memory Palace exploration for mythology violations
+            full_response = validate_agent_output("MemoryPalaceExplorer", full_response)
+
             # Parse the response
             exploration_content = ""
             insights = []
@@ -5248,6 +5258,9 @@ The synthesis should read as a cohesive document, not just a collection of separ
         )
 
         synthesis = synthesis_response.choices[0].message.content.strip()
+
+        # Session 359: Validate Hive Mind synthesis for mythology violations
+        synthesis = validate_agent_output("HiveMindSynthesizer", synthesis)
 
         # Extract a brief summary (first 2-3 sentences or look for summary section)
         summary_lines = synthesis.split('\n')
