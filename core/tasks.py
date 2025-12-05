@@ -3852,6 +3852,20 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 except Exception as e:
                     logger.debug(f"Could not get spider intelligence: {e}")
 
+                # Session 365: Get agent mood context for personality-influenced responses
+                mood_context = ""
+                try:
+                    from core.models_unified_system import AgentMood
+                    mood_obj = AgentMood.objects.filter(agent=current_speaker).first()
+                    if mood_obj:
+                        mood_modifier = mood_obj.get_prompt_modifier()
+                        mood_emoji = mood_obj.get_mood_emoji()
+                        if mood_modifier:
+                            mood_context = f"\n\n== YOUR CURRENT MOOD: {mood_emoji} {mood_obj.current_mood.upper()} ==\n{mood_modifier}"
+                            logger.debug(f"🎭 [CONVERSATIONS] {current_speaker.name} mood: {mood_obj.current_mood}")
+                except Exception as e:
+                    logger.debug(f"Could not get mood context: {e}")
+
                 # Session 362: Build knowledge context with data source attribution
                 knowledge_context_parts = []
                 if knowledge_item.summary:
@@ -3887,6 +3901,7 @@ Guidelines:
 - Ask probing questions, don't just accept statements
 - Real experts disagree sometimes - that's healthy
 - When citing data, mention the source (e.g., "from Notion spider data" or "based on HackerNews trends")
+{mood_context}
 {policy_context}
 {spider_context}"""
 
@@ -4048,6 +4063,75 @@ Guidelines:
                         stats['living_insights'] = stats.get('living_insights', 0) + len(insights)
                 except Exception as e:
                     logger.warning(f"Could not process conversation for living projects: {e}")
+
+                # Session 365: Update agent moods based on conversation outcomes
+                try:
+                    from core.models_unified_system import AgentMood, MoodHistory
+                    from django.utils import timezone as tz
+                    import random
+
+                    # Determine conversation success (insights = good, quality_score = good)
+                    was_successful = len([m for m in messages if m['type'] == 'insight']) > 0
+                    quality = conversation.quality_score or 0.5
+
+                    for agent in [initiator, responder]:
+                        mood_obj = AgentMood.objects.filter(agent=agent).first()
+                        if not mood_obj:
+                            continue
+
+                        old_mood = mood_obj.current_mood
+
+                        # Mood transition logic based on conversation outcomes
+                        if was_successful and quality > 0.7:
+                            # Great conversation - boost positive moods
+                            positive_transitions = {
+                                'calm': 'confident',
+                                'curious': 'inspired',
+                                'focused': 'confident',
+                                'contemplative': 'inspired',
+                                'tired': 'energetic',
+                                'frustrated': 'calm',
+                            }
+                            if old_mood in positive_transitions and random.random() < 0.4:
+                                mood_obj.current_mood = positive_transitions[old_mood]
+                        elif quality < 0.4:
+                            # Poor conversation - shift to contemplative/frustrated
+                            negative_transitions = {
+                                'confident': 'contemplative',
+                                'energetic': 'calm',
+                                'inspired': 'contemplative',
+                                'playful': 'calm',
+                            }
+                            if old_mood in negative_transitions and random.random() < 0.3:
+                                mood_obj.current_mood = negative_transitions[old_mood]
+
+                        # Random mood variation (5% chance) to add diversity over time
+                        if random.random() < 0.05:
+                            available_moods = ['inspired', 'focused', 'curious', 'confident', 'contemplative', 'energetic', 'calm', 'playful']
+                            mood_obj.current_mood = random.choice(available_moods)
+
+                        if mood_obj.current_mood != old_mood:
+                            mood_obj.trigger_type = 'collaboration'
+                            mood_obj.trigger_source = f"Conversation: {topic[:50]}"
+                            mood_obj.total_mood_changes += 1
+                            mood_obj.save()
+
+                            # Log mood history
+                            MoodHistory.objects.create(
+                                agent=agent,
+                                mood=mood_obj.current_mood,
+                                intensity=mood_obj.intensity,
+                                trigger_type='collaboration',
+                                trigger_source=f"Conversation: {topic[:50]}",
+                                creativity_level=mood_obj.creativity_level,
+                                precision_level=mood_obj.precision_level,
+                                sociability_level=mood_obj.sociability_level,
+                                risk_tolerance=mood_obj.risk_tolerance
+                            )
+                            logger.info(f"🎭 [MOOD] {agent.name}: {old_mood} -> {mood_obj.current_mood} after conversation")
+
+                except Exception as e:
+                    logger.debug(f"Could not update mood after conversation: {e}")
 
         # Broadcast the update
         try:
@@ -4323,6 +4407,20 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
 
                     knowledge_context = '\n'.join(knowledge_context_parts) if knowledge_context_parts else ''
 
+                    # Session 365: Get agent mood context for personality-influenced responses
+                    mood_context = ""
+                    try:
+                        from core.models_unified_system import AgentMood
+                        mood_obj = AgentMood.objects.filter(agent=current_agent).first()
+                        if mood_obj:
+                            mood_modifier = mood_obj.get_prompt_modifier()
+                            mood_emoji = mood_obj.get_mood_emoji()
+                            if mood_modifier:
+                                mood_context = f"\n\n== YOUR CURRENT MOOD: {mood_emoji} {mood_obj.current_mood.upper()} ==\n{mood_modifier}"
+                                logger.debug(f"🎭 [MULTI-AGENT] {current_agent.name} mood: {mood_obj.current_mood}")
+                    except Exception as e:
+                        logger.debug(f"Could not get mood context: {e}")
+
                     # Build system prompt
                     system_prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'general topics'}.
 
@@ -4343,7 +4441,8 @@ Guidelines:
 - Add unique insights from your specialty
 - Be natural and conversational
 - When citing data, mention the specific source (e.g., "from the Notion data" or "looking at the 11 HackerNews data points")
-- {"Challenge assumptions and push back" if tension == 'high' else "Build on others' ideas collaboratively" if tension == 'low' else "Balance agreement and constructive criticism"}"""
+- {"Challenge assumptions and push back" if tension == 'high' else "Build on others' ideas collaboratively" if tension == 'low' else "Balance agreement and constructive criticism"}
+{mood_context}"""
 
                     # Session 364: Add diversity prompts to avoid repetitive agreement
                     panel_diversity_prompts = [
@@ -4509,6 +4608,73 @@ Provide a 2-3 sentence summary highlighting the key insights and any points of c
                         stats['living_insights'] = stats.get('living_insights', 0) + len(insights)
                 except Exception as e:
                     logger.debug(f"Could not process panel for living projects: {e}")
+
+                # Session 365: Update panel agent moods based on conversation outcomes
+                try:
+                    from core.models_unified_system import AgentMood, MoodHistory
+                    import random
+
+                    # Determine conversation success
+                    was_successful = stats['insights_discovered'] > 0
+                    quality = conversation.quality_score or 0.5
+
+                    for agent in panel_agents:
+                        mood_obj = AgentMood.objects.filter(agent=agent).first()
+                        if not mood_obj:
+                            continue
+
+                        old_mood = mood_obj.current_mood
+
+                        # Panel conversations tend to be more collaborative and energizing
+                        if was_successful and quality > 0.6:
+                            # Great panel - boost collaborative moods
+                            panel_positive_transitions = {
+                                'calm': 'energetic',
+                                'curious': 'confident',
+                                'focused': 'inspired',
+                                'contemplative': 'curious',
+                                'tired': 'calm',
+                                'frustrated': 'focused',
+                            }
+                            if old_mood in panel_positive_transitions and random.random() < 0.35:
+                                mood_obj.current_mood = panel_positive_transitions[old_mood]
+                        elif quality < 0.4:
+                            # Poor panel - reflect on performance
+                            panel_negative_transitions = {
+                                'confident': 'contemplative',
+                                'energetic': 'focused',
+                                'inspired': 'curious',
+                                'playful': 'calm',
+                            }
+                            if old_mood in panel_negative_transitions and random.random() < 0.25:
+                                mood_obj.current_mood = panel_negative_transitions[old_mood]
+
+                        # Random variation (4% chance in panels)
+                        if random.random() < 0.04:
+                            available_moods = ['inspired', 'focused', 'curious', 'confident', 'contemplative', 'energetic', 'calm', 'playful']
+                            mood_obj.current_mood = random.choice(available_moods)
+
+                        if mood_obj.current_mood != old_mood:
+                            mood_obj.trigger_type = 'collaboration'
+                            mood_obj.trigger_source = f"Panel: {topic[:50]}"
+                            mood_obj.total_mood_changes += 1
+                            mood_obj.save()
+
+                            MoodHistory.objects.create(
+                                agent=agent,
+                                mood=mood_obj.current_mood,
+                                intensity=mood_obj.intensity,
+                                trigger_type='collaboration',
+                                trigger_source=f"Panel: {topic[:50]}",
+                                creativity_level=mood_obj.creativity_level,
+                                precision_level=mood_obj.precision_level,
+                                sociability_level=mood_obj.sociability_level,
+                                risk_tolerance=mood_obj.risk_tolerance
+                            )
+                            logger.info(f"🎭 [MOOD] {agent.name}: {old_mood} -> {mood_obj.current_mood} after panel")
+
+                except Exception as e:
+                    logger.debug(f"Could not update mood after panel: {e}")
 
         # Calculate average participants
         if stats['conversations_started'] > 0:
