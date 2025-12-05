@@ -2881,20 +2881,35 @@ def run_agent_learning_cycle():
             student = connection.student_agent
 
             # Get teacher's recent knowledge that student doesn't have
+            # Session 357: Expanded default to include ALL knowledge types for better sharing
+            ALL_KNOWLEDGE_TYPES = ['trend', 'opportunity', 'market', 'user_behavior', 'content_idea',
+                                   'tool_discovery', 'pricing', 'research', 'insight', 'strategy']
             teacher_knowledge = AgentKnowledgeSource.objects.filter(
                 agent=teacher,
                 is_active=True,
-                knowledge_type__in=connection.shareable_knowledge_types or ['trend', 'market', 'opportunity']
+                knowledge_type__in=connection.shareable_knowledge_types or ALL_KNOWLEDGE_TYPES
             ).order_by('-confidence_score', '-last_updated_at')[:5]
 
             for knowledge in teacher_knowledge:
-                # Session 322: Check if student already has this exact knowledge
-                # Use first 30 chars of title for better matching (was just first word which was too crude)
-                title_prefix = knowledge.title[:30] if knowledge.title else ''
+                # Session 357: Improved duplicate detection
+                # Use full title match (after stripping [Learned] prefix) instead of just first 30 chars
+                # This allows more knowledge sharing while preventing true duplicates
+                import re
+                clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title or '').strip()
+                # Also strip multiple [Learned] prefixes
+                while clean_title.startswith('[Learned]'):
+                    clean_title = clean_title[9:].strip()
+
+                # Check for exact title match OR if this specific knowledge was already transferred
+                from django.db.models import Q
                 student_has_similar = AgentKnowledgeSource.objects.filter(
                     agent=student,
-                    title__icontains=title_prefix,
                     knowledge_type=knowledge.knowledge_type
+                ).filter(
+                    # Match: exact clean title OR [Learned] version of the same title
+                    Q(title=clean_title) |
+                    Q(title=f"[Learned] {clean_title}") |
+                    Q(title__iexact=knowledge.title)
                 ).exists()
 
                 if not student_has_similar:
