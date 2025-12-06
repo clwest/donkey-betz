@@ -3498,6 +3498,87 @@ class AgentPerformanceMetric(models.Model):
         success_rate = self.successful_executions / self.total_executions if self.total_executions > 0 else 0
         return f"{self.agent_name} ({success_rate:.1%} success)"
 
+    def calculate_quality_score(self):
+        """
+        Calculate dynamic quality score based on actual performance metrics.
+
+        Session 383: Replaced hardcoded 85.0 placeholder with real calculation.
+
+        Formula (weighted composite):
+        - Execution Success Rate: 50% weight (most important)
+        - Collaboration Success Rate: 25% weight
+        - Knowledge Contribution: 15% weight (normalized 0-100, capped at 10 contributions)
+        - Activity Recency: 10% weight (bonus for recent activity)
+
+        Returns: Float 0-100
+        """
+        score = 0.0
+
+        # 1. Execution Success Rate (50% weight)
+        if self.total_executions > 0:
+            # Fix data inconsistency: cap successful at total
+            successful = min(self.successful_executions, self.total_executions)
+            exec_rate = (successful / self.total_executions) * 100
+            score += exec_rate * 0.50
+        else:
+            # New agent with no executions gets neutral score
+            score += 50 * 0.50
+
+        # 2. Collaboration Success Rate (25% weight)
+        if self.total_collaborations > 0:
+            successful_collabs = min(self.successful_collaborations, self.total_collaborations)
+            collab_rate = (successful_collabs / self.total_collaborations) * 100
+            score += collab_rate * 0.25
+        else:
+            # No collaborations yet, give neutral score
+            score += 50 * 0.25
+
+        # 3. Knowledge Contribution (15% weight)
+        # Normalize to 0-100: 10+ contributions = 100%
+        knowledge_score = min(self.knowledge_contributions * 10, 100)
+        score += knowledge_score * 0.15
+
+        # 4. Activity Recency (10% weight)
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        if self.last_execution:
+            days_since = (now - self.last_execution).days
+            if days_since <= 1:
+                recency_score = 100
+            elif days_since <= 7:
+                recency_score = 80
+            elif days_since <= 30:
+                recency_score = 60
+            else:
+                recency_score = 40
+        else:
+            recency_score = 50  # No activity recorded
+        score += recency_score * 0.10
+
+        return round(score, 2)
+
+    def update_quality_score(self):
+        """Calculate and save the quality score."""
+        self.quality_score = self.calculate_quality_score()
+        self.save(update_fields=['quality_score', 'updated_at'])
+        return self.quality_score
+
+    @classmethod
+    def recalculate_all_quality_scores(cls):
+        """Recalculate quality scores for all agents."""
+        updated = []
+        for metric in cls.objects.all():
+            old_score = metric.quality_score
+            new_score = metric.update_quality_score()
+            updated.append({
+                'agent': metric.agent_name,
+                'old_score': old_score,
+                'new_score': new_score
+            })
+        return updated
+
 
 # =============================================================================
 # SESSION 219 PHASE D: WORKFLOW MARKETPLACE MODELS
