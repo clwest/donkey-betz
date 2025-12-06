@@ -47283,6 +47283,38 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                         <span style="color: #22c55e;">${(impl.quality_rating * 100).toFixed(0)}%</span>
                                     </div>
                                 ` : ''}
+                                ${impl.generated_media && impl.generated_media.length > 0 ? `
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-2">🎨 Generated Images:</small>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            ${impl.generated_media.map((media, idx) => `
+                                                <div class="position-relative" style="width: 120px;">
+                                                    ${media.url ? `
+                                                        <img src="${media.url}"
+                                                             alt="Generated image ${idx + 1}"
+                                                             class="rounded"
+                                                             style="width: 100%; height: 80px; object-fit: cover; cursor: pointer; border: 2px solid #a855f7;"
+                                                             onclick="showGeneratedImageModal('${impl.id}', ${idx})">
+                                                    ` : media.base64 ? `
+                                                        <img src="data:image/png;base64,${media.base64}"
+                                                             alt="Generated image ${idx + 1}"
+                                                             class="rounded"
+                                                             style="width: 100%; height: 80px; object-fit: cover; cursor: pointer; border: 2px solid #a855f7;"
+                                                             onclick="showGeneratedImageModal('${impl.id}', ${idx})">
+                                                    ` : `
+                                                        <div class="rounded d-flex align-items-center justify-content-center"
+                                                             style="width: 100%; height: 80px; background: #2a2a2a; border: 2px solid #a855f7;">
+                                                            <span style="color: #888;">🖼️</span>
+                                                        </div>
+                                                    `}
+                                                    <div class="position-absolute bottom-0 end-0 px-1" style="background: rgba(0,0,0,0.7); font-size: 10px; color: #a855f7;">
+                                                        ${media.style || 'image'}
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
                                 <div class="d-flex gap-2 mt-3">
                                     ${impl.status === 'completed' ? `
                                         <button class="btn btn-sm btn-success" onclick="validateImplementation('${impl.id}', 'validate')">
@@ -47615,6 +47647,87 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             URL.revokeObjectURL(url);
 
             showNotification(`Downloaded: ${filename}`, 'success');
+        }
+
+        // Session 370: Show generated image in a modal
+        async function showGeneratedImageModal(implId, imageIndex) {
+            try {
+                // Fetch all implementations to find the one we need
+                const response = await authenticatedFetch(`/api/dream-implementations/?limit=50`);
+                const data = await response.json();
+
+                // Find the specific implementation
+                const impl = data.implementations?.find(i => i.id === implId);
+                if (!impl || !impl.generated_media || !impl.generated_media[imageIndex]) {
+                    showNotification('Image not found', 'warning');
+                    return;
+                }
+
+                const media = impl.generated_media[imageIndex];
+                const imgSrc = media.url || (media.base64 ? `data:image/png;base64,${media.base64}` : null);
+
+                if (!imgSrc) {
+                    showNotification('Image data not available', 'warning');
+                    return;
+                }
+
+                const modalHtml = `
+                    <div class="modal fade" id="generatedImageModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content" style="background: #1a1a1a; border: 1px solid #a855f7;">
+                                <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                    <h5 class="modal-title" style="color: #a855f7;">
+                                        🎨 ${impl.dream_title || 'Generated Image'}
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center p-0">
+                                    <img src="${imgSrc}"
+                                         alt="Generated image"
+                                         style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333; background: #0d0d0d;">
+                                    <div class="w-100">
+                                        <div class="mb-2">
+                                            <small class="text-muted">Style:</small>
+                                            <span class="badge" style="background: #a855f7;">${media.style || 'default'}</span>
+                                            <small class="text-muted ms-3">Provider:</small>
+                                            <span class="badge bg-info">${media.provider || 'unknown'}</span>
+                                            <small class="text-muted ms-3">Model:</small>
+                                            <span class="badge bg-secondary">${media.model || 'unknown'}</span>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Prompt:</small>
+                                            <span class="small" style="color: #aaa;">${media.prompt || 'N/A'}</span>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            ${media.url ? `
+                                                <a href="${media.url}" download="dream_${implId}_${imageIndex}.png" class="btn btn-sm btn-outline-success">
+                                                    ⬇️ Download
+                                                </a>
+                                            ` : ''}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Remove existing modal if present
+                const existingModal = document.getElementById('generatedImageModal');
+                if (existingModal) existingModal.remove();
+
+                // Add and show new modal
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modal = new bootstrap.Modal(document.getElementById('generatedImageModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error showing generated image:', error);
+                showNotification('Error loading image', 'danger');
+            }
         }
 
         // =========================================================================
