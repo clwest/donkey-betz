@@ -1435,6 +1435,7 @@ def get_dream_implementations(request):
                 'deliverable_path': impl.deliverable_path,
                 'deliverable_summary': impl.deliverable_summary,
                 'deliverable_content': impl.deliverable_content,
+                'generated_media': impl.generated_media or [],  # Session 370: Visual implementations
                 'quality_rating': impl.quality_rating,
                 'user_feedback': impl.user_feedback,
                 'created_at': impl.created_at.isoformat(),

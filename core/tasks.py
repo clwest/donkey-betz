@@ -6646,6 +6646,11 @@ def process_approved_dreams(self, max_dreams: int = 10):
                 # Determine implementation type
                 impl_type = type_mapping.get(dream.dream_type, 'other')
 
+                # Session 370: Check if this dream should be a visual implementation
+                if _is_visual_dream(dream):
+                    impl_type = 'visual'
+                    logger.info(f"🎨 [DREAM-IMPLEMENTATION] Detected visual dream: {dream.title[:40]}")
+
                 # Create implementation record
                 implementation = DreamImplementation.create_from_approved_dream(
                     dream=dream,
@@ -6658,7 +6663,8 @@ def process_approved_dreams(self, max_dreams: int = 10):
                 assigned_agent = dream.agent
 
                 # If dream has no agent or we want a specialist, find one
-                if not assigned_agent or impl_type in ['feature', 'improvement']:
+                # Session 370: Added 'visual' to the list - always use ImageAgent for visual dreams
+                if not assigned_agent or impl_type in ['feature', 'improvement', 'visual']:
                     # Try to find a specialist based on implementation type
                     if impl_type in ['feature', 'improvement', 'workflow']:
                         # Look for workflow or creation agents
@@ -6684,6 +6690,16 @@ def process_approved_dreams(self, max_dreams: int = 10):
                         ).first()
                         if candidates:
                             assigned_agent = candidates
+
+                    # Session 370: Assign ImageAgent for visual implementations
+                    elif impl_type == 'visual':
+                        candidates = Agent.objects.filter(
+                            is_active=True,
+                            name__in=['ImageAgent', 'CreativeDirectorAgent', 'CreationAgent']
+                        ).first()
+                        if candidates:
+                            assigned_agent = candidates
+                        logger.info(f"🎨 [DREAM-IMPLEMENTATION] Assigned {candidates.name if candidates else 'None'} for visual dream")
 
                 if assigned_agent:
                     implementation.assign_agent(assigned_agent)
@@ -6850,6 +6866,21 @@ def execute_dream_implementations(self, max_implementations: int = 5):
                     deliverable_type = 'experiment_report'
                     deliverable_path = f'/implementations/experiments/{impl.id}.md'
                     deliverable_summary = f"Experiment findings for: {dream.title}"
+
+                elif impl.implementation_type == 'visual':
+                    # Session 370: Generate actual images using ImageAgent
+                    visual_result = _execute_visual_implementation(dream, impl, agent)
+                    if visual_result:
+                        deliverable = visual_result.get('description', '')
+                        deliverable_type = 'generated_images'
+                        deliverable_path = f'/implementations/visual/{impl.id}'
+                        deliverable_summary = f"Generated {len(visual_result.get('images', []))} image(s) for: {dream.title}"
+                        # Store the generated images in the JSONField
+                        impl.generated_media = visual_result.get('images', [])
+                        impl.save(update_fields=['generated_media'])
+                        stats['images_generated'] = stats.get('images_generated', 0) + len(visual_result.get('images', []))
+                    else:
+                        deliverable = None
 
                 else:
                     # Generic implementation
@@ -7067,6 +7098,229 @@ Write in a professional, actionable format."""
         max_completion_tokens=2500  # Higher for reasoning models
     )
     return response.choices[0].message.content.strip()
+
+
+def _execute_visual_implementation(dream, impl, agent):
+    """
+    Session 370: Generate actual images using ImageAgent for visual dreams.
+
+    This function uses the ImageAgent to generate real images based on the
+    dream content. The generated images are stored and linked to the implementation.
+
+    Args:
+        dream: The AgentDream being implemented
+        impl: The DreamImplementation record
+        agent: The Agent model assigned to this implementation
+
+    Returns:
+        Dict with 'images' list and 'description' or None on failure
+    """
+    from content.image_generation import ImageGenerationService
+
+    logger.info(f"🎨 [VISUAL-ENGINE] Generating images for: {dream.title[:50]}")
+
+    try:
+        # Build an image generation prompt from the dream
+        # The dream title and content describe the visual concept
+        image_prompt = _build_image_prompt_from_dream(dream, impl)
+
+        # Initialize the image generation service
+        image_service = ImageGenerationService()
+
+        # Determine style based on dream type/content
+        style = _detect_visual_style(dream)
+
+        # Generate the image(s)
+        result = image_service.generate_image(
+            prompt=image_prompt,
+            provider='stability',  # Use Stability AI
+            style=style,
+            num_images=1,  # Generate 1 image per dream for now
+            quality='balanced'  # SDXL - good quality, reasonable cost
+        )
+
+        if result.success and result.images:
+            # Format the images for storage
+            generated_images = []
+            for i, img_data in enumerate(result.images):
+                # img_data could be URL or base64
+                image_record = {
+                    'index': i,
+                    'url': img_data if isinstance(img_data, str) and img_data.startswith('http') else None,
+                    'base64': img_data if isinstance(img_data, str) and not img_data.startswith('http') else None,
+                    'prompt': image_prompt,
+                    'style': style,
+                    'provider': result.provider_used,
+                    'model': result.model_used,
+                    'dream_id': str(dream.id),
+                    'dream_title': dream.title,
+                }
+                generated_images.append(image_record)
+
+            logger.info(
+                f"🎨 [VISUAL-ENGINE] Generated {len(generated_images)} image(s) for: {dream.title[:40]}"
+            )
+
+            # Create a description document
+            description = f"""# Visual Implementation: {dream.title}
+
+## Generated Images
+- **Count**: {len(generated_images)} image(s)
+- **Style**: {style}
+- **Provider**: {result.provider_used}
+- **Model**: {result.model_used}
+
+## Prompt Used
+{image_prompt}
+
+## Dream Context
+{dream.content[:500] if dream.content else 'No additional context'}
+
+## Implementation Plan
+{impl.implementation_plan[:500] if impl.implementation_plan else 'Auto-generated visual'}
+"""
+
+            return {
+                'images': generated_images,
+                'description': description,
+                'generation_time_ms': result.generation_time_ms,
+                'provider': result.provider_used,
+                'model': result.model_used
+            }
+
+        else:
+            logger.warning(
+                f"🎨 [VISUAL-ENGINE] Failed to generate images for: {dream.title[:40]} - {result.error_message}"
+            )
+            return None
+
+    except Exception as e:
+        logger.exception(f"🎨 [VISUAL-ENGINE] Error generating images: {e}")
+        return None
+
+
+def _build_image_prompt_from_dream(dream, impl):
+    """
+    Build an optimized image generation prompt from dream content.
+
+    Extracts key visual concepts from the dream title and content
+    and formats them for Stability AI.
+    """
+    # Start with the dream title as the main concept
+    title = dream.title.strip()
+
+    # Add content context if available
+    content = dream.content[:200] if dream.content else ''
+
+    # Build the prompt
+    prompt_parts = [title]
+
+    # Extract visual keywords from content
+    visual_keywords = []
+    visual_terms = ['visual', 'design', 'style', 'color', 'image', 'graphic',
+                    'illustration', 'art', 'creative', 'aesthetic', 'modern',
+                    'futuristic', 'elegant', 'vibrant', 'dynamic']
+
+    if content:
+        for term in visual_terms:
+            if term.lower() in content.lower():
+                visual_keywords.append(term)
+
+    # Add implementation context if available
+    if impl.implementation_plan:
+        # Extract first actionable item
+        plan_lines = impl.implementation_plan.split('\n')
+        for line in plan_lines[:3]:
+            if line.strip() and not line.strip().startswith('#'):
+                prompt_parts.append(line.strip()[:100])
+                break
+
+    # Combine into final prompt
+    base_prompt = ', '.join(prompt_parts)
+
+    # Add quality enhancers for Stability AI
+    quality_suffix = ", high quality, detailed, professional, 4k"
+
+    return f"{base_prompt}{quality_suffix}"
+
+
+def _is_visual_dream(dream):
+    """
+    Session 370: Detect if a dream should be implemented as a visual/image.
+
+    Uses keyword matching against the dream title and content to determine
+    if this dream describes a visual concept that should be rendered as an image.
+
+    Returns:
+        True if the dream should be a visual implementation
+    """
+    text = (dream.title + ' ' + (dream.content or '')).lower()
+
+    # Strong visual indicators - if any of these are present, it's visual
+    strong_visual_keywords = [
+        'image', 'visual', 'graphic', 'illustration', 'artwork',
+        'design', 'logo', 'icon', 'picture', 'photo', 'art gallery',
+        'visualization', 'render', 'aesthetic', 'banner', 'poster',
+        'infographic', 'chart', 'diagram', 'thumbnail', 'avatar',
+    ]
+
+    # Check for strong indicators
+    for keyword in strong_visual_keywords:
+        if keyword in text:
+            return True
+
+    # Title-based patterns that suggest visual output
+    visual_title_patterns = [
+        'art ', ' art', 'gallery', 'studio', 'creative hub',
+        'visual experience', 'immersive', 'interactive display',
+    ]
+
+    title_lower = dream.title.lower()
+    for pattern in visual_title_patterns:
+        if pattern in title_lower:
+            return True
+
+    # Agent-based detection: If the dreaming agent is image-focused
+    if dream.agent and dream.agent.name in ['ImageAgent', 'CreativeDirectorAgent']:
+        # More likely to be visual if from these agents
+        return 'creative' in text or 'design' in text or 'style' in text
+
+    return False
+
+
+def _detect_visual_style(dream):
+    """
+    Detect the appropriate visual style based on dream content.
+
+    Returns a style preset that works well with Stability AI.
+    """
+    content = (dream.title + ' ' + (dream.content or '')).lower()
+
+    # Style detection patterns
+    style_patterns = {
+        'cyberpunk': ['cyber', 'neon', 'tech', 'digital', 'ai', 'future', 'robot'],
+        'fantasy': ['magic', 'fantasy', 'mythical', 'dragon', 'wizard', 'enchant'],
+        'minimalist': ['minimal', 'simple', 'clean', 'modern', 'elegant'],
+        'watercolor': ['watercolor', 'artistic', 'painted', 'soft'],
+        'photorealistic': ['photo', 'realistic', 'real', 'natural'],
+        'anime': ['anime', 'manga', 'cartoon', 'animated'],
+        'concept_art': ['concept', 'design', 'game', 'character'],
+        'digital_art': ['digital', 'graphic', 'illustration', 'artwork'],
+    }
+
+    # Score each style based on keyword matches
+    style_scores = {}
+    for style, keywords in style_patterns.items():
+        score = sum(1 for keyword in keywords if keyword in content)
+        if score > 0:
+            style_scores[style] = score
+
+    # Return the best matching style or default
+    if style_scores:
+        return max(style_scores.items(), key=lambda x: x[1])[0]
+
+    # Default to digital art for creative AI dreams
+    return 'digital_art'
 
 
 @shared_task(bind=True)

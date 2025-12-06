@@ -7016,6 +7016,7 @@ class DreamImplementation(models.Model):
         ('research', 'Research/Analysis'),
         ('experiment', 'Experiment'),
         ('workflow', 'Workflow Automation'),
+        ('visual', 'Visual/Image Creation'),  # Session 370: Visual dream execution
         ('other', 'Other'),
     ]
     implementation_type = models.CharField(
@@ -7048,6 +7049,13 @@ class DreamImplementation(models.Model):
     deliverable_content = models.TextField(
         blank=True,
         help_text="Full content of the deliverable (report, spec, etc.)"
+    )
+
+    # Session 370: Generated media for visual implementations
+    generated_media = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of generated images/videos [{id, url, prompt, type}]"
     )
 
     # Quality metrics
