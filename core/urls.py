@@ -824,7 +824,8 @@ from core.views_agent_training import (
     list_agents as training_list_agents, get_agent as training_get_agent,
     update_agent as training_update_agent, list_capabilities,
     add_capability, remove_capability, list_templates, create_from_template,
-    training_history, training_stats, training_dashboard
+    training_history, training_stats, training_dashboard,
+    agent_chat, agent_invoke  # Session 383: Chat & Invoke
 )
 # Session 217C: Workflow Analytics API
 from core.views_workflow_analytics import (
@@ -1847,6 +1848,10 @@ urlpatterns = [
     path('api/training/history/', training_history, name='training-history'),
     path('api/training/stats/', training_stats, name='training-stats'),
     path('api/training/dashboard/', training_dashboard, name='training-dashboard'),
+
+    # Session 383: Agent Chat & Invoke
+    path('api/training/agents/chat/', agent_chat, name='training-agent-chat'),
+    path('api/training/agents/invoke/', agent_invoke, name='training-agent-invoke'),
 
     # Session 217C: Workflow Analytics API
     path('api/workflow-analytics/history/', wf_execution_history, name='wf-execution-history'),

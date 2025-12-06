@@ -3094,6 +3094,79 @@
                 <!-- Status Messages -->
                 <div id="compareStatus" class="mt-3"></div>
 
+                <!-- Session 383: Agent Chat Modal -->
+                <div id="agentChatModal" class="modal" tabindex="-1" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999;">
+                    <div class="modal-dialog modal-lg" style="margin: 30px auto; max-width: 800px; height: calc(100vh - 60px);">
+                        <div class="modal-content h-100" style="background: linear-gradient(135deg, #1a1a2e, #0f1729); border: 2px solid #06b6d4; border-radius: 16px; display: flex; flex-direction: column;">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(6, 182, 212, 0.3); padding: 16px 20px;">
+                                <div>
+                                    <h5 class="modal-title mb-0" style="color: #06b6d4; font-weight: 700;">
+                                        <span id="agentChatIcon" style="margin-right: 8px;">🤖</span>
+                                        <span id="agentChatName">Agent Chat</span>
+                                    </h5>
+                                    <small class="text-muted" id="agentChatStatus">Ready to chat</small>
+                                </div>
+                                <button type="button" class="btn-close btn-close-white" onclick="closeAgentChat()"></button>
+                            </div>
+                            <div class="modal-body flex-grow-1" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                                <!-- Chat Messages Area -->
+                                <div id="agentChatMessages" style="flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.3);">
+                                    <div class="text-center text-muted py-5">
+                                        <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                                        <p>Start a conversation with this agent!</p>
+                                        <p class="small">Type a message below or use suggested prompts.</p>
+                                    </div>
+                                </div>
+                                <!-- Suggested Prompts -->
+                                <div id="agentSuggestedPrompts" style="padding: 12px 20px; border-top: 1px solid rgba(6, 182, 212, 0.2); background: rgba(6, 182, 212, 0.05);">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button class="btn btn-sm btn-outline-info" onclick="useAgentPrompt('What can you help me with?')">What can you do?</button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="useAgentPrompt('Create something creative for me')">Create something</button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="useAgentPrompt('Analyze the latest trends')">Analyze trends</button>
+                                    </div>
+                                </div>
+                                <!-- Input Area -->
+                                <div style="padding: 16px 20px; border-top: 1px solid rgba(6, 182, 212, 0.3); background: rgba(0,0,0,0.2);">
+                                    <div class="input-group">
+                                        <input type="text" id="agentChatInput" class="form-control" placeholder="Type your message..."
+                                               style="background: #1a1a2e; border: 1px solid #444; color: white; border-radius: 8px 0 0 8px;"
+                                               onkeypress="if(event.key==='Enter') sendAgentMessage()">
+                                        <button class="btn btn-info" onclick="sendAgentMessage()" style="border-radius: 0 8px 8px 0;">
+                                            <span id="agentSendBtn">Send 🚀</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 383: Quick Invoke Modal -->
+                <div id="agentInvokeModal" class="modal" tabindex="-1" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999;">
+                    <div class="modal-dialog" style="margin: 100px auto; max-width: 500px;">
+                        <div class="modal-content" style="background: linear-gradient(135deg, #1a1a2e, #0f1729); border: 2px solid #22c55e; border-radius: 16px;">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(34, 197, 94, 0.3); padding: 16px 20px;">
+                                <h5 class="modal-title" style="color: #22c55e; font-weight: 700;">
+                                    <span style="margin-right: 8px;">⚡</span>
+                                    <span id="invokeAgentName">Quick Invoke</span>
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" onclick="closeInvokeModal()"></button>
+                            </div>
+                            <div class="modal-body" style="padding: 20px;">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">What would you like this agent to do?</label>
+                                    <textarea id="invokeTaskInput" class="form-control" rows="3" placeholder="e.g., Create a logo for a coffee shop called 'Morning Brew'"
+                                              style="background: #2a2a2a; border: 1px solid #444; color: white;"></textarea>
+                                </div>
+                                <div id="invokeResult" style="display: none;" class="mb-3"></div>
+                                <button class="btn btn-success w-100" onclick="executeAgentInvoke()">
+                                    <span id="invokeBtn">⚡ Execute Task</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Session 296: Certificate of Authenticity Modal -->
                 <div id="certificateModal" class="modal" tabindex="-1" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 9999;">
                     <div class="modal-dialog modal-lg" style="margin: 30px auto; max-width: 700px;">
@@ -9556,7 +9629,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label text-muted">Custom Name (Optional)</label>
-                                        <input type="text" id="create-agent-name" class="form-control" placeholder="my_custom_agent" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                        <input type="text" id="create-agent-name" class="form-control" placeholder="my_custom_agent" style="background: #2a2a2a; border: 1px solid #444; color: white; cursor: text; pointer-events: auto;">
                                     </div>
                                     <button class="btn btn-success w-100" onclick="createAgentFromTemplate()">
                                         ✨ Create Agent
@@ -9750,9 +9823,27 @@
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
-                                                    <button class="btn btn-lg w-100" id="run-pipeline-btn" onclick="runPipeline()"
-                                                            style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
-                                                        🚀 Run Research Pipeline
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-lg flex-grow-1" id="run-pipeline-btn" onclick="runPipeline(false)"
+                                                                style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none;">
+                                                            🔬 Research Only
+                                                        </button>
+                                                        <button class="btn btn-lg flex-grow-1" id="run-full-pipeline-btn" onclick="runPipeline(true)"
+                                                                style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                                            🚀 Full Pipeline
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Continue to Creative button (appears after research) -->
+                                            <div id="continue-creative-section" style="display: none;" class="mt-3">
+                                                <div class="alert d-flex align-items-center justify-content-between" style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e;">
+                                                    <div>
+                                                        <strong style="color: #22c55e;">✅ Research Complete!</strong>
+                                                        <span class="text-muted ms-2">Project ID: <code id="completed-project-id">-</code></span>
+                                                    </div>
+                                                    <button class="btn btn-success" id="continue-creative-btn" onclick="runCreativePipeline()">
+                                                        🎨 Continue to Creative Pipeline →
                                                     </button>
                                                 </div>
                                             </div>
@@ -9954,6 +10045,19 @@
                                                 <span class="activity-time text-muted me-3" style="font-size: 11px; min-width: 50px;">Now</span>
                                                 <span class="activity-icon me-2">🚀</span>
                                                 <span class="activity-message">Pipeline Visualizer initialized - watching for agent activity...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Session 384: Generated Assets Gallery -->
+                                    <div class="card mt-3" style="background: #1a1a1a; border: 1px solid #333; display: none;" id="pipeline-assets-gallery">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                            <h5 class="mb-0" style="color: #8b5cf6;">🖼️ Generated Assets</h5>
+                                            <span class="badge bg-purple" id="assets-count-badge">0 assets</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3" id="pipeline-assets-grid">
+                                                <!-- Assets will be dynamically inserted here -->
                                             </div>
                                         </div>
                                     </div>
@@ -47459,7 +47563,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                                              style="width: 100%; height: 80px; object-fit: cover; cursor: pointer; border: 2px solid #a855f7;"
                                                              onclick="showGeneratedImageModal('${impl.id}', ${idx})">
                                                     ` : media.base64 ? `
-                                                        <img src="data:image/png;base64,${media.base64}"
+                                                        <img src="${media.base64.startsWith('data:') ? media.base64 : 'data:image/png;base64,' + media.base64}"
                                                              alt="Generated image ${idx + 1}"
                                                              class="rounded"
                                                              style="width: 100%; height: 80px; object-fit: cover; cursor: pointer; border: 2px solid #a855f7;"
@@ -47827,7 +47931,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
 
                 const media = impl.generated_media[imageIndex];
-                const imgSrc = media.url || (media.base64 ? `data:image/png;base64,${media.base64}` : null);
+                const imgSrc = media.url || (media.base64 ? (media.base64.startsWith('data:') ? media.base64 : `data:image/png;base64,${media.base64}`) : null);
 
                 if (!imgSrc) {
                     showNotification('Image data not available', 'warning');
@@ -58394,9 +58498,14 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
             document.getElementById('pipeline-idea-input').value = idea;
         }
 
-        async function runPipeline() {
+        // Store current project ID for Creative Pipeline
+        let currentPipelineProjectId = null;
+        let shouldRunCreativeAfterResearch = false;
+
+        async function runPipeline(runCreative = false) {
             const ideaInput = document.getElementById('pipeline-idea-input');
             const runBtn = document.getElementById('run-pipeline-btn');
+            const fullBtn = document.getElementById('run-full-pipeline-btn');
             const idea = ideaInput.value.trim();
 
             if (!idea) {
@@ -58405,9 +58514,17 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 return;
             }
 
-            // Disable button and show loading
+            // Store flag for auto-continuing to creative
+            shouldRunCreativeAfterResearch = runCreative;
+
+            // Disable buttons and show loading
             runBtn.disabled = true;
-            runBtn.innerHTML = '⏳ Running Pipeline...';
+            fullBtn.disabled = true;
+            runBtn.innerHTML = '⏳ Running...';
+            fullBtn.innerHTML = '⏳ Running...';
+
+            // Hide the continue section while running
+            document.getElementById('continue-creative-section').style.display = 'none';
 
             // Reset all stages first
             resetPipelineStages();
@@ -58415,7 +58532,8 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
             // Connect to WebSocket if not already connected
             connectPipelineWebSocket();
 
-            addPipelineActivity('🚀', `Starting pipeline for: "${idea.substring(0, 50)}${idea.length > 50 ? '...' : ''}"`, '#ec4899');
+            const pipelineType = runCreative ? 'Full Pipeline (Research + Creative)' : 'Research Pipeline';
+            addPipelineActivity('🚀', `Starting ${pipelineType} for: "${idea.substring(0, 50)}${idea.length > 50 ? '...' : ''}"`, '#ec4899');
 
             try {
                 const response = await fetch('/api/business-ideas/', {
@@ -58430,16 +58548,32 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 const data = await response.json();
 
                 if (response.ok) {
+                    // Store project ID for Creative Pipeline
+                    currentPipelineProjectId = data.project_id;
+
                     // Update active pipeline count
                     const activeEl = document.getElementById('pipeline-active-count');
                     if (activeEl) activeEl.textContent = '1';
 
-                    addPipelineActivity('✅', `Pipeline initiated! Project ID: ${data.project_id || 'N/A'}`, '#22c55e');
+                    addPipelineActivity('✅', `Research complete! Project ID: ${data.project_id || 'N/A'}`, '#22c55e');
 
-                    // The WebSocket will handle real-time updates from here
-                    // But if WebSocket isn't connected yet, simulate updates
+                    // Show completed project ID
+                    document.getElementById('completed-project-id').textContent = data.project_id || 'N/A';
+
+                    // Simulate research pipeline updates
                     if (!pipelineWebSocket || pipelineWebSocket.readyState !== WebSocket.OPEN) {
                         simulatePipelineUpdates(data);
+                    }
+
+                    // If Full Pipeline was selected, automatically run Creative Pipeline
+                    if (runCreative && data.project_id) {
+                        addPipelineActivity('🎨', 'Auto-continuing to Creative Pipeline...', '#ec4899');
+                        setTimeout(() => {
+                            runCreativePipeline();
+                        }, 1500);
+                    } else {
+                        // Show the "Continue to Creative" button
+                        document.getElementById('continue-creative-section').style.display = 'block';
                     }
                 } else {
                     addPipelineActivity('❌', `Error: ${data.error || 'Failed to start pipeline'}`, '#ef4444');
@@ -58448,10 +58582,218 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 console.error('Pipeline error:', error);
                 addPipelineActivity('❌', `Network error: ${error.message}`, '#ef4444');
             } finally {
-                // Re-enable button
+                // Re-enable buttons
                 runBtn.disabled = false;
-                runBtn.innerHTML = '🚀 Run Research Pipeline';
+                fullBtn.disabled = false;
+                runBtn.innerHTML = '🔬 Research Only';
+                fullBtn.innerHTML = '🚀 Full Pipeline';
             }
+        }
+
+        // Run Creative Pipeline (generate assets)
+        async function runCreativePipeline() {
+            if (!currentPipelineProjectId) {
+                addPipelineActivity('⚠️', 'No project ID available. Run Research Pipeline first.', '#f59e0b');
+                return;
+            }
+
+            const continueBtn = document.getElementById('continue-creative-btn');
+            if (continueBtn) {
+                continueBtn.disabled = true;
+                continueBtn.innerHTML = '⏳ Generating Assets...';
+            }
+
+            addPipelineActivity('🎨', 'Starting Creative Pipeline - generating brand assets...', '#ec4899');
+
+            // Update creative pipeline stages to "running"
+            updateCreativePipelineStage('creative_brief', 'running', 'Extracting...');
+
+            try {
+                const response = await fetch(`/api/business-ideas/${currentPipelineProjectId}/generate-assets/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        asset_types: ['logo', 'banner', 'thumbnail']
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    addPipelineActivity('✅', 'Creative Pipeline complete! Assets generated.', '#22c55e');
+
+                    // Update completed count
+                    const completedEl = document.getElementById('pipeline-completed-count');
+                    if (completedEl) {
+                        completedEl.textContent = parseInt(completedEl.textContent || '0') + 1;
+                    }
+
+                    // Simulate creative pipeline stage updates
+                    simulateCreativePipelineUpdates(data);
+
+                    // Session 384: Fixed data structure - backend returns all_images, all_videos, all_audio
+                    const totalAssets = (data.all_images?.length || 0) + (data.all_videos?.length || 0) + (data.all_audio?.length || 0);
+                    const assetTypes = data.assets_generated || [];
+
+                    if (totalAssets > 0) {
+                        addPipelineActivity('🖼️', `Generated ${totalAssets} assets: ${assetTypes.join(', ')}`, '#8b5cf6');
+
+                        // Display generated images in visual gallery
+                        displayGeneratedAssets(data);
+                    } else if (assetTypes.length > 0) {
+                        addPipelineActivity('🖼️', `Asset types generated: ${assetTypes.join(', ')}`, '#8b5cf6');
+                    }
+                } else {
+                    addPipelineActivity('❌', `Creative Pipeline Error: ${data.error || 'Asset generation failed'}`, '#ef4444');
+                    updateCreativePipelineStage('creative_brief', 'failed', 'Error');
+                }
+            } catch (error) {
+                console.error('Creative Pipeline error:', error);
+                addPipelineActivity('❌', `Network error: ${error.message}`, '#ef4444');
+            } finally {
+                if (continueBtn) {
+                    continueBtn.disabled = false;
+                    continueBtn.innerHTML = '🎨 Continue to Creative Pipeline →';
+                }
+            }
+        }
+
+        // Update Creative Pipeline stage status
+        function updateCreativePipelineStage(stageName, status, statusText) {
+            const stage = document.querySelector(`#creative-pipeline-flow .pipeline-stage[data-stage="${stageName}"]`);
+            if (!stage) return;
+
+            const statusEl = stage.querySelector('.stage-status');
+            if (statusEl) {
+                statusEl.textContent = statusText || status;
+                statusEl.className = 'stage-status';
+
+                if (status === 'completed') {
+                    stage.style.borderColor = '#22c55e';
+                    stage.style.background = 'rgba(34, 197, 94, 0.2)';
+                    statusEl.style.color = '#22c55e';
+                } else if (status === 'running') {
+                    stage.style.borderColor = '#f59e0b';
+                    stage.style.background = 'rgba(245, 158, 11, 0.2)';
+                    statusEl.style.color = '#f59e0b';
+                } else if (status === 'failed') {
+                    stage.style.borderColor = '#ef4444';
+                    stage.style.background = 'rgba(239, 68, 68, 0.2)';
+                    statusEl.style.color = '#ef4444';
+                }
+            }
+        }
+
+        // Simulate Creative Pipeline stage updates
+        function simulateCreativePipelineUpdates(data) {
+            const creativeStages = [
+                'creative_brief', 'creative_direction', 'image_generation',
+                'video_generation', 'audio_generation', '3d_generation',
+                'image_editing', 'trained_creation', 'seo_optimization', 'content_audit'
+            ];
+
+            creativeStages.forEach((stage, index) => {
+                setTimeout(() => {
+                    updateCreativePipelineStage(stage, 'completed', 'Done');
+                    const stageName = stage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    addPipelineActivity('✅', `${stageName} completed`, '#22c55e');
+                }, index * 400);
+            });
+        }
+
+        // Session 384: Display generated assets in visual gallery
+        function displayGeneratedAssets(data) {
+            const gallery = document.getElementById('pipeline-assets-gallery');
+            const grid = document.getElementById('pipeline-assets-grid');
+            const badge = document.getElementById('assets-count-badge');
+
+            if (!gallery || !grid) return;
+
+            // Clear existing content
+            grid.innerHTML = '';
+
+            const allImages = data.all_images || [];
+            const allVideos = data.all_videos || [];
+            const allAudio = data.all_audio || [];
+            const totalCount = allImages.length + allVideos.length + allAudio.length;
+
+            if (totalCount === 0) return;
+
+            // Show gallery
+            gallery.style.display = 'block';
+            badge.textContent = `${totalCount} assets`;
+            badge.style.background = '#8b5cf6';
+
+            // Add images
+            allImages.forEach((img, idx) => {
+                if (img.url) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-sm-6';
+                    col.innerHTML = `
+                        <div class="card h-100" style="background: #2a2a2a; border: 1px solid #444;">
+                            <div style="position: relative; padding-top: 100%; overflow: hidden;">
+                                <img src="${img.url}" alt="Generated ${img.type || 'image'}"
+                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
+                                     onclick="window.open('${img.url}', '_blank')">
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted">${img.type || 'Image'} ${idx + 1}</small>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(col);
+                }
+            });
+
+            // Add videos
+            allVideos.forEach((vid, idx) => {
+                if (vid.url) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-sm-6';
+                    col.innerHTML = `
+                        <div class="card h-100" style="background: #2a2a2a; border: 1px solid #444;">
+                            <div style="padding: 20px; text-align: center;">
+                                <span style="font-size: 48px;">🎬</span>
+                                <div class="mt-2">
+                                    <a href="${vid.url}" target="_blank" class="btn btn-sm btn-outline-info">View Video</a>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted">Video ${idx + 1}</small>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(col);
+                }
+            });
+
+            // Add audio
+            allAudio.forEach((aud, idx) => {
+                if (aud.url) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-sm-6';
+                    col.innerHTML = `
+                        <div class="card h-100" style="background: #2a2a2a; border: 1px solid #444;">
+                            <div style="padding: 20px; text-align: center;">
+                                <span style="font-size: 48px;">🎵</span>
+                                <div class="mt-2">
+                                    <audio controls src="${aud.url}" style="width: 100%;"></audio>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted">Audio ${idx + 1}</small>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(col);
+                }
+            });
+
+            // Scroll gallery into view
+            gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function simulatePipelineUpdates(responseData) {
@@ -58822,7 +59164,13 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                             ${(a.capabilities || []).length > 3 ? `<span class="badge bg-secondary">+${a.capabilities.length - 3}</span>` : ''}
                         </div>
                     </div>
-                    <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="openAgentChat('${a.name}', '${a.display_name}')" title="Chat with this agent">
+                            💬 Chat
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="invokeAgent('${a.name}', '${a.display_name}')" title="Quick invoke with a task">
+                            ⚡ Invoke
+                        </button>
                         ${a.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
                     </div>
                 </div>
@@ -58911,6 +59259,244 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
 
         // ============================================================
         // END SESSION 217B: AGENT TRAINING FUNCTIONS
+        // ============================================================
+
+        // ============================================================
+        // SESSION 383: AGENT CHAT & INVOKE FUNCTIONS
+        // ============================================================
+
+        // Store current agent context
+        let currentAgentChat = { agentName: null, displayName: null, messages: [] };
+        let currentInvokeAgent = { agentName: null, displayName: null };
+
+        // Open Agent Chat Modal
+        function openAgentChat(agentName, displayName) {
+            currentAgentChat = { agentName, displayName, messages: [] };
+            document.getElementById('agentChatName').textContent = displayName;
+            document.getElementById('agentChatStatus').textContent = 'Ready to chat';
+            document.getElementById('agentChatMessages').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                    <p>Start a conversation with <strong>${displayName}</strong>!</p>
+                    <p class="small">Type a message below or use suggested prompts.</p>
+                </div>
+            `;
+            document.getElementById('agentChatInput').value = '';
+            document.getElementById('agentChatModal').style.display = 'block';
+            document.getElementById('agentChatInput').focus();
+        }
+
+        // Close Agent Chat Modal
+        function closeAgentChat() {
+            document.getElementById('agentChatModal').style.display = 'none';
+            currentAgentChat = { agentName: null, displayName: null, messages: [] };
+        }
+
+        // Use a suggested prompt
+        function useAgentPrompt(prompt) {
+            document.getElementById('agentChatInput').value = prompt;
+            document.getElementById('agentChatInput').focus();
+        }
+
+        // Add message to chat display
+        function addChatMessage(role, content, isStreaming = false) {
+            const messagesDiv = document.getElementById('agentChatMessages');
+
+            // Clear initial welcome message if this is the first real message
+            if (currentAgentChat.messages.length === 0 && messagesDiv.querySelector('.text-center.text-muted')) {
+                messagesDiv.innerHTML = '';
+            }
+
+            const messageId = `msg-${Date.now()}`;
+            const isUser = role === 'user';
+            const bgColor = isUser ? 'rgba(6, 182, 212, 0.2)' : 'rgba(34, 197, 94, 0.15)';
+            const borderColor = isUser ? '#06b6d4' : '#22c55e';
+            const icon = isUser ? '👤' : '🤖';
+            const label = isUser ? 'You' : currentAgentChat.displayName;
+
+            const messageHtml = `
+                <div id="${messageId}" class="mb-3" style="animation: fadeIn 0.3s ease;">
+                    <div class="d-flex align-items-start gap-2">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: ${bgColor}; border: 1px solid ${borderColor}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            ${icon}
+                        </div>
+                        <div style="flex: 1;">
+                            <div class="small mb-1" style="color: ${borderColor}; font-weight: 600;">${label}</div>
+                            <div class="message-content" style="color: #e5e5e5; line-height: 1.5;">
+                                ${isStreaming ? '<span class="streaming-indicator">Thinking...</span>' : formatAgentResponse(content)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            if (!isStreaming) {
+                currentAgentChat.messages.push({ role, content });
+            }
+
+            return messageId;
+        }
+
+        // Format agent response (handle markdown-like formatting)
+        function formatAgentResponse(content) {
+            if (!content) return '';
+            return content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Send message to agent
+        async function sendAgentMessage() {
+            const input = document.getElementById('agentChatInput');
+            const message = input.value.trim();
+
+            if (!message || !currentAgentChat.agentName) return;
+
+            // Add user message
+            addChatMessage('user', message);
+            input.value = '';
+
+            // Show thinking indicator
+            const agentMsgId = addChatMessage('agent', '', true);
+            document.getElementById('agentSendBtn').innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            document.getElementById('agentChatStatus').textContent = 'Agent is responding...';
+
+            try {
+                const response = await fetch('/api/training/agents/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        agent_name: currentAgentChat.agentName,
+                        message: message,
+                        conversation_history: currentAgentChat.messages
+                    })
+                });
+
+                const data = await response.json();
+
+                // Update the agent's message
+                const msgElement = document.getElementById(agentMsgId);
+                if (msgElement) {
+                    const contentDiv = msgElement.querySelector('.message-content');
+                    if (data.success && data.response) {
+                        contentDiv.innerHTML = formatAgentResponse(data.response);
+                        currentAgentChat.messages.push({ role: 'agent', content: data.response });
+                    } else {
+                        contentDiv.innerHTML = `<span style="color: #f87171;">Error: ${data.error || 'Failed to get response'}</span>`;
+                    }
+                }
+
+                document.getElementById('agentChatStatus').textContent = 'Ready to chat';
+
+            } catch (error) {
+                console.error('Error sending message:', error);
+                const msgElement = document.getElementById(agentMsgId);
+                if (msgElement) {
+                    const contentDiv = msgElement.querySelector('.message-content');
+                    contentDiv.innerHTML = '<span style="color: #f87171;">Failed to send message. Please try again.</span>';
+                }
+                document.getElementById('agentChatStatus').textContent = 'Connection error';
+            }
+
+            document.getElementById('agentSendBtn').innerHTML = 'Send 🚀';
+        }
+
+        // Open Quick Invoke Modal
+        function invokeAgent(agentName, displayName) {
+            currentInvokeAgent = { agentName, displayName };
+            document.getElementById('invokeAgentName').textContent = `Invoke: ${displayName}`;
+            document.getElementById('invokeTaskInput').value = '';
+            document.getElementById('invokeResult').style.display = 'none';
+            document.getElementById('invokeBtn').textContent = '⚡ Execute Task';
+            document.getElementById('agentInvokeModal').style.display = 'block';
+            document.getElementById('invokeTaskInput').focus();
+        }
+
+        // Close Invoke Modal
+        function closeInvokeModal() {
+            document.getElementById('agentInvokeModal').style.display = 'none';
+            currentInvokeAgent = { agentName: null, displayName: null };
+        }
+
+        // Execute Agent Task
+        async function executeAgentInvoke() {
+            const task = document.getElementById('invokeTaskInput').value.trim();
+            const resultDiv = document.getElementById('invokeResult');
+
+            if (!task || !currentInvokeAgent.agentName) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a task description</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            document.getElementById('invokeBtn').innerHTML = '<span class="spinner-border spinner-border-sm"></span> Executing...';
+            resultDiv.innerHTML = '<div class="alert alert-info">Agent is working on your task...</div>';
+            resultDiv.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/training/agents/invoke/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        agent_name: currentInvokeAgent.agentName,
+                        task: task
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Task Completed!</strong><br>
+                            <div class="mt-2">${formatAgentResponse(data.result)}</div>
+                            ${data.execution_time ? `<div class="small text-muted mt-2">Completed in ${data.execution_time}s</div>` : ''}
+                        </div>
+                    `;
+                    // Refresh the agents list to show updated stats
+                    loadTrainingDashboard();
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error || 'Task failed'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error invoking agent:', error);
+                resultDiv.innerHTML = '<div class="alert alert-danger">Failed to execute task. Please try again.</div>';
+            }
+
+            document.getElementById('invokeBtn').textContent = '⚡ Execute Task';
+        }
+
+        // Add fadeIn animation style
+        const agentChatStyle = document.createElement('style');
+        agentChatStyle.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .streaming-indicator {
+                color: #06b6d4;
+                animation: pulse 1.5s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(agentChatStyle);
+
+        // ============================================================
+        // END SESSION 383: AGENT CHAT & INVOKE FUNCTIONS
         // ============================================================
 
         // ============================================================

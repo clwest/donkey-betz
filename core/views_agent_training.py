@@ -274,3 +274,197 @@ def training_dashboard(request):
         'stats': service.get_training_stats(),
         'recent_history': service.get_training_history()[:10]
     })
+
+
+# =============================================================================
+# SESSION 383: AGENT CHAT & INVOKE
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def agent_chat(request):
+    """
+    POST /api/training/agents/chat/
+
+    Chat with an agent directly.
+
+    Body:
+        agent_name: Name of the agent to chat with
+        message: User's message
+        conversation_history: Optional list of previous messages
+    """
+    import time
+    from openai import OpenAI
+    import os
+
+    agent_name = request.data.get('agent_name')
+    message = request.data.get('message')
+    conversation_history = request.data.get('conversation_history', [])
+
+    if not agent_name or not message:
+        return Response(
+            {'success': False, 'error': 'agent_name and message are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get agent info
+    from core.models_unified_system import AgentPerformanceMetric
+    try:
+        agent_metric = AgentPerformanceMetric.objects.get(agent_name=agent_name)
+    except AgentPerformanceMetric.DoesNotExist:
+        return Response(
+            {'success': False, 'error': f'Agent not found: {agent_name}'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Build system prompt based on agent capabilities
+    capabilities = agent_metric.capabilities or []
+    display_name = agent_metric.agent_name.replace('_', ' ').title()
+
+    system_prompt = f"""You are {display_name}, a specialized AI agent.
+
+Your capabilities include: {', '.join(capabilities) if capabilities else 'general assistance'}
+
+You should:
+- Be helpful, creative, and engaging
+- Stay in character as this specialized agent
+- Provide detailed and actionable responses
+- If asked to create something, describe what you would create in detail
+- Reference your specific capabilities when relevant
+
+Current conversation context: You are chatting directly with a user through the Agent Training interface."""
+
+    # Build messages for OpenAI
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Add conversation history
+    for msg in conversation_history[-10:]:  # Last 10 messages for context
+        role = "user" if msg.get('role') == 'user' else "assistant"
+        messages.append({"role": role, "content": msg.get('content', '')})
+
+    # Add current message
+    messages.append({"role": "user", "content": message})
+
+    try:
+        start_time = time.time()
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=messages,
+            max_completion_tokens=2000
+        )
+
+        agent_response = response.choices[0].message.content
+        execution_time = round(time.time() - start_time, 2)
+
+        # Update agent metrics
+        agent_metric.total_executions += 1
+        agent_metric.successful_executions += 1
+        agent_metric.update_quality_score()
+
+        return Response({
+            'success': True,
+            'response': agent_response,
+            'agent_name': agent_name,
+            'execution_time': execution_time
+        })
+
+    except Exception as e:
+        logger.error(f"Agent chat error: {e}")
+        return Response(
+            {'success': False, 'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def agent_invoke(request):
+    """
+    POST /api/training/agents/invoke/
+
+    Invoke an agent with a specific task.
+
+    Body:
+        agent_name: Name of the agent to invoke
+        task: Task description for the agent
+    """
+    import time
+    from openai import OpenAI
+    import os
+
+    agent_name = request.data.get('agent_name')
+    task = request.data.get('task')
+
+    if not agent_name or not task:
+        return Response(
+            {'success': False, 'error': 'agent_name and task are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get agent info
+    from core.models_unified_system import AgentPerformanceMetric
+    try:
+        agent_metric = AgentPerformanceMetric.objects.get(agent_name=agent_name)
+    except AgentPerformanceMetric.DoesNotExist:
+        return Response(
+            {'success': False, 'error': f'Agent not found: {agent_name}'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Build task execution prompt
+    capabilities = agent_metric.capabilities or []
+    display_name = agent_metric.agent_name.replace('_', ' ').title()
+
+    system_prompt = f"""You are {display_name}, a specialized AI agent executing a task.
+
+Your capabilities include: {', '.join(capabilities) if capabilities else 'general task execution'}
+
+Execute the following task with precision and detail:
+- Provide a clear, actionable result
+- If the task involves creation, describe what you created in detail
+- Include any relevant insights or recommendations
+- Format your response clearly with sections if needed"""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"Task: {task}"}
+    ]
+
+    try:
+        start_time = time.time()
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=messages,
+            max_completion_tokens=3000
+        )
+
+        result = response.choices[0].message.content
+        execution_time = round(time.time() - start_time, 2)
+
+        # Update agent metrics
+        agent_metric.total_executions += 1
+        agent_metric.successful_executions += 1
+        agent_metric.update_quality_score()
+
+        return Response({
+            'success': True,
+            'result': result,
+            'agent_name': agent_name,
+            'execution_time': execution_time
+        })
+
+    except Exception as e:
+        logger.error(f"Agent invoke error: {e}")
+
+        # Track failed execution
+        agent_metric.total_executions += 1
+        agent_metric.save()
+
+        return Response(
+            {'success': False, 'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
