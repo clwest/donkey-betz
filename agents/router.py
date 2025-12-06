@@ -1033,8 +1033,8 @@ def consult(
         result = consult(
             requesting_agent='ImageAgent',
             specialist='research',
-            question='Find trending cyberpunk art styles',
-            context={'style_focus': 'neon', 'era': 'modern'},
+            question='Find trending logo design styles',
+            context={'style_focus': 'modern', 'era': '2024'},
             user=request.user
         )
 

@@ -310,6 +310,62 @@ class LearningLoopService:
             metadata=outcome.metadata,
         )
 
+        # Session 379: Update Agent model execution counters
+        self._update_agent_execution_counts(outcome)
+
+    # Session 379: Mapping from legacy snake_case names to proper agent names
+    AGENT_NAME_MAPPING = {
+        'image_generation_agent': 'ImageAgent',
+        'video_generation_agent': 'VideoAgent',
+        'audio_generation_agent': 'AudioAgent',
+        'three_d_generation_agent': 'ThreeDAgent',
+        'workflow_orchestration_agent': 'WorkflowAgent',
+        'research_agent': 'ResearchAgent',
+        'competitor_analysis_agent': 'CompetitorAnalysisAgent',
+        'customer_research_agent': 'CustomerResearchAgent',
+        'brand_strategy_agent': 'BrandStrategyAgent',
+        'trend_analysis_agent': 'TrendAnalysisAgent',
+        'opportunity_scoring_agent': 'OpportunityScoringAgent',
+    }
+
+    def _update_agent_execution_counts(self, outcome: OutcomeRecord) -> None:
+        """
+        Update the Agent model's total_executions and successful_executions.
+
+        Session 379: Ensures Agent Overview shows accurate execution counts.
+        """
+        try:
+            from core.models_unified_system import Agent
+            from django.db.models import F
+
+            for agent_name in outcome.agents_used:
+                # Map legacy names to proper names
+                proper_name = self.AGENT_NAME_MAPPING.get(agent_name, agent_name)
+
+                # Skip non-agent entries (tools, etc.)
+                if proper_name in ('web_search', 'coleadership_agent'):
+                    continue
+
+                # Try to find the agent by name
+                agent = Agent.objects.filter(name=proper_name).first()
+                if not agent:
+                    # Try with common naming variations as fallback
+                    clean_name = agent_name.replace('_agent', '').replace('_', ' ').title().replace(' ', '')
+                    if not clean_name.endswith('Agent'):
+                        clean_name += 'Agent'
+                    agent = Agent.objects.filter(name=clean_name).first()
+
+                if agent:
+                    # Use F() for atomic increment
+                    Agent.objects.filter(id=agent.id).update(
+                        total_executions=F('total_executions') + 1,
+                        successful_executions=F('successful_executions') + (1 if outcome.outcome == OutcomeType.SUCCESS else 0)
+                    )
+                    logger.debug(f"Updated execution count for {agent.name}")
+
+        except Exception as e:
+            logger.warning(f"Could not update agent execution counts: {e}")
+
     def _update_performance_cache(self, outcome: OutcomeRecord) -> None:
         """Update in-memory performance statistics."""
         cache_key = f"{self.CACHE_PREFIX}agent_performance"
