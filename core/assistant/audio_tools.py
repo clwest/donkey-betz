@@ -108,10 +108,10 @@ class AudioToolsMixin:
             # Get current project if in session
             current_project = getattr(self, 'project', None)
 
-            # Delegate to specialized Audio Generation Agent
-            from agents.audio_generation_agent import AudioGenerationAgent
+            # Delegate to specialized Audio Agent
+            from core.agents import AudioAgent
 
-            agent = AudioGenerationAgent(
+            agent = AudioAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
@@ -169,10 +169,10 @@ class AudioToolsMixin:
             # Get current project if in session
             current_project = getattr(self, 'project', None)
 
-            # Delegate to specialized Audio Generation Agent
-            from agents.audio_generation_agent import AudioGenerationAgent
+            # Delegate to specialized Audio Agent
+            from core.agents import AudioAgent
 
-            agent = AudioGenerationAgent(
+            agent = AudioAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )

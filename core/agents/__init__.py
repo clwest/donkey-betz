@@ -33,7 +33,7 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Available Agents (24 total):
+Available Agents (27 total):
 
     CREATION AGENTS (4):
         ImageAgent          - Image generation (logos, banners, illustrations)
@@ -71,9 +71,12 @@ Available Agents (24 total):
     SECURITY AGENTS (1) - Session 281:
         MemoryIsolationAgent    - Memory isolation and security
 
-    BUSINESS RESEARCH AGENTS (2) - Session 293:
+    BUSINESS RESEARCH AGENTS (5) - Session 293, expanded Session 337:
         CompetitorAnalysisAgent - Competitor analysis, SWOT, positioning
         CustomerResearchAgent   - Customer personas, pain points, sentiment
+        BrandStrategyAgent      - Brand positioning, messaging, visual direction
+        MarketingStrategyAgent  - Channel strategy, campaigns, funnel optimization
+        BusinessContentStrategyAgent - Content pillars, formats, topic ideas
 
     ORCHESTRATION AGENTS (1):
         WorkflowAgent           - Multi-step workflow coordination
@@ -146,10 +149,13 @@ from core.agents.security import (
     MemoryIsolationAgent,
 )
 
-# Business Research Agents (Session 293)
+# Business Research Agents (Session 293, expanded Session 337)
 from core.agents.business import (
     CompetitorAnalysisAgent,
     CustomerResearchAgent,
+    BrandStrategyAgent,
+    ContentStrategyAgent as BusinessContentStrategyAgent,  # Alias to avoid conflict
+    MarketingStrategyAgent,
 )
 
 __all__ = [
@@ -199,7 +205,10 @@ __all__ = [
     # Security Agents (1) - Session 281
     'MemoryIsolationAgent',
 
-    # Business Research Agents (2) - Session 293
+    # Business Research Agents (5) - Session 293, expanded Session 337
     'CompetitorAnalysisAgent',
     'CustomerResearchAgent',
+    'BrandStrategyAgent',
+    'BusinessContentStrategyAgent',
+    'MarketingStrategyAgent',
 ]

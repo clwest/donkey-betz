@@ -1,47 +1,28 @@
 # Start Next Session Here
 
-**Last Session:** 376 - Workflow Analytics Fix
+**Last Session:** 379 - Agent Ecosystem Unification
 **Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 24 agents | **ALL AGENT TABS WORKING!**
+**Status:** 102 spiders | 36 categories | 29 DB agents | 27 code agents | **UNIFIED**
 
 ---
 
-## Session 376 Accomplishments
+## Session 379 Accomplishments
 
-### Workflow Analytics API Fixed!
+### 1. Fixed Database/Code Mismatches
+- Renamed `3DGenerationAgent` → `ThreeDAgent`
+- Renamed `WorkflowOrchestrationAgent` → `WorkflowAgent`
 
-| Issue | Root Cause | Fix |
-|-------|------------|-----|
-| API returning `authentication_required` | `/api/workflow-analytics/` not in middleware PUBLIC_PATHS | Added to `core/auth_middleware.py:73` |
-| Empty data in Executions tab | 0 workflow executions in database | Created 39 sample executions |
+### 2. Added Missing Agents to DB
+- `PersonalAssistantAgent`, `ImageEditingAgent`, `VideoEditingAgent`
+- `MemoryIsolationAgent`, `MarketingStrategyAgent`
 
-### Code Changes
-- `core/auth_middleware.py:73` - Added `/api/workflow-analytics/` to PUBLIC_PATHS
+### 3. Exported Business Agents
+- Added `BrandStrategyAgent`, `MarketingStrategyAgent` to core/agents exports
 
-### Test Result
-```json
-{
-    "summary": {
-        "total_executions": 39,
-        "completed": 22,
-        "failed": 11,
-        "processing": 6,
-        "success_rate": 56.4,
-        "most_used_workflow": "Logo Generation"
-    }
-}
-```
-
----
-
-## Session 375 Accomplishments (Previous)
-
-### Multi-Agent Orchestration Fixed!
-
-| Bug | Root Cause | Fix |
-|-----|------------|-----|
-| `'NoneType' object has no attribute 'get'` | `agent.get('performance_metrics', {})` returns `None` (not `{}`) when key exists with value `None` | Changed to `agent.get('performance_metrics') or {}` |
-| `AnonymousUser cannot be assigned` | AnonymousUser passed to CollaborationSession.user field | Filter AnonymousUser in service __init__ |
+### 4. Updated Critical Imports
+- `core/assistant/image_tools.py` - Now uses `from core.agents import ImageAgent`
+- `core/assistant/audio_tools.py` - Now uses `AudioAgent` instead of `AudioGenerationAgent`
+- `core/assistant/video_tools.py` - Now uses `VideoAgent` instead of `VideoGenerationAgent`
 
 ---
 
@@ -50,25 +31,44 @@
 | Component | Count | Status |
 |-----------|-------|--------|
 | **Spiders** | **102** | Active |
-| **Agents** | **24** | Active with diverse moods! |
-| **Knowledge Gaps** | **0** | All resolved! |
-| **SharedKnowledge** | **50** | Best practices library |
-| **Agent Conversations** | **1,500+** | Searchable! |
-| **Agent Dreams** | **1,500+** | Searchable! |
-| **Workflow Executions** | **39** | Sample data! |
+| **Database Agents** | **29** | All active |
+| **Code Agents (core/agents/)** | **27** | Canonical |
+| **Matching Agents** | **26** | DB ↔ Code synced |
+| **Legacy Agents (agents/)** | **3** | Have data, kept for history |
+| **Agent Conversations** | **1,567+** | Preserved |
+| **Agent Dreams** | **1,676+** | Preserved |
+
+### Legacy Agents (Intentionally Kept)
+| Agent | Conversations | Dreams | Reason |
+|-------|---------------|--------|--------|
+| `CreationAgent` | 77 | 74 | Has data |
+| `PromptEngineeringAgent` | 112 | 91 | Has data |
+| `LearningCompanion` | 0 | 0 | Can be removed |
 
 ---
 
-## Agent Tab Overview
+## Next Session Options
 
-| Tab | Sub-Tabs | Status |
-|-----|----------|--------|
-| **Overview** | - | Working |
-| **Social** | - | Working |
-| **Intelligence** | - | Working |
-| **Growth** | - | Working |
-| **Memory** | Clusters, Prophecies, Capsules, Palace, Collaboration | Working |
-| **Workflows** | Analytics, Training, Executions, Pipeline, Network, Dreams | **FIXED!** |
+### Option A: Complete Legacy Import Migration
+~290 files still use `from agents import`. Update to `from core.agents import`:
+```bash
+# Find files needing updates
+grep -rl "from agents import" --include="*.py" | grep -v __pycache__ | wc -l
+```
+
+### Option B: Migrate CreationAgent
+The `CreationAgent` in `agents/creation_agent.py` has 77 conversations. Consider:
+1. Migrating to `core/agents/creation_agent.py`
+2. Or keeping it as legacy (still works via deprecation shim)
+
+### Option C: Clean Up LearningCompanion
+`LearningCompanion` has no code and no data. Safe to remove from DB.
+
+### Option D: Feature Development
+The agent system is now unified. Continue with:
+- New features
+- Spider network improvements
+- AI Studio enhancements
 
 ---
 
@@ -78,19 +78,25 @@
 # Start services
 make start && make celery
 
-# Test Workflow Analytics
-curl -s "http://localhost:8000/api/workflow-analytics/dashboard/" | python3 -m json.tool | head -20
+# Verify agent sync
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import Agent
+from core.agents import __all__ as code_agents
+db = set(Agent.objects.values_list('name', flat=True))
+code = set(code_agents) - {'BaseAgent', 'AgentResult', 'BusinessContentStrategyAgent'}
+print(f'DB: {len(db)}, Code: {len(code)}, Match: {len(db & code)}')"
 
-# Test Multi-Agent Orchestration
-curl -s -X POST "http://localhost:8000/api/collective/orchestrate/" \
-  -H "Content-Type: application/json" \
-  -d '{"task_description": "Create a complete logo package"}' | python3 -m json.tool
-
-# Test Collective Intelligence Search
-curl -s "http://localhost:8000/api/collective/insights/?topic=creative" | python3 -m json.tool | head -50
+# Test critical imports
+.venv/bin/python -c "from core.agents import ImageAgent, VideoAgent, AudioAgent; print('OK')"
 ```
 
 ---
 
-## Handoff Document
-See: `docs/handoffs/SESSION_376_WORKFLOW_ANALYTICS_FIX.md`
+## Handoff Documents
+- **This Session:** `docs/handoffs/SESSION_379_AGENT_UNIFICATION.md`
+- **Previous Audit:** `docs/handoffs/SESSION_378_AGENT_ECOSYSTEM_AUDIT.md`
+
+---
+
+## Backup Location
+`backups/agents_session_378/agents_backup.json` - Original 24 agents backed up before changes
