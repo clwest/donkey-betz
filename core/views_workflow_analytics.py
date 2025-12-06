@@ -14,7 +14,7 @@ Provides endpoints for:
 
 import logging
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_execution_history(request):
     """
     GET /api/workflow-analytics/history/
@@ -65,7 +65,7 @@ def get_execution_history(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_execution_trends(request):
     """
     GET /api/workflow-analytics/trends/
@@ -88,7 +88,7 @@ def get_execution_trends(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_success_failure_analysis(request):
     """
     GET /api/workflow-analytics/success-failure/
@@ -111,7 +111,7 @@ def get_success_failure_analysis(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_performance_metrics(request):
     """
     GET /api/workflow-analytics/performance/
@@ -134,7 +134,7 @@ def get_performance_metrics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_performance_comparison(request):
     """
     GET /api/workflow-analytics/performance-comparison/
@@ -157,7 +157,7 @@ def get_performance_comparison(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def compare_workflows(request):
     """
     GET /api/workflow-analytics/compare/
@@ -196,7 +196,7 @@ def compare_workflows(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_step_performance(request, workflow_id):
     """
     GET /api/workflow-analytics/steps/{workflow_id}/
@@ -222,7 +222,7 @@ def get_step_performance(request, workflow_id):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_execution_heatmap(request):
     """
     GET /api/workflow-analytics/heatmap/
@@ -245,7 +245,7 @@ def get_execution_heatmap(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_analytics_summary(request):
     """
     GET /api/workflow-analytics/summary/
@@ -264,7 +264,7 @@ def get_analytics_summary(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_analytics_dashboard(request):
     """
     GET /api/workflow-analytics/dashboard/
