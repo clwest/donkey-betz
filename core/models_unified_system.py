@@ -7126,14 +7126,17 @@ class DreamImplementation(models.Model):
         return self
 
     def validate(self, rating=None, feedback=''):
-        """User validates the implementation."""
+        """User validates the implementation - ready for execution engine to process."""
         self.status = 'validated'
         self.validated_at = timezone.now()
+        # Clear completed_at so execution engine will pick this up
+        # (it filters for completed_at__isnull=True)
+        self.completed_at = None
         if rating is not None:
             self.quality_rating = rating
         if feedback:
             self.user_feedback = feedback
-        self.save(update_fields=['status', 'validated_at', 'quality_rating', 'user_feedback'])
+        self.save(update_fields=['status', 'validated_at', 'completed_at', 'quality_rating', 'user_feedback'])
         return self
 
     def reject(self, reason=''):

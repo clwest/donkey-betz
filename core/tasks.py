@@ -6784,17 +6784,19 @@ def execute_dream_implementations(self, max_implementations: int = 5):
     logger.info("⚡ [EXECUTION-ENGINE] Starting dream implementation execution...")
 
     try:
-        # Get in-progress implementations that haven't been completed
+        # Get validated or in-progress implementations that haven't been completed
+        # 'validated' = user approved the dream, ready to execute
+        # 'in_progress' = execution has started (legacy status)
         in_progress = DreamImplementation.objects.filter(
-            status='in_progress',
+            status__in=['validated', 'in_progress'],
             completed_at__isnull=True
         ).select_related(
             'dream', 'dream__agent', 'assigned_agent', 'project'
         ).order_by('started_at')[:max_implementations]
 
         if not in_progress.exists():
-            logger.info("⚡ [EXECUTION-ENGINE] No implementations to execute")
-            return {'status': 'skipped', 'reason': 'no_implementations_in_progress'}
+            logger.info("⚡ [EXECUTION-ENGINE] No validated/in-progress implementations to execute")
+            return {'status': 'skipped', 'reason': 'no_implementations_ready'}
 
         # Initialize OpenAI client
         client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
@@ -6935,9 +6937,13 @@ Write in a professional, actionable format. Be specific and creative."""
     response = client.chat.completions.create(
         model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_completion_tokens=2500  # Higher for reasoning models
+        max_completion_tokens=4000  # Higher for reasoning models
     )
-    return response.choices[0].message.content.strip()
+    content = response.choices[0].message.content
+    if content:
+        return content.strip()
+    logger.warning(f"⚡ [EXECUTION-ENGINE] No content returned for feature: {dream.title[:30]}")
+    return None
 
 
 def _execute_content_implementation(client, dream, impl, agent):
