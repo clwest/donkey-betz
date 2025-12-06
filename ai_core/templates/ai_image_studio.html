@@ -8499,6 +8499,46 @@
                         <!-- ========== MEMORY SUB-TAB ========== -->
                         <div class="tab-pane fade" id="agents-memory" role="tabpanel">
 
+                            <!-- Memory Nested Sub-Tab Navigation (Session 372) -->
+                            <ul class="nav nav-pills nav-fill mb-4" id="memory-nested-tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="mem-clusters-tab" data-bs-toggle="pill" data-bs-target="#mem-clusters" type="button" role="tab" style="color: #22d3ee;">
+                                        🧩 Clusters
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="mem-prophecies-tab" data-bs-toggle="pill" data-bs-target="#mem-prophecies" type="button" role="tab" style="color: #8b5cf6;">
+                                        🔮 Prophecies
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="mem-capsules-tab" data-bs-toggle="pill" data-bs-target="#mem-capsules" type="button" role="tab" style="color: #06b6d4;">
+                                        ⏳ Capsules
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="mem-palace-tab" data-bs-toggle="pill" data-bs-target="#mem-palace" type="button" role="tab" style="color: #a855f7;">
+                                        🏛️ Palace
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="mem-collab-tab" data-bs-toggle="pill" data-bs-target="#mem-collab" type="button" role="tab" style="color: #22c55e;">
+                                        🤝 Collaboration
+                                    </button>
+                                </li>
+                            </ul>
+                            <style>
+                                #memory-nested-tabs .nav-link { background: transparent; border: 1px solid #444; font-size: 12px; padding: 8px 16px; }
+                                #memory-nested-tabs .nav-link:hover { background: rgba(139, 92, 246, 0.1); border-color: #a855f7; }
+                                #memory-nested-tabs .nav-link.active { background: rgba(139, 92, 246, 0.2) !important; border-color: #a855f7 !important; color: #a855f7 !important; }
+                            </style>
+
+                            <!-- Memory Nested Tab Content -->
+                            <div class="tab-content" id="memory-nested-content">
+
+                                <!-- ===== CLUSTERS NESTED TAB ===== -->
+                                <div class="tab-pane fade show active" id="mem-clusters" role="tabpanel">
+
                     <!-- Session 257: Memory Clusters - Semantic Grouping of Agent Memories -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22d3ee;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 211, 238, 0.2); border-bottom: 1px solid #22d3ee;">
@@ -8585,6 +8625,12 @@
                             </div>
                         </div>
                     </div>
+
+                                </div>
+                                <!-- END CLUSTERS NESTED TAB -->
+
+                                <!-- ===== PROPHECIES NESTED TAB ===== -->
+                                <div class="tab-pane fade" id="mem-prophecies" role="tabpanel">
 
                     <!-- Session 258: Agent Predictions / Prophecies -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6; animation: pulse-violet 2s infinite;">
@@ -8695,6 +8741,12 @@
                             </div>
                         </div>
                     </div>
+
+                                </div>
+                                <!-- END PROPHECIES NESTED TAB -->
+
+                                <!-- ===== CAPSULES NESTED TAB ===== -->
+                                <div class="tab-pane fade" id="mem-capsules" role="tabpanel">
 
                     <!-- Session 259: Time Capsule Messages - The Final Sci-Fi Feature! -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4; animation: pulse-cyan 2s infinite;">
@@ -8823,6 +8875,12 @@
                             </div>
                         </div>
                     </div>
+
+                                </div>
+                                <!-- END CAPSULES NESTED TAB -->
+
+                                <!-- ===== PALACE NESTED TAB ===== -->
+                                <div class="tab-pane fade" id="mem-palace" role="tabpanel">
 
                     <!-- Session 251: Memory Palace - Agent Memory Visualization -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a855f7;">
@@ -9041,6 +9099,12 @@
                         }
                     </style>
 
+                                </div>
+                                <!-- END PALACE NESTED TAB -->
+
+                                <!-- ===== COLLABORATION NESTED TAB ===== -->
+                                <div class="tab-pane fade" id="mem-collab" role="tabpanel">
+
                     <!-- Collaboration Health Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -9207,6 +9271,12 @@
                             </div>
                         </div>
                     </div>
+
+                                </div>
+                                <!-- END COLLABORATION NESTED TAB -->
+
+                            </div>
+                            <!-- END memory-nested-content -->
 
                         </div>
                         <!-- END MEMORY SUB-TAB -->
@@ -16210,15 +16280,46 @@
                 });
             }
 
-            // Session 371: Load Memory tab data when shown
+            // Session 371: Load Memory tab data when shown (now loads Clusters by default - Session 372)
             const agentsMemoryTab = document.getElementById('agents-memory-tab');
             if (agentsMemoryTab) {
                 agentsMemoryTab.addEventListener('shown.bs.tab', function() {
-                    console.log('🏛️ Agents Memory tab shown - loading memory data...');
+                    console.log('🏛️ Agents Memory tab shown - loading clusters (default sub-tab)...');
                     loadMemoryClustersOverview();
+                });
+            }
+
+            // Session 372: Memory nested sub-tab event listeners
+            const memPropheciesTab = document.getElementById('mem-prophecies-tab');
+            if (memPropheciesTab) {
+                memPropheciesTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🔮 Prophecies sub-tab shown - loading predictions...');
                     loadPredictionsOverview();
+                });
+            }
+
+            const memCapsulesTab = document.getElementById('mem-capsules-tab');
+            if (memCapsulesTab) {
+                memCapsulesTab.addEventListener('shown.bs.tab', function() {
+                    console.log('⏳ Capsules sub-tab shown - loading time capsules...');
                     loadCapsulesOverview();
                     loadCapsulesAgentSelect();
+                });
+            }
+
+            const memPalaceTab = document.getElementById('mem-palace-tab');
+            if (memPalaceTab) {
+                memPalaceTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🏛️ Palace sub-tab shown - loading memory palace...');
+                    loadMemoryPalaceAgents();
+                });
+            }
+
+            const memCollabTab = document.getElementById('mem-collab-tab');
+            if (memCollabTab) {
+                memCollabTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🤝 Collaboration sub-tab shown - loading collaboration data...');
+                    refreshAgentDashboard();
                 });
             }
         });
