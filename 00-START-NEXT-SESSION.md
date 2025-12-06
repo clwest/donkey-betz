@@ -1,28 +1,59 @@
 # Start Next Session Here
 
-**Last Session:** 379 - Agent Ecosystem Unification
-**Date:** December 5, 2025
-**Status:** 102 spiders | 36 categories | 29 DB agents | 27 code agents | **UNIFIED**
+**Last Session:** 384 - Creative Pipeline Asset Display Fix + Agent Chat/Invoke
+**Date:** December 6, 2025
+**Status:** 102 spiders | 29 DB agents | Full Pipeline working with visual asset gallery!
 
 ---
 
-## Session 379 Accomplishments
+## Session 383-384 Accomplishments
 
-### 1. Fixed Database/Code Mismatches
-- Renamed `3DGenerationAgent` → `ThreeDAgent`
-- Renamed `WorkflowOrchestrationAgent` → `WorkflowAgent`
+### Session 383: Agent Chat & Invoke Feature
+Added ability to chat with and invoke any trained agent directly:
 
-### 2. Added Missing Agents to DB
-- `PersonalAssistantAgent`, `ImageEditingAgent`, `VideoEditingAgent`
-- `MemoryIsolationAgent`, `MarketingStrategyAgent`
+| Feature | Location | Description |
+|---------|----------|-------------|
+| 💬 Chat with Agent | Agent list buttons | Opens modal for conversation |
+| ⚡ Invoke Agent | Agent list buttons | Quick task execution |
+| Backend APIs | `/api/training/agents/chat/` | GPT-5-mini powered responses |
+| Backend APIs | `/api/training/agents/invoke/` | Task execution with metrics |
 
-### 3. Exported Business Agents
-- Added `BrandStrategyAgent`, `MarketingStrategyAgent` to core/agents exports
+### Session 384: Creative Pipeline Asset Display Fix
+Fixed images not displaying after running Full Pipeline:
 
-### 4. Updated Critical Imports
-- `core/assistant/image_tools.py` - Now uses `from core.agents import ImageAgent`
-- `core/assistant/audio_tools.py` - Now uses `AudioAgent` instead of `AudioGenerationAgent`
-- `core/assistant/video_tools.py` - Now uses `VideoAgent` instead of `VideoGenerationAgent`
+| Issue | Fix |
+|-------|-----|
+| Frontend expected `data.assets` | Backend returns `all_images`, `all_videos`, `all_audio` |
+| No visual gallery for assets | Added "Generated Assets" card with image grid |
+| Images generated but not shown | Created `displayGeneratedAssets()` function |
+
+**Verified:** Stability AI image generation working perfectly (SDXL model)
+
+---
+
+## What's Working Now
+
+### Full Pipeline Flow
+```
+Enter business idea → Click "🚀 Full Pipeline"
+    ↓
+Research Pipeline (4 stages):
+  - Competitor Analysis
+  - Customer Research
+  - Brand Strategy
+  - Synthesis
+    ↓
+Creative Pipeline (auto-runs):
+  - Generates logos, banners, thumbnails via Stability AI
+    ↓
+🆕 Generated Assets Gallery appears with clickable images!
+```
+
+### Agent Training Features
+- **All Agents list** with Chat/Invoke buttons
+- **Create from Template** with custom naming
+- **Agent Chat Modal** for conversations
+- **Quick Invoke Modal** for task execution
 
 ---
 
@@ -32,71 +63,103 @@
 |-----------|-------|--------|
 | **Spiders** | **102** | Active |
 | **Database Agents** | **29** | All active |
-| **Code Agents (core/agents/)** | **27** | Canonical |
-| **Matching Agents** | **26** | DB ↔ Code synced |
-| **Legacy Agents (agents/)** | **3** | Have data, kept for history |
-| **Agent Conversations** | **1,567+** | Preserved |
-| **Agent Dreams** | **1,676+** | Preserved |
-
-### Legacy Agents (Intentionally Kept)
-| Agent | Conversations | Dreams | Reason |
-|-------|---------------|--------|--------|
-| `CreationAgent` | 77 | 74 | Has data |
-| `PromptEngineeringAgent` | 112 | 91 | Has data |
-| `LearningCompanion` | 0 | 0 | Can be removed |
+| **Learning Hooks** | **21** agents | Recording outcomes |
+| **Stability AI** | SDXL | Working |
+| **Full Pipeline** | Research + Creative | ✅ Complete |
 
 ---
 
-## Next Session Options
-
-### Option A: Complete Legacy Import Migration
-~290 files still use `from agents import`. Update to `from core.agents import`:
-```bash
-# Find files needing updates
-grep -rl "from agents import" --include="*.py" | grep -v __pycache__ | wc -l
-```
-
-### Option B: Migrate CreationAgent
-The `CreationAgent` in `agents/creation_agent.py` has 77 conversations. Consider:
-1. Migrating to `core/agents/creation_agent.py`
-2. Or keeping it as legacy (still works via deprecation shim)
-
-### Option C: Clean Up LearningCompanion
-`LearningCompanion` has no code and no data. Safe to remove from DB.
-
-### Option D: Feature Development
-The agent system is now unified. Continue with:
-- New features
-- Spider network improvements
-- AI Studio enhancements
-
----
-
-## Quick Commands
+## Quick Start Next Session
 
 ```bash
 # Start services
 make start && make celery
 
-# Verify agent sync
+# Open AI Studio
+open http://localhost:8000/ai-studio/
+
+# Test Full Pipeline
+# 1. Go to Agents > Workflow Pipeline
+# 2. Enter: "AI fitness coaching app"
+# 3. Click "🚀 Full Pipeline"
+# 4. Watch assets appear in gallery!
+```
+
+---
+
+## Files Modified This Session
+
+| File | Changes |
+|------|---------|
+| `ai_core/templates/ai_image_studio.html` | Chat/Invoke buttons, modals, gallery, displayGeneratedAssets() |
+| `core/views_agent_training.py` | agent_chat() and agent_invoke() endpoints |
+| `core/urls.py` | Routes for chat/invoke APIs |
+| `docs/handoffs/SESSION_384_*` | This handoff |
+
+---
+
+## Next Session Options
+
+### Option A: Test Everything
+Run the Full Pipeline end-to-end and verify all features:
+- Agent Chat works
+- Agent Invoke works
+- Research Pipeline completes
+- Creative Pipeline generates images
+- Images display in gallery
+
+### Option B: Enhance Asset Gallery
+- Add download buttons for images
+- Add "Save to Project" functionality
+- Improve image preview (lightbox)
+
+### Option C: Video/Audio Generation
+Currently only ImageAgent is called. Could add:
+- Video generation (Runway ML)
+- Audio generation (ElevenLabs)
+
+### Option D: Fix Legacy Imports
+~290 files still use `from agents import`. Could migrate to `from core.agents import`
+
+---
+
+## Verification Commands
+
+```bash
+# Test Stability AI
+.venv/bin/python manage.py shell -c "
+from content.image_generation import ImageGenerationService
+result = ImageGenerationService().generate_image(
+    prompt='Blue circle', provider='stability', quality='balanced')
+print(f'Success: {result.success}')"
+
+# Check agent count
 .venv/bin/python manage.py shell -c "
 from core.models_unified_system import Agent
-from core.agents import __all__ as code_agents
-db = set(Agent.objects.values_list('name', flat=True))
-code = set(code_agents) - {'BaseAgent', 'AgentResult', 'BusinessContentStrategyAgent'}
-print(f'DB: {len(db)}, Code: {len(code)}, Match: {len(db & code)}')"
+print(f'Agents: {Agent.objects.count()}')"
 
-# Test critical imports
-.venv/bin/python -c "from core.agents import ImageAgent, VideoAgent, AudioAgent; print('OK')"
+# Check learning system
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import CoordinatorOutcome, AgentDream
+print(f'Outcomes: {CoordinatorOutcome.objects.count()}')
+print(f'Dreams: {AgentDream.objects.count()}')"
 ```
 
 ---
 
 ## Handoff Documents
-- **This Session:** `docs/handoffs/SESSION_379_AGENT_UNIFICATION.md`
-- **Previous Audit:** `docs/handoffs/SESSION_378_AGENT_ECOSYSTEM_AUDIT.md`
+
+- **This Session:** `docs/handoffs/SESSION_384_CREATIVE_PIPELINE_ASSET_DISPLAY.md`
+- **Previous:** `docs/handoffs/SESSION_382_GPT5_MIGRATION_AGENT_DOCS.md`
+- **Learning System:** `docs/handoffs/SESSION_381_COLLECTIVE_INTELLIGENCE_ARCHITECTURE.md`
 
 ---
 
-## Backup Location
-`backups/agents_session_378/agents_backup.json` - Original 24 agents backed up before changes
+## Important Notes
+
+1. **Stability AI** uses SDXL 1.0 model (quality='balanced')
+2. **GPT-5-mini** used for agent chat/invoke (reasoning model, no temperature)
+3. **macOS Celery** needs `--pool=solo` to avoid crashes
+4. **Full Pipeline** generates ~9 images (3 each: logo, banner, thumbnail)
+
+Enjoy your evening with your son! 🎉
