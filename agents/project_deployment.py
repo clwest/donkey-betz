@@ -239,7 +239,7 @@ class ProjectAgentDeploymentManager:
                     'specialization': 'technical',
                     'capabilities': ['machine-learning', 'data-analysis', 'model-training'],
                     'system_prompt': f"You are an ML agent specialized in {agent_name.replace('-', ' ')}",
-                    'llm_model': 'gpt-4-turbo',
+                    'llm_model': 'gpt-5-mini',
                     'routing_keywords': agent_name.split('-'),
                     'domain_tags': ['ml', 'ai', 'ecommerce']
                 }

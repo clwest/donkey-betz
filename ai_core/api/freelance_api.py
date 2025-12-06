@@ -203,22 +203,12 @@ Respond in JSON format:
 }}
 """
 
-        # Use proven working models - GPT-5 models have empty response issues
+        # Use GPT-5 models as primary
         possible_models = [
-            "gpt-5-mini",      # Proven working model - use first
-            "gpt-4o",           # Proven working flagship model
-            "gpt-4.1-mini",     # Latest GPT-4.1 model - 83% cheaper, half latency vs gpt-4o
-            "gpt-4.1",          # Latest GPT-4.1 flagship model
-            # Skip GPT-5 models due to empty response issue
-            # "gpt-5-mini",     # GPT-5 mini - returning empty responses
-            # "gpt-5",          # GPT-5 flagship - returning empty responses
-            # "gpt-5-preview",  # GPT-5 preview - returning empty responses
-            # "gpt-5-nano",     # GPT-5 nano - returning empty responses
+            "gpt-5-mini",       # Primary model - cost-optimized reasoning
+            "gpt-5-1",          # GPT-5.1 flagship model
             "o4-mini",          # Latest reasoning model optimized for cost/performance
             "o3",               # Advanced reasoning model
-            "gpt-5-mini",      # Fallback to 2024 model
-            "gpt-4o",           # Fallback to 2024 flagship
-            "gpt-5-mini-2024-07-18"  # Specific dated version
         ]
 
         response = None

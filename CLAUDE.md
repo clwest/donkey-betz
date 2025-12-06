@@ -1,13 +1,14 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 1, 2025 - Session 303 (Database Audit + Unified Intelligence)
+**Last Updated:** December 6, 2025 - Session 382 (GPT-5 Migration + Agent Documentation)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 102 spiders | 36 categories | 31 real data sources | **Topic Filtering (ai/web/security/cloud/design)!**
-**Agent Ecosystem:** 24 clean agents (including 2 Business Research) + 22 legacy | Time Travel Debugging | Real-time conversations
+**Agent Ecosystem:** 27 clean agents + learning hooks | Time Travel Debugging | Real-time conversations
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
 **Unified Intelligence:** SpiderData + BusinessResearchResult combined search with auto-refresh!
+**LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
 
@@ -156,45 +157,85 @@ Ask about specific topics and get relevant, clickable article links:
 - `video_thumbnail_series` - Consistent thumbnail series
 - `logo_to_video` - Animate logo into video
 
-### Agent Ecosystem (22 Real Agents)
+### Agent Ecosystem - MAINTAINED AGENTS (27 Clean Architecture)
 
-All agents have actual Python implementations in `agents/` directory:
+**⚠️ IMPORTANT FOR FUTURE SESSIONS:**
+- **Canonical Location:** `core/agents/` - This is the ONLY maintained agent directory
+- **Legacy Location:** `agents/` - DEPRECATED, has shim that redirects to core/agents
+- **All agents have learning hooks** connected to collective intelligence (Sessions 378-381)
 
-**Generation Agents:**
-- `ImageAgent` - Unified image generation (logos, social media, illustrations)
-- `VideoAgent` - Text-to-video, image-to-video, editing, color grading
-- `AudioAgent` - Text-to-speech, sound effects, voiceovers
-- `3DGenerationAgent` - 3D model and scene generation
+**Creation Agents (4):**
+- `ImageAgent` - Image generation (logos, banners, illustrations)
+- `VideoAgent` - Video generation (text-to-video, animations)
+- `AudioAgent` - Audio generation (TTS, voiceovers)
+- `ThreeDAgent` - 3D model generation
 
-**Research & Analysis:**
-- `ResearchAgent` - Web search + spider intelligence
-- `TrendAnalysisAgent` - Trending topics, colors, styles
+**Editing Agents (2):**
+- `ImageEditingAgent` - Image editing (upscale, remove bg, variations)
+- `VideoEditingAgent` - Video editing (trim, effects, text)
 
-**Workflow & Orchestration:**
-- `WorkflowOrchestrationAgent` - Multi-step creative workflows
-- `OpportunityScoringAgent` - Score spider data as opportunities
+**Research Agents (1):**
+- `ResearchAgent` - Web search + spider network queries
 
-**Specialized Generation:**
-- `CharacterTrainingAgent` - Train custom character styles
-- `TrainedCreationAgent` - Generate with trained characters
-- `CreationAgent` - General content creation
-- `PromptEngineeringAgent` - Prompt optimization
-
-**Strategy Agents (Session 241):**
+**Strategy Agents (4) - Session 280:**
 - `ContentStrategyAgent` - Content recommendations from trends
-- `SEOOptimizerAgent` - Hashtags, metadata, SEO optimization
 - `BrandIdentityAgent` - Brand colors, styles, consistency
-- `SocialMediaAgent` - Platform-specific content
-- `CreativeDirectorAgent` - High-level creative direction
+- `SEOOptimizerAgent` - Hashtags, metadata, keywords
+- `SocialMediaAgent` - Platform-specific content strategy
 
-**Executive Agents:**
-- `CTOAgent` - Technical decisions
-- `COOAgent` - Operations oversight
-- `MeetingCoordinatorAgent` - Team coordination
+**Executive Agents (4) - Session 280:**
+- `CTOAgent` - Technical planning and analysis
+- `COOAgent` - Operations planning and risk analysis
+- `CreativeDirectorAgent` - Creative guidance and prompt enhancement
+- `MeetingCoordinatorAgent` - Coordinates meetings between agents
 
-**Specialized:**
-- `MemoryIsolationAgent` - Memory namespace management
-- `BookmakerAgent` - Sports/financial analysis
+**Analysis Agents (2) - Session 281:**
+- `TrendAnalysisAgent` - Spider intelligence analysis
+- `OpportunityScoringAgent` - Opportunity scoring engine
+
+**Training Agents (2) - Session 281:**
+- `CharacterTrainingAgent` - FLUX LoRA character training
+- `TrainedCreationAgent` - LoRA image generation
+
+**Security Agents (1) - Session 281:**
+- `MemoryIsolationAgent` - Memory isolation and security
+
+**Business Research Agents (5) - Sessions 293, 337:**
+- `CompetitorAnalysisAgent` - Competitor analysis, SWOT, positioning
+- `CustomerResearchAgent` - Customer personas, pain points, sentiment
+- `BrandStrategyAgent` - Brand positioning, messaging, visual direction
+- `MarketingStrategyAgent` - Channel strategy, campaigns, funnel optimization
+- `BusinessContentStrategyAgent` - Content pillars, formats, topic ideas
+
+**Orchestration Agents (1):**
+- `WorkflowAgent` - Multi-step workflow coordination
+
+**Entry Point (1):**
+- `PersonalAssistantAgent` - Main user interaction and routing
+
+### Agent Architecture Notes
+
+**BaseAgent Features (all agents inherit):**
+- `TimeTravelMixin` - Decision tracking for replay/debugging
+- `_record_learning_outcome()` - Records for XP/evolution system
+- `_create_execution_memory()` - Creates persistent memories
+
+**Router:** `core/agent_router.py` - Deterministic routing (no LLM involved)
+
+**Verification Commands:**
+```bash
+# Count agents in database
+.venv/bin/python manage.py shell -c "from core.models_unified_system import Agent; print(f'DB: {Agent.objects.count()}')"
+
+# Test imports
+.venv/bin/python -c "from core.agents import ImageAgent, VideoAgent, AudioAgent; print('OK')"
+```
+
+### Legacy Agents (DEPRECATED - Do Not Extend)
+These exist in `agents/` directory with deprecation shim. They still work but emit warnings:
+- `CreationAgent` - Has 77 conversations + 74 dreams (preserved for history)
+- `PromptEngineeringAgent` - Has 112 conversations + 91 dreams (preserved for history)
+- `BookmakerAgent` - Sports/financial analysis (not migrated)
 
 ---
 
@@ -358,6 +399,11 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 382:** GPT-5 Migration + Agent Documentation - Upgraded all GPT-4o-mini references to GPT-5-mini across codebase. Fixed parameters for reasoning models (`max_completion_tokens` instead of `max_tokens`, removed `temperature`). Updated CLAUDE.md with comprehensive agent documentation for future sessions.
+- **Session 381:** Collective Intelligence Architecture - Complete documentation of learning system. Verified 21 agents connected to learning hooks. Handoff: `docs/handoffs/SESSION_381_COLLECTIVE_INTELLIGENCE_ARCHITECTURE.md`
+- **Session 380:** Learning Hooks All Agents - Added learning hooks to 12 agents that were missing them. Connected all 21 agents to collective learning system. Handoff: `docs/handoffs/SESSION_380_LEARNING_HOOKS_ALL_AGENTS.md`
+- **Session 379:** Agent Ecosystem Unification - Fixed database/code mismatches, added 5 missing agents to database. Final state: 29 DB agents, 27 code exports. Handoff: `docs/handoffs/SESSION_379_AGENT_UNIFICATION.md`
+- **Session 378:** Agent Ecosystem Audit - Deep dive identifying 4 different agent definition systems. Raised questions about duplicates and overlaps. Handoff: `docs/handoffs/SESSION_378_AGENT_ECOSYSTEM_AUDIT.md`
 - **Session 303:** Database Audit + Unified Intelligence - Comprehensive audit of all database models and agent relationships. Created `UnifiedIntelligenceSearch` service that combines SpiderData + BusinessResearchResult into one searchable index. Added auto-refresh spiders before business research and 2 new tools (`refresh_spider_data`, `get_prior_research`) to both business agents. Handoff: `docs/handoffs/SESSION_303_DATABASE_RELATIONSHIP_AUDIT.md`
 - **Session 302:** Direct API + Project Context Awareness - Created direct REST API endpoint (`POST /api/projects/from-research/`) that bypasses GPT for instant project creation (~1-2 seconds vs 178+ seconds). Added `project_id` parameter to business research agents so they automatically enhance vague requests with project context. Handoff: `docs/handoffs/SESSION_302_PROJECT_CONTEXT_AND_DIRECT_API.md`
 - **Session 301:** Create Project Button Fix - Changed button messaging from "Create a project for..." to "Organize our research..." to prevent WorkflowAgent mis-routing. Handoff: `docs/handoffs/SESSION_301_CREATE_PROJECT_BUTTON_FIX.md`
@@ -376,20 +422,36 @@ Built-in style library in `content/image_generation.py`:
 
 ## Key Technical Notes
 
-### gpt-5-mini Token Allocation (Session 293)
-Reasoning models (gpt-5-mini, o1, o3) allocate tokens differently than standard models:
-- Standard models: All tokens go to visible output
-- Reasoning models: Tokens split between **internal reasoning** + visible output
+### GPT-5-mini Configuration (Session 382)
 
-**Solution:** Set `max_completion_tokens` high (4000-6000) to ensure room for both reasoning AND output.
+**⚠️ CRITICAL: GPT-5-mini is a reasoning model with different parameters!**
 
+| Parameter | GPT-4o-mini | GPT-5-mini |
+|-----------|-------------|------------|
+| Token limit | `max_tokens` | `max_completion_tokens` |
+| Temperature | Supported (0.0-2.0) | **NOT SUPPORTED** |
+| Response format | `response_format={"type": "json_object"}` | Works but optional |
+
+**Correct Usage:**
 ```python
-response = self.client.chat.completions.create(
+# ✅ CORRECT for gpt-5-mini
+response = client.chat.completions.create(
     model="gpt-5-mini",
     messages=messages,
-    max_completion_tokens=6000,  # High enough for reasoning + output
+    max_completion_tokens=6000  # High enough for reasoning + output
+    # NO temperature parameter!
+)
+
+# ❌ WRONG - will cause errors
+response = client.chat.completions.create(
+    model="gpt-5-mini",
+    messages=messages,
+    max_tokens=1000,  # Wrong parameter name
+    temperature=0.7   # Not supported for reasoning models
 )
 ```
+
+**Why high token counts?** Reasoning models split tokens between **internal reasoning** (hidden) + visible output. Set 4000-6000 to ensure room for both.
 
 ### Business Research Agents (No Stability AI Credits!)
 - `CompetitorAnalysisAgent` - Market analysis, SWOT, competitor tracking

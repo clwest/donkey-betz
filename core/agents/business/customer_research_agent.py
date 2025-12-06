@@ -564,11 +564,10 @@ For questionable ideas, help them become viable.
 For absurd ideas, suggest what realistic version might work."""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": check_prompt}],
-                temperature=0.3,
-                max_tokens=500,  # Increased for improvement suggestions
-                response_format={"type": "json_object"}
+                max_completion_tokens=500  # Increased for improvement suggestions
+                # Note: gpt-5-mini reasoning models don't support temperature
             )
 
             result = json.loads(response.choices[0].message.content)

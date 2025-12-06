@@ -42,7 +42,7 @@ def test_agent_learning_system():
             },
             'learning_enabled': True,
             'llm_provider': 'openai',
-            'llm_model': 'gpt-4',
+            'llm_model': 'gpt-5-mini',
         }
     )
 

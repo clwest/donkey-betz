@@ -12,12 +12,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # OpenAI Settings - Using gpt-5-mini for cost optimization
+# Note: gpt-5-mini is a reasoning model that doesn't support temperature
 OPENAI_CONFIG = {
     'api_key': os.getenv('OPENAI_API_KEY'),
-    'model': 'gpt-5-mini',  # Cost-optimized model
-    'temperature': 0.7,
-    'max_tokens': 1000,
+    'model': 'gpt-5-mini',  # Cost-optimized reasoning model
+    'max_completion_tokens': 1000,  # Reasoning models use max_completion_tokens
     'fallback_model': 'gpt-5-mini',  # Even fallback uses mini
+    # Note: temperature not supported for reasoning models
 }
 
 # Cost comparison (per 1M tokens as of 2024)

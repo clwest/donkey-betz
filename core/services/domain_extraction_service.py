@@ -369,11 +369,10 @@ Example for "AI-powered fitness coaching app":
 }}"""
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=500,
-            response_format={"type": "json_object"}
+            max_completion_tokens=500
+            # Note: gpt-5-mini reasoning models don't support temperature
         )
 
         result = json.loads(response.choices[0].message.content)
