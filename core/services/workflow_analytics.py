@@ -66,7 +66,9 @@ class WorkflowAnalyticsService:
     """
 
     def __init__(self, user=None):
-        self.user = user
+        # Only store user if it's a real authenticated user (not AnonymousUser)
+        from django.contrib.auth.models import AnonymousUser
+        self.user = user if user and not isinstance(user, AnonymousUser) else None
 
     def _get_workflow_execution_model(self):
         """Get WorkflowExecution model lazily to avoid import issues"""

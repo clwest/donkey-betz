@@ -58926,12 +58926,21 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
         // Load Workflow Analytics Dashboard
         async function loadWorkflowAnalytics() {
             const days = document.getElementById('wf-analytics-period').value || 30;
+            console.log('📊 Loading workflow analytics for', days, 'days...');
 
             try {
                 const response = await fetch(`/api/workflow-analytics/dashboard/?days=${days}`, {
                     headers: { 'X-CSRFToken': getCsrfToken() }
                 });
                 const data = await response.json();
+                console.log('📊 Workflow analytics response:', data);
+
+                // Check for error response
+                if (data.error || data.success === false) {
+                    console.error('📊 Workflow analytics error:', data.error || data);
+                    return;
+                }
+
                 wfAnalyticsData = data;
 
                 // Update summary
