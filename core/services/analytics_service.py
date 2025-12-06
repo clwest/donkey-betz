@@ -189,7 +189,8 @@ class AnalyticsService:
         for m in metrics:
             labels.append(m.agent_name[:15])  # Truncate long names
             collaborations.append(m.successful_collaborations)
-            quality_scores.append(float(m.quality_score) * 100)  # Convert to percentage
+            # quality_score is already stored as percentage (0-100), not ratio (0-1)
+            quality_scores.append(float(m.quality_score))
             knowledge.append(m.knowledge_contributions)
 
         return ChartData(
