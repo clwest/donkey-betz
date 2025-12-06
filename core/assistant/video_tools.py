@@ -38,9 +38,9 @@ class VideoGenerationToolsMixin:
 
             current_project = getattr(self, 'project', None)
 
-            from agents.video_generation_agent import VideoGenerationAgent
+            from core.agents import VideoAgent
 
-            agent = VideoGenerationAgent(
+            agent = VideoAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
@@ -86,9 +86,9 @@ class VideoGenerationToolsMixin:
             extension_seconds = arguments.get('extension_seconds', 10)
             prompt = arguments.get('prompt')
 
-            from agents.video_generation_agent import VideoGenerationAgent
+            from core.agents import VideoAgent
 
-            agent = VideoGenerationAgent(user=self.user, project_id=None)
+            agent = VideoAgent(user=self.user, project_id=None)
 
             result = agent.extend_video(
                 video_id=video_id,
@@ -180,9 +180,9 @@ class VideoGenerationToolsMixin:
 
             current_project = getattr(self, 'project', None)
 
-            from agents.video_generation_agent import VideoGenerationAgent
+            from core.agents import VideoAgent
 
-            agent = VideoGenerationAgent(
+            agent = VideoAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else project_id
             )

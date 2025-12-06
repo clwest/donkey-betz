@@ -33,7 +33,7 @@ class ImageToolsMixin:
             image_id = arguments['image_id']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -63,7 +63,7 @@ class ImageToolsMixin:
             image_id = arguments['image_id']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -99,7 +99,7 @@ class ImageToolsMixin:
 
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -133,7 +133,7 @@ class ImageToolsMixin:
             object_description = arguments['object_description']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -166,7 +166,7 @@ class ImageToolsMixin:
             select_prompt = arguments.get('select_prompt')
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -199,7 +199,7 @@ class ImageToolsMixin:
             refinement_request = arguments['refinement_request']
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -232,7 +232,7 @@ class ImageToolsMixin:
             replace_prompt = arguments.get('replace_prompt', '')
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -266,7 +266,7 @@ class ImageToolsMixin:
             creativity = arguments.get('creativity', 0.3)
             current_project = getattr(self, 'project', None)
 
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
