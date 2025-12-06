@@ -631,6 +631,10 @@ from core.views_collective_intelligence import (
     get_collective_stats,
     get_dashboard_data,
     get_agent_collective_profile,
+    resolve_knowledge_gap,  # Session 373
+    resolve_all_knowledge_gaps,  # Session 373
+    fix_collaboration,  # Session 373
+    boost_agent,  # Session 373
 )
 from core.views_spider_data import (
     get_spider_items,
@@ -1478,6 +1482,10 @@ urlpatterns = [
     path('api/collective/insights/', aggregate_insights, name='collective-insights'),
     path('api/collective/report/', generate_report, name='collective-report'),
     path('api/collective/knowledge-gaps/', get_knowledge_gaps, name='collective-knowledge-gaps'),
+    path('api/collective/knowledge-gaps/resolve/', resolve_knowledge_gap, name='collective-resolve-gap'),  # Session 373
+    path('api/collective/knowledge-gaps/resolve-all/', resolve_all_knowledge_gaps, name='collective-resolve-all-gaps'),  # Session 373
+    path('api/collective/fix-collaboration/', fix_collaboration, name='collective-fix-collaboration'),  # Session 373
+    path('api/collective/boost-agent/', boost_agent, name='collective-boost-agent'),  # Session 373
     path('api/collective/improvements/', get_agent_improvements, name='collective-improvements'),
     path('api/collective/monitor/', get_collaboration_monitor, name='collective-monitor'),
     path('api/collective/network/', get_collaboration_network, name='collective-network'),

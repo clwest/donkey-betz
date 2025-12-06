@@ -352,6 +352,15 @@ app.conf.beat_schedule = {
             'max_promotions': 3,  # Max decisions to promote per run
         }
     },
+    # Session 373: Auto-Resolve Knowledge Gaps
+    # Automatically fills knowledge gaps from spider data and best practices
+    'auto-resolve-knowledge-gaps': {
+        'task': 'core.tasks.auto_resolve_knowledge_gaps',
+        'schedule': crontab(hour='*/6'),  # Every 6 hours
+        'options': {
+            'expires': 3600 * 5,  # 5 hours
+        },
+    },
     'broadcast-conversation-status': {
         'task': 'core.tasks.broadcast_conversation_status',
         'schedule': 120.0,  # Every 2 minutes - show recent conversations

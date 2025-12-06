@@ -8916,14 +8916,42 @@
 
                             <!-- Memory Palace Overview (shown when no agent selected) -->
                             <div id="memory-palace-overview" class="mb-3">
-                                <div class="row">
-                                    <div class="col-md-4 text-center p-3" style="background: rgba(168, 85, 247, 0.1); border-radius: 12px; margin: 0 auto;">
-                                        <h2 id="memory-palace-total-memories" style="color: #a855f7; font-size: 48px; font-weight: bold;">0</h2>
-                                        <p class="mb-0 text-muted">Total Memories</p>
+                                <!-- Session 372: Enhanced overview with stats and agent breakdown -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3" style="background: rgba(168, 85, 247, 0.1); border-radius: 12px;">
+                                            <h2 id="memory-palace-total-memories" style="color: #a855f7; font-size: 48px; font-weight: bold;">0</h2>
+                                            <p class="mb-0 text-muted">Total Memories</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.1); border-radius: 12px;">
+                                            <h2 id="memory-palace-agents-count" style="color: #22c55e; font-size: 48px; font-weight: bold;">0</h2>
+                                            <p class="mb-0 text-muted">Agents with Memories</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.1); border-radius: 12px;">
+                                            <h2 id="memory-palace-avg-importance" style="color: #3b82f6; font-size: 48px; font-weight: bold;">0%</h2>
+                                            <p class="mb-0 text-muted">Avg Importance</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="memory-palace-type-breakdown" class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
-                                    <!-- Memory type badges will appear here -->
+
+                                <!-- Memory Type Breakdown -->
+                                <div class="mb-3">
+                                    <h6 class="text-muted mb-2">Memory Types:</h6>
+                                    <div id="memory-palace-type-breakdown" class="d-flex flex-wrap gap-2">
+                                        <!-- Memory type badges will appear here -->
+                                    </div>
+                                </div>
+
+                                <!-- Agent Breakdown -->
+                                <div>
+                                    <h6 class="text-muted mb-2">Agents with Most Memories:</h6>
+                                    <div id="memory-palace-agent-breakdown" class="row g-2">
+                                        <!-- Agent cards will appear here -->
+                                    </div>
                                 </div>
                             </div>
 
@@ -9219,7 +9247,7 @@
                             <div class="input-group mb-3">
                                 <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #444; color: #8b5cf6;">🔍</span>
                                 <input type="text" id="collective-search-input" class="form-control"
-                                       placeholder="Search agent insights (e.g., 'logo design', 'video editing', 'brand identity')"
+                                       placeholder="Search knowledge, conversations, dreams (e.g., 'creative', 'video', 'AI', 'brand')"
                                        style="background: #2a2a2a; border: 1px solid #444; color: white;"
                                        onkeypress="if(event.key==='Enter') searchCollectiveIntelligence()">
                                 <button class="btn btn-outline-primary" onclick="searchCollectiveIntelligence()">Search Insights</button>
@@ -49922,33 +49950,32 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 const response = await authenticatedFetch('/api/predictions/');
                 if (response.ok) {
                     const data = await response.json();
-                    // Session 293: Add null check for overview data
-                    if (data.success && data.overview) {
+                    // Session 372: Fixed to match actual API response structure (stats, not overview)
+                    if (data.success && data.stats) {
                         // Update badges
                         const totalBadge = document.getElementById('predictions-total-badge');
                         const accuracyBadge = document.getElementById('predictions-accuracy-badge');
-                        if (totalBadge) totalBadge.textContent = `${data.overview.total_predictions || 0} predictions`;
-                        if (accuracyBadge) accuracyBadge.textContent = `${Math.round((data.overview.overall_accuracy || 0) * 100)}% accuracy`;
+                        if (totalBadge) totalBadge.textContent = `${data.stats.total_predictions || 0} predictions`;
+                        if (accuracyBadge) accuracyBadge.textContent = `${Math.round((data.stats.overall_accuracy || 0) * 100)}% accuracy`;
 
                         // Update stats
                         const totalCount = document.getElementById('predictions-total-count');
                         const pendingCount = document.getElementById('predictions-pending-count');
                         const verifiedCount = document.getElementById('predictions-verified-count');
                         const overallAccuracy = document.getElementById('predictions-overall-accuracy');
-                        if (totalCount) totalCount.textContent = data.overview.total_predictions || 0;
-                        if (pendingCount) pendingCount.textContent = data.overview.pending_predictions || 0;
-                        if (verifiedCount) verifiedCount.textContent = data.overview.verified_predictions || 0;
-                        if (overallAccuracy) overallAccuracy.textContent = `${Math.round((data.overview.overall_accuracy || 0) * 100)}%`;
+                        if (totalCount) totalCount.textContent = data.stats.total_predictions || 0;
+                        if (pendingCount) pendingCount.textContent = data.stats.pending || 0;
+                        if (verifiedCount) verifiedCount.textContent = (data.stats.verified_true || 0) + (data.stats.verified_false || 0) + (data.stats.partially_true || 0);
+                        if (overallAccuracy) overallAccuracy.textContent = `${Math.round((data.stats.overall_accuracy || 0) * 100)}%`;
 
-                        // Render timeline
-                        if (data.recent_predictions) {
-                            renderPredictionsTimeline(data.recent_predictions);
+                        // Render timeline (API returns 'recent' not 'recent_predictions')
+                        if (data.recent) {
+                            renderPredictionsTimeline(data.recent);
                         }
                     }
                 }
             } catch (error) {
-                // Session 293: Silently ignore predictions errors (feature may be disabled)
-                // console.error('Error loading predictions overview:', error);
+                console.error('Error loading predictions overview:', error);
             }
         }
 
@@ -50235,7 +50262,9 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
-                        alert(`Generated ${data.predictions_created} predictions from ${data.dreams_processed} dreams!`);
+                        // Session 372: Fixed to use actual API response fields
+                        const count = data.predictions?.length || data.predictions_created || 0;
+                        alert(data.message || `Generated ${count} predictions from dreams!`);
                         loadPredictionsOverview();
                     } else {
                         alert(data.error || 'Failed to generate predictions');
@@ -50695,17 +50724,52 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                         document.getElementById('memory-palace-agents-badge').textContent = `${data.overview.agents_with_memories} agents`;
                         document.getElementById('memory-palace-total-memories').textContent = data.overview.total_memories;
 
+                        // Session 372: Update new stat cards
+                        const agentsCountEl = document.getElementById('memory-palace-agents-count');
+                        if (agentsCountEl) agentsCountEl.textContent = data.overview.agents_with_memories;
+
+                        // Calculate average importance from agents
+                        const agents = data.agents || [];
+                        const avgImportance = agents.length > 0
+                            ? Math.round((agents.reduce((sum, a) => sum + (a.avg_importance || 0), 0) / agents.length) * 100)
+                            : 0;
+                        const avgImportanceEl = document.getElementById('memory-palace-avg-importance');
+                        if (avgImportanceEl) avgImportanceEl.textContent = `${avgImportance}%`;
+
                         // Update type breakdown
                         const typeEl = document.getElementById('memory-palace-type-breakdown');
                         const typeEmojis = {
                             'success': '✅', 'failure': '❌', 'technique': '⚙️',
                             'insight': '💡', 'preference': '❤️', 'interaction': '💬', 'feedback': '📝'
                         };
-                        typeEl.innerHTML = data.overview.memory_types.map(t => `
-                            <span class="badge" style="background: rgba(168, 85, 247, 0.3); color: #a855f7;">
-                                ${typeEmojis[t.memory_type] || '🧠'} ${t.memory_type}: ${t.count}
-                            </span>
-                        `).join('');
+                        if (typeEl) {
+                            typeEl.innerHTML = data.overview.memory_types.map(t => `
+                                <span class="badge" style="background: rgba(168, 85, 247, 0.3); color: #a855f7;">
+                                    ${typeEmojis[t.memory_type] || '🧠'} ${t.memory_type}: ${t.count}
+                                </span>
+                            `).join('');
+                        }
+
+                        // Session 372: Render agent breakdown cards
+                        const agentBreakdownEl = document.getElementById('memory-palace-agent-breakdown');
+                        if (agentBreakdownEl && agents.length > 0) {
+                            agentBreakdownEl.innerHTML = agents.map(agent => `
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="p-2" style="background: rgba(168, 85, 247, 0.1); border: 1px solid #a855f7; border-radius: 8px; cursor: pointer;"
+                                         onclick="document.getElementById('memory-palace-agent-select').value='${agent.id}'; loadAgentMemoryPalace();">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span style="color: #a855f7; font-weight: 500;">🤖 ${agent.name}</span>
+                                            <span class="badge" style="background: #a855f7;">${agent.memory_count}</span>
+                                        </div>
+                                        <div class="small text-muted mt-1">
+                                            Importance: ${Math.round((agent.avg_importance || 0) * 100)}%
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('');
+                        } else if (agentBreakdownEl) {
+                            agentBreakdownEl.innerHTML = '<div class="col-12 text-muted text-center">No agents with memories yet</div>';
+                        }
                     }
                 }
             } catch (error) {
@@ -51060,6 +51124,7 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
         }
 
         // Session 216: Load Knowledge Gaps
+        // Session 373: Added resolve buttons
         async function loadKnowledgeGaps() {
             const listEl = document.getElementById('knowledge-gaps-list');
 
@@ -51069,7 +51134,30 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
 
                 const gaps = data.gaps || [];
                 if (gaps.length > 0) {
-                    listEl.innerHTML = gaps.slice(0, 5).map(gap => {
+                    // Session 373: Add "Resolve All" button at top - only if there are resolvable gaps
+                    const resolvableDomains = ['video', 'audio', 'workflow', '3d', 'character', 'image', 'research'];
+                    const resolvableGaps = gaps.filter(g => resolvableDomains.includes(g.domain));
+                    const nonResolvableGaps = gaps.filter(g => !resolvableDomains.includes(g.domain));
+
+                    let html = '';
+                    if (resolvableGaps.length > 0) {
+                        html += `
+                            <div class="mb-3 text-center">
+                                <button class="btn btn-sm btn-success" onclick="resolveAllKnowledgeGaps()" id="resolve-all-btn">
+                                    <i class="bi bi-lightning-charge"></i> Resolve ${resolvableGaps.length} Gap${resolvableGaps.length > 1 ? 's' : ''}
+                                </button>
+                            </div>
+                        `;
+                    } else if (nonResolvableGaps.length > 0) {
+                        html += `
+                            <div class="mb-3 p-2 text-center" style="background: rgba(34, 197, 94, 0.1); border-radius: 4px;">
+                                <small class="text-success">✅ All resolvable gaps have been addressed!</small><br>
+                                <small class="text-muted">Remaining gaps require manual system fixes.</small>
+                            </div>
+                        `;
+                    }
+
+                    html += gaps.slice(0, 8).map(gap => {
                         const severityColors = {
                             critical: '#ef4444',
                             high: '#f97316',
@@ -51077,23 +51165,182 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                             low: '#22c55e'
                         };
                         const color = severityColors[gap.severity] || '#666';
+                        const canResolve = resolvableDomains.includes(gap.domain);
+
+                        // Session 373: Add fix guidance for non-resolvable gaps
+                        const fixGuidance = {
+                            'collaboration': {
+                                icon: 'bi-arrow-repeat',
+                                action: 'Run More Collaborations',
+                                onclick: 'triggerCollaborationFix()',
+                                tip: 'Failed collaborations will auto-retry. Run successful ones to improve the ratio.'
+                            },
+                            'performance': {
+                                icon: 'bi-graph-up-arrow',
+                                action: 'Boost Agent',
+                                onclick: `boostAgentPerformance('${gap.affected_agents?.[0] || 'unknown'}')`,
+                                tip: 'Increases quality score by running calibration tasks for this agent.'
+                            }
+                        };
+                        const guidance = fixGuidance[gap.domain];
 
                         return `
-                            <div class="mb-2 p-2" style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid ${color}; border-radius: 4px;">
-                                <div class="d-flex justify-content-between">
-                                    <strong style="color: ${color};">${gap.domain}</strong>
-                                    <span class="badge" style="background: ${color};">${gap.severity}</span>
+                            <div class="mb-2 p-2" style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid ${color}; border-radius: 4px;" id="gap-${gap.domain}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong style="color: ${color};">${gap.domain}</strong>
+                                        <span class="badge ms-1" style="background: ${color};">${gap.severity}</span>
+                                    </div>
+                                    ${canResolve ? `
+                                        <button class="btn btn-xs btn-outline-success" onclick="resolveKnowledgeGap('${gap.domain}')" style="font-size: 10px; padding: 2px 8px;">
+                                            <i class="bi bi-wrench"></i> Resolve
+                                        </button>
+                                    ` : (guidance ? `
+                                        <button class="btn btn-xs btn-outline-info" onclick="${guidance.onclick}" style="font-size: 10px; padding: 2px 8px;" title="${guidance.tip}">
+                                            <i class="bi ${guidance.icon}"></i> ${guidance.action}
+                                        </button>
+                                    ` : '')}
                                 </div>
                                 <small class="text-muted">${gap.description}</small>
+                                ${gap.potential_impact ? `<div class="mt-1"><small class="text-warning">${gap.potential_impact}</small></div>` : ''}
+                                ${!canResolve && guidance ? `<div class="mt-1"><small class="text-info"><i class="bi bi-info-circle"></i> ${guidance.tip}</small></div>` : ''}
                             </div>
                         `;
                     }).join('');
+
+                    listEl.innerHTML = html;
                 } else {
                     listEl.innerHTML = '<p class="text-success text-center">✅ No knowledge gaps detected!</p>';
                 }
             } catch (error) {
                 console.error('Error loading knowledge gaps:', error);
                 listEl.innerHTML = '<p class="text-muted text-center">Failed to load gaps</p>';
+            }
+        }
+
+        // Session 373: Resolve a single knowledge gap
+        async function resolveKnowledgeGap(domain) {
+            const gapEl = document.getElementById(`gap-${domain}`);
+            if (gapEl) {
+                gapEl.style.opacity = '0.5';
+                gapEl.innerHTML = `<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Resolving ${domain}...</div>`;
+            }
+
+            try {
+                const response = await authenticatedFetch('/api/collective/knowledge-gaps/resolve/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: domain })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Resolved ${domain} gap: Created ${data.items_created} knowledge items!`, 'success');
+                    // Reload the gaps list
+                    setTimeout(() => loadKnowledgeGaps(), 1000);
+                } else {
+                    showNotification(`Failed to resolve ${domain}: ${data.error}`, 'danger');
+                    loadKnowledgeGaps();
+                }
+            } catch (error) {
+                console.error('Error resolving gap:', error);
+                showNotification(`Error resolving ${domain} gap`, 'danger');
+                loadKnowledgeGaps();
+            }
+        }
+
+        // Session 373: Resolve all knowledge gaps
+        async function resolveAllKnowledgeGaps() {
+            const btn = document.getElementById('resolve-all-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Resolving All...';
+            }
+
+            try {
+                const response = await authenticatedFetch('/api/collective/knowledge-gaps/resolve-all/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Resolved ${data.domains_processed} gaps! Created ${data.total_items_created} knowledge items!`, 'success');
+                    // Reload the gaps list
+                    setTimeout(() => loadKnowledgeGaps(), 1500);
+                } else {
+                    showNotification('Failed to resolve gaps', 'danger');
+                    loadKnowledgeGaps();
+                }
+            } catch (error) {
+                console.error('Error resolving all gaps:', error);
+                showNotification('Error resolving knowledge gaps', 'danger');
+                loadKnowledgeGaps();
+            }
+        }
+
+        // Session 373: Fix collaboration failures by running successful collaborations
+        async function triggerCollaborationFix() {
+            const gapEl = document.getElementById('gap-collaboration');
+            if (gapEl) {
+                const btn = gapEl.querySelector('button');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running...';
+                }
+            }
+
+            try {
+                const response = await authenticatedFetch('/api/collective/fix-collaboration/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Started ${data.sessions_created} new collaboration sessions! Check back in a few minutes.`, 'success');
+                    setTimeout(() => loadKnowledgeGaps(), 3000);
+                } else {
+                    showNotification(`Could not fix: ${data.error || 'Unknown error'}`, 'warning');
+                    loadKnowledgeGaps();
+                }
+            } catch (error) {
+                console.error('Error fixing collaboration:', error);
+                showNotification('Error triggering collaboration fix', 'danger');
+                loadKnowledgeGaps();
+            }
+        }
+
+        // Session 373: Boost agent performance by running calibration
+        async function boostAgentPerformance(agentName) {
+            const gapEl = document.getElementById('gap-performance');
+            if (gapEl) {
+                const btn = gapEl.querySelector('button');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Boosting...';
+                }
+            }
+
+            try {
+                const response = await authenticatedFetch('/api/collective/boost-agent/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_name: agentName })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Boosted ${agentName}! New quality score: ${data.new_score}%`, 'success');
+                    setTimeout(() => loadKnowledgeGaps(), 2000);
+                } else {
+                    showNotification(`Could not boost: ${data.error || 'Unknown error'}`, 'warning');
+                    loadKnowledgeGaps();
+                }
+            } catch (error) {
+                console.error('Error boosting agent:', error);
+                showNotification('Error boosting agent performance', 'danger');
+                loadKnowledgeGaps();
             }
         }
 
@@ -51131,7 +51378,7 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
             }
         }
 
-        // Session 216: Load Top Collaborators
+        // Session 216/372: Load Top Collaborators - derived from learning transfers
         async function loadTopCollaborators() {
             const gridEl = document.getElementById('top-collaborators-grid');
 
@@ -51139,17 +51386,44 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 const response = await authenticatedFetch('/api/collective/stats/');
                 const data = await response.json();
 
-                const collaborators = data.top_collaborators || [];
+                // Session 372: Derive top collaborators from recent_transfers
+                // Count how many times each agent taught others (teachers are the collaborators)
+                const transfers = data.learning?.recent_transfers || [];
+                const collaboratorCounts = {};
+
+                transfers.forEach(t => {
+                    const teacher = t.teacher;
+                    if (!collaboratorCounts[teacher]) {
+                        collaboratorCounts[teacher] = {
+                            agent_name: teacher,
+                            knowledge_shared: 0,
+                            avg_usefulness: 0,
+                            total_usefulness: 0
+                        };
+                    }
+                    collaboratorCounts[teacher].knowledge_shared++;
+                    collaboratorCounts[teacher].total_usefulness += (t.usefulness || 0);
+                    collaboratorCounts[teacher].avg_usefulness =
+                        collaboratorCounts[teacher].total_usefulness / collaboratorCounts[teacher].knowledge_shared;
+                });
+
+                // Convert to array and sort by knowledge shared
+                const collaborators = Object.values(collaboratorCounts)
+                    .sort((a, b) => b.knowledge_shared - a.knowledge_shared)
+                    .slice(0, 5);
+
                 if (collaborators.length > 0) {
-                    gridEl.innerHTML = collaborators.slice(0, 5).map((collab, idx) => {
+                    gridEl.innerHTML = collaborators.map((collab, idx) => {
                         const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                        const usefulnessPercent = Math.round(collab.avg_usefulness * 100);
                         return `
                             <div class="col-md-2 col-sm-4 col-6">
                                 <div class="card text-center" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
                                     <div class="card-body p-2">
                                         <div style="font-size: 24px;">${medals[idx] || '🏅'}</div>
                                         <small style="color: #fcd34d; font-weight: 600;">${collab.agent_name.replace(/_/g, ' ')}</small>
-                                        <div class="text-muted small">${collab.successful_collaborations} collabs</div>
+                                        <div class="text-muted small">${collab.knowledge_shared} shares</div>
+                                        <div class="small" style="color: #22c55e;">${usefulnessPercent}% useful</div>
                                     </div>
                                 </div>
                             </div>
@@ -51277,16 +51551,31 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                 const data = await response.json();
 
                 if (data.insights && data.insights.length > 0) {
+                    // Session 374: Helper function to get insight type badge
+                    const getTypeBadge = (type) => {
+                        const badges = {
+                            'knowledge': '<span class="badge" style="background: #22c55e;">Knowledge</span>',
+                            'conversation': '<span class="badge" style="background: #3b82f6;">Conversation</span>',
+                            'dream': '<span class="badge" style="background: #ec4899;">Dream</span>',
+                            'memory': '<span class="badge" style="background: #f59e0b;">Memory</span>',
+                            'collaboration_result': '<span class="badge" style="background: #8b5cf6;">Collaboration</span>'
+                        };
+                        return badges[type] || '<span class="badge bg-secondary">Insight</span>';
+                    };
+
                     results.innerHTML = `
                         <div class="mb-3">
                             <strong style="color: #8b5cf6;">Found ${data.total_insights} insights from ${data.unique_agents} agents</strong>
                             <span class="badge bg-info ms-2">Consensus: ${Math.round(data.consensus_score * 100)}%</span>
                         </div>
-                        ${data.insights.slice(0, 10).map(insight => `
+                        ${data.insights.slice(0, 15).map(insight => `
                             <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 6px;">
-                                <div class="d-flex justify-content-between">
-                                    <strong style="color: #c4b5fd;">${insight.agent_name.replace(/_/g, ' ')}</strong>
-                                    <span class="badge bg-secondary">${Math.round(insight.confidence * 100)}% confident</span>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <strong style="color: #c4b5fd;">${insight.agent_name.replace(/_/g, ' ')}</strong>
+                                        ${getTypeBadge(insight.insight_type)}
+                                    </div>
+                                    <span class="badge bg-secondary">${Math.round(insight.confidence * 100)}%</span>
                                 </div>
                                 <small class="text-muted">${insight.content.substring(0, 200)}...</small>
                             </div>

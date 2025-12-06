@@ -9081,3 +9081,68 @@ def _create_learning_notification(project, deltas):
         logger.info(f"🧠 [SESSION 354] Created learning notification for {project.project_name}")
     except Exception as e:
         logger.warning(f"🧠 [SESSION 354] Failed to create notification: {e}")
+
+
+# ==================== SESSION 373: AUTO-RESOLVE KNOWLEDGE GAPS ====================
+
+
+@shared_task(bind=True, max_retries=2)
+def auto_resolve_knowledge_gaps(self):
+    """
+    Session 373: Automatically resolve knowledge gaps on a schedule.
+
+    Checks for knowledge gaps and attempts to fill them with:
+    1. Spider data extraction
+    2. Best practice generation
+
+    Run via Celery Beat every 6 hours.
+    """
+    try:
+        from core.services.collective_intelligence import get_collective_intelligence_service
+
+        service = get_collective_intelligence_service()
+
+        # Get current knowledge gaps
+        gaps = service.identify_knowledge_gaps()
+
+        # Filter to resolvable domains only
+        resolvable_domains = {'video', 'audio', 'workflow', '3d', 'character', 'image', 'research'}
+        resolvable_gaps = [g for g in gaps if g.domain in resolvable_domains]
+
+        if not resolvable_gaps:
+            logger.info("🧠 [SESSION 373] No resolvable knowledge gaps found")
+            return {'status': 'no_gaps', 'message': 'No resolvable knowledge gaps'}
+
+        total_created = 0
+        results = []
+
+        for gap in resolvable_gaps:
+            result = service.resolve_knowledge_gap(gap.domain)
+            results.append(result)
+            if result.get('success'):
+                total_created += result.get('items_created', 0)
+                logger.info(f"🧠 [SESSION 373] Resolved {gap.domain} gap: created {result.get('items_created', 0)} items")
+
+        # Broadcast the update via WebSocket
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('collective_intelligence', json.dumps({
+                'type': 'knowledge_gaps_resolved',
+                'gaps_resolved': len(resolvable_gaps),
+                'items_created': total_created
+            }))
+        except Exception:
+            pass
+
+        return {
+            'status': 'success',
+            'gaps_resolved': len(resolvable_gaps),
+            'items_created': total_created,
+            'details': results
+        }
+
+    except Exception as e:
+        logger.error(f"🧠 [SESSION 373] Error auto-resolving knowledge gaps: {e}")
+        return {'status': 'error', 'error': str(e)}
