@@ -110,7 +110,8 @@ CURRENT CODE:
 Please provide a corrected version of the code that fixes the error. Return only the corrected Python code without explanations."""
 
                 # Use the orchestrator's LLM to generate a fix
-                fixed_code = orchestrator.llm_executor.call_llm(fix_prompt, model="gpt-5-mini", temperature=0.3)
+                # Note: gpt-5-mini reasoning models don't support temperature
+                fixed_code = orchestrator.llm_executor.call_llm(fix_prompt, model="gpt-5-mini")
 
                 # Clean the response to extract just the code
                 if "```python" in fixed_code:

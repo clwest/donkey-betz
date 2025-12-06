@@ -22,11 +22,11 @@ def test_simple_gpt5():
         print("❌ OpenAI provider not available")
         return
 
-    # Test 1: Very simple prompt with GPT-4
-    print("🧪 Test 1: Very simple prompt (GPT-4)")
+    # Test 1: Very simple prompt with GPT-5-mini
+    print("🧪 Test 1: Very simple prompt (GPT-5-mini)")
     try:
         result1 = provider.generate_content(
-            model='gpt-4o-mini',
+            model='gpt-5-mini',
             system_prompt="You are a helpful assistant.",
             user_prompt="Please write a simple business plan for selling digital templates.",
             config={'max_completion_tokens': 200}
@@ -43,10 +43,10 @@ def test_simple_gpt5():
     print()
 
     # Test 2: No system prompt
-    print("🧪 Test 2: No system prompt (GPT-4)")
+    print("🧪 Test 2: No system prompt (GPT-5-mini)")
     try:
         result2 = provider.generate_content(
-            model='gpt-4o-mini',
+            model='gpt-5-mini',
             system_prompt="",
             user_prompt="Please write a simple business plan for selling digital templates.",
             config={'max_completion_tokens': 200}
@@ -63,10 +63,10 @@ def test_simple_gpt5():
     print()
 
     # Test 3: Platform awareness but simple
-    print("🧪 Test 3: Simple platform awareness (GPT-4)")
+    print("🧪 Test 3: Simple platform awareness (GPT-5-mini)")
     try:
         result3 = provider.generate_content(
-            model='gpt-4o-mini',
+            model='gpt-5-mini',
             system_prompt="You work for a platform with AI Content Studio and specialized agents.",
             user_prompt="How should someone create digital templates using our platform tools?",
             config={'max_completion_tokens': 200}

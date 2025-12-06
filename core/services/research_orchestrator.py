@@ -539,13 +539,13 @@ Examples:
 Return ONLY the JSON, no explanation."""
 
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "Extract search parameters from business ideas. Return only valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=300,
-                temperature=0.3
+                max_completion_tokens=300
+                # Note: gpt-5-mini reasoning models don't support temperature
             )
 
             content = response.choices[0].message.content.strip()
@@ -781,13 +781,13 @@ You MUST respond with ONLY valid JSON in this exact format (no markdown, no expl
 
             # Call GPT directly
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "You are a business analyst scoring opportunities. Always respond with valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1000,
-                temperature=0.3
+                max_completion_tokens=1000
+                # Note: gpt-5-mini reasoning models don't support temperature
             )
 
             content = response.choices[0].message.content.strip()

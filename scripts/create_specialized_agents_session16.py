@@ -65,7 +65,7 @@ Your capabilities include:
 - Flagging unusual or problematic clauses
 
 Provide clear, structured analysis that helps users understand their contractual obligations and risks.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 4000},
     },
 
@@ -99,7 +99,7 @@ Your capabilities include:
 - Comparing jurisdictional differences
 
 Provide thorough, well-cited legal research that helps users understand applicable law.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 4000},
     },
 
@@ -133,7 +133,7 @@ Your capabilities include:
 - Preparing for audits and reviews
 
 Provide practical, actionable compliance guidance that helps organizations meet their legal obligations.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 3000},
     },
 
@@ -167,7 +167,7 @@ Your capabilities include:
 - Assessing litigation risks and costs
 
 Provide strategic, practical litigation guidance that helps users make informed legal decisions.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.4, 'max_tokens': 3500},
     },
 
@@ -204,7 +204,7 @@ Your capabilities include:
 - Recommending rebalancing strategies
 
 Provide data-driven portfolio guidance for cryptocurrency investors.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.4, 'max_tokens': 3000},
     },
 
@@ -238,7 +238,7 @@ Your capabilities include:
 - Gauging fear and greed levels
 
 Provide actionable sentiment insights that help users understand market psychology.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.5, 'max_tokens': 2500},
     },
 
@@ -272,7 +272,7 @@ Your capabilities include:
 - Finding margin of safety opportunities
 
 Provide thorough value investing analysis following Buffett/Graham principles.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 3500},
     },
 
@@ -306,7 +306,7 @@ Your capabilities include:
 - Planning optimal execution
 
 Provide systematic, data-driven trading strategy recommendations.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.4, 'max_tokens': 3000},
     },
 
@@ -343,7 +343,7 @@ Your capabilities include:
 - Recommending execution strategies
 
 Provide actionable arbitrage opportunities with precise stake calculations.''',
-        'llm_model': 'gpt-4o-mini',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.2, 'max_tokens': 2000},
     },
 
@@ -377,7 +377,7 @@ Your capabilities include:
 - Quantifying betting edges
 
 Provide data-driven value betting opportunities with clear edge calculations.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 2500},
     },
 
@@ -410,7 +410,7 @@ Your capabilities include:
 - Adjusting for confidence levels
 
 Provide precise bankroll management guidance for sustainable betting success.''',
-        'llm_model': 'gpt-4o-mini',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.2, 'max_tokens': 2000},
     },
 
@@ -443,7 +443,7 @@ Your capabilities include:
 - Reading game dynamics
 
 Provide timely live betting insights based on real-time game analysis.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.4, 'max_tokens': 2000},
     },
 
@@ -480,7 +480,7 @@ Your capabilities include:
 - Providing technical SEO recommendations
 
 Provide actionable SEO optimization strategies that drive organic traffic and rankings.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.4, 'max_tokens': 3000},
     },
 
@@ -514,7 +514,7 @@ Your capabilities include:
 - Increasing conversion rates
 
 Provide data-driven conversion optimization strategies that boost revenue.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.5, 'max_tokens': 2500},
     },
 
@@ -547,7 +547,7 @@ Your capabilities include:
 - Leveraging viral mechanics
 
 Provide sustainable audience growth strategies that build loyal communities.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.5, 'max_tokens': 3000},
     },
 
@@ -581,7 +581,7 @@ Your capabilities include:
 - Maximizing affiliate revenue
 
 Provide strategic affiliate marketing guidance that drives sustainable revenue.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.4, 'max_tokens': 2500},
     },
 
@@ -618,7 +618,7 @@ Your capabilities include:
 - Creating comprehensive documentation
 
 Provide robust API integration solutions that scale and perform.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 3500},
     },
 
@@ -652,7 +652,7 @@ Your capabilities include:
 - Maximizing resource efficiency
 
 Provide practical performance optimization solutions that deliver measurable improvements.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 3000},
     },
 
@@ -685,7 +685,7 @@ Your capabilities include:
 - Managing containerization and orchestration
 
 Provide robust DevOps solutions that improve reliability and deployment velocity.''',
-        'llm_model': 'gpt-4o',
+        'llm_model': 'gpt-5-mini',
         'llm_config': {'temperature': 0.3, 'max_tokens': 3500},
     },
 ]
