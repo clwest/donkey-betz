@@ -336,7 +336,7 @@ the user should use ImageAgent, VideoAgent, etc."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
-                    return AgentResult(
+                    result = AgentResult(
                         success=True,
                         message="Brand identity operation completed",
                         data={
@@ -349,8 +349,25 @@ the user should use ImageAgent, VideoAgent, etc."""
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 380: Learning hooks for collective intelligence
+                    self._record_learning_outcome(
+                        result=result,
+                        task=task,
+                        context=context,
+                        spider_data_used=bool(spider_context),
+                        scifi_context_used=bool(scifi_context)
+                    )
+                    self._create_execution_memory(
+                        result=result,
+                        task=task,
+                        memory_type="success",
+                        importance=0.7
+                    )
+
+                    return result
+
                 else:
-                    return AgentResult(
+                    result = AgentResult(
                         success=True,
                         message=gpt_response.get('content', ''),
                         data={'type': 'conversation'},
@@ -358,14 +375,48 @@ the user should use ImageAgent, VideoAgent, etc."""
                         execution_time_ms=int((time.time() - start_time) * 1000)
                     )
 
+                    # Session 380: Learning hooks for collective intelligence
+                    self._record_learning_outcome(
+                        result=result,
+                        task=task,
+                        context=context,
+                        spider_data_used=bool(spider_context),
+                        scifi_context_used=bool(scifi_context)
+                    )
+                    self._create_execution_memory(
+                        result=result,
+                        task=task,
+                        memory_type="success",
+                        importance=0.6
+                    )
+
+                    return result
+
             except Exception as e:
                 logger.error(f"BrandIdentityAgent error: {e}")
-                return AgentResult(
+                result = AgentResult(
                     success=False,
                     error=str(e),
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
+
+                # Session 380: Learning hooks for collective intelligence (failures too)
+                self._record_learning_outcome(
+                    result=result,
+                    task=task,
+                    context=context,
+                    spider_data_used=bool(spider_context),
+                    scifi_context_used=bool(scifi_context)
+                )
+                self._create_execution_memory(
+                    result=result,
+                    task=task,
+                    memory_type="failure",
+                    importance=0.8  # Failures are important to learn from
+                )
+
+                return result
 
     def _execute_tool_call(
         self,

@@ -34,8 +34,8 @@ Usage:
 
     agent = ImageAgent(user=request.user)
     result = agent.execute(
-        task="create a cyberpunk logo for a tech startup",
-        context={'count': 3, 'style': 'cyberpunk', 'project_id': 'uuid...'},
+        task="create a modern logo for a bakery",
+        context={'count': 3, 'style': 'minimalist', 'project_id': 'uuid...'},
         scifi_context=scifi_service.get_context('ImageAgent'),
         spider_context=spider_service.get_insights_for_prompt(task)
     )
@@ -55,7 +55,7 @@ class ImageAgent(BaseAgent):
     Agent specialized in image generation. Cannot do anything else.
 
     This agent:
-    1. Takes a task like "create a cyberpunk logo"
+    1. Takes a task like "create a professional logo"
     2. Enhances the prompt using GPT
     3. Calls generate_image with Stability AI
     4. Returns the generated images
@@ -79,18 +79,32 @@ You have ONE tool: generate_image.
 When given a task:
 1. Analyze what the user wants
 2. Enhance the prompt for better image generation results
-3. Choose appropriate style and size based on the request
+3. Choose appropriate style based on the CONTEXT (brand, industry, use case)
 4. Call generate_image with optimized parameters
 
+IMPORTANT - Style Selection Guidelines:
+- Match style to the PROJECT/BRAND context, not to a default preference
+- For AI/tech companies: Consider clean, modern, minimalist, or professional styles first
+- For creative agencies: Consider artistic, colorful, or unique brand-appropriate styles
+- For corporate: Consider professional, clean, or photorealistic styles
+- ONLY use cyberpunk/neon styles when the brand explicitly calls for it
+- When in doubt, prefer: minimalist, modern, professional, or clean styles
+
 Common image types and optimal settings:
-- Logos: 1024x1024 (square), style varies by brand (modern, vintage, geometric)
+- Logos: 1024x1024 (square), style varies by brand (modern, minimalist, geometric)
 - Social media banners: 1280x720 (landscape) or 1080x1080 (square)
 - Product photos: 1024x1024, photorealistic style
 - Illustrations: 1024x1024, artistic/illustration style
 - Thumbnails: 1280x720, eye-catching vibrant style
 
-Style options: photorealistic, cinematic, anime, watercolor, oil_painting,
-digital_art, 3d_render, cyberpunk, fantasy, minimalist, vintage, pop_art
+Available styles: photorealistic, cinematic, anime, watercolor, oil_painting,
+digital_art, 3d_render, minimalist, vintage, pop_art, modern, professional,
+clean, geometric, flat_design, gradient, elegant, bold, playful
+
+SPECIAL STYLES (use only when explicitly requested or matching brand):
+- cyberpunk: For explicitly futuristic/dystopian/neon-focused brands
+- fantasy: For gaming, entertainment, or magical themes
+- steampunk: For Victorian/mechanical aesthetics
 
 You CANNOT create videos, audio, 3D models, or search the web. Just images.
 If asked to do something outside image generation, politely explain you can only create images."""
@@ -149,7 +163,7 @@ If asked to do something outside image generation, politely explain you can only
         Execute image generation based on the task.
 
         Args:
-            task: User's image request (e.g., "create a cyberpunk logo")
+            task: User's image request (e.g., "create a company logo")
             context: Additional context (count, style preferences)
             scifi_context: Mood, memory, evolution context
             spider_context: Trends, market data context
