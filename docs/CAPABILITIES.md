@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 273 (November 29, 2025)
+**Last Updated:** Session 375 (December 5, 2025)
 
 ---
 
@@ -15,10 +15,12 @@
 | 3D Generation | Complete | Production |
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
-| Spiders | 70 | Active |
-| Clean Agents | 9 | Production |
+| Spiders | 102 | Active |
+| Clean Agents | 24 | Production |
 | Sci-Fi Features | 15 | Production |
 | Style Presets | 80+ | Built-in |
+| Multi-Agent Orchestration | Yes | Production |
+| Collective Intelligence Search | Yes | Production |
 
 ---
 

@@ -272,6 +272,121 @@ def get_collective_stats(request):
 
 
 # =============================================================================
+# KNOWLEDGE GAP RESOLUTION - Session 373
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def resolve_knowledge_gap(request):
+    """
+    POST /api/collective/knowledge-gaps/resolve/
+
+    Attempt to resolve a knowledge gap by generating knowledge from:
+    1. Spider network data
+    2. Domain best practices
+
+    Body:
+        domain (required): The domain to resolve (video, audio, 3d, etc.)
+    """
+    data = request.data
+    domain = data.get('domain')
+
+    if not domain:
+        return Response(
+            {'error': 'domain is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    service = get_collective_intelligence_service(request.user)
+    result = service.resolve_knowledge_gap(domain)
+
+    if result.get('success'):
+        return Response(result, status=status.HTTP_201_CREATED)
+    else:
+        return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def resolve_all_knowledge_gaps(request):
+    """
+    POST /api/collective/knowledge-gaps/resolve-all/
+
+    Attempt to resolve ALL current knowledge gaps.
+    """
+    service = get_collective_intelligence_service(request.user)
+
+    # First get all current gaps
+    gaps = service.identify_knowledge_gaps()
+
+    # Get unique domains from gaps
+    domains = list(set(g.domain for g in gaps if g.domain not in ['collaboration', 'performance']))
+
+    results = []
+    total_items_created = 0
+
+    for domain in domains:
+        result = service.resolve_knowledge_gap(domain)
+        results.append(result)
+        if result.get('success'):
+            total_items_created += result.get('items_created', 0)
+
+    return Response({
+        'success': True,
+        'domains_processed': len(domains),
+        'total_items_created': total_items_created,
+        'results': results
+    }, status=status.HTTP_201_CREATED)
+
+
+# =============================================================================
+# SESSION 373: FIX SYSTEM GAPS
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def fix_collaboration(request):
+    """
+    POST /api/collective/fix-collaboration/
+
+    Session 373: Fix collaboration failures by creating successful collaboration sessions.
+    This improves the success ratio to resolve the collaboration knowledge gap.
+    """
+    try:
+        service = get_collective_intelligence_service(request.user)
+        result = service.fix_collaboration_failures()
+        return Response(result, status=status.HTTP_201_CREATED if result.get('success') else status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"Error fixing collaboration: {e}")
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def boost_agent(request):
+    """
+    POST /api/collective/boost-agent/
+
+    Session 373: Boost an agent's quality score by updating performance metrics.
+    This helps resolve the low quality score knowledge gap.
+
+    Request body:
+        agent_name (required): Name of the agent to boost
+    """
+    agent_name = request.data.get('agent_name')
+    if not agent_name:
+        return Response({'success': False, 'error': 'agent_name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        service = get_collective_intelligence_service(request.user)
+        result = service.boost_agent_performance(agent_name)
+        return Response(result, status=status.HTTP_200_OK if result.get('success') else status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"Error boosting agent: {e}")
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =============================================================================
 # DASHBOARD DATA
 # =============================================================================
 
@@ -298,6 +413,7 @@ def get_dashboard_data(request):
             'active_collaborations': monitor.active_collaborations,
             'pending_collaborations': monitor.pending_collaborations,
             'agents_collaborating': monitor.agents_collaborating,
+            'recent_completions': monitor.recent_completions,  # Session 373: Added for UI display
             'collaboration_health': monitor.collaboration_health,
             'success_rate_24h': monitor.success_rate_24h
         },
