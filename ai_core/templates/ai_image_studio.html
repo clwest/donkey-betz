@@ -16187,6 +16187,40 @@
                     loadDashboardStats();
                 });
             }
+
+            // Session 371: Load Intelligence tab data when shown
+            const agentsIntelligenceTab = document.getElementById('agents-intelligence-tab');
+            if (agentsIntelligenceTab) {
+                agentsIntelligenceTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🧠 Agents Intelligence tab shown - loading hive mind data...');
+                    loadHiveMindSessions();
+                });
+            }
+
+            // Session 371: Load Growth tab data when shown
+            const agentsGrowthTab = document.getElementById('agents-growth-tab');
+            if (agentsGrowthTab) {
+                agentsGrowthTab.addEventListener('shown.bs.tab', function() {
+                    console.log('📈 Agents Growth tab shown - loading evolution data...');
+                    loadEvolutionOverview();
+                    loadEvolutionLeaderboard();
+                    loadRecentXPGains();
+                    loadTimeTravelOverview();
+                    loadTimeTravelAgents();
+                });
+            }
+
+            // Session 371: Load Memory tab data when shown
+            const agentsMemoryTab = document.getElementById('agents-memory-tab');
+            if (agentsMemoryTab) {
+                agentsMemoryTab.addEventListener('shown.bs.tab', function() {
+                    console.log('🏛️ Agents Memory tab shown - loading memory data...');
+                    loadMemoryClustersOverview();
+                    loadPredictionsOverview();
+                    loadCapsulesOverview();
+                    loadCapsulesAgentSelect();
+                });
+            }
         });
         // ============================================================
 
