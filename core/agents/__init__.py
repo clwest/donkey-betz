@@ -33,7 +33,7 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Available Agents (27 total):
+Available Agents (28 total):
 
     CREATION AGENTS (4):
         ImageAgent          - Image generation (logos, banners, illustrations)
@@ -60,9 +60,10 @@ Available Agents (27 total):
         CreativeDirectorAgent - Creative guidance and prompt enhancement
         MeetingCoordinatorAgent - Coordinates meetings between agents
 
-    ANALYSIS AGENTS (2) - Session 281:
-        TrendAnalysisAgent      - Spider intelligence analysis
-        OpportunityScoringAgent - Opportunity scoring engine
+    ANALYSIS AGENTS (3) - Session 281, expanded Session 385:
+        TrendAnalysisAgent       - Spider intelligence analysis
+        OpportunityScoringAgent  - Opportunity scoring engine
+        MarketIntelligenceAgent  - SEC filings, crypto, stocks analysis
 
     TRAINING AGENTS (2) - Session 281:
         CharacterTrainingAgent  - FLUX LoRA character training
@@ -132,10 +133,11 @@ from core.agents.executive import (
     MeetingCoordinatorAgent,
 )
 
-# Analysis Agents (Session 281)
+# Analysis Agents (Session 281, expanded Session 385)
 from core.agents.analysis import (
     TrendAnalysisAgent,
     OpportunityScoringAgent,
+    MarketIntelligenceAgent,
 )
 
 # Training Agents (Session 281)
@@ -194,9 +196,10 @@ __all__ = [
     'CreativeDirectorAgent',
     'MeetingCoordinatorAgent',
 
-    # Analysis Agents (2) - Session 281
+    # Analysis Agents (3) - Session 281, expanded Session 385
     'TrendAnalysisAgent',
     'OpportunityScoringAgent',
+    'MarketIntelligenceAgent',
 
     # Training Agents (2) - Session 281
     'CharacterTrainingAgent',

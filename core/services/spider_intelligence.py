@@ -39,7 +39,7 @@ class SpiderIntelligenceService:
                  'medium', 'substack'],
         'financial': ['coingecko', 'yahoo_finance', 'etherscan', 'financial', 'seekingalpha'],
         'jobs': ['weworkremotely', 'remote_jobs', 'github_jobs', 'stackoverflow_jobs', 'flexjobs',
-                 'remoteok', 'weworkremotely'],
+                 'remoteok', 'weworkremotely', 'adzuna', 'angellist'],
         'news': ['news_harvester', 'reuters', 'bbc', 'techcrunch', 'axios', 'theverge', 'wired',
                  'mit_tech_review'],
         # Session 294: Added bluesky and youtube for customer research
@@ -49,6 +49,15 @@ class SpiderIntelligenceService:
         'crypto': ['coingecko', 'etherscan', 'nft_tracker', 'defi_tracker'],
         # Session 294: Community category for customer research spiders
         'community': ['reddit', 'bluesky', 'discord', 'indiehackers'],
+    }
+
+    # Session 385: Job spiders to exclude from general trending topics
+    # These spiders pollute trends with job titles like "developer", "designer", etc.
+    # Job data should only appear in the dedicated Jobs sub-tab
+    JOB_SPIDERS = {
+        'weworkremotely', 'remote_jobs', 'github_jobs', 'stackoverflow_jobs',
+        'flexjobs', 'remoteok', 'adzuna', 'angellist', 'toptal', 'guru',
+        'peopleperhour', 'ninetyninedesigns'
     }
 
     def __init__(self):
@@ -94,28 +103,37 @@ class SpiderIntelligenceService:
         'gift', 'gifts', 'holiday', 'holidays', 'black', 'friday', 'cyber', 'monday'
     }
 
-    def get_trending_topics(self, category: str = None, hours: int = 24, limit: int = 10) -> list:
+    def get_trending_topics(self, category: str = None, hours: int = 24, limit: int = 10, include_jobs: bool = False) -> list:
         """
         Session 237: Improved trending topic extraction.
+        Session 385: Enhanced to include sample articles for each topic.
+        Session 385: Exclude job spiders by default to prevent job titles polluting trends.
 
         Get trending topics from spider data with smarter extraction:
         1. Prioritize tags/keywords from articles (most reliable)
         2. Extract meaningful phrases from titles (not single words)
         3. Filter out common stopwords aggressively
         4. Show actual headlines for context
+        5. Include sample articles for each topic (Session 385)
+        6. Exclude job spiders by default (Session 385)
 
         Args:
             category: Filter by category (tech, financial, jobs, etc.)
             hours: Look back period in hours
             limit: Maximum number of topics to return
+            include_jobs: If True, include job spiders in trends (default False)
 
         Returns:
-            List of trending topics with scores
+            List of trending topics with scores and sample articles
         """
         since = timezone.now() - timedelta(hours=hours)
 
         # Build query
         queryset = self.SpiderData.objects.filter(created_at__gte=since)
+
+        # Session 385: Exclude job spiders unless explicitly requested or filtering by jobs category
+        if not include_jobs and category != 'jobs':
+            queryset = queryset.exclude(spider_name__in=self.JOB_SPIDERS)
 
         if category:
             spider_names = self.CATEGORY_MAPPINGS.get(category, [])
@@ -129,8 +147,9 @@ class SpiderIntelligenceService:
         keyword_counts = Counter()  # Extracted keywords
         keyword_sources = defaultdict(set)
 
-        # Also collect top headlines per source for context
-        headlines_by_source = defaultdict(list)
+        # Session 385: Track articles per topic for display
+        tag_articles = defaultdict(list)  # tag -> list of articles
+        keyword_articles = defaultdict(list)  # keyword -> list of articles
 
         for entry in queryset:
             if not entry.raw_data:
@@ -139,10 +158,20 @@ class SpiderIntelligenceService:
             items = entry.raw_data.get('items', [])
             for item in items:
                 title = item.get('title') or item.get('name') or ''
+                url = item.get('url') or item.get('link') or ''
 
-                # Collect headlines
-                if title and not title.startswith('Spider') and len(title) > 10:
-                    headlines_by_source[entry.spider_name].append(title)
+                # Skip items without title or url
+                if not title or len(title) < 10:
+                    continue
+
+                # Build article object for later use
+                article = {
+                    'title': title[:100],  # Truncate long titles
+                    'url': url,
+                    'source': entry.spider_name,
+                    'description': (item.get('description') or item.get('summary') or '')[:150],
+                    'tags': item.get('tags', [])[:5] if isinstance(item.get('tags'), list) else [],
+                }
 
                 # Priority 1: Extract tags (most reliable indicator of topic)
                 tags = item.get('tags', [])
@@ -156,6 +185,9 @@ class SpiderIntelligenceService:
                     if tag_clean and len(tag_clean) > 1 and tag_clean not in self.STOPWORDS:
                         tag_counts[tag_clean] += 1
                         tag_sources[tag_clean].add(entry.spider_name)
+                        # Session 385: Track article for this tag (limit to 5 per tag)
+                        if len(tag_articles[tag_clean]) < 5 and url:
+                            tag_articles[tag_clean].append(article)
 
                 # Priority 2: Extract meaningful keywords from titles
                 if title:
@@ -163,6 +195,9 @@ class SpiderIntelligenceService:
                     for kw in keywords:
                         keyword_counts[kw] += 1
                         keyword_sources[kw].add(entry.spider_name)
+                        # Session 385: Track article for this keyword (limit to 5 per keyword)
+                        if len(keyword_articles[kw]) < 5 and url:
+                            keyword_articles[kw].append(article)
 
         # Build trending list - prioritize tags, then keywords
         trending = []
@@ -181,7 +216,8 @@ class SpiderIntelligenceService:
                 'sources': list(tag_sources[tag]),
                 'source_count': source_count,
                 'score': round(score, 2),
-                'type': 'tag'  # Indicates this came from article tags
+                'type': 'tag',
+                'articles': tag_articles[tag][:5]  # Session 385: Include sample articles
             })
             seen_topics.add(tag)
 
@@ -200,7 +236,8 @@ class SpiderIntelligenceService:
                     'sources': list(keyword_sources[kw]),
                     'source_count': source_count,
                     'score': round(score, 2),
-                    'type': 'keyword'
+                    'type': 'keyword',
+                    'articles': keyword_articles[kw][:5]  # Session 385: Include sample articles
                 })
                 seen_topics.add(kw)
 

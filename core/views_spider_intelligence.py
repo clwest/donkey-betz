@@ -534,6 +534,16 @@ def market_research_dashboard(request):
         crypto_news = [n for n in all_news if n['category'] == 'crypto'][:news_limit * 3]
         stock_news = [n for n in all_news if n['category'] == 'stock'][:news_limit * 3]
 
+        # ========== SEC FILINGS SECTION (Session 385) ==========
+        # Fetch live SEC filings using the updated spider
+        sec_filings = []
+        try:
+            from ai_core.spiders.specialized.sec_spider import SECSpider
+            sec_spider = SECSpider()
+            sec_filings = sec_spider.fetch_data(max_results=15)
+        except Exception as e:
+            logger.warning(f"Error fetching SEC filings: {e}")
+
         # ========== BUILD RESPONSE ==========
         return JsonResponse({
             'status': 'success',
@@ -550,10 +560,255 @@ def market_research_dashboard(request):
                     'total_assets': len(stock_assets),
                     'total_news': len(stock_news)
                 },
+                'sec_filings': {
+                    'filings': sec_filings,
+                    'total_filings': len(sec_filings),
+                    'high_impact_count': len([f for f in sec_filings if f.get('is_high_impact')])
+                },
                 'summary': {
                     'period_hours': hours,
                     'last_updated': timezone.now().isoformat(),
-                    'sources': list(set([a['source'] for a in crypto_assets + stock_assets]))
+                    'sources': list(set([a['source'] for a in crypto_assets + stock_assets] + ['sec_edgar']))
+                }
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+# ============================================================
+# SESSION 385: OPPORTUNITIES DASHBOARD
+# ============================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def opportunities_dashboard(request):
+    """
+    Get comprehensive opportunities dashboard data.
+    Aggregates:
+    - Remote jobs (weworkremotely, remoteok, adzuna)
+    - Freelance gigs (guru, toptal, peopleperhour, ninetyninedesigns, flexjobs)
+    - Crowdfunding projects (kickstarter, indiegogo)
+    - Startup ideas (indiehackers, producthunt)
+
+    Query params:
+        hours: Hours back to look (default: 72)
+        limit: Max items per category (default: 10)
+    """
+    hours = int(request.GET.get('hours', 72))
+    limit = int(request.GET.get('limit', 10))
+
+    try:
+        from core.models_unified_system import SpiderData
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        # Helper function to get spider data
+        # SpiderData stores items in raw_data['items'] as a list
+        def get_spider_items(source_names, item_limit=10):
+            items = []
+            for source in source_names:
+                spider_data = SpiderData.objects.filter(
+                    spider_name__icontains=source,
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:5]  # Get fewer records, each has multiple items
+
+                for data in spider_data:
+                    raw = data.raw_data or {}
+                    # Items are stored as a list in raw_data['items']
+                    raw_items = raw.get('items', [])
+                    if isinstance(raw_items, list):
+                        for item in raw_items:
+                            if len(items) >= item_limit:
+                                break
+                            items.append({
+                                'id': str(data.id),
+                                'title': (item.get('title', '') or 'Untitled')[:100],
+                                'url': item.get('url') or item.get('link', ''),
+                                'source': data.spider_name,
+                                'description': (item.get('description') or item.get('summary', ''))[:200],
+                                'salary': item.get('salary', ''),
+                                'company': item.get('company', ''),
+                                'location': item.get('location', 'Remote'),
+                                'category': item.get('category', ''),
+                                'created_at': data.created_at.isoformat() if data.created_at else None,
+                                'tags': item.get('tags', [])[:5] if isinstance(item.get('tags'), list) else []
+                            })
+                    if len(items) >= item_limit:
+                        break
+            return items[:item_limit]
+
+        # Remote Jobs
+        job_sources = ['weworkremotely', 'remoteok', 'adzuna', 'angellist']
+        remote_jobs = get_spider_items(job_sources, limit)
+
+        # Freelance Gigs - Session 386: Use Reddit forhire/freelance since those spiders have real data
+        # Traditional freelance platforms (guru, toptal, etc.) require JS rendering
+        freelance_gigs = []
+        freelance_sources = []
+        # Extract freelance posts from Reddit
+        reddit_freelance_data = SpiderData.objects.filter(
+            spider_name__icontains='reddit',
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:10]
+
+        for data in reddit_freelance_data:
+            raw = data.raw_data or {}
+            raw_items = raw.get('items', [])
+            if isinstance(raw_items, list):
+                for item in raw_items:
+                    subreddit = item.get('subreddit', '').lower()
+                    title = item.get('title', '').lower()
+                    # Focus on hiring/freelance subreddits and posts
+                    if subreddit in ['forhire', 'freelance', 'remotework', 'designjobs'] or \
+                       any(kw in title for kw in ['[hiring]', '[for hire]', 'looking for', 'need a', 'freelance', 'contract']):
+                        if len(freelance_gigs) >= limit:
+                            break
+                        freelance_gigs.append({
+                            'id': str(data.id),
+                            'title': (item.get('title', '') or 'Untitled')[:100],
+                            'url': item.get('url') or item.get('link', ''),
+                            'source': f"r/{item.get('subreddit', 'reddit')}",
+                            'description': '',
+                            'salary': '',
+                            'company': '',
+                            'location': 'Remote',
+                            'category': 'Freelance',
+                            'created_at': data.created_at.isoformat() if data.created_at else None,
+                            'tags': []
+                        })
+                        freelance_sources.append(f"r/{item.get('subreddit', 'reddit')}")
+            if len(freelance_gigs) >= limit:
+                break
+        freelance_sources = list(set(freelance_sources))
+
+        # Crowdfunding/Creative Projects - Session 386: Use Behance since Kickstarter/Indiegogo need JS
+        crowdfunding_sources = ['behance', 'dribbble']
+        crowdfunding = get_spider_items(crowdfunding_sources, limit)
+
+        # Startup Ideas & Discussions
+        startup_sources = ['indiehackers', 'producthunt']
+        startup_ideas = get_spider_items(startup_sources, limit)
+
+        # Business & Tech Discussions from Reddit
+        # Session 385: Broadened to include AI, ML, design, and tech discussions
+        # SpiderData stores items in raw_data['items'] as a list
+        reddit_data = SpiderData.objects.filter(
+            spider_name__icontains='reddit',
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:15]  # Get more records for variety
+
+        # Session 386: Ensure subreddit diversity in discussions
+        # Collect posts grouped by subreddit first, then interleave for variety
+        discussions_by_subreddit = {}  # subreddit -> list of posts
+
+        # Relevant subreddits for opportunities (priority order)
+        relevant_subreddits = [
+            'entrepreneur', 'startups', 'sideproject', 'indiehackers',  # Business
+            'forhire', 'freelance', 'remotework', 'designjobs',  # Work
+            'machinelearning', 'artificial', 'datascience',  # AI/ML
+            'stablediffusion', 'midjourney', 'chatgpt', 'localllama',  # AI Tools
+            'webdev', 'programming',  # Tech
+            'graphic_design', 'web_design', 'ui_design',  # Design
+        ]
+        # Keywords for posts from any subreddit
+        opportunity_keywords = [
+            'business', 'startup', 'entrepreneur', 'side hustle', 'freelance',
+            'income', 'money', 'job', 'career', 'salary', 'remote', 'hiring',
+            'looking for', 'need help', 'project', 'client', 'gig', 'opportunity',
+            'ai', 'machine learning', 'llm', 'gpt', 'stable diffusion', 'midjourney',
+            'tutorial', 'how to', 'tips', 'advice', 'best practices', 'built', 'made',
+            'launched', 'release', 'new tool', 'open source'
+        ]
+
+        for data in reddit_data:
+            raw = data.raw_data or {}
+            raw_items = raw.get('items', [])
+            if isinstance(raw_items, list):
+                for item in raw_items:
+                    title = item.get('title', 'Untitled')
+                    subreddit = item.get('subreddit', '').lower()
+                    title_lower = title.lower()
+
+                    # Include if: relevant subreddit OR matching keywords
+                    is_relevant = (
+                        subreddit in relevant_subreddits or
+                        any(kw in title_lower for kw in opportunity_keywords)
+                    )
+
+                    if is_relevant:
+                        post = {
+                            'id': str(data.id),
+                            'title': title[:100],
+                            'url': item.get('url') or item.get('link', ''),
+                            'source': data.spider_name,
+                            'subreddit': item.get('subreddit', ''),
+                            'score': item.get('score', 0),
+                            'comments': item.get('num_comments', 0),
+                            'created_at': data.created_at.isoformat() if data.created_at else None
+                        }
+                        # Group by subreddit
+                        if subreddit not in discussions_by_subreddit:
+                            discussions_by_subreddit[subreddit] = []
+                        # Keep top 5 per subreddit (sorted by score later)
+                        if len(discussions_by_subreddit[subreddit]) < 5:
+                            discussions_by_subreddit[subreddit].append(post)
+
+        # Interleave posts from different subreddits for variety
+        discussions = []
+        # Sort each subreddit's posts by score
+        for sub in discussions_by_subreddit:
+            discussions_by_subreddit[sub].sort(key=lambda x: x.get('score', 0), reverse=True)
+
+        # Round-robin from each subreddit
+        round_num = 0
+        while len(discussions) < limit and round_num < 5:
+            for sub in discussions_by_subreddit:
+                posts = discussions_by_subreddit[sub]
+                if round_num < len(posts):
+                    discussions.append(posts[round_num])
+                    if len(discussions) >= limit:
+                        break
+            round_num += 1
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'remote_jobs': {
+                    'items': remote_jobs,
+                    'total': len(remote_jobs),
+                    'sources': job_sources
+                },
+                'freelance_gigs': {
+                    'items': freelance_gigs,
+                    'total': len(freelance_gigs),
+                    'sources': freelance_sources
+                },
+                'crowdfunding': {
+                    'items': crowdfunding,
+                    'total': len(crowdfunding),
+                    'sources': crowdfunding_sources
+                },
+                'startup_ideas': {
+                    'items': startup_ideas,
+                    'total': len(startup_ideas),
+                    'sources': startup_sources
+                },
+                'business_discussions': {
+                    'items': discussions,
+                    'total': len(discussions),
+                    'sources': ['reddit']
+                },
+                'summary': {
+                    'period_hours': hours,
+                    'last_updated': timezone.now().isoformat(),
+                    'total_opportunities': len(remote_jobs) + len(freelance_gigs) + len(crowdfunding) + len(startup_ideas) + len(discussions)
                 }
             }
         })
