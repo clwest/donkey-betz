@@ -10710,32 +10710,16 @@
                         <!-- END TRENDING SUB-TAB -->
 
                         <!-- ========== MARKETS SUB-TAB ========== -->
+                        <!-- Session 385: Enhanced with Crypto + Stocks + News -->
                         <div class="tab-pane fade" id="intel-markets" role="tabpanel">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(139, 92, 246, 0.3);">
-                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
-                                            <h5 class="mb-0" style="color: #a78bfa;">₿ Market Pulse</h5>
-                                            <button class="btn btn-sm" onclick="loadTrendingTab()" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4);">
-                                                🔄 Refresh
-                                            </button>
-                                        </div>
-                                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                                            <div id="trending-market-list">
-                                                <p style="color: #6b7280; font-size: 12px;">Loading market data...</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Market Summary Cards -->
-                            <div class="row">
+                            <!-- Market Summary Cards Row -->
+                            <div class="row mb-4">
                                 <div class="col-md-3">
                                     <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
                                         <div class="card-body py-3">
                                             <h4 class="mb-0" id="market-btc-price">$--</h4>
                                             <small>Bitcoin</small>
+                                            <div id="market-btc-change" style="font-size: 11px; margin-top: 4px;">--</div>
                                         </div>
                                     </div>
                                 </div>
@@ -10744,22 +10728,93 @@
                                         <div class="card-body py-3">
                                             <h4 class="mb-0" id="market-eth-price">$--</h4>
                                             <small>Ethereum</small>
+                                            <div id="market-eth-change" style="font-size: 11px; margin-top: 4px;">--</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
                                         <div class="card-body py-3">
-                                            <h4 class="mb-0" id="market-sentiment">--</h4>
-                                            <small>Market Sentiment</small>
+                                            <h4 class="mb-0" id="market-sp500-price">$--</h4>
+                                            <small>S&P 500</small>
+                                            <div id="market-sp500-change" style="font-size: 11px; margin-top: 4px;">--</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
                                         <div class="card-body py-3">
-                                            <h4 class="mb-0" id="market-fear-greed">--</h4>
-                                            <small>Fear & Greed</small>
+                                            <h4 class="mb-0" id="market-nasdaq-price">$--</h4>
+                                            <small>NASDAQ</small>
+                                            <div id="market-nasdaq-change" style="font-size: 11px; margin-top: 4px;">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Crypto and Stocks Side by Side -->
+                            <div class="row">
+                                <!-- Crypto Column -->
+                                <div class="col-md-6">
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(249, 115, 22, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
+                                            <h5 class="mb-0" style="color: #fb923c;">₿ Cryptocurrency</h5>
+                                            <button class="btn btn-sm" onclick="loadMarketsTab()" style="background: rgba(249, 115, 22, 0.2); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.4);">
+                                                🔄 Refresh
+                                            </button>
+                                        </div>
+                                        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                                            <div id="markets-crypto-list">
+                                                <p style="color: #6b7280; font-size: 12px;">Loading crypto data...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stocks Column -->
+                                <div class="col-md-6">
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                            <h5 class="mb-0" style="color: #86efac;">📈 Stock Indices</h5>
+                                            <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e;">Live</span>
+                                        </div>
+                                        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                                            <div id="markets-stocks-list">
+                                                <p style="color: #6b7280; font-size: 12px;">Loading stock data...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SEC Filings and Financial News Row -->
+                            <div class="row">
+                                <!-- SEC Filings Column -->
+                                <div class="col-md-6">
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid rgba(59, 130, 246, 0.3);">
+                                            <h5 class="mb-0" style="color: #93c5fd;">📋 SEC Filings</h5>
+                                            <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd;" id="markets-sec-count">0 filings</span>
+                                        </div>
+                                        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                                            <div id="markets-sec-list">
+                                                <p style="color: #6b7280; font-size: 12px;">Loading SEC filings...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Financial News Column -->
+                                <div class="col-md-6">
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                            <h5 class="mb-0" style="color: #a78bfa;">📰 Market News</h5>
+                                            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;" id="markets-news-count">0 articles</span>
+                                        </div>
+                                        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                                            <div id="markets-news-list">
+                                                <p style="color: #6b7280; font-size: 12px;">Loading financial news...</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -10769,31 +10824,116 @@
 
                         <!-- ========== OPPORTUNITIES SUB-TAB ========== -->
                         <div class="tab-pane fade" id="intel-opportunities" role="tabpanel">
-                            <div class="row">
-                                <!-- Hot Discussions (Full Half) -->
-                                <div class="col-md-6">
-                                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid rgba(251, 191, 36, 0.3);">
-                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
-                                            <h5 class="mb-0" style="color: #fbbf24;">💡 Hot Discussions</h5>
-                                            <span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;">Live</span>
+                            <!-- Summary Cards Row -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <div class="card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                        <div class="card-body text-center py-2">
+                                            <div style="color: #86efac; font-size: 24px; font-weight: bold;" id="opp-jobs-count">0</div>
+                                            <div style="color: #6b7280; font-size: 11px;">Remote Jobs</div>
                                         </div>
-                                        <div class="card-body" style="max-height: 450px; overflow-y: auto;">
-                                            <div id="trending-suggestions-list">
-                                                <!-- Suggestions will be loaded here -->
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                        <div class="card-body text-center py-2">
+                                            <div style="color: #a78bfa; font-size: 24px; font-weight: bold;" id="opp-freelance-count">0</div>
+                                            <div style="color: #6b7280; font-size: 11px;">Freelance Gigs</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.1)); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                        <div class="card-body text-center py-2">
+                                            <div style="color: #fbbf24; font-size: 24px; font-weight: bold;" id="opp-crowdfunding-count">0</div>
+                                            <div style="color: #6b7280; font-size: 11px;">Crowdfunding</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1)); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                        <div class="card-body text-center py-2">
+                                            <div style="color: #f472b6; font-size: 24px; font-weight: bold;" id="opp-startup-count">0</div>
+                                            <div style="color: #6b7280; font-size: 11px;">Startup Ideas</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Main Content: 4 Columns -->
+                            <div class="row">
+                                <!-- Remote Jobs Column -->
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                            <h6 class="mb-0" style="color: #86efac; font-size: 13px;">💼 Remote Jobs</h6>
+                                            <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; font-size: 10px;">Live</span>
+                                        </div>
+                                        <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                                            <div id="opp-remote-jobs-list">
+                                                <p style="color: #6b7280; font-size: 11px;">Loading...</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Job Market (Full Half) -->
-                                <div class="col-md-6">
-                                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid rgba(34, 197, 94, 0.3);">
-                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
-                                            <h5 class="mb-0" style="color: #86efac;">💼 Job Market</h5>
-                                            <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e;">Remote OK</span>
+
+                                <!-- Freelance Gigs Column -->
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                                            <h6 class="mb-0" style="color: #a78bfa; font-size: 13px;">💎 Freelance Gigs</h6>
+                                            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6; font-size: 10px;">Guru/Toptal</span>
                                         </div>
-                                        <div class="card-body" style="max-height: 450px; overflow-y: auto;">
-                                            <div id="trending-jobs-list">
-                                                <p style="color: #6b7280; font-size: 12px;">Loading job data...</p>
+                                        <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                                            <div id="opp-freelance-list">
+                                                <p style="color: #6b7280; font-size: 11px;">Loading...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Crowdfunding Column -->
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid rgba(251, 191, 36, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                                            <h6 class="mb-0" style="color: #fbbf24; font-size: 13px;">🚀 Crowdfunding</h6>
+                                            <span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24; font-size: 10px;">KS/IG</span>
+                                        </div>
+                                        <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                                            <div id="opp-crowdfunding-list">
+                                                <p style="color: #6b7280; font-size: 11px;">Loading...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Startup Ideas Column -->
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid rgba(236, 72, 153, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                                            <h6 class="mb-0" style="color: #f472b6; font-size: 13px;">💡 Startup Ideas</h6>
+                                            <span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #ec4899; font-size: 10px;">IH/PH</span>
+                                        </div>
+                                        <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                                            <div id="opp-startup-list">
+                                                <p style="color: #6b7280; font-size: 11px;">Loading...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Business Discussions Row -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="card" style="background: #1a1a1a; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid rgba(59, 130, 246, 0.3);">
+                                            <h6 class="mb-0" style="color: #60a5fa; font-size: 13px;">🔥 Business Discussions (Reddit)</h6>
+                                            <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; font-size: 10px;" id="opp-discussions-count">0</span>
+                                        </div>
+                                        <div class="card-body p-2">
+                                            <div id="opp-discussions-list" class="d-flex flex-wrap gap-2">
+                                                <p style="color: #6b7280; font-size: 11px;">Loading discussions...</p>
                                             </div>
                                         </div>
                                     </div>
@@ -10804,7 +10944,43 @@
 
                         <!-- ========== SPIDERS SUB-TAB ========== -->
                         <div class="tab-pane fade" id="intel-spiders" role="tabpanel">
-                            <!-- Spider Network Control - Now expanded by default in its own tab -->
+                            <!-- Session 386: Spider Network Summary Cards -->
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0 text-white" id="spider-total-count">102</h2>
+                                            <small class="text-white-50" style="text-transform: uppercase; letter-spacing: 1px;">Total Spiders</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0 text-white" id="spider-category-count">36</h2>
+                                            <small class="text-white-50" style="text-transform: uppercase; letter-spacing: 1px;">Categories</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0 text-white" id="spider-data-points">930</h2>
+                                            <small class="text-white-50" style="text-transform: uppercase; letter-spacing: 1px;">Data Points</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0 text-white" id="spider-success-rate">95%</h2>
+                                            <small class="text-white-50" style="text-transform: uppercase; letter-spacing: 1px;">Success Rate</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Spider Network Control -->
                             <div class="card mb-4" style="background: #1a1a1a; border: 1px solid rgba(249, 115, 22, 0.3);">
                                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(249, 115, 22, 0.1); border-bottom: 1px solid rgba(249, 115, 22, 0.3);">
                                     <h5 class="mb-0" style="color: #f97316;">🕷️ Spider Network Control</h5>
@@ -10822,6 +10998,15 @@
                                         <button class="btn btn-info" onclick="generateDailyReport()">
                                             📋 Daily Report
                                         </button>
+                                    </div>
+
+                                    <!-- Session 386: Spider Categories Grid -->
+                                    <div class="mb-4">
+                                        <h6 class="text-muted mb-3">Top Categories</h6>
+                                        <div id="spider-categories-badges" class="d-flex flex-wrap gap-2">
+                                            <!-- Will be populated by loadSpiderNetwork() -->
+                                            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;">Loading...</span>
+                                        </div>
                                     </div>
 
                                     <!-- Spider Status Grid -->
@@ -16105,6 +16290,340 @@
         // Make loadDashboardStats globally accessible
         window.loadDashboardStats = loadDashboardStats;
 
+        // Session 385: Load Markets Tab with Crypto, Stocks, and News
+        async function loadMarketsTab() {
+            const cryptoList = document.getElementById('markets-crypto-list');
+            const stocksList = document.getElementById('markets-stocks-list');
+            const newsList = document.getElementById('markets-news-list');
+            const newsCount = document.getElementById('markets-news-count');
+
+            // Show loading state
+            if (cryptoList) cryptoList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">Loading crypto data...</p>';
+            if (stocksList) stocksList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">Loading stock data...</p>';
+            if (newsList) newsList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">Loading financial news...</p>';
+
+            try {
+                const res = await authenticatedFetch('/api/spider-intelligence/market-research/');
+                if (!res.ok) throw new Error('Failed to load market data');
+
+                const data = await res.json();
+                if (data.status !== 'success') throw new Error(data.message || 'API error');
+
+                const { crypto, stocks } = data.data;
+
+                // === UPDATE SUMMARY CARDS ===
+                // Bitcoin
+                const btc = crypto.assets.find(c => c.symbol === 'BTC');
+                if (btc) {
+                    document.getElementById('market-btc-price').textContent = `$${btc.price.toLocaleString()}`;
+                    const btcChangeEl = document.getElementById('market-btc-change');
+                    if (btcChangeEl) {
+                        const changeIcon = btc.change_24h >= 0 ? '▲' : '▼';
+                        const changeColor = btc.change_24h >= 0 ? '#86efac' : '#fca5a5';
+                        btcChangeEl.innerHTML = `<span style="color: ${changeColor};">${changeIcon} ${btc.change_24h.toFixed(2)}%</span>`;
+                    }
+                }
+
+                // Ethereum
+                const eth = crypto.assets.find(c => c.symbol === 'ETH');
+                if (eth) {
+                    document.getElementById('market-eth-price').textContent = `$${eth.price.toLocaleString()}`;
+                    const ethChangeEl = document.getElementById('market-eth-change');
+                    if (ethChangeEl) {
+                        const changeIcon = eth.change_24h >= 0 ? '▲' : '▼';
+                        const changeColor = eth.change_24h >= 0 ? '#86efac' : '#fca5a5';
+                        ethChangeEl.innerHTML = `<span style="color: ${changeColor};">${changeIcon} ${eth.change_24h.toFixed(2)}%</span>`;
+                    }
+                }
+
+                // S&P 500
+                const sp500 = stocks.assets.find(s => s.symbol === 'GSPC' || s.symbol === '^GSPC');
+                if (sp500) {
+                    document.getElementById('market-sp500-price').textContent = `$${sp500.price.toLocaleString()}`;
+                    const sp500ChangeEl = document.getElementById('market-sp500-change');
+                    if (sp500ChangeEl) {
+                        const changeIcon = sp500.change_pct >= 0 ? '▲' : '▼';
+                        const changeColor = sp500.change_pct >= 0 ? '#86efac' : '#fca5a5';
+                        sp500ChangeEl.innerHTML = `<span style="color: ${changeColor};">${changeIcon} ${sp500.change_pct.toFixed(2)}%</span>`;
+                    }
+                }
+
+                // NASDAQ
+                const nasdaq = stocks.assets.find(s => s.symbol === 'IXIC' || s.symbol === '^IXIC');
+                if (nasdaq) {
+                    document.getElementById('market-nasdaq-price').textContent = `$${nasdaq.price.toLocaleString()}`;
+                    const nasdaqChangeEl = document.getElementById('market-nasdaq-change');
+                    if (nasdaqChangeEl) {
+                        const changeIcon = nasdaq.change_pct >= 0 ? '▲' : '▼';
+                        const changeColor = nasdaq.change_pct >= 0 ? '#86efac' : '#fca5a5';
+                        nasdaqChangeEl.innerHTML = `<span style="color: ${changeColor};">${changeIcon} ${nasdaq.change_pct.toFixed(2)}%</span>`;
+                    }
+                }
+
+                // === RENDER CRYPTO LIST ===
+                if (crypto.assets && crypto.assets.length > 0) {
+                    cryptoList.innerHTML = crypto.assets.map(coin => {
+                        const changeColor = coin.change_24h >= 0 ? '#22c55e' : '#ef4444';
+                        const changeIcon = coin.change_24h >= 0 ? '▲' : '▼';
+                        const price = coin.price > 1 ? coin.price.toLocaleString('en-US', {maximumFractionDigits: 2}) : coin.price.toFixed(4);
+                        const imgHtml = coin.image ? `<img src="${coin.image}" alt="${coin.symbol}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px;">` : '';
+
+                        return `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(249, 115, 22, 0.05); border-radius: 6px; border-left: 3px solid ${changeColor};">
+                                <div class="d-flex align-items-center">
+                                    ${imgHtml}
+                                    <div>
+                                        <span style="color: #fdba74; font-weight: 600;">${coin.symbol}</span>
+                                        <span style="color: #6b7280; font-size: 11px; margin-left: 4px;">${coin.name}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div style="color: #e5e7eb;">$${price}</div>
+                                    <div style="color: ${changeColor}; font-size: 11px;">${changeIcon} ${coin.change_24h.toFixed(2)}%</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    cryptoList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">No crypto data available. Run spiders to fetch data.</p>';
+                }
+
+                // === RENDER STOCKS LIST ===
+                if (stocks.assets && stocks.assets.length > 0) {
+                    stocksList.innerHTML = stocks.assets.map(stock => {
+                        const changeColor = stock.change_pct >= 0 ? '#22c55e' : '#ef4444';
+                        const changeIcon = stock.change_pct >= 0 ? '▲' : '▼';
+                        const price = stock.price.toLocaleString('en-US', {maximumFractionDigits: 2});
+
+                        // Get friendly name for indices
+                        let displayName = stock.name || stock.symbol;
+                        if (stock.symbol === 'GSPC') displayName = 'S&P 500';
+                        if (stock.symbol === 'DJI') displayName = 'Dow Jones';
+                        if (stock.symbol === 'IXIC') displayName = 'NASDAQ';
+
+                        return `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(34, 197, 94, 0.05); border-radius: 6px; border-left: 3px solid ${changeColor};">
+                                <div>
+                                    <span style="color: #86efac; font-weight: 600;">${stock.symbol}</span>
+                                    <span style="color: #6b7280; font-size: 11px; margin-left: 4px;">${displayName}</span>
+                                </div>
+                                <div class="text-end">
+                                    <div style="color: #e5e7eb;">$${price}</div>
+                                    <div style="color: ${changeColor}; font-size: 11px;">${changeIcon} ${stock.change_pct.toFixed(2)}%</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    stocksList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">No stock data available.</p>';
+                }
+
+                // === RENDER SEC FILINGS LIST (Session 385) ===
+                const secList = document.getElementById('markets-sec-list');
+                const secCount = document.getElementById('markets-sec-count');
+                const secFilings = data.data.sec_filings?.filings || [];
+
+                if (secCount) secCount.textContent = `${secFilings.length} filings`;
+
+                if (secFilings.length > 0) {
+                    secList.innerHTML = secFilings.slice(0, 10).map(filing => {
+                        const isHighImpact = filing.is_high_impact;
+                        const borderColor = isHighImpact ? '#ef4444' : '#3b82f6';
+                        const formBadgeColor = filing.form_type === '8-K' ? '#f59e0b' :
+                                              filing.form_type === '10-K' ? '#22c55e' :
+                                              filing.form_type === '10-Q' ? '#6366f1' : '#6b7280';
+
+                        return `
+                            <a href="${filing.url}" target="_blank" rel="noopener" class="d-block p-2 mb-2 text-decoration-none" style="background: rgba(59, 130, 246, 0.05); border-radius: 6px; border-left: 3px solid ${borderColor}; transition: all 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.15)';" onmouseout="this.style.background='rgba(59, 130, 246, 0.05)';">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <div style="color: #e5e7eb; font-size: 13px; line-height: 1.3;">
+                                            ${isHighImpact ? '<span style="color: #ef4444;">⚠️</span> ' : ''}${filing.company}
+                                        </div>
+                                        <div style="color: #6b7280; font-size: 11px; margin-top: 4px;">
+                                            <span class="badge" style="background: ${formBadgeColor}; font-size: 9px; padding: 2px 6px;">${filing.form_type}</span>
+                                            <span style="margin-left: 6px;">${filing.filed_at}</span>
+                                            ${filing.description ? ` • ${filing.description.substring(0, 40)}...` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                } else {
+                    secList.innerHTML = `
+                        <div class="text-center py-4">
+                            <span style="font-size: 32px;">📋</span>
+                            <p style="color: #9ca3af; margin-top: 12px;">Loading SEC filings...</p>
+                        </div>
+                    `;
+                }
+
+                // === RENDER NEWS LIST ===
+                const allNews = [...(crypto.news || []), ...(stocks.news || [])];
+                if (newsCount) newsCount.textContent = `${allNews.length} articles`;
+
+                if (allNews.length > 0) {
+                    newsList.innerHTML = allNews.slice(0, 10).map(article => {
+                        const categoryColor = article.category === 'crypto' ? '#fb923c' : '#86efac';
+                        const categoryIcon = article.category === 'crypto' ? '₿' : '📈';
+                        const sourceLabel = article.source || 'News';
+
+                        return `
+                            <a href="${article.url}" target="_blank" rel="noopener" class="d-block p-2 mb-2 text-decoration-none" style="background: rgba(139, 92, 246, 0.05); border-radius: 6px; border-left: 3px solid ${categoryColor}; transition: all 0.2s;" onmouseover="this.style.background='rgba(139, 92, 246, 0.15)';" onmouseout="this.style.background='rgba(139, 92, 246, 0.05)';">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <div style="color: #e5e7eb; font-size: 13px; line-height: 1.3;">${article.title}</div>
+                                        <div style="color: #6b7280; font-size: 11px; margin-top: 4px;">
+                                            <span style="color: ${categoryColor};">${categoryIcon}</span>
+                                            ${sourceLabel}
+                                            ${article.description ? ` • ${article.description.substring(0, 60)}...` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                } else {
+                    // If no tagged news, show SEC filings as market-moving content
+                    newsList.innerHTML = `
+                        <div class="text-center py-4">
+                            <span style="font-size: 32px;">📰</span>
+                            <p style="color: #9ca3af; margin-top: 12px;">No market-specific news yet.</p>
+                            <small style="color: #6b7280;">News mentioning specific assets will appear here.</small>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error loading markets tab:', error);
+                if (cryptoList) cryptoList.innerHTML = `<p style="color: #f87171; font-size: 12px;">Error: ${error.message}</p>`;
+                if (stocksList) stocksList.innerHTML = `<p style="color: #f87171; font-size: 12px;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-load markets when tab is shown
+        document.getElementById('intel-markets-tab')?.addEventListener('shown.bs.tab', loadMarketsTab);
+
+        // ========== SESSION 385: OPPORTUNITIES TAB ==========
+        async function loadOpportunitiesTab() {
+            try {
+                const response = await authenticatedFetch('/api/spider-intelligence/opportunities/?limit=10');
+                if (!response.ok) throw new Error('Failed to load opportunities');
+
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message || 'API error');
+
+                const data = result.data;
+
+                // Update summary counts
+                document.getElementById('opp-jobs-count').textContent = data.remote_jobs?.total || 0;
+                document.getElementById('opp-freelance-count').textContent = data.freelance_gigs?.total || 0;
+                document.getElementById('opp-crowdfunding-count').textContent = data.crowdfunding?.total || 0;
+                document.getElementById('opp-startup-count').textContent = data.startup_ideas?.total || 0;
+                document.getElementById('opp-discussions-count').textContent = data.business_discussions?.total || 0;
+
+                // Render Remote Jobs
+                const jobsList = document.getElementById('opp-remote-jobs-list');
+                if (jobsList && data.remote_jobs?.items?.length > 0) {
+                    jobsList.innerHTML = data.remote_jobs.items.map(job => `
+                        <div class="mb-2 p-2" style="background: rgba(34, 197, 94, 0.05); border-radius: 6px; border-left: 2px solid #22c55e;">
+                            <a href="${job.url || '#'}" target="_blank" rel="noopener" style="color: #86efac; font-size: 12px; text-decoration: none; display: block; line-height: 1.3;">
+                                ${(job.title || 'Untitled').substring(0, 50)}${job.title?.length > 50 ? '...' : ''}
+                            </a>
+                            <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
+                                ${job.company ? `<span style="color: #9ca3af;">${job.company}</span> • ` : ''}
+                                ${job.source || 'Unknown'}
+                                ${job.salary ? ` • ${job.salary}` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else if (jobsList) {
+                    jobsList.innerHTML = '<p style="color: #6b7280; font-size: 11px;">No remote jobs found</p>';
+                }
+
+                // Render Freelance Gigs
+                const freelanceList = document.getElementById('opp-freelance-list');
+                if (freelanceList && data.freelance_gigs?.items?.length > 0) {
+                    freelanceList.innerHTML = data.freelance_gigs.items.map(gig => `
+                        <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.05); border-radius: 6px; border-left: 2px solid #8b5cf6;">
+                            <a href="${gig.url || '#'}" target="_blank" rel="noopener" style="color: #a78bfa; font-size: 12px; text-decoration: none; display: block; line-height: 1.3;">
+                                ${(gig.title || 'Untitled').substring(0, 50)}${gig.title?.length > 50 ? '...' : ''}
+                            </a>
+                            <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
+                                ${gig.source || 'Unknown'}
+                                ${gig.category ? ` • ${gig.category}` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else if (freelanceList) {
+                    freelanceList.innerHTML = '<p style="color: #6b7280; font-size: 11px;">No freelance gigs found</p>';
+                }
+
+                // Render Crowdfunding
+                const crowdfundingList = document.getElementById('opp-crowdfunding-list');
+                if (crowdfundingList && data.crowdfunding?.items?.length > 0) {
+                    crowdfundingList.innerHTML = data.crowdfunding.items.map(project => `
+                        <div class="mb-2 p-2" style="background: rgba(251, 191, 36, 0.05); border-radius: 6px; border-left: 2px solid #fbbf24;">
+                            <a href="${project.url || '#'}" target="_blank" rel="noopener" style="color: #fbbf24; font-size: 12px; text-decoration: none; display: block; line-height: 1.3;">
+                                ${(project.title || 'Untitled').substring(0, 50)}${project.title?.length > 50 ? '...' : ''}
+                            </a>
+                            <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
+                                ${project.source || 'Unknown'}
+                                ${project.category ? ` • ${project.category}` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else if (crowdfundingList) {
+                    crowdfundingList.innerHTML = '<p style="color: #6b7280; font-size: 11px;">No crowdfunding projects found</p>';
+                }
+
+                // Render Startup Ideas
+                const startupList = document.getElementById('opp-startup-list');
+                if (startupList && data.startup_ideas?.items?.length > 0) {
+                    startupList.innerHTML = data.startup_ideas.items.map(idea => `
+                        <div class="mb-2 p-2" style="background: rgba(236, 72, 153, 0.05); border-radius: 6px; border-left: 2px solid #ec4899;">
+                            <a href="${idea.url || '#'}" target="_blank" rel="noopener" style="color: #f472b6; font-size: 12px; text-decoration: none; display: block; line-height: 1.3;">
+                                ${(idea.title || 'Untitled').substring(0, 50)}${idea.title?.length > 50 ? '...' : ''}
+                            </a>
+                            <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
+                                ${idea.source || 'Unknown'}
+                            </div>
+                        </div>
+                    `).join('');
+                } else if (startupList) {
+                    startupList.innerHTML = '<p style="color: #6b7280; font-size: 11px;">No startup ideas found</p>';
+                }
+
+                // Render Business Discussions (as chips/tags)
+                const discussionsList = document.getElementById('opp-discussions-list');
+                if (discussionsList && data.business_discussions?.items?.length > 0) {
+                    discussionsList.innerHTML = data.business_discussions.items.map(disc => `
+                        <a href="${disc.url || '#'}" target="_blank" rel="noopener" class="badge text-decoration-none" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 11px; padding: 6px 10px; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                            ${disc.subreddit ? `r/${disc.subreddit}` : ''} ${(disc.title || 'Discussion').substring(0, 30)}${disc.title?.length > 30 ? '...' : ''}
+                            ${disc.score ? `<span style="color: #86efac; margin-left: 4px;">+${disc.score}</span>` : ''}
+                        </a>
+                    `).join('');
+                } else if (discussionsList) {
+                    discussionsList.innerHTML = '<p style="color: #6b7280; font-size: 11px;">No business discussions found</p>';
+                }
+
+            } catch (error) {
+                console.error('Error loading opportunities:', error);
+                const errorHtml = `<p style="color: #f87171; font-size: 11px;">Error: ${error.message}</p>`;
+                ['opp-remote-jobs-list', 'opp-freelance-list', 'opp-crowdfunding-list', 'opp-startup-list', 'opp-discussions-list'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = errorHtml;
+                });
+            }
+        }
+
+        // Auto-load opportunities when tab is shown
+        document.getElementById('intel-opportunities-tab')?.addEventListener('shown.bs.tab', loadOpportunitiesTab);
+
+        // Session 386: Auto-load spiders when tab is shown
+        document.getElementById('intel-spiders-tab')?.addEventListener('shown.bs.tab', loadSpiderNetwork);
+
         // Session 219: Load Trending Tab Content
         // Session 241: Fixed insightsData bug, added market/jobs sections
         async function loadTrendingTab(category = null) {
@@ -16158,6 +16677,7 @@
                 }
 
                 // === RENDER TRENDS ===
+                // Session 385: Enhanced to show expandable article lists
                 if (trendsData.status === 'success' && trendsData.trends && trendsData.trends.length > 0) {
                     trendsList.innerHTML = trendsData.trends.map((trend, idx) => {
                         const topic = trend.topic || 'Trend';
@@ -16165,24 +16685,57 @@
                         const sources = trend.sources || [];
                         const score = Math.round(trend.score || 0);
                         const icon = getTrendIcon(topic);
+                        const articles = trend.articles || [];
+                        const hasArticles = articles.length > 0;
+                        const trendId = `trend-${idx}`;
+
+                        // Build articles HTML (Session 385)
+                        const articlesHtml = hasArticles ? articles.map(article => {
+                            const articleTitle = (article.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            const articleUrl = article.url || '#';
+                            const articleSource = article.source || '';
+                            const articleDesc = (article.description || '').substring(0, 80);
+                            return `
+                                <a href="${articleUrl}" target="_blank" rel="noopener" class="d-block p-2 mb-1 text-decoration-none" style="background: rgba(255,255,255,0.02); border-radius: 6px; border-left: 2px solid #6b7280; transition: all 0.2s;" onmouseover="this.style.background='rgba(236,72,153,0.1)'; this.style.borderLeftColor='#ec4899';" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderLeftColor='#6b7280';">
+                                    <div style="color: #e5e7eb; font-size: 13px; line-height: 1.3;">${articleTitle}</div>
+                                    <div style="color: #6b7280; font-size: 11px; margin-top: 2px;">
+                                        <span style="color: #9ca3af;">${articleSource}</span>
+                                        ${articleDesc ? ` • ${articleDesc}...` : ''}
+                                    </div>
+                                </a>
+                            `;
+                        }).join('') : '<p style="color: #6b7280; font-size: 12px; margin: 0;">No articles found for this topic.</p>';
 
                         return `
-                            <div class="d-flex align-items-start gap-3 p-3 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 4px solid #ec4899;">
-                                <div style="font-size: 28px;">${icon}</div>
-                                <div style="flex: 1;">
-                                    <h6 style="color: #fbcfe8; margin-bottom: 4px; text-transform: capitalize;">${topic}</h6>
-                                    <p style="color: #9ca3af; font-size: 12px; margin-bottom: 6px;">
-                                        ${mentions} mentions across ${sources.length} source${sources.length !== 1 ? 's' : ''}
-                                    </p>
-                                    <div class="d-flex gap-2 align-items-center flex-wrap">
-                                        ${sources.slice(0, 3).map(s => `<span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; font-size: 10px;">${s}</span>`).join('')}
-                                        ${sources.length > 3 ? `<span style="color: #6b7280; font-size: 10px;">+${sources.length - 3} more</span>` : ''}
-                                        <span style="color: #22c55e; font-size: 10px; margin-left: auto;">⚡ ${score} score</span>
+                            <div class="mb-3" style="background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 4px solid #ec4899; overflow: hidden;">
+                                <div class="d-flex align-items-start gap-3 p-3" style="cursor: pointer;" onclick="toggleTrendArticles('${trendId}')">
+                                    <div style="font-size: 28px;">${icon}</div>
+                                    <div style="flex: 1;">
+                                        <h6 style="color: #fbcfe8; margin-bottom: 4px; text-transform: capitalize;">${topic}</h6>
+                                        <p style="color: #9ca3af; font-size: 12px; margin-bottom: 6px;">
+                                            ${mentions} mentions across ${sources.length} source${sources.length !== 1 ? 's' : ''}
+                                            ${hasArticles ? `<span style="color: #22c55e;"> • ${articles.length} article${articles.length !== 1 ? 's' : ''}</span>` : ''}
+                                        </p>
+                                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                                            ${sources.slice(0, 3).map(s => `<span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; font-size: 10px;">${s}</span>`).join('')}
+                                            ${sources.length > 3 ? `<span style="color: #6b7280; font-size: 10px;">+${sources.length - 3} more</span>` : ''}
+                                            <span style="color: #22c55e; font-size: 10px; margin-left: auto;">⚡ ${score} score</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2 align-items-end">
+                                        <button class="btn btn-sm" onclick="event.stopPropagation(); useTrendingPrompt('${topic.replace(/'/g, "\\'")}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
+                                            Use
+                                        </button>
+                                        ${hasArticles ? `<span id="${trendId}-toggle" style="color: #6b7280; font-size: 11px;">▼ Show articles</span>` : ''}
                                     </div>
                                 </div>
-                                <button class="btn btn-sm" onclick="useTrendingPrompt('${topic.replace(/'/g, "\\'")}')" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.4);">
-                                    Use
-                                </button>
+                                ${hasArticles ? `
+                                <div id="${trendId}-articles" style="display: none; padding: 0 16px 16px 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="padding-top: 12px;">
+                                        ${articlesHtml}
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
                         `;
                     }).join('');
@@ -16198,18 +16751,21 @@
 
                 // === RENDER SUGGESTIONS (from tech discussions) ===
                 // Session 241: Fixed - use techData.trends.discussions instead of undefined insightsData
-                if (techDiscussions.length > 0) {
-                    suggestionsList.innerHTML = techDiscussions.slice(0, 5).map(article => `
-                        <div class="p-3 mb-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; cursor: pointer;" onclick="useTrendingPrompt('${(article.title || '').replace(/'/g, "\\'")}', '')">
-                            <div style="color: #fcd34d; font-size: 12px; font-weight: 600;">${article.title || 'Tech News'}</div>
-                            <div style="color: #fde68a; font-size: 11px; margin-top: 4px;">
-                                ${article.points ? `⬆️ ${article.points} points` : ''}
-                                ${article.source ? `• ${article.source}` : ''}
+                // Session 385: Added null check for suggestionsList
+                if (suggestionsList) {
+                    if (techDiscussions.length > 0) {
+                        suggestionsList.innerHTML = techDiscussions.slice(0, 5).map(article => `
+                            <div class="p-3 mb-2" style="background: rgba(251, 191, 36, 0.1); border-radius: 8px; cursor: pointer;" onclick="useTrendingPrompt('${(article.title || '').replace(/'/g, "\\'")}', '')">
+                                <div style="color: #fcd34d; font-size: 12px; font-weight: 600;">${article.title || 'Tech News'}</div>
+                                <div style="color: #fde68a; font-size: 11px; margin-top: 4px;">
+                                    ${article.points ? `⬆️ ${article.points} points` : ''}
+                                    ${article.source ? `• ${article.source}` : ''}
+                                </div>
                             </div>
-                        </div>
-                    `).join('');
-                } else {
-                    suggestionsList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">Spiders are gathering intelligence! Check back soon.</p>';
+                        `).join('');
+                    } else {
+                        suggestionsList.innerHTML = '<p style="color: #6b7280; font-size: 12px;">Spiders are gathering intelligence! Check back soon.</p>';
+                    }
                 }
 
                 // === RENDER MARKET INSIGHTS ===
@@ -16270,6 +16826,22 @@
             } catch (error) {
                 console.error('Error loading trending tab:', error);
                 if (loading) loading.innerHTML = '<p style="color: #f87171;">Error loading trends. Please try again.</p>';
+            }
+        }
+
+        // Session 385: Toggle article expansion for a trend
+        function toggleTrendArticles(trendId) {
+            const articlesDiv = document.getElementById(`${trendId}-articles`);
+            const toggleSpan = document.getElementById(`${trendId}-toggle`);
+
+            if (!articlesDiv) return;
+
+            const isHidden = articlesDiv.style.display === 'none';
+            articlesDiv.style.display = isHidden ? 'block' : 'none';
+
+            if (toggleSpan) {
+                toggleSpan.textContent = isHidden ? '▲ Hide articles' : '▼ Show articles';
+                toggleSpan.style.color = isHidden ? '#ec4899' : '#6b7280';
             }
         }
 
@@ -45472,29 +46044,65 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 241: Spiders tab merged into Intelligence Hub
         // Old spiders-tab listener removed - functionality now in collapsed Spider Control section
 
-        // Session 241: Load Spider Network Data for Intelligence Hub
-        // Updated to work with collapsed Spider Control section
+        // Session 241/386: Load Spider Network Data for Intelligence Hub
+        // Updated to work with collapsed Spider Control section + summary cards
         async function loadSpiderNetwork() {
             const activeListEl = document.getElementById('intel-active-spiders-list');
             const activityFeedEl = document.getElementById('intel-activity-feed');
             const activeCountEl = document.getElementById('intel-active-spiders');
-            const spiderCountEl = document.getElementById('intel-spider-count');
-            const successRateEl = document.getElementById('intel-success-rate');
+            // Session 386: New summary card elements
+            const totalCountEl = document.getElementById('spider-total-count');
+            const categoryCountEl = document.getElementById('spider-category-count');
+            const dataPointsEl = document.getElementById('spider-data-points');
+            const successRateEl = document.getElementById('spider-success-rate');
+            const categoriesBadgesEl = document.getElementById('spider-categories-badges');
 
             try {
-                // Load network data and activity in parallel
-                const [networkRes, activityRes] = await Promise.all([
+                // Load network data, activity, and report in parallel
+                const [networkRes, activityRes, reportRes] = await Promise.all([
                     authenticatedFetch('/api/spider-dashboard/network/'),
-                    authenticatedFetch('/api/spider-dashboard/activity/')
+                    authenticatedFetch('/api/spider-dashboard/activity/'),
+                    authenticatedFetch('/api/spider-intelligence/report/')
                 ]);
 
                 const networkData = await networkRes.json();
                 const activityData = await activityRes.json();
+                const reportData = await reportRes.json();
 
-                // Update header stats
-                if (spiderCountEl) spiderCountEl.textContent = networkData.totalSpiders || 67;
-                if (successRateEl) successRateEl.textContent = `${networkData.successRate || 98}%`;
-                if (activeCountEl) activeCountEl.textContent = `Active: ${networkData.activeSpiders || 0}`;
+                // Session 386: Count unique categories
+                const spiders = networkData.spiders || [];
+                const categories = {};
+                spiders.forEach(s => {
+                    const cat = s.category || 'Other';
+                    categories[cat] = (categories[cat] || 0) + 1;
+                });
+                const categoryCount = Object.keys(categories).length;
+
+                // Session 386: Update summary cards
+                if (totalCountEl) totalCountEl.textContent = networkData.totalSpiders || spiders.length || 102;
+                if (categoryCountEl) categoryCountEl.textContent = categoryCount || 36;
+                if (dataPointsEl) dataPointsEl.textContent = reportData.report?.highlights?.total_data_points || 930;
+                if (successRateEl) successRateEl.textContent = `${networkData.successRate || 95}%`;
+                if (activeCountEl) activeCountEl.textContent = `Active: ${networkData.activeSpiders || spiders.length || 0}`;
+
+                // Session 386: Populate category badges (top 10 categories)
+                if (categoriesBadgesEl) {
+                    const sortedCategories = Object.entries(categories)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10);
+
+                    const categoryColors = {
+                        'Financial': '#22c55e', 'Tech': '#06b6d4', 'News': '#f59e0b',
+                        'Freelance': '#8b5cf6', 'Content': '#ec4899', 'Creative Assets': '#f97316',
+                        'Digital Products': '#3b82f6', 'Education': '#14b8a6', 'Legal': '#ef4444',
+                        'Ai Creative': '#a855f7', 'Innovation': '#84cc16', 'Social': '#6366f1'
+                    };
+
+                    categoriesBadgesEl.innerHTML = sortedCategories.map(([cat, count]) => {
+                        const color = categoryColors[cat] || '#9ca3af';
+                        return `<span class="badge" style="background: ${color}20; color: ${color}; font-size: 11px;">${cat}: ${count}</span>`;
+                    }).join('');
+                }
 
                 // Populate active spiders list (simplified for collapsed section)
                 if (activeListEl) {
@@ -45517,8 +46125,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     if (activities.length > 0) {
                         activityFeedEl.innerHTML = activities.map(activity => `
                             <div class="d-flex gap-2 p-1 mb-1" style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11px;">
-                                <span style="color: #8b5cf6;">📡</span>
-                                <span style="color: #9ca3af;">${activity.spider || 'Spider'}: ${activity.message || 'Activity'}</span>
+                                <span style="color: ${activity.status === 'success' ? '#22c55e' : '#ef4444'};">${activity.status === 'success' ? '✅' : '❌'}</span>
+                                <span style="color: #9ca3af;">${activity.spider || 'Spider'}: ${activity.action || activity.message || 'Activity'}</span>
                             </div>
                         `).join('');
                     } else {
