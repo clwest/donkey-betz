@@ -19,7 +19,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator, TaskStatus
-from agents.opportunity_pipeline_orchestrator import OpportunityPipelineOrchestrator
+from core.agents import OpportunityPipelineAgent
 
 class IncomeBuilderAutomation:
     """
@@ -131,7 +131,7 @@ class IncomeBuilderAutomation:
         try:
             # Route to appropriate agent
             if agent_type == "opportunity-pipeline-orchestrator":
-                agent = OpportunityPipelineOrchestrator()
+                agent = OpportunityPipelineAgent()
                 result = await self._run_opportunity_agent(agent, task_context)
 
             elif agent_type == "revenue-activation-orchestrator":
