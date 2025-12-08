@@ -1,160 +1,84 @@
 # Start Next Session Here
 
-**Last Session:** 393 - Orchestrator BaseAgent Refactoring
-**Date:** December 7, 2025
-**Status:** 102 spiders | 31 code agents | ORCHESTRATORS REFACTORED
+**Last Session:** 394 - Spider Embeddings Bulk Processing
+**Date:** December 8, 2025
+**Status:** 102 spiders | 31 code agents | EMBEDDINGS PROCESSED
 
 ---
 
-## Session 393 Accomplishments
+## Session 394 Accomplishments
 
-### 1. Refactored 3 Legacy Orchestrators to BaseAgent Pattern
+### 1. Bulk Embedding Processing Complete
 
-Created clean architecture wrappers that preserve legacy functionality while gaining BaseAgent benefits:
+Created `bulk_embed_spiders` management command and processed all pending embeddings:
 
-| Legacy Agent | Lines | New Clean Agent | Status |
-|--------------|-------|-----------------|--------|
-| `agents/workflow_orchestration_agent.py` | 3,120 | `core/agents/workflow_orchestration_agent.py` | Done |
-| `agents/opportunity_pipeline_orchestrator.py` | 1,759 | `core/agents/opportunity_pipeline_agent.py` | Done |
-| `agents/content_executor.py` | 568 | `core/agents/content_executor_agent.py` | Done |
+| Before | After |
+|--------|-------|
+| 36 with embeddings (0.3%) | 2,006 with embeddings (16.1%) |
+| 12,413 pending | 0 pending |
+| N/A | 10,443 marked as no-content |
 
-### 2. Benefits of Wrapper Approach
+### 2. Discovered Critical Spider Content Issue
 
-Instead of risky rewrites, wrappers preserve:
-- 17 predefined workflow templates (research_and_create_logos, youtube_thumbnail_package, etc.)
-- 5-stage pipeline with value multiplication (1.2x→2.5x)
-- SEO scoring and content generation logic
-- All battle-tested logic and integrations
+**83.9% of spider entries lack embeddable content!**
 
-While gaining:
-- TimeTravelMixin for decision tracking
-- Learning infrastructure hooks
-- Consistent AgentResult interface
-- Standard execute() signature
+| Spider | Issue |
+|--------|-------|
+| hackernews | Only stores story IDs, not actual titles/descriptions |
+| kickstarter | Stores search metadata, not project details |
+| behance/dribbble | Return error messages |
+| guru/flexjobs | Store status messages instead of job data |
 
-### 3. Updated Agent Counts
+**Spiders with good content:** techcrunch, wired, theverge, axios, mit_tech_review, devto, remoteok, weworkremotely, reddit, medium
 
-| Category | Count | Notes |
-|----------|-------|-------|
-| Orchestration Agents | 4 | Was 2, added 3 (WOA, OPA, CEA) - WorkflowAgent already existed |
-| Total Code Agents | 31 | Was 28, added 3 new wrappers |
+### 3. New Management Command
 
-### 4. Updated 16 Deprecated Import Paths
-
-Updated high-impact files to use canonical `core.agents` paths:
-
-| File | Imports Updated |
-|------|-----------------|
-| `core/personal_ai_assistant_enhanced.py` | 17 |
-| `core/views_opportunity.py` | 4 |
-| `core/services/workflow_builder.py` | 3 |
-| `core/views_image.py` | 2 |
-
-Key migrations:
-- `agents._deprecated.*` → `core.agents.strategy`, `core.agents.analysis`, `core.agents.executive`, `core.agents.training`
-- `agents.router` → `core.agent_router`
-- `agents.workflow_orchestration_agent` → `core.agents`
-- `agents.video_generation_agent` → `core.agents` (VideoAgent)
-- `agents.audio_generation_agent` → `core.agents` (AudioAgent)
-- `agents.video_editing_agent` → `core.agents` (VideoEditingAgent)
-
-### 5. Additional Import Path Updates
-
-Updated more files to canonical paths:
-
-| File | Changes |
-|------|---------|
-| `intelligence/income_builder_automation.py` | OpportunityPipelineOrchestrator → OpportunityPipelineAgent |
-| `ai_core/intelligence/automation_integration.py` | OpportunityPipelineOrchestrator → OpportunityPipelineAgent |
-| `core/tasks.py` | OpportunityScoringAgent from core.agents.analysis |
-| `core/super_platform/revenue_integration.py` | OpportunityScoringAgent from core.agents.analysis |
-| `core/agents/business/base_business_research_agent.py` | ResearchAgent from core.agents |
-
-### Import Path Analysis Completed
-
-Analyzed all remaining `agents.*` imports (~100+) and categorized:
-
-**Must Stay in `agents.*` (Django app dependencies):**
-- `agents.tasks` - Celery tasks (Django app requires module path)
-- `agents.serializers` - Django REST framework
-- `agents.services` - Django app services
-- `agents.views_*` - URL routing
-- `agents.models` - Database models
-
-**Intentionally Using Legacy API:**
-- `agents.creation_agent` - Legacy interface differs from ImageAgent
-- `agents.content_executor` - Legacy interface differs from ContentExecutorAgent
-- Other specialized income/marketplace agents
-
-### Commits Made
-
-1. `d5072bd` - feat(Session 393): Refactor 3 legacy orchestrators to use BaseAgent pattern
-2. `40ac960` - refactor(Session 393): Update 16 deprecated agents.* imports to core.agents
-3. `45f3fdd` - refactor(Session 393): Update OpportunityPipelineOrchestrator imports
-4. `cd94edf` - refactor(Session 393): Update 3 more legacy imports to canonical paths
-
----
-
-## New Agent Usage
-
-```python
-# Import new clean architecture agents
-from core.agents import (
-    WorkflowOrchestrationAgent,
-    OpportunityPipelineAgent,
-    ContentExecutorAgent,
-)
-
-# WorkflowOrchestrationAgent - predefined workflow packages
-workflow_agent = WorkflowOrchestrationAgent(user=user)
-result = workflow_agent.execute(
-    task="Create logos for my startup",
-    context={'workflow': 'research_and_create_logos', 'count': 3},
-    scifi_context={},
-    spider_context={}
-)
-
-# OpportunityPipelineAgent - value multiplication pipelines
-pipeline_agent = OpportunityPipelineAgent(user=user)
-result = pipeline_agent.execute(
-    task="Process this opportunity",
-    context={'opportunity': {'title': 'Freelance gig', 'base_value': 500}},
-    scifi_context={},
-    spider_context={}
-)
-
-# ContentExecutorAgent - AI content generation
-content_agent = ContentExecutorAgent(user=user)
-result = content_agent.execute(
-    task="Write a blog post about AI",
-    context={'content_type': 'blog_post', 'target_audience': 'developers'},
-    scifi_context={},
-    spider_context={}
-)
+```bash
+python manage.py bulk_embed_spiders              # Process all (7 days)
+python manage.py bulk_embed_spiders --batch=200  # Custom batch size
+python manage.py bulk_embed_spiders --hours=24   # Only last 24 hours
+python manage.py bulk_embed_spiders --dry-run    # Preview
+python manage.py bulk_embed_spiders --mark-empty # Mark entries with no items
 ```
 
 ---
 
-## Remaining Work
+## CRITICAL: Next Session Priority
 
-### Technical Debt Status: IMPORT CLEANUP COMPLETE ✓
+### Fix Spiders That Don't Fetch Content
 
-All migratable imports have been updated. Remaining `agents.*` imports (~100) are intentional:
+The following spiders need to be fixed to fetch actual content instead of just references:
 
-| Category | Reason to Keep |
-|----------|----------------|
-| Django Tasks | Celery requires `agents.tasks` module path |
-| Serializers | Django REST framework integration |
-| Services | Django app service layer |
-| Views/URLs | Django URL routing |
-| Models | Database model references |
-| Legacy APIs | Different interface than clean wrappers |
+#### 1. HackerNews Spider (HIGHEST PRIORITY - 147 entries affected)
+**Current behavior:** Fetches story IDs only
+**Should do:** Fetch individual story details
 
-### Potential Future Work
+```python
+# Location: ai_core/spiders/specialized/hackernews.py
+# Currently fetches: https://hacker-news.firebaseio.com/v0/topstories.json
+# Returns: [46193931, 46192846, ...] (just IDs)
 
-1. **Wrap CreationAgent**: Create `core/agents/creation_agent.py` wrapper (has 77 conversations + 74 dreams - valuable history)
-2. **Wrap Income Agents**: Create wrappers for `ZeroCapitalIncomeGenerator`, `RealContentCreator`, etc.
-3. **Consolidate Agent Apps**: Eventually merge `agents/` Django app functionality into `core/`
+# SHOULD ALSO fetch each story:
+# https://hacker-news.firebaseio.com/v0/item/{id}.json
+# Which returns: {"title": "...", "url": "...", "score": 100, ...}
+```
+
+#### 2. Kickstarter Spider (25 entries)
+- Currently stores search metadata, not project details
+- Should extract: project titles, descriptions, funding goals
+
+#### 3. Behance/Dribbble (24 entries)
+- Return API error messages
+- Need: Valid API credentials or RSS fallback
+
+#### 4. Add Content Validation
+Don't save entries without actual content:
+```python
+def save_data(self, data):
+    items = data.get('items', [])
+    if not any(item.get('title') or item.get('description') for item in items):
+        return  # Skip saving empty/reference-only data
+```
 
 ---
 
@@ -164,17 +88,20 @@ All migratable imports have been updated. Remaining `agents.*` imports (~100) ar
 # Start services
 make start && make celery
 
-# Run health check
-make health-check
+# Check embedding stats
+.venv/bin/python manage.py shell -c "
+from core.services.spider_semantic_search import get_spider_semantic_search
+search = get_spider_semantic_search()
+print(search.get_embedding_stats())
+"
 
-# Test new agent imports
-.venv/bin/python -c "
-import os, sys, django
-sys.path.insert(0, '.')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
-django.setup()
-from core.agents import WorkflowOrchestrationAgent, OpportunityPipelineAgent, ContentExecutorAgent
-print(f'All 3 new orchestrators imported successfully!')
+# Test semantic search
+.venv/bin/python manage.py shell -c "
+from core.services.spider_semantic_search import get_spider_semantic_search
+search = get_spider_semantic_search()
+results = search.semantic_search('AI tools for developers', limit=5)
+for r in results:
+    print(f'{r[\"spider_name\"]}: {r[\"embedding_text\"][:80]}...')
 "
 
 # Open AI Studio
@@ -187,16 +114,27 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | **102** | All registered |
+| **Spiders** | **102** | 31 real data sources |
 | **Code Agents** | **31** | In `core/agents/` |
 | **DB Agents** | **28** | All active |
-| **Orchestration Agents** | **4** | WorkflowAgent, WorkflowOrchestrationAgent, OpportunityPipelineAgent, ContentExecutorAgent |
-| **Models Location** | `core/models/agents_registry/` | Canonical |
-| **Registry Location** | `core/agents/registry.py` | Canonical |
+| **Spider Data** | **12,449** | Total entries |
+| **Searchable** | **2,006** | With embeddings |
+| **No Content** | **10,443** | Marked as empty |
+
+---
+
+## Files Changed This Session
+
+| File | Changes |
+|------|---------|
+| `core/management/commands/bulk_embed_spiders.py` | NEW - Bulk embedding command |
+| `core/services/spider_semantic_search.py` | Updated stats and backfill logic |
+| `core/tasks.py` | Increased batch size to 200 |
+| `docs/SPIDERS.md` | Updated with semantic search docs |
 
 ---
 
 ## Handoff Documents
 
-- **This Session:** `docs/handoffs/SESSION_393_ORCHESTRATOR_BASEAGENT_REFACTORING.md`
-- **Previous:** `docs/handoffs/SESSION_392_REGISTRY_MIGRATION.md`
+- **This Session:** `docs/handoffs/SESSION_394_SPIDER_EMBEDDINGS_BULK_PROCESSING.md`
+- **Previous:** `docs/handoffs/SESSION_393_ORCHESTRATOR_BASEAGENT_REFACTORING.md`

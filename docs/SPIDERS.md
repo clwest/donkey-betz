@@ -1,12 +1,12 @@
 # Spider Network Reference
 
-**Last Updated:** Session 273 (November 29, 2025)
+**Last Updated:** Session 394 (December 8, 2025)
 
 ---
 
 ## Overview
 
-The Spider Network consists of **70 spiders** collecting real-time data from **24 real sources** across **20 categories**. Data is stored in the `SpiderData` model and queried via `SpiderIntelligenceService`.
+The Spider Network consists of **102 spiders** collecting real-time data from **31 real sources** across **36 categories**. Data is stored in the `SpiderData` model and queried via `SpiderIntelligenceService` and `SpiderSemanticSearch`.
 
 ---
 
@@ -14,10 +14,52 @@ The Spider Network consists of **70 spiders** collecting real-time data from **2
 
 | Metric | Count |
 |--------|-------|
-| Total Spiders | 70 |
-| Real Data Sources | 24 |
-| Categories | 20 |
-| Records in DB | 3,400+ |
+| Total Spiders | 102 |
+| Real Data Sources | 31 |
+| Categories | 36 |
+| Records in DB | 12,400+ |
+| **Searchable (with embeddings)** | **2,006** |
+
+---
+
+## Semantic Search (Session 394)
+
+Spider data can be searched semantically using embeddings:
+
+```python
+from core.services.spider_semantic_search import get_spider_semantic_search
+
+search = get_spider_semantic_search()
+
+# Semantic search
+results = search.semantic_search("AI tools for developers", limit=10)
+
+# Get stats
+stats = search.get_embedding_stats()
+# {'total_entries': 12449, 'with_embedding': 2006, 'marked_empty': 10443, ...}
+```
+
+### Bulk Embedding Command
+
+```bash
+python manage.py bulk_embed_spiders              # Process all (7 days)
+python manage.py bulk_embed_spiders --batch=200  # Custom batch size
+python manage.py bulk_embed_spiders --hours=24   # Only last 24 hours
+python manage.py bulk_embed_spiders --dry-run    # Preview without changes
+```
+
+### Content Quality Notes
+
+Not all spiders produce embeddable content. Some spiders only store reference IDs or metadata:
+
+| Spider Type | Content Quality | Notes |
+|-------------|-----------------|-------|
+| RSS Feeds (techcrunch, wired, etc.) | High | Full titles and descriptions |
+| Job Boards (remoteok, weworkremotely) | High | Job details with requirements |
+| Dev Content (devto, medium) | High | Article summaries |
+| HackerNews | Low | Only story IDs, not content |
+| Kickstarter | Low | Search metadata only |
+| API Error Cases | None | Error messages stored |
 
 ---
 

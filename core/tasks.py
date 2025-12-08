@@ -703,12 +703,15 @@ def run_spider_network():
 
 
 @shared_task
-def backfill_spider_embeddings(batch_size: int = 100):
+def backfill_spider_embeddings(batch_size: int = 200):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
+    Session 394: Increased default batch size from 50 to 200 for faster processing.
 
     Runs every 10 minutes via Celery Beat to gradually build embedding coverage.
     Uses the SpiderSemanticSearch service.
+
+    Now also marks entries with no items as 'empty' so they're skipped in future runs.
     """
     logger.info("🧠 Starting spider embedding backfill...")
 
@@ -721,12 +724,17 @@ def backfill_spider_embeddings(batch_size: int = 100):
         logger.info(
             f"✅ Embedding backfill complete: "
             f"{stats['processed']} processed, {stats['succeeded']} succeeded, "
-            f"{stats['failed']} failed, {stats['skipped']} skipped"
+            f"{stats['failed']} failed, {stats['skipped']} skipped, "
+            f"{stats.get('marked_empty', 0)} marked empty"
         )
 
         # Get current coverage stats
         coverage = search.get_embedding_stats()
-        logger.info(f"📊 Embedding coverage: {coverage['coverage_percent']:.1f}% ({coverage['with_embedding']}/{coverage['total_entries']})")
+        logger.info(
+            f"📊 Embedding stats: {coverage['searchable']} searchable, "
+            f"{coverage.get('marked_empty', 0)} empty, {coverage.get('pending', 0)} pending "
+            f"({coverage['coverage_percent']:.1f}% coverage)"
+        )
 
         return {
             'success': True,

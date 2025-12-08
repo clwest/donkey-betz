@@ -372,12 +372,14 @@ class SpiderSemanticSearch:
 
         return False
 
-    def backfill_embeddings(self, batch_size: int = 50, hours: int = 168) -> Dict[str, int]:
+    def backfill_embeddings(self, batch_size: int = 100, hours: int = 168) -> Dict[str, int]:
         """
         Generate embeddings for SpiderData entries that don't have them.
 
+        Session 394: Improved to skip already-marked empty entries and use larger batches.
+
         Args:
-            batch_size: Number of entries to process
+            batch_size: Number of entries to process (default 100)
             hours: Only process entries from last N hours (default 7 days)
 
         Returns:
@@ -388,12 +390,13 @@ class SpiderSemanticSearch:
         since = timezone.now() - timedelta(hours=hours)
 
         # Find entries without embeddings
+        # Session 394: Also exclude entries marked as empty (embedding=[])
         entries = SpiderData.objects.filter(
             created_at__gte=since,
-            embedding__isnull=True
+            embedding__isnull=True  # Only NULL, not empty list
         ).order_by('-created_at')[:batch_size]
 
-        stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0}
+        stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0, 'marked_empty': 0}
 
         for entry in entries:
             stats['processed'] += 1
@@ -401,6 +404,11 @@ class SpiderSemanticSearch:
             # Skip entries with no items
             if not entry.raw_data or not entry.raw_data.get('items'):
                 stats['skipped'] += 1
+                # Session 394: Mark as empty so we don't reprocess
+                entry.embedding = []
+                entry.embedding_text = "[NO_ITEMS]"
+                entry.save(update_fields=['embedding', 'embedding_text'])
+                stats['marked_empty'] += 1
                 continue
 
             if self.generate_entry_embedding(entry):
@@ -500,27 +508,58 @@ class SpiderSemanticSearch:
         return results[:limit]
 
     def get_embedding_stats(self) -> Dict[str, Any]:
-        """Get statistics about spider data embeddings."""
+        """
+        Get statistics about spider data embeddings.
+
+        Session 394: Updated to distinguish between:
+        - with_embedding: Has actual embedding vector (searchable)
+        - marked_empty: Has empty list [] (no content to embed)
+        - pending: Has NULL (needs processing)
+        """
         from core.models_unified_system import SpiderData
-        from django.db.models import Count
 
         total = SpiderData.objects.count()
-        with_embedding = SpiderData.objects.filter(embedding__isnull=False).count()
-        without_embedding = SpiderData.objects.filter(embedding__isnull=True).count()
+
+        # Count entries with actual embeddings (not empty list)
+        # PostgreSQL: embedding is not null AND embedding != '{}'
+        with_embedding = 0
+        marked_empty = 0
+        pending = 0
+
+        # Sample to count - for large datasets this is more efficient
+        sample_size = min(total, 5000)
+        for entry in SpiderData.objects.order_by('-created_at')[:sample_size]:
+            if entry.embedding is None:
+                pending += 1
+            elif entry.embedding == [] or (isinstance(entry.embedding, list) and len(entry.embedding) == 0):
+                marked_empty += 1
+            else:
+                with_embedding += 1
+
+        # Extrapolate if sampling
+        if sample_size < total:
+            ratio = total / sample_size
+            with_embedding = int(with_embedding * ratio)
+            marked_empty = int(marked_empty * ratio)
+            pending = int(pending * ratio)
 
         # Recent stats (last 24 hours)
         since = timezone.now() - timedelta(hours=24)
         recent_total = SpiderData.objects.filter(created_at__gte=since).count()
-        recent_with = SpiderData.objects.filter(
-            created_at__gte=since,
-            embedding__isnull=False
-        ).count()
+        recent_with = 0
+        for entry in SpiderData.objects.filter(created_at__gte=since):
+            if entry.embedding and len(entry.embedding) > 0:
+                recent_with += 1
+
+        searchable = with_embedding  # Only actual embeddings are searchable
 
         return {
             'total_entries': total,
             'with_embedding': with_embedding,
-            'without_embedding': without_embedding,
-            'coverage_percent': round(with_embedding / total * 100, 1) if total > 0 else 0,
+            'marked_empty': marked_empty,
+            'pending': pending,
+            'searchable': searchable,
+            'coverage_percent': round(searchable / total * 100, 1) if total > 0 else 0,
             'recent_24h': {
                 'total': recent_total,
                 'with_embedding': recent_with,
