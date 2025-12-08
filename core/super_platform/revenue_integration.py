@@ -182,7 +182,7 @@ class RevenueIntegrationService:
         """Lazy load OpportunityScoringAgent."""
         if self._scoring_agent is None:
             try:
-                from agents.opportunity_scoring_agent import OpportunityScoringAgent
+                from core.agents.analysis import OpportunityScoringAgent
                 self._scoring_agent = OpportunityScoringAgent()
             except ImportError:
                 logger.warning("OpportunityScoringAgent not available")
