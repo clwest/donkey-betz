@@ -1178,7 +1178,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             if function_name in ROUTER_ENABLED_TOOLS:
                 try:
-                    from agents.router import AgentRouter
+                    from core.agent_router import AgentRouter
                     logger.info(f"🔀 Using AgentRouter for: {function_name}")
 
                     result = AgentRouter.execute_tool(
@@ -2728,9 +2728,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Video Generation Agent
-            from agents.video_generation_agent import VideoGenerationAgent
+            from core.agents import VideoAgent
 
-            agent = VideoGenerationAgent(
+            agent = VideoAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
@@ -2780,10 +2780,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             prompt = arguments.get('prompt')
 
             # Session 128: Delegate to specialized Video Generation Agent
-            from agents.video_generation_agent import VideoGenerationAgent
+            from core.agents import VideoAgent
 
             # Don't need project_id for extension - it inherits from original video
-            agent = VideoGenerationAgent(
+            agent = VideoAgent(
                 user=self.user,
                 project_id=None
             )
@@ -3948,7 +3948,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
             if agent_name == 'brand_identity_agent':
-                from agents._deprecated.brand_identity_agent import BrandIdentityAgent
+                from core.agents.strategy import BrandIdentityAgent
                 agent = BrandIdentityAgent(user=self.user)
 
                 if action == 'get_profile':
@@ -3969,7 +3969,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     return {'success': False, 'error': f'Unknown action: {action}'}
 
             elif agent_name == 'content_strategy_agent':
-                from agents._deprecated.content_strategy_agent import ContentStrategyAgent
+                from core.agents.strategy import ContentStrategyAgent
                 agent = ContentStrategyAgent(user=self.user)
 
                 if action == 'get_recommendations':
@@ -3987,7 +3987,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     return {'success': False, 'error': f'Unknown action: {action}'}
 
             elif agent_name == 'seo_optimizer_agent':
-                from agents._deprecated.seo_optimizer_agent import SEOOptimizerAgent
+                from core.agents.strategy import SEOOptimizerAgent
                 agent = SEOOptimizerAgent(user=self.user)
 
                 if action == 'get_hashtags':
@@ -4008,7 +4008,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     return {'success': False, 'error': f'Unknown action: {action}'}
 
             elif agent_name == 'trend_analysis_agent':
-                from agents._deprecated.trend_analysis_agent import TrendAnalysisAgent
+                from core.agents.analysis import TrendAnalysisAgent
                 agent = TrendAnalysisAgent(user=self.user)
 
                 if action == 'analyze_sector':
@@ -4023,7 +4023,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     return {'success': False, 'error': f'Unknown action: {action}'}
 
             elif agent_name == 'social_media_agent':
-                from agents._deprecated.social_media_agent import SocialMediaAgent
+                from core.agents.strategy import SocialMediaAgent
                 agent = SocialMediaAgent(user=self.user)
 
                 if action == 'create_for_platform':
@@ -4077,7 +4077,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import warnings
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            from agents._deprecated.creative_director_agent import CreativeDirectorAgent
+            from core.agents.executive import CreativeDirectorAgent
             agent = CreativeDirectorAgent(user=self.user)
 
             if action == 'review_prompt':
@@ -4144,7 +4144,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import warnings
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            from agents._deprecated.opportunity_scoring_agent import OpportunityScoringAgent
+            from core.agents.analysis import OpportunityScoringAgent
             agent = OpportunityScoringAgent()
 
             if action == 'score_data':
@@ -4224,7 +4224,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import warnings
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            from agents._deprecated.trained_creation_agent import TrainedCreationAgent
+            from core.agents.training import TrainedCreationAgent
             agent = TrainedCreationAgent(user=self.user, project_id=getattr(self, 'project_id', None))
 
             result = agent.execute(
@@ -4262,7 +4262,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import warnings
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            from agents._deprecated.cto_agent import CTOAgent
+            from core.agents.executive import CTOAgent
             agent = CTOAgent(user=self.user)
 
             if action == 'analyze_feature':
@@ -4326,7 +4326,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import warnings
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            from agents._deprecated.coo_agent import COOAgent
+            from core.agents.executive import COOAgent
             agent = COOAgent(user=self.user)
 
             if action == 'analyze_roadmap':
@@ -4379,7 +4379,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             import warnings
             warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            from agents._deprecated.meeting_coordinator_agent import MeetingCoordinatorAgent
+            from core.agents.executive import MeetingCoordinatorAgent
             agent = MeetingCoordinatorAgent(user=self.user)
 
             result = agent.start_meeting(
@@ -4662,9 +4662,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Audio Generation Agent
-            from agents.audio_generation_agent import AudioGenerationAgent
+            from core.agents import AudioAgent
 
-            agent = AudioGenerationAgent(
+            agent = AudioAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
@@ -4697,9 +4697,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Audio Generation Agent
-            from agents.audio_generation_agent import AudioGenerationAgent
+            from core.agents import AudioAgent
 
-            agent = AudioGenerationAgent(
+            agent = AudioAgent(
                 user=self.user,
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
@@ -4841,7 +4841,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128 Part 2: Delegate to specialized Video Editing Agent
-            from agents.video_editing_agent import VideoEditingAgent
+            from core.agents import VideoEditingAgent
 
             agent = VideoEditingAgent(
                 user=self.user,
@@ -4879,7 +4879,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128 Part 2: Delegate to specialized Video Editing Agent
-            from agents.video_editing_agent import VideoEditingAgent
+            from core.agents import VideoEditingAgent
 
             agent = VideoEditingAgent(
                 user=self.user,

@@ -375,7 +375,7 @@ class WorkflowBuilderService:
             workflow_def = workflow.to_workflow_definition()
 
             # Execute using WorkflowOrchestrationAgent
-            from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+            from core.agents import WorkflowOrchestrationAgent
 
             agent = WorkflowOrchestrationAgent(
                 user=self.user,
@@ -467,7 +467,7 @@ class WorkflowBuilderService:
 
     def list_builtin_workflows(self) -> List[Dict[str, Any]]:
         """Get list of built-in workflows from WorkflowOrchestrationAgent."""
-        from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+        from core.agents import WorkflowOrchestrationAgent
 
         workflows = []
         for name, data in WorkflowOrchestrationAgent.WORKFLOWS.items():
@@ -501,7 +501,7 @@ class WorkflowBuilderService:
         )
 
         try:
-            from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+            from core.agents import WorkflowOrchestrationAgent
 
             agent = WorkflowOrchestrationAgent(
                 user=self.user,

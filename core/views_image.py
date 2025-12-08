@@ -7461,7 +7461,7 @@ def execute_tool(request):
 
         if tool_name in ROUTER_ENABLED_TOOLS:
             try:
-                from agents.router import AgentRouter
+                from core.agent_router import AgentRouter
                 logger.info(f"🔀 Using AgentRouter.execute_tool for: {tool_name}")
 
                 # Session 204: Use execute_tool for full agent routing with preference support
@@ -7495,7 +7495,7 @@ def execute_tool(request):
         # Legacy routing - will be gradually migrated to AgentRouter
         # This agent handles multi-step workflows like "research and create logos"
         if tool_name == 'workflow_orchestration_agent':
-            from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+            from core.agents import WorkflowOrchestrationAgent
 
             agent = WorkflowOrchestrationAgent(
                 user=request.user,
