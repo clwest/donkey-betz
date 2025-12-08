@@ -15,8 +15,9 @@ from django.core.cache import cache
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from .models import (
-    AgentExecution, 
+# Session 392: Updated to use canonical import path
+from core.models.agents_registry import (
+    AgentExecution,
     UnifiedAgentTemplate,
     AgentStatus,
     AgentOrchestration

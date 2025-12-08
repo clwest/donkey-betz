@@ -30,14 +30,14 @@ from django.utils import timezone
 from django.db import transaction
 from asgiref.sync import async_to_sync, sync_to_async
 
-# Import existing integrations
+# Session 392: Updated to use canonical import paths
 try:
-    from .registry import get_agent_registry
+    from core.agents.registry import get_agent_registry
 except ImportError:
     get_agent_registry = None
 
 try:
-    from .models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
 except ImportError:
     UnifiedAgentTemplate = AgentExecution = AgentOrchestration = None
 

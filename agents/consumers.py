@@ -22,7 +22,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
-from .models import (
+# Session 392: Updated to use canonical import path
+from core.models.agents_registry import (
     UnifiedAgentTemplate, AgentExecution, AgentRegistry,
     AgentStatus, AgentSpecialization
 )
