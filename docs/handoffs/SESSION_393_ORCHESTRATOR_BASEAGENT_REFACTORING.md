@@ -232,9 +232,58 @@ These still work since wrappers delegate to legacy code. Updates are purely for 
 
 ---
 
+## Part 2: Import Path Updates
+
+### Files Updated (25+ imports)
+
+**Batch 1 - `core/personal_ai_assistant_enhanced.py` (17 imports):**
+- `agents._deprecated.*` → `core.agents.strategy`, `core.agents.analysis`, etc.
+- `agents.router` → `core.agent_router`
+- `agents.video_generation_agent` → `core.agents` (VideoAgent)
+
+**Batch 2 - Core views and services:**
+- `core/views_opportunity.py` - 4 OpportunityScoringAgent imports
+- `core/services/workflow_builder.py` - 3 WorkflowOrchestrationAgent imports
+- `core/views_image.py` - 2 imports
+
+**Batch 3 - Intelligence and automation:**
+- `intelligence/income_builder_automation.py` - OpportunityPipelineOrchestrator → OpportunityPipelineAgent
+- `ai_core/intelligence/automation_integration.py` - Same change
+
+**Batch 4 - Core components:**
+- `core/tasks.py` - OpportunityScoringAgent from core.agents.analysis
+- `core/super_platform/revenue_integration.py` - OpportunityScoringAgent
+- `core/agents/business/base_business_research_agent.py` - ResearchAgent
+
+---
+
+## Part 3: Import Analysis Results
+
+### Remaining `agents.*` Imports (~100)
+
+Analyzed all remaining imports and categorized:
+
+**Must Stay as `agents.*` (Django App Dependencies):**
+- `agents.tasks` - Celery requires Django app module paths
+- `agents.serializers` - Django REST framework serializers
+- `agents.services` - Django app service layer
+- `agents.views_*` - URL routing in core/urls.py
+- `agents.models` - Database model references
+
+**Intentionally Using Legacy API:**
+- `agents.creation_agent.CreationAgent` - Different interface than ImageAgent
+- `agents.content_executor.DonkeyBetzContentExecutor` - Uses `execute_content_creation()`
+- `agents.ai_project_builder.AIProjectBuilder` - Specialized builder
+- Various income agents - Specialized agents not wrapped
+
+---
+
 ## Commits
 
 1. `d5072bd` - feat(Session 393): Refactor 3 legacy orchestrators to use BaseAgent pattern
+2. `40ac960` - refactor(Session 393): Update 16 deprecated agents.* imports to core.agents
+3. `45f3fdd` - refactor(Session 393): Update OpportunityPipelineOrchestrator imports
+4. `cd94edf` - refactor(Session 393): Update 3 more legacy imports to canonical paths
 
 ---
 

@@ -58,10 +58,40 @@ Key migrations:
 - `agents.audio_generation_agent` → `core.agents` (AudioAgent)
 - `agents.video_editing_agent` → `core.agents` (VideoEditingAgent)
 
+### 5. Additional Import Path Updates
+
+Updated more files to canonical paths:
+
+| File | Changes |
+|------|---------|
+| `intelligence/income_builder_automation.py` | OpportunityPipelineOrchestrator → OpportunityPipelineAgent |
+| `ai_core/intelligence/automation_integration.py` | OpportunityPipelineOrchestrator → OpportunityPipelineAgent |
+| `core/tasks.py` | OpportunityScoringAgent from core.agents.analysis |
+| `core/super_platform/revenue_integration.py` | OpportunityScoringAgent from core.agents.analysis |
+| `core/agents/business/base_business_research_agent.py` | ResearchAgent from core.agents |
+
+### Import Path Analysis Completed
+
+Analyzed all remaining `agents.*` imports (~100+) and categorized:
+
+**Must Stay in `agents.*` (Django app dependencies):**
+- `agents.tasks` - Celery tasks (Django app requires module path)
+- `agents.serializers` - Django REST framework
+- `agents.services` - Django app services
+- `agents.views_*` - URL routing
+- `agents.models` - Database models
+
+**Intentionally Using Legacy API:**
+- `agents.creation_agent` - Legacy interface differs from ImageAgent
+- `agents.content_executor` - Legacy interface differs from ContentExecutorAgent
+- Other specialized income/marketplace agents
+
 ### Commits Made
 
 1. `d5072bd` - feat(Session 393): Refactor 3 legacy orchestrators to use BaseAgent pattern
 2. `40ac960` - refactor(Session 393): Update 16 deprecated agents.* imports to core.agents
+3. `45f3fdd` - refactor(Session 393): Update OpportunityPipelineOrchestrator imports
+4. `cd94edf` - refactor(Session 393): Update 3 more legacy imports to canonical paths
 
 ---
 
@@ -107,18 +137,24 @@ result = content_agent.execute(
 
 ## Remaining Work
 
-### Still Using Deprecated `agents.` Imports (~107)
+### Technical Debt Status: IMPORT CLEANUP COMPLETE ✓
 
-The legacy agents still exist and are wrapped by the new clean agents:
-- `agents.workflow_orchestration_agent` - Wrapped by `WorkflowOrchestrationAgent`
-- `agents.opportunity_pipeline_orchestrator` - Wrapped by `OpportunityPipelineAgent`
-- `agents.content_executor` - Wrapped by `ContentExecutorAgent`
-- `agents.creation_agent` (legacy CreationAgent) - Not yet wrapped
-- `agents.tasks` (Celery tasks - must stay in agents/ for Django app config)
+All migratable imports have been updated. Remaining `agents.*` imports (~100) are intentional:
 
-### Import Path Updates Still Needed
+| Category | Reason to Keep |
+|----------|----------------|
+| Django Tasks | Celery requires `agents.tasks` module path |
+| Serializers | Django REST framework integration |
+| Services | Django app service layer |
+| Views/URLs | Django URL routing |
+| Models | Database model references |
+| Legacy APIs | Different interface than clean wrappers |
 
-Files still importing from `agents.workflow_orchestration_agent` etc. can optionally be updated to use the new clean imports from `core.agents`. This is optional since the wrappers delegate to the legacy code.
+### Potential Future Work
+
+1. **Wrap CreationAgent**: Create `core/agents/creation_agent.py` wrapper (has 77 conversations + 74 dreams - valuable history)
+2. **Wrap Income Agents**: Create wrappers for `ZeroCapitalIncomeGenerator`, `RealContentCreator`, etc.
+3. **Consolidate Agent Apps**: Eventually merge `agents/` Django app functionality into `core/`
 
 ---
 
