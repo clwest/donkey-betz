@@ -244,7 +244,7 @@ def opportunity_score(request):
         - limit: Max items to score (default: 50)
     """
     try:
-        from agents.opportunity_scoring_agent import OpportunityScoringAgent
+        from core.agents.analysis import OpportunityScoringAgent
 
         # Parse request body
         try:
@@ -375,7 +375,7 @@ def opportunity_top(request):
         - category: Filter by category (optional)
     """
     try:
-        from agents.opportunity_scoring_agent import OpportunityScoringAgent
+        from core.agents.analysis import OpportunityScoringAgent
 
         limit = min(int(request.GET.get('limit', 10)), 50)
         min_score = int(request.GET.get('min_score', 50))
@@ -413,7 +413,7 @@ def opportunity_rescore(request, opportunity_id):
     Re-score an existing opportunity with fresh data.
     """
     try:
-        from agents.opportunity_scoring_agent import OpportunityScoringAgent
+        from core.agents.analysis import OpportunityScoringAgent
 
         agent = OpportunityScoringAgent()
         result = agent.rescore_opportunity(opportunity_id)
@@ -457,7 +457,7 @@ def opportunity_analyze(request):
         - data: Additional trend data (optional)
     """
     try:
-        from agents.opportunity_scoring_agent import OpportunityScoringAgent
+        from core.agents.analysis import OpportunityScoringAgent
 
         # Parse request body
         try:
