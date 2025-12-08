@@ -34,7 +34,7 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Available Agents (28 total):
+Available Agents (31 total):
 
     CREATION AGENTS (4):
         ImageAgent          - Image generation (logos, banners, illustrations)
@@ -80,8 +80,11 @@ Available Agents (28 total):
         MarketingStrategyAgent  - Channel strategy, campaigns, funnel optimization
         BusinessContentStrategyAgent - Content pillars, formats, topic ideas
 
-    ORCHESTRATION AGENTS (1):
-        WorkflowAgent           - Multi-step workflow coordination
+    ORCHESTRATION AGENTS (4) - Session 393:
+        WorkflowAgent               - Multi-step workflow coordination (GPT-driven)
+        WorkflowOrchestrationAgent  - Predefined workflow packages (16+ templates)
+        OpportunityPipelineAgent    - Multi-stage opportunity execution (value multiplication)
+        ContentExecutorAgent        - AI content generation for platform
 
     ENTRY POINT (1):
         PersonalAssistantAgent  - Main user interaction and routing
@@ -126,8 +129,23 @@ from core.agents.video_editing_agent import VideoEditingAgent
 # Research Agents
 from core.agents.research_agent import ResearchAgent
 
-# Orchestration Agents
+# Orchestration Agents (Session 393: Added 3 new orchestrators)
 from core.agents.workflow_agent import WorkflowAgent
+from core.agents.workflow_orchestration_agent import (
+    WorkflowOrchestrationAgent,
+    get_workflow_orchestration_agent,
+    AVAILABLE_WORKFLOWS,
+)
+from core.agents.opportunity_pipeline_agent import (
+    OpportunityPipelineAgent,
+    get_opportunity_pipeline_agent,
+    PIPELINE_STAGES,
+)
+from core.agents.content_executor_agent import (
+    ContentExecutorAgent,
+    get_content_executor_agent,
+    CONTENT_TYPES,
+)
 
 # Entry Point Agent
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
@@ -207,8 +225,17 @@ __all__ = [
     # Research Agents (1)
     'ResearchAgent',
 
-    # Orchestration Agents (1)
+    # Orchestration Agents (4) - Session 393
     'WorkflowAgent',
+    'WorkflowOrchestrationAgent',
+    'get_workflow_orchestration_agent',
+    'AVAILABLE_WORKFLOWS',
+    'OpportunityPipelineAgent',
+    'get_opportunity_pipeline_agent',
+    'PIPELINE_STAGES',
+    'ContentExecutorAgent',
+    'get_content_executor_agent',
+    'CONTENT_TYPES',
 
     # Entry Point Agent (1)
     'PersonalAssistantAgent',
