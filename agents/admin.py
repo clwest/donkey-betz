@@ -8,7 +8,8 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 import json
 
-from .models import (
+# Session 392: Updated to use canonical import path
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration,

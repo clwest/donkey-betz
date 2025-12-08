@@ -15,7 +15,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.core.cache import cache
 import django_filters
 
-from .models import (
+# Session 392: Updated to use canonical import path
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration,

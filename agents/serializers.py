@@ -6,7 +6,8 @@ from rest_framework import serializers
 from rest_framework.fields import JSONField
 from django.contrib.auth import get_user_model
 
-from .models import (
+# Session 392: Updated to use canonical import path
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration,

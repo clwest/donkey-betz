@@ -7,7 +7,8 @@ from rest_framework.response import Response
 from django.db.models import Q
 import logging
 
-from .models import AgentExecution, AgentOrchestration, AgentStatus
+# Session 392: Updated to use canonical import path
+from core.models.agents_registry import AgentExecution, AgentOrchestration, AgentStatus
 
 logger = logging.getLogger(__name__)
 
