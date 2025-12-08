@@ -18,7 +18,7 @@ from core.views_projects_api import (
     projects_list, project_detail, project_agents, assign_agent_to_project
 )
 from core.models_partnership import PartnershipProject
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from django.test import RequestFactory
 from rest_framework.test import force_authenticate
 

@@ -103,7 +103,7 @@ class SpiderIntelligenceService:
         'gift', 'gifts', 'holiday', 'holidays', 'black', 'friday', 'cyber', 'monday'
     }
 
-    def get_trending_topics(self, category: str = None, hours: int = 24, limit: int = 10, include_jobs: bool = False) -> list:
+    def get_trending_topics(self, category: str = None, hours: int = 168, limit: int = 10, include_jobs: bool = False) -> list:
         """
         Session 237: Improved trending topic extraction.
         Session 385: Enhanced to include sample articles for each topic.

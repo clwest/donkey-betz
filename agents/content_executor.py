@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional, List
 from django.utils import timezone
 
 from core.llm_enforcer import LLMEnforcer
-from agents.models import AgentExecution, AgentStatus
+from core.models.agents_registry import AgentExecution, AgentStatus
 
 logger = logging.getLogger(__name__)
 

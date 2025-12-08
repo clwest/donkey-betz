@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from django.utils import timezone
 
-from agents.models import UnifiedAgentTemplate, AgentSpecialization, LLMProvider
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization, LLMProvider
 from .models import (
     Game, BettingMarket, OddsLine, Team, League, BettingRecommendation,
     ArbitrageOpportunity, BankrollManagement, SportsAnalytics

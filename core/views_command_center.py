@@ -27,7 +27,7 @@ import redis
 from django.contrib.auth import get_user_model
 from persistence.models import AgentKnowledge, SpiderData, RevenueTracker
 try:
-    from agents.models import Agent
+    from core.models.agents_registry import Agent
 except ImportError:
     Agent = None
 try:
@@ -101,7 +101,7 @@ def system_stats(request):
 
         # Get agent count from database
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
             agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
         except:
             agent_count = 151
@@ -249,7 +249,7 @@ def handle_status_command(args):
 
         # Get agent stats
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
             agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
         except:
             agent_count = 151

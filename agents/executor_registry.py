@@ -27,7 +27,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentStatus
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentStatus
 from agents.registry import get_agent_registry
 from agents.executors.base_executor import (
     BaseAgentExecutor,

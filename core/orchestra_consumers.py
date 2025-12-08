@@ -394,7 +394,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
     def get_real_orchestra_data_from_db(self):
         """Get real Neural Orchestra data with dynamic connections and workflows"""
         try:
-            from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
             from .orchestration_reality_connector import orchestration_connector
             from .models_unified_system import Advisor
             from django.db.models import Count
@@ -707,7 +707,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_agent_details(self, agent_id):
         """Get detailed information about a specific agent"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
         try:
             agent = UnifiedAgentTemplate.objects.get(id=agent_id, is_active=True)
@@ -908,7 +908,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             }
 
             # PHASE 2 FIX: Calculate real metrics from database
-            from agents.models import UnifiedAgentTemplate, AgentExecution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
             from core.models import Revenue
             from core.models_unified_system import Advisor
             from datetime import datetime, timedelta
@@ -964,7 +964,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             spiders_active = Spider.objects.filter(is_active=True).count() if hasattr(Spider.objects.model, 'is_active') else 40
 
             # Count opportunities found today
-            from agents.models import OpportunityInteraction
+            from core.models.agents_registry import OpportunityInteraction
             opportunities_today = OpportunityInteraction.objects.filter(
                 created_at__date=today
             ).count() if OpportunityInteraction.objects.exists() else 0
@@ -1022,7 +1022,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             if command == 'start_agents':
                 logger.info("Starting all agents...")
                 # Real implementation: Could trigger Celery tasks or update agent statuses
-                from agents.models import UnifiedAgentTemplate
+                from core.models.agents_registry import UnifiedAgentTemplate
                 count = await database_sync_to_async(
                     lambda: UnifiedAgentTemplate.objects.filter(is_active=True).update(status='active')
                 )()
@@ -1031,7 +1031,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             elif command == 'pause':
                 logger.info("Pausing operations...")
                 # Real implementation: Pause active orchestrations
-                from agents.models import AgentOrchestration
+                from core.models.agents_registry import AgentOrchestration
                 paused_count = await database_sync_to_async(
                     lambda: AgentOrchestration.objects.filter(
                         status='running'
@@ -1048,7 +1048,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             elif command == 'emergency_stop':
                 logger.info("⚠️ EMERGENCY STOP INITIATED")
                 # Real implementation: Stop all active agents and orchestrations
-                from agents.models import UnifiedAgentTemplate, AgentOrchestration
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentOrchestration
                 stopped_agents = await database_sync_to_async(
                     lambda: UnifiedAgentTemplate.objects.filter(is_active=True).update(status='stopped')
                 )()
@@ -1085,7 +1085,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def run_system_diagnostics(self):
         """Run comprehensive system diagnostics"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
         from core.models import Revenue
         from django.db import connection
 

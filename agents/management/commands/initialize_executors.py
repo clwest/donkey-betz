@@ -24,7 +24,7 @@ from agents.executor_registry import (
     system_health_check,
     execute_agent_by_name
 )
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
 
 class Command(BaseCommand):

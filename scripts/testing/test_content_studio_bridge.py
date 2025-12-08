@@ -23,7 +23,7 @@ from agents.content_studio_bridge import (
     agent_create_image,
     agent_create_campaign
 )
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 
 def test_content_studio_connection():
@@ -204,7 +204,7 @@ def test_agent_execution_logging():
     print("Testing Agent Execution Logging")
     print("-"*40)
 
-    from agents.models import AgentExecution
+    from core.models.agents_registry import AgentExecution
 
     # Count executions before
     before_count = AgentExecution.objects.count()

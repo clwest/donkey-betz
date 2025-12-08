@@ -21,7 +21,7 @@ from ai_core.intelligence.learning_loop import learning_loop
 from ai_core.intelligence.spider_learning_orchestrator import get_spider_orchestrator
 
 # Session 145: Import AgentContribution for REAL data!
-from agents.models import UnifiedAgentTemplate, AgentContribution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
 from content.models import ImageHistory, VideoHistory, MiniFigAsset, CreativeProject
 
 

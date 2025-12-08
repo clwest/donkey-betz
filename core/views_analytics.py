@@ -82,7 +82,7 @@ def analytics_dashboard(request):
 
     # REAL DATA: Agent executions
     try:
-        from agents.models import AgentExecution, AgentStatus
+        from core.models.agents_registry import AgentExecution, AgentStatus
         agent_executions = AgentExecution.objects.filter(
             created_at__gte=start_date
         ).count()
@@ -289,7 +289,7 @@ def cost_breakdown(request):
 
     # REAL DATA: Agent execution costs (if available)
     try:
-        from agents.models import AgentExecution, AgentStatus
+        from core.models.agents_registry import AgentExecution, AgentStatus
         agent_cost = AgentExecution.objects.filter(
             created_at__gte=start_date,
             status=AgentStatus.COMPLETED

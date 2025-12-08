@@ -14,7 +14,7 @@ django.setup()
 
 pytestmark = pytest.mark.django_db
 
-from agents.models import UnifiedAgentTemplate, AgentExecution  # noqa: E402
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution  # noqa: E402
 
 
 @pytest.fixture

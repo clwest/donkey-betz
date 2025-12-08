@@ -13,7 +13,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from content.models import ImageHistory, VideoHistory
-from agents.models import AgentContribution
+from core.models.agents_registry import AgentContribution
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

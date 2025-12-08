@@ -12,7 +12,7 @@ from channels.db import database_sync_to_async
 from asgiref.sync import sync_to_async
 
 from persistence.models import UnifiedUser, UserMemoryContext
-from agents.models import Agent
+from core.models.agents_registry import Agent
 from core.unified_memory_manager import UnifiedMemoryManager
 from ai_core.agents.orchestrator import AgentOrchestrator
 from intelligence.income_builder import AIIncomeBuilder

@@ -8,7 +8,7 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 
 class Command(BaseCommand):

@@ -3,7 +3,7 @@ import os, uuid, pytest
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_core.settings")
 pytestmark = pytest.mark.django_db
 
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from sports.models import Game
 from agents import tasks as agent_tasks
 

@@ -24,7 +24,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 import django
 django.setup()
 
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from persistence.models import SpiderData
 from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 

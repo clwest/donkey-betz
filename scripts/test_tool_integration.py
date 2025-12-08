@@ -21,7 +21,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from ai_core.agents.universal_agent_loader import get_all_agent_classes
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 
 async def test_agent_with_tools():

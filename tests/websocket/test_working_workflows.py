@@ -22,7 +22,7 @@ from django.utils import timezone
 from django.db import connection
 
 # Import models
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentRegistry
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentRegistry
 from sports.models import League, Team, Game, Sportsbook, BettingMarket, OddsLine, BankrollManagement
 from content.models import Document
 

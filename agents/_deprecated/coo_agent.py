@@ -28,7 +28,7 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from openai import OpenAI
 
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentSpecialization
 from intelligence.shared_memory import AgentMemoryInterface
 
 User = get_user_model()

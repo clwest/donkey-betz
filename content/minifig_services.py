@@ -166,7 +166,7 @@ def create_minifig_asset_from_images(
 
         # Session 142: Track agent contribution for 3D generation
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='three-d-generation-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -218,7 +218,7 @@ def create_minifig_asset_from_images(
 
             # Session 142: Track agent contribution for 3D generation (placeholder)
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='three-d-generation-agent')
                 AgentContribution.objects.create(
                     agent=agent,

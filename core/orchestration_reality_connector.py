@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Tuple
 from django.utils import timezone
 from django.db.models import Q
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate, AgentExecution, AgentOrchestration,
     AgentSpecialization, AgentStatus, AgentPriority
 )

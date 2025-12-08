@@ -13,7 +13,7 @@ sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 
 # Check if already exists
 existing = UnifiedAgentTemplate.objects.filter(name='three-d-generation-agent').first()

@@ -163,7 +163,7 @@ def deploy_legal_spiders():
     print(f"   Legal agents receiving data: {len(legal_agents)}")
 
     # Verify legal agents have data
-    from agents.models import UnifiedAgentTemplate
+    from core.models.agents_registry import UnifiedAgentTemplate
     from django.db import connection
 
     with connection.cursor() as cursor:

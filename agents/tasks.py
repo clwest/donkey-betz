@@ -784,7 +784,7 @@ def update_agent_performance():
         dict: Summary of predictions processed and agents updated
     """
     from sports.models import MLPrediction
-    from agents.models import UnifiedAgentTemplate, AgentPerformanceMetrics
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentPerformanceMetrics
 
     logger.info("Starting agent performance update task")
 

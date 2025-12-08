@@ -28,7 +28,7 @@ from django.utils import timezone
 from asgiref.sync import sync_to_async
 
 # Import models
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate, AgentExecution, AgentOrchestration, 
     AgentRegistry, AgentSpecialization
 )
@@ -229,7 +229,7 @@ class CrossSystemWorkflowTester:
     def _setup_agent_data(self):
         """Setup agent orchestration test data"""
         # Ensure agent registry exists
-        from agents.models import AgentRegistry
+        from core.models.agents_registry import AgentRegistry
         self.agent_registry, _ = AgentRegistry.objects.get_or_create(
             registry_name="unified_agent_registry"
         )

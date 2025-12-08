@@ -9,7 +9,7 @@ from datetime import datetime
 from dataclasses import dataclass
 
 from agents.registry import get_agent_registry, AgentRegistry
-from agents.models import UnifiedAgentTemplate, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 from advisors.registry import get_advisor_registry
 
 logger = logging.getLogger(__name__)

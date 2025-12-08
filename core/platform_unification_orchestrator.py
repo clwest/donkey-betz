@@ -28,7 +28,7 @@ from asgiref.sync import sync_to_async
 from agents.registry import agent_registry
 from intelligence.spiders.spider_army.orchestrator import SpiderArmyOrchestrator
 from intelligence.models import OpportunityActionPlan, RevenueMetrics, EarningRecord
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
 from persistence.models import AgentKnowledge, SpiderData, UnifiedEmbedding
 from django.db import models
 

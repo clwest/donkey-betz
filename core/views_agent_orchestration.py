@@ -12,7 +12,7 @@ from django.core.paginator import Paginator
 from datetime import datetime, timedelta
 import json
 import uuid
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 User = get_user_model()
 
@@ -127,7 +127,7 @@ def execute_agent(request):
     """
     Execute AI agent task with intelligent routing - migrated from DBAO
     """
-    from agents.models import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
     from agents.tasks import execute_agent as execute_agent_task
     
     # DEBUG: This should help identify if this function is being called

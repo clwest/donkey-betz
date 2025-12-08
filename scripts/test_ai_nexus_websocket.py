@@ -13,7 +13,7 @@ sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from core.models_unified_system import Advisor
 from core.models import Revenue
 from django.utils import timezone

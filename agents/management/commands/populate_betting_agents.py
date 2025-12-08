@@ -3,7 +3,7 @@ Management command to populate sports betting agents in the database.
 """
 
 from django.core.management.base import BaseCommand
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 import json
 
 

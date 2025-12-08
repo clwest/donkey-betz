@@ -371,7 +371,7 @@ class ComponentDataPipeline:
     def get_suitable_agents(self, input_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get suitable agents for the task"""
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
 
             # Get agents based on task requirements
             task_type = input_data.get('task_type', 'general')

@@ -79,7 +79,7 @@ def check_recent_videos():
                 print(f"      Agent: None")
 
             # Check for agent contributions
-            from agents.models import AgentContribution
+            from core.models.agents_registry import AgentContribution
             contributions = AgentContribution.objects.filter(video=video)
             if contributions.exists():
                 print(f"      ✅ {contributions.count()} agent contribution(s) tracked")

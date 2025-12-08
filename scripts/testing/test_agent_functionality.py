@@ -21,7 +21,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 import django
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from agents.registry import AgentRegistry
 from core.tools import ToolRegistry
 from intelligence.shared_memory import SharedMemorySystem

@@ -15,7 +15,7 @@ sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 
 def register_trained_creation_agent():
     """Register the Trained Creation Agent in the unified agent registry."""

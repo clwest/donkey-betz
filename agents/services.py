@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.core.cache import cache
 import logging
 
-from agents.models import AgentContribution, UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate, AgentExecution
 from content.models import CreativeProject, ImageHistory, VideoHistory
 
 logger = logging.getLogger(__name__)

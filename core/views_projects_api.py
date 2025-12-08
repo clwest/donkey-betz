@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 
 from core.models_partnership import PartnershipProject
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

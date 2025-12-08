@@ -7,7 +7,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentRegistry
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
 from core.agent_integration import AgentRouter
 from django.contrib.auth import get_user_model
 

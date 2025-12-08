@@ -98,7 +98,7 @@ def agent_performance_detail(request, agent_name):
             )
         
         # Get recent executions
-        from agents.models import AgentExecution
+        from core.models.agents_registry import AgentExecution
         
         recent_executions = AgentExecution.objects.filter(
             template__name=agent_name,

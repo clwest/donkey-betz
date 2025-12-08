@@ -62,7 +62,7 @@ def dashboard_stats(request):
     
     # Try to get real data where available
     try:
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         agent_count = UnifiedAgentTemplate.objects.count()
         stats['total_agents'] = agent_count
         print(f"Successfully retrieved {agent_count} agents")
@@ -74,7 +74,7 @@ def dashboard_stats(request):
         import traceback
         traceback.print_exc()
         try:
-            from agents.models import Agent
+            from core.models.agents_registry import Agent
             stats['total_agents'] = Agent.objects.count()
         except:
             pass

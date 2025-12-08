@@ -24,7 +24,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import sync_to_async
 
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from sports.models import Game, OddsLine, BettingMarket, LineMovement
 from content.models import Document
 
@@ -362,7 +362,7 @@ class WebSocketAgentIntegrationTester:
         print("\n🤝 Testing multi-agent coordination WebSocket...")
         
         try:
-            from agents.models import AgentOrchestration
+            from core.models.agents_registry import AgentOrchestration
             
             # Create orchestration with WebSocket channel
             ws_channel = f"orchestration_{int(time.time())}"

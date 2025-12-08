@@ -496,7 +496,7 @@ class AgentOrchestrator:
         try:
             # Import Django models and execution function
             from django.apps import apps
-            from agents.models import UnifiedAgentTemplate, AgentExecution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
             from agents.tasks_enhanced import execute_agent_with_tools
             from asgiref.sync import sync_to_async
             import uuid

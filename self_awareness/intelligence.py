@@ -24,7 +24,7 @@ from django.db import transaction, connection
 from django.core.management import execute_from_command_line
 
 from content.ai_providers import AIProviderManager
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from .models import (
     SystemEvolution,
     SelfAnalysisReport,

@@ -129,6 +129,16 @@ from core.views_spider_dashboard import (
     execute_spider
 )
 
+# Session 388: Income Action Pipeline - Spider to Income Bridge
+from core.views_income_action import (
+    save_opportunity as income_save_opportunity,
+    generate_application as income_generate_application,
+    update_status as income_update_status,
+    get_opportunities as income_get_opportunities,
+    get_statistics as income_get_statistics,
+    quick_apply as income_quick_apply,
+)
+
 # Session 208: Import spider intelligence views
 # Session 343: Added spider_registry, test_spider, run_all_spiders
 from core.views_spider_intelligence import (
@@ -2256,6 +2266,14 @@ urlpatterns = [
 
     # Session 385: Opportunities dashboard (freelance, jobs, crowdfunding, startups)
     path('api/spider-intelligence/opportunities/', opportunities_dashboard, name='spider-intelligence-opportunities'),
+
+    # Session 388: Income Action Pipeline - Spider to Income Bridge
+    path('api/income/save-opportunity/', income_save_opportunity, name='income-save-opportunity'),
+    path('api/income/generate-application/', income_generate_application, name='income-generate-application'),
+    path('api/income/update-status/', income_update_status, name='income-update-status'),
+    path('api/income/opportunities/', income_get_opportunities, name='income-opportunities'),
+    path('api/income/statistics/', income_get_statistics, name='income-statistics'),
+    path('api/income/quick-apply/', income_quick_apply, name='income-quick-apply'),
 
     # Session 219: Agent Intelligence API - Phase A Spider-Agent Integration
     path('api/agent-intelligence/agents/', ai_agents_list, name='ai-agents-list'),

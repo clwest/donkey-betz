@@ -1125,7 +1125,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     def get_channel(self, channel_id):
         """Get channel from database"""
         try:
-            from agents.models import AgentChannel
+            from core.models.agents_registry import AgentChannel
             
             # Support both numeric IDs and string names
             if str(channel_id).isdigit():
@@ -1148,7 +1148,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     def get_all_channels(self):
         """Get all active channels"""
         try:
-            from agents.models import AgentChannel, AgentChannelMessage
+            from core.models.agents_registry import AgentChannel, AgentChannelMessage
             
             channels = AgentChannel.objects.filter(is_active=True).order_by('-created_at')
             channel_data = []
@@ -1186,7 +1186,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     def get_channel_messages(self, channel_id):
         """Get messages for a specific channel"""
         try:
-            from agents.models import AgentChannel, AgentChannelMessage
+            from core.models.agents_registry import AgentChannel, AgentChannelMessage
             
             # Get the channel
             if str(channel_id).isdigit():
@@ -1241,7 +1241,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     def create_user_message(self, channel_id, content, message_type):
         """Create user message in database"""
         try:
-            from agents.models import AgentChannel, AgentChannelMessage
+            from core.models.agents_registry import AgentChannel, AgentChannelMessage
             
             # Get channel
             if str(channel_id).isdigit():

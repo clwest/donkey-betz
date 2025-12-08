@@ -20,7 +20,7 @@ from core.views_content import (
 )
 
 # Import agent models
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from content.models import ContentGeneration, ContentStatus
 
 logger = logging.getLogger(__name__)

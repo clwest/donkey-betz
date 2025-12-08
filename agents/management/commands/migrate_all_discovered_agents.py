@@ -15,7 +15,7 @@ from decimal import Decimal
 from typing import Dict, Any, List
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from agents.models import UnifiedAgentTemplate, AgentSpecialization, LLMProvider
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization, LLMProvider
 
 logger = logging.getLogger(__name__)
 

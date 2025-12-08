@@ -56,7 +56,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from openai import OpenAI
 
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentSpecialization
 from intelligence.shared_memory import AgentMemoryInterface
 
 logger = logging.getLogger(__name__)

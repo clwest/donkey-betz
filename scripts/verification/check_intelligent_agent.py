@@ -7,7 +7,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 try:
     intelligent_agent = UnifiedAgentTemplate.objects.get(name="Intelligent Prompting Agent", is_active=True)

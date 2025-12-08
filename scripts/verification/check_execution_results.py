@@ -13,7 +13,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
-from agents.models import AgentOrchestration, AgentExecution
+from core.models.agents_registry import AgentOrchestration, AgentExecution
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

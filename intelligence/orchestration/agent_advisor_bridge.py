@@ -12,7 +12,7 @@ import json
 from django.db import transaction
 from django.core.cache import cache
 
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from intelligence.models.advisor_network import (
     Advisor, AdvisorCategory, AdvisorCollaboration, AdvisorVerification
 )

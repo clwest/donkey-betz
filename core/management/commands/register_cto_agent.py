@@ -19,7 +19,7 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand
-from agents.models import UnifiedAgentTemplate, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 
 
 class Command(BaseCommand):

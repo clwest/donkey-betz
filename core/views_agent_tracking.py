@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 from content.models import CreativeProject
-from agents.models import AgentContribution
+from core.models.agents_registry import AgentContribution
 from agents.services import AgentContributionService
 
 logger = logging.getLogger(__name__)

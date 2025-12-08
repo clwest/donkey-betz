@@ -25,7 +25,7 @@ from agents.content_studio_bridge import (
 
 # Import agent executor lazily to avoid circular dependency
 from ai_core.agents.ai_enforced_base import AIEnforcedAgent
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 logger = logging.getLogger(__name__)
 

@@ -34,11 +34,11 @@ def trending_topics(request):
         service = SpiderIntelligenceService()
 
         category = request.GET.get('category')
-        hours = int(request.GET.get('hours', 24))
+        hours = int(request.GET.get('hours', 168))  # Default: 7 days for better data coverage
         limit = int(request.GET.get('limit', 10))
 
         # Cap limits for performance
-        hours = min(hours, 168)  # Max 1 week
+        hours = min(hours, 336)  # Max 2 weeks
         limit = min(limit, 50)
 
         trends = service.get_trending_topics(
@@ -648,44 +648,55 @@ def opportunities_dashboard(request):
         job_sources = ['weworkremotely', 'remoteok', 'adzuna', 'angellist']
         remote_jobs = get_spider_items(job_sources, limit)
 
-        # Freelance Gigs - Session 386: Use Reddit forhire/freelance since those spiders have real data
-        # Traditional freelance platforms (guru, toptal, etc.) require JS rendering
+        # Freelance Gigs - Session 390: Use Himalayas.app API as PRIMARY source
+        # Himalayas provides high-quality remote job data via free API (requires attribution)
+        # Fallback to remote jobs if API fails
         freelance_gigs = []
         freelance_sources = []
-        # Extract freelance posts from Reddit
-        reddit_freelance_data = SpiderData.objects.filter(
-            spider_name__icontains='reddit',
-            created_at__gte=cutoff
-        ).order_by('-created_at')[:10]
+        seen_urls = set()  # Track URLs to prevent duplicates
 
-        for data in reddit_freelance_data:
-            raw = data.raw_data or {}
-            raw_items = raw.get('items', [])
-            if isinstance(raw_items, list):
-                for item in raw_items:
-                    subreddit = item.get('subreddit', '').lower()
-                    title = item.get('title', '').lower()
-                    # Focus on hiring/freelance subreddits and posts
-                    if subreddit in ['forhire', 'freelance', 'remotework', 'designjobs'] or \
-                       any(kw in title for kw in ['[hiring]', '[for hire]', 'looking for', 'need a', 'freelance', 'contract']):
+        # First: Fetch fresh jobs from Himalayas.app API (free, no key needed)
+        try:
+            from ai_core.spiders.specialized.himalayas_spider import fetch_himalayas_jobs
+            himalayas_result = fetch_himalayas_jobs(limit=limit)
+            if himalayas_result.get('success'):
+                for job in himalayas_result.get('items', []):
+                    url = job.get('url', '')
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        freelance_gigs.append({
+                            'id': str(job.get('id', '')),
+                            'title': (job.get('title', '') or 'Untitled')[:100],
+                            'url': url,
+                            'source': 'Himalayas',
+                            'description': job.get('description', '')[:200] if job.get('description') else '',
+                            'salary': job.get('salary', ''),
+                            'company': job.get('company', ''),
+                            'location': job.get('location', 'Remote'),
+                            'category': 'Remote Work',
+                            'created_at': job.get('posted_at'),
+                            'tags': job.get('tags', []),
+                            'attribution_url': job.get('attribution_url', '')  # Required for Himalayas
+                        })
+                        freelance_sources.append('Himalayas')
                         if len(freelance_gigs) >= limit:
                             break
-                        freelance_gigs.append({
-                            'id': str(data.id),
-                            'title': (item.get('title', '') or 'Untitled')[:100],
-                            'url': item.get('url') or item.get('link', ''),
-                            'source': f"r/{item.get('subreddit', 'reddit')}",
-                            'description': '',
-                            'salary': '',
-                            'company': '',
-                            'location': 'Remote',
-                            'category': 'Freelance',
-                            'created_at': data.created_at.isoformat() if data.created_at else None,
-                            'tags': []
-                        })
-                        freelance_sources.append(f"r/{item.get('subreddit', 'reddit')}")
-            if len(freelance_gigs) >= limit:
-                break
+        except Exception as e:
+            logger.warning(f"Failed to fetch Himalayas jobs: {e}")
+
+        # Second: If not enough jobs, supplement from remote jobs fallback
+        if len(freelance_gigs) < limit and remote_jobs:
+            for job in remote_jobs[:limit - len(freelance_gigs)]:
+                url = job.get('url', '')
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    freelance_gigs.append({
+                        **job,
+                        'category': 'Remote Work',
+                        'source': f"{job.get('source', 'Job Board')}"
+                    })
+                    freelance_sources.append(job.get('source', 'Job Board'))
+
         freelance_sources = list(set(freelance_sources))
 
         # Crowdfunding/Creative Projects - Session 386: Use Behance since Kickstarter/Indiegogo need JS

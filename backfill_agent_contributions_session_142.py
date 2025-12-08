@@ -22,7 +22,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from content.models import ImageHistory, VideoHistory, MiniFigAsset
-from agents.models import UnifiedAgentTemplate, AgentContribution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
 from django.db import transaction
 
 def get_or_none(model, **kwargs):

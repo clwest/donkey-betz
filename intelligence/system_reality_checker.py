@@ -937,7 +937,7 @@ def run_reality_check():
         result = subprocess.run([
             'python', 'manage.py', 'shell', '-c',
             """
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from intelligence.models import OpportunityActionPlan
 print(f'Agents in DB: {UnifiedAgentTemplate.objects.count()}')
 print(f'Opportunities in DB: {OpportunityActionPlan.objects.count()}')

@@ -8,7 +8,7 @@ Usage:
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from content.models import ImageHistory, CreativeProject
-from agents.models import AgentContribution, UnifiedAgentTemplate
+from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate
 from content.image_generation import ImageGenerationService
 
 

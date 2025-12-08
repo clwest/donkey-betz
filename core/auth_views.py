@@ -190,7 +190,7 @@ def user_profile(request):
         
         # Get statistics from the UserStatistics model
         # (Will integrate with real content models when available)
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         
         total_contents = statistics.total_contents
         total_blogs = statistics.total_blogs
@@ -275,7 +275,7 @@ def profile_stats(request):
     """
     Get user profile statistics matching frontend expectations.
     """
-    from agents.models import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
     from django.db.models import Count, Q
     from datetime import datetime, timedelta
     

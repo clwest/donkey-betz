@@ -25,7 +25,7 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from agents.coo_agent import COOAgent
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 import json
 
 User = get_user_model()

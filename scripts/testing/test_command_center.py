@@ -15,7 +15,7 @@ django.setup()
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
 User = get_user_model()
 

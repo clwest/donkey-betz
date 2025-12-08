@@ -13,7 +13,7 @@ from enum import Enum
 from django.db import transaction
 from django.core.exceptions import ValidationError
 
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration,

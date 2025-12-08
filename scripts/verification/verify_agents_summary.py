@@ -11,7 +11,7 @@ from datetime import timedelta
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from agents.models import AgentExecution
+from core.models.agents_registry import AgentExecution
 from django.utils import timezone
 
 print(f"\n{'='*80}")

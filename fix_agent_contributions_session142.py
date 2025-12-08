@@ -68,7 +68,7 @@ def fix_agent_contribution_block(match):
     # Build replacement
     replacement = f"""{indent}# Session 142: Track agent contribution
 {indent}try:
-{indent}    from agents.models import UnifiedAgentTemplate, AgentContribution
+{indent}    from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
 {indent}    agent = UnifiedAgentTemplate.objects.get(name='{agent_name}')
 {indent}    AgentContribution.objects.create(
 {indent}        agent=agent,

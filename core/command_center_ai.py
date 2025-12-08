@@ -703,7 +703,7 @@ Please respond appropriately based on the context and conversation history."""
     def get_agents_from_db(self):
         """Get agents from database"""
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
 
             agents = UnifiedAgentTemplate.objects.filter(is_active=True)[:20]
             return [{

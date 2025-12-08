@@ -17,7 +17,7 @@ sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentContribution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
 from content.models import ImageHistory
 
 def verify_agent_registration():

@@ -14022,3 +14022,124 @@ class LivingProjectConfig(models.Model):
             self.average_rating = (current_total + rating) / self.total_insights_surfaced
         self.last_insight_at = timezone.now()
         self.save()
+
+
+# =============================================================================
+# SESSION 388: INCOME ACTION PIPELINE
+# =============================================================================
+
+class SavedOpportunity(models.Model):
+    """
+    Session 388: User-saved opportunities from spider data.
+
+    This is the ACTION layer between spider discovery and income:
+    1. User sees opportunity in Intelligence Tab
+    2. User clicks "Save & Apply"
+    3. System saves here with source URL for deduplication
+    4. System generates application materials (cover letter/proposal)
+    5. User applies externally
+    6. User records outcome (accepted/rejected/no_response)
+    7. System learns from outcomes
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='saved_opportunities'
+    )
+
+    # Opportunity details (from spider data)
+    title = models.CharField(max_length=200)
+    source_url = models.URLField(max_length=500, blank=True)
+    source_platform = models.CharField(max_length=50)  # reddit, weworkremotely, adzuna, etc.
+    description = models.TextField(blank=True)
+    salary_info = models.CharField(max_length=200, blank=True)
+    company_name = models.CharField(max_length=200, blank=True)
+    location = models.CharField(max_length=100, default='Remote')
+    category = models.CharField(max_length=50, default='general')  # freelance, remote_job, crowdfunding, etc.
+
+    # Raw spider data for reference
+    raw_data = models.JSONField(default=dict)
+
+    # Generated application materials
+    application_materials = models.JSONField(default=dict, blank=True)
+    # Structure: {'cover_letter': '...', 'proposal': '...', 'generated_at': '...'}
+
+    # Status tracking
+    STATUS_CHOICES = [
+        ('saved', 'Saved'),
+        ('materials_ready', 'Materials Ready'),
+        ('applied', 'Applied'),
+        ('interview', 'Interview'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('no_response', 'No Response'),
+        ('withdrawn', 'Withdrawn'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='saved')
+    notes = models.TextField(blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    # Link to full Opportunity model if converted
+    opportunity = models.ForeignKey(
+        'Opportunity',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='saved_source'
+    )
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['source_url']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+
+    def mark_applied(self):
+        """Mark as applied and record timestamp."""
+        self.status = 'applied'
+        self.applied_at = timezone.now()
+        self.save()
+
+    def mark_outcome(self, outcome: str, notes: str = None):
+        """Record final outcome (accepted/rejected/no_response)."""
+        if outcome in ['accepted', 'rejected', 'no_response']:
+            self.status = outcome
+            self.resolved_at = timezone.now()
+            if notes:
+                self.notes = f"{self.notes}\n[{timezone.now().isoformat()}] {notes}".strip()
+            self.save()
+
+            # If accepted, create full Opportunity record
+            if outcome == 'accepted':
+                self._create_opportunity_record()
+
+    def _create_opportunity_record(self):
+        """Create full Opportunity when accepted."""
+        if not self.opportunity:
+            self.opportunity = Opportunity.objects.create(
+                user=self.user,
+                title=self.title,
+                opportunity_type=self.category,
+                source=self.source_platform,
+                potential_revenue=Decimal('0.00'),  # User can update
+                status='accepted',
+                description=self.description,
+                metadata={
+                    'saved_opportunity_id': str(self.id),
+                    'source_url': self.source_url,
+                    'applied_at': self.applied_at.isoformat() if self.applied_at else None,
+                }
+            )
+            self.save()

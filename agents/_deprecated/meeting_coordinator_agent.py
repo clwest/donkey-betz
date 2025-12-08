@@ -29,7 +29,7 @@ from typing import Dict, List, Optional, Any
 from django.contrib.auth import get_user_model
 from openai import OpenAI
 
-from agents.models import UnifiedAgentTemplate, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 from agents.cto_agent import CTOAgent
 from agents.coo_agent import COOAgent
 from intelligence.shared_memory import AgentMemoryInterface, redis_client
