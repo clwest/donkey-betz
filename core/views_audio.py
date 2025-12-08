@@ -258,7 +258,7 @@ def check_audio_status(request, task_id):
         # Session 81: Update AudioAgent state when audio completes
         if result.status in ['completed', 'SUCCEEDED'] and result.video_url:
             try:
-                from agents.audio_agent import get_audio_agent
+                from core.agents import get_audio_agent
                 audio_agent = get_audio_agent(user=request.user)
                 audio_agent.update_audio_status(
                     task_id=task_id,

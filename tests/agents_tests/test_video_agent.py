@@ -12,7 +12,7 @@ class TestVideoAgent:
     @pytest.fixture
     def agent(self):
         """Create a video agent instance."""
-        from agents.video_agent import VideoAgent
+        from core.agents import VideoAgent
         return VideoAgent()
 
     def test_agent_initialization(self, agent):
@@ -80,7 +80,7 @@ class TestVideoAgentConfiguration:
     @pytest.fixture
     def agent(self):
         """Create a video agent instance."""
-        from agents.video_agent import VideoAgent
+        from core.agents import VideoAgent
         return VideoAgent()
 
     def test_default_model_configuration(self, agent):
@@ -104,7 +104,7 @@ class TestVideoAgentEditing:
     @pytest.fixture
     def agent(self):
         """Create a video agent instance."""
-        from agents.video_agent import VideoAgent
+        from core.agents import VideoAgent
         return VideoAgent()
 
     def test_upscale_operation(self, agent):
@@ -142,7 +142,7 @@ class TestVideoAgentErrorHandling:
     @pytest.fixture
     def agent(self):
         """Create a video agent instance."""
-        from agents.video_agent import VideoAgent
+        from core.agents import VideoAgent
         return VideoAgent()
 
     def test_handles_api_error(self, agent):

@@ -14,7 +14,7 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from content.models import ImageHistory
-from agents.image_editing_agent import ImageEditingAgent
+from core.agents import ImageEditingAgent
 from content.image_generation import ImageGenerationService
 
 User = get_user_model()

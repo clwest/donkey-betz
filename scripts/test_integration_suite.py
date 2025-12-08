@@ -133,7 +133,7 @@ def test_complete_image_workflow():
 
 def test_video_agent_workflow():
     """Test: VideoAgent complete workflow (Session 84 validation)"""
-    from agents.video_agent import VideoAgent
+    from core.agents import VideoAgent
     from content.models import VideoHistory
     from django.contrib.auth import get_user_model
 
@@ -155,7 +155,7 @@ def test_video_agent_workflow():
 
 def test_audio_agent_workflow():
     """Test: AudioAgent complete workflow (Session 82-83 validation)"""
-    from agents.audio_agent import AudioAgent
+    from core.agents import AudioAgent
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -178,8 +178,8 @@ def test_audio_agent_workflow():
 def test_agent_communication():
     """Test: Agent-to-agent communication (Session 81)"""
     from intelligence.agent_query_protocol import AgentQueryProtocol
-    from agents.audio_agent import AudioAgent
-    from agents.video_agent import VideoAgent
+    from core.agents import AudioAgent
+    from core.agents import VideoAgent
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -262,8 +262,8 @@ def test_database_connection():
 
 def test_concurrent_agent_initialization():
     """Test: Multiple agents can initialize concurrently"""
-    from agents.audio_agent import AudioAgent
-    from agents.video_agent import VideoAgent
+    from core.agents import AudioAgent
+    from core.agents import VideoAgent
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -355,7 +355,7 @@ def test_unicode_text_handling():
 
 def test_agent_initialization_performance():
     """Benchmark: Agent initialization speed"""
-    from agents.video_agent import VideoAgent
+    from core.agents import VideoAgent
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -473,8 +473,8 @@ def test_all_documented_features_exist():
 
 def test_agent_system_complete():
     """Test: Agent system has all required components"""
-    from agents.video_agent import VideoAgent
-    from agents.audio_agent import AudioAgent
+    from core.agents import VideoAgent
+    from core.agents import AudioAgent
     from intelligence.agent_query_protocol import AgentQueryProtocol
 
     # All agent components exist

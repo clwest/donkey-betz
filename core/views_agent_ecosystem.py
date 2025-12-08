@@ -29,7 +29,7 @@ from ai_core.agents.brand_style_agent import BrandStyleAgent
 from ai_core.agents.reference_library_agent import ReferenceLibraryAgent
 # Session 206: EditingOrchestratorAgent was merged into ImageAgent in Phase 1
 # Using ImageAgent as replacement for editing orchestration
-from agents.image_agent import ImageAgent as EditingOrchestratorAgent
+from core.agents import ImageAgent as EditingOrchestratorAgent
 from ai_core.agents.iteration_agent import IterationAgent
 from ai_core.agents.workflow_coordinator_agent import WorkflowCoordinatorAgent
 
