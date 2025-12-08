@@ -43,42 +43,32 @@ python manage.py bulk_embed_spiders --mark-empty # Mark entries with no items
 
 ---
 
-## CRITICAL: Next Session Priority
+## Spider Content Fixes Applied
 
-### Fix Spiders That Don't Fetch Content
+### HackerNews Spider - FIXED ✅
 
-The following spiders need to be fixed to fetch actual content instead of just references:
-
-#### 1. HackerNews Spider (HIGHEST PRIORITY - 147 entries affected)
-**Current behavior:** Fetches story IDs only
-**Should do:** Fetch individual story details
+Added `fetch_hackernews_stories()` to fetch full story content instead of just IDs:
 
 ```python
-# Location: ai_core/spiders/specialized/hackernews.py
-# Currently fetches: https://hacker-news.firebaseio.com/v0/topstories.json
-# Returns: [46193931, 46192846, ...] (just IDs)
-
-# SHOULD ALSO fetch each story:
-# https://hacker-news.firebaseio.com/v0/item/{id}.json
-# Which returns: {"title": "...", "url": "...", "score": 100, ...}
+# Now fetches 15 full stories with titles, links, and scores
+# File: ai_core/spiders/real_data_collector.py
 ```
 
-#### 2. Kickstarter Spider (25 entries)
-- Currently stores search metadata, not project details
-- Should extract: project titles, descriptions, funding goals
+### Spider Status
 
-#### 3. Behance/Dribbble (24 entries)
-- Return API error messages
-- Need: Valid API credentials or RSS fallback
+| Spider | Status | Notes |
+|--------|--------|-------|
+| hackernews | ✅ Fixed | 15 full stories with titles |
+| behance | ✅ Working | 20 items with titles |
+| devto | ✅ Working | 30 items with titles |
+| techcrunch | ✅ Working | 20 items with titles |
+| dribbble | ❌ Blocked | HTTP 202 (Cloudflare) |
+| kickstarter | ❌ Blocked | HTTP 403 (API blocked) |
 
-#### 4. Add Content Validation
-Don't save entries without actual content:
-```python
-def save_data(self, data):
-    items = data.get('items', [])
-    if not any(item.get('title') or item.get('description') for item in items):
-        return  # Skip saving empty/reference-only data
-```
+### Future Work
+
+1. **Add content validation** - Skip saving entries without titles/descriptions
+2. **Find alternative sources** for Dribbble/Kickstarter (RSS feeds or different APIs)
 
 ---
 

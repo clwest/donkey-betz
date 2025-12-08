@@ -170,6 +170,35 @@ def parse_rss_feed(data: str, source: str) -> List[Dict[str, Any]]:
     return items
 
 
+async def fetch_hackernews_stories(session: aiohttp.ClientSession, story_ids: List[int]) -> List[Dict[str, Any]]:
+    """
+    Session 394: Fetch full story details from HackerNews API.
+    The topstories.json endpoint only returns IDs, so we need to fetch each story.
+    """
+    stories = []
+    for story_id in story_ids[:15]:  # Limit to 15 stories for performance
+        try:
+            url = f'https://hacker-news.firebaseio.com/v0/item/{story_id}.json'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    story = await response.json()
+                    if story and story.get('title'):
+                        stories.append({
+                            'title': story.get('title', ''),
+                            'description': f"Score: {story.get('score', 0)} | Comments: {story.get('descendants', 0)} | By: {story.get('by', '')}",
+                            'link': story.get('url', f"https://news.ycombinator.com/item?id={story_id}"),
+                            'author': story.get('by', ''),
+                            'score': story.get('score', 0),
+                            'comments': story.get('descendants', 0),
+                            'source': 'hackernews',
+                            'type': 'hackernews_story',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+        except Exception as e:
+            logger.warning(f"Error fetching HN story {story_id}: {e}")
+    return stories
+
+
 def parse_json_api(data: Any, source: str) -> List[Dict[str, Any]]:
     """Parse JSON API response into structured items"""
     items = []
@@ -180,7 +209,11 @@ def parse_json_api(data: Any, source: str) -> List[Dict[str, Any]]:
                 if isinstance(item, dict):
                     items.append(normalize_item(item, source))
                 elif isinstance(item, (int, str)):
-                    # HackerNews returns IDs
+                    # Session 394: Don't store HackerNews IDs as references
+                    # They will be fetched separately in collect_spider_data
+                    if source == 'hackernews':
+                        # Skip - these will be handled by fetch_hackernews_stories
+                        continue
                     items.append({'id': item, 'source': source, 'type': 'reference'})
         elif isinstance(data, dict):
             # Single object or wrapped response
@@ -600,6 +633,8 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     """
     Collect real data for a specific spider.
     Returns structured data with items.
+
+    Session 394: Special handling for HackerNews to fetch full story content.
     """
     # API-based spiders use their own implementations
     API_SPIDERS = ['bluesky', 'youtube', 'discord']
@@ -626,7 +661,16 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
             result = await fetch_url(session, url)
 
             if result:
-                if result['type'] == 'json':
+                # Session 394: Special handling for HackerNews
+                # The topstories.json only returns IDs, so we fetch full stories
+                if spider_name == 'hackernews' and result['type'] == 'json':
+                    story_ids = result['data']
+                    if isinstance(story_ids, list) and story_ids and isinstance(story_ids[0], int):
+                        items = await fetch_hackernews_stories(session, story_ids)
+                        logger.info(f"Spider hackernews: fetched {len(items)} full stories")
+                    else:
+                        items = parse_json_api(result['data'], spider_name)
+                elif result['type'] == 'json':
                     items = parse_json_api(result['data'], spider_name)
                 elif result['type'] == 'rss':
                     items = parse_rss_feed(result['data'], spider_name)
