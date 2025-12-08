@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from channels.db import database_sync_to_async
 from core.models import UserProfile, UserPreferences, ConversationMemory
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from intelligence.income_builder import enhanced_income_builder
 from ai_core.intelligence.monetization_engine import monetization_engine
 

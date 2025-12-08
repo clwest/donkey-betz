@@ -14,7 +14,7 @@ import logging
 # Import our AI analyzer and agent system
 from core.opportunity_ai_analyzer import OpportunityAIAnalyzer, analyze_opportunity_batch
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from django.contrib.auth import get_user_model
 from ai_core.spiders.live_job_scraper import scrape_jobs_sync

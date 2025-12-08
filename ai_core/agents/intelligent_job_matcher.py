@@ -49,7 +49,7 @@ class IntelligentJobMatcher:
 
     def __init__(self):
         # Import all our powerful systems
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
         from ml_pipeline.enhanced_ml_pipeline import EnhancedMLPipeline
         from core.memory_system import MemorySystem
 

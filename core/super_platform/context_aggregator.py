@@ -317,7 +317,7 @@ class ContextAggregator:
     def _get_available_agents(self) -> List[str]:
         """Get list of available agents from registry."""
         try:
-            from agents.registry import get_agent_registry
+            from core.agents.registry import get_agent_registry
             registry = get_agent_registry()
             agents = registry.list_agents() if hasattr(registry, 'list_agents') else []
             return [a.get('name', str(a)) if isinstance(a, dict) else str(a) for a in agents]

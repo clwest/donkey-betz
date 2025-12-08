@@ -37,7 +37,7 @@ class PlatformIntegration:
 
         try:
             # Import agent registry
-            from agents.registry import get_agent_registry
+            from core.agents.registry import get_agent_registry
             self.services['agent_network'] = get_agent_registry()
             logger.info("✅ Agent network initialized")
         except ImportError as e:

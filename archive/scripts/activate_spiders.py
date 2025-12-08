@@ -98,7 +98,7 @@ async def activate_minimal_spider_system():
     print(f"{'='*50}")
 
     # Import agent system
-    from agents.registry import agent_registry
+    from core.agents.registry import agent_registry
 
     # Check agent availability
     agents = agent_registry.list_agents()

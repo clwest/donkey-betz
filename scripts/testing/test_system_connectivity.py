@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from core.system_integration_orchestrator import get_system_orchestrator
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator

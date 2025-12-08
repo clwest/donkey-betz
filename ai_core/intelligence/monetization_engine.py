@@ -108,7 +108,7 @@ class UnifiedMonetizationEngine:
         """Initialize connections to agent and advisor registries"""
         try:
             # Import and initialize registries
-            from agents.registry import agent_registry
+            from core.agents.registry import agent_registry
             from advisors.registry import advisor_registry
 
             self.agent_registry = agent_registry

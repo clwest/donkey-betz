@@ -28,7 +28,7 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 # Import real dependencies for full system integration
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 # from advisors.registry import advisor_registry  # TODO: Create if needed
 # from orchestration import orchestrator, WorkflowStep, StepType  # TODO: Create if needed
 # from ml_pipeline.pipeline import MLPipeline  # Using embedded MLPipeline instead

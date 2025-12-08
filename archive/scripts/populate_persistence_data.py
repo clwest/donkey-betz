@@ -36,7 +36,7 @@ from persistence.models import (
     AgentCollaborationSession, SpiderDataRoute, DataPersistenceMetrics
 )
 from core.models import UnifiedUser
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 
 def create_sample_users():
     """Create sample users for testing"""

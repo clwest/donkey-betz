@@ -21,7 +21,7 @@ django.setup()
 
 from agents.universal_llm_executor import get_universal_executor, execute_agent_with_llm
 from advisors.llm_advisor_system import get_advisor_network, get_advisor_advice
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from advisors.registry import advisor_registry
 from core.llm_enforcer import verify_llm_availability
 

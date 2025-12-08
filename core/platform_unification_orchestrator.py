@@ -25,7 +25,7 @@ from django.db import transaction
 from asgiref.sync import sync_to_async
 
 # Import all platform components
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from intelligence.spiders.spider_army.orchestrator import SpiderArmyOrchestrator
 from intelligence.models import OpportunityActionPlan, RevenueMetrics, EarningRecord
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration

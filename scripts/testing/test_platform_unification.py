@@ -27,7 +27,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 import django
 django.setup()
 
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from core.platform_unification_orchestrator import get_platform_orchestrator
 
 

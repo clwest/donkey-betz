@@ -14,7 +14,7 @@ import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from core.models.agents_registry import UnifiedAgentTemplate
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from asgiref.sync import sync_to_async
 # Note: UniversalLLMExecutor not used directly, we create dynamic classes instead
 from ai_core.agents.ai_enforced_base import AIEnforcedAgent

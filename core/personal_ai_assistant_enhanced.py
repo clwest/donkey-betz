@@ -21,7 +21,7 @@ from core.agent_context_middleware import AgentContextMiddleware
 from core.personal_ai_assistant import PersonalAIAssistant
 from core.llm_enforcer import LLMEnforcer
 from core.unified_memory_manager import UnifiedMemoryManager, get_memory_manager
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from ml.core.ml_engine import MLEngine
 try:

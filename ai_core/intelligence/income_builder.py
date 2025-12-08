@@ -14,7 +14,7 @@ from enum import Enum
 import logging
 
 # Import real dependencies - INTEGRATION RESTORED
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from advisors.registry import advisor_registry
 # from orchestration import orchestrator, WorkflowStep, StepType  # Keep commented until orchestrator is updated
 # from ml_pipeline.pipeline import MLPipeline  # Will be replaced with ml.core.ml_engine import

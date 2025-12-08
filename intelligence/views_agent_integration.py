@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from .agent_execution_pipeline import AgentExecutionPipeline
 from .agent_instruction_parser import AgentInstructionParser
 from .models import ActionPlan, AgentExecution
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 
 logger = logging.getLogger(__name__)
 

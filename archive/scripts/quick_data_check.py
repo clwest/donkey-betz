@@ -14,7 +14,7 @@ django.setup()
 from agents.models import UnifiedAgentTemplate
 from intelligence.models import OpportunityActionPlan, RevenueMetrics, EarningRecord
 from advisors.registry import advisor_registry
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 
 print("="*60)
 print("CHECKING DATA AVAILABILITY")

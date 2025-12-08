@@ -20,7 +20,7 @@ from datetime import datetime
 from intelligence.action_plan_formatter import action_plan_formatter
 from intelligence.action_plan_advisor_handoff import action_plan_advisor_handoff
 from intelligence.income_builder import AIIncomeBuilder
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from advisors.registry import advisor_registry
 
 logger = logging.getLogger(__name__)

@@ -188,7 +188,7 @@ class RealClientAcquisitionEngine:
         """Find an agent capable of handling these skills"""
 
         # Import our agent registry
-        from agents.registry import get_agent_registry
+        from core.agents.registry import get_agent_registry
 
         try:
             agent_registry = get_agent_registry()
@@ -479,7 +479,7 @@ class RealClientAcquisitionEngine:
 
         try:
             # Get the assigned agent
-            from agents.registry import get_agent_registry
+            from core.agents.registry import get_agent_registry
 
             agent_registry = get_agent_registry()
             agent = agent_registry.get_agent_by_name(project.agent_id)

@@ -16,7 +16,7 @@ from django.db.models import Q, Count, Avg
 
 from core.models import ExtendedUserProfile, JobApplication, UserEmbedding
 from core.agent_context_middleware import AgentContextMiddleware
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from ml.core.ml_engine import MLEngine
 try:

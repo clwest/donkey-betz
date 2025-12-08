@@ -1,75 +1,63 @@
 # Start Next Session Here
 
-**Last Session:** 391 - Technical Debt Remediation (Model Migration Complete!)
+**Last Session:** 392 - Agent Registry Migration Complete
 **Date:** December 7, 2025
-**Status:** 103 spiders | 28 code agents | MODEL MIGRATION COMPLETE ✅
+**Status:** 102 spiders | 28 code agents | REGISTRY MIGRATION COMPLETE
 
 ---
 
-## Session 391 Accomplishments
+## Session 392 Accomplishments
 
-### Agent Model Migration - COMPLETE! ✅
+### Agent Registry Migration - COMPLETE!
 
-Successfully migrated all 10 Django models from `agents/models.py` to `core/models/agents_registry/` with zero database changes required.
+Successfully migrated `agents/registry.py` to `core/agents/registry.py` with 70 files updated.
 
-| Step | Status | Files Changed |
-|------|--------|---------------|
-| Database backup | ✅ | 123MB full dump |
-| Models migrated | ✅ | `core/models/agents_registry/models.py` |
-| Shim created | ✅ | `agents/models.py` (66 lines, re-exports) |
-| Imports updated | ✅ | **163+ files** |
-| Health check | ✅ | 7/7 checks pass |
+| Step | Status | Details |
+|------|--------|---------|
+| Registry migrated | Done | `core/agents/registry.py` (canonical) |
+| Imports updated | Done | **70 files** |
+| Shim created | Done | `agents/registry.py` (re-exports) |
+| Exports added | Done | `core/agents/__init__.py` |
+| Health check | Done | 7/7 passes |
 
 ### Files Created/Modified
 
 | File | Purpose |
 |------|---------|
-| `core/models/agents_registry/__init__.py` | Package exports |
-| `core/models/agents_registry/models.py` | **Canonical model location** (1800+ lines) |
-| `agents/models.py` | Shim for backwards compatibility |
-| `scripts/health_check.py` | System health verification |
-| `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md` | Full remediation plan |
-| `backups/database/unified_donkey_betz_20251207_session391.dump` | Database backup |
+| `core/agents/registry.py` | **Canonical registry location** (457 lines) |
+| `core/agents/__init__.py` | Added registry exports |
+| `agents/registry.py` | Backwards-compatible shim (57 lines) |
+| 70 other files | Import path updates |
+| `docs/handoffs/SESSION_392_REGISTRY_MIGRATION.md` | This session's handoff |
 
-### Import Migration Stats
-- **core/**: 47 files updated
-- **ai_core/**: included in first batch
-- **content/**: included in first batch
-- **scripts/**: 37 files updated
-- **intelligence/**: 33 files updated
-- **agents/**: subdirectories updated
-- **Total**: 163+ files now use `core.models.agents_registry`
+### Technical Debt Progress (Sessions 391-392)
 
-### Technical Note: app_label Preservation
-All models retain `app_label = 'agents'` in their Meta class:
-```python
-class Meta:
-    app_label = 'agents'  # Keep using agents app tables
-```
-This means:
-- **No database migration needed**
-- **All existing data preserved**
-- **Tables still named `agents_*`**
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1A | Model migration (`agents/models.py`) | **DONE** (Session 391) |
+| 1B-1 | Registry migration (`agents/registry.py`) | **DONE** (Session 392) |
+| 1B-2 | Remaining agents/ cleanup | **IN PROGRESS** |
+| 2 | Split large files | Pending |
+| 3 | Test coverage | Pending |
 
 ---
 
-## Next Priority: agents/ Directory Cleanup
+## Next Priority: Continue agents/ Cleanup
 
-The `agents/models.py` migration is done. Next steps from technical debt plan:
+### Remaining Work in Phase 1B
 
-### Phase 1B: Clean Up agents/ Directory (2-3 sessions)
-1. **Move `agents/registry.py`** to `core/agents/registry.py`
-2. **Audit remaining agents/** files:
-   - Which are deprecated and can be deleted?
-   - Which need to move to core/agents/?
-3. **Remove duplicate agent implementations**
+Many files still import from `agents.` (not yet migrated):
+- `agents.router`
+- `agents.workflow_orchestration_agent`
+- `agents.creation_agent`
+- `agents.video_agent`, `agents.image_agent` (shims to deprecated)
+- ~50+ files total
 
-### Phase 2: Split Large Files (4-6 sessions)
-1. `views_image.py` (14K lines) → modules
-2. `ai_image_studio.html` (65K lines) → components
-3. `core/tasks.py` (2K lines) → task modules
+### Options for Next Session:
 
-See `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md` for full 15-19 session plan.
+1. **Continue Phase 1B** - Migrate more files from `agents/` to `core/`
+2. **Pause cleanup** - Work on features instead
+3. **Phase 2** - Split large files (`views_image.py` is 14K lines)
 
 ---
 
@@ -82,10 +70,10 @@ make start && make celery
 # Run health check
 make health-check
 
-# Verify model imports work
+# Verify registry works
 .venv/bin/python -c "
-from core.models.agents_registry import UnifiedAgentTemplate
-print(f'Agents in DB: {UnifiedAgentTemplate.objects.count()}')
+from core.agents.registry import get_agent_registry
+print(f'Registry: {get_agent_registry().get_registry_stats().active_agents} agents')
 "
 
 # Open AI Studio
@@ -98,54 +86,17 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | **103** | All registered |
+| **Spiders** | **102** | All registered |
 | **Code Agents** | **28** | In `core/agents/` |
 | **DB Agents** | **28** | All active |
 | **Learning Hooks** | **21** agents | Recording outcomes |
-| **Models Location** | **core/models/agents_registry/** | ✅ Migrated |
-| **Shim Status** | **agents/models.py** | Re-exports for backwards compat |
-
----
-
-## Verification Commands
-
-```bash
-# Test model imports (both paths should work)
-.venv/bin/python -c "
-import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
-import django; django.setup()
-
-# New path (canonical)
-from core.models.agents_registry import UnifiedAgentTemplate
-print(f'✓ New import: {UnifiedAgentTemplate.objects.count()} agents')
-
-# Old path (shim - still works)
-from agents.models import Agent
-print(f'✓ Shim import: {Agent.objects.count()} agents')
-"
-
-# Check for any remaining old imports in active code
-grep -r "from agents\.models import" --include="*.py" | grep -v "^agents/models.py" | grep -v "^docs/"
-# Should return NO results (only docs/ and the shim itself)
-
-# Health check
-make health-check
-```
+| **Models Location** | **core/models/agents_registry/** | Migrated (Session 391) |
+| **Registry Location** | **core/agents/registry.py** | Migrated (Session 392) |
 
 ---
 
 ## Handoff Documents
 
-- **This Session:** `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md`
-- **Previous:** Session 390 - Himalayas.app API Integration
-- **Profile Integration:** `docs/handoffs/SESSION_389_USER_PROFILE_INTEGRATION.md`
-
----
-
-## Important Notes
-
-1. **No Database Migration Needed** - Models use `app_label='agents'` so they still map to `agents_*` tables
-2. **Shim is Backwards Compatible** - Old imports via `from agents.models import` still work
-3. **Documentation Files Unchanged** - Historical docs in `docs/` still reference old imports (intentional)
-4. **Next Priority** - Clean up remaining files in `agents/` directory
-5. **Full Backup Available** - `backups/database/unified_donkey_betz_20251207_session391.dump`
+- **This Session:** `docs/handoffs/SESSION_392_REGISTRY_MIGRATION.md`
+- **Previous:** `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md`
+- **Full Plan:** See Session 391 handoff for 15-19 session roadmap

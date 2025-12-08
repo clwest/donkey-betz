@@ -291,7 +291,7 @@ class LLMVerificationSystem:
 
     async def audit_all_agents(self) -> Dict[str, Any]:
         """Audit all agents in the system for LLM usage"""
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
 
         audit_report = {
             'timestamp': datetime.now().isoformat(),

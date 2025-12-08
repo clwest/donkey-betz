@@ -96,7 +96,7 @@ def show_system_status():
 
     # Show agent/advisor status
     try:
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
         from advisors.registry import advisor_registry
 
         agents = agent_registry.list_agents()

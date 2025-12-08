@@ -19,7 +19,7 @@ from django.contrib.auth import get_user_model
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
 from core.opportunity_ai_analyzer import OpportunityAIAnalyzer, analyze_opportunity_batch
 from core.unified_learning_pipeline import UnifiedLearningPipeline, analyze_user_learning_patterns
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 
 User = get_user_model()

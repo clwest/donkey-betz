@@ -16,7 +16,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 import django
 django.setup()
 
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from intelligence.models import ActionPlan, OpportunityProfile
 from intelligence.tasks import execute_action_plan
 from django.contrib.auth import get_user_model

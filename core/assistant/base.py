@@ -47,7 +47,7 @@ from core.assistant.video_tools import VideoGenerationToolsMixin, VideoEditingTo
 
 # Try to import optional dependencies
 try:
-    from agents.registry import get_agent_registry
+    from core.agents.registry import get_agent_registry
     from advisors.registry import get_advisor_registry
 except ImportError:
     get_agent_registry = None

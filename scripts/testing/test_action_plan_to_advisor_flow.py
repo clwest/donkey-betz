@@ -27,7 +27,7 @@ django.setup()
 
 from intelligence.action_plan_orchestrator import action_plan_orchestrator
 from advisors.registry import advisor_registry
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 
 
 async def test_complete_flow():

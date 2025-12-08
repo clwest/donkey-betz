@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Import registries and models only
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
 from intelligence.models import OpportunityActionPlan, RevenueMetrics

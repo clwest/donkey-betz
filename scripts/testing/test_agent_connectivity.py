@@ -12,7 +12,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator
 from agents.opportunity_pipeline_orchestrator import OpportunityPipelineOrchestrator

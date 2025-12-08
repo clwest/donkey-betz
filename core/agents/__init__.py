@@ -5,6 +5,7 @@ Unified Agent System - Clean Architecture
 Session 268: Phase 1 & 2 - Complete Agent Ecosystem
 Session 280: Phase 2 - Strategy and Executive Agents
 Session 281: Phase 3 - Analysis, Training, and Security Agents
+Session 392: Migrated AgentRegistry from agents/registry.py
 
 All agents inherit from BaseAgent and follow these principles:
 1. Isolated tools - each agent only has access to its own tools
@@ -98,6 +99,20 @@ Legacy Compatibility:
 # Base classes
 from core.agents.base_agent import BaseAgent, AgentResult
 
+# Registry (Session 392)
+from core.agents.registry import (
+    AgentRegistry,
+    AgentCapability,
+    AgentPerformanceStats,
+    RegistryStats,
+    get_agent_registry,
+    get_agent,
+    list_agents,
+    find_best_agent,
+    execute_agent,
+    agent_registry,
+)
+
 # Creation Agents
 from core.agents.image_agent import ImageAgent
 from core.agents.video_agent import VideoAgent
@@ -164,6 +179,18 @@ __all__ = [
     # Base
     'BaseAgent',
     'AgentResult',
+
+    # Registry (Session 392)
+    'AgentRegistry',
+    'AgentCapability',
+    'AgentPerformanceStats',
+    'RegistryStats',
+    'get_agent_registry',
+    'get_agent',
+    'list_agents',
+    'find_best_agent',
+    'execute_agent',
+    'agent_registry',
 
     # Creation Agents (4)
     'ImageAgent',
