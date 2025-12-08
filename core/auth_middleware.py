@@ -71,6 +71,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/collective/',  # Session 349: Collective Intelligence API - supports session auth
         '/api/creative-projects/',  # Session 350: Creative Projects - supports session auth
         '/api/workflow-analytics/',  # Session 375: Workflow Analytics - supports session auth
+        '/api/income/',  # Session 388: Income Action Pipeline - supports session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

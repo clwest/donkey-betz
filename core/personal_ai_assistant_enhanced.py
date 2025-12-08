@@ -4415,7 +4415,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 return {'success': False, 'error': 'Task description is required'}
 
             from agents.content_executor import DonkeyBetzContentExecutor
-            from agents.models import AgentExecution, UnifiedAgentTemplate
+            from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
             import uuid
 
             # Create execution record

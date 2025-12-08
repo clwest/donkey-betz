@@ -8,7 +8,7 @@ import uuid
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
 
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentRegistry
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentRegistry
 from content.ai_providers import AIProviderManager
 from django.contrib.auth import get_user_model
 
@@ -144,7 +144,7 @@ class AgentRouter:
         """
         Apply learning-based adjustments to agent scores
         """
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         
         for agent_data in agents:
             try:
@@ -205,7 +205,7 @@ class AgentRouter:
         Fallback method to find agents when registry is unavailable
         """
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
             
             exclude_agents = exclude_agents or []
             message_lower = message.lower()
@@ -348,7 +348,7 @@ class AgentRouter:
         
         try:
             # Create execution record for tracking
-            from agents.models import AgentExecution, AgentStatus
+            from core.models.agents_registry import AgentExecution, AgentStatus
             execution = AgentExecution.objects.create(
                 template=agent,
                 user=self.user,

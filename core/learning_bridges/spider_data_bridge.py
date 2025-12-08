@@ -10,7 +10,7 @@ from typing import Dict, List
 
 from persistence.models import SpiderData
 from core.models_unified_system import UserAgentLearning
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 logger = logging.getLogger(__name__)
 

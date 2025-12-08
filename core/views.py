@@ -481,7 +481,7 @@ def prompting_settings(request):
 @permission_classes([IsAuthenticated])
 def execute_agent(request):
     """Execute an agent with provided parameters"""
-    from agents.models import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
     from agents.tasks import execute_agent as execute_agent_task
     import uuid
     
@@ -532,7 +532,7 @@ def execute_agent(request):
 @permission_classes([AllowAny])
 def agent_instances(request):
     """Get list of agent instances from database"""
-    from agents.models import UnifiedAgentTemplate
+    from core.models.agents_registry import UnifiedAgentTemplate
     
     # Fetch real agents from database
     agents = UnifiedAgentTemplate.objects.filter(is_active=True)
@@ -570,7 +570,7 @@ def agent_instances(request):
 @permission_classes([AllowAny])
 def agent_executions_list(request):
     """Get list of agent executions (actual task runs with results)"""
-    from agents.models import AgentExecution
+    from core.models.agents_registry import AgentExecution
     from agents.serializers import AgentExecutionSerializer
     from django.core.paginator import Paginator
     

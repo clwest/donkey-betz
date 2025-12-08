@@ -600,7 +600,7 @@ class AgentExecutionTracker:
         """
         try:
             # Count total agents in database
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
             total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
 
             # Get active agent stats

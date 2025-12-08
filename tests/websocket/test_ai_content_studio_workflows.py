@@ -22,7 +22,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 # Core AI Platform Models
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate, 
     AgentExecution, 
     AgentOrchestration,

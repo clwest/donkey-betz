@@ -119,7 +119,7 @@ class HybridAgentExecutor:
         user=None
     ) -> Dict[str, Any]:
         """Execute agent asynchronously via Celery"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
         from agents.tasks import execute_agent as execute_agent_task
         import uuid
 

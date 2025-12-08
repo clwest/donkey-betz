@@ -271,7 +271,7 @@ class BaseContentAgent(ABC):
             metadata: Additional metadata
         """
         try:
-            from agents.models import AgentContribution
+            from core.models.agents_registry import AgentContribution
 
             AgentContribution.objects.create(
                 agent_name=self.agent_name,

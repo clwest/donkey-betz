@@ -24,7 +24,7 @@ from intelligence.models import (
     SpiderIntelligenceNode, AgentIntelligenceFeed,
     AdvisorIntelligenceFeed, SpiderPerformanceMetrics
 )
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 
 @dataclass

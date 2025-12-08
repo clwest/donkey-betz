@@ -24,7 +24,7 @@ from intelligence.collaboration_tracker import (
     CollaborationTracker,
     CollaborationType
 )
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from agents.tasks import execute_agent
 
 init(autoreset=True)

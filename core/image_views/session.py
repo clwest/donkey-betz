@@ -408,7 +408,7 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
             AgentContribution.objects.create(
                 agent=agent,

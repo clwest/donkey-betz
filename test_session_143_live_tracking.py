@@ -17,7 +17,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from content.models import ImageHistory, VideoHistory, MiniFigAsset, CreativeProject
-from agents.models import AgentContribution
+from core.models.agents_registry import AgentContribution
 from content.image_generation import ImageGenerationService
 from content.video_provider import VideoProvider
 from content.minifig_services import generate_3d_from_images

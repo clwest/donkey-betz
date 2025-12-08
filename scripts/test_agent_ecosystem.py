@@ -22,7 +22,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from ai_core.agents.workflow_coordinator_agent import WorkflowCoordinatorAgent
 from ai_core.agents.creative_director_agent import CreativeDirectorAgent
 from ai_core.agents.template_manager_agent import TemplateManagerAgent
@@ -213,7 +213,7 @@ def test_inter_agent_communication(agents):
 
     # Check agent templates
     try:
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         audio_template = UnifiedAgentTemplate.objects.get(name='AudioAgent')
         video_template = UnifiedAgentTemplate.objects.get(name='VideoAgent')
         print(f"✅ Both agent templates exist in database")

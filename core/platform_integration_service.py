@@ -427,7 +427,7 @@ class PlatformIntegrationService:
     def link_income_builder_to_agents(self):
         """Link Income Builder to actual agent execution"""
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
 
             # Verify we have agents available
             agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
@@ -733,7 +733,7 @@ AI-Powered Freelancer
     def activate_all_agents(self):
         """Activate all 149 agents"""
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
 
             active_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
             logger.info(f"Activated {active_agents} agents")
@@ -747,7 +747,7 @@ AI-Powered Freelancer
     def create_agent_workflows(self):
         """Create real orchestration workflows"""
         try:
-            from agents.models import AgentOrchestration, UnifiedAgentTemplate
+            from core.models.agents_registry import AgentOrchestration, UnifiedAgentTemplate
 
             # Create sample workflows
             workflows_created = 0

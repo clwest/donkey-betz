@@ -204,7 +204,7 @@ class SystemRealityChecker:
             # Check agents
             checks_performed.append("agent_data_check")
             try:
-                from agents.models import UnifiedAgentTemplate, AgentExecution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
                 agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
                 execution_count = AgentExecution.objects.count()
@@ -585,7 +585,7 @@ class SystemRealityChecker:
             # Check agent models
             checks_performed.append("agent_models_check")
             try:
-                from agents.models import UnifiedAgentTemplate, AgentExecution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
                 total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
                 total_executions = AgentExecution.objects.count()
@@ -630,7 +630,7 @@ class SystemRealityChecker:
             # Check for agent advisors
             checks_performed.append("advisors_check")
             try:
-                from agents.models import AgentAdvisor
+                from core.models.agents_registry import AgentAdvisor
                 advisor_count = AgentAdvisor.objects.count()
                 details['advisors'] = advisor_count
 
@@ -935,7 +935,7 @@ class SystemRealityChecker:
             # Check agent registration
             checks_performed.append("agent_registration_check")
             try:
-                from agents.models import UnifiedAgentTemplate
+                from core.models.agents_registry import UnifiedAgentTemplate
 
                 total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
                 details['total_registered_agents'] = total_agents
@@ -951,7 +951,7 @@ class SystemRealityChecker:
             # Check agent execution history
             checks_performed.append("execution_history_check")
             try:
-                from agents.models import AgentExecution
+                from core.models.agents_registry import AgentExecution
 
                 total_executions = AgentExecution.objects.count()
                 recent_executions = AgentExecution.objects.filter(
@@ -981,7 +981,7 @@ class SystemRealityChecker:
             # Check agent capabilities
             checks_performed.append("agent_capabilities_check")
             try:
-                from agents.models import UnifiedAgentTemplate
+                from core.models.agents_registry import UnifiedAgentTemplate
 
                 # Check for different agent types
                 specializations = UnifiedAgentTemplate.objects.filter(
@@ -1011,7 +1011,7 @@ class SystemRealityChecker:
             # Check agent orchestration
             checks_performed.append("orchestration_check")
             try:
-                from agents.models import AgentOrchestration
+                from core.models.agents_registry import AgentOrchestration
 
                 orchestrations = AgentOrchestration.objects.count()
                 active_orchestrations = AgentOrchestration.objects.filter(

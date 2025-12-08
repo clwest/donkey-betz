@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 
 from django.db import models
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration,

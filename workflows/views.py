@@ -11,7 +11,7 @@ import json
 import logging
 
 # Import real agent models and tasks
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate, AgentExecution, AgentOrchestration, 
     AgentStatus, AgentSpecialization
 )

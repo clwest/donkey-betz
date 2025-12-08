@@ -24,7 +24,7 @@ from coleadership.models import (
     DecisionOutcome,
 )
 from pipelines.models import CreativePipelineTemplate, CreativePipelineRun
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 User = get_user_model()
 

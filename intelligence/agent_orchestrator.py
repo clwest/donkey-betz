@@ -22,7 +22,7 @@ from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
 
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentOrchestration,
     AgentExecution,

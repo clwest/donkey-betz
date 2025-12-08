@@ -20,7 +20,7 @@ Usage:
 
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from agents.models import UnifiedAgentTemplate, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 
 User = get_user_model()
 

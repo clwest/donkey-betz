@@ -16,7 +16,7 @@ from django.db import models, transaction
 from django.core.cache import cache
 from django.utils import timezone
 
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration

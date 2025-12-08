@@ -524,7 +524,7 @@ Base recommendations on the concrete data collected, not generic advice."""
 
                     try:
                         from agents.tasks import execute_agent
-                        from agents.models import UnifiedAgentTemplate, AgentExecution, AgentStatus
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentStatus
 
                         # Find the best agent for this specialization
                         # First try to get the preferred agent by name
@@ -1444,7 +1444,7 @@ def execute_agent_task(agent_id: int, task: str, context: dict = None):
         Execution result dictionary
     """
     try:
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         from intelligence.agent_executor import AgentExecutor
 
         logger.info(f"🤖 Executing agent task: agent_id={agent_id}")

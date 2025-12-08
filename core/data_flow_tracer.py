@@ -591,7 +591,7 @@ class DataFlowTracer:
                 # Check agent system
                 if component == "agent_system":
                     try:
-                        from agents.models import UnifiedAgentTemplate
+                        from core.models.agents_registry import UnifiedAgentTemplate
                         agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
                         if agent_count == 0:
                             success = False

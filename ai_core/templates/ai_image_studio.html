@@ -10824,6 +10824,54 @@
 
                         <!-- ========== OPPORTUNITIES SUB-TAB ========== -->
                         <div class="tab-pane fade" id="intel-opportunities" role="tabpanel">
+                            <!-- SESSION 389: My Applications Panel + Income Stats -->
+                            <div class="row mb-3">
+                                <!-- My Applications Card -->
+                                <div class="col-md-8">
+                                    <div class="card" id="my-applications-panel" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                                            <h6 class="mb-0" style="color: #a78bfa; font-size: 14px;">My Applications</h6>
+                                            <button class="btn btn-sm" style="background: rgba(139, 92, 246, 0.3); color: #a78bfa; font-size: 10px; padding: 2px 8px;" onclick="loadMyApplications()">
+                                                Refresh
+                                            </button>
+                                        </div>
+                                        <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+                                            <div id="my-applications-list">
+                                                <p style="color: #6b7280; font-size: 11px;">Click "Quick Apply" on any job to get started!</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Income Stats Card -->
+                                <div class="col-md-4">
+                                    <div class="card h-100" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 163, 74, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                        <div class="card-header py-2" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.2);">
+                                            <h6 class="mb-0" style="color: #86efac; font-size: 14px;">Income Pipeline</h6>
+                                        </div>
+                                        <div class="card-body p-2">
+                                            <div class="row text-center">
+                                                <div class="col-6 mb-2">
+                                                    <div style="color: #8b5cf6; font-size: 20px; font-weight: bold;" id="income-stats-saved">0</div>
+                                                    <div style="color: #6b7280; font-size: 9px;">Saved</div>
+                                                </div>
+                                                <div class="col-6 mb-2">
+                                                    <div style="color: #3b82f6; font-size: 20px; font-weight: bold;" id="income-stats-applied">0</div>
+                                                    <div style="color: #6b7280; font-size: 9px;">Applied</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div style="color: #22c55e; font-size: 20px; font-weight: bold;" id="income-stats-accepted">0</div>
+                                                    <div style="color: #6b7280; font-size: 9px;">Accepted</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div style="color: #f59e0b; font-size: 20px; font-weight: bold;" id="income-stats-rate">0%</div>
+                                                    <div style="color: #6b7280; font-size: 9px;">Success Rate</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Summary Cards Row -->
                             <div class="row mb-3">
                                 <div class="col-md-3">
@@ -16505,6 +16553,271 @@
         // Auto-load markets when tab is shown
         document.getElementById('intel-markets-tab')?.addEventListener('shown.bs.tab', loadMarketsTab);
 
+        // ========== SESSION 389: QUICK APPLY INCOME PIPELINE ==========
+        async function quickApplyOpportunity(encodedData, buttonEl) {
+            const originalText = buttonEl.innerHTML;
+            buttonEl.disabled = true;
+            buttonEl.innerHTML = 'Saving...';
+
+            try {
+                const opportunityData = JSON.parse(decodeURIComponent(encodedData));
+
+                const response = await authenticatedFetch('/api/income/quick-apply/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(opportunityData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    buttonEl.innerHTML = result.is_duplicate ? 'Already Saved' : 'Saved!';
+                    buttonEl.style.background = '#16a34a';
+
+                    // Show cover letter modal if generated
+                    if (result.cover_letter) {
+                        showCoverLetterModal(opportunityData.title, result.cover_letter, result.opportunity_id);
+                    }
+
+                    // Refresh saved opportunities if panel is visible
+                    if (document.getElementById('my-applications-panel')?.style.display !== 'none') {
+                        loadMyApplications();
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to save opportunity');
+                }
+            } catch (error) {
+                console.error('Quick Apply error:', error);
+                buttonEl.innerHTML = 'Error';
+                buttonEl.style.background = '#dc2626';
+
+                setTimeout(() => {
+                    buttonEl.innerHTML = originalText;
+                    buttonEl.disabled = false;
+                    buttonEl.style.background = '';
+                }, 2000);
+            }
+        }
+
+        // Show cover letter modal
+        function showCoverLetterModal(title, coverLetter, opportunityId) {
+            // Create modal HTML
+            const modalHtml = `
+                <div class="modal fade" id="coverLetterModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-lg" role="document">
+                        <div class="modal-content" style="background: #1a1a2e; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <div class="modal-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                                <h5 class="modal-title" style="color: #a78bfa;">Cover Letter Generated!</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p style="color: #9ca3af; font-size: 13px; margin-bottom: 10px;">For: <strong style="color: #f9a8d4;">${title}</strong></p>
+                                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                                    <pre style="color: #d1d5db; font-size: 13px; white-space: pre-wrap; margin: 0; font-family: inherit;">${coverLetter}</pre>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="background: rgba(139, 92, 246, 0.05); border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copyCoverLetter()">
+                                    Copy to Clipboard
+                                </button>
+                                <button type="button" class="btn btn-sm" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white;" onclick="markAsApplied('${opportunityId}')">
+                                    Mark as Applied
+                                </button>
+                                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove any existing modal
+            document.getElementById('coverLetterModal')?.remove();
+
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Store current cover letter text for copying
+            window.currentCoverLetter = coverLetter;
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('coverLetterModal'));
+            modal.show();
+        }
+
+        // Copy cover letter to clipboard
+        function copyCoverLetter() {
+            if (window.currentCoverLetter) {
+                navigator.clipboard.writeText(window.currentCoverLetter).then(() => {
+                    showToast('Cover letter copied to clipboard!', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+            }
+        }
+
+        // Mark opportunity as applied
+        async function markAsApplied(opportunityId) {
+            try {
+                const response = await authenticatedFetch('/api/income/update-status/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        opportunity_id: opportunityId,
+                        status: 'applied'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Marked as applied!', 'success');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('coverLetterModal'));
+                    modal?.hide();
+                } else {
+                    throw new Error(result.error || 'Failed to update status');
+                }
+            } catch (error) {
+                console.error('Mark as applied error:', error);
+                showToast('Error updating status', 'error');
+            }
+        }
+
+        // Load saved opportunities (My Applications)
+        async function loadMyApplications() {
+            const container = document.getElementById('my-applications-list');
+            if (!container) return;
+
+            container.innerHTML = '<p style="color: #9ca3af;">Loading...</p>';
+
+            try {
+                const response = await authenticatedFetch('/api/income/opportunities/');
+                const result = await response.json();
+
+                if (result.success && result.opportunities?.length > 0) {
+                    container.innerHTML = result.opportunities.map(opp => `
+                        <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.05); border-radius: 6px; border-left: 3px solid ${getStatusColor(opp.status)};">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <a href="${opp.source_url}" target="_blank" rel="noopener" style="color: #a78bfa; font-size: 12px; text-decoration: none;">
+                                        ${opp.title.substring(0, 40)}${opp.title.length > 40 ? '...' : ''}
+                                    </a>
+                                    <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
+                                        ${opp.company_name ? `<span style="color: #9ca3af;">${opp.company_name}</span> • ` : ''}
+                                        ${opp.source_platform}
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <span class="badge" style="background: ${getStatusColor(opp.status)}20; color: ${getStatusColor(opp.status)}; font-size: 9px; cursor: pointer;" data-bs-toggle="dropdown">
+                                        ${formatStatus(opp.status)}
+                                    </span>
+                                    <ul class="dropdown-menu dropdown-menu-end" style="background: #1a1a2e; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                        <li><a class="dropdown-item" style="color: #d1d5db; font-size: 11px;" href="#" onclick="updateOpportunityStatus('${opp.id}', 'applied'); return false;">Applied</a></li>
+                                        <li><a class="dropdown-item" style="color: #d1d5db; font-size: 11px;" href="#" onclick="updateOpportunityStatus('${opp.id}', 'interview'); return false;">Interview</a></li>
+                                        <li><a class="dropdown-item" style="color: #22c55e; font-size: 11px;" href="#" onclick="updateOpportunityStatus('${opp.id}', 'accepted'); return false;">Accepted!</a></li>
+                                        <li><a class="dropdown-item" style="color: #f87171; font-size: 11px;" href="#" onclick="updateOpportunityStatus('${opp.id}', 'rejected'); return false;">Rejected</a></li>
+                                        <li><a class="dropdown-item" style="color: #6b7280; font-size: 11px;" href="#" onclick="updateOpportunityStatus('${opp.id}', 'no_response'); return false;">No Response</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #6b7280; font-size: 11px;">No saved opportunities yet. Click "Quick Apply" on any job to get started!</p>';
+                }
+
+                // Update stats
+                loadIncomeStats();
+            } catch (error) {
+                console.error('Error loading applications:', error);
+                container.innerHTML = `<p style="color: #f87171; font-size: 11px;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Update opportunity status
+        async function updateOpportunityStatus(opportunityId, newStatus) {
+            try {
+                const response = await authenticatedFetch('/api/income/update-status/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        opportunity_id: opportunityId,
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Status updated to ${formatStatus(newStatus)}!`, 'success');
+                    loadMyApplications(); // Refresh list
+                } else {
+                    throw new Error(result.error || 'Failed to update status');
+                }
+            } catch (error) {
+                console.error('Update status error:', error);
+                showToast('Error updating status', 'error');
+            }
+        }
+
+        // Load income statistics
+        async function loadIncomeStats() {
+            try {
+                const response = await authenticatedFetch('/api/income/statistics/');
+                const result = await response.json();
+
+                if (result.success) {
+                    const stats = result.statistics;
+                    const savedEl = document.getElementById('income-stats-saved');
+                    const appliedEl = document.getElementById('income-stats-applied');
+                    const acceptedEl = document.getElementById('income-stats-accepted');
+                    const rateEl = document.getElementById('income-stats-rate');
+                    if (savedEl) savedEl.textContent = stats.total_saved || 0;
+                    if (appliedEl) appliedEl.textContent = stats.total_applied || 0;
+                    if (acceptedEl) acceptedEl.textContent = stats.total_accepted || 0;
+                    if (rateEl) rateEl.textContent = `${stats.success_rate || 0}%`;
+                }
+            } catch (error) {
+                console.error('Error loading income stats:', error);
+            }
+        }
+
+        // Helper: Get status color
+        function getStatusColor(status) {
+            const colors = {
+                'saved': '#8b5cf6',
+                'materials_ready': '#06b6d4',
+                'applied': '#3b82f6',
+                'interview': '#f59e0b',
+                'accepted': '#22c55e',
+                'rejected': '#ef4444',
+                'no_response': '#6b7280',
+                'withdrawn': '#9ca3af'
+            };
+            return colors[status] || '#6b7280';
+        }
+
+        // Helper: Format status for display
+        function formatStatus(status) {
+            const labels = {
+                'saved': 'Saved',
+                'materials_ready': 'Ready',
+                'applied': 'Applied',
+                'interview': 'Interview',
+                'accepted': 'Accepted',
+                'rejected': 'Rejected',
+                'no_response': 'No Response',
+                'withdrawn': 'Withdrawn'
+            };
+            return labels[status] || status;
+        }
+
         // ========== SESSION 385: OPPORTUNITIES TAB ==========
         async function loadOpportunitiesTab() {
             try {
@@ -16528,9 +16841,15 @@
                 if (jobsList && data.remote_jobs?.items?.length > 0) {
                     jobsList.innerHTML = data.remote_jobs.items.map(job => `
                         <div class="mb-2 p-2" style="background: rgba(34, 197, 94, 0.05); border-radius: 6px; border-left: 2px solid #22c55e;">
-                            <a href="${job.url || '#'}" target="_blank" rel="noopener" style="color: #86efac; font-size: 12px; text-decoration: none; display: block; line-height: 1.3;">
-                                ${(job.title || 'Untitled').substring(0, 50)}${job.title?.length > 50 ? '...' : ''}
-                            </a>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <a href="${job.url || '#'}" target="_blank" rel="noopener" style="color: #86efac; font-size: 12px; text-decoration: none; line-height: 1.3; flex: 1;">
+                                    ${(job.title || 'Untitled').substring(0, 45)}${job.title?.length > 45 ? '...' : ''}
+                                </a>
+                                <button onclick="quickApplyOpportunity('${encodeURIComponent(JSON.stringify({title: job.title, url: job.url, source: job.source, company: job.company, description: job.description || '', salary: job.salary, category: 'remote_job'}))}', this)"
+                                        class="btn btn-sm" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: none; white-space: nowrap;">
+                                    Quick Apply
+                                </button>
+                            </div>
                             <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
                                 ${job.company ? `<span style="color: #9ca3af;">${job.company}</span> • ` : ''}
                                 ${job.source || 'Unknown'}
@@ -16547,9 +16866,15 @@
                 if (freelanceList && data.freelance_gigs?.items?.length > 0) {
                     freelanceList.innerHTML = data.freelance_gigs.items.map(gig => `
                         <div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.05); border-radius: 6px; border-left: 2px solid #8b5cf6;">
-                            <a href="${gig.url || '#'}" target="_blank" rel="noopener" style="color: #a78bfa; font-size: 12px; text-decoration: none; display: block; line-height: 1.3;">
-                                ${(gig.title || 'Untitled').substring(0, 50)}${gig.title?.length > 50 ? '...' : ''}
-                            </a>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <a href="${gig.url || '#'}" target="_blank" rel="noopener" style="color: #a78bfa; font-size: 12px; text-decoration: none; line-height: 1.3; flex: 1;">
+                                    ${(gig.title || 'Untitled').substring(0, 45)}${gig.title?.length > 45 ? '...' : ''}
+                                </a>
+                                <button onclick="quickApplyOpportunity('${encodeURIComponent(JSON.stringify({title: gig.title, url: gig.url, source: gig.source, company: gig.company || '', description: gig.description || '', category: 'freelance'}))}', this)"
+                                        class="btn btn-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: none; white-space: nowrap;">
+                                    Quick Apply
+                                </button>
+                            </div>
                             <div style="color: #6b7280; font-size: 10px; margin-top: 2px;">
                                 ${gig.source || 'Unknown'}
                                 ${gig.category ? ` • ${gig.category}` : ''}
@@ -16619,7 +16944,11 @@
         }
 
         // Auto-load opportunities when tab is shown
-        document.getElementById('intel-opportunities-tab')?.addEventListener('shown.bs.tab', loadOpportunitiesTab);
+        document.getElementById('intel-opportunities-tab')?.addEventListener('shown.bs.tab', () => {
+            loadOpportunitiesTab();
+            loadMyApplications();
+            loadIncomeStats();
+        });
 
         // Session 386: Auto-load spiders when tab is shown
         document.getElementById('intel-spiders-tab')?.addEventListener('shown.bs.tab', loadSpiderNetwork);
@@ -16739,7 +17068,7 @@
                             </div>
                         `;
                     }).join('');
-                } else {
+                } else if (trendsList) {
                     trendsList.innerHTML = `
                         <div class="text-center py-5">
                             <span style="font-size: 48px;">🕸️</span>
@@ -16942,6 +17271,13 @@
                     console.log('🕸️ Intelligence Hub panel shown - loading Trending data...');
                     loadTrendingTab();
                 });
+
+                // Session 390: Check if Intelligence tab is already active on page load
+                // This handles hard refresh when already on the Intelligence tab
+                if (intelligenceHubTab.classList.contains('active')) {
+                    console.log('🕸️ Intelligence Hub already active on load - loading Trending data...');
+                    loadTrendingTab();
+                }
             }
 
             // Also load when switching between subtabs within Intelligence Hub

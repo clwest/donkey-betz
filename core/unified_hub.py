@@ -393,7 +393,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_real_orchestra_data(self) -> Dict[str, Any]:
         """Get REAL Neural Orchestra data - all 149 agents with live activity!"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
         from django.db.models import Count, Q
 
         # Get ALL registered agents (should be 149!)
@@ -671,7 +671,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_control_center_data(self) -> Dict[str, Any]:
         """Get Control Center overview data"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
         from intelligence.models import OpportunityActionPlan, RevenueMetrics
 
         return {
@@ -716,7 +716,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_generic_real_data(self) -> Dict[str, Any]:
         """Get generic real data for unknown components"""
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         from intelligence.models import ActionPlan
 
         return {

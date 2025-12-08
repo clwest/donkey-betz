@@ -11,7 +11,7 @@ django.setup()
 
 from django.db import connection
 from intelligence.models import OpportunityActionPlan, ActionPlan, EarningRecord
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from persistence.models import (
     UnifiedUser, UserProfile, DocumentEmbedding, PersistentMemory,
     AgentKnowledge, SpiderDiscovery, SystemMetrics
@@ -99,7 +99,7 @@ def check_agent_reality():
     print("="*50)
 
     try:
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
 
         agents = UnifiedAgentTemplate.objects.all()
         total_agents = agents.count()

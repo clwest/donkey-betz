@@ -21,7 +21,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentOrchestration,
     AgentChannel,

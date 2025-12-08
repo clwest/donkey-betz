@@ -4,7 +4,7 @@ Master Demo View - Unified AI Learning System Showcase
 
 from django.shortcuts import render
 from django.http import JsonResponse
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from core.models import GeneratedProject, GeneratedCode
 import redis
 import json

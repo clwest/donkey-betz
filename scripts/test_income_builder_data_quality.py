@@ -14,7 +14,7 @@ django.setup()
 
 from persistence.models import SpiderData
 from core.models_unified_system import UserAgentLearning, Opportunity
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from django.utils import timezone
 from datetime import timedelta
 

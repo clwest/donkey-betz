@@ -141,7 +141,7 @@ def run_spider_by_category(category: str):
         results = []
         for spider_name in spiders[:3]:  # Limit to 3 spiders per category
             try:
-                spider_class = registry.get_spider(spider_name)
+                spider_class = registry.get_spider_class(spider_name)
                 if spider_class:
                     spider = spider_class()
                     data = spider.fetch()

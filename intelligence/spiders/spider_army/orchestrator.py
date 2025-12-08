@@ -24,7 +24,7 @@ import django
 django.setup()
 
 from intelligence.models import SpiderIntelligenceNode
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 
 @dataclass

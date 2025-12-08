@@ -10,7 +10,7 @@ django.setup()
 
 pytestmark = pytest.mark.django_db
 
-from agents.models import AgentRegistry  # noqa: E402
+from core.models.agents_registry import AgentRegistry  # noqa: E402
 
 
 @pytest.fixture(scope="module")

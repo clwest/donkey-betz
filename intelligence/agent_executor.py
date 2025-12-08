@@ -24,7 +24,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.conf import settings
 
-from agents.models import (
+from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
     AgentOrchestration,

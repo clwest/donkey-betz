@@ -49,7 +49,7 @@ def test_database_connection():
     """Test database connection"""
     try:
         from django.db import connection
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
 
         start_time = time.time()
         agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()

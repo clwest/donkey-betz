@@ -94,7 +94,7 @@ class AgentRouter:
     def _load_agents(self):
         """Load all active agents from the database"""
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
 
             # Get all active agents
             agents = UnifiedAgentTemplate.objects.filter(is_active=True)

@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from decimal import Decimal
 
-from agents.models import UnifiedAgentTemplate, AgentRegistry, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentSpecialization
 
 
 class Command(BaseCommand):

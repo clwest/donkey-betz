@@ -11,7 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.conf import settings
 
-from agents.models import UnifiedAgentTemplate, AgentRegistry, AgentTool
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentTool
 
 
 logger = logging.getLogger(__name__)

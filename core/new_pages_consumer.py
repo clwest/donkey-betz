@@ -148,7 +148,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_real_nexus_status(self):
         """Get REAL system status from database including REAL spider data"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
         from core.models_unified_system import Advisor
         from core.models import Revenue
         try:
@@ -360,7 +360,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_recent_activities(self, limit=5):
         """PHASE 1 FIX: Get REAL recent system activities"""
-        from agents.models import AgentExecution
+        from core.models.agents_registry import AgentExecution
         from core.models import Revenue
         try:
             from intelligence.models import OpportunityInteraction
@@ -537,7 +537,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
 
     async def send_agent_status(self):
         """Send detailed agent status information"""
-        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 
         try:
             # Get recent agent activity (last 24 hours to ensure we show some data)

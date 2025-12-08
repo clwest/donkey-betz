@@ -388,6 +388,11 @@ test-collect: ## Collect tests without running (verify structure)
 	@.venv/bin/pytest tests/ --collect-only -q
 	@echo "✓ Test collection complete."
 
+# ---------- Health Check (Session 391) ----------
+health-check: ## Run system health check (agents, spiders, database, etc.)
+	@echo "==> Running system health check..."
+	@.venv/bin/python scripts/health_check.py
+
 # ---------- Utility / help ----------
 help:
 	@echo "Usage: make <target>"

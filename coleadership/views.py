@@ -18,7 +18,7 @@ from rest_framework.response import Response
 
 from .models import CoLeadershipDecision, HumanDecision, DecisionOutcome
 from .services import record_human_decision, record_outcome, get_user_decision_stats
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +284,7 @@ def start_boardroom_meeting(request):
     try:
         from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
         from content.models import AISession, CreativeProject
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         from .services import start_decision, log_agent_recommendation
         import uuid as uuid_module
 

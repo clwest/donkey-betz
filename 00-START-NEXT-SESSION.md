@@ -1,95 +1,75 @@
 # Start Next Session Here
 
-**Last Session:** 387 - Playwright Spider Infrastructure
+**Last Session:** 391 - Technical Debt Remediation (Model Migration Complete!)
 **Date:** December 7, 2025
-**Status:** 102 spiders | 30 DB agents | 28 code agents | Playwright infrastructure ready!
+**Status:** 103 spiders | 28 code agents | MODEL MIGRATION COMPLETE ✅
 
 ---
 
-## Session 387 Accomplishments
+## Session 391 Accomplishments
 
-### Playwright Spider Infrastructure
-| Component | Status |
-|-----------|--------|
-| **PlaywrightSpider Base Class** | Created - JS rendering, anti-detection |
-| **FiverrPlaywrightSpider** | Created - blocked by CAPTCHA |
-| **KickstarterPlaywrightSpider** | Created - blocked by bot detection |
-| **IndiegogoPlaywrightSpider** | Created - blocked by bot detection |
+### Agent Model Migration - COMPLETE! ✅
 
-### Key Finding: Platform Bot Detection
-Major platforms (Fiverr, Kickstarter, Indiegogo) have sophisticated anti-bot detection:
-- Browser fingerprinting
-- CAPTCHA challenges ("It needs a human touch")
-- Request rate analysis
-- Headless browser detection
+Successfully migrated all 10 Django models from `agents/models.py` to `core/models/agents_registry/` with zero database changes required.
 
-**Result:** Infrastructure is ready for future use, but we continue using working alternatives (Reddit, Behance) from Session 386.
+| Step | Status | Files Changed |
+|------|--------|---------------|
+| Database backup | ✅ | 123MB full dump |
+| Models migrated | ✅ | `core/models/agents_registry/models.py` |
+| Shim created | ✅ | `agents/models.py` (66 lines, re-exports) |
+| Imports updated | ✅ | **163+ files** |
+| Health check | ✅ | 7/7 checks pass |
 
-### Legacy Imports Assessment
-| Issue | Finding |
-|-------|---------|
-| **Documented** | ~290 files need migration |
-| **Actual** | Only 4 Python files with pattern |
-| **Solution** | `agents/__init__.py` already has deprecation shim |
-
-The legacy import issue is resolved:
-- `agents/__init__.py` has proper `__getattr__` that redirects to `core.agents`
-- Test files import `agents.tasks` (Celery tasks, not agent classes)
-- No action needed - the shim handles backwards compatibility
-
----
-
-## Files Created This Session
+### Files Created/Modified
 
 | File | Purpose |
 |------|---------|
-| `ai_core/spiders/playwright_spider.py` | Base class for JS-enabled spiders |
-| `ai_core/spiders/specialized/fiverr_spider.py` | Fiverr gig scraper |
-| `ai_core/spiders/specialized/kickstarter_playwright_spider.py` | Kickstarter project scraper |
-| `ai_core/spiders/specialized/indiegogo_playwright_spider.py` | Indiegogo campaign scraper |
-| `docs/handoffs/SESSION_387_PLAYWRIGHT_SPIDERS.md` | Session documentation |
+| `core/models/agents_registry/__init__.py` | Package exports |
+| `core/models/agents_registry/models.py` | **Canonical model location** (1800+ lines) |
+| `agents/models.py` | Shim for backwards compatibility |
+| `scripts/health_check.py` | System health verification |
+| `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md` | Full remediation plan |
+| `backups/database/unified_donkey_betz_20251207_session391.dump` | Database backup |
+
+### Import Migration Stats
+- **core/**: 47 files updated
+- **ai_core/**: included in first batch
+- **content/**: included in first batch
+- **scripts/**: 37 files updated
+- **intelligence/**: 33 files updated
+- **agents/**: subdirectories updated
+- **Total**: 163+ files now use `core.models.agents_registry`
+
+### Technical Note: app_label Preservation
+All models retain `app_label = 'agents'` in their Meta class:
+```python
+class Meta:
+    app_label = 'agents'  # Keep using agents app tables
+```
+This means:
+- **No database migration needed**
+- **All existing data preserved**
+- **Tables still named `agents_*`**
 
 ---
 
-## What's Working Now
+## Next Priority: agents/ Directory Cleanup
 
-### Data Sources Status
-| Category | Working Source | Blocked Platform |
-|----------|----------------|------------------|
-| **Freelance** | Reddit (r/forhire, r/freelance) | Fiverr, Toptal, Guru |
-| **Crowdfunding** | Behance | Kickstarter, Indiegogo |
-| **Jobs** | WeWorkRemotely, Adzuna API | - |
-| **Tech News** | TechCrunch, HackerNews, Dev.to | - |
-| **Finance** | CoinGecko, Yahoo Finance | - |
+The `agents/models.py` migration is done. Next steps from technical debt plan:
 
-### Full Pipeline Flow
-```
-Enter business idea -> Click "Full Pipeline"
-    |
-Research Pipeline (4 stages):
-  - Competitor Analysis
-  - Customer Research
-  - Brand Strategy
-  - Synthesis
-    |
-Creative Pipeline (auto-runs):
-  - Generates logos, banners, thumbnails via Stability AI
-    |
-Generated Assets Gallery with clickable images!
-```
+### Phase 1B: Clean Up agents/ Directory (2-3 sessions)
+1. **Move `agents/registry.py`** to `core/agents/registry.py`
+2. **Audit remaining agents/** files:
+   - Which are deprecated and can be deleted?
+   - Which need to move to core/agents/?
+3. **Remove duplicate agent implementations**
 
----
+### Phase 2: Split Large Files (4-6 sessions)
+1. `views_image.py` (14K lines) → modules
+2. `ai_image_studio.html` (65K lines) → components
+3. `core/tasks.py` (2K lines) → task modules
 
-## Current System State
-
-| Component | Count | Status |
-|-----------|-------|--------|
-| **Spiders** | **102** | 36 categories |
-| **Database Agents** | **30** | All active |
-| **Code Agents** | **28** | In core/agents/ |
-| **Learning Hooks** | **21** agents | Recording outcomes |
-| **Playwright** | v1.55.0 | Installed with Chromium |
-| **Full Pipeline** | Research + Creative | Complete |
+See `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md` for full 15-19 session plan.
 
 ---
 
@@ -99,77 +79,73 @@ Generated Assets Gallery with clickable images!
 # Start services
 make start && make celery
 
+# Run health check
+make health-check
+
+# Verify model imports work
+.venv/bin/python -c "
+from core.models.agents_registry import UnifiedAgentTemplate
+print(f'Agents in DB: {UnifiedAgentTemplate.objects.count()}')
+"
+
 # Open AI Studio
 open http://localhost:8000/ai-studio/
-
-# Test Playwright (if needed)
-.venv/bin/python -c "from ai_core.spiders.playwright_spider import PlaywrightSpider; print('OK')"
 ```
 
 ---
 
-## Next Session Options
+## Current System State
 
-### Option A: Test Everything
-Run the Full Pipeline and verify all Intelligence Tab sub-tabs work correctly.
-
-### Option B: Spider Health Dashboard
-Add monitoring for individual spiders:
-- Last run timestamp
-- Success/failure rates
-- Data quality metrics
-
-### Option C: Add More API-Based Sources
-Expand data coverage with additional APIs that don't require JS rendering:
-- GitHub Trending (via API)
-- Hacker News API enhancements
-- Additional RSS feeds
-
-### Option D: Agent Collaboration Features
-Enhance multi-agent workflows:
-- Agent-to-agent communication
-- Collaborative research sessions
-- Result aggregation
+| Component | Count | Status |
+|-----------|-------|--------|
+| **Spiders** | **103** | All registered |
+| **Code Agents** | **28** | In `core/agents/` |
+| **DB Agents** | **28** | All active |
+| **Learning Hooks** | **21** agents | Recording outcomes |
+| **Models Location** | **core/models/agents_registry/** | ✅ Migrated |
+| **Shim Status** | **agents/models.py** | Re-exports for backwards compat |
 
 ---
 
 ## Verification Commands
 
 ```bash
-# Test Playwright installation
-.venv/bin/python -c "from playwright.sync_api import sync_playwright; print('Playwright OK')"
+# Test model imports (both paths should work)
+.venv/bin/python -c "
+import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+import django; django.setup()
 
-# Test spider imports
-.venv/bin/python -c "from ai_core.spiders.playwright_spider import PlaywrightSpider; print('Base OK')"
-.venv/bin/python -c "from ai_core.spiders.specialized.fiverr_spider import FiverrPlaywrightSpider; print('Fiverr OK')"
+# New path (canonical)
+from core.models.agents_registry import UnifiedAgentTemplate
+print(f'✓ New import: {UnifiedAgentTemplate.objects.count()} agents')
 
-# Test legacy import shim
-.venv/bin/python -c "from agents import ImageAgent; print('Shim OK')"
+# Old path (shim - still works)
+from agents.models import Agent
+print(f'✓ Shim import: {Agent.objects.count()} agents')
+"
 
-# Test Opportunities API
-curl -s "http://localhost:8000/api/spider-intelligence/opportunities/?limit=5" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-data = d.get('data', {})
-for cat in ['remote_jobs', 'freelance_gigs', 'creative_projects', 'startups', 'business_discussions']:
-    items = data.get(cat, {}).get('items', [])
-    print(f'{cat}: {len(items)} items')"
+# Check for any remaining old imports in active code
+grep -r "from agents\.models import" --include="*.py" | grep -v "^agents/models.py" | grep -v "^docs/"
+# Should return NO results (only docs/ and the shim itself)
+
+# Health check
+make health-check
 ```
 
 ---
 
 ## Handoff Documents
 
-- **This Session:** `docs/handoffs/SESSION_387_PLAYWRIGHT_SPIDERS.md`
-- **Previous:** `docs/handoffs/SESSION_386_INTELLIGENCE_TAB_ENHANCEMENTS.md`
-- **Learning System:** `docs/handoffs/SESSION_381_COLLECTIVE_INTELLIGENCE_ARCHITECTURE.md`
+- **This Session:** `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md`
+- **Previous:** Session 390 - Himalayas.app API Integration
+- **Profile Integration:** `docs/handoffs/SESSION_389_USER_PROFILE_INTEGRATION.md`
 
 ---
 
 ## Important Notes
 
-1. **Playwright Infrastructure Ready:** Base class + 3 specialized spiders created but platforms block automated access
-2. **Continue Using Alternatives:** Reddit for freelance, Behance for creative projects
-3. **Legacy Imports Resolved:** Deprecation shim in `agents/__init__.py` handles backwards compatibility
-4. **GPT-5-mini:** Uses `max_completion_tokens`, no `temperature` parameter
-5. **Chromium Installed:** `.venv/bin/playwright install chromium` already run
+1. **No Database Migration Needed** - Models use `app_label='agents'` so they still map to `agents_*` tables
+2. **Shim is Backwards Compatible** - Old imports via `from agents.models import` still work
+3. **Documentation Files Unchanged** - Historical docs in `docs/` still reference old imports (intentional)
+4. **Next Priority** - Clean up remaining files in `agents/` directory
+5. **Full Backup Available** - `backups/database/unified_donkey_betz_20251207_session391.dump`

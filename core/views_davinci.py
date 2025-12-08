@@ -506,7 +506,7 @@ def chain_videos_simple(request):
 
                 # Session 142: Track agent contribution
                 try:
-                    from agents.models import UnifiedAgentTemplate, AgentContribution
+                    from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                     agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                     AgentContribution.objects.create(
                         agent=agent,
@@ -707,7 +707,7 @@ def add_text_overlay_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -888,7 +888,7 @@ def apply_color_grading_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1061,7 +1061,7 @@ def add_audio_to_video_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,

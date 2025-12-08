@@ -11,7 +11,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from datetime import datetime
 import logging
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 from core.models import Agent, SpiderCategory, AgentSpiderConnection, AgentKnowledgeSource
 

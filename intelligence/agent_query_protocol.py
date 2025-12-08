@@ -35,7 +35,7 @@ from django.utils import timezone
 import redis
 from django.conf import settings
 
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 from intelligence.agent_communication import AgentCommunication
 
 logger = logging.getLogger(__name__)

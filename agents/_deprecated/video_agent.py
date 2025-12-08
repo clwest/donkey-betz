@@ -51,7 +51,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
-from agents.models import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
 from intelligence.shared_memory import AgentMemoryInterface
 from intelligence.agent_query_protocol import query_protocol
 
@@ -370,7 +370,7 @@ class VideoAgent:
 
                     # Session 144: Track agent contribution for audio mixing
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -825,7 +825,7 @@ class VideoAgent:
 
             # Session 144: Track agent contribution for multi-edit
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -970,7 +970,7 @@ class VideoAgent:
 
             # Session 144: Track agent contribution for text overlay
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1103,7 +1103,7 @@ class VideoAgent:
 
             # Session 144: Track agent contribution for color grading
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1241,7 +1241,7 @@ class VideoAgent:
 
             # Session 144: Track agent contribution for video chaining
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1423,7 +1423,7 @@ class VideoAgent:
 
             # Session 144: Track agent contribution for image-to-video
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1547,7 +1547,7 @@ class VideoAgent:
 
                 # Track agent contribution
                 try:
-                    from agents.models import UnifiedAgentTemplate, AgentContribution
+                    from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                     agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                     AgentContribution.objects.create(
                         agent=agent,
@@ -1715,7 +1715,7 @@ class VideoAgent:
 
             # Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,

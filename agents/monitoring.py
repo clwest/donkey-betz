@@ -228,7 +228,7 @@ class AgentMonitor:
         
         # Store summary in database (if model exists)
         try:
-            from agents.models import AgentExecution
+            from core.models.agents_registry import AgentExecution
             
             AgentExecution.objects.filter(id=self.execution_id).update(
                 performance_metrics=self.metrics,
@@ -300,7 +300,7 @@ class PerformanceAnalyzer:
     def get_agent_stats(agent_name, time_period=None):
         """Get performance statistics for an agent"""
         try:
-            from agents.models import AgentExecution
+            from core.models.agents_registry import AgentExecution
             from django.db.models import Avg, Count, Max, Min, Q
             
             query = AgentExecution.objects.filter(
@@ -346,7 +346,7 @@ class PerformanceAnalyzer:
         
         # Get metrics for each agent type
         try:
-            from agents.models import AgentTemplate
+            from core.models.agents_registry import AgentTemplate
             
             for template in AgentTemplate.objects.filter(is_active=True):
                 agent_stats = PerformanceAnalyzer.get_agent_stats(
@@ -388,7 +388,7 @@ class PerformanceAnalyzer:
         
         # Get metrics for all agents
         try:
-            from agents.models import AgentTemplate, AgentExecution
+            from core.models.agents_registry import AgentTemplate, AgentExecution
             
             # Overall statistics
             total_executions = AgentExecution.objects.count()
@@ -464,7 +464,7 @@ def get_agent_metrics_summary():
     }
     
     try:
-        from agents.models import AgentExecution
+        from core.models.agents_registry import AgentExecution
         from django.db.models import Avg, Count
         
         # Get 24-hour statistics

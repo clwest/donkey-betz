@@ -105,7 +105,7 @@ def main():
         if entry.routed_to_agents:
             all_routed_agents.update(entry.routed_to_agents)
 
-    from agents.models import UnifiedAgentTemplate
+    from core.models.agents_registry import UnifiedAgentTemplate
     total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
 
     print(f'   Agents with data: {len(all_routed_agents)}/{total_agents}')

@@ -15,7 +15,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from agents.models import UnifiedAgentTemplate, AgentPerformanceMetrics
+from core.models.agents_registry import UnifiedAgentTemplate, AgentPerformanceMetrics
 from sports.models import MLPrediction, Game
 from ml.core.ml_engine import MLEngine
 from intelligence.agent_learning import AgentLearningSystem

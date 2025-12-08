@@ -248,7 +248,7 @@ class SystemMonitor:
             db_queries = len(connection.queries)
             
             # Application metrics
-            from agents.models import Agent
+            from core.models.agents_registry import Agent
             from content.models import ContentGeneration
             
             active_agents = Agent.objects.filter(status='running').count()

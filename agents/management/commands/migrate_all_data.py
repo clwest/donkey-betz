@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.contrib.auth import get_user_model
 
-from agents.models import UnifiedAgentTemplate, AgentRegistry, AgentTool
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentTool
 from sports.models import (
     League, Team, Game, Sportsbook, BettingMarket, 
     OddsLine, BankrollManagement, ArbitrageOpportunity

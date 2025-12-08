@@ -436,7 +436,7 @@ class ProductionValidator:
         test_name = "database_performance"
         try:
             from django.db import connection
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
 
             # Test database query performance
             start_time = time.time()

@@ -244,3 +244,4 @@ mobile/ios/Flutter/.last_build_id
 mobile/.env
 mobile/.env.local
 mobile/.env.production
+backups/database/

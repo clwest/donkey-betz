@@ -1455,7 +1455,7 @@ def video_to_video_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1558,7 +1558,7 @@ def video_upscale_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1664,7 +1664,7 @@ def extend_video_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -1816,7 +1816,7 @@ def character_performance_endpoint(request):
 
             # Session 142: Track agent contribution
             try:
-                from agents.models import UnifiedAgentTemplate, AgentContribution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                 agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
                 AgentContribution.objects.create(
                     agent=agent,
@@ -2032,7 +2032,7 @@ def upscale_video(request):
 
         # Session 155: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -2238,7 +2238,7 @@ def apply_video_effect(request):
 
         # Session 155: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -2505,7 +2505,7 @@ def extract_video_frame(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -2747,7 +2747,7 @@ def reverse_video(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -3016,7 +3016,7 @@ def trim_video(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -3294,7 +3294,7 @@ def change_video_speed(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -3551,7 +3551,7 @@ def concatenate_videos(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -3779,7 +3779,7 @@ def rotate_flip_video(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -4023,7 +4023,7 @@ def fade_video(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -4310,7 +4310,7 @@ def crop_resize_video(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -4570,7 +4570,7 @@ def audio_controls(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -4821,7 +4821,7 @@ def picture_in_picture(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -5143,7 +5143,7 @@ def add_watermark(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -5438,7 +5438,7 @@ def blur_region(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -5727,7 +5727,7 @@ def stabilize_video(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -6066,7 +6066,7 @@ def add_text_animation(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -6581,7 +6581,7 @@ def chroma_key(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -6930,7 +6930,7 @@ def export_for_platform(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -7239,7 +7239,7 @@ def video_transition(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -7590,7 +7590,7 @@ def auto_caption(request):
 
         # Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='video-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,

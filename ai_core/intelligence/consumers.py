@@ -41,7 +41,7 @@ except ImportError:
 # Import real system components
 from agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
-from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentStatus
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentStatus
 from intelligence.models import ActionPlan, OpportunityActionPlan, RevenueMetrics
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ class AgentWorkPlatformConsumer(AsyncWebsocketConsumer):
         try:
             from ai_core.agents.agent_work_platform import get_agent_work_platform_status
             from django.core.cache import cache
-            from agents.models import AgentExecution, UnifiedAgentTemplate
+            from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
             from intelligence.models import RevenueMetrics, OpportunityActionPlan
 
             # Get platform status

@@ -15,7 +15,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from core.agent_integration import AgentRouter
 from core.feedback_collector import FeedbackCollector, ResponseAnalyzer
-from agents.models import UnifiedAgentTemplate
+from core.models.agents_registry import UnifiedAgentTemplate
 
 User = get_user_model()
 

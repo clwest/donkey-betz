@@ -328,7 +328,7 @@ class ConsciousnessBridge:
                 print("📂 Skipping database check (in async context)")
             except RuntimeError:
                 # We're in sync context, safe to access database
-                from agents.models import UnifiedAgentTemplate
+                from core.models.agents_registry import UnifiedAgentTemplate
                 from django.db import connection
 
                 with connection.cursor() as cursor:

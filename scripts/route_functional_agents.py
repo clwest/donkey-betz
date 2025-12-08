@@ -126,7 +126,7 @@ def main():
         print(f"  Entries updated: {total_entries:,}")
 
         # Verify final coverage
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         from django.db import connection
 
         with connection.cursor() as cursor:

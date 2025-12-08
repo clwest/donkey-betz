@@ -296,7 +296,7 @@ class PersonalAssistantIntegration:
     def _get_active_agent_count(self) -> int:
         """Get count of active agents"""
         try:
-            from agents.models import UnifiedAgentTemplate
+            from core.models.agents_registry import UnifiedAgentTemplate
             return UnifiedAgentTemplate.objects.filter(is_active=True).count()
         except:
             return 0

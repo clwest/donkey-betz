@@ -20,7 +20,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from content.models import ImageHistory, VideoHistory
-from agents.models import AgentContribution
+from core.models.agents_registry import AgentContribution
 from agents.services import AgentContributionService
 
 def backfill_contributions():

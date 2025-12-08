@@ -14,7 +14,7 @@ Features:
 import logging
 from typing import Optional, Dict, List
 
-from agents.models import UnifiedAgentTemplate, AgentPerformanceMetrics
+from core.models.agents_registry import UnifiedAgentTemplate, AgentPerformanceMetrics
 
 logger = logging.getLogger(__name__)
 

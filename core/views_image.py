@@ -438,7 +438,7 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -710,7 +710,7 @@ def gallery_generate(request):
 
                     # Session 143: Track agent contribution for gallery generation
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -2996,7 +2996,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3066,7 +3066,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3147,7 +3147,7 @@ def execute_workflow_step(request):
 
                             # Session 142: Track agent contribution
                             try:
-                                from agents.models import UnifiedAgentTemplate, AgentContribution
+                                from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                                 agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
                                 AgentContribution.objects.create(
                                     agent=agent,
@@ -3209,7 +3209,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3289,7 +3289,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3387,7 +3387,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3476,7 +3476,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3576,7 +3576,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -3672,7 +3672,7 @@ def execute_workflow_step(request):
 
                     # Session 142: Track agent contribution
                     try:
-                        from agents.models import UnifiedAgentTemplate, AgentContribution
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                         agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
                         AgentContribution.objects.create(
                             agent=agent,
@@ -7747,7 +7747,7 @@ def execute_tool(request):
 
                 # Session 99: Create co-leadership decision + log agent recommendations
                 from coleadership.services import start_decision, log_agent_recommendation
-                from agents.models import UnifiedAgentTemplate
+                from core.models.agents_registry import UnifiedAgentTemplate
                 from content.models import CreativeProject
 
                 # Get project if provided
@@ -8632,7 +8632,7 @@ def _execute_generate_video(user, parameters, session=None):
 
         # Session 144: Track agent contribution for video generation
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='VideoAgent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -10081,7 +10081,7 @@ def _execute_inpaint(user, parameters):
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -10815,7 +10815,7 @@ def calculate_project_stats(project_id, user):
         Dict containing content counts, collaboration metrics, and timeline
     """
     from content.models import ImageHistory, VideoHistory, MiniFigAsset
-    from agents.models import AgentContribution
+    from core.models.agents_registry import AgentContribution
     from coleadership.models import CoLeadershipDecision
     from django.db.models import Sum, Max
 
@@ -11350,7 +11350,7 @@ def get_portfolio(request):
         agent_video_ids = None
         agent_model_ids = None
         if agent_filter:
-            from agents.models import AgentContribution
+            from core.models.agents_registry import AgentContribution
 
             logger.info(f"🤖 Filtering by agent: {agent_filter}")
 
@@ -12757,7 +12757,7 @@ def upscale_image_view(request):
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -12876,7 +12876,7 @@ def remove_background_view(request):
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -13008,7 +13008,7 @@ def create_variations_view(request):
 
                 # Session 142: Track agent contribution
                 try:
-                    from agents.models import UnifiedAgentTemplate, AgentContribution
+                    from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
                     agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
                     AgentContribution.objects.create(
                         agent=agent,
@@ -13158,7 +13158,7 @@ def search_and_replace_view(request):
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -13272,7 +13272,7 @@ def recolor_image_view(request):
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -13588,7 +13588,7 @@ def export_project_csv(request, project_id):
     import csv
     from django.http import HttpResponse
     from content.models import CreativeProject, ImageHistory, VideoHistory, MiniFigAsset
-    from agents.models import AgentContribution
+    from core.models.agents_registry import AgentContribution
     from collections import defaultdict
 
     try:
@@ -13793,7 +13793,7 @@ def creative_upscale_view(request):
 
         # Session 142: Track agent contribution
         try:
-            from agents.models import UnifiedAgentTemplate, AgentContribution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
             agent = UnifiedAgentTemplate.objects.get(name='image-editing-agent')
             AgentContribution.objects.create(
                 agent=agent,
@@ -13884,7 +13884,7 @@ Include specific prompt suggestions that incorporate the research insights."""
         participants = ['CTOAgent', 'COOAgent']
 
         # Check if CreativeDirectorAgent exists, add if so
-        from agents.models import UnifiedAgentTemplate
+        from core.models.agents_registry import UnifiedAgentTemplate
         try:
             UnifiedAgentTemplate.objects.get(name='CreativeDirectorAgent')
             participants.append('CreativeDirectorAgent')
