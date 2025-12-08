@@ -1520,7 +1520,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         lora_scale = params.get('lora_scale', 0.8)
 
         try:
-            from agents.trained_creation_agent import TrainedCreationAgent
+            from core.agents.training import TrainedCreationAgent
 
             # Initialize agent
             agent = TrainedCreationAgent(user=self.user, project_id=project_id)
@@ -2274,7 +2274,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 topic += f"\n\nAdditional context: {context}"
 
             # Call the boardroom API
-            from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+            from core.agents.executive import MeetingCoordinatorAgent
 
             coordinator = MeetingCoordinatorAgent(user=self.user)
             meeting_result = coordinator.start_meeting(
@@ -4775,7 +4775,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.info(f"🤖 Delegating to 3D Generation Agent...")
 
             # Session 128: Delegate to specialized 3D Generation Agent
-            from agents.three_d_generation_agent import ThreeDGenerationAgent
+            from core.agents import ThreeDAgent as ThreeDGenerationAgent
 
             agent = ThreeDGenerationAgent(
                 user=self.user,

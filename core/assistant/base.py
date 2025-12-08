@@ -311,7 +311,7 @@ class EnhancedPersonalAIAssistant(
         lora_scale = params.get('lora_scale', 0.8)
 
         try:
-            from agents.trained_creation_agent import TrainedCreationAgent
+            from core.agents.training import TrainedCreationAgent
 
             agent = TrainedCreationAgent(user=self.user, project_id=project_id)
             result = agent.execute(
@@ -446,7 +446,7 @@ class EnhancedPersonalAIAssistant(
 
         if operation == 'convert':
             try:
-                from agents.three_d_generation_agent import ThreeDGenerationAgent
+                from core.agents import ThreeDAgent as ThreeDGenerationAgent
 
                 current_project = getattr(self, 'project', None)
                 agent = ThreeDGenerationAgent(
@@ -477,7 +477,7 @@ class EnhancedPersonalAIAssistant(
         logger.info(f"Character Training Agent: operation={operation}")
 
         try:
-            from agents.character_training_agent import CharacterTrainingAgent
+            from core.agents.training import CharacterTrainingAgent
 
             current_project = getattr(self, 'project', None)
             agent = CharacterTrainingAgent(

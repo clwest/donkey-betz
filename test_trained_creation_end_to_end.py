@@ -17,7 +17,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from content.models import CharacterModel, ImageHistory
 from agents.creation_agent import CreationAgent
-from agents.trained_creation_agent import TrainedCreationAgent
+from core.agents.training import TrainedCreationAgent
 
 User = get_user_model()
 

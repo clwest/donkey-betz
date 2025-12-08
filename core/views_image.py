@@ -7654,7 +7654,7 @@ def execute_tool(request):
 
         elif tool_name == 'analyze_codebase':
             # Session 98: Route to CTOAgent - Codebase analysis (read-only)
-            from agents.cto_agent import CTOAgent
+            from core.agents.executive import CTOAgent
             cto = CTOAgent(user=request.user)
             result = cto.analyze_feature(
                 feature_name=parameters.get('feature_name'),
@@ -7663,7 +7663,7 @@ def execute_tool(request):
 
         elif tool_name == 'plan_implementation':
             # Session 98: Route to CTOAgent - Implementation planning (no execution)
-            from agents.cto_agent import CTOAgent
+            from core.agents.executive import CTOAgent
             cto = CTOAgent(user=request.user)
             result = cto.implement_feature(
                 description=parameters.get('description'),
@@ -7673,7 +7673,7 @@ def execute_tool(request):
 
         elif tool_name == 'analyze_documentation':
             # Session 98: Route to CTOAgent - Documentation analysis (read-only)
-            from agents.cto_agent import CTOAgent
+            from core.agents.executive import CTOAgent
             cto = CTOAgent(user=request.user)
             result = cto.sync_documentation(
                 scope=parameters.get('scope', 'all_features')
@@ -7681,7 +7681,7 @@ def execute_tool(request):
 
         elif tool_name == 'analyze_roadmap':
             # Session 98: Route to COOAgent - Roadmap analysis (read-only)
-            from agents.coo_agent import COOAgent
+            from core.agents.executive import COOAgent
             coo = COOAgent(user=request.user)
             result = coo.analyze_roadmap(
                 project_slug=parameters.get('project_slug'),
@@ -7691,7 +7691,7 @@ def execute_tool(request):
 
         elif tool_name == 'plan_next_sprint':
             # Session 98: Route to COOAgent - Sprint planning (no execution)
-            from agents.coo_agent import COOAgent
+            from core.agents.executive import COOAgent
             coo = COOAgent(user=request.user)
             result = coo.propose_next_sprint(
                 project_slug=parameters.get('project_slug'),
@@ -7701,7 +7701,7 @@ def execute_tool(request):
 
         elif tool_name == 'analyze_risks':
             # Session 98: Route to COOAgent - Risk analysis (read-only)
-            from agents.coo_agent import COOAgent
+            from core.agents.executive import COOAgent
             coo = COOAgent(user=request.user)
             result = coo.identify_risks(
                 project_slug=parameters.get('project_slug'),
@@ -7711,7 +7711,7 @@ def execute_tool(request):
 
         elif tool_name == 'start_executive_meeting':
             # Session 98: Route to MeetingCoordinatorAgent - Executive boardroom meeting
-            from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+            from core.agents.executive import MeetingCoordinatorAgent
             from content.models import AISession
 
             coordinator = MeetingCoordinatorAgent(user=request.user)
@@ -13864,7 +13864,7 @@ def _execute_strategic_review(user, parameters):
         logger.info(f"📋 Content type: {content_type}, Findings length: {len(research_findings)} chars")
 
         # Use MeetingCoordinatorAgent for strategic boardroom discussion
-        from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+        from core.agents.executive import MeetingCoordinatorAgent
         coordinator = MeetingCoordinatorAgent(user=user)
 
         # Build strategic review topic with research context
