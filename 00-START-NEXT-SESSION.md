@@ -1,81 +1,104 @@
 # Start Next Session Here
 
-**Last Session:** 392 - Agent Import Cleanup (Phase 1B Extended)
+**Last Session:** 393 - Orchestrator BaseAgent Refactoring
 **Date:** December 7, 2025
-**Status:** 102 spiders | 28 code agents | IMPORT MIGRATION IN PROGRESS
+**Status:** 102 spiders | 31 code agents | ORCHESTRATORS REFACTORED
 
 ---
 
-## Session 392 Accomplishments
+## Session 393 Accomplishments
 
-### 1. Agent Registry Migration - COMPLETE!
+### 1. Refactored 3 Legacy Orchestrators to BaseAgent Pattern
 
-Migrated `agents/registry.py` to `core/agents/registry.py`:
-- 70 files updated
-- Backwards-compatible shim created
-- Factory functions added (`get_agent_registry`, etc.)
+Created clean architecture wrappers that preserve legacy functionality while gaining BaseAgent benefits:
 
-### 2. agents/ Internal Imports - COMPLETE!
+| Legacy Agent | Lines | New Clean Agent | Status |
+|--------------|-------|-----------------|--------|
+| `agents/workflow_orchestration_agent.py` | 3,120 | `core/agents/workflow_orchestration_agent.py` | Done |
+| `agents/opportunity_pipeline_orchestrator.py` | 1,759 | `core/agents/opportunity_pipeline_agent.py` | Done |
+| `agents/content_executor.py` | 568 | `core/agents/content_executor_agent.py` | Done |
 
-Updated all files in `agents/` to use canonical imports:
-- `agents/tasks.py`, `admin.py`, `consumers.py`, etc.
-- Now import from `core.models.agents_registry` instead of `.models`
+### 2. Benefits of Wrapper Approach
 
-### 3. Agent Shim Imports - IN PROGRESS
+Instead of risky rewrites, wrappers preserve:
+- 17 predefined workflow templates (research_and_create_logos, youtube_thumbnail_package, etc.)
+- 5-stage pipeline with value multiplication (1.2x→2.5x)
+- SEO scoring and content generation logic
+- All battle-tested logic and integrations
 
-Updated many imports from deprecated shims to `core.agents`:
+While gaining:
+- TimeTravelMixin for decision tracking
+- Learning infrastructure hooks
+- Consistent AgentResult interface
+- Standard execute() signature
 
-| Agent | Old Import | New Import | Status |
-|-------|------------|------------|--------|
-| VideoAgent | `agents.video_agent` | `core.agents` | Done |
-| AudioAgent | `agents.audio_agent` | `core.agents` | Done |
-| ImageAgent | `agents.image_agent` | `core.agents` | Done |
-| ImageEditingAgent | `agents.image_editing_agent` | `core.agents` | Done |
-| CTOAgent | `agents.cto_agent` | `core.agents.executive` | Done |
-| COOAgent | `agents.coo_agent` | `core.agents.executive` | Done |
-| MeetingCoordinatorAgent | `agents.meeting_coordinator_agent` | `core.agents.executive` | Done |
-| TrainedCreationAgent | `agents.trained_creation_agent` | `core.agents.training` | Done |
-| CharacterTrainingAgent | `agents.character_training_agent` | `core.agents.training` | Done |
-| ThreeDAgent | `agents.three_d_generation_agent` | `core.agents` (aliased) | Done |
+### 3. Updated Agent Counts
+
+| Category | Count | Notes |
+|----------|-------|-------|
+| Orchestration Agents | 4 | Was 2, added 3 (WOA, OPA, CEA) - WorkflowAgent already existed |
+| Total Code Agents | 31 | Was 28, added 3 new wrappers |
 
 ### Commits Made
 
-1. `ac442a5` - Registry migration (70 files)
-2. `6eb6159` - agents/ internal imports (8 files)
-3. `feb9669` - Video/Audio/Image agents (20 files)
-4. `feaadaf` - Executive/Training agents (10 files)
+1. `d5072bd` - feat(Session 393): Refactor 3 legacy orchestrators to use BaseAgent pattern
 
 ---
 
-## Migration Progress
+## New Agent Usage
 
-| Metric | Before | After |
-|--------|--------|-------|
-| `agents.registry` imports | 70 | 0 |
-| `agents.models` internal imports | 8 | 0 |
-| Other `agents.` imports | ~200 | 153 |
+```python
+# Import new clean architecture agents
+from core.agents import (
+    WorkflowOrchestrationAgent,
+    OpportunityPipelineAgent,
+    ContentExecutorAgent,
+)
 
-**~47 imports migrated this session!**
+# WorkflowOrchestrationAgent - predefined workflow packages
+workflow_agent = WorkflowOrchestrationAgent(user=user)
+result = workflow_agent.execute(
+    task="Create logos for my startup",
+    context={'workflow': 'research_and_create_logos', 'count': 3},
+    scifi_context={},
+    spider_context={}
+)
+
+# OpportunityPipelineAgent - value multiplication pipelines
+pipeline_agent = OpportunityPipelineAgent(user=user)
+result = pipeline_agent.execute(
+    task="Process this opportunity",
+    context={'opportunity': {'title': 'Freelance gig', 'base_value': 500}},
+    scifi_context={},
+    spider_context={}
+)
+
+# ContentExecutorAgent - AI content generation
+content_agent = ContentExecutorAgent(user=user)
+result = content_agent.execute(
+    task="Write a blog post about AI",
+    context={'content_type': 'blog_post', 'target_audience': 'developers'},
+    scifi_context={},
+    spider_context={}
+)
+```
 
 ---
 
 ## Remaining Work
 
-### Still Using Deprecated `agents.` Imports (~153)
+### Still Using Deprecated `agents.` Imports (~150)
 
-Top remaining imports:
-- `agents.tasks` (Celery tasks - intentionally in agents app)
-- `agents.creation_agent` (legacy CreationAgent)
-- `agents.workflow_orchestration_agent`
-- `agents.content_executor`
-- `agents.opportunity_pipeline_orchestrator`
-- `agents.router` (legacy - different from `core.agent_router`)
+The legacy agents still exist and are wrapped by the new clean agents:
+- `agents.workflow_orchestration_agent` - Wrapped by `WorkflowOrchestrationAgent`
+- `agents.opportunity_pipeline_orchestrator` - Wrapped by `OpportunityPipelineAgent`
+- `agents.content_executor` - Wrapped by `ContentExecutorAgent`
+- `agents.creation_agent` (legacy CreationAgent) - Not yet wrapped
+- `agents.tasks` (Celery tasks - must stay in agents/ for Django app config)
 
-### Why Some Imports Remain
+### Import Path Updates Still Needed
 
-1. **Celery tasks** - Must stay in `agents/` for Django app config
-2. **Legacy agents** - `CreationAgent`, `WorkflowOrchestrationAgent` are legacy, kept for backwards compatibility
-3. **Complex orchestrators** - Need deeper refactoring before migration
+Files still importing from `agents.workflow_orchestration_agent` etc. can optionally be updated to use the new clean imports from `core.agents`. This is optional since the wrappers delegate to the legacy code.
 
 ---
 
@@ -88,8 +111,15 @@ make start && make celery
 # Run health check
 make health-check
 
-# Count remaining old imports
-grep -r "from agents\." --include="*.py" | grep -v "__pycache__" | grep -v "from agents\.models" | grep -v "from agents\.registry" | grep -v "from agents\._deprecated" | grep -v "^docs/" | wc -l
+# Test new agent imports
+.venv/bin/python -c "
+import os, sys, django
+sys.path.insert(0, '.')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+django.setup()
+from core.agents import WorkflowOrchestrationAgent, OpportunityPipelineAgent, ContentExecutorAgent
+print(f'All 3 new orchestrators imported successfully!')
+"
 
 # Open AI Studio
 open http://localhost:8000/ai-studio/
@@ -102,15 +132,15 @@ open http://localhost:8000/ai-studio/
 | Component | Count | Status |
 |-----------|-------|--------|
 | **Spiders** | **102** | All registered |
-| **Code Agents** | **28** | In `core/agents/` |
+| **Code Agents** | **31** | In `core/agents/` |
 | **DB Agents** | **28** | All active |
+| **Orchestration Agents** | **4** | WorkflowAgent, WorkflowOrchestrationAgent, OpportunityPipelineAgent, ContentExecutorAgent |
 | **Models Location** | `core/models/agents_registry/` | Canonical |
 | **Registry Location** | `core/agents/registry.py` | Canonical |
-| **Old imports remaining** | ~153 | Ongoing cleanup |
 
 ---
 
 ## Handoff Documents
 
-- **This Session:** `docs/handoffs/SESSION_392_REGISTRY_MIGRATION.md`
-- **Previous:** `docs/handoffs/SESSION_391_TECHNICAL_DEBT_REMEDIATION.md`
+- **This Session:** `docs/handoffs/SESSION_393_ORCHESTRATOR_BASEAGENT_REFACTORING.md`
+- **Previous:** `docs/handoffs/SESSION_392_REGISTRY_MIGRATION.md`
