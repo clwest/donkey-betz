@@ -46,7 +46,7 @@ class JobApplicationOrchestrator:
 
     def __init__(self):
         # Import agent registry to access all 149 agents
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
         self.agent_registry = agent_registry
 
         # Track applications

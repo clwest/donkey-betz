@@ -15,7 +15,7 @@ from typing import Dict, Any, List, Optional, Union
 from intelligence.agent_execution_pipeline import AgentExecutionPipeline
 from intelligence.agent_instruction_parser import AgentInstruction, AgentInstructionParser
 from intelligence.real_agents import AgentFactory
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 
 # Session 352: Pipeline Visualizer integration
 from core.pipeline_progress_consumer import (

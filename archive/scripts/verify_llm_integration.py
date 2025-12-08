@@ -21,7 +21,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.contrib.auth.models import User
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from advisors.registry import advisor_registry
 from core.llm_enforcer import get_llm_enforcer, verify_llm_availability
 from ai_core.agents.ai_enforced_base import AIEnforcedAgent

@@ -24,7 +24,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 
 # Internal imports
-from agents.registry import get_agent_registry, AgentRegistry
+from core.agents.registry import get_agent_registry, AgentRegistry
 from advisors.registry import get_advisor_registry, AdvisorRegistry
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator
 from intelligence.income_builder_automation import IncomeBuilderAutomation

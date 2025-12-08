@@ -345,7 +345,7 @@ AGENT_CACHE_TIMEOUT=300
 
             # Try importing Django models
             from agents.models import UnifiedAgentTemplate
-            from agents.registry import get_agent_registry
+            from core.agents.registry import get_agent_registry
 
             agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
             print(f"   ✅ Django configured - {agent_count} active agents in database")

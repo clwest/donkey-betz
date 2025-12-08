@@ -32,7 +32,7 @@ class TestAgentRegistryIntegration:
     def test_agent_registry_import(self):
         """Test that agent registry can be imported and initialized"""
         try:
-            from agents.registry import agent_registry, get_agent_registry
+            from core.agents.registry import agent_registry, get_agent_registry
             assert agent_registry is not None
             assert get_agent_registry() is not None
             logger.info("✅ Agent registry import successful")
@@ -42,7 +42,7 @@ class TestAgentRegistryIntegration:
     def test_agent_registry_basic_operations(self):
         """Test basic agent registry operations"""
         try:
-            from agents.registry import agent_registry
+            from core.agents.registry import agent_registry
 
             # Test listing agents
             agents = agent_registry.list_agents()
@@ -60,7 +60,7 @@ class TestAgentRegistryIntegration:
     def test_agent_discovery(self):
         """Test agent discovery functionality"""
         try:
-            from agents.registry import agent_registry
+            from core.agents.registry import agent_registry
 
             # Test finding best agent
             best_agent = agent_registry.find_best_agent(
@@ -369,7 +369,7 @@ class TestCriticalPathIntegration:
     def test_registry_cross_communication(self):
         """Test that registries can communicate with each other"""
         try:
-            from agents.registry import agent_registry
+            from core.agents.registry import agent_registry
             from advisors.registry import advisor_registry
 
             # Test basic connectivity
@@ -395,7 +395,7 @@ def run_integration_health_check():
 
     # Test Agent Registry
     try:
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
         health = agent_registry.health_check()
         health_results['agent_registry'] = health.get('status') == 'healthy'
     except:

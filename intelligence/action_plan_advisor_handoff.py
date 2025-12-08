@@ -20,7 +20,7 @@ from enum import Enum
 
 # Import existing components
 from advisors.registry import advisor_registry, AdvisorDomain, AdvisorConsultation, AdvisorProfile
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from intelligence.action_plan_formatter import ActionPlanFormatter
 
 logger = logging.getLogger(__name__)

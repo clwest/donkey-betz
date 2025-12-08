@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from core.llm_enforcer import LLMEnforcer
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry, AdvisorDomain
 
 logger = logging.getLogger(__name__)

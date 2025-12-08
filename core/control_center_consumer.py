@@ -308,7 +308,7 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
         agents = []
 
         # Get registered agents
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
 
         for agent_name, agent_class in agent_registry.get_all_agents().items():
             # Check if agent is active in Redis

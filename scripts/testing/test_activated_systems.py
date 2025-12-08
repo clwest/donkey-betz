@@ -19,7 +19,7 @@ django.setup()
 
 from django.db import connection
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
-from agents.registry import AgentRegistry
+from core.agents.registry import AgentRegistry
 from ai_core.spiders.spider_registry import SpiderRegistry
 from core.llm_enforcer import get_llm_enforcer
 

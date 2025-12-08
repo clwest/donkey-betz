@@ -476,7 +476,7 @@ class AgentCollaborationService:
         exclude_agents: List[str] = None
     ) -> Optional[str]:
         """Find the best agent to collaborate with for a task."""
-        from agents.registry import get_agent_registry
+        from core.agents.registry import get_agent_registry
 
         registry = get_agent_registry()
 

@@ -218,7 +218,7 @@ class TestAgentRegistry:
 
     def test_register_agent(self):
         """Test registering an agent."""
-        from agents.registry import AgentRegistry
+        from core.agents.registry import AgentRegistry
 
         registry = AgentRegistry()
 
@@ -233,7 +233,7 @@ class TestAgentRegistry:
 
     def test_get_unregistered_agent(self):
         """Test getting an unregistered agent."""
-        from agents.registry import AgentRegistry
+        from core.agents.registry import AgentRegistry
 
         registry = AgentRegistry()
 
@@ -242,7 +242,7 @@ class TestAgentRegistry:
 
     def test_list_agents(self):
         """Test listing all registered agents."""
-        from agents.registry import AgentRegistry
+        from core.agents.registry import AgentRegistry
 
         registry = AgentRegistry()
 

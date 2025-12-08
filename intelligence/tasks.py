@@ -67,7 +67,7 @@ def trigger_market_scan():
 def execute_action_plan(self, action_plan_id):
     """Execute an action plan using real agents"""
     from .models import ActionPlan
-    from agents.registry import agent_registry
+    from core.agents.registry import agent_registry
     from channels.layers import get_channel_layer
     from asgiref.sync import async_to_sync
     import time

@@ -23,7 +23,7 @@ import json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ai_core.agents.ai_enforced_base import AIEnforcedAgent
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from core.llm_enforcer import get_llm_enforcer
 
 logger = logging.getLogger(__name__)

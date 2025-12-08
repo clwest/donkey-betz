@@ -22,7 +22,7 @@ import django
 django.setup()
 
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
-from agents.registry import AgentRegistry
+from core.agents.registry import AgentRegistry
 from core.tools import ToolRegistry
 from intelligence.shared_memory import SharedMemorySystem
 from agents.executors.base_executor import BaseAgentExecutor

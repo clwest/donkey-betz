@@ -16,7 +16,7 @@ import logging
 
 # Conditional imports to avoid Django dependency issues
 try:
-    from agents.registry import agent_registry
+    from core.agents.registry import agent_registry
 except ImportError:
     class MockAgentRegistry:
         def list_agents(self):

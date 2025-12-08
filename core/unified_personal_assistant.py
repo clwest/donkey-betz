@@ -23,7 +23,7 @@ from core.unified_memory_manager import UnifiedMemoryManager, get_memory_manager
 from core.models_agent_memory import AgentExecutionMemory, AgentRecommendation, AgentPerformanceStats
 
 # Agent and AI imports
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from core.personal_assistant_agent_integration import personal_assistant_agent_integration
 

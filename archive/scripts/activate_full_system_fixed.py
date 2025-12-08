@@ -21,7 +21,7 @@ django.setup()
 from django.db import connection
 from django.utils import timezone
 from agents.models import UnifiedAgentTemplate, AgentExecution
-from agents.registry import AgentRegistry
+from core.agents.registry import AgentRegistry
 from ai_core.spiders.spider_registry import SpiderRegistry
 from core.llm_enforcer import get_llm_enforcer
 

@@ -39,7 +39,7 @@ except ImportError:
     learning_loop = None
 
 # Import real system components
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentStatus
 from intelligence.models import ActionPlan, OpportunityActionPlan, RevenueMetrics

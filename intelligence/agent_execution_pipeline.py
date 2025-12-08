@@ -24,7 +24,7 @@ except ImportError:
 
 from .agent_instruction_parser import AgentInstruction, AgentInstructionParser
 from intelligence.models import ActionPlan, AgentExecution
-from agents.registry import get_agent_registry  # Use the real registry
+from core.agents.registry import get_agent_registry  # Use the real registry
 from .real_agents import AgentFactory  # Import the real agent factory
 
 

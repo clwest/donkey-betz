@@ -8,7 +8,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 from dataclasses import dataclass
 
-from agents.registry import get_agent_registry, AgentRegistry
+from core.agents.registry import get_agent_registry, AgentRegistry
 from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 from advisors.registry import get_advisor_registry
 

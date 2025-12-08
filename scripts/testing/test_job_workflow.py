@@ -79,7 +79,7 @@ async def test_basic_job_scanning():
     # Try to use the intelligent job matcher if available
     try:
         # Check if we can import without the missing ml_pipeline
-        from agents.registry import agent_registry
+        from core.agents.registry import agent_registry
 
         print(f"\n✅ Agent Registry loaded")
         print(f"📊 Total agents available: {len(agent_registry.agents)}")

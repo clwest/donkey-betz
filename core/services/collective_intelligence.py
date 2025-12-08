@@ -667,7 +667,7 @@ class CollectiveIntelligenceService:
     def _get_agents_by_domain(self, domain: str) -> List[str]:
         """Get agents that work in a specific domain"""
         try:
-            from agents.registry import get_agent_registry
+            from core.agents.registry import get_agent_registry
             registry = get_agent_registry()
             agents = registry.list_agents(specialization=domain)
             return [a['name'] for a in agents]
@@ -915,7 +915,7 @@ class CollectiveIntelligenceService:
         import uuid
 
         try:
-            from agents.registry import get_agent_registry
+            from core.agents.registry import get_agent_registry
             from core.models_unified_system import CollaborationSession
 
             orchestration_id = str(uuid.uuid4())

@@ -153,7 +153,7 @@ class SuperPlatformCoordinator:
         """Lazy load agent registry."""
         if self._agent_registry is None:
             try:
-                from agents.registry import get_agent_registry
+                from core.agents.registry import get_agent_registry
                 self._agent_registry = get_agent_registry()
             except Exception as e:
                 logger.warning(f"Could not load agent registry: {e}")

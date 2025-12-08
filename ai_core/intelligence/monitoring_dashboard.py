@@ -15,7 +15,7 @@ import statistics
 import logging
 
 from orchestration import orchestrator
-from agents.registry import agent_registry
+from core.agents.registry import agent_registry
 from advisors.registry import advisor_registry
 from ml_pipeline.pipeline import MLPipeline
 

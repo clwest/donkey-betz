@@ -20,7 +20,7 @@ django.setup()
 
 from intelligence.income_builder import AIIncomeBuilder, UserProfile, SkillLevel
 from intelligence.agent_execution_pipeline import AgentExecutionPipeline
-from agents.registry import get_agent_registry
+from core.agents.registry import get_agent_registry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
