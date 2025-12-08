@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 from decimal import Decimal
 from django.db import models
-from agents.opportunity_pipeline_orchestrator import OpportunityPipelineOrchestrator
+from core.agents import OpportunityPipelineAgent
 
 class RevenueAutomationIntegration:
     """
@@ -15,7 +15,7 @@ class RevenueAutomationIntegration:
     """
 
     def __init__(self):
-        self.opportunity_orchestrator = OpportunityPipelineOrchestrator()
+        self.opportunity_orchestrator = OpportunityPipelineAgent()
         self.active_automations = {}
         self.revenue_tracking = {}
 
