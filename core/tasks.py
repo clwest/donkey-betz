@@ -1819,7 +1819,7 @@ def score_opportunities_from_spider_data(hours: int = 24, limit: int = 100):
     logger.info(f"🎯 [OPPORTUNITY ENGINE] Starting opportunity scoring - last {hours}h, limit: {limit}")
 
     try:
-        from agents.opportunity_scoring_agent import OpportunityScoringAgent
+        from core.agents.analysis import OpportunityScoringAgent
 
         agent = OpportunityScoringAgent()
         results = agent.score_spider_data(hours=hours, limit=limit)

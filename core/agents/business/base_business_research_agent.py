@@ -637,7 +637,7 @@ class BaseBusinessResearchAgent:
         num_results = arguments.get('num_results', 10)
 
         try:
-            from agents.research_agent import ResearchAgent
+            from core.agents import ResearchAgent
             agent = ResearchAgent()
             results = agent.web_search(query, num_results=num_results)
             logger.info(f"{self.name}: Web search returned {len(results) if results else 0} results")
