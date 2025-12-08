@@ -7555,12 +7555,12 @@ def execute_tool(request):
             result = _execute_chain_videos(request.user, parameters)
         elif tool_name == 'add_text_to_video':
             # Session 81: Route to VideoAgent
-            from agents.video_agent import get_video_agent
+            from core.agents import get_video_agent
             video_agent = get_video_agent(user=request.user)
             result = video_agent.add_text_to_video(**parameters)
         elif tool_name == 'add_music_to_video':
             # Session 81: Route to VideoAgent (auto-queries AudioAgent)
-            from agents.video_agent import get_video_agent
+            from core.agents import get_video_agent
             video_agent = get_video_agent(user=request.user)
             result = video_agent.add_music_to_video(**parameters)
         elif tool_name == 'apply_color_grade':
@@ -7578,12 +7578,12 @@ def execute_tool(request):
             result = _execute_edit_character_training_image(request.user, parameters)
         elif tool_name == 'generate_speech':
             # Session 81: Route to AudioAgent (stores state in memory)
-            from agents.audio_agent import get_audio_agent
+            from core.agents import get_audio_agent
             audio_agent = get_audio_agent(user=request.user)
             result = audio_agent.generate_speech(**parameters)
         elif tool_name == 'generate_sound_effect':
             # Session 81: Route to AudioAgent (stores state in memory)
-            from agents.audio_agent import get_audio_agent
+            from core.agents import get_audio_agent
             audio_agent = get_audio_agent(user=request.user)
             result = audio_agent.generate_sound_effect(**parameters)
         elif tool_name == 'audio_generation_agent':
@@ -7597,7 +7597,7 @@ def execute_tool(request):
                     'suggestion': 'For logo creation workflows, the final step should be create_project_from_research, not audio_generation_agent.'
                 }
             else:
-                from agents.audio_agent import get_audio_agent
+                from core.agents import get_audio_agent
                 audio_agent = get_audio_agent(user=request.user)
                 operation = parameters.get('operation', 'speech')
                 if operation == 'sound_effect':
@@ -9059,7 +9059,7 @@ def _execute_add_music_to_video(user, parameters):
             logger.info(f"🎵 Session 83: Audio URL provided, executing mixing immediately...")
 
             # Call VideoAgent to actually mix the audio
-            from agents.video_agent import VideoAgent
+            from core.agents import VideoAgent
 
             video_agent = VideoAgent(user=user)
             result = video_agent.add_music_to_video(
@@ -9141,7 +9141,7 @@ def _execute_apply_color_grade(user, parameters):
     """
     try:
         from content.models import VideoHistory
-        from agents.video_agent import VideoAgent
+        from core.agents import VideoAgent
 
         # Get parameters
         style = parameters.get('style', 'cinematic').lower()
@@ -9287,7 +9287,7 @@ def _execute_edit_video(user, parameters):
     """
     try:
         from content.models import VideoHistory
-        from agents.video_agent import VideoAgent
+        from core.agents import VideoAgent
 
         # Get parameters
         video_selection = parameters.get('video_selection', 'last')

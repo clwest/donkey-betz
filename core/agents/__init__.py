@@ -115,8 +115,8 @@ from core.agents.registry import (
 
 # Creation Agents
 from core.agents.image_agent import ImageAgent
-from core.agents.video_agent import VideoAgent
-from core.agents.audio_agent import AudioAgent
+from core.agents.video_agent import VideoAgent, get_video_agent
+from core.agents.audio_agent import AudioAgent, get_audio_agent
 from core.agents.three_d_agent import ThreeDAgent
 
 # Editing Agents
@@ -192,10 +192,12 @@ __all__ = [
     'execute_agent',
     'agent_registry',
 
-    # Creation Agents (4)
+    # Creation Agents (4) + factory functions
     'ImageAgent',
     'VideoAgent',
+    'get_video_agent',
     'AudioAgent',
+    'get_audio_agent',
     'ThreeDAgent',
 
     # Editing Agents (2)

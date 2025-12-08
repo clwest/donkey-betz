@@ -2410,7 +2410,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             # Session 128: Delegate to specialized Image Editing Agent
             # Session 202: Consolidated to unified ImageAgent
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -2446,7 +2446,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             # Session 128: Delegate to specialized Image Editing Agent
             # Session 202: Consolidated to unified ImageAgent
-            from agents.image_agent import ImageAgent
+            from core.agents import ImageAgent
 
             agent = ImageAgent(
                 user=self.user,
@@ -2486,7 +2486,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            from core.agents import ImageEditingAgent
 
             agent = ImageEditingAgent(
                 user=self.user,
@@ -2525,7 +2525,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            from core.agents import ImageEditingAgent
 
             agent = ImageEditingAgent(
                 user=self.user,
@@ -2563,7 +2563,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            from core.agents import ImageEditingAgent
 
             agent = ImageEditingAgent(
                 user=self.user,
@@ -2604,7 +2604,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Session 128: Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            from core.agents import ImageEditingAgent
 
             agent = ImageEditingAgent(
                 user=self.user,
@@ -2645,7 +2645,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            from core.agents import ImageEditingAgent
 
             agent = ImageEditingAgent(
                 user=self.user,
@@ -2686,7 +2686,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             current_project = getattr(self, 'project', None)  # Session 179: Fixed project access
 
             # Delegate to specialized Image Editing Agent
-            from agents.image_editing_agent import ImageEditingAgent
+            from core.agents import ImageEditingAgent
 
             agent = ImageEditingAgent(
                 user=self.user,
@@ -4732,7 +4732,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.info(f"🎬🎬🎬 ANIMATE_IMAGE TOOL CALLED! Image: {image_id}, Project: {current_project}, Session: {current_session}")
 
             # Session 127 Part 2: Use VideoAgent directly instead of views!
-            from agents.video_agent import VideoAgent
+            from core.agents import VideoAgent
             video_agent = VideoAgent(self.user)
 
             result = video_agent.animate_image(
@@ -7717,7 +7717,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 logger.info(f"🎬 Routing to VideoAgent.animate_image()...")
 
                 # Initialize VideoAgent and call animate_image
-                from agents.video_agent import get_video_agent
+                from core.agents import get_video_agent
                 video_agent = get_video_agent(user=self.user)
                 logger.info(f"✅ VideoAgent initialized for user: {self.user}")
 
@@ -7821,7 +7821,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
                 # Initialize EditingOrchestratorAgent
                 # Session 206: EditingOrchestratorAgent was merged into ImageAgent in Phase 1
-                from agents.image_agent import ImageAgent as EditingOrchestratorAgent
+                from core.agents import ImageAgent as EditingOrchestratorAgent
                 editing_agent = EditingOrchestratorAgent(user=self.user)
                 logger.info(f"✅ EditingOrchestratorAgent initialized for user: {self.user}")
 

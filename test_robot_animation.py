@@ -14,7 +14,7 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from content.models import ImageHistory
-from agents.video_agent import VideoAgent
+from core.agents import VideoAgent
 
 User = get_user_model()
 user = User.objects.get(username='admin')

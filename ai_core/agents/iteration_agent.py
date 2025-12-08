@@ -21,7 +21,7 @@ from django.contrib.auth.models import User
 
 from ai_core.agents.agent_memory_interface import AgentMemoryInterface
 # Session 206: EditingOrchestratorAgent was merged into ImageAgent in Phase 1
-from agents.image_agent import ImageAgent as EditingOrchestratorAgent
+from core.agents import ImageAgent as EditingOrchestratorAgent
 
 
 class IterationAgent:

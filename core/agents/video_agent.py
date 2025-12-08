@@ -384,3 +384,17 @@ If asked to do something outside video generation, politely explain you can only
                 'success': False,
                 'error': f"Unknown tool: {tool_name}. VideoAgent only supports video tools."
             }
+
+
+# Session 392: Factory function for backwards compatibility
+def get_video_agent(user=None) -> VideoAgent:
+    """
+    Get VideoAgent instance.
+
+    Args:
+        user: Optional user who initiated the agent
+
+    Returns:
+        VideoAgent instance
+    """
+    return VideoAgent(user=user)

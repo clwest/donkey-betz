@@ -205,14 +205,14 @@ def test_elevenlabs_provider_import():
 
 def test_audio_agent_import():
     """Test: AudioAgent can be imported"""
-    from agents.audio_agent import AudioAgent
+    from core.agents import AudioAgent
     assert AudioAgent, "AudioAgent class not found"
     logger.info("  AudioAgent class imported successfully")
 
 
 def test_audio_agent_initialization():
     """Test: AudioAgent can be initialized"""
-    from agents.audio_agent import AudioAgent
+    from core.agents import AudioAgent
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -248,14 +248,14 @@ def test_replicate_provider_import():
 
 def test_video_agent_import():
     """Test: VideoAgent can be imported"""
-    from agents.video_agent import VideoAgent
+    from core.agents import VideoAgent
     assert VideoAgent, "VideoAgent class not found"
     logger.info("  VideoAgent class imported successfully")
 
 
 def test_video_agent_initialization():
     """Test: VideoAgent can be initialized"""
-    from agents.video_agent import VideoAgent
+    from core.agents import VideoAgent
     from django.contrib.auth import get_user_model
 
     User = get_user_model()

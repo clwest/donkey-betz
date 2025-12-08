@@ -15,8 +15,8 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from content.elevenlabs_provider import elevenlabs_provider
-from agents.audio_agent import get_audio_agent
-from agents.video_agent import VideoAgent
+from core.agents import get_audio_agent
+from core.agents import VideoAgent
 from content.models import VideoHistory
 
 User = get_user_model()

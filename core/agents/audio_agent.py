@@ -362,3 +362,17 @@ If asked to do something outside audio generation, politely explain you can only
                 'success': False,
                 'error': f"Unknown tool: {tool_name}. AudioAgent only supports audio tools."
             }
+
+
+# Session 392: Factory function for backwards compatibility
+def get_audio_agent(user=None) -> AudioAgent:
+    """
+    Get AudioAgent instance.
+
+    Args:
+        user: Optional user who initiated the agent
+
+    Returns:
+        AudioAgent instance
+    """
+    return AudioAgent(user=user)

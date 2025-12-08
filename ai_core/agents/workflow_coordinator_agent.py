@@ -36,7 +36,7 @@ from ai_core.agents.version_control_agent import VersionControlAgent
 from ai_core.agents.brand_style_agent import BrandStyleAgent
 from ai_core.agents.reference_library_agent import ReferenceLibraryAgent
 # Session 206: EditingOrchestratorAgent was merged into ImageAgent in Phase 1
-from agents.image_agent import ImageAgent as EditingOrchestratorAgent
+from core.agents import ImageAgent as EditingOrchestratorAgent
 from ai_core.agents.iteration_agent import IterationAgent
 
 
