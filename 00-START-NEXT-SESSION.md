@@ -39,9 +39,29 @@ While gaining:
 | Orchestration Agents | 4 | Was 2, added 3 (WOA, OPA, CEA) - WorkflowAgent already existed |
 | Total Code Agents | 31 | Was 28, added 3 new wrappers |
 
+### 4. Updated 16 Deprecated Import Paths
+
+Updated high-impact files to use canonical `core.agents` paths:
+
+| File | Imports Updated |
+|------|-----------------|
+| `core/personal_ai_assistant_enhanced.py` | 17 |
+| `core/views_opportunity.py` | 4 |
+| `core/services/workflow_builder.py` | 3 |
+| `core/views_image.py` | 2 |
+
+Key migrations:
+- `agents._deprecated.*` → `core.agents.strategy`, `core.agents.analysis`, `core.agents.executive`, `core.agents.training`
+- `agents.router` → `core.agent_router`
+- `agents.workflow_orchestration_agent` → `core.agents`
+- `agents.video_generation_agent` → `core.agents` (VideoAgent)
+- `agents.audio_generation_agent` → `core.agents` (AudioAgent)
+- `agents.video_editing_agent` → `core.agents` (VideoEditingAgent)
+
 ### Commits Made
 
 1. `d5072bd` - feat(Session 393): Refactor 3 legacy orchestrators to use BaseAgent pattern
+2. `40ac960` - refactor(Session 393): Update 16 deprecated agents.* imports to core.agents
 
 ---
 
@@ -87,7 +107,7 @@ result = content_agent.execute(
 
 ## Remaining Work
 
-### Still Using Deprecated `agents.` Imports (~150)
+### Still Using Deprecated `agents.` Imports (~107)
 
 The legacy agents still exist and are wrapped by the new clean agents:
 - `agents.workflow_orchestration_agent` - Wrapped by `WorkflowOrchestrationAgent`
