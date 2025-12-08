@@ -176,6 +176,59 @@ for r in results:
 
 ---
 
+---
+
+## Spider Content Fix (Part 2)
+
+### Root Cause Identified
+
+The HackerNews spider was only fetching story IDs, not full content. The bug was in `ai_core/spiders/real_data_collector.py`:
+
+```python
+# BEFORE: Just stored IDs as references
+elif isinstance(item, (int, str)):
+    items.append({'id': item, 'source': source, 'type': 'reference'})
+```
+
+### Fix Applied
+
+Added `fetch_hackernews_stories()` function to fetch full story details:
+
+```python
+async def fetch_hackernews_stories(session, story_ids):
+    """Fetch full story details from HackerNews API."""
+    stories = []
+    for story_id in story_ids[:15]:
+        url = f'https://hacker-news.firebaseio.com/v0/item/{story_id}.json'
+        story = await fetch(url)
+        stories.append({
+            'title': story.get('title', ''),
+            'description': f"Score: {story.get('score')} | Comments: {story.get('descendants')}",
+            'link': story.get('url', f"https://news.ycombinator.com/item?id={story_id}"),
+            ...
+        })
+    return stories
+```
+
+### Spider Status After Fix
+
+| Spider | Status | Notes |
+|--------|--------|-------|
+| hackernews | ✅ Fixed | Now fetches 15 full stories with titles |
+| behance | ✅ Working | 20 items with titles |
+| devto | ✅ Working | 30 items with titles |
+| techcrunch | ✅ Working | 20 items with titles |
+| dribbble | ❌ Blocked | HTTP 202 (Cloudflare protection) |
+| kickstarter | ❌ Blocked | HTTP 403 (API blocked) |
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `ai_core/spiders/real_data_collector.py` | Added `fetch_hackernews_stories()`, updated `collect_spider_data()` |
+
+---
+
 ## Related Documents
 
 - [SPIDERS.md](../SPIDERS.md) - Spider network reference
