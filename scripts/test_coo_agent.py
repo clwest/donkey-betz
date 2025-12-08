@@ -24,7 +24,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from agents.coo_agent import COOAgent
+from core.agents.executive import COOAgent
 from core.models.agents_registry import UnifiedAgentTemplate
 import json
 

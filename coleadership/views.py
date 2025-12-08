@@ -282,7 +282,7 @@ def start_boardroom_meeting(request):
     - session_id and decision_id for follow-up actions
     """
     try:
-        from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+        from core.agents.executive import MeetingCoordinatorAgent
         from content.models import AISession, CreativeProject
         from core.models.agents_registry import UnifiedAgentTemplate
         from .services import start_decision, log_agent_recommendation

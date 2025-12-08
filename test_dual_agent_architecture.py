@@ -101,7 +101,7 @@ def test_trained_creation_agent(character_model):
     print(f"\n✅ User: {user.username}")
     print(f"✅ Character Model: {character_model.name}")
 
-    from agents.trained_creation_agent import TrainedCreationAgent
+    from core.agents.training import TrainedCreationAgent
 
     agent = TrainedCreationAgent(user=user, project_id=None)
     print(f"\n🤖 Agent initialized: {agent.agent_name}")
