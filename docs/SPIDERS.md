@@ -1,12 +1,12 @@
 # Spider Network Reference
 
-**Last Updated:** Session 396 (December 8, 2025)
+**Last Updated:** Session 397 (December 8, 2025)
 
 ---
 
 ## Overview
 
-The Spider Network consists of **102 registered spiders**, with **40 currently functional** after Phase 1 & 2 implementations. This document reflects the actual state after Session 396.
+The Spider Network consists of **102 registered spiders**, with **46 currently functional** after Phase 1, 2 & 3 implementations. This document reflects the actual state after Session 397.
 
 ---
 
@@ -15,16 +15,16 @@ The Spider Network consists of **102 registered spiders**, with **40 currently f
 | Metric | Count |
 |--------|-------|
 | Total Registered | 102 |
-| **Actually Working** | **40** |
-| Unconfigured (broken) | 62 |
+| **Actually Working** | **46** |
+| Unconfigured (broken) | 56 |
 | Records in DB | 13,700+ |
 | Searchable (with embeddings) | ~2,000 |
 
 ---
 
-## Spider Status (Session 396 Update)
+## Spider Status (Session 397 Update)
 
-### Working Spiders (40)
+### Working Spiders (46)
 
 These spiders are configured and collecting real data:
 
@@ -82,7 +82,17 @@ These spiders are configured and collecting real data:
 | education_rss | RSS | Working (EdSurge, Chronicle) |
 | business_news | RSS | Working (Bloomberg, Fortune) |
 
-### Broken Spiders (62)
+#### Session 397 Additions (Phase 3 - 6 spiders)
+| Spider | Source Type | Status |
+|--------|-------------|--------|
+| polygon_finance | Polygon.io API | Working (market news) |
+| etherscan | Etherscan V2 API | Working (ETH supply/blocks) |
+| newsapi | NewsAPI.org | Working (tech headlines) |
+| giphy | Giphy API | Working (trending GIFs) |
+| unsplash | Unsplash API | Working (popular photos) |
+| adzuna | Adzuna API | Working (remote jobs) |
+
+### Broken Spiders (56)
 
 These spiders return placeholder data ("no real URLs configured"):
 

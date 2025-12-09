@@ -153,6 +153,30 @@ SPIDER_TARGET_URLS = {
         'https://fortune.com/feed/',
     ],
 
+    # === SESSION 396: PHASE 3 - API KEY SPIDERS ===
+    # These use API keys from .env
+
+    # Polygon.io Financial Data (POLYGON_API_KEY required)
+    # Note: URL is a template - actual key injected at runtime
+    'polygon_finance': [
+        'POLYGON_API',  # Marker for custom handler
+    ],
+
+    # Etherscan Blockchain Data (ETHERSCAN_API_KEY required)
+    'etherscan': [
+        'ETHERSCAN_API',  # Marker for custom handler
+    ],
+
+    # SEC EDGAR Filings (SEC_API_KEY required)
+    'sec_edgar': [
+        'SEC_EDGAR_API',  # Marker for custom handler
+    ],
+
+    # Spotify Podcast/Music Trends (SPOTIFY_CLIENT_ID/SECRET required)
+    'spotify': [
+        'SPOTIFY_API',  # Marker for custom handler
+    ],
+
     # Note: These spiders use their own API clients, not SPIDER_TARGET_URLS:
     # - bluesky: Uses BlueSky AT Protocol API (BLUESKY_IDENTIFIER, BLUESKY_PASSWORD)
     # - youtube: Uses YouTube Data API v3 (GOOGLE_API_KEY)
@@ -730,18 +754,411 @@ async def _collect_discord_data() -> Dict[str, Any]:
     }
 
 
+# === SESSION 396: PHASE 3 API HANDLERS ===
+
+async def _collect_polygon_data() -> Dict[str, Any]:
+    """Collect financial data from Polygon.io API"""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    api_key = os.getenv('POLYGON_API_KEY', '')
+
+    if not api_key:
+        return {
+            'items': [],
+            'source': 'polygon_finance',
+            'error': 'POLYGON_API_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Use v3 reference endpoint (works with free tier)
+            # Get latest market news
+            url = f'https://api.polygon.io/v2/reference/news?limit=15&apiKey={api_key}'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    news = data.get('results', [])
+                    for article in news:
+                        all_items.append({
+                            'title': article.get('title', ''),
+                            'description': article.get('description', '')[:500] if article.get('description') else '',
+                            'link': article.get('article_url', ''),
+                            'author': article.get('author', ''),
+                            'published': article.get('published_utc', ''),
+                            'tickers': article.get('tickers', []),
+                            'source': 'polygon_finance',
+                            'type': 'market_news',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                else:
+                    error_text = await response.text()
+                    logger.warning(f"Polygon API error: {response.status} - {error_text[:100]}")
+
+        logger.info(f"Polygon: collected {len(all_items)} items")
+
+        return {
+            'items': all_items[:50],
+            'item_count': len(all_items),
+            'source': 'polygon_finance',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Polygon collection error: {e}")
+        return {
+            'items': [],
+            'source': 'polygon_finance',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_etherscan_data() -> Dict[str, Any]:
+    """Collect blockchain data from Etherscan API V2"""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    api_key = os.getenv('ETHERSCAN_API_KEY', '')
+
+    if not api_key:
+        return {
+            'items': [],
+            'source': 'etherscan',
+            'error': 'ETHERSCAN_API_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Get ETH supply stats (V2 API)
+            url = f'https://api.etherscan.io/v2/api?chainid=1&module=stats&action=ethsupply&apikey={api_key}'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get('status') == '1':
+                        result = data.get('result', '')
+                        if result:
+                            eth_supply = float(result) / 1e18  # Convert from wei
+                            all_items.append({
+                                'title': f"ETH Total Supply: {eth_supply:,.0f} ETH",
+                                'description': f"Total Ethereum supply on mainnet",
+                                'eth_supply': eth_supply,
+                                'source': 'etherscan',
+                                'type': 'eth_supply',
+                                'fetched_at': datetime.now(timezone.utc).isoformat()
+                            })
+
+            # Get latest block number
+            url = f'https://api.etherscan.io/v2/api?chainid=1&module=proxy&action=eth_blockNumber&apikey={api_key}'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    result = data.get('result', '')
+                    if result:
+                        block_num = int(result, 16)
+                        all_items.append({
+                            'title': f"Latest ETH Block: {block_num:,}",
+                            'description': f"Current Ethereum mainnet block number",
+                            'block_number': block_num,
+                            'source': 'etherscan',
+                            'type': 'block_info',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"Etherscan: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'etherscan',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Etherscan collection error: {e}")
+        return {
+            'items': [],
+            'source': 'etherscan',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_newsapi_data() -> Dict[str, Any]:
+    """Collect news from NewsAPI"""
+    import os
+
+    api_key = os.getenv('NEWS_API_KEY', '')
+
+    if not api_key:
+        return {
+            'items': [],
+            'source': 'newsapi',
+            'error': 'NEWS_API_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Tech headlines
+            url = f'https://newsapi.org/v2/top-headlines?category=technology&language=en&pageSize=20&apiKey={api_key}'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    articles = data.get('articles', [])
+                    for article in articles:
+                        all_items.append({
+                            'title': article.get('title', ''),
+                            'description': article.get('description', '')[:500] if article.get('description') else '',
+                            'link': article.get('url', ''),
+                            'author': article.get('author', ''),
+                            'published': article.get('publishedAt', ''),
+                            'source_name': article.get('source', {}).get('name', ''),
+                            'image': article.get('urlToImage', ''),
+                            'source': 'newsapi',
+                            'type': 'news_article',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                elif response.status == 426:
+                    # Free tier limitation - need to use different endpoint
+                    logger.warning("NewsAPI: Free tier requires 'everything' endpoint from localhost only")
+                else:
+                    logger.warning(f"NewsAPI error: {response.status}")
+
+        logger.info(f"NewsAPI: collected {len(all_items)} items")
+
+        return {
+            'items': all_items[:50],
+            'item_count': len(all_items),
+            'source': 'newsapi',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"NewsAPI collection error: {e}")
+        return {
+            'items': [],
+            'source': 'newsapi',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_giphy_data() -> Dict[str, Any]:
+    """Collect trending GIFs from Giphy API"""
+    import os
+
+    api_key = os.getenv('GIPHY_API_KEY', os.getenv('GIPHY_API_Key', ''))
+
+    if not api_key:
+        return {
+            'items': [],
+            'source': 'giphy',
+            'error': 'GIPHY_API_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f'https://api.giphy.com/v1/gifs/trending?api_key={api_key}&limit=20&rating=g'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    gifs = data.get('data', [])
+                    for gif in gifs:
+                        all_items.append({
+                            'title': gif.get('title', 'Trending GIF'),
+                            'description': f"Trending on Giphy - {gif.get('trending_datetime', '')}",
+                            'link': gif.get('url', ''),
+                            'image': gif.get('images', {}).get('fixed_height', {}).get('url', ''),
+                            'embed_url': gif.get('embed_url', ''),
+                            'source': 'giphy',
+                            'type': 'trending_gif',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                else:
+                    logger.warning(f"Giphy API error: {response.status}")
+
+        logger.info(f"Giphy: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'giphy',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Giphy collection error: {e}")
+        return {
+            'items': [],
+            'source': 'giphy',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_unsplash_data() -> Dict[str, Any]:
+    """Collect trending photos from Unsplash API"""
+    import os
+
+    access_key = os.getenv('UNSPLASH_ACCESS_KEY', '')
+
+    if not access_key:
+        return {
+            'items': [],
+            'source': 'unsplash',
+            'error': 'UNSPLASH_ACCESS_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {'Authorization': f'Client-ID {access_key}'}
+            url = 'https://api.unsplash.com/photos?order_by=popular&per_page=20'
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    photos = await response.json()
+                    for photo in photos:
+                        all_items.append({
+                            'title': photo.get('alt_description', photo.get('description', 'Popular photo')),
+                            'description': f"By {photo.get('user', {}).get('name', 'Unknown')} - {photo.get('likes', 0)} likes",
+                            'link': photo.get('links', {}).get('html', ''),
+                            'image': photo.get('urls', {}).get('regular', ''),
+                            'author': photo.get('user', {}).get('name', ''),
+                            'likes': photo.get('likes', 0),
+                            'source': 'unsplash',
+                            'type': 'photo',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                else:
+                    logger.warning(f"Unsplash API error: {response.status}")
+
+        logger.info(f"Unsplash: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'unsplash',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Unsplash collection error: {e}")
+        return {
+            'items': [],
+            'source': 'unsplash',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_adzuna_data() -> Dict[str, Any]:
+    """Collect job listings from Adzuna API"""
+    import os
+
+    app_id = os.getenv('ADZUNA_APP_ID', '')
+    app_key = os.getenv('ADZUNA_APP_KEY', '')
+
+    if not app_id or not app_key:
+        return {
+            'items': [],
+            'source': 'adzuna',
+            'error': 'ADZUNA_APP_ID or ADZUNA_APP_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Search for remote tech jobs
+            url = f'https://api.adzuna.com/v1/api/jobs/us/search/1?app_id={app_id}&app_key={app_key}&results_per_page=20&what=developer%20remote&content-type=application/json'
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    jobs = data.get('results', [])
+                    for job in jobs:
+                        salary_min = job.get('salary_min', 0)
+                        salary_max = job.get('salary_max', 0)
+                        salary_str = f"${salary_min:,.0f} - ${salary_max:,.0f}" if salary_min else "Not specified"
+
+                        all_items.append({
+                            'title': job.get('title', ''),
+                            'description': job.get('description', '')[:500],
+                            'link': job.get('redirect_url', ''),
+                            'company': job.get('company', {}).get('display_name', ''),
+                            'location': job.get('location', {}).get('display_name', ''),
+                            'salary': salary_str,
+                            'salary_min': salary_min,
+                            'salary_max': salary_max,
+                            'created': job.get('created', ''),
+                            'source': 'adzuna',
+                            'type': 'job_listing',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                else:
+                    logger.warning(f"Adzuna API error: {response.status}")
+
+        logger.info(f"Adzuna: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'adzuna',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Adzuna collection error: {e}")
+        return {
+            'items': [],
+            'source': 'adzuna',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
 async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     """
     Collect real data for a specific spider.
     Returns structured data with items.
 
     Session 394: Special handling for HackerNews to fetch full story content.
+    Session 396: Added Phase 3 API handlers for key-based spiders.
     """
     # API-based spiders use their own implementations
     API_SPIDERS = ['bluesky', 'youtube', 'discord']
 
     if spider_name in API_SPIDERS:
         return await _collect_api_spider_data(spider_name)
+
+    # Session 396: Phase 3 API key-based spiders
+    PHASE3_API_SPIDERS = {
+        'polygon_finance': _collect_polygon_data,
+        'etherscan': _collect_etherscan_data,
+        'newsapi': _collect_newsapi_data,
+        'giphy': _collect_giphy_data,
+        'unsplash': _collect_unsplash_data,
+        'adzuna': _collect_adzuna_data,
+    }
+
+    if spider_name in PHASE3_API_SPIDERS:
+        return await PHASE3_API_SPIDERS[spider_name]()
 
     urls = SPIDER_TARGET_URLS.get(spider_name, [])
 
