@@ -539,15 +539,14 @@ async function submitLegalQuery() {
         // Use the chat endpoint with the legal query
         const message = `[Legal Assistant Query]\nCase Type: ${caseType}\nDocument Type: ${docType}\n\nQuestion: ${query}`;
 
-        const response = await fetch('/api/chat/', {
+        const response = await fetch('/api/super-platform/process/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
-                message: message,
-                agent_hint: 'LegalDocDrafterAgent'
+                message: message
             })
         });
 
@@ -598,15 +597,14 @@ async function generateLegalDoc(docType, subType) {
     const query = `Generate a ${docType} template for ${subType.replace(/_/g, ' ')} in Colorado family court.`;
 
     try {
-        const response = await fetch('/api/chat/', {
+        const response = await fetch('/api/super-platform/process/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
-                message: `[Legal Document Request]\nDocument Type: ${docType}\nSub-type: ${subType}\n\n${query}`,
-                agent_hint: 'LegalDocDrafterAgent'
+                message: `[Legal Document Request]\nDocument Type: ${docType}\nSub-type: ${subType}\n\n${query}`
             })
         });
 
@@ -659,15 +657,14 @@ async function explainProcedure(procedureId) {
     document.getElementById('legal-procedure-content').style.display = 'block';
 
     try {
-        const response = await fetch('/api/chat/', {
+        const response = await fetch('/api/super-platform/process/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
-                message: `[Legal Procedure Explanation]\nProcedure: ${procedureId}\n\nExplain the step-by-step process for ${procedureNames[procedureId]} in Colorado.`,
-                agent_hint: 'LegalDocDrafterAgent'
+                message: `[Legal Procedure Explanation]\nProcedure: ${procedureId}\n\nExplain the step-by-step process for ${procedureNames[procedureId]} in Colorado.`
             })
         });
 
