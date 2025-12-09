@@ -1133,6 +1133,91 @@ async def _collect_adzuna_data() -> Dict[str, Any]:
         }
 
 
+async def _collect_finnhub_data() -> Dict[str, Any]:
+    """Collect financial data from Finnhub API - stock quotes, market news"""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    api_key = os.getenv('FINNHUB_API_KEY', '')
+
+    if not api_key:
+        return {
+            'items': [],
+            'source': 'finnhub',
+            'error': 'FINNHUB_API_KEY not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    # Top stocks to track
+    tracked_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'JPM', 'V', 'UNH']
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # 1. Get stock quotes for top companies
+            for symbol in tracked_symbols[:5]:  # Limit to 5 for rate limits
+                url = f'https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}'
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get('c'):  # Has current price
+                            all_items.append({
+                                'title': f'{symbol} Stock Quote',
+                                'description': f'{symbol}: ${data.get("c", 0):.2f} (Change: {data.get("dp", 0):.2f}%)',
+                                'symbol': symbol,
+                                'current_price': data.get('c', 0),
+                                'change': data.get('d', 0),
+                                'change_percent': data.get('dp', 0),
+                                'high': data.get('h', 0),
+                                'low': data.get('l', 0),
+                                'open': data.get('o', 0),
+                                'previous_close': data.get('pc', 0),
+                                'source': 'finnhub',
+                                'type': 'stock_quote',
+                                'fetched_at': datetime.now(timezone.utc).isoformat()
+                            })
+                await asyncio.sleep(0.15)  # Rate limiting (60 calls/min)
+
+            # 2. Get market news
+            news_url = f'https://finnhub.io/api/v1/news?category=general&token={api_key}'
+            async with session.get(news_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    news = await response.json()
+                    for article in news[:15]:
+                        all_items.append({
+                            'title': article.get('headline', ''),
+                            'description': article.get('summary', '')[:500],
+                            'link': article.get('url', ''),
+                            'source_name': article.get('source', ''),
+                            'category': article.get('category', ''),
+                            'image': article.get('image', ''),
+                            'published': datetime.fromtimestamp(article.get('datetime', 0), tz=timezone.utc).isoformat() if article.get('datetime') else '',
+                            'source': 'finnhub',
+                            'type': 'market_news',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"Finnhub: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'finnhub',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Finnhub collection error: {e}")
+        return {
+            'items': [],
+            'source': 'finnhub',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
 async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     """
     Collect real data for a specific spider.
@@ -1147,7 +1232,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     if spider_name in API_SPIDERS:
         return await _collect_api_spider_data(spider_name)
 
-    # Session 396: Phase 3 API key-based spiders
+    # Session 396-397: Phase 3 API key-based spiders
     PHASE3_API_SPIDERS = {
         'polygon_finance': _collect_polygon_data,
         'etherscan': _collect_etherscan_data,
@@ -1155,6 +1240,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         'giphy': _collect_giphy_data,
         'unsplash': _collect_unsplash_data,
         'adzuna': _collect_adzuna_data,
+        'finnhub': _collect_finnhub_data,
     }
 
     if spider_name in PHASE3_API_SPIDERS:
