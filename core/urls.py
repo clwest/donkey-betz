@@ -989,6 +989,11 @@ from core.views_rag_embeddings import (
     # Session 402: Document ingestion APIs
     list_documents, ingest_url, ingest_file, get_document, delete_document
 )
+# Session 403: Legal Case Files APIs
+from core.views_legal import (
+    list_legal_case_files, upload_legal_case_file, get_legal_case_file,
+    analyze_legal_case_file, delete_legal_case_file
+)
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
     model_performance_analytics as llm_analytics, set_model_preferences
@@ -2194,6 +2199,13 @@ urlpatterns = [
     path('api/documents/ingest-file/', ingest_file, name='documents-ingest-file'),
     path('api/documents/<uuid:document_id>/', get_document, name='documents-get'),
     path('api/documents/<uuid:document_id>/delete/', delete_document, name='documents-delete'),
+
+    # Session 403: Legal Case Files APIs
+    path('api/legal/case-files/', list_legal_case_files, name='legal-case-files-list'),
+    path('api/legal/case-files/upload/', upload_legal_case_file, name='legal-case-files-upload'),
+    path('api/legal/case-files/<uuid:document_id>/', get_legal_case_file, name='legal-case-files-get'),
+    path('api/legal/case-files/<uuid:document_id>/analyze/', analyze_legal_case_file, name='legal-case-files-analyze'),
+    path('api/legal/case-files/<uuid:document_id>/delete/', delete_legal_case_file, name='legal-case-files-delete'),
 
     # Multi-LLM Provider Integration APIs
     path('api/v1/llm/providers/', available_llm_providers, name='llm-providers'),
