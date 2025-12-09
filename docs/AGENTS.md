@@ -62,7 +62,7 @@ self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...}
 
 ---
 
-## Clean Architecture Agents (12)
+## Clean Architecture Agents (13)
 
 ### PersonalAssistantAgent
 
@@ -386,14 +386,31 @@ Step 4: Generate social media banners
 - Legal disclaimers in every response
 - NOT legal advice - general information only
 - Motion types: continuance, modify_parenting_time, modify_child_support, enforce_order, reconsideration
+- **Case File Upload** - Analyze uploaded PDFs, DOC, TXT files
+- **Document Context Injection** - Auto-injects uploaded case files into prompts
+- **Corrective Filing Generation** - Generates refilings based on denied motion analysis
+
+**Database Models (Session 403):**
+- `LegalCase` - User's case info (parties, dates, status)
+- `LegalDocument` - Generated/uploaded documents
+- `LegalResearchResult` - Saved research with embeddings
+- `LegalMemory` - Legal-specific learning patterns
 
 **Data Sources:**
 - 6 legal spiders (colorado_family_law, justia_family_law, legal_news, courtlistener, findlaw, lii)
 - Colorado JDF form database (embedded)
+- User's uploaded case files (LegalDocument model)
 
 **Cannot Access:** Image, video, audio, editing, creation tools
 
 **UI Panel:** `ai_core/templates/components/panels/legal_assistant_panel.html`
+
+**Sub-Tabs:**
+- Guidance - Ask legal questions
+- Documents - Motion/email/declaration templates
+- Colorado Forms - JDF form reference
+- Procedures - Step-by-step guides
+- **My Case Files** - Upload and analyze case documents
 
 ---
 
