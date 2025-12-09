@@ -15,8 +15,8 @@ The Spider Network consists of **102 registered spiders**, with **46 currently f
 | Metric | Count |
 |--------|-------|
 | Total Registered | 102 |
-| **Actually Working** | **46** |
-| Unconfigured (broken) | 56 |
+| **Actually Working** | **47** |
+| Unconfigured (broken) | 55 |
 | Records in DB | 13,700+ |
 | Searchable (with embeddings) | ~2,000 |
 
@@ -24,13 +24,14 @@ The Spider Network consists of **102 registered spiders**, with **46 currently f
 
 ## Spider Status (Session 397 Update)
 
-### Working Spiders (46)
+### Working Spiders (47)
 
 These spiders are configured and collecting real data:
 
 | Spider | Source Type | Status |
 |--------|-------------|--------|
 | techcrunch | RSS | Working |
+| youtube | YouTube API | Working (via GOOGLE_API_KEY) |
 | theverge | RSS | Working |
 | wired | RSS | Working |
 | mit_tech_review | RSS | Working |
@@ -92,7 +93,7 @@ These spiders are configured and collecting real data:
 | unsplash | Unsplash API | Working (popular photos) |
 | adzuna | Adzuna API | Working (remote jobs) |
 
-### Broken Spiders (56)
+### Broken Spiders (55)
 
 These spiders return placeholder data ("no real URLs configured"):
 
