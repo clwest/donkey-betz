@@ -357,19 +357,27 @@ Step 4: Generate social media banners
 
 ---
 
-### LegalDocDrafterAgent (Session 403)
+### LegalDocDrafterAgent (Session 403, Enhanced 404F + Patch 4C)
 
 **Purpose:** Pro Se Legal Assistant for Colorado Family Law
 
 **Location:** `core/agents/legal/legal_doc_drafter_agent.py`
 
-**Tools:**
+**Tools (10 total):**
+
+*Core Tools:*
 - `search_legal_resources` - Search spider network for legal info
 - `draft_motion` - Generate motion templates
 - `draft_email` - Generate meet-and-confer emails
 - `draft_declaration` - Generate declaration templates
 - `get_form_info` - Get Colorado JDF form information
 - `explain_procedure` - Explain court procedures
+
+*Session 404 Tools (Motion Rewriting):*
+- `analyze_denied_motion` - Analyze why motion was denied, identify all deficiencies
+- `rewrite_motion` - Generate corrected motion in proper JDF format with affidavit
+- `generate_evidence_checklist` - Create checklist of required exhibits for motion type
+- `check_non_party_issues` - Detect non-party relief requests and provide corrections
 
 **Parameters:**
 ```python
@@ -383,12 +391,48 @@ Step 4: Generate social media banners
 
 **Key Features:**
 - Colorado family law focus (JDF forms)
-- Legal disclaimers in every response
 - NOT legal advice - general information only
 - Motion types: continuance, modify_parenting_time, modify_child_support, enforce_order, reconsideration
 - **Case File Upload** - Analyze uploaded PDFs, DOC, TXT files
 - **Document Context Injection** - Auto-injects uploaded case files into prompts
 - **Corrective Filing Generation** - Generates refilings based on denied motion analysis
+- **Motion Rewriter (Session 404)** - Transforms denied motions into correct JDF format
+- **Non-Party Detection (Session 404)** - Warns when relief sought against non-parties
+- **Evidence Checklist (Session 404)** - Motion-type specific exhibit requirements
+
+**Session 404 Enhancements (Initial):**
+- `JDF_FORM_MAPPING` - Maps relief types to correct Colorado forms
+- `STATUTORY_CRITERIA` - Aligns facts to criteria categories (no statute citations)
+- `NON_PARTY_INDICATORS` - Detects relief requests against girlfriends, grandparents, etc.
+- Rewrote system prompt to focus on PROCEDURE only, never strategy
+- Output structure: caption → facts → affidavit → proposed order → checklist
+
+**Session 404F County/State Inference:**
+- Auto-infers county and state from court address when not explicitly provided
+- Colorado city → county mapping (Fort Collins → LARIMER, Denver → DENVER, etc.)
+- State abbreviation expansion (CO → COLORADO, CA → CALIFORNIA)
+- Falls back gracefully when inference not possible
+
+**Session 404 Patch 4C (Incident & Enumeration Normalization):**
+- **Strict 1-4 Numbered Allegations Format:**
+  - Allegations 1-3: Individual incidents as complete sentences with dates
+  - Allegation 4: Impact/pattern paragraph summarizing harm
+- **Inline List Splitting:** Handles semicolon-separated inline lists ("1. Today...; 2. August 29...") and splits into separate allegations
+- **No Raw PDF Fragments:** Removes orphan numbering ("1." "2." without content)
+- **No Subheadings:** Strips "Today's Incident –" style headers
+- **Date-Anchored Extraction:** Finds sentences with date references
+- **Relative Time Handling:** Converts "the following week", "today" to dates
+- **Deduplication:** Prevents duplicate incidents by description similarity
+- **Full Restatement Section:** PART 5 contains 1:1 mapping of all petitioner's paragraphs (for verification)
+
+**New Helper Functions (Patch 4C):**
+```python
+_extract_incident_candidates(text) → List[Tuple[str, str, int]]  # (text, date, priority)
+_clean_incident_text(text) → str                                  # Strip noise
+_extract_date_from_text(text) → str                               # Find dates
+_build_clean_allegations(incidents, original) → List[str]         # Build 1-3
+_generate_impact_paragraph(incidents, original) → str             # Build 4
+```
 
 **Database Models (Session 403):**
 - `LegalCase` - User's case info (parties, dates, status)
