@@ -153,6 +153,50 @@ SPIDER_TARGET_URLS = {
         'https://fortune.com/feed/',
     ],
 
+    # === SESSION 397: LIFESTYLE & NICHE RSS SPIDERS ===
+
+    # Food & Cooking RSS Feeds
+    'food': [
+        'https://www.seriouseats.com/feeds/atom',  # Serious Eats
+        'https://www.bonappetit.com/feed/rss',  # Bon Appetit
+        'https://minimalistbaker.com/feed/',  # Minimalist Baker
+    ],
+
+    # Travel RSS Feeds
+    'travel': [
+        'https://www.lonelyplanet.com/blog/feed/atom',  # Lonely Planet
+        'https://www.nomadicmatt.com/travel-blog/feed/',  # Nomadic Matt
+        'https://feeds.feedburner.com/ThePointsGuy',  # The Points Guy
+    ],
+
+    # Parenting & Family RSS Feeds
+    'parenting': [
+        'https://www.scarymommy.com/feed/',  # Scary Mommy
+        'https://www.fatherly.com/feed/',  # Fatherly
+        'https://www.parents.com/feed/',  # Parents Magazine
+    ],
+
+    # Real Estate RSS Feeds
+    'real_estate': [
+        'https://www.inman.com/feed/',  # Inman News (real estate)
+        'https://www.housingwire.com/feed/',  # HousingWire
+        'https://www.biggerpockets.com/blog/feed',  # BiggerPockets
+    ],
+
+    # Library & Books RSS Feeds
+    'library': [
+        'https://americanlibrariesmagazine.org/feed/',  # American Libraries
+        'https://bookriot.com/feed/',  # Book Riot
+        'https://www.theguardian.com/books/rss',  # Guardian Books
+    ],
+
+    # Government & Policy RSS Feeds
+    'government': [
+        'https://www.politico.com/rss/politicopicks.xml',  # Politico
+        'https://www.govtech.com/rss/',  # Government Technology
+        'https://thehill.com/feed/',  # The Hill
+    ],
+
     # === SESSION 396: PHASE 3 - API KEY SPIDERS ===
     # These use API keys from .env
 
