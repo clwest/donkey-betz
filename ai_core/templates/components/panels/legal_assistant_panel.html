@@ -1,0 +1,718 @@
+{% comment %}
+Session 403: Pro Se Legal Assistant Panel
+Colorado Family Law - General Legal Information Only
+NOT legal advice - always recommends attorney consultation
+{% endcomment %}
+
+<div class="tab-pane fade" id="legal-assistant" role="tabpanel">
+    <h3 class="mb-4">&#9878; Pro Se Legal Assistant</h3>
+    <p class="text-muted mb-3">Colorado Family Law Information & Document Templates</p>
+
+    <!-- REQUIRED DISCLAIMER BANNER -->
+    <div class="alert mb-4" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-left: 4px solid #ef4444;">
+        <div class="d-flex align-items-start">
+            <span style="font-size: 1.5rem; margin-right: 12px;">&#9888;</span>
+            <div>
+                <strong style="color: #fca5a5;">IMPORTANT DISCLAIMER</strong>
+                <p class="mb-0 mt-1" style="font-size: 0.9rem; color: #fca5a5;">
+                    This is <strong>GENERAL LEGAL INFORMATION</strong> only, NOT legal advice.
+                    This does NOT create an attorney-client relationship.
+                    Laws vary by jurisdiction and change over time.
+                    <strong>Always consult a licensed Colorado attorney for your specific situation.</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards Row -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                <div class="card-body py-3">
+                    <h2 class="mb-0">&#9878;</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Colorado</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
+                <div class="card-body py-3">
+                    <h2 class="mb-0" id="legal-forms-count">12</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">JDF Forms</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                <div class="card-body py-3">
+                    <h2 class="mb-0">6</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Case Types</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                <div class="card-body py-3">
+                    <h2 class="mb-0">5</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Doc Types</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none;">
+                <div class="card-body py-3">
+                    <h2 class="mb-0" id="legal-spiders-count">6</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Legal Spiders</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                <div class="card-body py-3">
+                    <h2 class="mb-0">&#128274;</h2>
+                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Pro Se</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal Sub-Tab Navigation -->
+    <ul class="nav nav-pills mb-4" id="legal-subtabs" role="tablist" style="border-bottom: 1px solid #333; padding-bottom: 10px;">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="legal-guidance-tab" data-bs-toggle="pill" data-bs-target="#legal-guidance" type="button" role="tab" style="color: #8b5cf6;">
+                &#128218; Guidance
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="legal-documents-tab" data-bs-toggle="pill" data-bs-target="#legal-documents" type="button" role="tab" style="color: #22c55e;">
+                &#128196; Documents
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="legal-forms-tab" data-bs-toggle="pill" data-bs-target="#legal-forms" type="button" role="tab" style="color: #f97316;">
+                &#128203; Colorado Forms
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="legal-procedures-tab" data-bs-toggle="pill" data-bs-target="#legal-procedures" type="button" role="tab" style="color: #06b6d4;">
+                &#128221; Procedures
+            </button>
+        </li>
+    </ul>
+    <style>
+        #legal-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
+        #legal-subtabs .nav-link:hover { background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; }
+        #legal-subtabs .nav-link.active { background: rgba(139, 92, 246, 0.2) !important; border-color: #8b5cf6 !important; color: #8b5cf6 !important; }
+    </style>
+
+    <!-- Sub-Tab Content -->
+    <div class="tab-content" id="legal-subtabs-content">
+
+        <!-- Guidance Sub-Tab (Default) -->
+        <div class="tab-pane fade show active" id="legal-guidance" role="tabpanel">
+            <!-- Query Input Card -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                    <h6 class="mb-0" style="color: #a78bfa;">&#128218; Ask a Legal Question</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">What would you like to know about Colorado family law?</label>
+                        <textarea id="legal-query-input" class="form-control" rows="3"
+                                  placeholder="Example: How do I file for divorce in Colorado? What forms do I need for custody modification?"
+                                  style="background: #2a2a2a; border: 1px solid #444; color: white;"></textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Case Type</label>
+                            <select id="legal-case-type" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                <option value="general">General Family Law</option>
+                                <option value="divorce">Divorce / Dissolution</option>
+                                <option value="custody">Custody / Parental Responsibilities</option>
+                                <option value="child_support">Child Support</option>
+                                <option value="parenting_time">Parenting Time / Visitation</option>
+                                <option value="modification">Modification of Orders</option>
+                                <option value="enforcement">Enforcement of Orders</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Document Type Needed</label>
+                            <select id="legal-doc-type" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                <option value="guidance">General Guidance</option>
+                                <option value="motion">Motion Template</option>
+                                <option value="email">Meet-and-Confer Email</option>
+                                <option value="declaration">Declaration Template</option>
+                                <option value="checklist">Procedural Checklist</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="submitLegalQuery()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white; padding: 10px 24px;">
+                        &#9878; Get Legal Information
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Container -->
+            <div id="legal-results-container" style="display: none;">
+                <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                        <h6 class="mb-0" style="color: #a78bfa;">&#9878; Legal Information</h6>
+                        <button class="btn btn-sm" onclick="copyLegalResult()" style="background: rgba(139, 92, 246, 0.3); border: none; color: #a78bfa;">
+                            &#128203; Copy
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="legal-results-content">
+                            <!-- Results will be inserted here -->
+                        </div>
+                        <!-- Disclaimer Footer -->
+                        <div class="mt-4 pt-3" style="border-top: 1px solid #333;">
+                            <small class="text-muted">
+                                <strong>&#9888; Reminder:</strong> This is general legal information only.
+                                Consult a licensed Colorado attorney for advice specific to your situation.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="legal-loading" class="text-center py-5" style="display: none;">
+                <div class="spinner-border" style="color: #8b5cf6;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Researching legal information...</p>
+            </div>
+        </div>
+
+        <!-- Documents Sub-Tab -->
+        <div class="tab-pane fade" id="legal-documents" role="tabpanel">
+            <div class="row">
+                <!-- Motion Templates -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                            <h6 class="mb-0" style="color: #86efac;">&#128196; Motion Templates</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('motion', 'continuance'); return false;">
+                                    <strong>Motion to Continue</strong>
+                                    <small class="d-block text-muted">Request to postpone a hearing</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('motion', 'modify_parenting_time'); return false;">
+                                    <strong>Motion to Modify Parenting Time</strong>
+                                    <small class="d-block text-muted">Change visitation schedule</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('motion', 'modify_child_support'); return false;">
+                                    <strong>Motion to Modify Child Support</strong>
+                                    <small class="d-block text-muted">Adjust support amount</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('motion', 'enforce_order'); return false;">
+                                    <strong>Motion to Enforce</strong>
+                                    <small class="d-block text-muted">Compel compliance with court order</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other Documents -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                            <h6 class="mb-0" style="color: #67e8f9;">&#128221; Other Documents</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('email', 'meet_and_confer'); return false;">
+                                    <strong>Meet-and-Confer Email</strong>
+                                    <small class="d-block text-muted">Professional correspondence to opposing party</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('declaration', 'general'); return false;">
+                                    <strong>Declaration Template</strong>
+                                    <small class="d-block text-muted">Sworn statement for court filings</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('checklist', 'divorce'); return false;">
+                                    <strong>Divorce Checklist</strong>
+                                    <small class="d-block text-muted">Step-by-step filing guide</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="generateLegalDoc('checklist', 'custody_modification'); return false;">
+                                    <strong>Custody Modification Checklist</strong>
+                                    <small class="d-block text-muted">Steps to modify parental responsibilities</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Preview -->
+            <div id="legal-doc-preview" style="display: none;">
+                <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                        <h6 class="mb-0" style="color: #a78bfa;">&#128196; Document Preview</h6>
+                        <div>
+                            <button class="btn btn-sm me-2" onclick="copyLegalDoc()" style="background: rgba(139, 92, 246, 0.3); border: none; color: #a78bfa;">
+                                &#128203; Copy
+                            </button>
+                            <button class="btn btn-sm" onclick="downloadLegalDoc()" style="background: rgba(34, 197, 94, 0.3); border: none; color: #86efac;">
+                                &#128229; Download
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <pre id="legal-doc-content" style="background: #0a0a0a; padding: 20px; border-radius: 8px; white-space: pre-wrap; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 13px;"></pre>
+                        <!-- Disclaimer Footer -->
+                        <div class="mt-3 pt-3" style="border-top: 1px solid #333;">
+                            <small class="text-muted">
+                                <strong>&#9888; Template Only:</strong> This is a template that requires customization.
+                                Review all content and consult an attorney before filing.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colorado Forms Sub-Tab -->
+        <div class="tab-pane fade" id="legal-forms" role="tabpanel">
+            <div class="alert mb-4" style="background: rgba(249, 115, 22, 0.15); border: 1px solid rgba(249, 115, 22, 0.4);">
+                <strong style="color: #fdba74;">&#128203; Colorado JDF Forms</strong>
+                <p class="mb-0 mt-1" style="color: #fed7aa; font-size: 0.9rem;">
+                    Official Judicial Department Forms from the Colorado Courts Self-Help Center.
+                    Click a form to view details and get the official link.
+                </p>
+            </div>
+
+            <div class="row">
+                <!-- Divorce Forms -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                            <h6 class="mb-0" style="color: #f9a8d4;">&#128148; Divorce Forms</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1101'); return false;">
+                                    <strong>JDF 1101</strong> - Case Information Sheet
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1102'); return false;">
+                                    <strong>JDF 1102</strong> - Summons
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1111'); return false;">
+                                    <strong>JDF 1111</strong> - Petition for Dissolution
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1115'); return false;">
+                                    <strong>JDF 1115</strong> - Response to Petition
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custody Forms -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                            <h6 class="mb-0" style="color: #a78bfa;">&#128106; Custody Forms</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1113'); return false;">
+                                    <strong>JDF 1113</strong> - Parenting Plan
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1220'); return false;">
+                                    <strong>JDF 1220</strong> - Parental Responsibilities
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1221'); return false;">
+                                    <strong>JDF 1221</strong> - Proposed Parenting Plan
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Child Support Forms -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                            <h6 class="mb-0" style="color: #86efac;">&#128176; Child Support Forms</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1820'); return false;">
+                                    <strong>JDF 1820</strong> - Child Support Worksheet A
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1821'); return false;">
+                                    <strong>JDF 1821</strong> - Child Support Worksheet B
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="showFormInfo('JDF 1000'); return false;">
+                                    <strong>JDF 1000</strong> - Financial Affidavit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Info Modal -->
+            <div id="legal-form-info" style="display: none;">
+                <div class="card" style="background: #1a1a1a; border: 1px solid #8b5cf6;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                        <h6 class="mb-0" style="color: #a78bfa;" id="form-info-title">Form Information</h6>
+                        <button class="btn btn-sm" onclick="document.getElementById('legal-form-info').style.display='none';" style="background: transparent; border: none; color: #a78bfa;">&#10005;</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="form-info-content"></div>
+                        <a id="form-info-link" href="#" target="_blank" class="btn mt-3" style="background: linear-gradient(135deg, #f97316, #ea580c); border: none; color: white;">
+                            &#128279; View Official Form
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Procedures Sub-Tab -->
+        <div class="tab-pane fade" id="legal-procedures" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                            <h6 class="mb-0" style="color: #67e8f9;">&#128221; Filing Procedures</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="explainProcedure('file_for_divorce'); return false;">
+                                    <strong>How to File for Divorce</strong>
+                                    <small class="d-block text-muted">Step-by-step dissolution process</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="explainProcedure('file_motion'); return false;">
+                                    <strong>How to File a Motion</strong>
+                                    <small class="d-block text-muted">General motion filing process</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="explainProcedure('modify_parenting_time'); return false;">
+                                    <strong>How to Modify Parenting Time</strong>
+                                    <small class="d-block text-muted">Change custody/visitation orders</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;" onclick="explainProcedure('attend_hearing'); return false;">
+                                    <strong>How to Prepare for a Hearing</strong>
+                                    <small class="d-block text-muted">What to expect in court</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                            <h6 class="mb-0" style="color: #a78bfa;">&#128218; Important Resources</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush" style="background: transparent;">
+                                <a href="https://www.coloradojudicial.gov/self-help" target="_blank" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;">
+                                    <strong>Colorado Courts Self-Help Center</strong>
+                                    <small class="d-block text-muted">&#128279; Official forms and guides</small>
+                                </a>
+                                <a href="https://www.cobar.org/For-the-Public/Find-a-Lawyer" target="_blank" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;">
+                                    <strong>Colorado Bar Association</strong>
+                                    <small class="d-block text-muted">&#128279; Find a licensed attorney</small>
+                                </a>
+                                <a href="https://www.coloradolegalservices.org/" target="_blank" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;">
+                                    <strong>Colorado Legal Services</strong>
+                                    <small class="d-block text-muted">&#128279; Free legal help for qualifying individuals</small>
+                                </a>
+                                <a href="https://www.courts.state.co.us/userfiles/file/Self_Help/familylawforms.cfm" target="_blank" class="list-group-item list-group-item-action" style="background: transparent; border-color: #333; color: #d4d4d4;">
+                                    <strong>Family Law Forms Index</strong>
+                                    <small class="d-block text-muted">&#128279; Complete list of JDF forms</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Procedure Explanation -->
+            <div id="legal-procedure-content" style="display: none;">
+                <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                        <h6 class="mb-0" style="color: #67e8f9;" id="procedure-title">Procedure</h6>
+                        <button class="btn btn-sm" onclick="document.getElementById('legal-procedure-content').style.display='none';" style="background: transparent; border: none; color: #67e8f9;">&#10005;</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="procedure-explanation"></div>
+                        <!-- Disclaimer Footer -->
+                        <div class="mt-4 pt-3" style="border-top: 1px solid #333;">
+                            <small class="text-muted">
+                                <strong>&#9888; Note:</strong> Procedures may vary by county. Always verify with your local court clerk.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Legal Assistant JavaScript Functions
+
+// Colorado JDF Form Information
+const COLORADO_FORMS = {
+    'JDF 1101': {
+        name: 'Case Information Sheet',
+        description: 'Required for all new cases. Contains basic information about parties and case type.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'General'
+    },
+    'JDF 1102': {
+        name: 'Summons for Dissolution of Marriage',
+        description: 'Notifies the respondent of the divorce petition and their deadline to respond (21 days if served in Colorado, 35 days if served outside Colorado).',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Divorce'
+    },
+    'JDF 1111': {
+        name: 'Petition for Dissolution of Marriage or Legal Separation',
+        description: 'The initial filing to start a divorce case. States grounds, requests for orders regarding property, children, and support.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Divorce'
+    },
+    'JDF 1115': {
+        name: 'Response to Petition',
+        description: 'Filed by respondent within 21/35 days. Admits or denies allegations and makes counter-requests.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Divorce'
+    },
+    'JDF 1113': {
+        name: 'Parenting Plan',
+        description: 'Required when children are involved. Details decision-making responsibilities and parenting time schedule.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Custody'
+    },
+    'JDF 1220': {
+        name: 'Petition for Allocation of Parental Responsibilities',
+        description: 'Used to establish custody for unmarried parents or as standalone custody case.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Custody'
+    },
+    'JDF 1221': {
+        name: 'Proposed Parenting Plan',
+        description: 'Template for proposing parenting time schedule and decision-making allocation.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Custody'
+    },
+    'JDF 1820': {
+        name: 'Child Support Worksheet A',
+        description: 'For cases where one parent has primary physical custody (less than 92 overnights to other parent).',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Child Support'
+    },
+    'JDF 1821': {
+        name: 'Child Support Worksheet B',
+        description: 'For shared physical custody cases (each parent has 92+ overnights per year).',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Child Support'
+    },
+    'JDF 1000': {
+        name: 'Sworn Financial Statement',
+        description: 'Required disclosure of income, expenses, assets, and debts. Must be filed in all family law cases.',
+        url: 'https://www.coloradojudicial.gov/forms',
+        category: 'Financial'
+    }
+};
+
+// Submit legal query to AI
+async function submitLegalQuery() {
+    const query = document.getElementById('legal-query-input').value.trim();
+    if (!query) {
+        showToast('Please enter a legal question', 'warning');
+        return;
+    }
+
+    const caseType = document.getElementById('legal-case-type').value;
+    const docType = document.getElementById('legal-doc-type').value;
+
+    document.getElementById('legal-loading').style.display = 'block';
+    document.getElementById('legal-results-container').style.display = 'none';
+
+    try {
+        // Use the chat endpoint with the legal query
+        const message = `[Legal Assistant Query]\nCase Type: ${caseType}\nDocument Type: ${docType}\n\nQuestion: ${query}`;
+
+        const response = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                message: message,
+                agent_hint: 'LegalDocDrafterAgent'
+            })
+        });
+
+        const data = await response.json();
+
+        document.getElementById('legal-loading').style.display = 'none';
+        document.getElementById('legal-results-container').style.display = 'block';
+
+        // Format the response with proper styling
+        let content = data.response || data.message || 'No response received.';
+        content = formatLegalResponse(content);
+        document.getElementById('legal-results-content').innerHTML = content;
+
+    } catch (error) {
+        console.error('Legal query error:', error);
+        document.getElementById('legal-loading').style.display = 'none';
+        showToast('Error getting legal information. Please try again.', 'error');
+    }
+}
+
+// Format legal response with proper styling
+function formatLegalResponse(content) {
+    // Convert markdown-style headers to HTML
+    content = content.replace(/^### (.*$)/gim, '<h5 style="color: #a78bfa; margin-top: 16px;">$1</h5>');
+    content = content.replace(/^## (.*$)/gim, '<h4 style="color: #8b5cf6; margin-top: 20px;">$1</h4>');
+    content = content.replace(/^# (.*$)/gim, '<h3 style="color: #7c3aed; margin-top: 24px;">$1</h3>');
+
+    // Convert bullet points
+    content = content.replace(/^\* (.*$)/gim, '<li style="margin-left: 20px;">$1</li>');
+    content = content.replace(/^- (.*$)/gim, '<li style="margin-left: 20px;">$1</li>');
+
+    // Convert numbered lists
+    content = content.replace(/^\d+\. (.*$)/gim, '<li style="margin-left: 20px;">$1</li>');
+
+    // Convert bold
+    content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Convert line breaks to paragraphs
+    content = content.split('\n\n').map(p => `<p>${p}</p>`).join('');
+
+    return content;
+}
+
+// Generate legal document template
+async function generateLegalDoc(docType, subType) {
+    document.getElementById('legal-doc-preview').style.display = 'none';
+
+    const query = `Generate a ${docType} template for ${subType.replace(/_/g, ' ')} in Colorado family court.`;
+
+    try {
+        const response = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                message: `[Legal Document Request]\nDocument Type: ${docType}\nSub-type: ${subType}\n\n${query}`,
+                agent_hint: 'LegalDocDrafterAgent'
+            })
+        });
+
+        const data = await response.json();
+
+        document.getElementById('legal-doc-preview').style.display = 'block';
+        document.getElementById('legal-doc-content').textContent = data.response || data.message || 'Template generation failed.';
+
+        // Scroll to preview
+        document.getElementById('legal-doc-preview').scrollIntoView({ behavior: 'smooth' });
+
+    } catch (error) {
+        console.error('Document generation error:', error);
+        showToast('Error generating document template. Please try again.', 'error');
+    }
+}
+
+// Show form information
+function showFormInfo(formId) {
+    const form = COLORADO_FORMS[formId];
+    if (!form) {
+        showToast('Form information not found', 'warning');
+        return;
+    }
+
+    document.getElementById('form-info-title').textContent = `${formId} - ${form.name}`;
+    document.getElementById('form-info-content').innerHTML = `
+        <p><strong>Category:</strong> ${form.category}</p>
+        <p><strong>Description:</strong> ${form.description}</p>
+        <p class="text-muted mt-3">
+            <small>&#9888; Always download the most current version from the official Colorado Courts website.</small>
+        </p>
+    `;
+    document.getElementById('form-info-link').href = form.url;
+    document.getElementById('legal-form-info').style.display = 'block';
+    document.getElementById('legal-form-info').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Explain procedure
+async function explainProcedure(procedureId) {
+    const procedureNames = {
+        'file_for_divorce': 'How to File for Divorce in Colorado',
+        'file_motion': 'How to File a Motion',
+        'modify_parenting_time': 'How to Modify Parenting Time',
+        'attend_hearing': 'How to Prepare for a Court Hearing'
+    };
+
+    document.getElementById('procedure-title').textContent = procedureNames[procedureId] || 'Procedure';
+    document.getElementById('procedure-explanation').innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm" style="color: #67e8f9;"></div> Loading...</div>';
+    document.getElementById('legal-procedure-content').style.display = 'block';
+
+    try {
+        const response = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                message: `[Legal Procedure Explanation]\nProcedure: ${procedureId}\n\nExplain the step-by-step process for ${procedureNames[procedureId]} in Colorado.`,
+                agent_hint: 'LegalDocDrafterAgent'
+            })
+        });
+
+        const data = await response.json();
+        let content = data.response || data.message || 'Procedure information unavailable.';
+        document.getElementById('procedure-explanation').innerHTML = formatLegalResponse(content);
+
+    } catch (error) {
+        console.error('Procedure explanation error:', error);
+        document.getElementById('procedure-explanation').innerHTML = '<p class="text-danger">Error loading procedure. Please try again.</p>';
+    }
+}
+
+// Copy legal result
+function copyLegalResult() {
+    const content = document.getElementById('legal-results-content').innerText;
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('Legal information copied to clipboard', 'success');
+    });
+}
+
+// Copy legal document
+function copyLegalDoc() {
+    const content = document.getElementById('legal-doc-content').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('Document template copied to clipboard', 'success');
+    });
+}
+
+// Download legal document
+function downloadLegalDoc() {
+    const content = document.getElementById('legal-doc-content').textContent;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'legal_document_template.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Document template downloaded', 'success');
+}
+
+// Helper to get CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+</script>

@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 400 (December 8, 2025)
+**Last Updated:** Session 403 (December 9, 2025)
 
 ---
 
@@ -62,7 +62,7 @@ self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...}
 
 ---
 
-## Clean Architecture Agents (11)
+## Clean Architecture Agents (12)
 
 ### PersonalAssistantAgent
 
@@ -354,6 +354,46 @@ Step 4: Generate social media banners
 ```
 
 **Cannot Access:** Image, video, audio, editing tools
+
+---
+
+### LegalDocDrafterAgent (Session 403)
+
+**Purpose:** Pro Se Legal Assistant for Colorado Family Law
+
+**Location:** `core/agents/legal/legal_doc_drafter_agent.py`
+
+**Tools:**
+- `search_legal_resources` - Search spider network for legal info
+- `draft_motion` - Generate motion templates
+- `draft_email` - Generate meet-and-confer emails
+- `draft_declaration` - Generate declaration templates
+- `get_form_info` - Get Colorado JDF form information
+- `explain_procedure` - Explain court procedures
+
+**Parameters:**
+```python
+{
+    "query": "How do I file for divorce in Colorado?",
+    "document_type": "guidance",  # guidance, motion, email, declaration, checklist
+    "case_type": "divorce",  # divorce, custody, child_support, parenting_time, modification, enforcement
+    "jurisdiction": "Colorado"
+}
+```
+
+**Key Features:**
+- Colorado family law focus (JDF forms)
+- Legal disclaimers in every response
+- NOT legal advice - general information only
+- Motion types: continuance, modify_parenting_time, modify_child_support, enforce_order, reconsideration
+
+**Data Sources:**
+- 6 legal spiders (colorado_family_law, justia_family_law, legal_news, courtlistener, findlaw, lii)
+- Colorado JDF form database (embedded)
+
+**Cannot Access:** Image, video, audio, editing, creation tools
+
+**UI Panel:** `ai_core/templates/components/panels/legal_assistant_panel.html`
 
 ---
 

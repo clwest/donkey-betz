@@ -59,6 +59,7 @@ def get_tool_definitions() -> List[Dict]:
         _get_brand_strategy_agent_definition(),       # Session 335: Brand strategy research
         _get_content_strategy_agent_definition(),     # Session 337: Content strategy research
         _get_marketing_strategy_agent_definition(),   # Session 337: Marketing strategy research
+        _get_legal_doc_drafter_agent_definition(),    # Session 403: Pro Se Legal Assistant
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -809,5 +810,51 @@ def _get_marketing_strategy_agent_definition() -> Dict:
                 }
             },
             "required": ["project_id"]
+        }
+    }
+
+
+# =============================================================================
+# LEGAL AGENTS (Session 403)
+# =============================================================================
+
+def _get_legal_doc_drafter_agent_definition() -> Dict:
+    """
+    Session 403: Pro Se Legal Assistant for Colorado family law.
+    Provides general legal information and document templates.
+    NOT legal advice - always recommends attorney consultation.
+    """
+    return {
+        "type": "function",
+        "name": "legal_doc_drafter_agent",
+        "description": get_tool_description("legal_doc_drafter_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The legal question, situation, or document request. Be specific about what type of document or information is needed."
+                },
+                "document_type": {
+                    "type": "string",
+                    "enum": ["guidance", "motion", "email", "declaration", "checklist"],
+                    "description": "Type of output needed: 'guidance' (general info), 'motion' (court filing template), 'email' (meet-and-confer), 'declaration' (sworn statement template), 'checklist' (procedural steps)"
+                },
+                "jurisdiction": {
+                    "type": "string",
+                    "default": "Colorado",
+                    "description": "State jurisdiction (currently focused on Colorado family law)"
+                },
+                "case_type": {
+                    "type": "string",
+                    "enum": ["divorce", "custody", "child_support", "parenting_time", "modification", "enforcement", "general"],
+                    "description": "Type of family law case: divorce, custody, child_support, parenting_time, modification, enforcement, or general"
+                },
+                "user_context": {
+                    "type": "string",
+                    "description": "Additional context about the user's situation to make the response more relevant (without sharing sensitive details)"
+                }
+            },
+            "required": ["query"]
         }
     }
