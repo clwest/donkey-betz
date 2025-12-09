@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 303 (December 1, 2025)
+**Last Updated:** Session 400 (December 8, 2025)
 
 ---
 
@@ -8,7 +8,57 @@
 
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
 
+**Session 400 Addition:** All agents now automatically inject learned knowledge into their prompts via `_build_prompt()`. The knowledge pipeline is:
+```
+Spider Data → Embeddings → Learning Bridge → AgentKnowledgeSource → Agent Prompts
+```
+
 **Session 303 Addition:** Business research agents now have unified intelligence search with auto-refresh and prior research context.
+
+---
+
+## Agent Knowledge Pipeline (Session 400)
+
+All agents inherit from `BaseAgent` which provides:
+
+### Knowledge Retrieval Methods
+
+```python
+# Get learned knowledge relevant to current task
+knowledge = agent._get_relevant_knowledge_for_task("AI trends", limit=5)
+# Returns: [{source_agent, title, summary, knowledge_type, confidence, spider_sources}]
+
+# Get fresh spider intelligence by category
+intel = agent._get_fresh_spider_intelligence(categories=['tech', 'news'], hours=24, limit=5)
+# Returns: [{source, category, titles, item_count, relevance, timestamp}]
+```
+
+### Automatic Knowledge Injection
+
+The `_build_prompt()` method automatically:
+1. Calls `_get_relevant_knowledge_for_task(task)`
+2. Injects relevant knowledge before the task
+3. Includes source attribution
+
+**Example prompt section:**
+```
+## Relevant Knowledge from Past Learning
+You have learned the following that may be relevant:
+
+1. [ResearchAgent] Research: AI trends in 2025
+   Analysis shows growth in LLM applications...
+   (from: techcrunch, hackernews)
+```
+
+### Learning Hooks
+
+Agents record their executions for future learning:
+```python
+# After successful execution
+self._record_learning_outcome(result, task, context)
+self._create_execution_memory(result, task, memory_type="success")
+self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...})
+```
 
 ---
 
