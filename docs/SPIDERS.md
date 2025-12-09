@@ -15,8 +15,8 @@ The Spider Network consists of **102 registered spiders**, with **46 currently f
 | Metric | Count |
 |--------|-------|
 | Total Registered | 102 |
-| **Actually Working** | **47** |
-| Unconfigured (broken) | 55 |
+| **Actually Working** | **48** |
+| Unconfigured (broken) | 54 |
 | Records in DB | 13,700+ |
 | Searchable (with embeddings) | ~2,000 |
 
@@ -24,7 +24,7 @@ The Spider Network consists of **102 registered spiders**, with **46 currently f
 
 ## Spider Status (Session 397 Update)
 
-### Working Spiders (47)
+### Working Spiders (48)
 
 These spiders are configured and collecting real data:
 
@@ -83,7 +83,7 @@ These spiders are configured and collecting real data:
 | education_rss | RSS | Working (EdSurge, Chronicle) |
 | business_news | RSS | Working (Bloomberg, Fortune) |
 
-#### Session 397 Additions (Phase 3 - 6 spiders)
+#### Session 397 Additions (Phase 3 - 7 spiders)
 | Spider | Source Type | Status |
 |--------|-------------|--------|
 | polygon_finance | Polygon.io API | Working (market news) |
@@ -92,8 +92,9 @@ These spiders are configured and collecting real data:
 | giphy | Giphy API | Working (trending GIFs) |
 | unsplash | Unsplash API | Working (popular photos) |
 | adzuna | Adzuna API | Working (remote jobs) |
+| finnhub | Finnhub API | Working (stock quotes, market news) |
 
-### Broken Spiders (55)
+### Broken Spiders (54)
 
 These spiders return placeholder data ("no real URLs configured"):
 
