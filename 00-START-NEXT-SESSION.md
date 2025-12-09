@@ -2,7 +2,7 @@
 
 **Last Session:** 397 - Spider Phase 3 Implementation
 **Date:** December 8, 2025
-**Status:** 46 working spiders (+6 new!) | 56 need fixing | PHASE 3 COMPLETE
+**Status:** 47 working spiders (+6 new!) | 55 need fixing | PHASE 3 COMPLETE
 
 ---
 
@@ -59,10 +59,10 @@
 | **Phase 1 (RSS)** | 11 | - | BBC, CNN, NPR, etc. |
 | **Phase 2 (Free APIs)** | 8 | - | NOAA, GitHub, Science, etc. |
 | **Phase 3 (API Keys)** | 6 | - | Polygon, Etherscan, NewsAPI, etc. |
-| **Original Working** | 21 | - | TechCrunch, Reddit, etc. |
-| **API (need keys)** | 3 | - | BlueSky, YouTube, Discord |
-| **Broken/Placeholder** | - | 53 | Remaining from audit |
-| **TOTAL** | **49** | **53** | 48% working |
+| **Original Working** | 21 | - | TechCrunch, Reddit, YouTube, etc. |
+| **API (need keys)** | 1 | - | BlueSky (Discord needs bot token) |
+| **Broken/Placeholder** | - | 55 | Remaining from audit |
+| **TOTAL** | **47** | **55** | 46% working |
 
 ---
 
