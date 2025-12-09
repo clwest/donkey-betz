@@ -155,16 +155,16 @@ SPIDER_TARGET_URLS = {
 
     # === SESSION 397: LIFESTYLE & NICHE RSS SPIDERS ===
 
-    # Food & Cooking RSS Feeds
+    # Food & Cooking RSS Feeds (Session 398: Fixed broken feeds)
     'food': [
-        'https://www.seriouseats.com/feeds/atom',  # Serious Eats
-        'https://www.bonappetit.com/feed/rss',  # Bon Appetit
+        'https://www.eater.com/rss/index.xml',  # Eater (fast, reliable)
+        'https://smittenkitchen.com/feed/',  # Smitten Kitchen
         'https://minimalistbaker.com/feed/',  # Minimalist Baker
     ],
 
-    # Travel RSS Feeds
+    # Travel RSS Feeds (Session 398: Fixed Lonely Planet 404)
     'travel': [
-        'https://www.lonelyplanet.com/blog/feed/atom',  # Lonely Planet
+        'https://matadornetwork.com/feed/',  # Matador Network
         'https://www.nomadicmatt.com/travel-blog/feed/',  # Nomadic Matt
         'https://feeds.feedburner.com/ThePointsGuy',  # The Points Guy
     ],
@@ -190,9 +190,9 @@ SPIDER_TARGET_URLS = {
         'https://www.theguardian.com/books/rss',  # Guardian Books
     ],
 
-    # Government & Policy RSS Feeds
+    # Government & Policy RSS Feeds (Session 398: Fixed Politico 403)
     'government': [
-        'https://www.politico.com/rss/politicopicks.xml',  # Politico
+        'https://rss.politico.com/politics-news.xml',  # Politico (new feed URL)
         'https://www.govtech.com/rss/',  # Government Technology
         'https://thehill.com/feed/',  # The Hill
     ],
