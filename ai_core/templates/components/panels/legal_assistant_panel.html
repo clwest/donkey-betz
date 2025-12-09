@@ -646,13 +646,7 @@ NOT legal advice - always recommends attorney consultation
                                 </button>
                             </div>
                         </div>
-                        <!-- Disclaimer -->
-                        <div class="mt-4 pt-3" style="border-top: 1px solid #333;">
-                            <small class="text-muted">
-                                <strong>&#9888; Important:</strong> This analysis is AI-generated general information.
-                                Always verify with current court rules and consult a licensed attorney for your specific case.
-                            </small>
-                        </div>
+                        <!-- Session 404E: DISCLAIMER REMOVED - Court-ready documents should not have disclaimers -->
                     </div>
                 </div>
             </div>
@@ -1102,6 +1096,7 @@ async function uploadLegalCaseFile() {
         progressBar.style.width = '100%';
 
         const data = await response.json();
+        console.log('[SESSION 404] Upload response:', data);
 
         if (data.success) {
             statusText.textContent = 'Upload complete! Processing...';
@@ -1118,8 +1113,12 @@ async function uploadLegalCaseFile() {
             }, 1000);
 
             // Show analysis if available
+            console.log('[SESSION 404] Checking for analysis:', data.analysis);
             if (data.analysis) {
+                console.log('[SESSION 404] Analysis found! Calling showDocumentAnalysis');
                 showDocumentAnalysis(data.analysis, data.document?.id);
+            } else {
+                console.log('[SESSION 404] No analysis in response');
             }
         } else {
             throw new Error(data.error || 'Upload failed');
@@ -1189,15 +1188,31 @@ async function analyzeLegalCaseFile(docId) {
 
 // Display document analysis
 function showDocumentAnalysis(analysis, docId) {
+    console.log('[SESSION 404] showDocumentAnalysis called', { analysis, docId });
     const analysisLoading = document.getElementById('legal-file-analysis-loading');
     const analysisContent = document.getElementById('legal-file-analysis-content');
 
     currentAnalyzedDocId = docId;
 
-    document.getElementById('legal-analysis-summary').innerHTML = formatLegalResponse(analysis.summary || 'No summary available');
-    document.getElementById('legal-analysis-issues').innerHTML = formatLegalResponse(analysis.issues || 'No issues identified');
-    document.getElementById('legal-analysis-actions').innerHTML = formatLegalResponse(analysis.recommendations || analysis.actions || 'No specific actions recommended');
-    document.getElementById('legal-analysis-forms').innerHTML = formatLegalResponse(analysis.forms || analysis.relevant_forms || 'No specific forms identified');
+    // Session 404: Handle new full_analysis format from denied motion pipeline
+    if (analysis.full_analysis) {
+        console.log('[SESSION 404] Using full_analysis output (denied motion pipeline)');
+        // The full_analysis contains the complete JDF-formatted output
+        // Display the entire analysis in the summary section
+        document.getElementById('legal-analysis-summary').innerHTML = formatLegalResponse(analysis.full_analysis);
+        document.getElementById('legal-analysis-issues').innerHTML = `<em>Pipeline used: ${analysis.pipeline_used || 'standard'}</em>`;
+        document.getElementById('legal-analysis-actions').innerHTML = analysis.tools_called && analysis.tools_called.length > 0
+            ? `<em>Tools applied: ${analysis.tools_called.join(', ')}</em>`
+            : '<em>Complete motion rewrite generated above</em>';
+        document.getElementById('legal-analysis-forms').innerHTML = '<em>Forms and filing instructions are included in the analysis above</em>';
+    } else {
+        // Fallback: traditional multi-field format
+        console.log('[SESSION 404] Using traditional analysis format');
+        document.getElementById('legal-analysis-summary').innerHTML = formatLegalResponse(analysis.summary || 'No summary available');
+        document.getElementById('legal-analysis-issues').innerHTML = formatLegalResponse(analysis.issues || 'No issues identified');
+        document.getElementById('legal-analysis-actions').innerHTML = formatLegalResponse(analysis.recommendations || analysis.actions || 'No specific actions recommended');
+        document.getElementById('legal-analysis-forms').innerHTML = formatLegalResponse(analysis.forms || analysis.relevant_forms || 'No specific forms identified');
+    }
 
     analysisLoading.style.display = 'none';
     analysisContent.style.display = 'block';

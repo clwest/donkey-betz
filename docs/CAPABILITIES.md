@@ -328,7 +328,7 @@ Intelligence Tab → Documents sub-tab
 
 ---
 
-## Pro Se Legal Assistant (Session 403)
+## Pro Se Legal Assistant (Session 403, Enhanced 404F + Patch 4C)
 
 AI-powered legal document assistant for Colorado family law self-represented litigants.
 
@@ -345,6 +345,59 @@ AI-powered legal document assistant for Colorado family law self-represented lit
 | **Case File Upload** | Upload PDFs, DOC, TXT for AI analysis |
 | **Document Analysis** | AI identifies issues and recommends corrections |
 | **Corrective Filing Generation** | Generate properly formatted refilings |
+| **Motion Rewriter (404)** | Transform denied motion into correct JDF format |
+| **Non-Party Detection (404)** | Warn when relief sought against non-parties |
+| **Evidence Checklist (404)** | Motion-type specific exhibit requirements |
+| **Statutory Alignment (404)** | Map facts to criteria categories (no statute citations) |
+| **County/State Inference (404F)** | Auto-detects jurisdiction from court address |
+| **Incident Normalization (Patch 4C)** | Clean numbered allegations from messy PDF text |
+
+### Session 404 Motion Rewriting Tools
+
+| Tool | Purpose |
+|------|---------|
+| `analyze_denied_motion` | Identify all deficiencies in denied motion |
+| `rewrite_motion` | Generate corrected motion with affidavit + proposed order |
+| `generate_evidence_checklist` | Create motion-type specific exhibit checklist |
+| `check_non_party_issues` | Detect/correct non-party relief requests |
+
+### Session 404F - County/State Inference
+
+When a court address is extracted but county/state fields are blank, the system now:
+- Parses city name from address (e.g., "Fort Collins, CO 80521")
+- Maps Colorado cities to counties (Fort Collins → LARIMER)
+- Expands state abbreviations (CO → COLORADO)
+
+### Session 404 Patch 4C - Incident & Enumeration Normalization
+
+Completely rewrote fact extraction for court-ready output:
+
+| Problem | Solution |
+|---------|----------|
+| Inline semicolon lists ("1. Today...; 2. Aug 29...") | Split into separate numbered allegations |
+| Raw PDF numbering fragments ("1." "2.") | Filtered out, only complete sentences kept |
+| Subheadings in facts ("Today's Incident –") | Stripped from output |
+| Missing impact summary | Allegation 4 auto-generated from petitioner's language |
+| Content verification | PART 5: Full Restatement with 1:1 mapping log |
+
+**Output Format (Patch 4C):**
+```
+SPECIFIC FACTUAL ALLEGATIONS:
+1. On [DATE], [INCIDENT DESCRIPTION].
+2. On [DATE], [INCIDENT DESCRIPTION].
+3. On [DATE], [INCIDENT DESCRIPTION].
+4. [IMPACT PARAGRAPH - pattern/harm summary using petitioner's language]
+```
+
+### JDF Form Mapping
+
+| Relief Type | Primary Form |
+|-------------|--------------|
+| Emergency Parenting | Motion and Affidavit for Emergency Orders |
+| Restrict Parenting | JDF 1220 (Motion to Modify) |
+| Modify Parenting Time | JDF 1220 + JDF 1221 (Affidavit) |
+| Enforce Order | Motion for Citation for Contempt |
+| Modify Child Support | JDF 1820 or JDF 1821 |
 
 ### Document Types Supported
 
@@ -372,12 +425,13 @@ AI-powered legal document assistant for Colorado family law self-represented lit
 
 Legal Assistant Tab → My Case Files sub-tab
 
-### Important Disclaimers
+### Important Notes
 
 - Provides **general legal information only**, NOT legal advice
 - Does NOT create an attorney-client relationship
 - Users should consult a licensed Colorado attorney
 - Generated documents are **templates** requiring review
+- Court-ready output contains NO AI disclaimers (Session 404E removed them)
 
 ---
 
