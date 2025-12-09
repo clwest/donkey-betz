@@ -11442,22 +11442,43 @@
                                     <h5 class="mb-0" style="color: #3b82f6;">📄 Add Knowledge Source</h5>
                                 </div>
                                 <div class="card-body">
-                                    <!-- URL/YouTube Input -->
-                                    <div class="mb-3">
-                                        <label class="form-label text-muted">YouTube URL or Web Page</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #444; color: #3b82f6;">
-                                                🌐
-                                            </span>
-                                            <input type="text" class="form-control" id="doc-url-input"
-                                                   placeholder="https://youtube.com/watch?v=... or https://example.com/article"
-                                                   style="background: #222; border: 1px solid #444; color: white;">
-                                            <button class="btn btn-primary" type="button" onclick="ingestUrl()" id="doc-url-btn">
-                                                ➤ Ingest
-                                            </button>
+                                    <div class="row">
+                                        <!-- URL/YouTube Input -->
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label text-muted">YouTube URL or Web Page</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #444; color: #3b82f6;">
+                                                    🌐
+                                                </span>
+                                                <input type="text" class="form-control" id="doc-url-input"
+                                                       placeholder="https://youtube.com/watch?v=..."
+                                                       style="background: #222; border: 1px solid #444; color: white;">
+                                                <button class="btn btn-primary" type="button" onclick="ingestUrl()" id="doc-url-btn">
+                                                    ➤ Ingest
+                                                </button>
+                                            </div>
+                                            <div class="form-text text-muted mt-1">
+                                                YouTube videos or web pages
+                                            </div>
                                         </div>
-                                        <div class="form-text text-muted mt-1">
-                                            Paste a YouTube video URL to extract transcripts, or any web page to extract content.
+
+                                        <!-- PDF/File Upload -->
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label text-muted">Upload PDF or Text File</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #444; color: #f97316;">
+                                                    📄
+                                                </span>
+                                                <input type="file" class="form-control" id="doc-file-input"
+                                                       accept=".pdf,.txt,.md"
+                                                       style="background: #222; border: 1px solid #444; color: white;">
+                                                <button class="btn btn-warning" type="button" onclick="ingestFile()" id="doc-file-btn">
+                                                    ⬆ Upload
+                                                </button>
+                                            </div>
+                                            <div class="form-text text-muted mt-1">
+                                                PDF, TXT, or Markdown files
+                                            </div>
                                         </div>
                                     </div>
 
@@ -47528,6 +47549,77 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '➤ Ingest';
+            }
+        }
+
+        async function ingestFile() {
+            const input = document.getElementById('doc-file-input');
+            const btn = document.getElementById('doc-file-btn');
+            const status = document.getElementById('doc-processing-status');
+            const message = document.getElementById('doc-processing-message');
+
+            if (!input.files || !input.files[0]) {
+                alert('Please select a file');
+                return;
+            }
+
+            const file = input.files[0];
+            const validTypes = ['.pdf', '.txt', '.md'];
+            const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+            if (!validTypes.includes(fileExt)) {
+                alert('Invalid file type. Supported: PDF, TXT, MD');
+                return;
+            }
+
+            // Show processing state
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            status.classList.remove('d-none');
+            message.textContent = `Uploading ${file.name}...`;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('generate_embeddings', 'true');
+
+                const response = await fetch('/api/documents/ingest-file/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const docTitle = data.document?.title || file.name;
+                    status.classList.remove('alert-info');
+                    status.classList.add('alert-success');
+                    message.textContent = `Success! Uploaded: ${docTitle}`;
+                    input.value = '';  // Clear file input
+                    setTimeout(() => {
+                        status.classList.add('d-none');
+                        status.classList.remove('alert-success');
+                        status.classList.add('alert-info');
+                        loadDocuments();
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                message.textContent = `Error: ${error.message}`;
+                status.classList.remove('alert-info');
+                status.classList.add('alert-danger');
+                setTimeout(() => {
+                    status.classList.add('d-none');
+                    status.classList.remove('alert-danger');
+                    status.classList.add('alert-info');
+                }, 5000);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '⬆ Upload';
             }
         }
 

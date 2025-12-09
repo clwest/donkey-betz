@@ -1083,3 +1083,91 @@ def delete_document(request, document_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ingest_file(request):
+    """
+    Upload and ingest a PDF or text file.
+    Session 402: Document ingestion system.
+    """
+    from content.processors import PDFProcessor, TextProcessor
+
+    user = request.user
+
+    if 'file' not in request.FILES:
+        return Response({
+            'success': False,
+            'error': 'No file provided'
+        }, status=400)
+
+    uploaded_file = request.FILES['file']
+    filename = uploaded_file.name.lower()
+    generate_embeddings = request.POST.get('generate_embeddings', 'true').lower() == 'true'
+
+    try:
+        # Read file content
+        file_content = uploaded_file.read()
+
+        # Determine file type and process
+        if filename.endswith('.pdf'):
+            processor = PDFProcessor()
+            result = processor.process(file_content, filename=uploaded_file.name)
+            doc_type = DocumentType.PDF
+        elif filename.endswith('.txt'):
+            processor = TextProcessor()
+            result = processor.process(file_content.decode('utf-8', errors='ignore'))
+            doc_type = DocumentType.TEXT
+        elif filename.endswith('.md'):
+            processor = TextProcessor()
+            result = processor.process(file_content.decode('utf-8', errors='ignore'))
+            doc_type = DocumentType.MARKDOWN
+        else:
+            return Response({
+                'success': False,
+                'error': f'Unsupported file type. Supported: .pdf, .txt, .md'
+            }, status=400)
+
+        # Check if we got content
+        has_content = result.processed_content and len(result.processed_content.strip()) > 50
+
+        # Create document record
+        document = Document.objects.create(
+            owner=user,
+            title=result.metadata.get('title', uploaded_file.name),
+            document_type=doc_type,
+            raw_content=result.raw_content[:100000] if result.raw_content else '',
+            processed_content=result.processed_content[:100000] if result.processed_content else '',
+            status='processed' if has_content else 'failed',
+            metadata=result.metadata
+        )
+
+        # Generate embeddings if requested and we have content
+        if generate_embeddings and has_content:
+            from core.tasks import generate_document_embeddings
+            generate_document_embeddings.delay(str(document.id))
+            document.status = 'embedding'
+            document.save()
+
+        return Response({
+            'success': True,
+            'document': {
+                'id': str(document.id),
+                'title': document.title,
+                'document_type': document.document_type,
+                'status': document.status,
+                'word_count': len(result.processed_content.split()) if result.processed_content else 0,
+                'has_content': has_content,
+                'created_at': document.created_at.isoformat()
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error ingesting file: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
