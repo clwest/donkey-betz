@@ -256,7 +256,8 @@ If asked to create content, explain you can only research and suggest using the 
                     confidence=0.9
                 )
 
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                # Session 401: Use prompt with attribution for transparency
+                full_prompt, knowledge_attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
                 gpt_response = self._call_openai(full_prompt)
 
                 if gpt_response.get('tool_calls'):
@@ -303,7 +304,8 @@ If asked to create content, explain you can only research and suggest using the 
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,
-                            tool_calls=tool_calls_made
+                            tool_calls=tool_calls_made,
+                            knowledge_attribution=knowledge_attribution  # Session 401
                         )
 
                         # === Session 304: Learning Infrastructure ===
@@ -369,7 +371,8 @@ If asked to create content, explain you can only research and suggest using the 
                         message=gpt_response.get('content', ''),
                         data={'type': 'conversation'},
                         agent_name=self.name,
-                        execution_time_ms=int((time.time() - start_time) * 1000)
+                        execution_time_ms=int((time.time() - start_time) * 1000),
+                        knowledge_attribution=knowledge_attribution  # Session 401
                     )
 
             except Exception as e:
