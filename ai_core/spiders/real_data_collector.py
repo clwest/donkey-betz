@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 # Real target URLs for each spider (with proper full URLs)
+# Session 395: Expanded from 21 to 40+ spiders with real data sources
 SPIDER_TARGET_URLS = {
     # === NEWS & TECH SPIDERS ===
     'techcrunch': ['https://techcrunch.com/feed/'],
@@ -29,6 +30,13 @@ SPIDER_TARGET_URLS = {
     'axios': ['https://api.axios.com/feed/'],
     'hackernews': ['https://hacker-news.firebaseio.com/v0/topstories.json'],
     'devto': ['https://dev.to/api/articles?per_page=30'],
+
+    # === SESSION 395: NEW NEWS SPIDERS ===
+    'bbc': ['http://feeds.bbci.co.uk/news/rss.xml', 'http://feeds.bbci.co.uk/news/technology/rss.xml'],
+    'cnn': ['http://rss.cnn.com/rss/cnn_topstories.rss', 'http://rss.cnn.com/rss/cnn_tech.rss'],
+    'npr': ['https://feeds.npr.org/1001/rss.xml', 'https://feeds.npr.org/1019/rss.xml'],  # Top stories + Technology
+    'reuters_rss': ['https://www.reutersagency.com/feed/', 'https://www.reuters.com/technology/rss'],
+    'arstechnica': ['https://feeds.arstechnica.com/arstechnica/index'],
 
     # === REMOTE JOBS SPIDERS ===
     'remoteok': ['https://remoteok.com/api'],
@@ -46,6 +54,13 @@ SPIDER_TARGET_URLS = {
     'producthunt': ['https://www.producthunt.com/feed'],
     'medium': ['https://medium.com/feed/topic/technology'],
     'hashnode': ['https://hashnode.com/api/feed/best'],
+
+    # === SESSION 395: NEW CONTENT SPIDERS ===
+    'substack': [
+        'https://stratechery.substack.com/feed',  # Tech strategy
+        'https://www.lennysnewsletter.com/feed',  # Product management
+        'https://www.platformer.news/feed',  # Tech news
+    ],
 
     # === EDUCATION SPIDERS ===
     'udemy': ['https://www.udemy.com/api-2.0/discovery-units/bestseller/?page_size=20'],
@@ -71,6 +86,17 @@ SPIDER_TARGET_URLS = {
     'indiehackers': [
         'https://www.indiehackers.com/feed.xml',
     ],
+
+    # === SESSION 395: LIFESTYLE & ENTERTAINMENT ===
+    'lifehacker': ['https://lifehacker.com/rss'],
+    'variety': ['https://variety.com/feed/', 'https://variety.com/v/film/feed/'],
+    'smashingmagazine': ['https://www.smashingmagazine.com/feed/'],
+
+    # === SESSION 395: WEATHER (No API key needed!) ===
+    'openmeteo': ['https://api.open-meteo.com/v1/forecast?latitude=39.7392&longitude=-104.9903&current_weather=true&hourly=temperature_2m,precipitation'],
+
+    # === SESSION 395: AI/ML SPIDERS ===
+    'huggingface': ['https://huggingface.co/api/models?sort=downloads&direction=-1&limit=20'],
 
     # Note: These spiders use their own API clients, not SPIDER_TARGET_URLS:
     # - bluesky: Uses BlueSky AT Protocol API (BLUESKY_IDENTIFIER, BLUESKY_PASSWORD)
