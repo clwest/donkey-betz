@@ -1,6 +1,9 @@
 """
 Spider Data Learning Bridge
 Learns from spider-collected data to improve agent intelligence and opportunity matching
+
+Session 400: Fixed to use core.models_unified_system.SpiderData (active model with 6500+ records)
+instead of persistence.models.SpiderData (empty model - never populated)
 """
 
 import logging
@@ -8,9 +11,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from typing import Dict, List
 
-from persistence.models import SpiderData
-from core.models_unified_system import UserAgentLearning
-from core.models.agents_registry import UnifiedAgentTemplate
+# Session 400: Use the CORRECT SpiderData model (the one that actually has data!)
+# Also use Agent from core.models_unified_system (has 31 agents) not UnifiedAgentTemplate (28 agents)
+from core.models_unified_system import SpiderData, UserAgentLearning, Agent
 
 logger = logging.getLogger(__name__)
 
@@ -28,43 +31,86 @@ class SpiderDataLearningLoop:
     """
 
     def process_spider_data(self, spider_data: SpiderData):
-        """Process newly collected spider data for learning"""
+        """Process newly collected spider data for learning
 
-        if not spider_data.routed_to_agents:
-            logger.debug(f"Spider data {spider_data.id} has no agent routing, skipping learning")
+        Session 400: Updated to use core.models_unified_system.SpiderData which doesn't
+        have routed_to_agents field. Instead, we determine agents based on data_type/category.
+        """
+        # Determine which agents should learn from this data based on category
+        target_agents = self._get_target_agents_for_data(spider_data)
+
+        if not target_agents:
+            logger.debug(f"Spider data {spider_data.id} has no target agents for category '{spider_data.data_type}'")
             return
 
-        logger.info(f"🕷️ Learning from spider data: {spider_data.spider_name} -> {len(spider_data.routed_to_agents)} agents")
+        logger.info(f"🕷️ Learning from spider data: {spider_data.spider_name} -> {len(target_agents)} agents")
 
         try:
-            # Process for each agent that received this data
-            for agent_name in spider_data.routed_to_agents:
+            # Process for each agent that should learn from this data
+            for agent_name in target_agents:
                 self._create_agent_learning_entry(spider_data, agent_name)
 
-            logger.info(f"✅ Spider data learning complete: {len(spider_data.routed_to_agents)} learning entries created")
+            logger.info(f"✅ Spider data learning complete: {len(target_agents)} learning entries created")
 
         except Exception as e:
             logger.error(f"Error in spider data learning: {e}", exc_info=True)
 
+    def _get_target_agents_for_data(self, spider_data: SpiderData) -> List[str]:
+        """Determine which agents should learn from this spider data based on category
+
+        Session 400: Maps data_type/category to relevant agents
+        """
+        # Map data categories to interested agents
+        category_to_agents = {
+            'tech': ['ResearchAgent', 'TrendAnalysisAgent', 'ContentStrategyAgent', 'CTOAgent'],
+            'news': ['ResearchAgent', 'TrendAnalysisAgent', 'ContentStrategyAgent'],
+            'jobs': ['OpportunityScoringAgent', 'ResearchAgent'],
+            'freelance': ['OpportunityScoringAgent', 'ResearchAgent'],
+            'design': ['CreativeDirectorAgent', 'BrandIdentityAgent', 'ContentStrategyAgent'],
+            'creative': ['CreativeDirectorAgent', 'BrandIdentityAgent', 'ImageAgent'],
+            'financial': ['OpportunityScoringAgent', 'TrendAnalysisAgent', 'CTOAgent'],
+            'community': ['SocialMediaAgent', 'ContentStrategyAgent', 'ResearchAgent'],
+            'education': ['ResearchAgent', 'ContentStrategyAgent'],
+            'legal': ['ResearchAgent', 'CTOAgent'],
+            'health': ['ResearchAgent', 'ContentStrategyAgent'],
+            'science': ['ResearchAgent', 'TrendAnalysisAgent'],
+            'business': ['OpportunityScoringAgent', 'CTOAgent', 'COOAgent'],
+        }
+
+        data_type = spider_data.data_type.lower() if spider_data.data_type else 'general'
+
+        # Get agents for this category, default to general research agents
+        agents = category_to_agents.get(data_type, ['ResearchAgent', 'TrendAnalysisAgent'])
+
+        return agents
+
     def _create_agent_learning_entry(self, spider_data: SpiderData, agent_name: str):
-        """Create a learning entry for a specific agent"""
+        """Create a learning entry for a specific agent
+
+        Session 400: Updated to use fields available in core.models_unified_system.SpiderData
+        """
         try:
-            # Try to find the agent
+            # Try to find the agent - Session 400: Use Agent model instead of UnifiedAgentTemplate
             try:
-                agent = UnifiedAgentTemplate.objects.get(name=agent_name)
-            except UnifiedAgentTemplate.DoesNotExist:
+                agent = Agent.objects.get(name=agent_name)
+            except Agent.DoesNotExist:
                 logger.warning(f"Agent '{agent_name}' not found in database, skipping learning entry")
                 return
 
-            # Extract learning content from spider data
+            # Session 400: Extract learning content using available fields in core SpiderData
+            # Core SpiderData has: spider_name, source_url, data_type, raw_data, processed_data,
+            # relevance_score, insights, embedding, is_processed, is_actionable, created_at
+            raw_data = spider_data.raw_data or {}
+            items = raw_data.get('items', [])
+            item_count = len(items)
+
             learning_content = {
                 'spider_name': spider_data.spider_name,
                 'data_type': spider_data.data_type,
-                'quality_score': float(spider_data.quality_score) if spider_data.quality_score else 0.5,
                 'relevance_score': float(spider_data.relevance_score) if spider_data.relevance_score else 0.5,
                 'source_url': spider_data.source_url,
-                'tags': spider_data.tags or [],
-                'discovered_at': spider_data.discovered_at.isoformat() if spider_data.discovered_at else None,
+                'item_count': item_count,
+                'created_at': spider_data.created_at.isoformat() if spider_data.created_at else None,
 
                 # Performance metrics
                 'data_completeness': self._calculate_completeness(spider_data),
@@ -74,16 +120,21 @@ class SpiderDataLearningLoop:
                 'learning_type': 'spider_intelligence',
                 'data_source_reliability': self._calculate_source_reliability(spider_data.spider_name),
                 'opportunity_potential': self._estimate_opportunity_potential(spider_data),
+
+                # Sample titles from items for context
+                'sample_items': [item.get('title', '')[:100] for item in items[:3]] if items else [],
             }
 
             # Determine learning domain
             learning_domain = self._map_data_type_to_domain(spider_data.data_type)
 
-            # Calculate confidence score based on data quality
+            # Session 400: Calculate confidence score - core SpiderData doesn't have quality_score
+            # Use relevance_score, completeness, and item count as proxies
+            item_score = min(1.0, item_count / 10) if item_count > 0 else 0.3  # More items = higher confidence
             confidence_score = (
-                float(spider_data.quality_score or 0.5) * 0.5 +
-                float(spider_data.relevance_score or 0.5) * 0.3 +
-                learning_content['data_completeness'] * 0.2
+                float(spider_data.relevance_score or 0.5) / 100 * 0.4 +  # relevance_score is 0-100
+                learning_content['data_completeness'] * 0.3 +
+                item_score * 0.3
             )
 
             # Get or create a system user for spider learning
@@ -132,28 +183,40 @@ class SpiderDataLearningLoop:
             logger.error(f"Error creating learning entry for {agent_name}: {e}", exc_info=True)
 
     def _calculate_completeness(self, spider_data: SpiderData) -> float:
-        """Calculate data completeness score (0-1)"""
-        required_fields = ['title', 'source_url', 'structured_data']
-        present = 0
+        """Calculate data completeness score (0-1)
 
-        if spider_data.title:
-            present += 1
+        Session 400: Updated to use fields available in core SpiderData
+        """
+        score = 0.0
+
+        # Check source_url
         if spider_data.source_url:
-            present += 1
-        if spider_data.structured_data:
-            present += 1
+            score += 0.25
 
-        return present / len(required_fields)
+        # Check raw_data has items
+        raw_data = spider_data.raw_data or {}
+        items = raw_data.get('items', [])
+        if items:
+            score += 0.5
+            # Bonus for items with titles
+            items_with_titles = sum(1 for item in items if item.get('title'))
+            if items_with_titles > 0:
+                score += 0.25 * min(1.0, items_with_titles / len(items))
+
+        return min(1.0, score)
 
     def _calculate_freshness(self, spider_data: SpiderData) -> float:
-        """Calculate data freshness score (0-1)"""
+        """Calculate data freshness score (0-1)
+
+        Session 400: Use created_at instead of discovered_at (core SpiderData field)
+        """
         from django.utils import timezone
         from datetime import timedelta
 
-        if not spider_data.discovered_at:
+        if not spider_data.created_at:
             return 0.5  # Unknown age
 
-        age = timezone.now() - spider_data.discovered_at
+        age = timezone.now() - spider_data.created_at
 
         # Fresh data (< 1 hour) = 1.0
         # Recent data (< 24 hours) = 0.8
@@ -170,31 +233,42 @@ class SpiderDataLearningLoop:
             return 0.2
 
     def _calculate_source_reliability(self, spider_name: str) -> float:
-        """Calculate reliability of this data source based on historical performance"""
+        """Calculate reliability of this data source based on historical performance
+
+        Session 400: Updated to use fields available in core SpiderData
+        """
         # Count successful data from this spider
         total = SpiderData.objects.filter(spider_name=spider_name).count()
 
         if total == 0:
             return 0.5  # No history, assume average
 
-        # High-quality data from this spider
-        high_quality = SpiderData.objects.filter(
+        # High relevance data from this spider (relevance_score is 0-100)
+        high_relevance = SpiderData.objects.filter(
             spider_name=spider_name,
-            quality_score__gte=0.7
+            relevance_score__gte=70
         ).count()
 
-        return high_quality / total if total > 0 else 0.5
+        return high_relevance / total if total > 0 else 0.5
 
     def _estimate_opportunity_potential(self, spider_data: SpiderData) -> str:
-        """Estimate the potential value of this opportunity"""
-        quality = float(spider_data.quality_score or 0.5)
-        relevance = float(spider_data.relevance_score or 0.5)
+        """Estimate the potential value of this opportunity
 
-        combined = (quality + relevance) / 2
+        Session 400: Updated to use relevance_score and item count
+        """
+        # relevance_score is 0-100 in core SpiderData
+        relevance = float(spider_data.relevance_score or 50) / 100
 
-        if combined >= 0.8:
+        # Also factor in item count
+        raw_data = spider_data.raw_data or {}
+        items = raw_data.get('items', [])
+        item_score = min(1.0, len(items) / 10) if items else 0.3
+
+        combined = (relevance * 0.6 + item_score * 0.4)
+
+        if combined >= 0.7:
             return 'high'
-        elif combined >= 0.6:
+        elif combined >= 0.5:
             return 'medium'
         else:
             return 'low'
