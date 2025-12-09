@@ -22,13 +22,19 @@ Focus Areas (Colorado Family Law):
 - Parenting time / custody
 - Child support
 - Parental responsibility
+
+Session 403 Enhancements:
+- Database models: LegalCase, LegalDocument, LegalResearchResult, LegalMemory
+- Learning hooks: Records successful document patterns
+- Memory system: Stores successful strategies for future use
+- Knowledge sharing: Shares learned patterns with collective intelligence
 """
 
 import logging
 import time
 import json
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
@@ -330,10 +336,23 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
         }
     ]
 
-    def __init__(self, user=None):
+    def __init__(self, user=None, case_id: str = None):
         super().__init__(user)
         self._spider_service = None
         self._semantic_search = None
+        self.case_id = case_id  # Optional: Link to LegalCase
+        self._current_case = None
+
+    @property
+    def current_case(self):
+        """Get the current LegalCase if case_id is provided."""
+        if self._current_case is None and self.case_id:
+            try:
+                from core.models_unified_system import LegalCase
+                self._current_case = LegalCase.objects.get(id=self.case_id)
+            except Exception:
+                pass
+        return self._current_case
 
     @property
     def spider_service(self):
@@ -423,11 +442,22 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
                 # Build response message
                 response_parts = []
 
-                # Add generated documents
+                # Save generated documents to database and add to response
+                saved_doc_ids = []
                 for doc in generated_documents:
                     response_parts.append(doc.get('document', ''))
+                    # Save to LegalDocument model
+                    saved_doc = self._save_legal_document(
+                        task=task,
+                        document=doc,
+                        context=context,
+                        execution_time_ms=execution_time
+                    )
+                    if saved_doc:
+                        saved_doc_ids.append(str(saved_doc.id))
 
-                # Add legal information
+                # Save legal info research and add to response
+                saved_research_ids = []
                 for info in legal_info:
                     if info.get('explanation'):
                         response_parts.append(info.get('explanation'))
@@ -435,6 +465,16 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
                         response_parts.append(info.get('form_info'))
                     if info.get('search_results'):
                         response_parts.append(f"**Relevant Information:**\n{info.get('search_results')}")
+
+                    # Save to LegalResearchResult model
+                    saved_research = self._save_legal_research(
+                        task=task,
+                        info=info,
+                        context=context,
+                        execution_time_ms=execution_time
+                    )
+                    if saved_research:
+                        saved_research_ids.append(str(saved_research.id))
 
                 # If no tool calls, use GPT's direct response
                 if not response_parts and gpt_response.get('content'):
@@ -455,14 +495,17 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
                         'query': task,
                         'jurisdiction': 'Colorado',
                         'focus_area': 'Family Law',
-                        'disclaimer_included': True
+                        'disclaimer_included': True,
+                        'saved_document_ids': saved_doc_ids,
+                        'saved_research_ids': saved_research_ids,
+                        'case_id': self.case_id,
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,
                     tool_calls=tool_calls_made
                 )
 
-                # Record learning outcome
+                # Record learning outcome (existing)
                 self._record_learning_outcome(
                     result=result,
                     task=task,
@@ -470,6 +513,19 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
                     spider_data_used=bool(legal_info),
                     scifi_context_used=False
                 )
+
+                # Create execution memory for successful legal assistance
+                if generated_documents or legal_info:
+                    self._create_execution_memory(
+                        result=result,
+                        task=task,
+                        memory_type="success",
+                        importance=0.8  # Legal documents are important
+                    )
+
+                    # Share knowledge if significant legal pattern discovered
+                    if generated_documents:
+                        self._share_legal_knowledge(task, generated_documents, context)
 
                 return result
 
@@ -1146,3 +1202,236 @@ For detailed information on this procedure in {county} County, Colorado, please 
             'procedure': procedure,
             'county': county
         }
+
+    # =========================================================================
+    # Session 403: Database Integration Methods
+    # =========================================================================
+
+    def _save_legal_document(
+        self,
+        task: str,
+        document: Dict[str, Any],
+        context: Dict[str, Any],
+        execution_time_ms: int = 0
+    ) -> Optional['LegalDocument']:
+        """Save a generated legal document to the database."""
+        if not self.user:
+            logger.warning("Cannot save legal document: no user provided")
+            return None
+
+        try:
+            from core.models_unified_system import LegalDocument, LegalCase
+
+            # Determine document type from the result
+            doc_type = document.get('document_type', 'other')
+            motion_type = document.get('motion_type', '')
+
+            # Build title
+            if doc_type == 'motion':
+                title = f"Motion: {motion_type.replace('_', ' ').title()}"
+            elif doc_type == 'email':
+                title = f"Email: {document.get('email_type', 'Communication')}"
+            elif doc_type == 'declaration':
+                title = "Declaration"
+            else:
+                title = f"Legal Document: {task[:100]}"
+
+            # Get case if available
+            case = None
+            if self.case_id:
+                try:
+                    case = LegalCase.objects.get(id=self.case_id)
+                except LegalCase.DoesNotExist:
+                    pass
+
+            # Create the document record
+            legal_doc = LegalDocument.objects.create(
+                user=self.user,
+                case=case,
+                document_type=doc_type,
+                title=title,
+                content=document.get('document', ''),
+                original_query=task,
+                generation_context={
+                    'motion_type': motion_type,
+                    'case_type': context.get('case_type', ''),
+                    'jurisdiction': 'Colorado',
+                    'execution_time_ms': execution_time_ms,
+                    'tool_used': doc_type,
+                },
+                status='draft',
+            )
+
+            # Update case document count
+            if case:
+                case.document_count = case.documents.count()
+                case.save(update_fields=['document_count', 'updated_at'])
+
+            logger.info(f"Saved LegalDocument {legal_doc.id}: {title}")
+            return legal_doc
+
+        except Exception as e:
+            logger.error(f"Failed to save legal document: {e}")
+            return None
+
+    def _save_legal_research(
+        self,
+        task: str,
+        info: Dict[str, Any],
+        context: Dict[str, Any],
+        execution_time_ms: int = 0
+    ) -> Optional['LegalResearchResult']:
+        """Save legal research result to the database."""
+        if not self.user:
+            logger.warning("Cannot save legal research: no user provided")
+            return None
+
+        try:
+            from core.models_unified_system import LegalResearchResult
+
+            # Determine research type
+            if info.get('explanation'):
+                research_type = 'procedure'
+            elif info.get('form_info'):
+                research_type = 'form_lookup'
+            elif info.get('search_results'):
+                research_type = 'guidance'
+            else:
+                research_type = 'guidance'
+
+            # Build analysis from info
+            analysis_parts = []
+            if info.get('explanation'):
+                analysis_parts.append(info['explanation'])
+            if info.get('form_info'):
+                analysis_parts.append(info['form_info'])
+            if info.get('search_results'):
+                analysis_parts.append(info['search_results'])
+
+            analysis = "\n\n".join(analysis_parts) if analysis_parts else str(info)
+
+            # Save using the model's helper method
+            research = LegalResearchResult.save_legal_research(
+                user=self.user,
+                query=task,
+                analysis=analysis,
+                research_type=research_type,
+                case_type=context.get('case_type', ''),
+                jurisdiction='Colorado',
+                sources_used=info.get('sources', []),
+                execution_time_ms=execution_time_ms,
+                case_id=self.case_id,
+            )
+
+            logger.info(f"Saved LegalResearchResult {research.id}: {research_type}")
+            return research
+
+        except Exception as e:
+            logger.error(f"Failed to save legal research: {e}")
+            return None
+
+    def _share_legal_knowledge(
+        self,
+        task: str,
+        documents: List[Dict[str, Any]],
+        context: Dict[str, Any]
+    ) -> None:
+        """Share learned legal patterns with collective intelligence."""
+        try:
+            for doc in documents:
+                doc_type = doc.get('document_type', 'other')
+                motion_type = doc.get('motion_type', '')
+
+                # Build knowledge title
+                if doc_type == 'motion' and motion_type:
+                    title = f"Colorado Motion Pattern: {motion_type.replace('_', ' ').title()}"
+                else:
+                    title = f"Colorado Legal Document: {doc_type}"
+
+                # Share knowledge with other agents
+                self._share_knowledge(
+                    knowledge_type='content_idea',  # Using existing type
+                    title=title,
+                    knowledge_value={
+                        'document_type': doc_type,
+                        'motion_type': motion_type,
+                        'case_type': context.get('case_type', ''),
+                        'jurisdiction': 'Colorado',
+                        'focus': 'Family Law',
+                        'task_pattern': task[:200],
+                    },
+                    confidence=0.8
+                )
+
+        except Exception as e:
+            logger.warning(f"Failed to share legal knowledge: {e}")
+
+    def _get_relevant_legal_memories(
+        self,
+        task: str,
+        case_type: str = '',
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Retrieve relevant legal memories for the current task."""
+        try:
+            from core.models_unified_system import LegalMemory
+
+            # Query memories by relevance
+            memories = LegalMemory.objects.filter(
+                jurisdiction='Colorado'
+            )
+
+            if case_type:
+                memories = memories.filter(case_type=case_type)
+
+            # Order by confidence and usage
+            memories = memories.order_by('-confidence_score', '-usage_count')[:limit]
+
+            return [
+                {
+                    'title': m.title,
+                    'content': m.content[:500],
+                    'memory_type': m.memory_type,
+                    'confidence': m.confidence_score,
+                    'usage_count': m.usage_count,
+                }
+                for m in memories
+            ]
+
+        except Exception as e:
+            logger.warning(f"Failed to get legal memories: {e}")
+            return []
+
+    def get_prior_legal_research(
+        self,
+        query: str = '',
+        case_type: str = '',
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Get prior legal research for context building."""
+        if not self.user:
+            return []
+
+        try:
+            from core.models_unified_system import LegalResearchResult
+
+            research = LegalResearchResult.objects.filter(user=self.user)
+
+            if case_type:
+                research = research.filter(case_type=case_type)
+
+            research = research.order_by('-created_at')[:limit]
+
+            return [
+                {
+                    'query': r.query,
+                    'analysis_preview': r.analysis[:300],
+                    'research_type': r.research_type,
+                    'created_at': r.created_at.isoformat(),
+                }
+                for r in research
+            ]
+
+        except Exception as e:
+            logger.warning(f"Failed to get prior research: {e}")
+            return []
