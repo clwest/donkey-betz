@@ -1,6 +1,6 @@
 # Spider Network Reference
 
-**Last Updated:** Session 397 (December 8, 2025)
+**Last Updated:** Session 399 (December 8, 2025)
 
 ---
 
@@ -24,6 +24,8 @@ The Spider Network consists of **62 registered spiders**, with **57 actually wor
 
 **Session 398:** Database cleaned - deleted 6,906 placeholder records from removed spiders, fixed broken RSS feeds
 
+**Session 399:** Spider renames - 6 spiders renamed to match actual data sources (cnn→google_news, dribbble→awwwards, indiehackers→hackernoon, hashnode→freecodecamp, udemy→coursera, indiegogo→techcrunch_startups). Fixed Data Feed API empty string parameter bug.
+
 ---
 
 ## Spider Status (Session 397 Update)
@@ -46,16 +48,16 @@ These spiders are configured and collecting real data:
 | weworkremotely | RSS | Working |
 | coingecko | JSON API | Working |
 | yahoo_finance | JSON API | Working |
-| dribbble | HTML Scrape | Blocked (Cloudflare) |
+| awwwards | RSS | Working (Session 399: renamed from dribbble) |
 | behance | RSS | Working |
 | producthunt | RSS | Working |
 | medium | RSS | Working |
-| hashnode | JSON API | Working |
-| udemy | JSON API | Working |
+| freecodecamp | RSS | Working (Session 399: renamed from hashnode) |
+| coursera | RSS | Working (Session 399: renamed from udemy) |
 | kickstarter | JSON API | Blocked (403) |
-| indiegogo | JSON API | Working |
+| techcrunch_startups | RSS | Working (Session 399: renamed from indiegogo) |
 | reddit | JSON API | Working (8 subreddits) |
-| indiehackers | RSS | Working |
+| hackernoon | RSS | Working (Session 399: renamed from indiehackers) |
 | bluesky | AT Protocol | Needs API keys |
 | youtube | YouTube API | Needs API key |
 | discord | Discord API | Needs bot token |
@@ -64,7 +66,7 @@ These spiders are configured and collecting real data:
 | Spider | Source Type | Status |
 |--------|-------------|--------|
 | bbc | RSS | Working |
-| cnn | RSS | Working |
+| google_news | RSS | Working (Session 399: renamed from cnn) |
 | npr | RSS | Working |
 | reuters_rss | RSS | Working |
 | arstechnica | RSS | Working |
@@ -188,7 +190,7 @@ python manage.py bulk_embed_spiders --dry-run    # Preview without changes
 | MIT Tech Review | RSS | Working | Research, innovation |
 | Axios | RSS | Working | Tech news |
 | Dev.to | JSON API | Working | Developer articles |
-| Hashnode | JSON API | Working | Developer blogs |
+| FreeCodeCamp | RSS | Working | Developer blogs (Session 399: renamed from Hashnode) |
 | ProductHunt | RSS | Working | New products |
 
 ### Financial (11 spiders - 2 working)
@@ -209,12 +211,12 @@ python manage.py bulk_embed_spiders --dry-run    # Preview without changes
 | FlexJobs | N/A | **No public API** |
 | Others | Various | **NOT CONFIGURED** |
 
-### Creative (5 spiders - 1 working)
+### Creative (5 spiders - 2 working)
 
 | Source | Type | Status |
 |--------|------|--------|
 | Behance | RSS | Working |
-| Dribbble | HTML | Blocked by Cloudflare |
+| Awwwards | RSS | Working (Session 399: renamed from Dribbble) |
 | Others | Various | **NOT CONFIGURED** |
 
 ### Content (5 spiders - 2 working)
@@ -232,7 +234,7 @@ python manage.py bulk_embed_spiders --dry-run    # Preview without changes
 | Source | Type | Status |
 |--------|------|--------|
 | Reddit | JSON API | Working (8 subreddits) |
-| IndieHackers | RSS | Working |
+| HackerNoon | RSS | Working (Session 399: renamed from IndieHackers) |
 | Discord | Bot API | Needs token |
 
 **Reddit Subreddits Monitored:**
@@ -240,11 +242,11 @@ python manage.py bulk_embed_spiders --dry-run    # Preview without changes
 - r/Entrepreneur, r/freelance, r/startups
 - r/SideProject, r/ChatGPT
 
-### Crowdfunding (2 spiders - 1 working)
+### Crowdfunding/Startups (2 spiders - 1 working)
 
 | Source | Type | Status |
 |--------|------|--------|
-| Indiegogo | JSON API | Working |
+| TechCrunch Startups | RSS | Working (Session 399: renamed from Indiegogo) |
 | Kickstarter | JSON API | Blocked (403) |
 
 ---

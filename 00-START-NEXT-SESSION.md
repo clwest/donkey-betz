@@ -1,45 +1,79 @@
 # Start Next Session Here
 
-**Last Session:** 398 - Spider System Audit + Embedding Cleanup + RSS Fixes
+**Last Session:** 399 - Spider Renames + Data Feed API Fix
 **Date:** December 8, 2025
-**Status:** 62 registered spiders | 57 working | DATABASE CLEANED
+**Status:** 62 registered spiders | 57 working | 6 spiders renamed to match actual sources
 
 ---
 
-## Session 398 Accomplishments
+## Session 399 Accomplishments
 
-### Full Spider System Audit
-Comprehensive audit of the entire spider network:
-- Verified all 62 registered spiders
-- Tested 20 representative spiders (100% success rate)
-- Confirmed SpiderIntelligenceService working (trending topics with real data)
-- Verified agent integration (167 knowledge transfers)
+### Spider Renames (6 spiders)
+Renamed spiders to accurately reflect their actual data sources:
 
-### Database Cleanup (6,906 records deleted)
-Removed placeholder records from 40 removed spiders:
-- **Before:** 14,049 records
-- **After:** 7,143 records (50% reduction)
-- All remaining records have real data
+| Old Name | New Name | Reason |
+|----------|----------|--------|
+| cnn | google_news | CNN RSS feeds stale (2023 content) |
+| dribbble | awwwards | Dribbble blocked (Cloudflare) |
+| indiehackers | hackernoon | IndieHackers RSS broken |
+| hashnode | freecodecamp | Hashnode API returns 404 |
+| udemy | coursera | Udemy API requires auth |
+| indiegogo | techcrunch_startups | Indiegogo API blocked (403) |
 
-### Embedding Catch-Up
-- Processed all pending embeddable entries
-- Marked 12,104 empty entries (placeholder data)
-- Final stats: 1,830 searchable embeddings (25.6% coverage)
+### Data Feed API Bug Fix
+Fixed bug where empty string category/source parameters returned no results:
+```python
+# core/views_spider_intelligence.py lines 1128-1129
+category = request.GET.get('category', 'all') or 'all'  # Handle empty string
+source = request.GET.get('source', 'all') or 'all'  # Handle empty string
+```
 
-### RSS Feed Fixes
-Fixed broken feeds that were timing out or returning 403/404:
+### Database Cleanup
+- Deleted 871 old records with stale spider names
+- Created fresh data for all 6 renamed spiders with correct categories
 
-| Spider | Old (Broken) | New (Working) |
-|--------|--------------|---------------|
-| food | Serious Eats, Bon Appetit | Eater, Smitten Kitchen |
-| travel | Lonely Planet, CN Traveler | Matador Network |
-| government | politico.com/rss | rss.politico.com |
+### Documentation
+- Handoff: `docs/handoffs/SESSION_399_SPIDER_RENAMES_AND_DATA_FEED_FIX.md`
+- Updated: `docs/SPIDERS.md`
 
-### Confirmed Working Systems
-- ✅ Celery Beat embedding schedule (every 10 min)
-- ✅ Semantic search returning relevant results
-- ✅ SpiderIntelligenceService with topic filtering
-- ✅ Agent learning integration with spider data
+---
+
+## Session 399 (Earlier) - Intelligence Sub-Tabs
+
+### New Intelligence Sub-Tabs
+Added 3 new sub-tabs to the Intelligence panel to surface hidden spider data:
+
+| Sub-Tab | Purpose | Data Source |
+|---------|---------|-------------|
+| **Data Feed** | Browse actual spider items (articles, jobs, prices) | SpiderData.raw_data['items'] |
+| **Knowledge** | View what agents learned from spiders | AgentKnowledgeSource + KnowledgeTransfer |
+| **Timeline** | Data collection timeline + source freshness | SpiderData aggregated by time |
+
+### New API Endpoints
+Created 3 REST endpoints to power the new UI:
+
+| Endpoint | Description |
+|----------|-------------|
+| `/api/spider-intelligence/feed/` | Paginated data items with category/source filtering |
+| `/api/spider-intelligence/knowledge/` | Knowledge sources, transfers, stats |
+| `/api/spider-intelligence/timeline/` | Hourly/daily collection timeline + freshness grid |
+
+### Files Created
+- `ai_core/templates/components/panels/intelligence/intel_data_feed.html`
+- `ai_core/templates/components/panels/intelligence/intel_knowledge.html`
+- `ai_core/templates/components/panels/intelligence/intel_timeline.html`
+
+### Files Modified
+- `core/views_spider_intelligence.py` - Added 3 new view functions (~250 lines)
+- `core/urls.py` - Added 3 new URL patterns
+- `ai_core/templates/components/panels/intelligence_panel.html` - Added sub-tab navigation
+- `ai_core/templates/partials/js/spider_intelligence.html` - Added JS functions (~400 lines)
+
+### Bug Fixed
+- Knowledge API had wrong field names for KnowledgeTransfer model (`from_agent`/`to_agent` should be `teacher_agent`/`student_agent` via `connection` FK)
+
+### Documentation
+- Full implementation plan: `/docs/SESSION_399_SPIDER_DATA_UI_IMPLEMENTATION.md`
 
 ---
 
@@ -51,7 +85,8 @@ Fixed broken feeds that were timing out or returning 403/404:
 | **Working Spiders** | 57 |
 | **Database Records** | 7,143 |
 | **With Embeddings** | 1,830 (25.6%) |
-| **Need API Keys** | 6 |
+| **Knowledge Sources** | 865 |
+| **Knowledge Transfers** | 168 |
 
 ---
 
@@ -61,31 +96,46 @@ Fixed broken feeds that were timing out or returning 403/404:
 # Start services
 make start && make celery
 
-# Verify spider system
-.venv/bin/python manage.py shell -c "
-from core.services.spider_semantic_search import get_spider_semantic_search
-search = get_spider_semantic_search()
-stats = search.get_embedding_stats()
-print(f'Records: {stats[\"total_entries\"]}, Searchable: {stats[\"with_embedding\"]}')
-"
+# Test new APIs
+curl -s "http://localhost:8000/api/spider-intelligence/feed/?limit=3" | python3 -m json.tool | head -30
+curl -s "http://localhost:8000/api/spider-intelligence/knowledge/?limit=5" | python3 -m json.tool | head -40
+curl -s "http://localhost:8000/api/spider-intelligence/timeline/?range=24h" | python3 -m json.tool | head -30
 
-# Test semantic search
-.venv/bin/python manage.py shell -c "
-from core.services.spider_semantic_search import get_spider_semantic_search
-search = get_spider_semantic_search()
-results = search.semantic_search('AI trends', limit=3)
-for r in results: print(f'[{r.source}] {r.title[:50]}')"
-
-# Open AI Studio
+# Open AI Studio and navigate to Intelligence tab
 open http://localhost:8000/ai-studio/
 ```
 
 ---
 
-## Files Changed This Session
+## All Phases Complete
 
-| File | Changes |
-|------|---------|
-| `ai_core/spiders/real_data_collector.py` | Fixed RSS feeds (food, travel, government) |
-| `00-START-NEXT-SESSION.md` | Updated for Session 398 |
-| `docs/SPIDERS.md` | Updated counts and legal spider status |
+**Phase 4 (Real-time WebSocket) was also implemented:**
+- WebSocket consumer: `SpiderIntelligenceConsumer` at `/ws/spider-intelligence/`
+- Redis publish on spider completion in `core/tasks.py`
+- Toast notifications when spiders complete (slide-in animation)
+- Auto-refresh of Data Feed and Timeline tabs when new data arrives
+
+---
+
+## Intelligence Tab Structure (Updated)
+
+```
+Intelligence Tab (7 sub-tabs)
+├── Trending - Hot topics across categories
+├── Markets - Crypto prices, stocks, SEC filings
+├── Opportunities - Jobs, freelance, crowdfunding
+├── Data Feed (NEW) - Browse actual spider items
+├── Knowledge (NEW) - Agent learnings from spiders
+├── Timeline (NEW) - Collection timeline + freshness
+└── Spiders - Network status and management
+```
+
+---
+
+## Previous Session Context
+
+Session 398 performed full spider audit:
+- Cleaned 6,906 placeholder records (50% reduction)
+- Fixed broken RSS feeds (food, travel, government)
+- Confirmed all 57 working spiders operational
+- Verified agent integration (167 knowledge transfers)

@@ -1,14 +1,18 @@
 {% comment %}
 Session 275: Intelligence Hub Panel - Main Container
 Session 343: Updated to 102 spiders across 36 categories
-Real-time intelligence from 102 spiders feeding AI Content agents
+Session 399: Added Data Feed, Knowledge, Timeline sub-tabs
+Real-time intelligence from 57 working spiders feeding AI Content agents
 Extracted from ai_image_studio.html as part of Frontend Componentization
 
 Sub-tabs:
 1. Trending - Hot topics across all categories
 2. Markets - Crypto, stocks, financial data
 3. Opportunities - Jobs, freelance, business opportunities
-4. Spiders - Spider network status and management
+4. Data Feed - Browse actual spider data items (NEW)
+5. Knowledge - What agents learned from spiders (NEW)
+6. Timeline - Data collection timeline + freshness (NEW)
+7. Spiders - Spider network status and management
 {% endcomment %}
 
 <div class="tab-pane fade" id="trending" role="tabpanel">
@@ -95,6 +99,22 @@ Sub-tabs:
                     &#128188; Opportunities
                 </button>
             </li>
+            <!-- Session 399: New Sub-Tabs -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="intel-feed-tab" data-bs-toggle="pill" data-bs-target="#intel-data-feed" type="button" role="tab" style="color: #3b82f6;" onclick="loadDataFeed(true)">
+                    &#128240; Data Feed
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="intel-knowledge-tab" data-bs-toggle="pill" data-bs-target="#intel-knowledge" type="button" role="tab" style="color: #8b5cf6;" onclick="loadKnowledgeSources()">
+                    &#129504; Knowledge
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="intel-timeline-tab" data-bs-toggle="pill" data-bs-target="#intel-timeline" type="button" role="tab" style="color: #06b6d4;" onclick="loadTimeline()">
+                    &#128200; Timeline
+                </button>
+            </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="intel-spiders-tab" data-bs-toggle="pill" data-bs-target="#intel-spiders" type="button" role="tab" style="color: #f97316;">
                     &#128375; Spiders
@@ -133,6 +153,9 @@ Sub-tabs:
             {% include "components/panels/intelligence/intel_trending.html" %}
             {% include "components/panels/intelligence/intel_markets.html" %}
             {% include "components/panels/intelligence/intel_opportunities.html" %}
+            {% include "components/panels/intelligence/intel_data_feed.html" %}
+            {% include "components/panels/intelligence/intel_knowledge.html" %}
+            {% include "components/panels/intelligence/intel_timeline.html" %}
             {% include "components/panels/intelligence/intel_spiders.html" %}
         </div>
     </div>

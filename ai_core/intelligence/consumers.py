@@ -1765,3 +1765,107 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
             'feedback_id': result.get('feedback_id'),
             'status': 'processed'
         }))
+
+
+class SpiderIntelligenceConsumer(AsyncWebsocketConsumer):
+    """
+    Session 399: WebSocket consumer for real-time spider intelligence updates.
+    Listens to Redis pub/sub for spider completion events and broadcasts to clients.
+    """
+
+    async def connect(self):
+        """Accept WebSocket connection and start Redis listener"""
+        self.room_name = 'spider_intelligence'
+        self.room_group_name = f'spider_{self.room_name}'
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+        logger.info("Spider Intelligence WebSocket connected")
+
+        # Start Redis listener for spider completion events
+        asyncio.create_task(self.listen_spider_events())
+
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnect"""
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        logger.info(f"Spider Intelligence WebSocket disconnected: {close_code}")
+
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages"""
+        try:
+            data = json.loads(text_data)
+            action = data.get('action')
+
+            if action == 'get_recent_updates':
+                await self.send_recent_updates()
+            elif action == 'subscribe_category':
+                # Store category subscription for filtering
+                self.subscribed_category = data.get('category')
+
+        except Exception as e:
+            logger.error(f"Error processing Spider Intelligence message: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': str(e)
+            }))
+
+    async def listen_spider_events(self):
+        """Listen to Redis pub/sub for spider completion events"""
+        import redis.asyncio as aioredis
+
+        try:
+            redis_client = aioredis.Redis(host='localhost', port=6379, db=0)
+            pubsub = redis_client.pubsub()
+            await pubsub.subscribe('spider:completion')
+
+            logger.info("Spider Intelligence consumer subscribed to spider:completion channel")
+
+            async for message in pubsub.listen():
+                if message['type'] == 'message':
+                    try:
+                        data = json.loads(message['data'])
+                        await self.send(text_data=json.dumps({
+                            'type': 'spider_update',
+                            'spider_name': data.get('spider_name'),
+                            'item_count': data.get('item_count', 0),
+                            'category': data.get('category'),
+                            'data_id': data.get('data_id'),
+                            'timestamp': data.get('timestamp')
+                        }))
+                    except json.JSONDecodeError:
+                        pass
+
+        except Exception as e:
+            logger.error(f"Error in Spider Intelligence Redis listener: {e}")
+
+    async def send_recent_updates(self):
+        """Send recent spider updates from the database"""
+        try:
+            recent_data = await self.get_recent_spider_data()
+            await self.send(text_data=json.dumps({
+                'type': 'recent_updates',
+                'updates': recent_data
+            }))
+        except Exception as e:
+            logger.error(f"Error sending recent updates: {e}")
+
+    @database_sync_to_async
+    def get_recent_spider_data(self):
+        """Get recent spider data from database"""
+        from core.models_unified_system import SpiderData
+
+        recent = SpiderData.objects.order_by('-created_at')[:10]
+        return [{
+            'spider_name': d.spider_name,
+            'category': d.data_type,
+            'item_count': len(d.raw_data.get('items', [])) if d.raw_data else 0,
+            'created_at': d.created_at.isoformat()
+        } for d in recent]

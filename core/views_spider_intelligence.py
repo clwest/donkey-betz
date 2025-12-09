@@ -1097,3 +1097,552 @@ def dashboard_stats(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+# ============================================================
+# SESSION 399: SPIDER DATA UI - DATA FEED, KNOWLEDGE, TIMELINE
+# ============================================================
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def spider_data_feed(request):
+    """
+    Session 399: Returns paginated spider data items for the data feed.
+    Extracts actual items from raw_data JSON for browsing.
+
+    Query params:
+        category: Filter by data_type (tech, news, financial, etc.)
+        source: Filter by spider_name
+        limit: Number of items (default 50)
+        offset: Pagination offset
+        sort: 'recent' or 'score'
+    """
+    from django.utils import timezone
+    from core.models_unified_system import SpiderData
+
+    try:
+        category = request.GET.get('category', 'all') or 'all'  # Handle empty string
+        source = request.GET.get('source', 'all') or 'all'  # Handle empty string
+        limit = min(int(request.GET.get('limit', 50)), 100)
+        offset = int(request.GET.get('offset', 0))
+        sort = request.GET.get('sort', 'recent')
+
+        # Build queryset
+        queryset = SpiderData.objects.exclude(raw_data__isnull=True)
+
+        if category != 'all':
+            queryset = queryset.filter(data_type=category)
+        if source != 'all':
+            queryset = queryset.filter(spider_name=source)
+
+        queryset = queryset.order_by('-created_at')[offset:offset + limit + 20]  # Get extra for item extraction
+
+        # Extract items from raw_data
+        items = []
+        seen_urls = set()
+
+        for sd in queryset:
+            if not sd.raw_data:
+                continue
+
+            raw_items = sd.raw_data.get('items', [])
+            if not isinstance(raw_items, list):
+                continue
+
+            for item in raw_items[:15]:  # Max 15 items per record
+                # Get URL for deduplication - try many possible fields
+                url = (
+                    item.get('url') or
+                    item.get('link') or
+                    item.get('html_url') or  # GitHub
+                    item.get('permalink') or  # Reddit
+                    item.get('guid') or  # RSS feeds
+                    ''
+                )
+                if url and url in seen_urls:
+                    continue
+                if url:
+                    seen_urls.add(url)
+
+                # Extract title - try multiple fields based on spider type
+                title = (
+                    item.get('title') or
+                    item.get('name') or  # GitHub repos
+                    item.get('full_name') or  # GitHub repos (owner/repo)
+                    item.get('modelId') or  # HuggingFace
+                    item.get('id') or  # Some APIs use id as identifier
+                    item.get('position') or  # Job listings
+                    item.get('headline') or
+                    item.get('text') or  # Some news items
+                    None
+                )
+
+                # Skip items with no title at all
+                if not title:
+                    continue
+
+                # Extract description - try many fields
+                description = (
+                    item.get('description') or
+                    item.get('summary') or
+                    item.get('selftext') or  # Reddit
+                    item.get('body') or
+                    item.get('content') or
+                    item.get('excerpt') or
+                    ''
+                )
+
+                # Special handling for HuggingFace models - build a rich description
+                if sd.spider_name == 'huggingface' and not description:
+                    desc_parts = []
+                    if item.get('pipeline_tag'):
+                        desc_parts.append(f"Task: {item.get('pipeline_tag')}")
+                    if item.get('library_name'):
+                        desc_parts.append(f"Library: {item.get('library_name')}")
+                    # Extract useful tags (skip dataset:, arxiv:, region:, etc.)
+                    tags = item.get('tags', [])
+                    useful_tags = [t for t in tags[:10] if not any(t.startswith(p) for p in ['dataset:', 'arxiv:', 'region:', 'license:', 'deploy:', 'endpoints_', 'autotrain_'])]
+                    if useful_tags:
+                        desc_parts.append(f"Tags: {', '.join(useful_tags[:5])}")
+                    if item.get('downloads'):
+                        desc_parts.append(f"{item.get('downloads'):,} downloads")
+                    if item.get('likes'):
+                        desc_parts.append(f"{item.get('likes'):,} likes")
+                    description = ' | '.join(desc_parts)
+
+                # Special handling for GitHub - build URL from html_url
+                if sd.spider_name == 'github' and not url and item.get('html_url'):
+                    url = item.get('html_url')
+
+                # Special handling for HuggingFace - construct URL from modelId
+                if sd.spider_name == 'huggingface' and not url and item.get('modelId'):
+                    url = f"https://huggingface.co/{item.get('modelId')}"
+
+                # Build item object
+                feed_item = {
+                    'title': str(title)[:200],
+                    'url': url,
+                    'source': sd.spider_name,
+                    'category': sd.data_type,
+                    'score': item.get('score') or item.get('points') or item.get('upvotes') or item.get('stargazers_count') or item.get('likes') or item.get('downloads'),
+                    'timestamp': item.get('created_at') or item.get('published') or item.get('fetched_at') or sd.created_at.isoformat(),
+                    'description': str(description)[:300] if description else '',
+                    'metadata': {
+                        'company': item.get('company'),
+                        'location': item.get('location'),
+                        'salary_min': item.get('salary_min'),
+                        'salary_max': item.get('salary_max'),
+                        'tags': item.get('tags', [])[:8] if isinstance(item.get('tags'), list) else [],
+                        'price': item.get('current_price') or item.get('price'),
+                        'change': item.get('price_change_percentage_24h') or item.get('change_24h'),
+                        'symbol': item.get('symbol'),
+                        'subreddit': item.get('subreddit'),
+                        'comments': item.get('num_comments') or item.get('comments'),
+                        'author': item.get('author') or item.get('by') or item.get('owner', {}).get('login') if isinstance(item.get('owner'), dict) else item.get('author'),
+                        'stars': item.get('stargazers_count'),  # GitHub
+                        'forks': item.get('forks_count') or item.get('forks'),  # GitHub
+                        'downloads': item.get('downloads'),  # HuggingFace
+                        'likes': item.get('likes'),  # HuggingFace
+                        'library': item.get('library_name'),  # HuggingFace
+                    }
+                }
+
+                items.append(feed_item)
+
+                if len(items) >= limit:
+                    break
+
+            if len(items) >= limit:
+                break
+
+        # Sort by score if requested
+        if sort == 'score':
+            items.sort(key=lambda x: x.get('score') or 0, reverse=True)
+
+        # Get available sources for filter dropdown
+        sources = list(SpiderData.objects.values_list('spider_name', flat=True).distinct().order_by('spider_name'))
+
+        # Get available categories
+        categories = list(SpiderData.objects.values_list('data_type', flat=True).distinct().order_by('data_type'))
+
+        # Get stats
+        total_records = SpiderData.objects.count()
+        with_embeddings = SpiderData.objects.exclude(embedding__isnull=True).count()
+
+        return JsonResponse({
+            'status': 'success',
+            'items': items,
+            'total': len(items),
+            'total_items': total_records,  # For frontend stats display
+            'categories': categories,  # For frontend filter pills
+            'has_more': len(queryset) > limit,
+            'sources': sources,
+            'stats': {
+                'total_records': total_records,
+                'with_embeddings': with_embeddings,
+                'active_sources': len(sources)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in spider_data_feed: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def spider_knowledge(request):
+    """
+    Session 399: Returns knowledge sources derived from spider data.
+    Shows what agents have learned from the spider network.
+
+    Query params:
+        type: Filter by knowledge_type (trend, market, opportunity, etc.)
+        limit: Max items (default 50)
+    """
+    from django.utils import timezone
+    from django.db.models import Count, Avg
+    from core.models_unified_system import AgentKnowledgeSource, KnowledgeTransfer, AgentMemory
+
+    try:
+        limit = min(int(request.GET.get('limit', 50)), 100)
+        knowledge_type = request.GET.get('type', 'all')
+
+        # Session 399: Get UNIQUE knowledge sources by title (deduplicated)
+        # First get unique titles with their most recent entry
+        from django.db.models import Max
+
+        queryset = AgentKnowledgeSource.objects.all()
+        if knowledge_type != 'all':
+            queryset = queryset.filter(knowledge_type=knowledge_type)
+
+        # Get unique titles with counts and latest discovery date
+        unique_knowledge = list(
+            queryset.values('title', 'knowledge_type', 'summary')
+            .annotate(
+                count=Count('id'),
+                latest=Max('first_discovered_at'),
+                avg_confidence=Avg('confidence_score'),
+                total_data_points=Count('data_points_count')
+            )
+            .order_by('-latest')[:limit]
+        )
+
+        # Build sources list from unique titles
+        sources = unique_knowledge
+
+        # Get type breakdown
+        type_counts = list(
+            AgentKnowledgeSource.objects.values('knowledge_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        # Session 399: Get DIVERSE transfers (unique agent pairs with counts)
+        from django.db.models import F
+
+        # Get unique transfer patterns with counts
+        transfer_patterns = list(
+            KnowledgeTransfer.objects.select_related(
+                'source_knowledge',
+                'connection__teacher_agent',
+                'connection__student_agent'
+            ).values(
+                'connection__teacher_agent__name',
+                'connection__student_agent__name'
+            ).annotate(
+                transfer_count=Count('id'),
+                latest=Max('created_at')
+            ).order_by('-latest')[:15]
+        )
+
+        # Also get a few recent individual transfers for detail
+        recent_transfers = KnowledgeTransfer.objects.select_related(
+            'source_knowledge',
+            'connection__teacher_agent',
+            'connection__student_agent'
+        ).order_by('-created_at')[:5]
+
+        # Calculate stats
+        total_sources = AgentKnowledgeSource.objects.count()
+        total_transfers = KnowledgeTransfer.objects.count()
+        total_memories = AgentMemory.objects.count()
+        avg_confidence = AgentKnowledgeSource.objects.aggregate(
+            avg=Avg('confidence_score')
+        )['avg'] or 0
+
+        # Build by_type dict for frontend (convert type_counts list to dict)
+        by_type = {tc['knowledge_type']: tc['count'] for tc in type_counts}
+
+        # Session 399: Helper to clean up titles and summaries
+        def clean_knowledge_display(title, summary, knowledge_type):
+            """Parse and clean knowledge data for human-readable display."""
+            import json
+            import re
+
+            # Clean title - remove [Learned] prefix and truncate
+            clean_title = title
+            if clean_title.startswith('[Learned] '):
+                clean_title = clean_title[10:]
+
+            # Extract meaningful info from title patterns
+            if clean_title.startswith('Research:'):
+                # Extract the topic being researched
+                topic = clean_title.replace('Research:', '').strip()
+                # Remove verbose prefixes
+                topic = re.sub(r'^Research this business idea thoroughly:\s*', '', topic)
+                topic = re.sub(r'^Research trending.*?:\s*', '', topic)
+                # Extract just the core topic (first meaningful phrase)
+                topic = topic.split('\n')[0].strip()  # Take first line
+                if len(topic) > 50:
+                    topic = topic[:50] + '...'
+                clean_title = f"📊 Research: {topic}"
+            elif clean_title.startswith('Style:'):
+                style = clean_title.replace('Style:', '').strip()
+                clean_title = f"🎨 Style Discovery: {style}"
+            elif clean_title.startswith('Dream Explored:'):
+                dream = clean_title.replace('Dream Explored:', '').strip()
+                clean_title = f"💭 Dream: {dream[:50]}{'...' if len(dream) > 50 else ''}"
+            elif clean_title.startswith('Customer Research:'):
+                topic = clean_title.replace('Customer Research:', '').strip()
+                topic = re.sub(r'^Research target customers for:\s*', '', topic)
+                clean_title = f"👥 Customer Research: {topic[:50]}{'...' if len(topic) > 50 else ''}"
+            elif clean_title.startswith('Market Analysis:'):
+                topic = clean_title.replace('Market Analysis:', '').strip()
+                topic = re.sub(r'^Analyze competitors for:\s*', '', topic)
+                clean_title = f"📈 Market Analysis: {topic[:50]}{'...' if len(topic) > 50 else ''}"
+            elif ' - ' in clean_title and 'Intelligence' in clean_title:
+                # Pattern like "Huggingface - Tech Intelligence"
+                parts = clean_title.split(' - ')
+                source = parts[0].strip()
+                intel_type = parts[1].replace('Intelligence', '').strip() if len(parts) > 1 else ''
+                emoji_map = {'Tech': '💻', 'Financial': '💰', 'Content': '📝', 'Design': '🎨', 'Market': '📈', 'Creative Assets': '🖼️', 'General': '📋'}
+                emoji = emoji_map.get(intel_type, '🔍')
+                clean_title = f"{emoji} {source}: {intel_type} Intelligence"
+            elif 'Market Data' in clean_title:
+                clean_title = "📊 Market Data Intelligence"
+
+            # Clean summary - try to parse JSON and extract meaningful parts
+            clean_summary = ''
+            if summary:
+                # First, remove "Learned from AgentName:" prefix(es)
+                working_summary = re.sub(r'Learned from \w+:\s*', '', summary).strip()
+
+                try:
+                    # Find JSON in the summary (it might be after text)
+                    json_match = re.search(r'\{.*\}', working_summary, re.DOTALL)
+                    if json_match:
+                        data = json.loads(json_match.group())
+                        parts = []
+                        if 'query' in data:
+                            query = data['query']
+                            # Clean up query
+                            query = re.sub(r'^Research this business idea thoroughly:\s*', '', query)
+                            query = re.sub(r'^Research target customers for:\s*', '', query)
+                            query = re.sub(r'^Analyze competitors for:\s*', '', query)
+                            query = re.sub(r'\n.*', '', query, flags=re.DOTALL)  # Take first line only
+                            if len(query) > 60:
+                                query = query[:60] + '...'
+                            parts.append(query)
+                        if 'sources' in data and isinstance(data['sources'], list):
+                            source_count = len(data['sources'])
+                            source_names = ', '.join(str(s) for s in data['sources'][:3])
+                            parts.append(f"Sources: {source_names}" + (f" +{source_count-3} more" if source_count > 3 else ""))
+                        if 'data_points' in data:
+                            parts.append(f"{data['data_points']} data points analyzed")
+                        if 'discussions_analyzed' in data:
+                            parts.append(f"{data['discussions_analyzed']} discussions analyzed")
+                        if 'style' in data:
+                            parts.append(f"Style: {data['style']}")
+                        if 'prompt_pattern' in data:
+                            pattern = data['prompt_pattern'][:40] + '...' if len(data.get('prompt_pattern', '')) > 40 else data.get('prompt_pattern', '')
+                            parts.append(f"Pattern: {pattern}")
+                        if 'success' in data:
+                            parts.append("✓ Successful" if data['success'] else "✗ Failed")
+                        if 'size' in data:
+                            parts.append(f"Size: {data['size']}")
+                        clean_summary = ' • '.join(parts) if parts else ''
+                    else:
+                        # Not JSON, use cleaned text
+                        clean_summary = working_summary
+                except (json.JSONDecodeError, TypeError):
+                    # Not valid JSON, use cleaned text
+                    clean_summary = working_summary
+
+                # Final cleanup - remove any remaining JSON-like content
+                if clean_summary.startswith('{') or clean_summary.startswith('['):
+                    clean_summary = ''
+
+                # Clean up "Aggregated X data points" pattern
+                agg_match = re.match(r'Aggregated (\d+) (\w+) data points from (\w+)', clean_summary)
+                if agg_match:
+                    clean_summary = f"📊 {agg_match.group(1)} {agg_match.group(2)} data points from {agg_match.group(3)}"
+
+                # Truncate if still too long
+                if len(clean_summary) > 120:
+                    clean_summary = clean_summary[:120] + '...'
+
+            return clean_title, clean_summary
+
+        # Session 399: Build deduplicated knowledge list with cleaned display
+        knowledge_list = []
+        for k in sources:
+            clean_title, clean_summary = clean_knowledge_display(k['title'], k['summary'], k['knowledge_type'])
+            knowledge_list.append({
+                'id': str(hash(k['title'])),
+                'title': clean_title,
+                'summary': clean_summary,
+                'type': k['knowledge_type'],
+                'confidence': k['avg_confidence'] or 0,
+                'occurrences': k['count'],
+                'discovered_at': k['latest'].isoformat() if k['latest'] else None,
+            })
+
+        # Session 399: Build diverse transfer list showing unique agent pairs
+        transfers_list = [{
+            'from': t['connection__teacher_agent__name'] or 'Unknown',
+            'to': t['connection__student_agent__name'] or 'Unknown',
+            'transfer_count': t['transfer_count'],  # How many transfers between this pair
+            'knowledge': f"{t['transfer_count']} knowledge transfers",
+            'summary': f"Shared knowledge {t['transfer_count']} times",
+            'latest': t['latest'].isoformat() if t['latest'] else None
+        } for t in transfer_patterns]
+
+        return JsonResponse({
+            'status': 'success',
+            'knowledge': knowledge_list,
+            'type_counts': type_counts,
+            'transfers': transfers_list,
+            'stats': {
+                'total_knowledge': total_sources,  # Session 399: Match frontend field name
+                'total_transfers': total_transfers,
+                'total_memories': total_memories,
+                'avg_confidence': round(avg_confidence * 100, 1),  # Already percentage
+                'by_type': by_type,  # Session 399: Add for frontend sidebar
+                'unique_knowledge': len(knowledge_list),  # Deduplicated count
+                'unique_connections': len(transfers_list)  # Unique agent pairs
+            },
+            'total': total_sources
+        })
+
+    except Exception as e:
+        logger.error(f"Error in spider_knowledge: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def spider_timeline(request):
+    """
+    Session 399: Returns data collection timeline and source freshness.
+
+    Query params:
+        range: '24h', '7d', or '30d' (default: '24h')
+    """
+    from django.utils import timezone
+    from django.db.models import Count, Max
+    from django.db.models.functions import TruncHour, TruncDay
+    from datetime import timedelta
+    from core.models_unified_system import SpiderData
+
+    try:
+        range_param = request.GET.get('range', '24h')
+
+        # Determine time range and truncation
+        if range_param == '24h':
+            since = timezone.now() - timedelta(hours=24)
+            trunc_fn = TruncHour
+        elif range_param == '7d':
+            since = timezone.now() - timedelta(days=7)
+            trunc_fn = TruncDay
+        else:  # 30d
+            since = timezone.now() - timedelta(days=30)
+            trunc_fn = TruncDay
+
+        # Get collection timeline
+        timeline = list(
+            SpiderData.objects.filter(created_at__gte=since)
+            .annotate(period=trunc_fn('created_at'))
+            .values('period')
+            .annotate(count=Count('id'))
+            .order_by('period')
+        )
+
+        # Calculate totals
+        total_items = sum(t['count'] for t in timeline)
+        peak_count = max((t['count'] for t in timeline), default=0)
+
+        # Get source freshness
+        freshness = list(
+            SpiderData.objects.values('spider_name')
+            .annotate(
+                last_update=Max('created_at'),
+                total_records=Count('id')
+            )
+            .order_by('-last_update')
+        )
+
+        # Session 399: Count actual browseable items per source (not just records)
+        # This helps users know which sources have data they can view
+        from django.db.models import JSONField
+
+        browseable_counts = {}
+        for spider_name in set(f['spider_name'] for f in freshness):
+            # Sample recent records to count actual items
+            recent = SpiderData.objects.filter(spider_name=spider_name).order_by('-created_at')[:3]
+            item_count = 0
+            for r in recent:
+                if r.raw_data and isinstance(r.raw_data.get('items'), list):
+                    item_count += len(r.raw_data['items'])
+            browseable_counts[spider_name] = item_count
+
+        # Calculate age for each source
+        now = timezone.now()
+        freshness_data = []
+        for f in freshness:
+            if f['last_update']:
+                age_minutes = (now - f['last_update']).total_seconds() / 60
+                browseable = browseable_counts.get(f['spider_name'], 0)
+                freshness_data.append({
+                    'source': f['spider_name'],
+                    'last_update': f['last_update'].isoformat(),
+                    'item_count': f['total_records'],  # Total records
+                    'browseable_items': browseable,  # Session 399: Items available to view
+                    'has_data': browseable > 0,  # Session 399: Can this source be browsed?
+                    'age_minutes': round(age_minutes, 1),
+                    'status': 'fresh' if age_minutes < 360 else 'aging' if age_minutes < 1440 else 'stale'
+                })
+
+        return JsonResponse({
+            'status': 'success',
+            'timeline': [{
+                'period': t['period'].isoformat(),
+                'count': t['count']
+            } for t in timeline],
+            'freshness': freshness_data,
+            'summary': {
+                'range': range_param,
+                'total_items': total_items,
+                'peak_count': peak_count,
+                'sources_fresh': len([f for f in freshness_data if f['status'] == 'fresh']),
+                'sources_aging': len([f for f in freshness_data if f['status'] == 'aging']),
+                'sources_stale': len([f for f in freshness_data if f['status'] == 'stale'])
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in spider_timeline: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
