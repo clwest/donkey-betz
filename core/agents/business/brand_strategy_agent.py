@@ -824,12 +824,40 @@ Return a comprehensive brand strategy report that builds on existing project res
         customer_insights: str = '',
         brand_trends: str = ''
     ) -> Dict[str, Any]:
-        """Generate comprehensive brand strategy using GPT."""
+        """Generate comprehensive brand strategy using GPT with style library awareness."""
 
-        strategy_prompt = f"""You are a senior brand strategist. Create a comprehensive brand strategy report.
+        # Session 394: Get style library recommendations based on the business idea
+        from core.services.style_library import (
+            get_brand_recommendations,
+            get_style_library_summary,
+            COLOR_PALETTES,
+            LOGO_DIRECTIONS
+        )
+
+        # Detect industry and get recommendations
+        brand_recs = get_brand_recommendations(project_name + ' ' + project_context)
+        style_summary = get_style_library_summary()
+
+        # Build list of recommended style names for the prompt
+        rec_style_names = [s['display_name'] for s in brand_recs.get('style_options', [])]
+        avoid_style_names = brand_recs.get('avoid_styles', [])
+
+        # Build color palette descriptions
+        rec_palette_desc = ""
+        for p in brand_recs.get('color_palettes', []):
+            colors_hex = ' '.join(p['colors'])
+            rec_palette_desc += f"- {p['name']}: {p['description']} ({colors_hex})\n"
+
+        # Build logo direction descriptions
+        rec_logo_desc = ""
+        for l in brand_recs.get('logo_directions', []):
+            rec_logo_desc += f"- {l['name']}: {l['description']} (e.g., {', '.join(l['examples'])})\n"
+
+        strategy_prompt = f"""You are a senior brand strategist with access to a comprehensive style library of 80+ visual styles.
 
 PROJECT: {project_name}
 {f'CONTEXT: {project_context}' if project_context else ''}
+DETECTED INDUSTRY: {brand_recs.get('detected_industry', 'general')}
 
 COMPETITOR ANALYSIS INSIGHTS:
 {competitor_insights if competitor_insights else 'No competitor analysis available yet.'}
@@ -840,7 +868,31 @@ CUSTOMER RESEARCH INSIGHTS:
 CURRENT BRANDING TRENDS:
 {brand_trends if brand_trends else 'No specific trends data gathered.'}
 
-Based on this research, create a COMPREHENSIVE BRAND STRATEGY REPORT with:
+=== STYLE LIBRARY GUIDANCE (Session 394) ===
+Based on the detected industry, here are the recommended approaches:
+
+RECOMMENDED VISUAL STYLES (pick 2-3):
+{', '.join(rec_style_names) if rec_style_names else 'minimalist, vector, digital_art'}
+
+STYLES TO AVOID for this industry:
+{', '.join(avoid_style_names) if avoid_style_names else 'None specifically - use judgment'}
+
+INDUSTRY NOTES:
+{brand_recs.get('industry_notes', 'Consider the target audience and competitive landscape.')}
+
+RECOMMENDED COLOR PALETTES:
+{rec_palette_desc if rec_palette_desc else '- Professional: Trust-inspiring blues and neutrals'}
+
+RECOMMENDED LOGO DIRECTIONS:
+{rec_logo_desc if rec_logo_desc else '- Icon + Wordmark: A symbol paired with the brand name'}
+
+CRITICAL: Do NOT default to "cyberpunk" style just because something involves AI or tech.
+Most AI/tech brands benefit more from minimalist, clean, or friendly styles that build trust.
+Only recommend cyberpunk if it genuinely fits the brand's rebellious or edgy positioning.
+
+=== END STYLE LIBRARY GUIDANCE ===
+
+Based on this research and style guidance, create a COMPREHENSIVE BRAND STRATEGY REPORT with:
 
 1) BRAND POSITIONING ANALYSIS
 - Market position recommendation based on competitor landscape
@@ -851,34 +903,32 @@ Based on this research, create a COMPREHENSIVE BRAND STRATEGY REPORT with:
 - Primary and secondary audience profiles (based on customer research)
 - Key pain points the brand should address
 - Emotional triggers and psychological hooks for brand connection
-- Communication preferences and channels
 
 3) COMPETITIVE DIFFERENTIATION STRATEGY
 - How to visually differentiate from competitors
 - Messaging differentiation opportunities
-- Market gaps the brand can own
 - Positioning statement recommendation
 
-4) VISUAL DIRECTION RECOMMENDATIONS
-- Color palette suggestions with rationale (primary, secondary, accent colors)
-- Typography direction (modern, classic, playful, authoritative)
-- Imagery style recommendations (photographic, illustrative, abstract, geometric)
-- Logo concept directions (icon-only, wordmark, combination mark)
-- Overall visual personality (minimalist, bold, sophisticated, friendly)
+4) VISUAL DIRECTION RECOMMENDATIONS (IMPORTANT - use style library!)
+- PRIMARY STYLE: Pick ONE main style from the recommended list above
+- SECONDARY STYLE: Pick ONE complementary style
+- COLOR PALETTE: Recommend ONE palette from the options above with specific hex codes
+- TYPOGRAPHY: Direction (modern, classic, playful, authoritative)
+- LOGO DIRECTION: Pick ONE from the recommended logo types above
+- MOOD: One word describing the overall feel (friendly, professional, bold, etc.)
 
 5) MESSAGING GUIDELINES
 - Brand voice and tone recommendations
 - Key messages that address customer pain points
-- Tagline suggestions (3-5 options)
-- Elevator pitch template
+- Tagline suggestions (3 options)
 
-6) ACTIONABLE RECOMMENDATIONS (prioritized list)
-- Immediate next steps (first 30 days)
+6) ACTIONABLE NEXT STEPS
 - Priority visual assets to create
 - Brand consistency guidelines
-- Launch strategy considerations
 
-Be specific and tie recommendations back to the research insights. This strategy will guide the visual identity creation."""
+OUTPUT FORMAT: Be specific with your style recommendations. Instead of vague suggestions,
+name the exact styles from the library (e.g., "minimalist", "pixar", "vector") and
+provide specific hex color codes."""
 
         try:
             response = self.client.chat.completions.create(
@@ -889,23 +939,34 @@ Be specific and tie recommendations back to the research insights. This strategy
 
             strategy_text = response.choices[0].message.content
 
-            # Extract structured data if possible
-            visual_direction = {}
-            recommendations = []
+            # Session 394: Extract structured visual direction for the review UI
+            visual_direction = {
+                'has_color_recommendations': True,
+                'has_typography_recommendations': True,
+                'has_logo_recommendations': True,
+                # Include the style library recommendations for the UI
+                'style_options': brand_recs.get('style_options', []),
+                'color_palettes': brand_recs.get('color_palettes', []),
+                'logo_directions': brand_recs.get('logo_directions', []),
+                'detected_industry': brand_recs.get('detected_industry', ''),
+                'avoid_styles': brand_recs.get('avoid_styles', [])
+            }
 
-            # Try to extract key sections
-            if 'VISUAL DIRECTION' in strategy_text.upper():
-                # Extract color suggestions
-                if 'color' in strategy_text.lower():
-                    visual_direction['has_color_recommendations'] = True
-                if 'typography' in strategy_text.lower():
-                    visual_direction['has_typography_recommendations'] = True
-                if 'logo' in strategy_text.lower():
-                    visual_direction['has_logo_recommendations'] = True
+            # Try to extract the primary style recommendation from GPT response
+            strategy_lower = strategy_text.lower()
+            primary_style = None
+            for style in brand_recs.get('style_options', []):
+                if style['name'] in strategy_lower or style['display_name'].lower() in strategy_lower:
+                    primary_style = style['name']
+                    break
+            if primary_style:
+                visual_direction['recommended_primary_style'] = primary_style
 
-            # Try to extract recommendations
-            if 'ACTIONABLE' in strategy_text.upper() or 'RECOMMENDATIONS' in strategy_text.upper():
-                recommendations = ['See detailed recommendations in report']
+            recommendations = [
+                'See detailed recommendations in report',
+                f"Detected industry: {brand_recs.get('detected_industry', 'general')}",
+                f"Style options: {', '.join(rec_style_names)}"
+            ]
 
             return {
                 'success': True,
@@ -914,7 +975,17 @@ Be specific and tie recommendations back to the research insights. This strategy
                     'project_name': project_name,
                     'visual_direction': visual_direction,
                     'recommendations': recommendations,
-                    'analysis': strategy_text  # Alias for compatibility
+                    'analysis': strategy_text,  # Alias for compatibility
+                    # Session 394: Include structured data for Human-in-the-Loop review
+                    'brand_review_data': {
+                        'detected_industry': brand_recs.get('detected_industry', ''),
+                        'style_options': brand_recs.get('style_options', []),
+                        'color_palettes': brand_recs.get('color_palettes', []),
+                        'logo_directions': brand_recs.get('logo_directions', []),
+                        'avoid_styles': brand_recs.get('avoid_styles', []),
+                        'industry_notes': brand_recs.get('industry_notes', ''),
+                        'requires_human_review': True  # Flag for UI to show review step
+                    }
                 }
             }
 

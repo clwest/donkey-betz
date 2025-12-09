@@ -348,7 +348,8 @@ class CreativeOrchestrator:
         self,
         project_id: str,
         asset_types: List[str] = None,
-        style_override: str = None
+        style_override: str = None,
+        brand_choices: Dict[str, Any] = None
     ) -> FullAssetResult:
         """
         Generate assets for a project based on its research.
@@ -364,6 +365,11 @@ class CreativeOrchestrator:
             project_id: UUID of the project with completed research
             asset_types: List of asset types ["logo", "thumbnail", "banner"]
             style_override: Optional style to override brand strategy
+            brand_choices: Session 394 - User's brand choices from Human-in-the-Loop review:
+                - style: Selected visual style (e.g., "minimalist", "vector")
+                - palette: Selected color palette name (e.g., "tech_modern")
+                - logoDirection: Selected logo type (e.g., "icon_wordmark")
+                - customFeedback: Optional custom feedback text
 
         Returns:
             FullAssetResult with all generated assets
@@ -397,10 +403,12 @@ class CreativeOrchestrator:
                 brand_strategy=brand_strategy,
                 business_plan=business_plan,
                 project_name=self.project.project_name,
-                style_override=style_override
+                style_override=style_override,
+                brand_choices=brand_choices or {}
             )
 
-            logger.info(f"Creative brief extracted: {creative_brief.get('style', 'default')}")
+            logger.info(f"Creative brief extracted: style={creative_brief.get('style', 'default')}, "
+                       f"colors={creative_brief.get('colors', [])}, logo_type={creative_brief.get('logo_type', 'auto')}")
 
             # Step 2.5: Session 341 - Get creative direction enhancement (optional)
             if self.creative_director_agent:
@@ -548,19 +556,26 @@ class CreativeOrchestrator:
         brand_strategy: Dict[str, Any],
         business_plan: Dict[str, Any],
         project_name: str,
-        style_override: str = None
+        style_override: str = None,
+        brand_choices: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
         Extract creative brief from research for asset generation.
+
+        Session 394: Now incorporates user's brand choices from Human-in-the-Loop review.
 
         Returns a structured brief with:
         - brand_name: Name to display
         - tagline: Short tagline
         - style: Visual style (modern, vintage, etc.)
-        - colors: Brand colors
+        - colors: Brand colors (hex values)
         - industry: Industry/vertical
         - tone: Brand tone (professional, playful, etc.)
+        - logo_type: Type of logo to generate (icon_wordmark, lettermark, etc.)
+        - custom_feedback: Any custom feedback from user
         """
+        brand_choices = brand_choices or {}
+
         brief = {
             'brand_name': project_name[:50] if project_name else 'Brand',
             'tagline': '',
@@ -568,34 +583,58 @@ class CreativeOrchestrator:
             'colors': [],
             'industry': '',
             'tone': 'professional',
-            'keywords': []
+            'keywords': [],
+            'logo_type': 'auto',
+            'custom_feedback': ''
         }
 
-        # Extract from brand_strategy analysis
-        analysis = brand_strategy.get('analysis', '')
-        if isinstance(analysis, str):
-            # Parse key elements from the analysis text
-            analysis_lower = analysis.lower()
+        # Session 394: Apply user's brand choices (highest priority)
+        if brand_choices.get('style'):
+            brief['style'] = brand_choices['style']
+            logger.info(f"Using user-selected style: {brief['style']}")
 
-            # Detect style from analysis
-            if 'minimalist' in analysis_lower:
-                brief['style'] = 'minimalist'
-            elif 'playful' in analysis_lower or 'fun' in analysis_lower:
-                brief['style'] = 'playful'
-            elif 'premium' in analysis_lower or 'luxury' in analysis_lower:
-                brief['style'] = 'premium'
-            elif 'tech' in analysis_lower or 'digital' in analysis_lower:
-                brief['style'] = 'modern-tech'
-            elif 'creative' in analysis_lower or 'artistic' in analysis_lower:
-                brief['style'] = 'creative'
+        if brand_choices.get('palette'):
+            # Get actual colors from the palette name
+            palette_colors = self._get_palette_colors(brand_choices['palette'])
+            if palette_colors:
+                brief['colors'] = palette_colors
+                brief['palette_name'] = brand_choices['palette']
+                logger.info(f"Using user-selected palette: {brand_choices['palette']} -> {palette_colors}")
 
-            # Detect tone
-            if 'friendly' in analysis_lower or 'approachable' in analysis_lower:
-                brief['tone'] = 'friendly'
-            elif 'bold' in analysis_lower or 'confident' in analysis_lower:
-                brief['tone'] = 'bold'
-            elif 'innovative' in analysis_lower:
-                brief['tone'] = 'innovative'
+        if brand_choices.get('logoDirection'):
+            brief['logo_type'] = brand_choices['logoDirection']
+            logger.info(f"Using user-selected logo type: {brief['logo_type']}")
+
+        if brand_choices.get('customFeedback'):
+            brief['custom_feedback'] = brand_choices['customFeedback']
+            logger.info(f"Custom feedback received: {brief['custom_feedback'][:100]}...")
+
+        # Only extract from analysis if user didn't make choices
+        if not brand_choices.get('style'):
+            analysis = brand_strategy.get('analysis', '')
+            if isinstance(analysis, str):
+                # Parse key elements from the analysis text
+                analysis_lower = analysis.lower()
+
+                # Detect style from analysis
+                if 'minimalist' in analysis_lower:
+                    brief['style'] = 'minimalist'
+                elif 'playful' in analysis_lower or 'fun' in analysis_lower:
+                    brief['style'] = 'playful'
+                elif 'premium' in analysis_lower or 'luxury' in analysis_lower:
+                    brief['style'] = 'premium'
+                elif 'tech' in analysis_lower or 'digital' in analysis_lower:
+                    brief['style'] = 'modern-tech'
+                elif 'creative' in analysis_lower or 'artistic' in analysis_lower:
+                    brief['style'] = 'creative'
+
+                # Detect tone
+                if 'friendly' in analysis_lower or 'approachable' in analysis_lower:
+                    brief['tone'] = 'friendly'
+                elif 'bold' in analysis_lower or 'confident' in analysis_lower:
+                    brief['tone'] = 'bold'
+                elif 'innovative' in analysis_lower:
+                    brief['tone'] = 'innovative'
 
         # Extract from raw_data if available
         raw_data = brand_strategy.get('raw_data', [])
@@ -626,6 +665,27 @@ class CreativeOrchestrator:
                 brief['industry'] = 'health'
 
         return brief
+
+    def _get_palette_colors(self, palette_name: str) -> List[str]:
+        """
+        Session 394: Get hex colors for a palette name from the style library.
+
+        Args:
+            palette_name: Name of the palette (e.g., "tech_modern", "professional")
+
+        Returns:
+            List of hex color codes, or empty list if palette not found
+        """
+        try:
+            from core.services.style_library import COLOR_PALETTES
+            palette = COLOR_PALETTES.get(palette_name, {})
+            return palette.get('colors', [])
+        except ImportError:
+            logger.warning("Style library not available for palette lookup")
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to get palette colors for {palette_name}: {e}")
+            return []
 
     # ==================== Session 341: Creative Direction & Audit ====================
 
@@ -793,7 +853,11 @@ If no trained character exists, return a message suggesting training one."""
     # ==================== Asset Generation ====================
 
     def _generate_logo(self, creative_brief: Dict[str, Any]) -> AssetResult:
-        """Generate logo using ImageAgent."""
+        """
+        Generate logo using ImageAgent.
+
+        Session 394: Now uses user's brand choices for style, colors, and logo type.
+        """
         start_time = time.time()
 
         try:
@@ -802,18 +866,35 @@ If no trained character exists, return a message suggesting training one."""
             style = creative_brief.get('style', 'modern')
             industry = creative_brief.get('industry', '')
             tone = creative_brief.get('tone', 'professional')
+            colors = creative_brief.get('colors', [])
+            logo_type = creative_brief.get('logo_type', 'auto')
+            custom_feedback = creative_brief.get('custom_feedback', '')
+
+            # Session 394: Build logo type description
+            logo_type_desc = self._get_logo_type_description(logo_type)
+
+            # Session 394: Build color guidance
+            color_guidance = ""
+            if colors:
+                color_guidance = f"\nColor palette: Use these colors: {', '.join(colors)}"
+
+            # Session 394: Include custom feedback
+            custom_section = ""
+            if custom_feedback:
+                custom_section = f"\n\nUser's specific requirements:\n{custom_feedback}"
 
             task = f"""Create a professional logo for "{brand_name}".
 
 Style: {style}
 Industry: {industry if industry else 'technology'}
 Tone: {tone}
+Logo Type: {logo_type_desc}{color_guidance}
 
 Requirements:
 - Clean, memorable design
 - Works at small and large sizes
 - Suitable for web, app, and print
-- No text in the logo (icon only)
+- {logo_type_desc}{custom_section}
 """
 
             # Call ImageAgent
@@ -821,7 +902,7 @@ Requirements:
                 task=task,
                 context={
                     'count': 3,  # Generate 3 logo options
-                    'style': 'digital_art',
+                    'style': style,  # Use user's chosen style
                     'size': '1024x1024',
                     'project_id': str(self.project.id) if self.project else None
                 },
@@ -836,7 +917,12 @@ Requirements:
                 agent_name='ImageAgent',
                 success=agent_result.success,
                 images=images,
-                metadata={'prompt': task},
+                metadata={
+                    'prompt': task,
+                    'style': style,
+                    'logo_type': logo_type,
+                    'colors': colors
+                },
                 error=agent_result.error if not agent_result.success else None,
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
@@ -851,33 +937,71 @@ Requirements:
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
 
+    def _get_logo_type_description(self, logo_type: str) -> str:
+        """
+        Session 394: Get descriptive text for logo type.
+
+        Args:
+            logo_type: Logo type key (e.g., "icon_wordmark", "lettermark")
+
+        Returns:
+            Description of what kind of logo to generate
+        """
+        logo_descriptions = {
+            'icon_wordmark': 'Icon with brand name - a symbolic icon accompanied by the brand name',
+            'lettermark': 'Letter-based logo - stylized initials or first letter of the brand',
+            'abstract': 'Abstract symbol - geometric or abstract shape representing the brand',
+            'mascot': 'Character mascot - a character or figure that represents the brand',
+            'emblem': 'Badge/emblem style - text integrated into a badge or crest design',
+            'wordmark': 'Text-only logo - stylized typography of the brand name',
+            'pictorial': 'Pictorial mark - a recognizable image or icon',
+            'auto': 'Icon-only logo - clean, memorable icon without text'
+        }
+        return logo_descriptions.get(logo_type, logo_descriptions['auto'])
+
     def _generate_thumbnail(self, creative_brief: Dict[str, Any]) -> AssetResult:
-        """Generate social media thumbnail using ImageAgent."""
+        """
+        Generate social media thumbnail using ImageAgent.
+
+        Session 394: Now uses user's brand choices for style and colors.
+        """
         start_time = time.time()
 
         try:
             brand_name = creative_brief.get('brand_name', 'Brand')
             style = creative_brief.get('style', 'modern')
             industry = creative_brief.get('industry', 'technology')
+            colors = creative_brief.get('colors', [])
+            custom_feedback = creative_brief.get('custom_feedback', '')
+
+            # Session 394: Build color guidance
+            color_guidance = ""
+            if colors:
+                color_guidance = f"\nColor palette: Incorporate these brand colors: {', '.join(colors)}"
+
+            # Session 394: Include custom feedback
+            custom_section = ""
+            if custom_feedback:
+                custom_section = f"\n\nUser's specific requirements:\n{custom_feedback}"
 
             task = f"""Create an eye-catching social media thumbnail for "{brand_name}".
 
 Style: {style}, vibrant, attention-grabbing
-Industry: {industry}
+Industry: {industry}{color_guidance}
 Use: Social media, YouTube, blog posts
 
 Requirements:
 - Bold, clear imagery
 - Vibrant colors that stand out
 - Professional but engaging
-- Works well at small preview sizes
+- Works well at small preview sizes{custom_section}
 """
 
             agent_result = self.image_agent.execute(
                 task=task,
                 context={
                     'count': 2,
-                    'style': 'cinematic',
+                    'style': style,  # Use user's chosen style
                     'size': '1280x720',  # Standard thumbnail size
                     'project_id': str(self.project.id) if self.project else None
                 },
@@ -892,7 +1016,7 @@ Requirements:
                 agent_name='ImageAgent',
                 success=agent_result.success,
                 images=images,
-                metadata={'prompt': task},
+                metadata={'prompt': task, 'style': style, 'colors': colors},
                 error=agent_result.error if not agent_result.success else None,
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
@@ -908,7 +1032,11 @@ Requirements:
             )
 
     def _generate_banner(self, creative_brief: Dict[str, Any]) -> AssetResult:
-        """Generate marketing banner using ImageAgent."""
+        """
+        Generate marketing banner using ImageAgent.
+
+        Session 394: Now uses user's brand choices for style and colors.
+        """
         start_time = time.time()
 
         try:
@@ -916,25 +1044,37 @@ Requirements:
             style = creative_brief.get('style', 'modern')
             industry = creative_brief.get('industry', 'technology')
             tone = creative_brief.get('tone', 'professional')
+            colors = creative_brief.get('colors', [])
+            custom_feedback = creative_brief.get('custom_feedback', '')
+
+            # Session 394: Build color guidance
+            color_guidance = ""
+            if colors:
+                color_guidance = f"\nColor palette: Incorporate these brand colors: {', '.join(colors)}"
+
+            # Session 394: Include custom feedback
+            custom_section = ""
+            if custom_feedback:
+                custom_section = f"\n\nUser's specific requirements:\n{custom_feedback}"
 
             task = f"""Create a professional marketing banner for "{brand_name}".
 
 Style: {style}, {tone}
-Industry: {industry}
+Industry: {industry}{color_guidance}
 Use: Website header, landing page, marketing materials
 
 Requirements:
 - Wide format suitable for headers
 - Clean, professional design
 - Subtle branding elements
-- Space for text overlay if needed
+- Space for text overlay if needed{custom_section}
 """
 
             agent_result = self.image_agent.execute(
                 task=task,
                 context={
                     'count': 2,
-                    'style': 'cinematic',
+                    'style': style,  # Use user's chosen style
                     'size': '1280x720',  # Banner size
                     'project_id': str(self.project.id) if self.project else None
                 },
@@ -949,7 +1089,7 @@ Requirements:
                 agent_name='ImageAgent',
                 success=agent_result.success,
                 images=images,
-                metadata={'prompt': task},
+                metadata={'prompt': task, 'style': style, 'colors': colors},
                 error=agent_result.error if not agent_result.success else None,
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )

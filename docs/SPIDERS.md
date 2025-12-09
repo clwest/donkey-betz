@@ -1,12 +1,12 @@
 # Spider Network Reference
 
-**Last Updated:** Session 394 (December 8, 2025)
+**Last Updated:** Session 395 (December 8, 2025)
 
 ---
 
 ## Overview
 
-The Spider Network consists of **102 spiders** collecting real-time data from **31 real sources** across **36 categories**. Data is stored in the `SpiderData` model and queried via `SpiderIntelligenceService` and `SpiderSemanticSearch`.
+The Spider Network consists of **102 registered spiders**, but **only 24 are currently functional** with real data sources. This document reflects the actual state after the Session 395 audit.
 
 ---
 
@@ -14,11 +14,52 @@ The Spider Network consists of **102 spiders** collecting real-time data from **
 
 | Metric | Count |
 |--------|-------|
-| Total Spiders | 102 |
-| Real Data Sources | 31 |
-| Categories | 36 |
-| Records in DB | 12,400+ |
-| **Searchable (with embeddings)** | **2,006** |
+| Total Registered | 102 |
+| **Actually Working** | **24** |
+| Unconfigured (broken) | 78 |
+| Records in DB | 13,700+ |
+| Searchable (with embeddings) | ~2,000 |
+
+---
+
+## CRITICAL: Spider Status (Session 395 Audit)
+
+### Working Spiders (24)
+
+These spiders are configured and collecting real data:
+
+| Spider | Source Type | Status |
+|--------|-------------|--------|
+| techcrunch | RSS | Working |
+| theverge | RSS | Working |
+| wired | RSS | Working |
+| mit_tech_review | RSS | Working |
+| axios | RSS | Working |
+| hackernews | JSON API | Working (Session 394 fixed) |
+| devto | JSON API | Working |
+| remoteok | JSON API | Working |
+| weworkremotely | RSS | Working |
+| coingecko | JSON API | Working |
+| yahoo_finance | JSON API | Working |
+| dribbble | HTML Scrape | Blocked (Cloudflare) |
+| behance | RSS | Working |
+| producthunt | RSS | Working |
+| medium | RSS | Working |
+| hashnode | JSON API | Working |
+| udemy | JSON API | Working |
+| kickstarter | JSON API | Blocked (403) |
+| indiegogo | JSON API | Working |
+| reddit | JSON API | Working (8 subreddits) |
+| indiehackers | RSS | Working |
+| bluesky | AT Protocol | Needs API keys |
+| youtube | YouTube API | Needs API key |
+| discord | Discord API | Needs bot token |
+
+### Broken Spiders (78)
+
+These spiders return placeholder data ("no real URLs configured"):
+
+**See:** `docs/handoffs/SESSION_395_SPIDER_AUDIT_AND_ACTION_PLAN.md` for full breakdown and fix plan.
 
 ---
 
@@ -36,7 +77,7 @@ results = search.semantic_search("AI tools for developers", limit=10)
 
 # Get stats
 stats = search.get_embedding_stats()
-# {'total_entries': 12449, 'with_embedding': 2006, 'marked_empty': 10443, ...}
+# {'total_entries': 13783, 'with_embedding': 2006, 'marked_empty': 9298, ...}
 ```
 
 ### Bulk Embedding Command
@@ -50,123 +91,123 @@ python manage.py bulk_embed_spiders --dry-run    # Preview without changes
 
 ### Content Quality Notes
 
-Not all spiders produce embeddable content. Some spiders only store reference IDs or metadata:
-
-| Spider Type | Content Quality | Notes |
-|-------------|-----------------|-------|
-| RSS Feeds (techcrunch, wired, etc.) | High | Full titles and descriptions |
-| Job Boards (remoteok, weworkremotely) | High | Job details with requirements |
-| Dev Content (devto, medium) | High | Article summaries |
-| HackerNews | Low | Only story IDs, not content |
-| Kickstarter | Low | Search metadata only |
-| API Error Cases | None | Error messages stored |
+| Spider Type | Content Quality | Embedding Rate |
+|-------------|-----------------|----------------|
+| RSS Feeds (techcrunch, wired, etc.) | High | ~90% |
+| Job Boards (remoteok, weworkremotely) | High | ~90% |
+| Dev Content (devto, medium) | High | ~93% |
+| Reddit | Medium | ~45% |
+| HackerNews (post-fix) | High | Growing |
+| Placeholder spiders | None | 0% |
 
 ---
 
-## Data Sources by Category
+## Working Data Sources by Category
 
-### Tech News (9 spiders)
+### Tech News (9 spiders - 7 working)
 
-| Source | Type | Data |
-|--------|------|------|
-| HackerNews | JSON API | Top stories, discussions |
-| TechCrunch | RSS | Tech news, startups |
-| The Verge | RSS | Tech, culture |
-| Wired | RSS | Tech, science |
-| MIT Tech Review | RSS | Research, innovation |
-| Axios | RSS | Tech news |
-| Dev.to | JSON API | Developer articles |
-| Hashnode | RSS | Developer blogs |
-| ProductHunt | RSS | New products |
+| Source | Type | Status | Data |
+|--------|------|--------|------|
+| HackerNews | JSON API | Working | Top stories, discussions |
+| TechCrunch | RSS | Working | Tech news, startups |
+| The Verge | RSS | Working | Tech, culture |
+| Wired | RSS | Working | Tech, science |
+| MIT Tech Review | RSS | Working | Research, innovation |
+| Axios | RSS | Working | Tech news |
+| Dev.to | JSON API | Working | Developer articles |
+| Hashnode | JSON API | Working | Developer blogs |
+| ProductHunt | RSS | Working | New products |
 
-### Financial (8 spiders)
+### Financial (11 spiders - 2 working)
 
-| Source | Type | Data |
-|--------|------|------|
-| CoinGecko | JSON API | Crypto prices, trends |
-| Yahoo Finance | JSON API | Stock prices, news |
-| SeekingAlpha | RSS | Analysis |
-| Bloomberg Terminal | Mock | Market data |
-| Reuters Eikon | Mock | Financial news |
-| Etherscan | API | Ethereum data |
-| OpenSea | API | NFT trends |
-| Plus more... | | |
+| Source | Type | Status |
+|--------|------|--------|
+| CoinGecko | JSON API | Working |
+| Yahoo Finance | JSON API | Working |
+| Others | Various | **NOT CONFIGURED** |
 
-### Jobs (7 spiders)
+### Jobs (7 spiders - 2 working)
 
-| Source | Type | Data |
-|--------|------|------|
-| RemoteOK | JSON API | Remote jobs (real-time) |
-| WeWorkRemotely | RSS | Remote positions |
-| Adzuna | JSON API | Global job aggregator |
-| FlexJobs | RSS | Flexible work |
-| AngelList | RSS | Startup jobs |
-| GitHub Jobs | Mock | Developer positions |
-| StackOverflow Jobs | Mock | Tech jobs |
+| Source | Type | Status |
+|--------|------|--------|
+| RemoteOK | JSON API | Working |
+| WeWorkRemotely | RSS | Working |
+| Adzuna | API | **NOT CONFIGURED** (easy fix) |
+| FlexJobs | N/A | **No public API** |
+| Others | Various | **NOT CONFIGURED** |
 
-### Creative (5 spiders)
+### Creative (5 spiders - 1 working)
 
-| Source | Type | Data |
-|--------|------|------|
-| Dribbble | RSS | Design shots |
-| Behance | RSS | Creative projects |
-| Unsplash | JSON API | Photography trends |
-| Envato | RSS | Digital assets |
-| Creative Market | RSS | Design resources |
+| Source | Type | Status |
+|--------|------|--------|
+| Behance | RSS | Working |
+| Dribbble | HTML | Blocked by Cloudflare |
+| Others | Various | **NOT CONFIGURED** |
 
-### AI/Creative Tools (4 spiders)
+### Content (5 spiders - 2 working)
 
-| Source | Type | Data |
-|--------|------|------|
-| HuggingFace | API | Models, datasets |
-| Midjourney | Mock | AI art trends |
-| Civitai | RSS | AI models |
-| RunwayML | Mock | AI video |
+| Source | Type | Status |
+|--------|------|--------|
+| Medium | RSS | Working |
+| ProductHunt | RSS | Working |
+| Substack | RSS | **NOT CONFIGURED** (easy fix) |
+| Patreon | API | **NOT CONFIGURED** |
+| Ko-fi | N/A | **No public API** |
 
-### Digital Products (5 spiders)
+### Community (3 spiders - 2 working)
 
-| Source | Type | Data |
-|--------|------|------|
-| Gumroad | RSS | Digital products |
-| Etsy | RSS | Handmade/digital |
-| LemonSqueezy | RSS | SaaS products |
-| AppSumo | RSS | Software deals |
-| Sellfy | RSS | Digital downloads |
-
-### Content (3 spiders)
-
-| Source | Type | Data |
-|--------|------|------|
-| Medium | RSS | Articles |
-| Substack | RSS | Newsletters |
-| Patreon | RSS | Creator content |
-
-### Community (1 spider)
-
-| Source | Type | Data |
-|--------|------|------|
-| Reddit | JSON API | 20+ subreddits |
+| Source | Type | Status |
+|--------|------|--------|
+| Reddit | JSON API | Working (8 subreddits) |
+| IndieHackers | RSS | Working |
+| Discord | Bot API | Needs token |
 
 **Reddit Subreddits Monitored:**
-- r/technology, r/programming, r/webdev
-- r/MachineLearning, r/artificial
-- r/design, r/graphic_design, r/UI_Design
-- r/freelance, r/digitalnomad
-- r/Entrepreneur, r/startups
-- r/SideProject, r/IndieHackers
-- r/cryptocurrency, r/Bitcoin
-- And more...
+- r/webdev, r/MachineLearning, r/StableDiffusion
+- r/Entrepreneur, r/freelance, r/startups
+- r/SideProject, r/ChatGPT
 
-### Education (3 spiders)
-- Teachable, Udemy, Skillshare
+### Crowdfunding (2 spiders - 1 working)
 
-### Legal (4 spiders)
-- CourtListener, Justia, FindLaw, LII
+| Source | Type | Status |
+|--------|------|--------|
+| Indiegogo | JSON API | Working |
+| Kickstarter | JSON API | Blocked (403) |
 
-### Innovation (3 spiders)
-- Indiegogo, Kickstarter, ProductHunt
+---
 
-### Plus 10 more categories...
+## Fix Plan (Session 395)
+
+### Phase 1: Quick Wins - Add RSS Feeds (25 spiders)
+
+These have public RSS feeds - just add URLs:
+
+```python
+# ai_core/spiders/real_data_collector.py
+SPIDER_TARGET_URLS = {
+    # ... existing ...
+    'bbc': ['http://feeds.bbci.co.uk/news/rss.xml'],
+    'cnn': ['http://rss.cnn.com/rss/cnn_topstories.rss'],
+    'npr': ['https://feeds.npr.org/1001/rss.xml'],
+    'arstechnica': ['https://feeds.arstechnica.com/arstechnica/index'],
+    'lifehacker': ['https://lifehacker.com/rss'],
+    'smashingmagazine': ['https://www.smashingmagazine.com/feed/'],
+    'variety': ['https://variety.com/feed/'],
+}
+```
+
+### Phase 2: Free APIs (15 spiders)
+
+These need free API registration:
+- OpenMeteo (no key needed!)
+- HuggingFace, Unsplash, Adzuna, NewsAPI
+
+### Phase 3: Cleanup
+
+Remove or disable spiders with no public API:
+- FlexJobs, Toptal, Guru, etc.
+
+**Full plan:** `docs/handoffs/SESSION_395_SPIDER_AUDIT_AND_ACTION_PLAN.md`
 
 ---
 
@@ -204,13 +245,6 @@ trends = service.get_tech_trends(
     limit=15,
     topic_filter='ai'  # ai, web, security, cloud, design
 )
-# Returns:
-# {
-#     'discussions': [{'title': '...', 'url': '...', 'source': 'hackernews'}],
-#     'projects': [{'title': '...', 'url': '...', 'source': 'producthunt'}],
-#     'sources': {'hackernews': 10, 'devto': 5},
-#     'last_updated': '2025-11-29T...'
-# }
 ```
 
 #### Topic Filters
@@ -222,73 +256,6 @@ trends = service.get_tech_trends(
 | `security` | cybersecurity, encryption, privacy, authentication, hacking |
 | `cloud` | AWS, Azure, Kubernetes, Docker, serverless, DevOps |
 | `design` | UI, UX, design, typography, branding, Figma, illustration |
-
-#### search_spider_data()
-Full-text search across all spider data.
-
-```python
-results = service.search_spider_data(
-    query="machine learning",
-    category="tech",  # Optional
-    hours=72,
-    limit=20
-)
-```
-
-#### get_market_insights()
-Get financial/crypto market data.
-
-```python
-market = service.get_market_insights()
-# Returns: {'crypto': [...], 'stocks': [...], 'trends': [...]}
-```
-
-#### get_job_market_summary()
-Get remote job opportunities.
-
-```python
-jobs = service.get_job_market_summary(hours=48, limit=20)
-# Returns: {'jobs': [...], 'categories': {...}, 'top_skills': [...]}
-```
-
-#### get_creative_trends()
-Get design/creative trends from Dribbble, Behance, etc.
-
-```python
-creative = service.get_creative_trends(hours=72, limit=10)
-# Returns: {'shots': [...], 'styles': [...], 'colors': [...]}
-```
-
-#### get_insights_for_prompt()
-Get context to enrich AI prompts.
-
-```python
-insights = service.get_insights_for_prompt("Create a logo for an AI startup")
-# Returns relevant trends, discussions, and style suggestions
-```
-
----
-
-## Spider Data Model
-
-**Location:** `core/models_unified_system.py`
-
-```python
-class SpiderData(models.Model):
-    spider_name = models.CharField(max_length=100)
-    category = models.CharField(max_length=50)
-    data = models.JSONField()  # Raw spider output
-    title = models.CharField(max_length=500, null=True)
-    url = models.URLField(max_length=1000, null=True)
-    score = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=['spider_name', 'created_at']),
-            models.Index(fields=['category']),
-        ]
-```
 
 ---
 
@@ -307,18 +274,10 @@ make celery
 ### Manual Execution
 
 ```bash
-# Run specific spider
+# Trigger spider network manually
 python manage.py shell -c "
-from ai_core.spiders.spider_registry import SpiderRegistry
-registry = SpiderRegistry()
-spider = registry.get_spider('hackernews')
-spider.execute()
-"
-
-# Run all spiders in category
-python manage.py shell -c "
-from core.tasks import run_spiders_by_category
-run_spiders_by_category.delay('tech')
+from core.tasks import run_spider_network
+run_spider_network()
 "
 ```
 
@@ -343,95 +302,46 @@ recent = SpiderData.objects.filter(
 ).count()
 print(f'Records in last hour: {recent}')
 "
+
+# Check which spiders have real data vs placeholder
+python manage.py shell -c "
+from ai_core.spiders.real_data_collector import SPIDER_TARGET_URLS
+print(f'Spiders with configured URLs: {len(SPIDER_TARGET_URLS)}')
+for name in sorted(SPIDER_TARGET_URLS.keys()):
+    print(f'  - {name}')
+"
 ```
 
 ---
 
-## Spider Registry
+## Configuration
 
-**Location:** `ai_core/spiders/spider_registry.py`
+### SPIDER_TARGET_URLS
 
-```python
-from ai_core.spiders.spider_registry import SpiderRegistry
+**Location:** `ai_core/spiders/real_data_collector.py`
 
-registry = SpiderRegistry()
-
-# List all spiders
-spiders = registry.list_spiders()
-
-# Get spider by name
-hackernews = registry.get_spider('hackernews')
-
-# Get spiders by category
-tech_spiders = registry.get_spiders_by_category('tech')
-
-# Get spider count
-counts = registry.get_spider_count()
-# {'total': 70, 'by_category': {'tech': 9, 'financial': 8, ...}}
-```
-
----
-
-## Category Mappings
+This is where URLs are configured for each spider. If a spider isn't in this dict, it returns placeholder data.
 
 ```python
-CATEGORY_MAPPINGS = {
-    'tech': ['hackernews', 'techcrunch', 'devto', 'theverge', 'wired',
-             'mit_tech_review', 'axios', 'hashnode', 'producthunt'],
-    'financial': ['coingecko', 'yahoo_finance', 'seekingalpha', ...],
-    'jobs': ['remoteok', 'weworkremotely', 'adzuna', 'flexjobs', ...],
-    'creative': ['dribbble', 'behance', 'unsplash', 'envato', ...],
-    # ... and 16 more categories
+SPIDER_TARGET_URLS = {
+    'techcrunch': ['https://techcrunch.com/feed/'],
+    'theverge': ['https://www.theverge.com/rss/index.xml'],
+    # ... etc
 }
 ```
 
----
+### API Spiders
 
-## Blacklist (Shopping/Deals Filter)
-
-Spider results are filtered to remove shopping/deals content:
-
-```python
-SHOPPING_BLACKLIST = [
-    'black friday', 'cyber monday', 'deal', 'discount',
-    'sale', 'coupon', 'promo', 'off your', '% off',
-    'save $', 'best buy', 'amazon', 'shopping'
-]
-```
-
----
-
-## Adding New Spiders
-
-1. Create spider class in `ai_core/spiders/specialized/`
-2. Register in `ai_core/spiders/spider_registry.py`
-3. Add to category mappings
-4. Test execution
-
-```python
-# ai_core/spiders/specialized/my_spider.py
-from ai_core.spiders.base import BaseSpider
-
-class MySpider(BaseSpider):
-    name = "my_source"
-    category = "tech"
-    source_url = "https://api.example.com/data"
-
-    def execute(self):
-        data = self.fetch_json(self.source_url)
-        for item in data:
-            self.save_data({
-                'title': item['title'],
-                'url': item['link'],
-                'score': item.get('points', 0)
-            })
-```
+Some spiders use custom API logic instead of URLs:
+- `bluesky` - Requires `BLUESKY_IDENTIFIER` and `BLUESKY_PASSWORD` env vars
+- `youtube` - Requires `GOOGLE_API_KEY` env var
+- `discord` - Requires `DISCORD_BOT_TOKEN` env var
 
 ---
 
 ## See Also
 
+- [SESSION_395_SPIDER_AUDIT_AND_ACTION_PLAN.md](handoffs/SESSION_395_SPIDER_AUDIT_AND_ACTION_PLAN.md) - Full audit and fix plan
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
 - [CAPABILITIES.md](CAPABILITIES.md) - Full feature list
 - [AGENTS.md](AGENTS.md) - Agent reference
-- [SCIFI_FEATURES.md](SCIFI_FEATURES.md) - Sci-fi features

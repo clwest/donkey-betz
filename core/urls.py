@@ -94,6 +94,7 @@ from core.views_business_ideas import (
     generate_assets,
     list_business_ideas,
     pipeline_stats,  # Session 343: Pipeline stats for UI
+    get_brand_recommendations,  # Session 394: Brand style recommendations
 )
 
 # Import image/export views (Session 148/149)
@@ -1169,6 +1170,9 @@ urlpatterns = [
     path('api/business-ideas/stats/', pipeline_stats, name='pipeline-stats'),  # Session 343
     path('api/business-ideas/<uuid:project_id>/', get_business_idea, name='get-business-idea'),
     path('api/business-ideas/<uuid:project_id>/generate-assets/', generate_assets, name='generate-assets'),
+
+    # Session 394: Brand Recommendations API
+    path('api/brand-recommendations/', get_brand_recommendations, name='brand-recommendations'),
 
     # Session 327: Project-Scoped Agent Intelligence APIs
     path('api/projects/<uuid:project_id>/intelligence/', get_project_intelligence_overview, name='project-intelligence'),
