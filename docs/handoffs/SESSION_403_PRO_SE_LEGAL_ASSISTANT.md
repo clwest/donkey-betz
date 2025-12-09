@@ -1,8 +1,8 @@
 # Session 403: Pro Se Legal Assistant MVP
 
 **Date:** December 9, 2025
-**Status:** Phase 1 + Phase 2 Complete ✅
-**Focus:** Colorado Divorce with Children
+**Status:** Phase 1 + Phase 2 + Phase 3 Complete ✅
+**Focus:** Colorado Divorce with Children + Case File Upload/Analysis
 
 ---
 
@@ -82,7 +82,7 @@ All these queries correctly route to LegalDocDrafterAgent:
 ## Key Files Modified/Created
 
 ```
-# Created
+# Created (Phase 1-2)
 core/agents/legal/__init__.py
 core/agents/legal/legal_doc_drafter_agent.py
 ai_core/spiders/specialized/colorado_family_law_spider.py
@@ -90,12 +90,22 @@ ai_core/spiders/specialized/justia_playwright_spider.py
 docs/SESSION_403_LEGAL_ASSISTANT_GAP_ANALYSIS.md
 docs/handoffs/SESSION_403_PRO_SE_LEGAL_ASSISTANT.md
 
-# Modified
+# Created (Phase 3)
+core/views_legal.py (518 lines - Complete legal case files API)
+
+# Modified (Phase 1-2)
 ai_core/spiders/spider_registry.py (added 2 spiders)
 core/agent_router.py (added LegalDocDrafterAgent)
 core/assistant/tool_definitions.py (added tool definition)
 core/prompts/tool_descriptions.py (added tool description)
 core/agents/personal_assistant_agent.py (added keywords, routing, delegate enum)
+
+# Modified (Phase 3)
+ai_core/templates/components/panels/legal_assistant_panel.html (added My Case Files sub-tab)
+core/urls.py (added 5 legal API routes)
+core/agents/legal/legal_doc_drafter_agent.py (added document context injection)
+docs/CAPABILITIES.md (added Pro Se Legal Assistant section)
+docs/AGENTS.md (updated LegalDocDrafterAgent documentation)
 ```
 
 ---
@@ -177,16 +187,72 @@ Created comprehensive UI panel (~43KB) with:
 
 ---
 
-## What's Next (Phase 3 - Optional)
+## Phase 3: Case Files Upload & Analysis ✅
 
-1. **Dedicated API Endpoints** (`core/views_legal.py`):
-   - POST /api/legal/research/ (currently uses /api/chat/)
-   - POST /api/legal/draft/
-   - GET /api/legal/history/
+### Database Models (Migration 0076)
 
-2. **Models** (for case management):
-   - LegalCase (case details, parties, dates)
-   - LegalDocument (generated documents with status tracking)
+| Model | Purpose |
+|-------|---------|
+| `LegalCase` | User's case info (parties, case number, dates, status) |
+| `LegalDocument` | Generated/uploaded documents with content storage |
+| `LegalResearchResult` | Saved legal research with embeddings |
+| `LegalMemory` | Legal-specific learning patterns |
+
+### API Endpoints (core/views_legal.py)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/legal/case-files/` | GET | List all case files with stats |
+| `/api/legal/case-files/upload/` | POST | Upload PDF/DOC/TXT file |
+| `/api/legal/case-files/<uuid>/` | GET | Get document details |
+| `/api/legal/case-files/<uuid>/analyze/` | POST | AI analysis |
+| `/api/legal/case-files/<uuid>/delete/` | DELETE | Delete document |
+
+### My Case Files Sub-Tab
+
+Added 5th sub-tab to Legal Assistant panel with:
+
+**UI Components:**
+- Stats cards (Total Files, Court Orders, Motions, Processed)
+- Drag-and-drop upload zone (10MB max, PDF/DOC/TXT/DOCX)
+- Document type selector (Court Order, Denied Motion, Motion, Correspondence, etc.)
+- Optional context input for additional info
+- Document library table with status badges
+- Analysis panel with 4 sections (Summary, Issues, Recommendations, Forms)
+
+**JavaScript Functions:**
+- `loadLegalCaseFiles()` - Fetches documents from API
+- `uploadLegalCaseFile()` - Handles file upload with FormData
+- `viewLegalCaseFile(docId)` - Gets document details
+- `analyzeLegalCaseFile(docId)` - Triggers AI analysis
+- `deleteLegalCaseFile(docId)` - Deletes document
+- `showDocumentAnalysis()` - Displays analysis results
+- `askAboutDocument()` - Follow-up question workflow
+- `generateCorrectiveFiling()` - Generate refiling based on analysis
+
+### Agent Enhancements
+
+- `_get_uploaded_document_context()` method in LegalDocDrafterAgent
+- Regex pattern matching for document IDs in task text
+- Auto-injection of uploaded documents into prompts
+- Falls back to recent denied motions/court orders if no specific document
+
+### Primary Use Case
+
+Upload a denied motion PDF and magistrate's denial letter to:
+1. Get AI analysis of why it was denied
+2. Receive recommendations on correct JDF forms
+3. Generate properly formatted corrective filing
+
+---
+
+## What's Next (Phase 4 - Optional)
+
+1. **Enhanced Corrective Filing** - Structured form-filling templates
+2. **Document Pinning** - Reference specific documents in ongoing chat
+3. **OCR Support** - Handle scanned PDF documents
+4. **Case Timeline** - Visual timeline of case events from documents
+5. **Auto-Detection** - Automatically detect document type from content
 
 ---
 
@@ -228,3 +294,62 @@ The LegalDocDrafterAgent follows the clean architecture pattern:
 3. **Jurisdiction clarity** - Focused on Colorado, warns about other jurisdictions
 4. **Urgent matter warnings** - Recommends immediate legal help for urgent situations
 5. **No criminal law** - Explicitly excluded from scope
+
+---
+
+## Known Issues / Areas for Tweaking
+
+### UI/UX
+1. **Loading States** - Upload zone needs better loading indicator during processing
+2. **Error Messages** - Some error messages could be more user-friendly
+3. **Document Preview** - Full document content preview in modal could be improved
+
+### Functionality
+1. **Document Type Auto-Detection** - Currently manual; could analyze content
+2. **Corrective Filing Button** - Currently sends generic chat message; needs structured template
+3. **Follow-up Questions** - "Ask a follow-up question" needs document context preservation
+4. **Embedding Generation** - Queued via Celery; should verify RAG search works
+
+### Technical
+1. **DOC File Support** - Legacy .doc files use fallback text extraction
+2. **Scanned PDFs** - No OCR support yet; only text-based PDFs work
+3. **File Size Limit** - 10MB may be too small for complex legal documents
+4. **Analysis Prompt** - Could be more specific per document type
+
+---
+
+## Testing Checklist
+
+- [ ] Upload PDF and verify text extraction
+- [ ] Upload DOCX and verify text extraction
+- [ ] Upload TXT file directly
+- [ ] Test file size validation (>10MB rejection)
+- [ ] Test invalid file type rejection
+- [ ] Test document analysis with denied motion
+- [ ] Test document analysis with court order
+- [ ] Verify document appears in document library
+- [ ] Test delete document
+- [ ] Test "Ask a follow-up question" workflow
+- [ ] Test "Generate corrective filing" workflow
+- [ ] Verify embeddings are generated (check Celery logs)
+
+---
+
+## Quick Start for Next Session
+
+```bash
+# Start services
+make start
+make celery
+
+# Access Legal Assistant
+open http://localhost:8000/ai-studio/
+# Click "Legal Assistant" tab
+# Click "My Case Files" sub-tab
+
+# Test upload
+# Drag a PDF to the upload zone
+# Select document type (e.g., "Denied Motion")
+# Click "Upload & Process"
+# Click "Analyze Document" after upload completes
+```
