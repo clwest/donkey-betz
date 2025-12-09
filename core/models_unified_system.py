@@ -14143,3 +14143,704 @@ class SavedOpportunity(models.Model):
                 }
             )
             self.save()
+
+
+# =============================================================================
+# Session 403: Legal Assistant Models
+# Pro Se Legal Assistant for Colorado Family Law
+# =============================================================================
+
+class LegalCase(models.Model):
+    """
+    Session 403: Represents a user's legal case.
+    Stores case information for the Pro Se Legal Assistant.
+
+    Focus: Colorado family law (divorce, custody, child support, parenting time)
+    """
+
+    CASE_TYPE_CHOICES = [
+        ('divorce', 'Divorce/Dissolution'),
+        ('custody', 'Custody (Allocation of Parental Responsibilities)'),
+        ('child_support', 'Child Support'),
+        ('parenting_time', 'Parenting Time/Visitation'),
+        ('modification', 'Modification of Existing Order'),
+        ('enforcement', 'Enforcement of Existing Order'),
+        ('paternity', 'Paternity/Parentage'),
+        ('protection', 'Protection Order'),
+        ('other', 'Other Family Law Matter'),
+    ]
+
+    CASE_STATUS_CHOICES = [
+        ('planning', 'Planning/Research'),
+        ('filing', 'Ready to File'),
+        ('filed', 'Filed with Court'),
+        ('pending', 'Pending/In Progress'),
+        ('hearing_scheduled', 'Hearing Scheduled'),
+        ('resolved', 'Resolved/Closed'),
+        ('appealing', 'Appealing'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='legal_cases'
+    )
+
+    # Case identification
+    case_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Court case number (if filed)"
+    )
+    court = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Court name (e.g., 'Denver District Court')"
+    )
+    county = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="County where case is filed"
+    )
+    jurisdiction = models.CharField(
+        max_length=50,
+        default='Colorado',
+        help_text="State/jurisdiction"
+    )
+
+    # Case details
+    case_type = models.CharField(
+        max_length=20,
+        choices=CASE_TYPE_CHOICES,
+        default='divorce'
+    )
+    case_status = models.CharField(
+        max_length=20,
+        choices=CASE_STATUS_CHOICES,
+        default='planning'
+    )
+    title = models.CharField(
+        max_length=200,
+        help_text="Brief case title (e.g., 'Smith v. Smith Divorce')"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Case summary and notes"
+    )
+
+    # Parties
+    parties = models.JSONField(
+        default=dict,
+        help_text="Parties involved: {petitioner: {name, role}, respondent: {name, role}, children: [...]}"
+    )
+
+    # Key dates
+    key_dates = models.JSONField(
+        default=dict,
+        help_text="Important dates: {filing_date, service_date, hearing_dates: [], deadlines: []}"
+    )
+
+    # Related documents count (denormalized for performance)
+    document_count = models.IntegerField(default=0)
+    research_count = models.IntegerField(default=0)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-updated_at']
+        verbose_name = "Legal Case"
+        verbose_name_plural = "Legal Cases"
+        indexes = [
+            models.Index(fields=['user', 'case_status']),
+            models.Index(fields=['case_type']),
+            models.Index(fields=['jurisdiction']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_case_type_display()})"
+
+    def add_key_date(self, date_type: str, date_value, description: str = ''):
+        """Add a key date to the case."""
+        if not self.key_dates:
+            self.key_dates = {}
+
+        if date_type == 'deadline':
+            if 'deadlines' not in self.key_dates:
+                self.key_dates['deadlines'] = []
+            self.key_dates['deadlines'].append({
+                'date': str(date_value),
+                'description': description
+            })
+        elif date_type == 'hearing':
+            if 'hearing_dates' not in self.key_dates:
+                self.key_dates['hearing_dates'] = []
+            self.key_dates['hearing_dates'].append({
+                'date': str(date_value),
+                'description': description
+            })
+        else:
+            self.key_dates[date_type] = str(date_value)
+
+        self.save(update_fields=['key_dates', 'updated_at'])
+
+
+class LegalDocument(models.Model):
+    """
+    Session 403: Generated legal documents for a case.
+    Stores motions, emails, declarations, and other documents drafted by LegalDocDrafterAgent.
+    """
+
+    DOCUMENT_TYPE_CHOICES = [
+        ('motion', 'Motion'),
+        ('email', 'Meet-and-Confer Email'),
+        ('declaration', 'Declaration'),
+        ('checklist', 'Procedure Checklist'),
+        ('response', 'Response to Motion'),
+        ('petition', 'Petition'),
+        ('agreement', 'Agreement/Stipulation'),
+        ('letter', 'Formal Letter'),
+        ('notes', 'Case Notes'),
+        ('other', 'Other Document'),
+    ]
+
+    DOCUMENT_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('review', 'Under Review'),
+        ('finalized', 'Finalized'),
+        ('filed', 'Filed with Court'),
+        ('sent', 'Sent to Opposing Party'),
+        ('archived', 'Archived'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to case (optional - can exist independently)
+    case = models.ForeignKey(
+        LegalCase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documents'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='legal_documents'
+    )
+
+    # Document metadata
+    document_type = models.CharField(
+        max_length=20,
+        choices=DOCUMENT_TYPE_CHOICES,
+        default='motion'
+    )
+    title = models.CharField(max_length=300)
+
+    # Content
+    content = models.TextField(
+        help_text="Generated document content (markdown)"
+    )
+
+    # Generation context
+    original_query = models.TextField(
+        blank=True,
+        help_text="The user's original request"
+    )
+    generation_context = models.JSONField(
+        default=dict,
+        help_text="Context used for generation: {case_type, motion_type, facts, etc.}"
+    )
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=DOCUMENT_STATUS_CHOICES,
+        default='draft'
+    )
+
+    # Version tracking
+    version = models.IntegerField(default=1)
+    parent_document = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='revisions',
+        help_text="Previous version of this document"
+    )
+
+    # Feedback for learning
+    user_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="User rating 1-5"
+    )
+    user_feedback = models.TextField(
+        blank=True,
+        help_text="User feedback on the document"
+    )
+    was_used = models.BooleanField(
+        default=False,
+        help_text="Whether the document was actually used/filed"
+    )
+
+    # Disclaimer tracking
+    disclaimer_shown = models.BooleanField(
+        default=True,
+        help_text="Whether legal disclaimer was shown"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = "Legal Document"
+        verbose_name_plural = "Legal Documents"
+        indexes = [
+            models.Index(fields=['user', 'document_type']),
+            models.Index(fields=['case', 'status']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_document_type_display()})"
+
+    def create_revision(self, new_content: str) -> 'LegalDocument':
+        """Create a new revision of this document."""
+        return LegalDocument.objects.create(
+            case=self.case,
+            user=self.user,
+            document_type=self.document_type,
+            title=self.title,
+            content=new_content,
+            original_query=self.original_query,
+            generation_context=self.generation_context,
+            version=self.version + 1,
+            parent_document=self,
+        )
+
+    def record_feedback(self, rating: int = None, feedback: str = None, was_used: bool = None):
+        """Record user feedback for learning."""
+        if rating is not None:
+            self.user_rating = rating
+        if feedback is not None:
+            self.user_feedback = feedback
+        if was_used is not None:
+            self.was_used = was_used
+        self.save()
+
+        # Trigger learning hook
+        self._record_learning_outcome()
+
+    def _record_learning_outcome(self):
+        """Create learning record from feedback."""
+        if not self.user_rating:
+            return
+
+        try:
+            from core.models_unified_system import AgentKnowledgeSource, Agent
+
+            agent = Agent.objects.filter(name='LegalDocDrafterAgent').first()
+            if not agent:
+                return
+
+            # Create knowledge from successful documents (rating >= 4)
+            if self.user_rating >= 4:
+                AgentKnowledgeSource.objects.create(
+                    agent=agent,
+                    knowledge_type='user_behavior',
+                    title=f"Successful {self.get_document_type_display()}: {self.title[:100]}",
+                    summary=f"User rated {self.user_rating}/5. Document type: {self.document_type}. Was used: {self.was_used}",
+                    key_insights=[
+                        f"Document type: {self.document_type}",
+                        f"Rating: {self.user_rating}/5",
+                        f"Was used: {self.was_used}",
+                        f"Context: {json.dumps(self.generation_context)[:500] if self.generation_context else 'N/A'}",
+                    ],
+                    confidence_score=self.user_rating / 5.0,
+                    raw_data={
+                        'document_id': str(self.id),
+                        'document_type': self.document_type,
+                        'rating': self.user_rating,
+                        'feedback': self.user_feedback,
+                        'was_used': self.was_used,
+                        'context': self.generation_context,
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to record learning outcome: {e}")
+
+
+class LegalResearchResult(models.Model):
+    """
+    Session 403: Legal research results from LegalDocDrafterAgent.
+    Stores legal guidance, procedure explanations, and form lookups.
+
+    Similar to BusinessResearchResult but focused on legal information.
+    """
+
+    RESEARCH_TYPE_CHOICES = [
+        ('guidance', 'Legal Guidance'),
+        ('procedure', 'Procedure Explanation'),
+        ('form_lookup', 'Form Information'),
+        ('case_law', 'Case Law Research'),
+        ('statute', 'Statute/Law Lookup'),
+        ('deadline', 'Deadline/Timeline Research'),
+        ('strategy', 'Strategy Research'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to case (optional)
+    case = models.ForeignKey(
+        LegalCase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='research_results'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='legal_research'
+    )
+
+    # Research metadata
+    research_type = models.CharField(
+        max_length=20,
+        choices=RESEARCH_TYPE_CHOICES,
+        default='guidance'
+    )
+    query = models.TextField(
+        help_text="The original research query"
+    )
+    case_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Type of case this research relates to"
+    )
+    jurisdiction = models.CharField(
+        max_length=50,
+        default='Colorado'
+    )
+
+    # The research result
+    analysis = models.TextField(
+        help_text="GPT-generated legal research/guidance (markdown)"
+    )
+
+    # Structured findings
+    key_points = models.JSONField(
+        default=list,
+        help_text="Key legal points extracted"
+    )
+    forms_referenced = models.JSONField(
+        default=list,
+        help_text="JDF forms referenced: [{form_number, title, url}]"
+    )
+    statutes_cited = models.JSONField(
+        default=list,
+        help_text="Statutes/laws cited: [{citation, summary}]"
+    )
+    procedures = models.JSONField(
+        default=list,
+        help_text="Procedures explained: [{step, description}]"
+    )
+    deadlines = models.JSONField(
+        default=list,
+        help_text="Relevant deadlines: [{deadline, description}]"
+    )
+    recommendations = models.JSONField(
+        default=list,
+        help_text="Recommended actions"
+    )
+
+    # Data sources
+    sources_used = models.JSONField(
+        default=list,
+        help_text="Spider/web sources used"
+    )
+    spider_data_count = models.IntegerField(default=0)
+
+    # Embedding for semantic search
+    embedding = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding for semantic search"
+    )
+
+    # Execution metrics
+    execution_time_ms = models.IntegerField(default=0)
+
+    # Disclaimer tracking
+    disclaimer_included = models.BooleanField(
+        default=True,
+        help_text="Whether legal disclaimer was included"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = "Legal Research Result"
+        verbose_name_plural = "Legal Research Results"
+        indexes = [
+            models.Index(fields=['user', 'research_type']),
+            models.Index(fields=['case_type', 'jurisdiction']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_research_type_display()}: {self.query[:50]}..."
+
+    def generate_embedding(self):
+        """Generate embedding for semantic search."""
+        try:
+            from openai import OpenAI
+            import os
+
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+            # Create searchable text
+            text_to_embed = f"Legal {self.research_type}: {self.query}\n\n{self.analysis[:4000]}"
+
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text_to_embed
+            )
+
+            self.embedding = response.data[0].embedding
+            self.save(update_fields=['embedding'])
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to generate legal research embedding: {e}")
+            return False
+
+    @classmethod
+    def save_legal_research(
+        cls,
+        user,
+        query: str,
+        analysis: str,
+        research_type: str = 'guidance',
+        case_type: str = '',
+        jurisdiction: str = 'Colorado',
+        key_points: list = None,
+        forms_referenced: list = None,
+        statutes_cited: list = None,
+        procedures: list = None,
+        deadlines: list = None,
+        recommendations: list = None,
+        sources_used: list = None,
+        execution_time_ms: int = 0,
+        case_id: str = None,
+    ):
+        """
+        Helper to save LegalDocDrafterAgent research results.
+        """
+        case = None
+        if case_id:
+            try:
+                case = LegalCase.objects.get(id=case_id)
+            except LegalCase.DoesNotExist:
+                pass
+
+        instance = cls.objects.create(
+            user=user,
+            case=case,
+            research_type=research_type,
+            query=query,
+            case_type=case_type,
+            jurisdiction=jurisdiction,
+            analysis=analysis,
+            key_points=key_points or [],
+            forms_referenced=forms_referenced or [],
+            statutes_cited=statutes_cited or [],
+            procedures=procedures or [],
+            deadlines=deadlines or [],
+            recommendations=recommendations or [],
+            sources_used=sources_used or [],
+            spider_data_count=len(sources_used) if sources_used else 0,
+            execution_time_ms=execution_time_ms,
+        )
+
+        # Update case research count
+        if case:
+            case.research_count = case.research_results.count()
+            case.save(update_fields=['research_count', 'updated_at'])
+
+        # Generate embedding for semantic search
+        instance.generate_embedding()
+
+        return instance
+
+
+class LegalMemory(models.Model):
+    """
+    Session 403: Legal-specific memory for the LegalDocDrafterAgent.
+    Stores successful legal patterns, precedents, and strategies learned.
+
+    Extends the Memory Palace concept for legal domain knowledge.
+    """
+
+    MEMORY_TYPE_CHOICES = [
+        ('precedent', 'Legal Precedent'),
+        ('strategy', 'Successful Strategy'),
+        ('pattern', 'Document Pattern'),
+        ('user_pref', 'User Preference'),
+        ('outcome', 'Case Outcome'),
+        ('form_usage', 'Form Usage Pattern'),
+        ('procedure', 'Procedure Insight'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to agent
+    agent = models.ForeignKey(
+        Agent,
+        on_delete=models.CASCADE,
+        related_name='legal_memories',
+        null=True,
+        blank=True
+    )
+
+    # Memory content
+    memory_type = models.CharField(
+        max_length=20,
+        choices=MEMORY_TYPE_CHOICES,
+        default='pattern'
+    )
+    title = models.CharField(max_length=300)
+    content = models.TextField()
+
+    # Legal context
+    case_type = models.CharField(max_length=50, blank=True)
+    jurisdiction = models.CharField(max_length=50, default='Colorado')
+    document_type = models.CharField(max_length=50, blank=True)
+
+    # Structured data
+    key_insights = models.JSONField(
+        default=list,
+        help_text="Key learnings from this memory"
+    )
+    applicable_scenarios = models.JSONField(
+        default=list,
+        help_text="Scenarios where this memory is applicable"
+    )
+
+    # Confidence and usage
+    confidence_score = models.FloatField(
+        default=0.8,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+    )
+    usage_count = models.IntegerField(default=0)
+    success_count = models.IntegerField(default=0)
+
+    # Source tracking
+    source_document = models.ForeignKey(
+        LegalDocument,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='memories_created'
+    )
+    source_research = models.ForeignKey(
+        LegalResearchResult,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='memories_created'
+    )
+
+    # Embedding for retrieval
+    embedding = models.JSONField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-confidence_score', '-usage_count']
+        verbose_name = "Legal Memory"
+        verbose_name_plural = "Legal Memories"
+        indexes = [
+            models.Index(fields=['memory_type', 'case_type']),
+            models.Index(fields=['jurisdiction']),
+            models.Index(fields=['confidence_score']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_memory_type_display()}: {self.title[:50]}"
+
+    def record_usage(self, was_successful: bool = True):
+        """Record that this memory was used."""
+        self.usage_count += 1
+        if was_successful:
+            self.success_count += 1
+        self.last_used_at = timezone.now()
+
+        # Update confidence based on success rate
+        if self.usage_count > 0:
+            self.confidence_score = self.success_count / self.usage_count
+
+        self.save(update_fields=['usage_count', 'success_count', 'last_used_at', 'confidence_score'])
+
+    def generate_embedding(self):
+        """Generate embedding for semantic retrieval."""
+        try:
+            from openai import OpenAI
+            import os
+
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+            text_to_embed = f"{self.memory_type} | {self.case_type} | {self.title}\n{self.content[:2000]}"
+
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text_to_embed
+            )
+
+            self.embedding = response.data[0].embedding
+            self.save(update_fields=['embedding'])
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to generate legal memory embedding: {e}")
+            return False
+
+    @classmethod
+    def create_from_successful_document(cls, document: LegalDocument, insights: list = None):
+        """Create a memory from a successfully used document."""
+        if not document.was_used or (document.user_rating and document.user_rating < 4):
+            return None
+
+        agent = Agent.objects.filter(name='LegalDocDrafterAgent').first()
+
+        memory = cls.objects.create(
+            agent=agent,
+            memory_type='pattern',
+            title=f"Successful {document.get_document_type_display()}: {document.title[:100]}",
+            content=f"Document rated {document.user_rating}/5 and was used. "
+                    f"Context: {json.dumps(document.generation_context)[:1000] if document.generation_context else 'N/A'}",
+            case_type=document.generation_context.get('case_type', '') if document.generation_context else '',
+            document_type=document.document_type,
+            key_insights=insights or [],
+            confidence_score=document.user_rating / 5.0 if document.user_rating else 0.8,
+            source_document=document,
+        )
+
+        memory.generate_embedding()
+        return memory
