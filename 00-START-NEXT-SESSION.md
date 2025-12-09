@@ -1,8 +1,37 @@
 # Start Next Session Here
 
-**Last Session:** 401 - Knowledge Attribution UI
+**Last Session:** 402 - Bug Fixes (PDF Upload & UI Status)
 **Date:** December 9, 2025
-**Status:** 62 spiders | Knowledge Attribution visible in AI responses!
+**Status:** 62 spiders | PDF upload working | Document status badges fixed!
+
+---
+
+## Session 402 Accomplishments
+
+### Bug Fixes - COMPLETE!
+
+Fixed critical issues with PDF upload and document status display:
+
+1. **PDF Upload Fixed**
+   - Fixed PyPDF2 import (case-sensitive)
+   - Updated processor to handle bytes input (not just file paths)
+
+2. **Celery Type Errors Fixed**
+   - Fixed 6 locations where `key_insights` and `source_spider_names` joins failed on mixed types
+   - Fixed `avatar_url` attribute error in dream journal
+
+3. **Document Status Badges Fixed**
+   - Renamed conflicting `getStatusBadge()` function for character training
+   - Documents now show: Ready, Embedding, Processing, Pending, Failed
+
+### Files Modified
+- `content/processors.py` - PyPDF2 import + bytes handling
+- `core/tasks.py` - 7 type safety fixes
+- `ai_core/templates/ai_image_studio.html` - Function rename to avoid collision
+- `ai_core/templates/components/panels/intelligence/intel_documents.html` - Added embedding status
+
+### Documentation
+- Handoff: `docs/handoffs/SESSION_402_BUGFIXES.md`
 
 ---
 

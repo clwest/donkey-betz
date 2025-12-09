@@ -3447,7 +3447,7 @@ def embed_daily_agent_learning():
                 f"Title: {item.title}",
                 f"Type: {item.knowledge_type}",
                 f"Summary: {item.summary or 'No summary'}",
-                f"Key Insights: {', '.join(item.key_insights) if item.key_insights else 'No insights'}",
+                f"Key Insights: {', '.join(str(i) for i in item.key_insights) if item.key_insights else 'No insights'}",
                 f"Confidence: {item.confidence_score}",
                 f"Data Points: {item.data_points_count}",
                 f"Learned At: {item.first_discovered_at.isoformat()}"
@@ -3502,7 +3502,7 @@ def embed_daily_agent_learning():
                 f"Agent: {synthesis.agent.name if synthesis.agent else 'Unknown'}",
                 f"Title: {synthesis.title}",
                 f"Summary: {synthesis.summary or 'No summary'}",
-                f"Key Insights: {', '.join(synthesis.key_insights) if synthesis.key_insights else 'No insights'}",
+                f"Key Insights: {', '.join(str(i) for i in synthesis.key_insights) if synthesis.key_insights else 'No insights'}",
                 f"Confidence: {synthesis.confidence_score}",
                 f"Source Data Points: {synthesis.data_points_count}",
                 f"Synthesized At: {synthesis.first_discovered_at.isoformat()}"
@@ -3830,12 +3830,12 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                 if knowledge_item.data_points_count:
                     knowledge_context_parts.append(f"Based on: {knowledge_item.data_points_count} data points")
                 if knowledge_item.source_spider_names:
-                    spider_sources = ', '.join(knowledge_item.source_spider_names[:5])
+                    spider_sources = ', '.join(str(s) for s in knowledge_item.source_spider_names[:5])
                     knowledge_context_parts.append(f"Data sources: {spider_sources}")
                 if knowledge_item.spider_category:
                     knowledge_context_parts.append(f"Category: {knowledge_item.spider_category.name}")
                 if knowledge_item.key_insights:
-                    insights = '; '.join(knowledge_item.key_insights[:3])
+                    insights = '; '.join(str(i) for i in knowledge_item.key_insights[:3])
                     knowledge_context_parts.append(f"Key insights: {insights}")
 
                 knowledge_context = '\n'.join(knowledge_context_parts) if knowledge_context_parts else 'No specific context'
@@ -4357,7 +4357,7 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                     if knowledge_item.data_points_count:
                         knowledge_context_parts.append(f"Based on: {knowledge_item.data_points_count} data points")
                     if knowledge_item.source_spider_names:
-                        spider_sources = ', '.join(knowledge_item.source_spider_names[:5])
+                        spider_sources = ', '.join(str(s) for s in knowledge_item.source_spider_names[:5])
                         knowledge_context_parts.append(f"Data sources: {spider_sources}")
                     if knowledge_item.spider_category:
                         knowledge_context_parts.append(f"Category: {knowledge_item.spider_category.name}")
@@ -5292,7 +5292,7 @@ New Canonical Policy:
 - Topic: {policy.topic}
 - Decision: {policy.recommended_stance[:200] if policy.recommended_stance else 'Not specified'}
 - Impact Area: {policy.impact_area}
-- Key Insights: {', '.join(policy.key_insights[:3]) if policy.key_insights else 'None specified'}
+- Key Insights: {', '.join(str(i) for i in policy.key_insights[:3]) if policy.key_insights else 'None specified'}
 """
 
             system_prompt = f"""You are {agents[0].name}, an AI agent specializing in {agents[0].specialization or 'analysis'}.
@@ -6122,7 +6122,7 @@ def broadcast_dream_journal(self):
             dreams_data.append({
                 'id': str(dream.id),
                 'agent_name': dream.agent.name if dream.agent else 'Unknown',
-                'agent_avatar': dream.agent.avatar_url if dream.agent else None,
+                'agent_avatar': getattr(dream.agent, 'avatar_url', None) if dream.agent else None,
                 'title': dream.title,
                 'content': dream.content[:300],
                 'dream_type': dream.dream_type,

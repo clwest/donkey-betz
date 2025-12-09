@@ -54,6 +54,28 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class KnowledgeAttribution:
+    """
+    Session 400: Tracks what knowledge influenced an agent's response.
+    This enables transparency - users can see WHY the agent said what it said.
+    """
+    spider_sources: List[str] = field(default_factory=list)  # e.g., ['techcrunch', 'hackernews']
+    knowledge_items: List[Dict[str, Any]] = field(default_factory=list)  # Relevant knowledge used
+    confidence_score: float = 0.0  # Overall confidence in the response
+    data_freshness_hours: float = 0.0  # How old is the data
+    total_sources: int = 0  # Total number of sources consulted
+
+    def to_dict(self) -> dict:
+        return {
+            'spider_sources': self.spider_sources,
+            'knowledge_items': self.knowledge_items,
+            'confidence_score': self.confidence_score,
+            'data_freshness_hours': self.data_freshness_hours,
+            'total_sources': self.total_sources,
+        }
+
+
+@dataclass
 class AgentResult:
     """Standard result object returned by all agents."""
     success: bool
@@ -64,10 +86,12 @@ class AgentResult:
     execution_time_ms: int = 0
     decisions_made: int = 0
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+    # Session 400: Knowledge attribution for transparency
+    knowledge_attribution: Optional[KnowledgeAttribution] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             'success': self.success,
             'message': self.message,
             'data': self.data,
@@ -77,6 +101,10 @@ class AgentResult:
             'decisions_made': self.decisions_made,
             'tool_calls': self.tool_calls,
         }
+        # Session 400: Include knowledge attribution if present
+        if self.knowledge_attribution:
+            result['knowledge_attribution'] = self.knowledge_attribution.to_dict()
+        return result
 
 
 class BaseAgent(ABC, TimeTravelMixin):
@@ -372,6 +400,143 @@ class BaseAgent(ABC, TimeTravelMixin):
             logger.debug(f"Found {len(results)} relevant knowledge items for task")
 
         return results[:limit]
+
+    def _build_knowledge_attribution(self, knowledge_items: List[Dict[str, Any]]) -> KnowledgeAttribution:
+        """
+        Session 400: Build a KnowledgeAttribution object from retrieved knowledge.
+
+        This creates the transparency metadata that shows users what influenced
+        the agent's response.
+
+        Args:
+            knowledge_items: List of knowledge dicts from _get_relevant_knowledge_for_task()
+
+        Returns:
+            KnowledgeAttribution object with sources, confidence, freshness
+        """
+        if not knowledge_items:
+            return KnowledgeAttribution()
+
+        # Collect all spider sources
+        all_spider_sources = []
+        for item in knowledge_items:
+            sources = item.get('spider_sources', [])
+            if sources:
+                all_spider_sources.extend(sources)
+
+        # Deduplicate and clean spider sources
+        unique_sources = []
+        for source in all_spider_sources:
+            if source and source not in unique_sources:
+                # Skip internal sources like 'dream_exploration', 'learned_from_X'
+                if not source.startswith(('dream_', 'learned_from_')):
+                    unique_sources.append(source)
+
+        # Calculate average confidence
+        confidences = [item.get('confidence', 0.5) for item in knowledge_items]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.5
+
+        # Estimate data freshness (simplified - would need timestamps for accuracy)
+        # For now, use a heuristic based on knowledge type
+        freshness_hours = 24.0  # Default assumption
+
+        # Build simplified knowledge items for attribution display
+        attribution_items = []
+        for item in knowledge_items[:3]:  # Limit to top 3 for display
+            attribution_items.append({
+                'source': item.get('source_agent', 'Unknown'),
+                'title': item.get('title', '')[:50],
+                'type': item.get('knowledge_type', 'general'),
+                'confidence': round(item.get('confidence', 0.5), 2),
+            })
+
+        return KnowledgeAttribution(
+            spider_sources=unique_sources[:5],  # Top 5 sources
+            knowledge_items=attribution_items,
+            confidence_score=round(avg_confidence, 2),
+            data_freshness_hours=freshness_hours,
+            total_sources=len(unique_sources),
+        )
+
+    def _build_prompt_with_attribution(
+        self,
+        task: str,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> tuple:
+        """
+        Session 400: Build prompt AND return knowledge attribution.
+
+        This is the preferred method for agents that want to surface
+        what knowledge influenced their response.
+
+        Args:
+            task: The user's task
+            scifi_context: Sci-fi system context
+            spider_context: Spider intelligence context
+
+        Returns:
+            Tuple of (prompt_string, KnowledgeAttribution)
+        """
+        # Get relevant knowledge first (we need it for both prompt and attribution)
+        relevant_knowledge = self._get_relevant_knowledge_for_task(task)
+
+        # Build the attribution
+        attribution = self._build_knowledge_attribution(relevant_knowledge)
+
+        # Build the prompt (using the already-retrieved knowledge)
+        parts = [self.system_prompt]
+
+        # Add relevant learned knowledge to prompt
+        if relevant_knowledge:
+            parts.append(f"\n\n## Relevant Knowledge from Past Learning")
+            parts.append("You have learned the following that may be relevant:")
+            for idx, knowledge in enumerate(relevant_knowledge[:3], 1):
+                source = knowledge.get('source_agent', 'Unknown')
+                title = knowledge.get('title', '')[:60]
+                summary = knowledge.get('summary', '')[:150]
+                spider_sources = knowledge.get('spider_sources', [])
+
+                parts.append(f"\n{idx}. [{source}] {title}")
+                if summary:
+                    parts.append(f"   {summary}")
+                if spider_sources and spider_sources[0] not in ['learned_from_', 'dream_']:
+                    sources_str = ', '.join(spider_sources[:3])
+                    parts.append(f"   (from: {sources_str})")
+
+        # Add mood modifier if available
+        if scifi_context:
+            mood = scifi_context.get('mood')
+            if mood:
+                mood_type = mood.get('mood_type', 'focused')
+                style_mod = mood.get('style_modifier', 'balanced')
+                parts.append(f"\n\n## Current Mood")
+                parts.append(f"State: {mood_type}")
+                parts.append(f"Style tendency: {style_mod}")
+
+            # Add evolution context
+            evolution = scifi_context.get('evolution')
+            if evolution:
+                level = evolution.get('level', 1)
+                title_evo = evolution.get('title', 'Apprentice')
+                parts.append(f"\n\n## Experience Level")
+                parts.append(f"Level {level} - {title_evo}")
+
+        # Add spider context (trends, market data)
+        if spider_context:
+            trends = spider_context.get('relevant_trends', [])
+            if trends:
+                trend_names = [t.get('topic', '') for t in trends[:5] if t.get('topic')]
+                if trend_names:
+                    parts.append(f"\n\n## Current Trends")
+                    parts.append(f"Trending topics: {', '.join(trend_names)}")
+
+        # Add the task
+        parts.append(f"\n\n## Task")
+        parts.append(task)
+
+        prompt = "\n".join(parts)
+        return prompt, attribution
 
     def _build_prompt(
         self,

@@ -20,7 +20,7 @@ from django.utils import timezone
 
 # Import libraries (will be installed via requirements)
 try:
-    import pypdf2
+    import PyPDF2
     HAS_PDF = True
 except ImportError:
     HAS_PDF = False
@@ -528,40 +528,61 @@ class PDFProcessor(BaseProcessor):
         return (mime_type in self.supported_types or 
                 file_path.endswith('.pdf')) and HAS_PDF
     
-    def process(self, file_path: str, **kwargs) -> ProcessingResult:
+    def process(self, file_input, **kwargs) -> ProcessingResult:
+        """
+        Process a PDF file.
+
+        Args:
+            file_input: Either a file path (str) or bytes content
+            **kwargs: Optional arguments including 'filename' for bytes input
+        """
         if not HAS_PDF:
             return ProcessingResult(
                 success=False,
-                error_message="PDF processing requires pypdf2 library",
+                error_message="PDF processing requires PyPDF2 library",
                 processing_steps=[
-                    {'step': 'dependency_check', 'status': 'error', 'error': 'pypdf2 not available'}
+                    {'step': 'dependency_check', 'status': 'error', 'error': 'PyPDF2 not available'}
                 ]
             )
-        
+
         try:
-            import pypdf2
-            
-            with open(file_path, 'rb') as f:
-                pdf_reader = pypdf2.PdfReader(f)
-                
-                # Extract metadata
-                metadata = self._extract_pdf_metadata(pdf_reader)
-                
-                # Extract text from all pages
-                raw_content = ""
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    raw_content += page.extract_text() + "\n"
-            
+            import PyPDF2
+            import io
+
+            # Handle both file path and bytes input
+            if isinstance(file_input, bytes):
+                f = io.BytesIO(file_input)
+                pdf_reader = PyPDF2.PdfReader(f)
+                file_size = len(file_input)
+            else:
+                # file_input is a path string
+                f = open(file_input, 'rb')
+                pdf_reader = PyPDF2.PdfReader(f)
+                file_size = os.path.getsize(file_input)
+
+            # Extract metadata
+            metadata = self._extract_pdf_metadata(pdf_reader)
+
+            # Extract text from all pages
+            raw_content = ""
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                raw_content += page.extract_text() + "\n"
+
+            # Close file if we opened it
+            if not isinstance(file_input, bytes):
+                f.close()
+
             processed_content = self._clean_text(raw_content)
             language = self._detect_language(processed_content)
             word_count = len(processed_content.split()) if processed_content else 0
             key_phrases = self._extract_key_phrases(processed_content)
             entities = self._extract_entities(processed_content)
-            
+
             metadata.update({
                 'processor': 'PDFProcessor',
-                'file_size': os.path.getsize(file_path)
+                'file_size': file_size,
+                'filename': kwargs.get('filename', 'unknown.pdf')
             })
             
             return ProcessingResult(

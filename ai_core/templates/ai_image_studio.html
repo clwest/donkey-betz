@@ -63764,7 +63764,7 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
             col.dataset.characterId = character.id;
             col.dataset.status = character.training_status;
 
-            const statusBadge = getStatusBadge(character.training_status);
+            const statusBadge = getCharacterStatusBadge(character.training_status);
             const favoriteIcon = character.is_favorite ? '⭐' : '☆';
 
             col.innerHTML = `
@@ -63811,7 +63811,7 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
             container.appendChild(col);
         }
 
-        function getStatusBadge(status) {
+        function getCharacterStatusBadge(status) {
             const badges = {
                 'preparing': '<span class="badge bg-secondary">Preparing</span>',
                 'pending': '<span class="badge bg-warning">Pending</span>',
