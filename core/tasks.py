@@ -409,80 +409,14 @@ def cleanup_isolation_metadata():
         }
 
 # Spider and Agent Learning Tasks
+# Session 399: DEPRECATED - This task created mock/placeholder spider data.
+# Real spider collection is handled by run_spider_network() task which runs every 15 minutes.
+# Keeping function for backwards compatibility but it now just returns without creating mock data.
 @shared_task
 def collect_spider_data():
-    """Collect spider data every 15 minutes - called by Celery Beat"""
-    from core.models_unified_system import SpiderData
-    from intelligence.spider_agent_connector import SpiderAgentConnector
-    import random
-    from django.utils import timezone
-
-    logger.info("Starting automated spider data collection...")
-
-    # Simulate spider data collection
-    spider_types = [
-        'Job Opportunity Spider',
-        'Finance Monitor Spider',
-        'Content Discovery Spider',
-        'Market Intelligence Spider',
-        'Lead Generation Spider',
-        'Research Paper Spider',
-        'Investment Tracker Spider'
-    ]
-
-    data_types = [
-        'job_posting', 'market_data', 'content_opportunity',
-        'research_paper', 'lead', 'financial_metric', 'investment'
-    ]
-
-    # Create 5-10 new spider data items
-    num_items = random.randint(5, 10)
-    created_items = []
-
-    for i in range(num_items):
-        spider_name = random.choice(spider_types)
-        data_type = random.choice(data_types)
-
-        spider_data = SpiderData.objects.create(
-            spider_name=spider_name,
-            data_type=data_type,
-            raw_data={
-                'title': f'Auto-collected {data_type} #{SpiderData.objects.count() + i}',
-                'description': f'Automated collection from {spider_name}',
-                'value': random.randint(100, 10000),
-                'timestamp': timezone.now().isoformat()
-            },
-            source_url=f'https://example.com/{data_type}/{i}'
-        )
-        created_items.append(spider_data)
-
-    # Process the spider data through agents
-    try:
-        connector = SpiderAgentConnector()
-        for item in created_items:
-            try:
-                connector.process_spider_data(item)
-            except Exception as e:
-                logger.error(f"Error processing spider data {item.id}: {e}")
-    except Exception as e:
-        logger.error(f"Error initializing connector: {e}")
-
-    # Session 335: Process spider data for Living Projects
-    try:
-        from core.services.living_project_service import get_living_project_service
-        living_service = get_living_project_service()
-        for item in created_items:
-            try:
-                insights = living_service.process_spider_data(item)
-                if insights:
-                    logger.info(f"📡 [LIVING] Created {len(insights)} insights from spider data")
-            except Exception as e:
-                logger.error(f"Error processing spider data for living projects: {e}")
-    except Exception as e:
-        logger.error(f"Error initializing living project service: {e}")
-
-    logger.info(f"Collected and processed {len(created_items)} spider data items")
-    return f"Collected {len(created_items)} items"
+    """DEPRECATED: Mock spider data collection - replaced by run_spider_network()"""
+    logger.info("collect_spider_data() is deprecated - use run_spider_network() for real data")
+    return "Deprecated - no mock data created"
 
 @shared_task
 def process_agent_solutions():
@@ -688,6 +622,21 @@ def run_spider_network():
                 'item_count': item_count,
                 'data_id': str(spider_data.id)
             })
+
+            # Session 399: Publish spider completion event for real-time UI updates
+            try:
+                import redis
+                import json as json_lib
+                redis_client = redis.Redis(host='localhost', port=6379, db=0)
+                redis_client.publish('spider:completion', json_lib.dumps({
+                    'spider_name': spider_name,
+                    'item_count': item_count,
+                    'category': config.get('category', spider_config.get('category', 'general')),
+                    'data_id': str(spider_data.id),
+                    'timestamp': timezone.now().isoformat()
+                }))
+            except Exception as redis_error:
+                logger.debug(f"Redis publish failed (non-critical): {redis_error}")
 
         except Exception as e:
             logger.error(f"❌ Spider {spider_name} failed: {e}")

@@ -33,9 +33,11 @@ SPIDER_TARGET_URLS = {
 
     # === SESSION 395: NEW NEWS SPIDERS ===
     'bbc': ['http://feeds.bbci.co.uk/news/rss.xml', 'http://feeds.bbci.co.uk/news/technology/rss.xml'],
-    'cnn': ['http://rss.cnn.com/rss/cnn_topstories.rss', 'http://rss.cnn.com/rss/cnn_tech.rss'],
+    # Session 399: Renamed from 'cnn' (RSS feeds were stale/2023 content)
+    'google_news': ['https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en'],
     'npr': ['https://feeds.npr.org/1001/rss.xml', 'https://feeds.npr.org/1019/rss.xml'],  # Top stories + Technology
-    'reuters_rss': ['https://www.reutersagency.com/feed/', 'https://www.reuters.com/technology/rss'],
+    # Session 399: Updated Reuters feeds (old ones returned 404/401)
+    'reuters_rss': ['https://news.google.com/rss/search?q=site:reuters.com&hl=en-US&gl=US&ceid=US:en'],
     'arstechnica': ['https://feeds.arstechnica.com/arstechnica/index'],
 
     # === REMOTE JOBS SPIDERS ===
@@ -47,13 +49,15 @@ SPIDER_TARGET_URLS = {
     'yahoo_finance': ['https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d'],
 
     # === DESIGN SPIDERS ===
-    'dribbble': ['https://dribbble.com/shots/popular'],
+    # Session 399: Renamed from 'dribbble' (blocked, returns 202)
+    'awwwards': ['https://www.awwwards.com/blog/feed/', 'https://tympanus.net/codrops/feed/'],
     'behance': ['https://www.behance.net/feeds/projects'],
 
     # === CONTENT/CREATOR SPIDERS ===
     'producthunt': ['https://www.producthunt.com/feed'],
     'medium': ['https://medium.com/feed/topic/technology'],
-    'hashnode': ['https://hashnode.com/api/feed/best'],
+    # Session 399: Renamed from 'hashnode' (API returns 404)
+    'freecodecamp': ['https://www.freecodecamp.org/news/rss/'],
 
     # === SESSION 395: NEW CONTENT SPIDERS ===
     'substack': [
@@ -63,11 +67,13 @@ SPIDER_TARGET_URLS = {
     ],
 
     # === EDUCATION SPIDERS ===
-    'udemy': ['https://www.udemy.com/api-2.0/discovery-units/bestseller/?page_size=20'],
+    # Session 399: Renamed from 'udemy' (API requires auth)
+    'coursera': ['https://blog.coursera.org/feed/'],
 
-    # === CROWDFUNDING SPIDERS ===
+    # === CROWDFUNDING/STARTUPS SPIDERS ===
     'kickstarter': ['https://www.kickstarter.com/discover/advanced.json?sort=magic&page=1'],
-    'indiegogo': ['https://www.indiegogo.com/private_api/discover/main?sort=trending'],
+    # Session 399: Renamed from 'indiegogo' (API blocked)
+    'techcrunch_startups': ['https://techcrunch.com/category/startups/feed/'],
 
     # === COMMUNITY SPIDERS (Session 294) ===
     # Reddit - uses JSON API (no API key needed)
@@ -82,9 +88,9 @@ SPIDER_TARGET_URLS = {
         'https://www.reddit.com/r/ChatGPT/hot.json?limit=10',
     ],
 
-    # Indie Hackers - uses RSS feeds (no API key needed)
-    'indiehackers': [
-        'https://www.indiehackers.com/feed.xml',
+    # Session 399: Renamed from 'indiehackers' (feed broken, returns HTML)
+    'hackernoon': [
+        'https://hackernoon.com/feed',  # Startup/tech entrepreneur content
     ],
 
     # === SESSION 395: LIFESTYLE & ENTERTAINMENT ===
@@ -221,10 +227,61 @@ SPIDER_TARGET_URLS = {
         'SPOTIFY_API',  # Marker for custom handler
     ],
 
-    # Note: These spiders use their own API clients, not SPIDER_TARGET_URLS:
-    # - bluesky: Uses BlueSky AT Protocol API (BLUESKY_IDENTIFIER, BLUESKY_PASSWORD)
-    # - youtube: Uses YouTube Data API v3 (GOOGLE_API_KEY)
-    # - discord: Uses Discord Bot API (DISCORD_BOT_TOKEN)
+    # Session 399: Added API-based spiders so they get routed through collect_spider_data_sync
+    'youtube': [
+        'YOUTUBE_API',  # Marker for custom handler - uses YOUTUBE_API_KEY or GOOGLE_API_KEY
+    ],
+
+    'bluesky': [
+        'BLUESKY_API',  # Marker for custom handler - uses BLUESKY_IDENTIFIER, BLUESKY_PASSWORD
+    ],
+
+    'discord': [
+        'DISCORD_API',  # Marker for custom handler - uses DISCORD_BOT_TOKEN
+    ],
+
+    # Session 399: Added giphy and newsapi (they have handlers in PHASE3_API_SPIDERS)
+    'giphy': [
+        'GIPHY_API',  # Marker for custom handler - uses GIPHY_API_KEY
+    ],
+
+    'newsapi': [
+        'NEWS_API',  # Marker for custom handler - uses NEWS_API_KEY
+    ],
+
+    # Session 399: Added finnhub and polygon_gaming
+    'finnhub': [
+        'FINNHUB_API',  # Marker for custom handler - uses FINNHUB_API_KEY
+    ],
+
+    'polygon_gaming': [
+        'POLYGON_GAMING_RSS',  # Marker for custom handler - uses polygon.com RSS feeds
+    ],
+
+    # Session 399: Added adzuna (already has handler in PHASE3_API_SPIDERS)
+    'adzuna': [
+        'ADZUNA_API',  # Marker for custom handler - uses ADZUNA_APP_ID, ADZUNA_APP_KEY
+    ],
+
+    # Session 399: Added unsplash and lii (already have handlers in PHASE3_API_SPIDERS)
+    'unsplash': [
+        'UNSPLASH_API',  # Marker for custom handler - uses UNSPLASH_ACCESS_KEY
+    ],
+
+    'lii': [
+        'LII_SCRAPER',  # Marker for custom handler - scrapes Cornell LII
+    ],
+
+    # Session 399: Legal spiders
+    'findlaw': [
+        'FINDLAW_SCRAPER',  # Marker for custom handler
+    ],
+    'legal_news': [
+        'LEGAL_NEWS_RSS',  # SCOTUSblog + Google News Legal
+    ],
+    'courtlistener': [
+        'COURTLISTENER_API',  # Marker for custom handler - uses public API
+    ],
 }
 
 # User agent to avoid blocks
@@ -775,7 +832,11 @@ async def _collect_youtube_data() -> Dict[str, Any]:
 
 
 async def _collect_discord_data() -> Dict[str, Any]:
-    """Collect data from Discord Bot API"""
+    """Collect data from Discord Bot API.
+
+    Session 399: Implemented actual Discord data collection.
+    Fetches guilds the bot is in, and recent messages from text channels.
+    """
     import os
 
     bot_token = os.getenv('DISCORD_BOT_TOKEN', '')
@@ -788,14 +849,96 @@ async def _collect_discord_data() -> Dict[str, Any]:
             'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
-    # Discord bot implementation would go here
-    # For now, return empty as we don't have the bot token yet
-    return {
-        'items': [],
-        'source': 'discord',
-        'message': 'Discord bot ready - configure bot and add to servers',
-        'timestamp': datetime.now(timezone.utc).isoformat()
+    all_items = []
+    headers = {
+        'Authorization': f'Bot {bot_token}',
+        'Content-Type': 'application/json'
     }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Get guilds (servers) the bot is in
+            guilds_url = 'https://discord.com/api/v10/users/@me/guilds'
+            async with session.get(guilds_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    guilds = await response.json()
+                    logger.info(f"Discord: Bot is in {len(guilds)} guilds")
+
+                    # Collect info about each guild
+                    for guild in guilds[:5]:  # Limit to first 5 guilds
+                        guild_item = {
+                            'title': f"Server: {guild.get('name', 'Unknown')}",
+                            'description': f"Discord server with ID {guild.get('id')}",
+                            'guild_id': guild.get('id'),
+                            'guild_name': guild.get('name'),
+                            'icon': f"https://cdn.discordapp.com/icons/{guild.get('id')}/{guild.get('icon')}.png" if guild.get('icon') else None,
+                            'owner': guild.get('owner', False),
+                            'permissions': guild.get('permissions'),
+                            'source': 'discord',
+                            'type': 'guild',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        }
+                        all_items.append(guild_item)
+
+                        # Try to get channels for this guild
+                        try:
+                            channels_url = f"https://discord.com/api/v10/guilds/{guild.get('id')}/channels"
+                            async with session.get(channels_url, headers=headers,
+                                                   timeout=aiohttp.ClientTimeout(total=5)) as ch_response:
+                                if ch_response.status == 200:
+                                    channels = await ch_response.json()
+                                    text_channels = [c for c in channels if c.get('type') == 0][:3]
+
+                                    for channel in text_channels:
+                                        channel_item = {
+                                            'title': f"#{channel.get('name', 'unknown')} in {guild.get('name')}",
+                                            'description': channel.get('topic', 'No topic set'),
+                                            'channel_id': channel.get('id'),
+                                            'channel_name': channel.get('name'),
+                                            'guild_name': guild.get('name'),
+                                            'source': 'discord',
+                                            'type': 'channel',
+                                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                                        }
+                                        all_items.append(channel_item)
+                        except Exception as e:
+                            logger.debug(f"Could not fetch channels for {guild.get('name')}: {e}")
+
+                        await asyncio.sleep(0.3)  # Rate limiting
+                elif response.status == 401:
+                    return {
+                        'items': [],
+                        'source': 'discord',
+                        'error': 'Invalid bot token - check DISCORD_BOT_TOKEN',
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                else:
+                    error_text = await response.text()
+                    return {
+                        'items': [],
+                        'source': 'discord',
+                        'error': f'Discord API error {response.status}: {error_text[:100]}',
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+
+        logger.info(f"Discord: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'discord',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Discord collection error: {e}")
+        return {
+            'items': [],
+            'source': 'discord',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
 
 
 # === SESSION 396: PHASE 3 API HANDLERS ===
@@ -1049,6 +1192,173 @@ async def _collect_giphy_data() -> Dict[str, Any]:
         return {
             'items': [],
             'source': 'giphy',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_spotify_data() -> Dict[str, Any]:
+    """Collect new releases and featured playlists from Spotify API.
+
+    Session 399: Added Spotify handler for trending music data.
+    Uses client credentials flow (no user auth needed).
+    """
+    import os
+    import base64
+
+    client_id = os.getenv('SPOTIFY_CLIENT_ID', '')
+    client_secret = os.getenv('SPOTIFY_CLIENT_SECRET', '')
+
+    if not client_id or not client_secret:
+        return {
+            'items': [],
+            'source': 'spotify',
+            'error': 'SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not configured',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Get access token using client credentials
+            auth_string = f"{client_id}:{client_secret}"
+            auth_bytes = base64.b64encode(auth_string.encode()).decode()
+
+            token_url = "https://accounts.spotify.com/api/token"
+            async with session.post(
+                token_url,
+                headers={
+                    'Authorization': f'Basic {auth_bytes}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                data={'grant_type': 'client_credentials'},
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                if response.status != 200:
+                    return {
+                        'items': [],
+                        'source': 'spotify',
+                        'error': f'Failed to get Spotify token: {response.status}',
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                token_data = await response.json()
+                access_token = token_data.get('access_token')
+
+            headers = {'Authorization': f'Bearer {access_token}'}
+
+            # Get new releases
+            releases_url = "https://api.spotify.com/v1/browse/new-releases?limit=20"
+            async with session.get(releases_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    albums = data.get('albums', {}).get('items', [])
+                    for album in albums:
+                        artists = ', '.join([a.get('name', '') for a in album.get('artists', [])])
+                        all_items.append({
+                            'title': f"{album.get('name', '')} - {artists}",
+                            'description': f"New release: {album.get('album_type', 'album')} with {album.get('total_tracks', 0)} tracks",
+                            'link': album.get('external_urls', {}).get('spotify', ''),
+                            'image': album.get('images', [{}])[0].get('url', '') if album.get('images') else '',
+                            'release_date': album.get('release_date', ''),
+                            'artists': artists,
+                            'source': 'spotify',
+                            'type': 'new_release',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+            # Get featured playlists
+            playlists_url = "https://api.spotify.com/v1/browse/featured-playlists?limit=10"
+            async with session.get(playlists_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    playlists = data.get('playlists', {}).get('items', [])
+                    for playlist in playlists:
+                        all_items.append({
+                            'title': playlist.get('name', ''),
+                            'description': playlist.get('description', ''),
+                            'link': playlist.get('external_urls', {}).get('spotify', ''),
+                            'image': playlist.get('images', [{}])[0].get('url', '') if playlist.get('images') else '',
+                            'tracks': playlist.get('tracks', {}).get('total', 0),
+                            'source': 'spotify',
+                            'type': 'featured_playlist',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"Spotify: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'spotify',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Spotify collection error: {e}")
+        return {
+            'items': [],
+            'source': 'spotify',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_polygon_gaming_data() -> Dict[str, Any]:
+    """Collect gaming news from Polygon RSS feeds.
+
+    Session 399: Added handler for Polygon gaming news.
+    Uses free RSS feeds, no API key required.
+    """
+    import feedparser
+
+    RSS_FEEDS = {
+        'main': 'https://www.polygon.com/rss/index.xml',
+        'reviews': 'https://www.polygon.com/rss/reviews/index.xml',
+        'features': 'https://www.polygon.com/rss/features/index.xml',
+    }
+
+    all_items = []
+
+    try:
+        for feed_name, feed_url in RSS_FEEDS.items():
+            try:
+                feed = feedparser.parse(feed_url)
+                if feed.entries:
+                    for entry in feed.entries[:15]:
+                        title = entry.get('title', '')
+                        if title:
+                            all_items.append({
+                                'title': title,
+                                'description': entry.get('summary', '')[:300] if entry.get('summary') else '',
+                                'link': entry.get('link', ''),
+                                'published': entry.get('published', ''),
+                                'author': entry.get('author', 'Polygon'),
+                                'tags': [tag.term for tag in entry.get('tags', [])][:5],
+                                'feed_source': feed_name,
+                                'source': 'polygon_gaming',
+                                'type': 'gaming_news',
+                                'fetched_at': datetime.now(timezone.utc).isoformat()
+                            })
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        logger.info(f"Polygon Gaming: collected {len(all_items)} items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'polygon_gaming',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Polygon Gaming collection error: {e}")
+        return {
+            'items': [],
+            'source': 'polygon_gaming',
             'error': str(e),
             'timestamp': datetime.now(timezone.utc).isoformat()
         }
@@ -1354,18 +1664,17 @@ async def _collect_courtlistener_data() -> Dict[str, Any]:
         }
 
 
-async def _collect_justia_data() -> Dict[str, Any]:
-    """Collect legal news and case summaries from Justia.
+async def _collect_legal_news_data() -> Dict[str, Any]:
+    """Collect legal news from SCOTUSblog and Google News.
 
-    Note: Justia has Cloudflare protection, so scraping may not work reliably.
-    Uses RSS feeds instead which are more reliable.
+    Session 399: Renamed from justia (which was blocked by Cloudflare).
+    Sources: SCOTUSblog (Supreme Court) + Google News Legal search.
     """
     all_items = []
 
-    # Justia has some RSS feeds we can use
     rss_feeds = [
-        'https://law.justia.com/cases/new/feed.xml',  # New cases feed
-        'https://www.justia.com/feed/',  # Main feed
+        'https://www.scotusblog.com/feed/',  # Supreme Court news
+        'https://news.google.com/rss/search?q=legal+law+court+ruling&hl=en-US&gl=US&ceid=US:en',  # Legal news
     ]
 
     try:
@@ -1389,29 +1698,29 @@ async def _collect_justia_data() -> Dict[str, Any]:
                                     'description': strip_html_tags(entry.get('summary', entry.get('description', '')))[:500],
                                     'link': entry.get('link', ''),
                                     'published': entry.get('published', ''),
-                                    'tags': ['legal', 'news', 'justia'],
-                                    'source': 'justia',
+                                    'tags': ['legal', 'news', 'court', 'scotus'],
+                                    'source': 'legal_news',
                                     'type': 'legal_news',
                                     'fetched_at': datetime.now(timezone.utc).isoformat()
                                 })
                 except Exception as e:
-                    logger.debug(f"Failed to fetch Justia feed {feed_url}: {e}")
+                    logger.debug(f"Failed to fetch legal news feed {feed_url}: {e}")
                     continue
 
-        logger.info(f"Justia: collected {len(all_items)} legal news items")
+        logger.info(f"Legal News: collected {len(all_items)} items")
 
         return {
             'items': all_items,
             'item_count': len(all_items),
-            'source': 'justia',
+            'source': 'legal_news',
             'collected_at': datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
-        logger.error(f"Justia collection error: {e}")
+        logger.error(f"Legal News collection error: {e}")
         return {
             'items': [],
-            'source': 'justia',
+            'source': 'legal_news',
             'error': str(e),
             'timestamp': datetime.now(timezone.utc).isoformat()
         }
@@ -1560,6 +1869,255 @@ async def _collect_lii_data() -> Dict[str, Any]:
         }
 
 
+async def _collect_sec_edgar_data() -> Dict[str, Any]:
+    """Collect SEC EDGAR filings using the SECSpider class.
+
+    Session 399: Added handler so SEC data is stored in SpiderData for Timeline/Data Feed.
+    Uses the existing SECSpider which fetches from free SEC EDGAR RSS feeds.
+    """
+    try:
+        from ai_core.spiders.specialized.sec_spider import SECSpider
+
+        sec_spider = SECSpider()
+        filings = sec_spider.fetch_data(max_results=30)
+
+        logger.info(f"SEC EDGAR: collected {len(filings)} filings")
+
+        return {
+            'items': filings,
+            'item_count': len(filings),
+            'source': 'sec_edgar',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"SEC EDGAR collection error: {e}")
+        return {
+            'items': [],
+            'source': 'sec_edgar',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_yahoo_finance_data() -> Dict[str, Any]:
+    """Collect financial news from Yahoo Finance RSS.
+
+    Session 399: Using RSS feed instead of API (API has strict rate limits).
+    Provides financial news, stock analysis, and market updates.
+    """
+    all_items = []
+
+    rss_url = 'https://finance.yahoo.com/news/rssindex'
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+
+            async with session.get(rss_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    feed = feedparser.parse(text)
+
+                    for entry in feed.entries[:30]:
+                        all_items.append({
+                            'title': entry.get('title', ''),
+                            'description': strip_html_tags(entry.get('summary', ''))[:500],
+                            'link': entry.get('link', ''),
+                            'published': entry.get('published', ''),
+                            'tags': ['finance', 'stock', 'market', 'investing'],
+                            'source': 'yahoo_finance',
+                            'type': 'financial_news',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"Yahoo Finance: collected {len(all_items)} financial news items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'yahoo_finance',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Yahoo Finance collection error: {e}")
+        return {
+            'items': [],
+            'source': 'yahoo_finance',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_freecodecamp_data() -> Dict[str, Any]:
+    """Collect developer articles from FreeCodeCamp.
+
+    Session 399: Renamed from hashnode (API returns 404).
+    FreeCodeCamp has high-quality developer tutorials and news.
+    """
+    all_items = []
+
+    rss_url = 'https://www.freecodecamp.org/news/rss/'
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+
+            async with session.get(rss_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    feed = feedparser.parse(text)
+
+                    for entry in feed.entries[:25]:
+                        all_items.append({
+                            'title': entry.get('title', ''),
+                            'description': strip_html_tags(entry.get('summary', ''))[:500],
+                            'link': entry.get('link', ''),
+                            'published': entry.get('published', ''),
+                            'author': entry.get('author', ''),
+                            'tags': ['developer', 'tutorial', 'programming', 'freecodecamp'],
+                            'source': 'freecodecamp',
+                            'type': 'developer_article',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"FreeCodeCamp: collected {len(all_items)} articles")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'freecodecamp',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"FreeCodeCamp collection error: {e}")
+        return {
+            'items': [],
+            'source': 'freecodecamp',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_coursera_data() -> Dict[str, Any]:
+    """Collect online learning content from Coursera Blog.
+
+    Session 399: Renamed from udemy (API requires auth).
+    Coursera blog has education industry news and learning trends.
+    """
+    all_items = []
+
+    rss_url = 'https://blog.coursera.org/feed/'
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+
+            async with session.get(rss_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    feed = feedparser.parse(text)
+
+                    for entry in feed.entries[:20]:
+                        all_items.append({
+                            'title': entry.get('title', ''),
+                            'description': strip_html_tags(entry.get('summary', ''))[:500],
+                            'link': entry.get('link', ''),
+                            'published': entry.get('published', ''),
+                            'tags': ['education', 'online-learning', 'courses', 'coursera'],
+                            'source': 'coursera',
+                            'type': 'education_content',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"Coursera: collected {len(all_items)} education articles")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'coursera',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Coursera collection error: {e}")
+        return {
+            'items': [],
+            'source': 'coursera',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_techcrunch_startups_data() -> Dict[str, Any]:
+    """Collect startup and innovation news from TechCrunch.
+
+    Session 399: Renamed from indiegogo (API blocked).
+    TechCrunch Startups has fresh, daily startup/funding news.
+    """
+    all_items = []
+
+    rss_url = 'https://techcrunch.com/category/startups/feed/'
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+
+            async with session.get(rss_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=15)) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    feed = feedparser.parse(text)
+
+                    for entry in feed.entries[:25]:
+                        all_items.append({
+                            'title': entry.get('title', ''),
+                            'description': strip_html_tags(entry.get('summary', ''))[:500],
+                            'link': entry.get('link', ''),
+                            'published': entry.get('published', ''),
+                            'author': entry.get('author', ''),
+                            'tags': ['startups', 'funding', 'innovation', 'techcrunch'],
+                            'source': 'techcrunch_startups',
+                            'type': 'startup_news',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"TechCrunch Startups: collected {len(all_items)} articles")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'techcrunch_startups',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"TechCrunch Startups collection error: {e}")
+        return {
+            'items': [],
+            'source': 'techcrunch_startups',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
 async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     """
     Collect real data for a specific spider.
@@ -1568,6 +2126,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     Session 394: Special handling for HackerNews to fetch full story content.
     Session 396: Added Phase 3 API handlers for key-based spiders.
     Session 397: Added legal spiders (courtlistener, justia, findlaw, lii).
+    Session 399: Added yahoo_finance, freecodecamp, coursera, techcrunch_startups handlers.
     """
     # API-based spiders use their own implementations
     API_SPIDERS = ['bluesky', 'youtube', 'discord']
@@ -1576,6 +2135,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         return await _collect_api_spider_data(spider_name)
 
     # Session 396-397: Phase 3 API key-based spiders + Legal spiders
+    # Session 399: Added sec_edgar, spotify
     PHASE3_API_SPIDERS = {
         'polygon_finance': _collect_polygon_data,
         'etherscan': _collect_etherscan_data,
@@ -1586,9 +2146,19 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         'finnhub': _collect_finnhub_data,
         # Session 397: Legal spiders
         'courtlistener': _collect_courtlistener_data,
-        'justia': _collect_justia_data,
+        'legal_news': _collect_legal_news_data,  # Session 399: Renamed from justia
         'findlaw': _collect_findlaw_data,
         'lii': _collect_lii_data,
+        # Session 399: Additional API spiders
+        'spotify': _collect_spotify_data,
+        'polygon_gaming': _collect_polygon_gaming_data,
+        # Session 399: SEC EDGAR filings
+        'sec_edgar': _collect_sec_edgar_data,
+        # Session 399: Final 4 spiders (renamed for accuracy)
+        'yahoo_finance': _collect_yahoo_finance_data,
+        'freecodecamp': _collect_freecodecamp_data,  # Was hashnode
+        'coursera': _collect_coursera_data,  # Was udemy
+        'techcrunch_startups': _collect_techcrunch_startups_data,  # Was indiegogo
     }
 
     if spider_name in PHASE3_API_SPIDERS:

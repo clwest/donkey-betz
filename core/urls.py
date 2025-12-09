@@ -157,6 +157,10 @@ from core.views_spider_intelligence import (
     market_research_dashboard,  # Session 344
     dashboard_stats as spider_dashboard_stats,  # Session 345
     opportunities_dashboard,  # Session 385
+    # Session 399: Spider Data UI
+    spider_data_feed,
+    spider_knowledge,
+    spider_timeline,
 )
 
 # Session 219: Import agent intelligence views (Phase A)
@@ -2270,6 +2274,11 @@ urlpatterns = [
 
     # Session 385: Opportunities dashboard (freelance, jobs, crowdfunding, startups)
     path('api/spider-intelligence/opportunities/', opportunities_dashboard, name='spider-intelligence-opportunities'),
+
+    # Session 399: Spider Data UI - Data Feed, Knowledge, Timeline
+    path('api/spider-intelligence/feed/', spider_data_feed, name='spider-intelligence-feed'),
+    path('api/spider-intelligence/knowledge/', spider_knowledge, name='spider-intelligence-knowledge'),
+    path('api/spider-intelligence/timeline/', spider_timeline, name='spider-intelligence-timeline'),
 
     # Session 388: Income Action Pipeline - Spider to Income Bridge
     path('api/income/save-opportunity/', income_save_opportunity, name='income-save-opportunity'),

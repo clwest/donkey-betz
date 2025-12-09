@@ -475,5 +475,534 @@ async function generateDailyReport() {
         content.innerHTML = '<p class="text-danger text-center">Failed to generate report</p>';
     }
 }
+
+// ============================================================
+// SESSION 399: DATA FEED, KNOWLEDGE, TIMELINE FUNCTIONS
+// ============================================================
+
+// Data Feed State
+let feedState = {
+    category: 'all',
+    source: 'all',
+    offset: 0,
+    items: []
+};
+
+// Category Colors
+function getCategoryColor(category) {
+    const colors = {
+        tech: '#3b82f6',
+        news: '#ec4899',
+        financial: '#22c55e',
+        jobs: '#f59e0b',
+        freelance: '#06b6d4',
+        creative: '#8b5cf6',
+        community: '#14b8a6',
+        design: '#f472b6',
+        legal: '#10b981',
+        innovation: '#a855f7'
+    };
+    return colors[category] || '#6b7280';
+}
+
+// Load Data Feed
+async function loadDataFeed(reset = true) {
+    if (reset) {
+        feedState.offset = 0;
+        feedState.items = [];
+    }
+
+    const container = document.getElementById('data-feed-container');
+    const sort = document.getElementById('feed-sort-select')?.value || 'recent';
+
+    if (reset) {
+        container.innerHTML = '<p class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span> Loading feed...</p>';
+    }
+
+    try {
+        const params = new URLSearchParams({
+            category: feedState.category,
+            source: feedState.source,
+            limit: 50,
+            offset: feedState.offset,
+            sort: sort
+        });
+
+        const response = await fetch(`/api/spider-intelligence/feed/?${params}`, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            feedState.items = reset ? data.items : [...feedState.items, ...data.items];
+            renderFeedItems();
+
+            // Update stats
+            document.getElementById('feed-item-count').textContent = `${feedState.items.length} items`;
+            document.getElementById('feed-total-records').textContent = data.stats.total_records.toLocaleString();
+            document.getElementById('feed-with-embeddings').textContent = data.stats.with_embeddings.toLocaleString();
+            document.getElementById('feed-active-sources').textContent = data.stats.active_sources;
+
+            // Populate source dropdown
+            const sourceSelect = document.getElementById('feed-source-select');
+            if (sourceSelect && reset) {
+                sourceSelect.innerHTML = '<option value="all">All Sources</option>' +
+                    data.sources.map(s => `<option value="${s}">${s}</option>`).join('');
+            }
+
+            // Hide load more if no more items
+            document.getElementById('load-more-btn').style.display = data.has_more ? 'inline-block' : 'none';
+        }
+    } catch (error) {
+        console.error('Error loading feed:', error);
+        container.innerHTML = '<p class="text-danger text-center py-4">Failed to load feed</p>';
+    }
+}
+
+// Render Feed Items
+function renderFeedItems() {
+    const container = document.getElementById('data-feed-container');
+
+    if (feedState.items.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No items found</p>';
+        return;
+    }
+
+    const html = feedState.items.map(item => {
+        const color = getCategoryColor(item.category);
+        const meta = item.metadata || {};
+
+        // Build metadata display
+        let metaHtml = '';
+        if (meta.company) metaHtml += `<small class="text-muted">${meta.company}</small>`;
+        if (meta.salary_min && meta.salary_max) {
+            metaHtml += `<small class="text-success ms-2">$${meta.salary_min.toLocaleString()} - $${meta.salary_max.toLocaleString()}</small>`;
+        }
+        if (meta.price) {
+            const changeColor = (meta.change || 0) >= 0 ? '#22c55e' : '#ef4444';
+            const changeSign = (meta.change || 0) >= 0 ? '+' : '';
+            metaHtml += `<small style="color: #f59e0b;">$${meta.price.toLocaleString()}</small>`;
+            if (meta.change !== null && meta.change !== undefined) {
+                metaHtml += `<small style="color: ${changeColor};"> (${changeSign}${meta.change.toFixed(2)}%)</small>`;
+            }
+        }
+        if (meta.subreddit) metaHtml += `<small class="text-muted">r/${meta.subreddit}</small>`;
+
+        // Tags
+        let tagsHtml = '';
+        if (meta.tags && meta.tags.length > 0) {
+            tagsHtml = `<div class="mt-2">${meta.tags.slice(0, 5).map(t =>
+                `<span class="badge me-1" style="background: rgba(255,255,255,0.1); font-size: 10px;">${t}</span>`
+            ).join('')}</div>`;
+        }
+
+        return `
+            <div class="feed-item p-3 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid ${color};">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div style="flex: 1;">
+                        <a href="${item.url || '#'}" target="_blank" class="text-light text-decoration-none fw-bold" style="line-height: 1.3;">
+                            ${item.title || 'Untitled'}
+                        </a>
+                        ${metaHtml ? `<div class="mt-1">${metaHtml}</div>` : ''}
+                        ${item.description ? `<small class="text-muted d-block mt-1">${item.description.substring(0, 150)}${item.description.length > 150 ? '...' : ''}</small>` : ''}
+                    </div>
+                    <div class="text-end ms-3" style="min-width: 80px;">
+                        <span class="badge" style="background: ${color}20; color: ${color}; font-size: 10px;">${item.source}</span>
+                        ${item.score ? `<small class="text-muted d-block mt-1">${item.score} pts</small>` : ''}
+                    </div>
+                </div>
+                ${tagsHtml}
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+// Filter by Category
+function filterFeedByCategory(category, element) {
+    feedState.category = category;
+    loadDataFeed(true);
+
+    // Update active pill
+    document.querySelectorAll('#feed-category-pills .badge').forEach(el => {
+        el.classList.remove('active');
+    });
+    if (element) element.classList.add('active');
+}
+
+// Filter by Source
+function filterFeedBySource(source) {
+    feedState.source = source;
+    loadDataFeed(true);
+}
+
+// Load More Items
+function loadMoreFeedItems() {
+    feedState.offset += 50;
+    loadDataFeed(false);
+}
+
+// ============================================================
+// KNOWLEDGE INTEGRATION FUNCTIONS
+// ============================================================
+
+// Load Knowledge Sources
+async function loadKnowledgeSources() {
+    const container = document.getElementById('knowledge-list');
+    const typeContainer = document.getElementById('knowledge-by-type');
+    const transfersContainer = document.getElementById('recent-transfers');
+    const typeFilter = document.getElementById('knowledge-type-filter')?.value || 'all';
+
+    container.innerHTML = '<p class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span> Loading knowledge...</p>';
+
+    try {
+        const response = await fetch(`/api/spider-intelligence/knowledge/?type=${typeFilter}&limit=50`, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            // Update count badge
+            document.getElementById('knowledge-count').textContent = data.total.toLocaleString();
+
+            // Render knowledge list
+            if (data.knowledge.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-4">No knowledge sources found</p>';
+            } else {
+                container.innerHTML = data.knowledge.map(k => `
+                    <div class="knowledge-item p-3 mb-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <strong class="text-light" style="flex: 1;">${k.title}</strong>
+                            <span class="badge ms-2" style="background: rgba(139, 92, 246, 0.3);">${k.type}</span>
+                        </div>
+                        ${k.summary ? `<p class="text-muted small mb-1 mt-1">${k.summary.substring(0, 200)}${k.summary.length > 200 ? '...' : ''}</p>` : ''}
+                        <div class="d-flex gap-3 mt-2">
+                            <small class="text-muted">Confidence: <span style="color: ${k.confidence > 0.7 ? '#22c55e' : k.confidence > 0.4 ? '#f59e0b' : '#ef4444'};">${(k.confidence * 100).toFixed(0)}%</span></small>
+                            <small class="text-muted">Data points: ${k.data_points}</small>
+                        </div>
+                        ${k.spider_sources && k.spider_sources.length > 0 ? `
+                            <div class="mt-2">
+                                ${k.spider_sources.slice(0, 5).map(s => `<span class="badge me-1" style="background: rgba(249, 115, 22, 0.2); font-size: 9px;">${s}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            }
+
+            // Render type counts
+            typeContainer.innerHTML = data.type_counts.map(tc => `
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-light text-capitalize">${tc.knowledge_type.replace(/_/g, ' ')}</span>
+                    <span class="badge bg-secondary">${tc.count}</span>
+                </div>
+            `).join('') || '<p class="text-muted small">No data</p>';
+
+            // Render transfers
+            if (data.transfers.length === 0) {
+                transfersContainer.innerHTML = '<p class="text-muted small text-center">No transfers yet</p>';
+            } else {
+                transfersContainer.innerHTML = data.transfers.map(t => `
+                    <div class="transfer-item p-2 mb-2" style="background: rgba(249, 115, 22, 0.1); border-radius: 4px; font-size: 12px;">
+                        <div class="text-light">${t.from} <span style="color: #f97316;">→</span> ${t.to}</div>
+                        <small class="text-muted">${t.knowledge}</small>
+                        ${t.useful ? '<span class="badge bg-success ms-1" style="font-size: 9px;">useful</span>' : ''}
+                    </div>
+                `).join('');
+            }
+
+            // Update stats
+            document.getElementById('stats-knowledge-sources').textContent = data.stats.total_sources.toLocaleString();
+            document.getElementById('stats-transfers').textContent = data.stats.total_transfers.toLocaleString();
+            document.getElementById('stats-memories').textContent = data.stats.total_memories.toLocaleString();
+            document.getElementById('stats-avg-confidence').textContent = `${data.stats.avg_confidence}%`;
+        }
+    } catch (error) {
+        console.error('Error loading knowledge:', error);
+        container.innerHTML = '<p class="text-danger text-center py-4">Failed to load knowledge</p>';
+    }
+}
+
+// ============================================================
+// TIMELINE FUNCTIONS
+// ============================================================
+
+let timelineRange = '24h';
+
+// Load Timeline Data
+async function loadTimeline() {
+    const chartContainer = document.getElementById('timeline-chart');
+    const gridContainer = document.getElementById('freshness-grid');
+
+    chartContainer.innerHTML = '<p class="text-center text-muted py-5"><span class="spinner-border spinner-border-sm me-2"></span> Loading timeline...</p>';
+    gridContainer.innerHTML = '<p class="text-center text-muted py-4 col-12"><span class="spinner-border spinner-border-sm me-2"></span> Loading freshness...</p>';
+
+    try {
+        const response = await fetch(`/api/spider-intelligence/timeline/?range=${timelineRange}`, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            renderTimelineChart(data.timeline);
+            renderFreshnessGrid(data.freshness);
+
+            // Update summary stats
+            document.getElementById('timeline-total').textContent = `Total: ${data.summary.total_items.toLocaleString()}`;
+            document.getElementById('timeline-peak').textContent = `Peak: ${data.summary.peak_count.toLocaleString()}`;
+        }
+    } catch (error) {
+        console.error('Error loading timeline:', error);
+        chartContainer.innerHTML = '<p class="text-danger text-center py-5">Failed to load timeline</p>';
+    }
+}
+
+// Render Timeline Chart (CSS-based bar chart)
+function renderTimelineChart(timeline) {
+    const container = document.getElementById('timeline-chart');
+
+    if (!timeline || timeline.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-5">No data for this time range</p>';
+        return;
+    }
+
+    const maxCount = Math.max(...timeline.map(t => t.count), 1);
+    const barWidth = Math.max(100 / timeline.length - 1, 2);
+
+    container.innerHTML = `
+        <div class="d-flex align-items-end justify-content-between" style="height: 160px; padding: 0 5px;">
+            ${timeline.map(t => {
+                const height = Math.max((t.count / maxCount) * 140, 4);
+                const date = new Date(t.period);
+                const label = timelineRange === '24h'
+                    ? date.getHours() + ':00'
+                    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return `
+                    <div class="text-center" style="flex: 1; max-width: ${barWidth}%;">
+                        <div class="timeline-bar" style="height: ${height}px; background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%); border-radius: 4px 4px 0 0; margin: 0 1px; cursor: pointer;" title="${t.count} items at ${label}"></div>
+                        <small class="text-muted d-block" style="font-size: 9px; margin-top: 4px; white-space: nowrap; overflow: hidden;">${label}</small>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// Render Freshness Grid
+function renderFreshnessGrid(freshness) {
+    const container = document.getElementById('freshness-grid');
+
+    if (!freshness || freshness.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4 col-12">No sources found</p>';
+        return;
+    }
+
+    container.innerHTML = freshness.slice(0, 24).map(f => {
+        let color, statusIcon;
+        if (f.status === 'fresh') {
+            color = '#22c55e';
+            statusIcon = '&#9679;';
+        } else if (f.status === 'aging') {
+            color = '#f59e0b';
+            statusIcon = '&#9679;';
+        } else {
+            color = '#ef4444';
+            statusIcon = '&#9679;';
+        }
+
+        const ageText = f.age_minutes < 60
+            ? `${Math.round(f.age_minutes)}m ago`
+            : f.age_minutes < 1440
+                ? `${Math.round(f.age_minutes / 60)}h ago`
+                : `${Math.round(f.age_minutes / 1440)}d ago`;
+
+        return `
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-2">
+                <div class="freshness-card p-2 text-center" style="background: ${color}15; border: 1px solid ${color}40; border-radius: 8px; cursor: pointer;" onclick="filterFeedBySource('${f.source}'); document.getElementById('intel-feed-tab').click();">
+                    <div class="text-light small text-truncate" title="${f.source}">${f.source}</div>
+                    <div style="color: ${color}; font-size: 11px;">${statusIcon} ${ageText}</div>
+                    <small class="text-muted">${f.total.toLocaleString()} records</small>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Set Timeline Range
+function setTimelineRange(range, button) {
+    timelineRange = range;
+    loadTimeline();
+
+    // Update active button
+    document.querySelectorAll('.timeline-range-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'rgba(6, 182, 212, 0.1)';
+    });
+    if (button) {
+        button.classList.add('active');
+        button.style.background = 'rgba(6, 182, 212, 0.3)';
+    }
+}
+
+// ============================================================
+// SESSION 399: REAL-TIME SPIDER WEBSOCKET CONNECTION
+// ============================================================
+
+let spiderWebSocket = null;
+let spiderReconnectAttempts = 0;
+const MAX_SPIDER_RECONNECT_ATTEMPTS = 5;
+
+function connectSpiderWebSocket() {
+    if (spiderWebSocket && spiderWebSocket.readyState === WebSocket.OPEN) {
+        return; // Already connected
+    }
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/spider-intelligence/`;
+
+    try {
+        spiderWebSocket = new WebSocket(wsUrl);
+
+        spiderWebSocket.onopen = function() {
+            console.log('Spider Intelligence WebSocket connected');
+            spiderReconnectAttempts = 0;
+            // Request recent updates on connect
+            spiderWebSocket.send(JSON.stringify({ action: 'get_recent_updates' }));
+        };
+
+        spiderWebSocket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'spider_update') {
+                // Show toast notification for spider completion
+                showSpiderToast(data);
+
+                // Refresh data if on relevant tab
+                if (data.item_count > 0) {
+                    // Refresh timeline if viewing it
+                    if (document.getElementById('intel-timeline')?.classList.contains('show')) {
+                        loadTimeline();
+                    }
+                    // Refresh feed if viewing it
+                    if (document.getElementById('intel-data-feed')?.classList.contains('show')) {
+                        loadDataFeed(false); // Don't reset pagination
+                    }
+                }
+            } else if (data.type === 'recent_updates') {
+                console.log('Received recent spider updates:', data.updates.length);
+            }
+        };
+
+        spiderWebSocket.onclose = function(event) {
+            console.log('Spider Intelligence WebSocket closed:', event.code);
+            spiderWebSocket = null;
+
+            // Attempt reconnection with backoff
+            if (spiderReconnectAttempts < MAX_SPIDER_RECONNECT_ATTEMPTS) {
+                spiderReconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, spiderReconnectAttempts), 30000);
+                console.log(`Reconnecting spider WebSocket in ${delay}ms (attempt ${spiderReconnectAttempts})`);
+                setTimeout(connectSpiderWebSocket, delay);
+            }
+        };
+
+        spiderWebSocket.onerror = function(error) {
+            console.error('Spider Intelligence WebSocket error:', error);
+        };
+
+    } catch (error) {
+        console.error('Failed to create Spider WebSocket:', error);
+    }
+}
+
+function showSpiderToast(data) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('spider-toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'spider-toast-container';
+        toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; max-width: 350px;';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'spider-toast';
+    toast.style.cssText = `
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 1px solid #f97316;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        animation: slideIn 0.3s ease-out;
+        color: white;
+    `;
+
+    const itemText = data.item_count === 1 ? 'item' : 'items';
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 20px;">&#128375;</span>
+            <div>
+                <strong style="color: #f97316;">${data.spider_name}</strong>
+                <div style="font-size: 12px; color: #94a3b8;">
+                    Collected ${data.item_count} ${itemText} from <span style="color: #22c55e;">${data.category || 'general'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Remove toast after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+// Add toast animations
+const toastStyles = document.createElement('style');
+toastStyles.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(toastStyles);
+
+// Connect WebSocket when Intelligence tab is shown
+document.addEventListener('DOMContentLoaded', function() {
+    // Connect when page loads if on Intelligence tab
+    const trendingTab = document.getElementById('trending');
+    if (trendingTab) {
+        // Use MutationObserver to detect when tab becomes visible
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.target.classList.contains('active') ||
+                    mutation.target.classList.contains('show')) {
+                    connectSpiderWebSocket();
+                }
+            });
+        });
+
+        observer.observe(trendingTab, { attributes: true, attributeFilter: ['class'] });
+
+        // Also connect if tab is already visible
+        if (trendingTab.classList.contains('active') || trendingTab.classList.contains('show')) {
+            connectSpiderWebSocket();
+        }
+    }
+
+    // Connect when Intelligence tab link is clicked
+    const intelTabLink = document.querySelector('[data-bs-target="#trending"]');
+    if (intelTabLink) {
+        intelTabLink.addEventListener('shown.bs.tab', connectSpiderWebSocket);
+    }
+});
 </script>
 <!-- END SESSION 208: SPIDER INTELLIGENCE FUNCTIONS -->

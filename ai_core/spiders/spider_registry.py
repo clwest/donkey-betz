@@ -27,7 +27,7 @@ from .specialized.tech_community_spider import TechCommunitySpider
 
 # Import legal spiders
 from .specialized.courtlistener_spider import CourtListenerSpider
-from .specialized.justia_spider import JustiaSpider
+from .specialized.legal_news_spider import LegalNewsSpider  # Session 399: Replaced JustiaSpider
 from .specialized.findlaw_spider import FindLawSpider
 from .specialized.lii_spider import LegalInformationInstituteSpider
 
@@ -41,14 +41,14 @@ from .specialized.mit_tech_review_spider import MITTechReviewSpider
 from .specialized.wired_spider import WiredSpider
 
 # Session 218: DESIGN spiders
-from .specialized.dribbble_spider import DribbbleSpider
+# Session 399: DribbbleSpider removed - blocked, now using awwwards via PHASE3_API_SPIDERS
 from .specialized.behance_spider import BehanceSpider
 
 # Session 218: FREELANCE spiders (Session 397: Removed AngelList - no public API)
 from .specialized.weworkremotely_spider import WeWorkRemotelySpider
 
 # Session 218: EDUCATION spiders (Session 397: Removed teachable, skillshare - no public API)
-from .specialized.udemy_spider import UdemySpider
+# Session 399: UdemySpider removed - API requires auth, now using coursera via PHASE3_API_SPIDERS
 
 # Session 218: FINANCIAL spiders (Session 397: Removed opensea, seekingalpha, bloomberg, reuters - no public API)
 from .specialized.etherscan_spider import EtherscanSpider
@@ -56,8 +56,8 @@ from .specialized.etherscan_spider import EtherscanSpider
 # Session 218: TECH spiders
 from .specialized.hackernews_spider import HackerNewsSpider
 from .specialized.devto_spider import DevToSpider
-from .specialized.hashnode_spider import HashnodeSpider
-from .specialized.indiegogo_spider import IndiegogoSpider
+# Session 399: HashnodeSpider removed - API returns 404, now using freecodecamp via PHASE3_API_SPIDERS
+# Session 399: IndiegogoSpider removed - API blocked, now using techcrunch_startups via PHASE3_API_SPIDERS
 from .specialized.kickstarter_spider import KickstarterSpider
 
 # Import financial API spiders (CRITICAL FIX: These were built but not registered!)
@@ -75,7 +75,7 @@ from .specialized.unsplash_spider import UnsplashSpider
 from .specialized.adzuna_spider import AdzunaSpider
 
 # Session 294: CUSTOMER RESEARCH SPIDERS (4 new)
-from .specialized.indiehackers_spider import IndieHackersSpider
+# Session 399: IndieHackersSpider removed - RSS broken, now using hackernoon via PHASE3_API_SPIDERS
 from .specialized.bluesky_spider import BlueSkySpider
 from .specialized.youtube_spider import YouTubeSpider
 from .specialized.discord_spider import DiscordSpider
@@ -103,7 +103,7 @@ from .specialized.lifehacker_spider import LifehackerSpider
 
 # Session 343: Phase 1 RSS Expansion - Batch 2 (12 new RSS spiders)
 # Major News (RSS - No Auth Required)
-from .specialized.cnn_spider import CNNSpider
+# Session 399: CNNSpider removed - RSS feeds stale (2023 content), now using google_news via PHASE3_API_SPIDERS
 from .specialized.reuters_rss_spider import ReutersRSSSpider
 
 # Science & Health (RSS - No Auth Required)
@@ -221,11 +221,13 @@ class SpiderRegistry:
             'targets': ['producthunt.com']
         })
 
-        self.register_spider('udemy', UdemySpider, {
+        # Session 399: Renamed udemy → coursera (API requires auth, using Coursera Blog RSS)
+        # Handler: _collect_coursera_data in real_data_collector.py PHASE3_API_SPIDERS
+        self.register_spider('coursera', BaseIntelligenceSpider, {
             'category': 'education',
             'priority': 1,
             'rate_limit': 1.0,
-            'targets': ['udemy.com']
+            'targets': ['blog.coursera.org/feed/']
         })
 
         # === SESSION 397: WORKING FINANCIAL SPIDERS ===
@@ -278,18 +280,22 @@ class SpiderRegistry:
             'targets': ['dev.to']
         })
 
-        self.register_spider('hashnode', HashnodeSpider, {
+        # Session 399: Renamed hashnode → freecodecamp (API returns 404)
+        # Handler: _collect_freecodecamp_data in real_data_collector.py PHASE3_API_SPIDERS
+        self.register_spider('freecodecamp', BaseIntelligenceSpider, {
             'category': 'tech',
             'priority': 1,
             'rate_limit': 1.0,
-            'targets': ['hashnode.com']
+            'targets': ['freecodecamp.org/news/rss/']
         })
 
-        self.register_spider('indiegogo', IndiegogoSpider, {
+        # Session 399: Renamed indiegogo → techcrunch_startups (API blocked 403)
+        # Handler: _collect_techcrunch_startups_data in real_data_collector.py PHASE3_API_SPIDERS
+        self.register_spider('techcrunch_startups', BaseIntelligenceSpider, {
             'category': 'tech',
             'priority': 1,
             'rate_limit': 1.0,
-            'targets': ['indiegogo.com']
+            'targets': ['techcrunch.com/category/startups/feed/']
         })
 
         self.register_spider('kickstarter', KickstarterSpider, {
@@ -307,11 +313,12 @@ class SpiderRegistry:
             'targets': ['courtlistener.com/api']
         })
 
-        self.register_spider('justia', JustiaSpider, {
+        # Session 399: Renamed from 'justia' (blocked by Cloudflare)
+        self.register_spider('legal_news', LegalNewsSpider, {
             'category': 'legal',
             'priority': 2,
             'rate_limit': 1.0,
-            'targets': ['news.justia.com', 'law.justia.com']
+            'targets': ['scotusblog.com', 'news.google.com/legal']
         })
 
         self.register_spider('findlaw', FindLawSpider, {
@@ -366,12 +373,13 @@ class SpiderRegistry:
         })
 
         # === SESSION 218: DESIGN SPIDERS (2) ===
-        # Activate Dribbble (was placeholder)
-        self.register_spider('dribbble', DribbbleSpider, {
+        # Session 399: Renamed dribbble → awwwards (Dribbble blocked, returns 202)
+        # Handler: Uses RSS feeds via SPIDER_TARGET_URLS in real_data_collector.py
+        self.register_spider('awwwards', BaseIntelligenceSpider, {
             'category': 'design',
             'priority': 1,
             'rate_limit': 1.0,
-            'targets': ['dribbble.com/shots/']
+            'targets': ['awwwards.com/blog/feed/', 'tympanus.net/codrops/feed/']
         })
 
         # Activate Behance (was placeholder)
@@ -428,13 +436,13 @@ class SpiderRegistry:
 
         # === SESSION 294: CUSTOMER RESEARCH SPIDERS (4) ===
 
-        # Indie Hackers - Maker/founder community discussions
-        # NO API KEY REQUIRED - uses RSS feeds
-        self.register_spider('indiehackers', IndieHackersSpider, {
+        # Session 399: Renamed indiehackers → hackernoon (RSS feed broken, returns HTML)
+        # Handler: Uses RSS feeds via SPIDER_TARGET_URLS in real_data_collector.py
+        self.register_spider('hackernoon', BaseIntelligenceSpider, {
             'category': 'community',
             'priority': 1,
             'rate_limit': 2.0,
-            'targets': ['indiehackers.com/feed.xml']
+            'targets': ['hackernoon.com/feed']
         })
 
         # BlueSky - Twitter/X alternative social network
@@ -548,12 +556,13 @@ class SpiderRegistry:
 
         # === SESSION 343: PHASE 1 RSS EXPANSION - BATCH 2 (12 new) ===
 
-        # CNN - Major news outlet (NO AUTH REQUIRED)
-        self.register_spider('cnn', CNNSpider, {
+        # Session 399: Renamed cnn → google_news (CNN RSS feeds stale - 2023 content)
+        # Handler: Uses RSS feeds via SPIDER_TARGET_URLS in real_data_collector.py
+        self.register_spider('google_news', BaseIntelligenceSpider, {
             'category': 'news',
             'priority': 1,
             'rate_limit': 1.0,
-            'targets': ['rss.cnn.com/rss']
+            'targets': ['news.google.com/rss']
         })
 
         # Reuters RSS - International news (NO AUTH REQUIRED)

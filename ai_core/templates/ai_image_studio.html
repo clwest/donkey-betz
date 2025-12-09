@@ -10736,6 +10736,22 @@
                                 🕷️ Spiders
                             </button>
                         </li>
+                        <!-- Session 399: New Data Exploration Sub-Tabs -->
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="intel-feed-tab" data-bs-toggle="pill" data-bs-target="#intel-data-feed" type="button" role="tab" style="color: #3b82f6;" onclick="loadDataFeed(true)">
+                                📰 Data Feed
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="intel-knowledge-tab" data-bs-toggle="pill" data-bs-target="#intel-knowledge" type="button" role="tab" style="color: #8b5cf6;" onclick="loadKnowledgeSources()">
+                                🧠 Knowledge
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="intel-timeline-tab" data-bs-toggle="pill" data-bs-target="#intel-timeline" type="button" role="tab" style="color: #06b6d4;" onclick="loadTimeline()">
+                                📊 Timeline
+                            </button>
+                        </li>
                     </ul>
                     <style>
                         #intel-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
@@ -11222,6 +11238,159 @@
                             </div>
                         </div>
                         <!-- END SPIDERS SUB-TAB -->
+
+                        <!-- ========== SESSION 399: DATA FEED SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="intel-data-feed" role="tabpanel">
+                            <div class="row">
+                                <!-- Main Feed Column -->
+                                <div class="col-lg-9">
+                                    <!-- Category Filter Pills -->
+                                    <div class="d-flex flex-wrap gap-2 mb-3" id="feed-category-pills">
+                                        <button class="btn btn-sm feed-category-btn active" style="background: rgba(59, 130, 246, 0.3); border: 1px solid #3b82f6; color: #93c5fd;" onclick="filterFeedByCategory('all', this)">All</button>
+                                    </div>
+                                    <!-- Source Filter -->
+                                    <div class="mb-3">
+                                        <select id="feed-source-filter" class="form-select form-select-sm" style="background: #2a2a2a; border: 1px solid #444; color: white; max-width: 200px;" onchange="filterFeedBySource(this.value)">
+                                            <option value="">All Sources</option>
+                                        </select>
+                                    </div>
+                                    <!-- Feed Items -->
+                                    <div id="data-feed-items" style="max-height: 600px; overflow-y: auto;">
+                                        <div class="text-center py-4">
+                                            <div class="spinner-border text-primary" role="status"></div>
+                                            <p class="text-muted mt-2">Loading data feed...</p>
+                                        </div>
+                                    </div>
+                                    <!-- Load More -->
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-outline-primary" onclick="loadDataFeed(false)" id="load-more-feed">Load More</button>
+                                    </div>
+                                </div>
+                                <!-- Stats Sidebar -->
+                                <div class="col-lg-3">
+                                    <div class="card" style="background: #1a1a1a; border: 1px solid #3b82f6;">
+                                        <div class="card-header" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid #3b82f6;">
+                                            <h6 class="mb-0" style="color: #3b82f6;">📊 Feed Stats</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <small class="text-muted">Total Items</small>
+                                                <h4 class="mb-0" style="color: #3b82f6;" id="feed-total-items">--</h4>
+                                            </div>
+                                            <div class="mb-3">
+                                                <small class="text-muted">Categories</small>
+                                                <h4 class="mb-0" style="color: #22c55e;" id="feed-categories-count">--</h4>
+                                            </div>
+                                            <div class="mb-3">
+                                                <small class="text-muted">Sources</small>
+                                                <h4 class="mb-0" style="color: #f97316;" id="feed-sources-count">--</h4>
+                                            </div>
+                                            <hr style="border-color: #333;">
+                                            <small class="text-muted">Last Updated</small>
+                                            <div id="feed-last-updated" style="color: #94a3b8; font-size: 12px;">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END DATA FEED SUB-TAB -->
+
+                        <!-- ========== SESSION 399: KNOWLEDGE SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="intel-knowledge" role="tabpanel">
+                            <div class="row">
+                                <!-- Knowledge List -->
+                                <div class="col-lg-8">
+                                    <h5 class="mb-3" style="color: #8b5cf6;">🧠 Knowledge Sources</h5>
+                                    <div id="knowledge-list" style="max-height: 400px; overflow-y: auto;">
+                                        <div class="text-center py-4">
+                                            <div class="spinner-border" style="color: #8b5cf6;" role="status"></div>
+                                            <p class="text-muted mt-2">Loading knowledge sources...</p>
+                                        </div>
+                                    </div>
+
+                                    <h5 class="mb-3 mt-4" style="color: #ec4899;">🔄 Recent Transfers</h5>
+                                    <div id="recent-transfers" style="max-height: 300px; overflow-y: auto;">
+                                        <p class="text-muted">Loading transfers...</p>
+                                    </div>
+                                </div>
+                                <!-- Stats Sidebar -->
+                                <div class="col-lg-4">
+                                    <div class="card" style="background: #1a1a1a; border: 1px solid #8b5cf6;">
+                                        <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #8b5cf6;">
+                                            <h6 class="mb-0" style="color: #8b5cf6;">📈 Knowledge Stats</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <small class="text-muted">Total Sources</small>
+                                                <h4 class="mb-0" style="color: #8b5cf6;" id="knowledge-count">--</h4>
+                                            </div>
+                                            <div class="mb-3">
+                                                <small class="text-muted">Total Transfers</small>
+                                                <h4 class="mb-0" style="color: #ec4899;" id="transfers-count">--</h4>
+                                            </div>
+                                            <div class="mb-3">
+                                                <small class="text-muted">Agent Memories</small>
+                                                <h4 class="mb-0" style="color: #22c55e;" id="memories-count">--</h4>
+                                            </div>
+                                            <div class="mb-3">
+                                                <small class="text-muted">Avg Confidence</small>
+                                                <h4 class="mb-0" style="color: #f59e0b;" id="avg-confidence">--%</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-3" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header" style="background: rgba(139, 92, 246, 0.05);">
+                                            <h6 class="mb-0 text-muted">By Type</h6>
+                                        </div>
+                                        <div class="card-body" id="knowledge-by-type">
+                                            <p class="text-muted small">Loading...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END KNOWLEDGE SUB-TAB -->
+
+                        <!-- ========== SESSION 399: TIMELINE SUB-TAB ========== -->
+                        <div class="tab-pane fade" id="intel-timeline" role="tabpanel">
+                            <!-- Range Selector -->
+                            <div class="d-flex gap-2 mb-4">
+                                <button class="btn btn-sm timeline-range-btn active" style="background: rgba(6, 182, 212, 0.3); border: 1px solid #06b6d4; color: #67e8f9;" onclick="setTimelineRange('24h', this)">24 Hours</button>
+                                <button class="btn btn-sm timeline-range-btn" style="background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; color: #67e8f9;" onclick="setTimelineRange('7d', this)">7 Days</button>
+                                <button class="btn btn-sm timeline-range-btn" style="background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; color: #67e8f9;" onclick="setTimelineRange('30d', this)">30 Days</button>
+                            </div>
+
+                            <!-- Timeline Chart -->
+                            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #06b6d4;">
+                                <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid #06b6d4;">
+                                    <h6 class="mb-0" style="color: #06b6d4;">📊 Data Collection Timeline</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="timeline-chart" style="height: 200px; display: flex; align-items: flex-end; gap: 2px; padding: 10px 0;">
+                                        <div class="text-center py-4 w-100">
+                                            <div class="spinner-border" style="color: #06b6d4;" role="status"></div>
+                                            <p class="text-muted mt-2">Loading timeline...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Source Freshness Grid -->
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(6, 182, 212, 0.05);">
+                                    <h6 class="mb-0" style="color: #06b6d4;">🎯 Source Freshness</h6>
+                                    <small class="text-muted">Click a source to filter the Data Feed</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row" id="freshness-grid">
+                                        <div class="col-12 text-center py-3">
+                                            <p class="text-muted">Loading freshness data...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END TIMELINE SUB-TAB -->
 
                     </div>
                     <!-- END Sub-Tab Content -->
@@ -46787,6 +46956,457 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         async function refreshSpiderNetwork() {
             await loadSpiderNetwork();
         }
+
+        // ============================================================
+        // SESSION 399: DATA FEED, KNOWLEDGE, AND TIMELINE FUNCTIONS
+        // ============================================================
+
+        let feedOffset = 0;
+        let feedCategory = '';
+        let feedSource = '';
+        let timelineRange = '24h';
+
+        async function loadDataFeed(reset = true) {
+            if (reset) {
+                feedOffset = 0;
+                document.getElementById('data-feed-items').innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2">Loading data feed...</p>
+                    </div>`;
+            }
+
+            try {
+                let url = `/api/spider-intelligence/feed/?limit=20&offset=${feedOffset}`;
+                if (feedCategory) url += `&category=${feedCategory}`;
+                if (feedSource) url += `&source=${feedSource}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    renderFeedItems(data.items, reset);
+                    updateFeedStats(data);
+                    updateFeedFilters(data);
+                    feedOffset += data.items.length;
+                }
+            } catch (error) {
+                console.error('Error loading data feed:', error);
+                document.getElementById('data-feed-items').innerHTML = `
+                    <div class="text-center py-4 text-danger">
+                        <p>Error loading feed: ${error.message}</p>
+                    </div>`;
+            }
+        }
+
+        function renderFeedItems(items, reset) {
+            const container = document.getElementById('data-feed-items');
+
+            if (reset) {
+                container.innerHTML = '';
+            }
+
+            if (items.length === 0 && reset) {
+                container.innerHTML = '<p class="text-muted text-center py-4">No items found</p>';
+                return;
+            }
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'feed-item p-3 mb-2';
+                div.style.cssText = 'background: #252525; border-radius: 8px; border-left: 3px solid #3b82f6;';
+
+                const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
+                const description = item.description ? item.description.substring(0, 200) + (item.description.length > 200 ? '...' : '') : '';
+
+                // Build metadata badges
+                let metaBadges = '';
+                const meta = item.metadata || {};
+                if (meta.stars) metaBadges += `<span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d; font-size: 10px;">⭐ ${meta.stars.toLocaleString()}</span> `;
+                if (meta.forks) metaBadges += `<span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; font-size: 10px;">🔱 ${meta.forks.toLocaleString()}</span> `;
+                if (meta.downloads) metaBadges += `<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #67e8f9; font-size: 10px;">⬇️ ${meta.downloads.toLocaleString()}</span> `;
+                if (meta.likes) metaBadges += `<span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; font-size: 10px;">❤️ ${meta.likes.toLocaleString()}</span> `;
+                if (meta.comments) metaBadges += `<span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-size: 10px;">💬 ${meta.comments}</span> `;
+                if (item.score && !meta.stars && !meta.downloads) metaBadges += `<span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d; font-size: 10px;">🔥 ${item.score}</span> `;
+                if (meta.subreddit) metaBadges += `<span class="badge" style="background: rgba(249, 115, 22, 0.2); color: #fdba74; font-size: 10px;">r/${meta.subreddit}</span> `;
+                if (meta.library) metaBadges += `<span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #86efac; font-size: 10px;">📚 ${meta.library}</span> `;
+
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <a href="${item.url || '#'}" target="_blank" style="color: #93c5fd; text-decoration: none; font-weight: 500;">
+                                ${item.title || 'Untitled'}
+                            </a>
+                            <div class="mt-1">
+                                <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #86efac; font-size: 10px;">${item.category || 'general'}</span>
+                                <span class="badge" style="background: rgba(249, 115, 22, 0.2); color: #fdba74; font-size: 10px;">${item.source || 'unknown'}</span>
+                                ${metaBadges}
+                            </div>
+                            ${description ? `<p class="text-muted small mt-2 mb-0">${description}</p>` : ''}
+                        </div>
+                        <small class="text-muted ms-2" style="white-space: nowrap;">${timestamp}</small>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateFeedStats(data) {
+            document.getElementById('feed-total-items').textContent = data.total_items?.toLocaleString() || '--';
+            document.getElementById('feed-categories-count').textContent = data.categories?.length || '--';
+            document.getElementById('feed-sources-count').textContent = data.sources?.length || '--';
+            document.getElementById('feed-last-updated').textContent = new Date().toLocaleString();
+        }
+
+        function updateFeedFilters(data) {
+            // Update category pills
+            const pillsContainer = document.getElementById('feed-category-pills');
+            let pillsHtml = `<button class="btn btn-sm feed-category-btn ${feedCategory === '' ? 'active' : ''}"
+                style="background: ${feedCategory === '' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.1)'}; border: 1px solid #3b82f6; color: #93c5fd;"
+                onclick="filterFeedByCategory('', this)">All</button>`;
+
+            (data.categories || []).forEach(cat => {
+                const isActive = feedCategory === cat;
+                pillsHtml += `<button class="btn btn-sm feed-category-btn ${isActive ? 'active' : ''}"
+                    style="background: ${isActive ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.1)'}; border: 1px solid #3b82f6; color: #93c5fd;"
+                    onclick="filterFeedByCategory('${cat}', this)">${cat}</button>`;
+            });
+            pillsContainer.innerHTML = pillsHtml;
+
+            // Update source dropdown
+            const sourceSelect = document.getElementById('feed-source-filter');
+            let optionsHtml = '<option value="">All Sources</option>';
+            (data.sources || []).forEach(src => {
+                optionsHtml += `<option value="${src}" ${feedSource === src ? 'selected' : ''}>${src}</option>`;
+            });
+            sourceSelect.innerHTML = optionsHtml;
+        }
+
+        function filterFeedByCategory(category, btn) {
+            feedCategory = category;
+            document.querySelectorAll('.feed-category-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'rgba(59, 130, 246, 0.1)';
+            });
+            if (btn) {
+                btn.classList.add('active');
+                btn.style.background = 'rgba(59, 130, 246, 0.3)';
+            }
+            loadDataFeed(true);
+        }
+
+        function filterFeedBySource(source) {
+            feedSource = source;
+            loadDataFeed(true);
+        }
+
+        async function loadKnowledgeSources() {
+            try {
+                const response = await fetch('/api/spider-intelligence/knowledge/');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    renderKnowledgeList(data.knowledge);
+                    renderTransfers(data.transfers);
+                    updateKnowledgeStats(data.stats);
+                }
+            } catch (error) {
+                console.error('Error loading knowledge:', error);
+            }
+        }
+
+        function renderKnowledgeList(knowledge) {
+            const container = document.getElementById('knowledge-list');
+
+            if (!knowledge || knowledge.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-4">No knowledge sources found</p>';
+                return;
+            }
+
+            container.innerHTML = knowledge.map(k => `
+                <div class="p-3 mb-2" style="background: #252525; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <strong style="color: #c4b5fd;">${k.title || 'Untitled'}</strong>
+                            <div class="mt-1">
+                                <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; font-size: 10px;">${k.type || 'general'}</span>
+                                <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #86efac; font-size: 10px;">${Math.round((k.confidence || 0) * 100)}% confidence</span>
+                                ${k.occurrences > 1 ? `<span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 10px;">${k.occurrences}x learned</span>` : ''}
+                            </div>
+                            <p class="text-muted small mt-2 mb-0">${k.summary || ''}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTransfers(transfers) {
+            const container = document.getElementById('recent-transfers');
+
+            if (!transfers || transfers.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-4">No recent transfers</p>';
+                return;
+            }
+
+            container.innerHTML = transfers.map(t => `
+                <div class="p-2 mb-2" style="background: #252525; border-radius: 6px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="color: #ec4899;">🔄</span>
+                        <span class="text-light">${t.from}</span>
+                        <span class="text-muted">→</span>
+                        <span class="text-light">${t.to}</span>
+                        ${t.transfer_count ? `<span class="badge" style="background: rgba(236, 72, 153, 0.2); color: #f472b6; font-size: 9px; margin-left: auto;">${t.transfer_count}x</span>` : ''}
+                    </div>
+                    <small class="text-muted">${t.knowledge || 'Unknown knowledge'}</small>
+                </div>
+            `).join('');
+        }
+
+        function updateKnowledgeStats(stats) {
+            if (!stats) return;
+            document.getElementById('knowledge-count').textContent = stats.total_knowledge?.toLocaleString() || '--';
+            document.getElementById('transfers-count').textContent = stats.total_transfers?.toLocaleString() || '--';
+            document.getElementById('memories-count').textContent = stats.total_memories?.toLocaleString() || '--';
+            // Session 399: avg_confidence comes as percentage already (e.g., 54.9)
+            document.getElementById('avg-confidence').textContent = stats.avg_confidence ? `${Math.round(stats.avg_confidence)}%` : '--%';
+
+            // Update by-type section
+            const byTypeContainer = document.getElementById('knowledge-by-type');
+            if (stats.by_type && Object.keys(stats.by_type).length > 0) {
+                byTypeContainer.innerHTML = Object.entries(stats.by_type).map(([type, count]) => `
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">${type}</small>
+                        <small style="color: #8b5cf6;">${count}</small>
+                    </div>
+                `).join('');
+            } else {
+                byTypeContainer.innerHTML = '<p class="text-muted small">No data</p>';
+            }
+        }
+
+        async function loadTimeline() {
+            try {
+                const response = await fetch(`/api/spider-intelligence/timeline/?range=${timelineRange}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    renderTimelineChart(data.timeline);
+                    renderFreshnessGrid(data.freshness);
+                }
+            } catch (error) {
+                console.error('Error loading timeline:', error);
+            }
+        }
+
+        function renderTimelineChart(timeline) {
+            const container = document.getElementById('timeline-chart');
+
+            if (!timeline || timeline.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-4 w-100">No timeline data available</p>';
+                return;
+            }
+
+            const maxCount = Math.max(...timeline.map(t => t.count), 1);
+
+            container.innerHTML = timeline.map(t => {
+                const height = Math.max(10, (t.count / maxCount) * 180);
+                const date = new Date(t.period);
+                const label = timelineRange === '24h'
+                    ? date.toLocaleTimeString('en-US', { hour: 'numeric' })
+                    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return `
+                    <div class="text-center" style="flex: 1; min-width: 20px;">
+                        <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); width: 100%; max-width: 30px; height: ${height}px; margin: 0 auto; border-radius: 4px 4px 0 0;" title="${t.count} items"></div>
+                        <div class="text-muted" style="font-size: 9px; margin-top: 4px;">${label}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderFreshnessGrid(freshness) {
+            const container = document.getElementById('freshness-grid');
+
+            if (!freshness || freshness.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center py-3"><p class="text-muted">No freshness data available</p></div>';
+                return;
+            }
+
+            container.innerHTML = freshness.map(f => {
+                let color, bgColor, statusText;
+                if (f.status === 'fresh') {
+                    color = '#22c55e'; bgColor = 'rgba(34, 197, 94, 0.1)'; statusText = 'Fresh';
+                } else if (f.status === 'aging') {
+                    color = '#f59e0b'; bgColor = 'rgba(245, 158, 11, 0.1)'; statusText = 'Aging';
+                } else {
+                    color = '#ef4444'; bgColor = 'rgba(239, 68, 68, 0.1)'; statusText = 'Stale';
+                }
+
+                // Session 399: Only make clickable if has browseable data
+                const hasData = f.has_data || f.browseable_items > 0;
+                const clickHandler = hasData
+                    ? `onclick="filterFeedBySource('${f.source}'); document.getElementById('intel-feed-tab').click();"`
+                    : '';
+                const cursorStyle = hasData ? 'pointer' : 'default';
+                const opacityStyle = hasData ? '1' : '0.6';
+
+                return `
+                    <div class="col-md-4 col-lg-3 mb-2">
+                        <div class="p-2" style="background: ${bgColor}; border: 1px solid ${color}; border-radius: 6px; cursor: ${cursorStyle}; opacity: ${opacityStyle};" ${clickHandler}>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small style="color: ${color}; font-weight: 500;">${f.source}</small>
+                                <span class="badge" style="background: ${bgColor}; color: ${color}; font-size: 9px;">${statusText}</span>
+                            </div>
+                            <small class="text-muted" style="font-size: 10px;">
+                                ${hasData ? `${f.browseable_items || f.item_count} items` : 'No data to browse'}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function setTimelineRange(range, btn) {
+            timelineRange = range;
+            document.querySelectorAll('.timeline-range-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'rgba(6, 182, 212, 0.1)';
+            });
+            if (btn) {
+                btn.classList.add('active');
+                btn.style.background = 'rgba(6, 182, 212, 0.3)';
+            }
+            loadTimeline();
+        }
+
+        // ============================================================
+        // SESSION 399: REAL-TIME SPIDER WEBSOCKET CONNECTION
+        // ============================================================
+
+        let spiderWebSocket = null;
+        let spiderReconnectAttempts = 0;
+        const MAX_SPIDER_RECONNECT_ATTEMPTS = 5;
+
+        function connectSpiderWebSocket() {
+            if (spiderWebSocket && spiderWebSocket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/spider-intelligence/`;
+
+            try {
+                spiderWebSocket = new WebSocket(wsUrl);
+
+                spiderWebSocket.onopen = function() {
+                    console.log('Spider Intelligence WebSocket connected');
+                    spiderReconnectAttempts = 0;
+                };
+
+                spiderWebSocket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'spider_update') {
+                        showSpiderToast(data);
+                        if (data.item_count > 0) {
+                            if (document.getElementById('intel-timeline')?.classList.contains('show')) {
+                                loadTimeline();
+                            }
+                            if (document.getElementById('intel-data-feed')?.classList.contains('show')) {
+                                loadDataFeed(false);
+                            }
+                        }
+                    }
+                };
+
+                spiderWebSocket.onclose = function(event) {
+                    console.log('Spider Intelligence WebSocket closed:', event.code);
+                    spiderWebSocket = null;
+                    if (spiderReconnectAttempts < MAX_SPIDER_RECONNECT_ATTEMPTS) {
+                        spiderReconnectAttempts++;
+                        const delay = Math.min(1000 * Math.pow(2, spiderReconnectAttempts), 30000);
+                        setTimeout(connectSpiderWebSocket, delay);
+                    }
+                };
+
+                spiderWebSocket.onerror = function(error) {
+                    console.error('Spider Intelligence WebSocket error:', error);
+                };
+
+            } catch (error) {
+                console.error('Failed to create Spider WebSocket:', error);
+            }
+        }
+
+        function showSpiderToast(data) {
+            let toastContainer = document.getElementById('spider-toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'spider-toast-container';
+                toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; max-width: 350px;';
+                document.body.appendChild(toastContainer);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'spider-toast';
+            toast.style.cssText = `
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                border: 1px solid #f97316;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 10px;
+                box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+                animation: spiderSlideIn 0.3s ease-out;
+                color: white;
+            `;
+
+            const itemText = data.item_count === 1 ? 'item' : 'items';
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">🕷️</span>
+                    <div>
+                        <strong style="color: #f97316;">${data.spider_name}</strong>
+                        <div style="font-size: 12px; color: #94a3b8;">
+                            Collected ${data.item_count} ${itemText} from <span style="color: #22c55e;">${data.category || 'general'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'spiderSlideOut 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Add toast animations
+        if (!document.getElementById('spider-toast-styles')) {
+            const toastStyles = document.createElement('style');
+            toastStyles.id = 'spider-toast-styles';
+            toastStyles.textContent = `
+                @keyframes spiderSlideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes spiderSlideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(toastStyles);
+        }
+
+        // Connect WebSocket when Intelligence tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const intelTabLink = document.querySelector('[data-bs-target="#trending"]');
+            if (intelTabLink) {
+                intelTabLink.addEventListener('shown.bs.tab', connectSpiderWebSocket);
+            }
+        });
+
+        // END SESSION 399 FUNCTIONS
 
         // Session 206: Execute Spider (with alert for single spider execution)
         async function executeSpider(spiderId, spiderName) {
