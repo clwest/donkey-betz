@@ -1,12 +1,12 @@
 # Spider Network Reference
 
-**Last Updated:** Session 395 (December 8, 2025)
+**Last Updated:** Session 396 (December 8, 2025)
 
 ---
 
 ## Overview
 
-The Spider Network consists of **102 registered spiders**, but **only 24 are currently functional** with real data sources. This document reflects the actual state after the Session 395 audit.
+The Spider Network consists of **102 registered spiders**, with **40 currently functional** after Phase 1 & 2 implementations. This document reflects the actual state after Session 396.
 
 ---
 
@@ -15,16 +15,16 @@ The Spider Network consists of **102 registered spiders**, but **only 24 are cur
 | Metric | Count |
 |--------|-------|
 | Total Registered | 102 |
-| **Actually Working** | **24** |
-| Unconfigured (broken) | 78 |
+| **Actually Working** | **40** |
+| Unconfigured (broken) | 62 |
 | Records in DB | 13,700+ |
 | Searchable (with embeddings) | ~2,000 |
 
 ---
 
-## CRITICAL: Spider Status (Session 395 Audit)
+## Spider Status (Session 396 Update)
 
-### Working Spiders (24)
+### Working Spiders (40)
 
 These spiders are configured and collecting real data:
 
@@ -55,7 +55,34 @@ These spiders are configured and collecting real data:
 | youtube | YouTube API | Needs API key |
 | discord | Discord API | Needs bot token |
 
-### Broken Spiders (78)
+#### Session 395 Additions (Phase 1 - 11 spiders)
+| Spider | Source Type | Status |
+|--------|-------------|--------|
+| bbc | RSS | Working |
+| cnn | RSS | Working |
+| npr | RSS | Working |
+| reuters_rss | RSS | Working |
+| arstechnica | RSS | Working |
+| substack | RSS | Working (3 newsletters) |
+| lifehacker | RSS | Working |
+| variety | RSS | Working |
+| smashingmagazine | RSS | Working |
+| openmeteo | JSON API | Working |
+| huggingface | JSON API | Working |
+
+#### Session 396 Additions (Phase 2 - 8 spiders)
+| Spider | Source Type | Status |
+|--------|-------------|--------|
+| noaa_weather | NOAA GeoJSON API | Working (weather alerts) |
+| github | GitHub API | Working (trending AI repos) |
+| github_jobs | GitHub API | Working (good first issues) |
+| coingecko_trending | CoinGecko API | Working |
+| science | RSS | Working (ScienceDaily, Phys.org, Nature) |
+| health | RSS | Working (STAT News, KFF, FierceHealthcare) |
+| education_rss | RSS | Working (EdSurge, Chronicle) |
+| business_news | RSS | Working (Bloomberg, Fortune) |
+
+### Broken Spiders (62)
 
 These spiders return placeholder data ("no real URLs configured"):
 

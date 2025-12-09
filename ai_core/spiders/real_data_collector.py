@@ -98,6 +98,61 @@ SPIDER_TARGET_URLS = {
     # === SESSION 395: AI/ML SPIDERS ===
     'huggingface': ['https://huggingface.co/api/models?sort=downloads&direction=-1&limit=20'],
 
+    # === SESSION 396: PHASE 2 - FREE PUBLIC APIs ===
+
+    # NOAA Weather - Uses alerts endpoint (more reliable than forecast)
+    'noaa_weather': [
+        'https://api.weather.gov/alerts/active?area=CO',  # Colorado alerts
+        'https://api.weather.gov/alerts/active?area=CA',  # California alerts
+        'https://api.weather.gov/alerts/active?area=NY',  # New York alerts
+    ],
+
+    # GitHub - Public API (60 requests/hr unauthenticated)
+    'github': [
+        'https://api.github.com/search/repositories?q=ai+created:>2024-01-01&sort=stars&per_page=15',
+        'https://api.github.com/search/repositories?q=machine-learning+created:>2024-01-01&sort=stars&per_page=15',
+    ],
+
+    # GitHub Jobs/Issues - Good first issues for developers
+    'github_jobs': [
+        'https://api.github.com/search/issues?q=is:open+label:good-first-issue+language:python&sort=created&per_page=15',
+        'https://api.github.com/search/issues?q=is:open+label:help-wanted+language:javascript&sort=created&per_page=15',
+    ],
+
+    # CoinGecko - Trending crypto (free, no key needed)
+    # Already have coingecko for markets, adding trending endpoint
+    'coingecko_trending': [
+        'https://api.coingecko.com/api/v3/search/trending',
+    ],
+
+    # Science RSS Feeds
+    'science': [
+        'https://www.sciencedaily.com/rss/all.xml',
+        'https://phys.org/rss-feed/',
+        'https://feeds.nature.com/nature/rss/current',
+    ],
+
+    # Health RSS Feeds (verified working)
+    'health': [
+        'https://www.statnews.com/feed/',  # STAT News - health/biotech
+        'https://kffhealthnews.org/feed/',  # KFF Health News
+        'https://www.fiercehealthcare.com/rss/xml',  # Fierce Healthcare
+    ],
+
+    # Education/Learning RSS Feeds (verified working)
+    'education_rss': [
+        'https://www.edsurge.com/rss',  # EdSurge education tech
+        'https://www.chronicle.com/section/News/6/rss',  # Chronicle of Higher Ed
+        'https://www.insidehighered.com/rss/feed',  # Inside Higher Ed
+    ],
+
+    # Business News RSS Feeds
+    'business_news': [
+        'https://feeds.bloomberg.com/markets/news.rss',
+        'https://www.wsj.com/xml/rss/3_7085.xml',  # WSJ Business
+        'https://fortune.com/feed/',
+    ],
+
     # Note: These spiders use their own API clients, not SPIDER_TARGET_URLS:
     # - bluesky: Uses BlueSky AT Protocol API (BLUESKY_IDENTIFIER, BLUESKY_PASSWORD)
     # - youtube: Uses YouTube Data API v3 (GOOGLE_API_KEY)
@@ -121,7 +176,7 @@ async def fetch_url(session: aiohttp.ClientSession, url: str, timeout: int = 30)
             content_type = response.headers.get('content-type', '')
 
             if response.status == 200:
-                if 'application/json' in content_type:
+                if 'application/json' in content_type or 'geo+json' in content_type:
                     data = await response.json()
                     return {'type': 'json', 'data': data, 'url': url}
                 elif 'xml' in content_type or 'rss' in content_type or url.endswith('.xml') or 'feed' in url:
@@ -274,6 +329,26 @@ def parse_json_api(data: Any, source: str) -> List[Dict[str, Any]]:
                 return parse_json_api(data['articles'], source)
             elif 'jobs' in data:
                 return parse_json_api(data['jobs'], source)
+            elif 'features' in data:
+                # GeoJSON format (NOAA Weather API)
+                for feature in data['features'][:30]:
+                    if isinstance(feature, dict) and 'properties' in feature:
+                        props = feature['properties']
+                        items.append({
+                            'title': props.get('headline', props.get('event', 'Weather Alert')),
+                            'description': props.get('description', '')[:500],
+                            'link': props.get('@id', props.get('id', '')),
+                            'severity': props.get('severity', ''),
+                            'certainty': props.get('certainty', ''),
+                            'urgency': props.get('urgency', ''),
+                            'area': props.get('areaDesc', ''),
+                            'effective': props.get('effective', ''),
+                            'expires': props.get('expires', ''),
+                            'source': source,
+                            'type': 'weather_alert',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                return items
             elif 'chart' in data:
                 # Yahoo Finance format
                 chart = data['chart']
