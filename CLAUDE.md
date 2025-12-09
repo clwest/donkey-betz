@@ -1,13 +1,14 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 6, 2025 - Session 382 (GPT-5 Migration + Agent Documentation)
+**Last Updated:** December 8, 2025 - Session 400 (Agent Knowledge Pipeline Complete)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
-**Spider Network:** 102 spiders | 36 categories | 31 real data sources | **Topic Filtering (ai/web/security/cloud/design)!**
+**Spider Network:** 62 spiders | 57 working | 6,500+ data records | **Agents USE learned knowledge!**
 **Agent Ecosystem:** 27 clean agents + learning hooks | Time Travel Debugging | Real-time conversations
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
 **Unified Intelligence:** SpiderData + BusinessResearchResult combined search with auto-refresh!
+**Knowledge Pipeline:** Spider → Embeddings → Learning Bridge → Agent Prompts (Session 400)
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
@@ -54,12 +55,12 @@ The 6-phase plan to transform spider data into revenue:
 | 14. Evolution System | Agent XP & leveling | 254 | **DONE** |
 | 15. Time Travel Debug | Replay agent decisions | 255 | **DONE** |
 
-### Super Platform Unification (NEW!)
+### Super Platform Unification
 
 | Phase | Focus | Session | Status |
 |-------|-------|---------|--------|
 | 1. Foundation | SuperPlatformCoordinator | 264 | **DONE** |
-| 2. Spider-Agent Bridge | Feed spider data to agents | Next | Pending |
+| 2. Spider-Agent Bridge | Feed spider data to agents | 400 | **DONE** |
 | 3. Sci-Fi Integration | Mood/memory in agent actions | - | Pending |
 | 4. Revenue Pipeline | Opportunity → Money automation | - | Pending |
 | 5. Learning Loop | Improve from outcomes | - | Pending |
@@ -399,6 +400,9 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 400:** Agent Knowledge Pipeline Complete - Fixed spider_data_bridge.py (was listening to wrong model), added `_get_relevant_knowledge_for_task()` and `_get_fresh_spider_intelligence()` to BaseAgent, updated `_build_prompt()` to automatically inject learned knowledge. Agents now USE their accumulated knowledge! Handoff: `docs/handoffs/SESSION_400_AGENT_KNOWLEDGE_PIPELINE.md`
+- **Session 399:** Spider Renames + Data Feed API + Intelligence UI - Renamed 6 spiders to match actual sources (cnn→google_news, etc.), fixed Data Feed API empty string bug, added 3 new Intelligence sub-tabs (Data Feed, Knowledge, Timeline). Handoff: `docs/handoffs/SESSION_399_SPIDER_RENAMES_AND_DATA_FEED_FIX.md`
+- **Session 398:** Spider Database Cleanup - Deleted 6,906 placeholder records, fixed broken RSS feeds, comprehensive spider audit. Handoff: `docs/handoffs/SESSION_398_SPIDER_DATA_EXPLORATION.md`
 - **Session 382:** GPT-5 Migration + Agent Documentation - Upgraded all GPT-4o-mini references to GPT-5-mini across codebase. Fixed parameters for reasoning models (`max_completion_tokens` instead of `max_tokens`, removed `temperature`). Updated CLAUDE.md with comprehensive agent documentation for future sessions.
 - **Session 381:** Collective Intelligence Architecture - Complete documentation of learning system. Verified 21 agents connected to learning hooks. Handoff: `docs/handoffs/SESSION_381_COLLECTIVE_INTELLIGENCE_ARCHITECTURE.md`
 - **Session 380:** Learning Hooks All Agents - Added learning hooks to 12 agents that were missing them. Connected all 21 agents to collective learning system. Handoff: `docs/handoffs/SESSION_380_LEARNING_HOOKS_ALL_AGENTS.md`
