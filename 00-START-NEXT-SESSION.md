@@ -1,8 +1,48 @@
 # Start Next Session Here
 
-**Last Session:** 399 - Spider Renames + Data Feed API Fix
+**Last Session:** 400 - Agent Knowledge Pipeline Complete
 **Date:** December 8, 2025
-**Status:** 62 registered spiders | 57 working | 6 spiders renamed to match actual sources
+**Status:** 62 spiders | Agents now USE their learned knowledge in prompts!
+
+---
+
+## Session 400 Accomplishments
+
+### Agent Knowledge Pipeline - COMPLETE!
+
+Fixed the full pipeline so agents actually USE their accumulated knowledge:
+
+```
+Spider Data (6,500+) → Embeddings (2,100+) → Learning Bridge → Knowledge (878) → AGENT PROMPTS ✅
+```
+
+### Key Changes
+
+1. **Fixed Spider Data Learning Bridge** (`core/learning_bridges/spider_data_bridge.py`)
+   - Was listening to `persistence.models.SpiderData` (0 records)
+   - Now uses `core.models_unified_system.SpiderData` (6,500+ records)
+   - Routes spider data to relevant agents by category
+
+2. **Added Knowledge Retrieval to BaseAgent** (`core/agents/base_agent.py`)
+   - `_get_relevant_knowledge_for_task(task)` - Hybrid semantic + keyword search
+   - `_get_fresh_spider_intelligence(categories)` - Real-time spider data
+
+3. **Updated `_build_prompt()` for Knowledge Injection**
+   - Automatically injects relevant learned knowledge into agent prompts
+   - Includes source attribution (which agent/spider provided the knowledge)
+
+### Example Prompt Section (Now Automatic!)
+```
+## Relevant Knowledge from Past Learning
+You have learned the following that may be relevant:
+
+1. [ResearchAgent] Research: AI trends in 2025
+   Analysis shows growth in LLM applications...
+   (from: techcrunch, hackernews)
+```
+
+### Documentation
+- Handoff: `docs/handoffs/SESSION_400_AGENT_KNOWLEDGE_PIPELINE.md`
 
 ---
 

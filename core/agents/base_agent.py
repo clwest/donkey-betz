@@ -215,6 +215,164 @@ class BaseAgent(ABC, TimeTravelMixin):
         """
         pass
 
+    def _get_fresh_spider_intelligence(self, categories: List[str] = None, hours: int = 24, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Session 400: Get fresh spider intelligence for the agent's domain.
+
+        Retrieves recent spider data relevant to the agent's specialization.
+        This complements _get_relevant_knowledge_for_task by providing
+        real-time intelligence from the spider network.
+
+        Args:
+            categories: List of spider categories to query (tech, news, jobs, etc.)
+                       If None, uses all categories
+            hours: How far back to look for data
+            limit: Maximum items to return
+
+        Returns:
+            List of spider intelligence dicts with title, content, source
+        """
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+            from datetime import timedelta
+
+            cutoff = timezone.now() - timedelta(hours=hours)
+
+            query = SpiderData.objects.filter(
+                created_at__gte=cutoff
+            ).exclude(
+                embedding__isnull=True
+            ).exclude(
+                embedding=[]
+            )
+
+            if categories:
+                query = query.filter(data_type__in=categories)
+
+            # Order by recency and relevance
+            query = query.order_by('-relevance_score', '-created_at')[:limit * 2]
+
+            results = []
+            for spider_data in query:
+                raw_data = spider_data.raw_data or {}
+                items = raw_data.get('items', [])
+
+                # Extract useful content from items
+                sample_titles = []
+                for item in items[:3]:
+                    title = item.get('title', '')
+                    if title:
+                        sample_titles.append(title[:80])
+
+                if sample_titles:
+                    results.append({
+                        'source': spider_data.spider_name,
+                        'category': spider_data.data_type,
+                        'titles': sample_titles,
+                        'item_count': len(items),
+                        'relevance': spider_data.relevance_score or 50,
+                        'timestamp': spider_data.created_at.isoformat() if spider_data.created_at else None,
+                    })
+
+                if len(results) >= limit:
+                    break
+
+            return results
+
+        except Exception as e:
+            logger.warning(f"Failed to get fresh spider intelligence: {e}")
+            return []
+
+    def _get_relevant_knowledge_for_task(self, task: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Session 400: Retrieve relevant learned knowledge for the current task.
+
+        This queries AgentKnowledgeSource for knowledge that might help with
+        the current task, including:
+        - Knowledge from this agent's past executions
+        - Knowledge shared by other agents
+        - Spider-derived intelligence
+
+        Uses a hybrid approach:
+        1. First tries semantic search on spider data (embeddings)
+        2. Falls back to keyword matching on AgentKnowledgeSource
+
+        Args:
+            task: The current task to find relevant knowledge for
+            limit: Maximum knowledge items to retrieve
+
+        Returns:
+            List of relevant knowledge dicts with title, summary, source
+        """
+        results = []
+
+        # Try semantic search on spider data first
+        try:
+            from core.services.spider_semantic_search import get_spider_semantic_search
+            search = get_spider_semantic_search()
+            semantic_results = search.semantic_search(task, limit=3)
+
+            for sr in semantic_results:
+                results.append({
+                    'source_agent': 'SpiderNetwork',
+                    'title': sr.title[:60] if sr.title else 'Spider Intelligence',
+                    'summary': sr.content[:200] if sr.content else '',
+                    'knowledge_type': 'spider_data',
+                    'confidence': sr.similarity,
+                    'spider_sources': [sr.source] if sr.source else [],
+                })
+        except Exception as e:
+            logger.debug(f"Semantic search not available: {e}")
+
+        # Also query AgentKnowledgeSource for learned knowledge
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+            from django.db.models import Q
+
+            # Extract keywords from task for matching
+            task_lower = task.lower()
+            keywords = [w for w in task_lower.split() if len(w) > 3][:5]
+
+            # Build query - look for knowledge matching task keywords
+            query = Q(is_active=True)
+
+            # Add keyword filters
+            keyword_q = Q()
+            for keyword in keywords:
+                keyword_q |= Q(title__icontains=keyword)
+                keyword_q |= Q(summary__icontains=keyword)
+
+            if keywords:
+                query &= keyword_q
+
+            # Query for relevant knowledge, prioritize by confidence and freshness
+            remaining_limit = limit - len(results)
+            if remaining_limit > 0:
+                knowledge_items = AgentKnowledgeSource.objects.filter(query).order_by(
+                    '-confidence_score',
+                    '-freshness_score',
+                    '-last_updated_at'
+                )[:remaining_limit]
+
+                for ks in knowledge_items:
+                    results.append({
+                        'source_agent': ks.agent.name if ks.agent else 'Unknown',
+                        'title': ks.title[:60] if ks.title else '',
+                        'summary': ks.summary[:300] if ks.summary else '',
+                        'knowledge_type': ks.knowledge_type,
+                        'confidence': ks.confidence_score,
+                        'spider_sources': ks.source_spider_names or [],
+                    })
+
+        except Exception as e:
+            logger.warning(f"Failed to retrieve agent knowledge: {e}")
+
+        if results:
+            logger.debug(f"Found {len(results)} relevant knowledge items for task")
+
+        return results[:limit]
+
     def _build_prompt(
         self,
         task: str,
@@ -226,9 +384,10 @@ class BaseAgent(ABC, TimeTravelMixin):
 
         This combines:
         1. The agent's base system prompt
-        2. Sci-fi context (mood, evolution, relationships, memories)
-        3. Spider context (trends, market data)
-        4. The actual task
+        2. Learned knowledge relevant to this task (Session 400)
+        3. Sci-fi context (mood, evolution, relationships, memories)
+        4. Spider context (trends, market data)
+        5. The actual task
 
         Args:
             task: The user's task
@@ -239,6 +398,24 @@ class BaseAgent(ABC, TimeTravelMixin):
             Complete prompt string
         """
         parts = [self.system_prompt]
+
+        # Session 400: Add relevant learned knowledge
+        relevant_knowledge = self._get_relevant_knowledge_for_task(task)
+        if relevant_knowledge:
+            parts.append(f"\n\n## Relevant Knowledge from Past Learning")
+            parts.append("You have learned the following that may be relevant:")
+            for idx, knowledge in enumerate(relevant_knowledge[:3], 1):
+                source = knowledge.get('source_agent', 'Unknown')
+                title = knowledge.get('title', '')[:60]
+                summary = knowledge.get('summary', '')[:150]
+                spider_sources = knowledge.get('spider_sources', [])
+
+                parts.append(f"\n{idx}. [{source}] {title}")
+                if summary:
+                    parts.append(f"   {summary}")
+                if spider_sources and spider_sources[0] not in ['learned_from_', 'dream_']:
+                    sources_str = ', '.join(spider_sources[:3])
+                    parts.append(f"   (from: {sources_str})")
 
         # Add mood modifier if available
         if scifi_context:
