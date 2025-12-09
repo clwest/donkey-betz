@@ -30,6 +30,9 @@ from .specialized.courtlistener_spider import CourtListenerSpider
 from .specialized.legal_news_spider import LegalNewsSpider  # Session 399: Replaced JustiaSpider
 from .specialized.findlaw_spider import FindLawSpider
 from .specialized.lii_spider import LegalInformationInstituteSpider
+# Session 403: Colorado Family Law spiders (Playwright-enabled)
+from .specialized.colorado_family_law_spider import ColoradoFamilyLawSpider
+from .specialized.justia_playwright_spider import JustiaPlaywrightSpider
 
 # Session 218: NEWS spiders
 from .specialized.techcrunch_spider import TechCrunchSpider
@@ -333,6 +336,26 @@ class SpiderRegistry:
             'priority': 2,
             'rate_limit': 1.0,
             'targets': ['law.cornell.edu/supct', 'law.cornell.edu/uscode']
+        })
+
+        # === SESSION 403: COLORADO FAMILY LAW SPIDERS (Playwright-enabled) ===
+        # Focus: Divorce with children, custody, parenting time, child support
+        self.register_spider('colorado_family_law', ColoradoFamilyLawSpider, {
+            'category': 'legal',
+            'priority': 1,  # High priority for legal assistant
+            'rate_limit': 2.0,  # Slower rate for Playwright
+            'targets': ['coloradojudicial.gov/self-help-forms'],
+            'description': 'Colorado family law forms from Colorado Judicial Branch',
+            'playwright_enabled': True,
+        })
+
+        self.register_spider('justia_family_law', JustiaPlaywrightSpider, {
+            'category': 'legal',
+            'priority': 1,  # High priority for legal assistant
+            'rate_limit': 2.0,  # Slower rate for Playwright
+            'targets': ['justia.com/family/'],
+            'description': 'Justia family law articles and guides (Playwright-enabled)',
+            'playwright_enabled': True,
         })
 
         # === SESSION 218: NEWS SPIDERS (3) ===

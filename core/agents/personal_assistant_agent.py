@@ -100,6 +100,14 @@ INTENT_AGENT_MAP = {
     'customer_personas': 'CustomerResearchAgent',
     'pain_points': 'CustomerResearchAgent',
 
+    # Legal intents → Legal agent (Session 403)
+    'legal_question': 'LegalDocDrafterAgent',
+    'legal_document': 'LegalDocDrafterAgent',
+    'draft_motion': 'LegalDocDrafterAgent',
+    'divorce_help': 'LegalDocDrafterAgent',
+    'custody_help': 'LegalDocDrafterAgent',
+    'court_procedure': 'LegalDocDrafterAgent',
+
     # Multi-step intents → Workflow agent
     'research_and_create': 'WorkflowAgent',
     'brand_package': 'WorkflowAgent',
@@ -147,6 +155,16 @@ INTENT_KEYWORDS = {
         'research and create', 'brand identity', 'package', 'complete', 'full',
         'end to end', 'workflow', 'step by step'
     ],
+    # Session 403: Legal Assistant keywords
+    'LegalDocDrafterAgent': [
+        'legal', 'law', 'lawyer', 'attorney', 'court', 'judge', 'lawsuit',
+        'divorce', 'custody', 'child support', 'parenting time', 'visitation',
+        'motion', 'file motion', 'declaration', 'subpoena', 'served',
+        'pro se', 'self-represented', 'family law', 'family court',
+        'jdf', 'colorado court', 'colorado divorce', 'colorado custody',
+        'modification', 'enforce', 'order', 'decree', 'separation',
+        'parental responsibilities', 'parenting plan', 'child custody'
+    ],
 }
 
 
@@ -185,6 +203,11 @@ For RESEARCH requests (search, find, trending, analyze):
 - For BUSINESS/MARKET/STARTUP research: use CompetitorAnalysisAgent (SWOT, competitors)
 - For CUSTOMER research: use CustomerResearchAgent (personas, pain points)
 
+For LEGAL requests (divorce, custody, court, motion):
+- Delegate to LegalDocDrafterAgent for Colorado family law questions
+- This agent provides GENERAL LEGAL INFORMATION ONLY, not legal advice
+- Always recommend consulting a licensed attorney
+
 For COMPLEX MULTI-STEP requests (research and create, brand package):
 - Delegate to WorkflowAgent for orchestration
 
@@ -203,6 +226,7 @@ Available agents:
 - ResearchAgent: Search web and spider network (general trending)
 - CompetitorAnalysisAgent: Business/market/startup research, SWOT, competitor analysis
 - CustomerResearchAgent: Customer personas, pain points, sentiment
+- LegalDocDrafterAgent: Colorado family law info, motion templates, court procedures (NOT legal advice)
 - WorkflowAgent: Multi-step workflows"""
 
     tools = [
@@ -216,7 +240,7 @@ Available agents:
                     "properties": {
                         "agent_name": {
                             "type": "string",
-                            "description": "Which agent to delegate to. For business/market/startup research, use CompetitorAnalysisAgent. For customer/persona research, use CustomerResearchAgent.",
+                            "description": "Which agent to delegate to. For business/market/startup research, use CompetitorAnalysisAgent. For customer/persona research, use CustomerResearchAgent. For legal/divorce/custody questions, use LegalDocDrafterAgent.",
                             "enum": [
                                 "ImageAgent",
                                 "VideoAgent",
@@ -227,7 +251,8 @@ Available agents:
                                 "ResearchAgent",
                                 "WorkflowAgent",
                                 "CompetitorAnalysisAgent",
-                                "CustomerResearchAgent"
+                                "CustomerResearchAgent",
+                                "LegalDocDrafterAgent"
                             ]
                         },
                         "task": {
@@ -515,6 +540,13 @@ Available agents:
         # Ordered from most specific to least specific
         # These indicate strong intent for a specific agent
         priority_checks = [
+            # Session 403: Legal terms FIRST (before 'motion' triggers VideoAgent)
+            ('LegalDocDrafterAgent', [
+                'divorce', 'custody', 'child support', 'parenting time', 'court',
+                'attorney', 'lawyer', 'legal', 'family law', 'pro se',
+                'file motion', 'draft motion', 'motion to', 'jdf', 'parental responsibilities',
+                'separation', 'decree', 'modification', 'enforcement'
+            ]),
             # Most specific compound terms first
             ('AudioAgent', ['voiceover', 'text to speech', 'tts', 'narration']),
             # Video editing terms (must check before generic 'video')

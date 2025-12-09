@@ -128,6 +128,11 @@ from core.agents.business import (
     CustomerResearchAgent,
 )
 
+# Session 403: Legal Agents
+from core.agents.legal import (
+    LegalDocDrafterAgent,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -193,6 +198,9 @@ class AgentRouter:
         # Business Research Agents (Session 293)
         "CompetitorAnalysisAgent": CompetitorAnalysisAgent,
         "CustomerResearchAgent": CustomerResearchAgent,
+
+        # Legal Agents (Session 403)
+        "LegalDocDrafterAgent": LegalDocDrafterAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,

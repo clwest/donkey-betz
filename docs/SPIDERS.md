@@ -1,12 +1,12 @@
 # Spider Network Reference
 
-**Last Updated:** Session 399 (December 8, 2025)
+**Last Updated:** Session 403 (December 9, 2025)
 
 ---
 
 ## Overview
 
-The Spider Network consists of **62 registered spiders**, with **57 actually working** after Session 397 cleanup. Session 397 removed 26 broken spiders that had no public API and added 4 legal spiders (3 working).
+The Spider Network consists of **64 registered spiders**, with **59 actually working** after Session 403 additions. Session 403 added 2 new Playwright-enabled legal spiders for Colorado family law.
 
 ---
 
@@ -14,13 +14,18 @@ The Spider Network consists of **62 registered spiders**, with **57 actually wor
 
 | Metric | Count |
 |--------|-------|
-| Total Registered | 62 |
-| **Actually Working** | **57** |
-| With Configured URLs | 48 |
-| Legal Spiders (working) | 3 |
+| Total Registered | 64 |
+| **Actually Working** | **59** |
+| With Configured URLs | 50 |
+| Legal Spiders (working) | 5 |
+| Playwright-Enabled | 2 |
 | Need API Keys | 6 |
-| Records in DB | 7,143 |
-| Searchable (with embeddings) | 1,830 (25.6%) |
+| Records in DB | ~7,100 |
+| Searchable (with embeddings) | ~1,800 |
+
+**Session 403:** Added 2 new Playwright-enabled spiders for Colorado family law:
+- `colorado_family_law` - Colorado Judicial Branch JDF forms
+- `justia_family_law` - Justia family law content (Cloudflare bypass)
 
 **Session 398:** Database cleaned - deleted 6,906 placeholder records from removed spiders, fixed broken RSS feeds
 
@@ -106,9 +111,17 @@ These spiders are configured and collecting real data:
 | courtlistener | REST API (free!) | Working (~20 items - court opinions, case law) |
 | findlaw | Web scraping | Working (~25 items - legal blogs, practice areas) |
 | lii | Web scraping | Working (~15 items - Cornell Law, US Code, CFR) |
-| justia | RSS/Scraping | Blocked (Cloudflare) |
+| justia | RSS/Scraping | Blocked (Cloudflare) - Replaced by justia_family_law |
 
-**Legal spiders collect ~60 items per run** covering court opinions, legal news, and legislation.
+#### Session 403 Additions (Legal - 2 Playwright-enabled spiders)
+| Spider | Source Type | Status |
+|--------|-------------|--------|
+| colorado_family_law | Playwright + Scraping | Working (12 JDF forms, Colorado Judicial Branch) |
+| justia_family_law | Playwright + Scraping | Working (Cloudflare bypass, family law topics) |
+
+**Session 403 spiders use Playwright** for JavaScript-rendered content and Cloudflare bypass. They include fallback data for reliability.
+
+**Legal spiders now collect ~80+ items per run** covering court opinions, legal news, legislation, Colorado JDF forms, and family law topics.
 
 ### Session 397 Cleanup - Removed Spiders (26)
 

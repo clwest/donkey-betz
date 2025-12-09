@@ -441,6 +441,59 @@ Use when user wants:
 - Promotional video
 - Multiple video clips for a brand/project""",
 
+
+    # -------------------------------------------------------------------------
+    # LEGAL AGENTS (Session 403)
+    # -------------------------------------------------------------------------
+
+    "legal_doc_drafter_agent": """⚖️ Pro Se Legal Assistant for Colorado Family Law - GENERAL LEGAL INFORMATION ONLY.
+
+⚠️ IMPORTANT DISCLAIMERS:
+- This is GENERAL LEGAL INFORMATION, NOT legal advice
+- Does NOT create an attorney-client relationship
+- Users should ALWAYS consult a licensed Colorado attorney for their specific situation
+- Laws change - verify all information with current statutes and court rules
+
+Use this agent for:
+- Understanding Colorado divorce procedures and requirements
+- General custody/parenting time information
+- Child support guideline explanations
+- Drafting TEMPLATE documents (motions, emails, declarations)
+- Procedural checklists and deadlines
+- Locating Colorado JDF (Judicial Department Forms)
+- Understanding court procedures and requirements
+
+Document Types Available:
+- 'guidance': General legal information and explanations
+- 'motion': Court filing templates (continuances, modifications)
+- 'email': Meet-and-confer professional correspondence
+- 'declaration': Sworn statement templates
+- 'checklist': Step-by-step procedural guides
+
+Case Types Covered:
+- Divorce (dissolution of marriage)
+- Custody (allocation of parental responsibilities)
+- Child support (calculation and modification)
+- Parenting time (visitation schedules)
+- Modification (changing existing orders)
+- Enforcement (ensuring compliance)
+
+Keywords that trigger this:
+- 'legal', 'law', 'court', 'attorney', 'lawyer', 'judge'
+- 'divorce', 'custody', 'child support', 'parenting time'
+- 'motion', 'file', 'declaration', 'subpoena'
+- 'rights', 'Colorado', 'family law'
+- 'JDF', 'forms', 'pro se', 'self-represented'
+
+DO NOT USE FOR:
+- Criminal law matters
+- Federal court cases
+- Legal matters outside Colorado
+- Urgent situations requiring immediate legal action
+- Cases involving domestic violence (refer to local resources)
+
+ALL OUTPUTS INCLUDE MANDATORY DISCLAIMERS.""",
+
 }
 
 
