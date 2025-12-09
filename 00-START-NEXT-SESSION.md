@@ -1,8 +1,44 @@
 # Start Next Session Here
 
-**Last Session:** 400 - Agent Knowledge Pipeline Complete
-**Date:** December 8, 2025
-**Status:** 62 spiders | Agents now USE their learned knowledge in prompts!
+**Last Session:** 401 - Knowledge Attribution UI
+**Date:** December 9, 2025
+**Status:** 62 spiders | Knowledge Attribution visible in AI responses!
+
+---
+
+## Session 401 Accomplishments
+
+### Knowledge Attribution UI - COMPLETE!
+
+Users can now see what intelligence sources influenced each AI response:
+
+```
++------------------------------------------+
+| Knowledge Attribution                     |
+| Sources: [techcrunch] [hackernews]        |
+| Learned: ResearchAgent: AI trends...      |
+| 87% confidence | 3 sources | 2h ago       |
++------------------------------------------+
+```
+
+### Key Changes
+
+1. **Backend - Attribution Data Flow**
+   - `KnowledgeAttribution` dataclass tracks sources, confidence, freshness
+   - `PersonalAssistantAgent` now attaches attribution to all responses
+   - `SuperPlatformCoordinator` passes attribution through to frontend
+
+2. **Frontend - Attribution Display**
+   - New `formatKnowledgeAttribution()` function renders beautiful attribution card
+   - Shows spider source badges, learned knowledge summaries, stats
+
+### Files Modified
+- `core/agents/personal_assistant_agent.py` - Attribution in responses
+- `core/super_platform/coordinator.py` - Pass attribution to frontend
+- `ai_core/templates/partials/js/ai_assistant.html` - Attribution UI component
+
+### Documentation
+- Handoff: `docs/handoffs/SESSION_401_KNOWLEDGE_ATTRIBUTION_UI.md`
 
 ---
 
