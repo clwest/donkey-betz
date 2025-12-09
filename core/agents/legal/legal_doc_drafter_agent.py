@@ -539,7 +539,7 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
                 )
 
     def _build_legal_prompt(self, task: str, context: Dict[str, Any]) -> str:
-        """Build prompt with legal context and safeguards."""
+        """Build prompt with legal context, safeguards, and uploaded case files."""
 
         prompt_parts = [
             f"User Request: {task}",
@@ -566,7 +566,88 @@ Remember: You provide INFORMATION and TEMPLATES, not legal advice."""
         if context.get('children'):
             prompt_parts.append(f"Children involved: Yes")
 
+        # Session 403: Add uploaded case file context if document ID is referenced
+        document_context = self._get_uploaded_document_context(task, context)
+        if document_context:
+            prompt_parts.append("")
+            prompt_parts.append("=== UPLOADED CASE DOCUMENT CONTEXT ===")
+            prompt_parts.append(document_context)
+            prompt_parts.append("=== END DOCUMENT CONTEXT ===")
+            prompt_parts.append("")
+            prompt_parts.append("IMPORTANT: Use the above document context to inform your response.")
+            prompt_parts.append("If this is a denied motion, analyze why it was denied and recommend corrective actions.")
+
         return "\n".join(prompt_parts)
+
+    def _get_uploaded_document_context(self, task: str, context: Dict[str, Any]) -> Optional[str]:
+        """
+        Retrieve context from uploaded legal documents.
+
+        Session 403: Extracts document content if:
+        - A document_id is referenced in the task
+        - Context contains a document_id
+        - User's most recent uploaded documents (for general context)
+        """
+        try:
+            from core.models_unified_system import LegalDocument
+            import re
+
+            # Check for document ID in task (format: "document ID: uuid")
+            doc_id_match = re.search(r'document\s*(?:ID|id)?:?\s*([a-f0-9-]{36})', task, re.IGNORECASE)
+            document_id = None
+
+            if doc_id_match:
+                document_id = doc_id_match.group(1)
+            elif context.get('document_id'):
+                document_id = context.get('document_id')
+            elif context.get('case_file_id'):
+                document_id = context.get('case_file_id')
+
+            if document_id and self.user:
+                try:
+                    doc = LegalDocument.objects.get(id=document_id, user=self.user)
+                    # Build context from document
+                    doc_context_parts = [
+                        f"Document Title: {doc.title}",
+                        f"Document Type: {doc.document_type}",
+                        f"Status: {doc.status}",
+                    ]
+                    if doc.original_query:
+                        doc_context_parts.append(f"User's Notes: {doc.original_query}")
+                    # Add document content (truncated for prompt size)
+                    content_preview = doc.content[:8000] if doc.content else ''
+                    if content_preview:
+                        doc_context_parts.append(f"\nDocument Content:\n{content_preview}")
+                        if len(doc.content) > 8000:
+                            doc_context_parts.append("\n[Document truncated for length]")
+                    return "\n".join(doc_context_parts)
+                except LegalDocument.DoesNotExist:
+                    logger.warning(f"Referenced document {document_id} not found")
+
+            # If no specific document but user exists, check for recent relevant uploads
+            if self.user and not document_id:
+                # Look for recent denied motions or court orders that might be relevant
+                recent_docs = LegalDocument.objects.filter(
+                    user=self.user,
+                    document_type__in=['denied_motion', 'court_order']
+                ).order_by('-created_at')[:2]
+
+                if recent_docs.exists():
+                    context_parts = ["Recent uploaded case documents that may be relevant:"]
+                    for doc in recent_docs:
+                        context_parts.append(f"\n--- {doc.title} ({doc.document_type}) ---")
+                        # Only include brief excerpt
+                        excerpt = doc.content[:1500] if doc.content else 'No content'
+                        context_parts.append(excerpt)
+                        if doc.content and len(doc.content) > 1500:
+                            context_parts.append("[...]")
+                    return "\n".join(context_parts)
+
+            return None
+
+        except Exception as e:
+            logger.warning(f"Error getting uploaded document context: {e}")
+            return None
 
     def _execute_tool_call(
         self,

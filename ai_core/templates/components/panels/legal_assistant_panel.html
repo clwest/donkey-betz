@@ -98,6 +98,11 @@ NOT legal advice - always recommends attorney consultation
                 &#128221; Procedures
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="legal-case-files-tab" data-bs-toggle="pill" data-bs-target="#legal-case-files" type="button" role="tab" style="color: #ec4899;" onclick="loadLegalCaseFiles()">
+                &#128193; My Case Files
+            </button>
+        </li>
     </ul>
     <style>
         #legal-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
@@ -451,6 +456,207 @@ NOT legal advice - always recommends attorney consultation
                 </div>
             </div>
         </div>
+
+        <!-- My Case Files Sub-Tab -->
+        <div class="tab-pane fade" id="legal-case-files" role="tabpanel">
+            <div class="alert mb-4" style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4);">
+                <strong style="color: #f9a8d4;">&#128193; Upload Your Case Documents</strong>
+                <p class="mb-0 mt-1" style="color: #fce7f3; font-size: 0.9rem;">
+                    Upload court orders, denied motions, correspondence, or other legal documents.
+                    The AI can analyze these documents to help you understand what went wrong and suggest corrective actions.
+                </p>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center" style="background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.3);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #f9a8d4;" id="legal-files-total">0</h4>
+                            <small class="text-muted">Total Files</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #fca5a5;" id="legal-files-court-orders">0</h4>
+                            <small class="text-muted">Court Orders</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center" style="background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.3);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #fdba74;" id="legal-files-motions">0</h4>
+                            <small class="text-muted">Motions</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center" style="background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #86efac;" id="legal-files-processed">0</h4>
+                            <small class="text-muted">Processed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Upload Section -->
+                <div class="col-md-5 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                            <h6 class="mb-0" style="color: #f9a8d4;">&#128228; Upload Document</h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Document Type Selection -->
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Document Type</label>
+                                <select id="legal-upload-doc-type" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    <option value="court_order">Court Order / Ruling</option>
+                                    <option value="denied_motion">Denied Motion</option>
+                                    <option value="motion">Filed Motion</option>
+                                    <option value="correspondence">Correspondence</option>
+                                    <option value="opposing_filing">Opposing Party Filing</option>
+                                    <option value="financial">Financial Document</option>
+                                    <option value="evidence">Evidence / Exhibit</option>
+                                    <option value="other">Other Legal Document</option>
+                                </select>
+                            </div>
+
+                            <!-- File Upload Area -->
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Upload PDF or Text File</label>
+                                <div id="legal-file-drop-zone" class="p-4 text-center rounded"
+                                     style="border: 2px dashed #444; background: #2a2a2a; cursor: pointer; transition: all 0.2s;"
+                                     ondrop="handleLegalFileDrop(event)" ondragover="handleLegalFileDragOver(event)" ondragleave="handleLegalFileDragLeave(event)">
+                                    <input type="file" id="legal-file-input" accept=".pdf,.txt,.doc,.docx" style="display: none;" onchange="handleLegalFileSelect(event)">
+                                    <div onclick="document.getElementById('legal-file-input').click();">
+                                        <span style="font-size: 2rem;">&#128196;</span>
+                                        <p class="mb-1 text-muted">Drop file here or click to browse</p>
+                                        <small class="text-muted">PDF, TXT, DOC, DOCX (max 10MB)</small>
+                                    </div>
+                                </div>
+                                <div id="legal-selected-file" class="mt-2" style="display: none;">
+                                    <small class="text-success" id="legal-selected-file-name"></small>
+                                    <button class="btn btn-sm text-danger" onclick="clearLegalFileSelection()" style="background: transparent; border: none;">&#10005;</button>
+                                </div>
+                            </div>
+
+                            <!-- Optional: Case Context -->
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Additional Context (optional)</label>
+                                <textarea id="legal-upload-context" class="form-control" rows="2"
+                                          placeholder="e.g., Magistrate denied motion on 12/1, need to refile with correct forms..."
+                                          style="background: #2a2a2a; border: 1px solid #444; color: white;"></textarea>
+                            </div>
+
+                            <button class="btn w-100" onclick="uploadLegalCaseFile()" style="background: linear-gradient(135deg, #ec4899, #db2777); border: none; color: white;">
+                                &#128228; Upload & Analyze
+                            </button>
+
+                            <!-- Upload Progress -->
+                            <div id="legal-upload-progress" class="mt-3" style="display: none;">
+                                <div class="progress" style="height: 4px; background: #333;">
+                                    <div class="progress-bar" id="legal-upload-progress-bar" style="width: 0%; background: linear-gradient(90deg, #ec4899, #8b5cf6);"></div>
+                                </div>
+                                <small class="text-muted mt-1" id="legal-upload-status">Uploading...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Library -->
+                <div class="col-md-7 mb-4">
+                    <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                            <h6 class="mb-0" style="color: #a78bfa;">&#128218; My Case Documents</h6>
+                            <button class="btn btn-sm" onclick="loadLegalCaseFiles()" style="background: rgba(139, 92, 246, 0.3); border: none; color: #a78bfa;">
+                                &#128260; Refresh
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="legal-files-loading" class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm" style="color: #a78bfa;"></div>
+                                <small class="text-muted ms-2">Loading documents...</small>
+                            </div>
+                            <div id="legal-files-empty" class="text-center py-4" style="display: none;">
+                                <span style="font-size: 2rem; opacity: 0.5;">&#128193;</span>
+                                <p class="text-muted mb-0">No documents uploaded yet</p>
+                                <small class="text-muted">Upload court orders, motions, or other legal documents to get AI analysis</small>
+                            </div>
+                            <div id="legal-files-table-container" style="display: none; max-height: 400px; overflow-y: auto;">
+                                <table class="table table-dark table-hover mb-0" style="font-size: 13px;">
+                                    <thead style="position: sticky; top: 0; background: #1a1a1a;">
+                                        <tr>
+                                            <th style="color: #a78bfa; border-color: #333;">Document</th>
+                                            <th style="color: #a78bfa; border-color: #333;">Type</th>
+                                            <th style="color: #a78bfa; border-color: #333;">Status</th>
+                                            <th style="color: #a78bfa; border-color: #333;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="legal-files-table-body">
+                                        <!-- Documents will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Analysis Panel -->
+            <div id="legal-file-analysis" class="mt-2" style="display: none;">
+                <div class="card" style="background: #1a1a1a; border: 1px solid #ec4899;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                        <h6 class="mb-0" style="color: #f9a8d4;">&#128269; Document Analysis</h6>
+                        <button class="btn btn-sm" onclick="document.getElementById('legal-file-analysis').style.display='none';" style="background: transparent; border: none; color: #f9a8d4;">&#10005;</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="legal-file-analysis-loading" class="text-center py-4">
+                            <div class="spinner-border" style="color: #ec4899;"></div>
+                            <p class="mt-2 text-muted">Analyzing document...</p>
+                        </div>
+                        <div id="legal-file-analysis-content" style="display: none;">
+                            <div class="mb-3">
+                                <h6 style="color: #f9a8d4;">Document Summary</h6>
+                                <div id="legal-analysis-summary" class="p-3 rounded" style="background: #0a0a0a;"></div>
+                            </div>
+                            <div class="mb-3">
+                                <h6 style="color: #fca5a5;">Issues Identified</h6>
+                                <div id="legal-analysis-issues" class="p-3 rounded" style="background: #0a0a0a;"></div>
+                            </div>
+                            <div class="mb-3">
+                                <h6 style="color: #86efac;">Recommended Actions</h6>
+                                <div id="legal-analysis-actions" class="p-3 rounded" style="background: #0a0a0a;"></div>
+                            </div>
+                            <div class="mb-3">
+                                <h6 style="color: #fdba74;">Relevant Forms</h6>
+                                <div id="legal-analysis-forms" class="p-3 rounded" style="background: #0a0a0a;"></div>
+                            </div>
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn" onclick="askAboutDocument()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white;">
+                                    &#128172; Ask Follow-up Question
+                                </button>
+                                <button class="btn" onclick="generateCorrectiveFiling()" style="background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: white;">
+                                    &#128196; Generate Corrective Filing
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Disclaimer -->
+                        <div class="mt-4 pt-3" style="border-top: 1px solid #333;">
+                            <small class="text-muted">
+                                <strong>&#9888; Important:</strong> This analysis is AI-generated general information.
+                                Always verify with current court rules and consult a licensed attorney for your specific case.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -711,5 +917,414 @@ function downloadLegalDoc() {
 function getCsrfToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
            document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+// ============================================
+// My Case Files Functions (Session 403)
+// ============================================
+
+let selectedLegalFile = null;
+let currentAnalyzedDocId = null;
+
+// Load case files from API
+async function loadLegalCaseFiles() {
+    const loading = document.getElementById('legal-files-loading');
+    const empty = document.getElementById('legal-files-empty');
+    const tableContainer = document.getElementById('legal-files-table-container');
+    const tableBody = document.getElementById('legal-files-table-body');
+
+    loading.style.display = 'block';
+    empty.style.display = 'none';
+    tableContainer.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/legal/case-files/', {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        loading.style.display = 'none';
+
+        if (data.success && data.documents && data.documents.length > 0) {
+            // Update stats
+            document.getElementById('legal-files-total').textContent = data.stats?.total || data.documents.length;
+            document.getElementById('legal-files-court-orders').textContent = data.stats?.court_orders || 0;
+            document.getElementById('legal-files-motions').textContent = data.stats?.motions || 0;
+            document.getElementById('legal-files-processed').textContent = data.stats?.processed || 0;
+
+            // Populate table
+            tableBody.innerHTML = '';
+            data.documents.forEach(doc => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="border-color: #333;">
+                        <strong>${escapeHtml(doc.title)}</strong>
+                        <br><small class="text-muted">${doc.word_count || 0} words</small>
+                    </td>
+                    <td style="border-color: #333;">
+                        <span class="badge" style="background: ${getDocTypeBadgeColor(doc.document_type)}; font-size: 10px;">
+                            ${formatDocType(doc.document_type)}
+                        </span>
+                    </td>
+                    <td style="border-color: #333;">
+                        <span class="badge" style="background: ${getStatusBadgeColor(doc.status)}; font-size: 10px;">
+                            ${doc.status}
+                        </span>
+                    </td>
+                    <td style="border-color: #333;">
+                        <button class="btn btn-sm me-1" onclick="viewLegalCaseFile('${doc.id}')" style="background: rgba(139, 92, 246, 0.3); border: none; color: #a78bfa;" title="View">
+                            &#128065;
+                        </button>
+                        <button class="btn btn-sm me-1" onclick="analyzeLegalCaseFile('${doc.id}')" style="background: rgba(236, 72, 153, 0.3); border: none; color: #f9a8d4;" title="Analyze">
+                            &#128269;
+                        </button>
+                        <button class="btn btn-sm" onclick="deleteLegalCaseFile('${doc.id}')" style="background: rgba(239, 68, 68, 0.3); border: none; color: #fca5a5;" title="Delete">
+                            &#128465;
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            tableContainer.style.display = 'block';
+        } else {
+            empty.style.display = 'block';
+            // Reset stats
+            document.getElementById('legal-files-total').textContent = '0';
+            document.getElementById('legal-files-court-orders').textContent = '0';
+            document.getElementById('legal-files-motions').textContent = '0';
+            document.getElementById('legal-files-processed').textContent = '0';
+        }
+    } catch (error) {
+        console.error('Error loading case files:', error);
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+    }
+}
+
+// File drag and drop handlers
+function handleLegalFileDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('legal-file-drop-zone').style.borderColor = '#ec4899';
+    document.getElementById('legal-file-drop-zone').style.background = 'rgba(236, 72, 153, 0.1)';
+}
+
+function handleLegalFileDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('legal-file-drop-zone').style.borderColor = '#444';
+    document.getElementById('legal-file-drop-zone').style.background = '#2a2a2a';
+}
+
+function handleLegalFileDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    handleLegalFileDragLeave(e);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleLegalFileSelected(files[0]);
+    }
+}
+
+function handleLegalFileSelect(e) {
+    if (e.target.files.length > 0) {
+        handleLegalFileSelected(e.target.files[0]);
+    }
+}
+
+function handleLegalFileSelected(file) {
+    const allowedTypes = ['application/pdf', 'text/plain', 'application/msword',
+                          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|txt|doc|docx)$/i)) {
+        showToast('Please upload a PDF, TXT, DOC, or DOCX file', 'error');
+        return;
+    }
+
+    if (file.size > maxSize) {
+        showToast('File size exceeds 10MB limit', 'error');
+        return;
+    }
+
+    selectedLegalFile = file;
+    document.getElementById('legal-selected-file').style.display = 'block';
+    document.getElementById('legal-selected-file-name').textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+}
+
+function clearLegalFileSelection() {
+    selectedLegalFile = null;
+    document.getElementById('legal-file-input').value = '';
+    document.getElementById('legal-selected-file').style.display = 'none';
+}
+
+// Upload legal case file
+async function uploadLegalCaseFile() {
+    if (!selectedLegalFile) {
+        showToast('Please select a file to upload', 'warning');
+        return;
+    }
+
+    const docType = document.getElementById('legal-upload-doc-type').value;
+    const context = document.getElementById('legal-upload-context').value;
+
+    const progressDiv = document.getElementById('legal-upload-progress');
+    const progressBar = document.getElementById('legal-upload-progress-bar');
+    const statusText = document.getElementById('legal-upload-status');
+
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    statusText.textContent = 'Uploading file...';
+
+    const formData = new FormData();
+    formData.append('file', selectedLegalFile);
+    formData.append('document_type', docType);
+    formData.append('context', context);
+    formData.append('generate_embeddings', 'true');
+    formData.append('analyze', 'true');
+
+    try {
+        // Simulate progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress = Math.min(progress + 10, 90);
+            progressBar.style.width = progress + '%';
+        }, 200);
+
+        const response = await fetch('/api/legal/case-files/upload/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        });
+
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusText.textContent = 'Upload complete! Processing...';
+            showToast('Document uploaded successfully!', 'success');
+
+            // Clear form
+            clearLegalFileSelection();
+            document.getElementById('legal-upload-context').value = '';
+
+            // Refresh file list
+            setTimeout(() => {
+                loadLegalCaseFiles();
+                progressDiv.style.display = 'none';
+            }, 1000);
+
+            // Show analysis if available
+            if (data.analysis) {
+                showDocumentAnalysis(data.analysis, data.document?.id);
+            }
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        progressDiv.style.display = 'none';
+        showToast('Error uploading document: ' + error.message, 'error');
+    }
+}
+
+// View case file details
+async function viewLegalCaseFile(docId) {
+    try {
+        const response = await fetch(`/api/legal/case-files/${docId}/`, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.success && data.document) {
+            const doc = data.document;
+            // Show in a modal or expand panel - for now, show in document preview
+            document.getElementById('legal-doc-preview').style.display = 'block';
+            document.getElementById('legal-doc-content').textContent =
+                `=== ${doc.title} ===\n\nType: ${formatDocType(doc.document_type)}\nStatus: ${doc.status}\nWord Count: ${doc.word_count}\nUploaded: ${new Date(doc.created_at).toLocaleDateString()}\n\n--- Content ---\n\n${doc.content || doc.processed_content || 'Content not available'}`;
+            document.getElementById('legal-doc-preview').scrollIntoView({ behavior: 'smooth' });
+        }
+    } catch (error) {
+        console.error('Error viewing document:', error);
+        showToast('Error loading document', 'error');
+    }
+}
+
+// Analyze case file
+async function analyzeLegalCaseFile(docId) {
+    const analysisPanel = document.getElementById('legal-file-analysis');
+    const analysisLoading = document.getElementById('legal-file-analysis-loading');
+    const analysisContent = document.getElementById('legal-file-analysis-content');
+
+    analysisPanel.style.display = 'block';
+    analysisLoading.style.display = 'block';
+    analysisContent.style.display = 'none';
+    analysisPanel.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        const response = await fetch(`/api/legal/case-files/${docId}/analyze/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        const data = await response.json();
+
+        if (data.success && data.analysis) {
+            showDocumentAnalysis(data.analysis, docId);
+        } else {
+            throw new Error(data.error || 'Analysis failed');
+        }
+    } catch (error) {
+        console.error('Analysis error:', error);
+        analysisLoading.style.display = 'none';
+        showToast('Error analyzing document: ' + error.message, 'error');
+        analysisPanel.style.display = 'none';
+    }
+}
+
+// Display document analysis
+function showDocumentAnalysis(analysis, docId) {
+    const analysisLoading = document.getElementById('legal-file-analysis-loading');
+    const analysisContent = document.getElementById('legal-file-analysis-content');
+
+    currentAnalyzedDocId = docId;
+
+    document.getElementById('legal-analysis-summary').innerHTML = formatLegalResponse(analysis.summary || 'No summary available');
+    document.getElementById('legal-analysis-issues').innerHTML = formatLegalResponse(analysis.issues || 'No issues identified');
+    document.getElementById('legal-analysis-actions').innerHTML = formatLegalResponse(analysis.recommendations || analysis.actions || 'No specific actions recommended');
+    document.getElementById('legal-analysis-forms').innerHTML = formatLegalResponse(analysis.forms || analysis.relevant_forms || 'No specific forms identified');
+
+    analysisLoading.style.display = 'none';
+    analysisContent.style.display = 'block';
+
+    document.getElementById('legal-file-analysis').style.display = 'block';
+    document.getElementById('legal-file-analysis').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Delete case file
+async function deleteLegalCaseFile(docId) {
+    if (!confirm('Are you sure you want to delete this document? This cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/legal/case-files/${docId}/delete/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Document deleted', 'success');
+            loadLegalCaseFiles();
+        } else {
+            throw new Error(data.error || 'Delete failed');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast('Error deleting document: ' + error.message, 'error');
+    }
+}
+
+// Ask follow-up question about analyzed document
+async function askAboutDocument() {
+    if (!currentAnalyzedDocId) {
+        showToast('No document selected for follow-up', 'warning');
+        return;
+    }
+
+    const question = prompt('What would you like to know about this document?');
+    if (!question) return;
+
+    // Switch to guidance tab and submit the question with document context
+    document.getElementById('legal-guidance-tab').click();
+    document.getElementById('legal-query-input').value =
+        `[Regarding uploaded document ID: ${currentAnalyzedDocId}]\n\n${question}`;
+    submitLegalQuery();
+}
+
+// Generate corrective filing based on analysis
+async function generateCorrectiveFiling() {
+    if (!currentAnalyzedDocId) {
+        showToast('No document selected', 'warning');
+        return;
+    }
+
+    // Switch to documents tab and generate
+    document.getElementById('legal-documents-tab').click();
+
+    try {
+        const response = await fetch('/api/super-platform/process/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                message: `[Legal Document Request - Corrective Filing]\nBased on the analyzed document (ID: ${currentAnalyzedDocId}), generate a corrective filing that addresses the issues identified. Use the proper Colorado JDF forms and format.`
+            })
+        });
+
+        const data = await response.json();
+
+        document.getElementById('legal-doc-preview').style.display = 'block';
+        document.getElementById('legal-doc-content').textContent = data.response || data.message || 'Could not generate corrective filing.';
+        document.getElementById('legal-doc-preview').scrollIntoView({ behavior: 'smooth' });
+
+    } catch (error) {
+        console.error('Error generating corrective filing:', error);
+        showToast('Error generating corrective filing', 'error');
+    }
+}
+
+// Helper functions
+function getDocTypeBadgeColor(docType) {
+    const colors = {
+        'court_order': 'rgba(239, 68, 68, 0.6)',
+        'denied_motion': 'rgba(249, 115, 22, 0.6)',
+        'motion': 'rgba(34, 197, 94, 0.6)',
+        'correspondence': 'rgba(6, 182, 212, 0.6)',
+        'opposing_filing': 'rgba(236, 72, 153, 0.6)',
+        'financial': 'rgba(139, 92, 246, 0.6)',
+        'evidence': 'rgba(251, 191, 36, 0.6)',
+        'other': 'rgba(107, 114, 128, 0.6)'
+    };
+    return colors[docType] || colors['other'];
+}
+
+function getStatusBadgeColor(status) {
+    const colors = {
+        'pending': 'rgba(251, 191, 36, 0.6)',
+        'processing': 'rgba(6, 182, 212, 0.6)',
+        'processed': 'rgba(34, 197, 94, 0.6)',
+        'failed': 'rgba(239, 68, 68, 0.6)',
+        'embedding': 'rgba(139, 92, 246, 0.6)'
+    };
+    return colors[status] || colors['pending'];
+}
+
+function formatDocType(docType) {
+    const labels = {
+        'court_order': 'Court Order',
+        'denied_motion': 'Denied Motion',
+        'motion': 'Motion',
+        'correspondence': 'Correspondence',
+        'opposing_filing': 'Opposing Filing',
+        'financial': 'Financial',
+        'evidence': 'Evidence',
+        'other': 'Other'
+    };
+    return labels[docType] || docType;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 </script>
