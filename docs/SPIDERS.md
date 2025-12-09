@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Spider Network consists of **102 registered spiders**, with **46 currently functional** after Phase 1, 2 & 3 implementations. This document reflects the actual state after Session 397.
+The Spider Network consists of **62 registered spiders**, with **54 actually working** after Session 397 cleanup. Session 397 removed 26 broken spiders that had no public API.
 
 ---
 
@@ -14,11 +14,14 @@ The Spider Network consists of **102 registered spiders**, with **46 currently f
 
 | Metric | Count |
 |--------|-------|
-| Total Registered | 102 |
-| **Actually Working** | **48** |
-| Unconfigured (broken) | 54 |
+| Total Registered | 62 |
+| **Actually Working** | **54** |
+| With Configured URLs | 48 |
+| Need API Keys | 6 |
 | Records in DB | 13,700+ |
 | Searchable (with embeddings) | ~2,000 |
+
+**Session 397:** Cleaned registry - removed 26 broken spiders (no public API/placeholders)
 
 ---
 
@@ -94,11 +97,29 @@ These spiders are configured and collecting real data:
 | adzuna | Adzuna API | Working (remote jobs) |
 | finnhub | Finnhub API | Working (stock quotes, market news) |
 
-### Broken Spiders (54)
+### Session 397 Cleanup - Removed Spiders (26)
 
-These spiders return placeholder data ("no real URLs configured"):
+These spiders were removed from the registry because they have no public API:
 
-**See:** `docs/handoffs/SESSION_395_SPIDER_AUDIT_AND_ACTION_PLAN.md` for full breakdown and fix plan.
+**Freelance Platforms (6):** toptal, guru, peopleperhour, ninetyninedesigns, flexjobs, angellist
+**Education (2):** teachable, skillshare
+**Financial (4):** opensea, seekingalpha, bloomberg_terminal, reuters_eikon
+**Tech (2):** kaggle, stackoverflow_jobs
+**Creative Assets (5):** envato, creativemarket, adobestock, shutterstock, canva
+**AI/Creative Tools (4):** midjourney, civitai, runwayml, replicate
+**Digital Products (4):** etsy, lemonsqueezy, sellfy, appsumo
+**Content Creation (3):** convertkit, notion, figma
+**Content (3):** gumroad, patreon, kofi
+**Placeholders (5):** financial, innovation, social_sentiment, market_data, news_harvester
+**Sports (2):** horse_racing, combat_sports (not in current focus)
+
+### Spiders Needing API Keys (6)
+
+These are registered but need credentials:
+- `bluesky` - Needs BLUESKY_IDENTIFIER + BLUESKY_PASSWORD
+- `discord` - Needs DISCORD_BOT_TOKEN
+- `spotify` - Needs SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET (OAuth)
+- `sec_edgar` - SEC_API_KEY (available in .env, needs testing)
 
 ---
 

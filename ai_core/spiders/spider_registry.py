@@ -15,30 +15,15 @@ from typing import Dict, Type, Any, Optional
 from datetime import datetime
 import logging
 
-# Import existing specialized spiders
-from .specialized.financial_spider import FinancialIntelligenceSpider
-from .specialized.innovation_spider import InnovationTrackingSpider
-from .specialized.social_spider import SocialSentimentSpider
-from .specialized.market_spider import MarketDataSpider
-from .specialized.news_spider import NewsHarvesterSpider
-
-# Import new freelance platform spiders
-from .specialized.toptal_spider import ToptalIntelligenceSpider
-from .specialized.guru_spider import GuruIntelligenceSpider
-from .specialized.peopleperhour_spider import PeoplePerHourIntelligenceSpider
-from .specialized.ninetyninedesigns_spider import NinetyNineDesignsIntelligenceSpider
-from .specialized.flexjobs_spider import FlexJobsIntelligenceSpider
+# Import working freelance platform spiders (Session 397: Removed broken/no-API spiders)
 from .specialized.remoteok_spider import RemoteOKIntelligenceSpider
 
-# Import content monetization spiders
+# Import content monetization spiders (Session 397: Removed gumroad - no public API)
 from .specialized.medium_spider import MediumIntelligenceSpider
-from .specialized.gumroad_spider import GumroadIntelligenceSpider
 from .specialized.content_monetization_spider import ContentMonetizationSpider
 from .specialized.tech_community_spider import TechCommunitySpider
 
-# Import sports betting spiders
-from .specialized.horse_racing_spider import HorseRacingSpider
-from .specialized.combat_sports_spider import CombatSportsSpider
+# Session 397: Removed sports betting spiders (horse_racing, combat_sports) - not in current focus
 
 # Import legal spiders
 from .specialized.courtlistener_spider import CourtListenerSpider
@@ -59,21 +44,14 @@ from .specialized.wired_spider import WiredSpider
 from .specialized.dribbble_spider import DribbbleSpider
 from .specialized.behance_spider import BehanceSpider
 
-# Session 218: Additional FREELANCE spiders
+# Session 218: FREELANCE spiders (Session 397: Removed AngelList - no public API)
 from .specialized.weworkremotely_spider import WeWorkRemotelySpider
-from .specialized.angellist_spider import AngelListSpider
 
-# Session 218: EDUCATION spiders
-from .specialized.teachable_spider import TeachableSpider
+# Session 218: EDUCATION spiders (Session 397: Removed teachable, skillshare - no public API)
 from .specialized.udemy_spider import UdemySpider
-from .specialized.skillshare_spider import SkillshareSpider
 
-# Session 218: Additional FINANCIAL spiders
+# Session 218: FINANCIAL spiders (Session 397: Removed opensea, seekingalpha, bloomberg, reuters - no public API)
 from .specialized.etherscan_spider import EtherscanSpider
-from .specialized.opensea_spider import OpenSeaSpider
-from .specialized.seekingalpha_spider import SeekingAlphaSpider
-from .specialized.bloomberg_spider import BloombergSpider
-from .specialized.reuters_spider import ReutersSpider
 
 # Session 218: TECH spiders
 from .specialized.hackernews_spider import HackerNewsSpider
@@ -86,29 +64,10 @@ from .specialized.kickstarter_spider import KickstarterSpider
 from .specialized.coingecko_spider import CoinGeckoSpider
 from .specialized.yahoo_finance_spider import YahooFinanceSpider
 
-# Session 218: CREATIVE ASSETS & STOCK spiders (5)
-from .specialized.envato_spider import EnvatoSpider
-from .specialized.creativemarket_spider import CreativeMarketSpider
-from .specialized.adobestock_spider import AdobeStockSpider
-from .specialized.shutterstock_spider import ShutterstockSpider
-from .specialized.canva_spider import CanvaSpider
-
-# Session 218: AI/CREATIVE TOOLS spiders (4)
-from .specialized.midjourney_spider import MidjourneySpider
-from .specialized.civitai_spider import CivitAISpider
-from .specialized.runwayml_spider import RunwayMLSpider
-from .specialized.replicate_spider import ReplicateSpider
-
-# Session 218: DIGITAL PRODUCT PLATFORMS spiders (4)
-from .specialized.etsy_spider import EtsySpider
-from .specialized.lemonsqueezy_spider import LemonSqueezySpider
-from .specialized.sellfy_spider import SellfySpider
-from .specialized.appsumo_spider import AppSumoSpider
-
-# Session 218: CONTENT CREATION spiders (3)
-from .specialized.convertkit_spider import ConvertKitSpider
-from .specialized.notion_spider import NotionSpider
-from .specialized.figma_spider import FigmaSpider
+# Session 397: Removed CREATIVE ASSETS spiders (envato, creativemarket, adobestock, shutterstock, canva) - no public API
+# Session 397: Removed AI/CREATIVE TOOLS spiders (midjourney, civitai, runwayml, replicate) - no public API
+# Session 397: Removed DIGITAL PRODUCT spiders (etsy, lemonsqueezy, sellfy, appsumo) - no public API
+# Session 397: Removed CONTENT CREATION spiders (convertkit, notion, figma) - no public API
 
 # Session 263: NEW SPIDERS TO REACH 70 TOTAL
 from .specialized.reddit_spider import RedditSpider
@@ -200,12 +159,13 @@ class SpiderRegistry:
     - Last verification timestamp
     """
 
-    # Verification status from Session 343 (2025-12-04)
+    # Verification status from Session 397 (2025-12-08)
     SPIDER_STATUS = {
-        # Session 343: Expanded to 102 spiders! (+7 high-value API spiders)
-        'verified_at': '2025-12-04T00:00:00',
-        'total_working': 102,
-        'total_placeholder': 0,
+        # Session 397: Cleaned registry - removed 26 broken spiders (no public API/placeholders)
+        # Remaining: ~76 spiders (working + needs API keys)
+        'verified_at': '2025-12-08T00:00:00',
+        'total_working': 54,  # Spiders with actual data collection
+        'total_placeholder': 0,  # All placeholders removed
         'total_error': 0,
     }
 
@@ -218,77 +178,9 @@ class SpiderRegistry:
     def _register_all_spiders(self):
         """Register all available spider classes"""
 
-        # === EXISTING SPIDERS (5) ===
-        self.register_spider('financial', FinancialIntelligenceSpider, {
-            'category': 'financial',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['finance.yahoo.com', 'polygon.io']  # Removed sec.gov - temporarily disabled
-        })
-
-        self.register_spider('innovation', InnovationTrackingSpider, {
-            'category': 'innovation',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['arxiv.org', 'patents.google.com', 'github.com']
-        })
-
-        self.register_spider('social_sentiment', SocialSentimentSpider, {
-            'category': 'social',
-            'priority': 2,
-            'rate_limit': 2.0,
-            'targets': ['reddit.com', 'twitter.com', 'stocktwits.com']
-        })
-
-        self.register_spider('market_data', MarketDataSpider, {
-            'category': 'market',
-            'priority': 1,
-            'rate_limit': 5.0,
-            'targets': ['binance.com', 'coinbase.com']  # Removed tradingview.com - replaced with Polygon
-        })
-
-        self.register_spider('news_harvester', NewsHarvesterSpider, {
-            'category': 'news',
-            'priority': 1,
-            'rate_limit': 2.0,
-            'targets': ['bloomberg.com', 'reuters.com', 'cnbc.com']
-        })
-
-        # === FREELANCE/GIG PLATFORM SPIDERS (10) ===
-        self.register_spider('toptal', ToptalIntelligenceSpider, {
-            'category': 'freelance',
-            'priority': 1,
-            'rate_limit': 0.5,
-            'targets': ['toptal.com/jobs', 'toptal.com/freelance']
-        })
-
-        self.register_spider('guru', GuruIntelligenceSpider, {
-            'category': 'freelance',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['guru.com/jobs', 'guru.com/freelance']
-        })
-
-        self.register_spider('peopleperhour', PeoplePerHourIntelligenceSpider, {
-            'category': 'freelance',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['peopleperhour.com/freelance-jobs']
-        })
-
-        self.register_spider('ninetyninedesigns', NinetyNineDesignsIntelligenceSpider, {
-            'category': 'design',
-            'priority': 2,
-            'rate_limit': 0.5,
-            'targets': ['99designs.com/contests']
-        })
-
-        self.register_spider('flexjobs', FlexJobsIntelligenceSpider, {
-            'category': 'remote_work',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['flexjobs.com/jobs']
-        })
+        # === SESSION 397: WORKING FREELANCE/JOBS SPIDERS ===
+        # Removed: financial, innovation, social_sentiment, market_data, news_harvester (placeholders)
+        # Removed: toptal, guru, peopleperhour, ninetyninedesigns, flexjobs, angellist (no public API)
 
         self.register_spider('remoteok', RemoteOKIntelligenceSpider, {
             'category': 'remote_work',
@@ -297,7 +189,6 @@ class SpiderRegistry:
             'targets': ['remoteok.io']
         })
 
-        # Session 218: Activate WeWorkRemotely and AngelList (were placeholders)
         self.register_spider('weworkremotely', WeWorkRemotelySpider, {
             'category': 'freelance',
             'priority': 1,
@@ -305,14 +196,10 @@ class SpiderRegistry:
             'targets': ['weworkremotely.com/categories/']
         })
 
-        self.register_spider('angellist', AngelListSpider, {
-            'category': 'freelance',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['angel.co/jobs']
-        })
+        # === SESSION 397: WORKING CONTENT SPIDERS ===
+        # Removed: gumroad, patreon, kofi (no public API)
+        # Removed: teachable, skillshare (no public API)
 
-        # === CONTENT MONETIZATION SPIDERS (8) ===
         self.register_spider('medium', MediumIntelligenceSpider, {
             'category': 'content',
             'priority': 2,
@@ -320,33 +207,11 @@ class SpiderRegistry:
             'targets': ['medium.com/partner-program']
         })
 
-        self.register_spider('gumroad', GumroadIntelligenceSpider, {
-            'category': 'digital_products',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['gumroad.com/discover']
-        })
-
-        # Register content monetization spiders with concrete implementation
         self.register_spider('substack', ContentMonetizationSpider, {
             'category': 'content',
             'priority': 2,
             'rate_limit': 1.0,
             'targets': ['substack.com']
-        })
-
-        self.register_spider('patreon', ContentMonetizationSpider, {
-            'category': 'content',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['patreon.com']
-        })
-
-        self.register_spider('kofi', ContentMonetizationSpider, {
-            'category': 'content',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['ko-fi.com']
         })
 
         self.register_spider('producthunt', ContentMonetizationSpider, {
@@ -356,14 +221,6 @@ class SpiderRegistry:
             'targets': ['producthunt.com']
         })
 
-        # Session 218: Activate Education spiders (were placeholders)
-        self.register_spider('teachable', TeachableSpider, {
-            'category': 'education',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['teachable.com']
-        })
-
         self.register_spider('udemy', UdemySpider, {
             'category': 'education',
             'priority': 1,
@@ -371,30 +228,23 @@ class SpiderRegistry:
             'targets': ['udemy.com']
         })
 
-        self.register_spider('skillshare', SkillshareSpider, {
-            'category': 'education',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['skillshare.com']
-        })
+        # === SESSION 397: WORKING FINANCIAL SPIDERS ===
+        # Removed: opensea, seekingalpha, bloomberg_terminal, reuters_eikon (no public API)
 
-        # === FINANCIAL/CRYPTO SPIDERS ===
-        # ✅ CRITICAL FIX: Register real CoinGecko and Yahoo Finance spiders
         self.register_spider('coingecko', CoinGeckoSpider, {
             'category': 'financial',
-            'priority': 1,  # High priority - real implementation
+            'priority': 1,
             'rate_limit': 1.0,
             'targets': ['api.coingecko.com/api/v3']
         })
 
         self.register_spider('yahoo_finance', YahooFinanceSpider, {
             'category': 'financial',
-            'priority': 1,  # High priority - real implementation
+            'priority': 1,
             'rate_limit': 1.0,
             'targets': ['query1.finance.yahoo.com/v8', 'query2.finance.yahoo.com/v10']
         })
 
-        # Session 218: Activate Financial spiders (were placeholders)
         self.register_spider('etherscan', EtherscanSpider, {
             'category': 'financial',
             'priority': 1,
@@ -402,49 +252,10 @@ class SpiderRegistry:
             'targets': ['etherscan.io/apis']
         })
 
-        self.register_spider('opensea', OpenSeaSpider, {
-            'category': 'financial',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['opensea.io/activity']
-        })
-
-        self.register_spider('seekingalpha', SeekingAlphaSpider, {
-            'category': 'financial',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['seekingalpha.com']
-        })
-
-        self.register_spider('bloomberg_terminal', BloombergSpider, {
-            'category': 'financial',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['bloomberg.com/professional']
-        })
-
-        self.register_spider('reuters_eikon', ReutersSpider, {
-            'category': 'financial',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['reuters.com/en/eikon']
-        })
-
-        # === AI/TECH OPPORTUNITY SPIDERS (10) ===
-        # Register tech community spiders with concrete implementation
-        self.register_spider('huggingface', TechCommunitySpider, {
-            'category': 'tech',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['huggingface.co']
-        })
-
-        self.register_spider('kaggle', TechCommunitySpider, {
-            'category': 'tech',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['kaggle.com']
-        })
+        # === SESSION 397: WORKING TECH SPIDERS ===
+        # Removed: kaggle, stackoverflow_jobs (no public API)
+        # Removed: horse_racing, combat_sports (sports betting not in focus)
+        # Note: huggingface TechCommunitySpider replaced by HuggingFaceSpider below
 
         self.register_spider('github_jobs', TechCommunitySpider, {
             'category': 'tech',
@@ -453,14 +264,6 @@ class SpiderRegistry:
             'targets': ['github.com']
         })
 
-        self.register_spider('stackoverflow_jobs', TechCommunitySpider, {
-            'category': 'tech',
-            'priority': 2,
-            'rate_limit': 1.0,
-            'targets': ['stackoverflow.com']
-        })
-
-        # Session 218: Activate Tech spiders (were placeholders)
         self.register_spider('hackernews', HackerNewsSpider, {
             'category': 'tech',
             'priority': 1,
@@ -494,21 +297,6 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['kickstarter.com']
-        })
-
-        # === SPORTS BETTING SPIDERS (5) ===
-        self.register_spider('horse_racing', HorseRacingSpider, {
-            'category': 'sports_betting',
-            'priority': 1,
-            'rate_limit': 2.0,
-            'targets': ['reddit.com/r/horseracing']
-        })
-
-        self.register_spider('combat_sports', CombatSportsSpider, {
-            'category': 'sports_betting',
-            'priority': 1,
-            'rate_limit': 2.0,
-            'targets': ['reddit.com/r/MMA', 'reddit.com/r/ufc', 'reddit.com/r/Boxing']
         })
 
         # === LEGAL SPIDERS (4) ===
@@ -594,121 +382,11 @@ class SpiderRegistry:
             'targets': ['behance.net/feeds/projects']
         })
 
-        # === SESSION 218: CREATIVE ASSETS & STOCK SPIDERS (5) ===
-        self.register_spider('envato', EnvatoSpider, {
-            'category': 'creative_assets',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['envato.com/blog/']
-        })
-
-        self.register_spider('creativemarket', CreativeMarketSpider, {
-            'category': 'creative_assets',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['creativemarket.com']
-        })
-
-        self.register_spider('adobestock', AdobeStockSpider, {
-            'category': 'creative_assets',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['stock.adobe.com']
-        })
-
-        self.register_spider('shutterstock', ShutterstockSpider, {
-            'category': 'creative_assets',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['shutterstock.com/blog/']
-        })
-
-        self.register_spider('canva', CanvaSpider, {
-            'category': 'creative_assets',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['canva.com/designschool/']
-        })
-
-        # === SESSION 218: AI/CREATIVE TOOLS SPIDERS (4) ===
-        self.register_spider('midjourney', MidjourneySpider, {
-            'category': 'ai_creative',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['midjourney.com']
-        })
-
-        self.register_spider('civitai', CivitAISpider, {
-            'category': 'ai_creative',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['civitai.com']
-        })
-
-        self.register_spider('runwayml', RunwayMLSpider, {
-            'category': 'ai_creative',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['runwayml.com/blog/']
-        })
-
-        self.register_spider('replicate', ReplicateSpider, {
-            'category': 'ai_creative',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['replicate.com']
-        })
-
-        # === SESSION 218: DIGITAL PRODUCT PLATFORMS SPIDERS (4) ===
-        self.register_spider('etsy', EtsySpider, {
-            'category': 'digital_products',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['etsy.com']
-        })
-
-        self.register_spider('lemonsqueezy', LemonSqueezySpider, {
-            'category': 'digital_products',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['lemonsqueezy.com']
-        })
-
-        self.register_spider('sellfy', SellfySpider, {
-            'category': 'digital_products',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['sellfy.com']
-        })
-
-        self.register_spider('appsumo', AppSumoSpider, {
-            'category': 'digital_products',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['appsumo.com']
-        })
-
-        # === SESSION 218: CONTENT CREATION SPIDERS (3) ===
-        self.register_spider('convertkit', ConvertKitSpider, {
-            'category': 'content_creation',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['convertkit.com/blog/']
-        })
-
-        self.register_spider('notion', NotionSpider, {
-            'category': 'content_creation',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['notion.so/blog/']
-        })
-
-        self.register_spider('figma', FigmaSpider, {
-            'category': 'content_creation',
-            'priority': 1,
-            'rate_limit': 1.0,
-            'targets': ['figma.com/blog/']
-        })
+        # === SESSION 397: REMOVED BROKEN CATEGORIES ===
+        # Removed CREATIVE ASSETS (5): envato, creativemarket, adobestock, shutterstock, canva - no public API
+        # Removed AI/CREATIVE TOOLS (4): midjourney, civitai, runwayml, replicate - no public API
+        # Removed DIGITAL PRODUCTS (4): etsy, lemonsqueezy, sellfy, appsumo - no public API
+        # Removed CONTENT CREATION (3): convertkit, notion, figma - no public API
 
         # === SESSION 263: NEW SPIDERS TO REACH 70 TOTAL (3) ===
 
