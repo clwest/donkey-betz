@@ -2022,6 +2022,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 `🔧 ${meta.tool_calls?.length || 0} tool calls | ` +
                                 `⏱️ ${Math.round(cleanData.execution_time_ms)}ms</div>`;
                         }
+
+                        // Session 401: Display Knowledge Attribution
+                        const ka = meta.knowledge_attribution;
+                        if (ka && (ka.spider_sources?.length > 0 || ka.knowledge_items?.length > 0)) {
+                            responseHtml += this.formatKnowledgeAttribution(ka);
+                        }
                     }
 
                     // Handle artifacts (generated images, videos, etc.)
@@ -3483,6 +3489,75 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
 
                 return message;
+            }
+
+            // Session 401: Format Knowledge Attribution for transparency
+            formatKnowledgeAttribution(attribution) {
+                if (!attribution) return '';
+
+                const sources = attribution.spider_sources || [];
+                const items = attribution.knowledge_items || [];
+                const confidence = Math.round((attribution.confidence_score || 0) * 100);
+                const freshness = attribution.data_freshness_hours || 0;
+                const totalSources = attribution.total_sources || sources.length;
+
+                // Don't show if no real attribution
+                if (sources.length === 0 && items.length === 0) return '';
+
+                let html = `
+                    <div class="knowledge-attribution" style="margin-top: 12px; background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(6, 182, 212, 0.12)); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 8px; padding: 10px 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="font-size: 14px;">💡</span>
+                            <span style="color: #22d3ee; font-weight: 600; font-size: 12px;">Knowledge Attribution</span>
+                        </div>
+                `;
+
+                // Spider sources row
+                if (sources.length > 0) {
+                    const sourceBadges = sources.slice(0, 4).map(s =>
+                        `<span style="background: rgba(34, 211, 238, 0.2); color: #67e8f9; padding: 2px 8px; border-radius: 10px; font-size: 10px;">${s}</span>`
+                    ).join(' ');
+                    const moreCount = sources.length > 4 ? `<span style="color: #94a3b8; font-size: 10px;">+${sources.length - 4} more</span>` : '';
+
+                    html += `
+                        <div style="margin-bottom: 6px;">
+                            <span style="color: #94a3b8; font-size: 10px; margin-right: 6px;">📊 Sources:</span>
+                            ${sourceBadges} ${moreCount}
+                        </div>
+                    `;
+                }
+
+                // Knowledge items (what agents learned)
+                if (items.length > 0) {
+                    const itemSummaries = items.slice(0, 2).map(item => {
+                        const source = item.source_agent || 'System';
+                        const title = (item.title || '').slice(0, 50);
+                        return `<span style="color: #a5f3fc;">${source}</span>: ${title}${title.length >= 50 ? '...' : ''}`;
+                    }).join('<br>');
+
+                    html += `
+                        <div style="margin-bottom: 6px; font-size: 10px; color: #cbd5e1; line-height: 1.4;">
+                            <span style="color: #94a3b8;">🧠 Learned:</span><br>
+                            ${itemSummaries}
+                        </div>
+                    `;
+                }
+
+                // Stats row
+                const freshnessLabel = freshness < 1 ? 'Just now' :
+                                      freshness < 24 ? `${Math.round(freshness)}h ago` :
+                                      `${Math.round(freshness / 24)}d ago`;
+
+                html += `
+                        <div style="display: flex; gap: 12px; font-size: 10px; color: #94a3b8;">
+                            <span>📈 ${confidence}% confidence</span>
+                            <span>📚 ${totalSources} source${totalSources !== 1 ? 's' : ''}</span>
+                            ${freshness > 0 ? `<span>⏱️ ${freshnessLabel}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                return html;
             }
 
             // Session 271: Format artifacts from Clean Architecture agents

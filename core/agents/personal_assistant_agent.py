@@ -27,7 +27,7 @@ import logging
 import time
 from typing import Dict, Any, List, Optional, Tuple
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, KnowledgeAttribution
 
 logger = logging.getLogger(__name__)
 
@@ -305,6 +305,10 @@ Available agents:
                         confidence=0.9
                     )
 
+                    # Session 401: Get knowledge attribution before delegation
+                    relevant_knowledge = self._get_relevant_knowledge_for_task(task)
+                    attribution = self._build_knowledge_attribution(relevant_knowledge)
+
                     # Delegate to the agent
                     result = self.router.route(
                         agent_name=suggested_agent,
@@ -326,6 +330,16 @@ Available agents:
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 401: Merge attribution from delegated agent if available
+                    if result.knowledge_attribution:
+                        attribution = KnowledgeAttribution(
+                            spider_sources=list(set(attribution.spider_sources + result.knowledge_attribution.spider_sources)),
+                            knowledge_items=attribution.knowledge_items + result.knowledge_attribution.knowledge_items,
+                            confidence_score=(attribution.confidence_score + result.knowledge_attribution.confidence_score) / 2 if attribution.confidence_score else result.knowledge_attribution.confidence_score,
+                            data_freshness_hours=min(attribution.data_freshness_hours, result.knowledge_attribution.data_freshness_hours) if attribution.data_freshness_hours else result.knowledge_attribution.data_freshness_hours,
+                            total_sources=attribution.total_sources + result.knowledge_attribution.total_sources
+                        )
+
                     return AgentResult(
                         success=result.success,
                         message=result.message,
@@ -337,7 +351,8 @@ Available agents:
                         agent_name=self.name,
                         execution_time_ms=execution_time,
                         decisions_made=self._tt_decision_count,
-                        tool_calls=tool_calls_made
+                        tool_calls=tool_calls_made,
+                        knowledge_attribution=attribution  # Session 401
                     )
 
                 else:
@@ -547,21 +562,18 @@ Available agents:
         spider_context: Dict[str, Any],
         start_time: float
     ) -> AgentResult:
-        """Answer a question directly using GPT."""
+        """
+        Answer a question directly using GPT.
+
+        Session 401: Enhanced with knowledge attribution to show users
+        what intelligence sources influenced the response.
+        """
         try:
-            # Build prompt with context
-            prompt_parts = [self.system_prompt]
+            # Session 401: Build prompt with attribution to track what knowledge is used
+            prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
 
-            # Add spider context for knowledge
-            if spider_context:
-                trends = spider_context.get('relevant_trends', [])
-                if trends:
-                    trend_info = [t.get('topic', str(t)) for t in trends[:5] if isinstance(t, dict)]
-                    if trend_info:
-                        prompt_parts.append(f"\n\nCurrent trends: {', '.join(trend_info)}")
-
-            prompt_parts.append("\n\nAnswer this question directly without delegating to an agent:")
-            prompt = "\n".join(prompt_parts)
+            # Append instruction to answer directly
+            prompt += "\n\nAnswer this question directly without delegating to an agent."
 
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
@@ -581,7 +593,8 @@ Available agents:
                 data={'type': 'direct_answer', 'question': task},
                 agent_name=self.name,
                 execution_time_ms=int((time.time() - start_time) * 1000),
-                decisions_made=self._tt_decision_count
+                decisions_made=self._tt_decision_count,
+                knowledge_attribution=attribution  # Session 401: Include attribution
             )
 
         except Exception as e:
@@ -601,10 +614,14 @@ Available agents:
         spider_context: Dict[str, Any],
         start_time: float
     ) -> AgentResult:
-        """Use GPT to decide which agent to route to."""
+        """
+        Use GPT to decide which agent to route to.
+
+        Session 401: Enhanced with knowledge attribution.
+        """
         try:
-            # Build prompt with context
-            full_prompt = self._build_prompt(task, scifi_context, spider_context)
+            # Session 401: Build prompt with attribution
+            full_prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
 
             gpt_response = self._call_openai(full_prompt)
 
@@ -630,6 +647,18 @@ Available agents:
                             context=subtask_context
                         )
 
+                        # Session 401: Merge attribution from delegated agent if available
+                        merged_attribution = attribution
+                        if result.knowledge_attribution:
+                            # Combine sources from both
+                            merged_attribution = KnowledgeAttribution(
+                                spider_sources=list(set(attribution.spider_sources + result.knowledge_attribution.spider_sources)),
+                                knowledge_items=attribution.knowledge_items + result.knowledge_attribution.knowledge_items,
+                                confidence_score=(attribution.confidence_score + result.knowledge_attribution.confidence_score) / 2,
+                                data_freshness_hours=min(attribution.data_freshness_hours, result.knowledge_attribution.data_freshness_hours),
+                                total_sources=attribution.total_sources + result.knowledge_attribution.total_sources
+                            )
+
                         return AgentResult(
                             success=result.success,
                             message=result.message,
@@ -640,7 +669,8 @@ Available agents:
                             },
                             agent_name=self.name,
                             execution_time_ms=int((time.time() - start_time) * 1000),
-                            decisions_made=self._tt_decision_count
+                            decisions_made=self._tt_decision_count,
+                            knowledge_attribution=merged_attribution  # Session 401
                         )
 
             # GPT responded without delegation
@@ -649,7 +679,8 @@ Available agents:
                 message=gpt_response.get('content', ''),
                 data={'type': 'conversation'},
                 agent_name=self.name,
-                execution_time_ms=int((time.time() - start_time) * 1000)
+                execution_time_ms=int((time.time() - start_time) * 1000),
+                knowledge_attribution=attribution  # Session 401
             )
 
         except Exception as e:

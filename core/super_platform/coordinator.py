@@ -1063,6 +1063,11 @@ Try:
             elif not response_message:
                 response_message = str(result.data) if result.data else "Request processed"
 
+            # Session 401: Include knowledge attribution if available
+            knowledge_attribution_data = None
+            if result.knowledge_attribution:
+                knowledge_attribution_data = result.knowledge_attribution.to_dict()
+
             return CoordinatorResult(
                 success=result.success,
                 response=response_message,
@@ -1077,6 +1082,7 @@ Try:
                     'decisions_made': result.decisions_made,
                     'tool_calls': result.tool_calls,
                     'agent_result': result.data.get('agent_result', {}) if result.data else {},
+                    'knowledge_attribution': knowledge_attribution_data,  # Session 401
                 }
             )
 
