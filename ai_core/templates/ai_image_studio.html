@@ -1803,7 +1803,25 @@
                     <!-- Right Panel (3 cols) - Style Preferences & Project Context -->
                     <!-- Session 272: Reduced from 4 to 3 cols to give more space to chat -->
                     <div class="col-lg-3">
-                        <!-- Session 292: Removed Project Selector Card - Main Assistant no longer uses project context -->
+                        <!-- Session 394: Restored Project Selector Card - Users can select which project to work with -->
+                        <div class="card mb-3" style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.4);">
+                            <div class="card-header" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                <h6 class="mb-0" style="color: #86efac;">📁 Working Project</h6>
+                            </div>
+                            <div class="card-body py-3">
+                                <select id="tabActiveProjectSelect" class="form-select mb-2" onchange="window.aiAssistant.switchProject(this.value)" style="background: rgba(34, 197, 94, 0.15); border-color: #22c55e; color: #bbf7d0; font-size: 13px;">
+                                    <option value="">🌐 No Project (General)</option>
+                                </select>
+                                <small style="color: #86efac; font-size: 11px;">
+                                    Select a customer/project to auto-organize created content
+                                </small>
+                                <div id="activeProjectIndicator" style="display: none; margin-top: 8px; padding: 8px; background: rgba(34, 197, 94, 0.2); border-radius: 6px; border-left: 3px solid #22c55e;">
+                                    <small style="color: #bbf7d0; font-weight: 600;">
+                                        ✅ All content will be added to: <span id="activeProjectName"></span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Style Preferences Card -->
                         <div class="card mb-3" id="tabStyleInsightsCard" style="background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.4);">
@@ -9835,12 +9853,116 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <!-- Continue to Creative button (appears after research) -->
+                                            <!-- Session 394: Brand Review Section (Human-in-the-Loop) -->
+                                            <div id="brand-review-section" style="display: none;" class="mt-3">
+                                                <div class="card" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #22c55e;">
+                                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                                        <div>
+                                                            <h5 class="mb-0" style="color: #22c55e;">🎨 Brand Direction Review</h5>
+                                                            <small class="text-muted">Research complete! Customize your brand direction before generating assets.</small>
+                                                        </div>
+                                                        <span class="badge bg-success">Project: <code id="completed-project-id">-</code></span>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <!-- Detected Industry -->
+                                                        <div class="mb-3">
+                                                            <label class="form-label" style="color: #a5b4fc;">Detected Industry</label>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span id="brand-detected-industry" class="badge" style="background: #6366f1; font-size: 14px;">Loading...</span>
+                                                                <small class="text-muted">This affects style recommendations</small>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="row">
+                                                            <!-- Visual Style Selection -->
+                                                            <div class="col-md-4 mb-3">
+                                                                <label class="form-label" style="color: #a5b4fc;">
+                                                                    🎭 Visual Style
+                                                                    <small class="text-muted">(Primary look & feel)</small>
+                                                                </label>
+                                                                <select id="brand-style-select" class="form-select" style="background: #0d0d0d; border: 1px solid #333; color: white;">
+                                                                    <option value="">Select a style...</option>
+                                                                    <optgroup label="Recommended for your industry">
+                                                                        <!-- Populated dynamically -->
+                                                                    </optgroup>
+                                                                </select>
+                                                                <div id="brand-style-description" class="mt-2 p-2" style="background: rgba(99, 102, 241, 0.1); border-radius: 6px; font-size: 12px; color: #a5b4fc; display: none;">
+                                                                    <!-- Style description appears here -->
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Color Palette Selection -->
+                                                            <div class="col-md-4 mb-3">
+                                                                <label class="form-label" style="color: #a5b4fc;">
+                                                                    🎨 Color Palette
+                                                                    <small class="text-muted">(Brand colors)</small>
+                                                                </label>
+                                                                <select id="brand-palette-select" class="form-select" style="background: #0d0d0d; border: 1px solid #333; color: white;">
+                                                                    <option value="">Select a palette...</option>
+                                                                </select>
+                                                                <div id="brand-palette-preview" class="mt-2 d-flex gap-1" style="display: none;">
+                                                                    <!-- Color swatches appear here -->
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Logo Direction Selection -->
+                                                            <div class="col-md-4 mb-3">
+                                                                <label class="form-label" style="color: #a5b4fc;">
+                                                                    ✨ Logo Direction
+                                                                    <small class="text-muted">(Logo type)</small>
+                                                                </label>
+                                                                <select id="brand-logo-select" class="form-select" style="background: #0d0d0d; border: 1px solid #333; color: white;">
+                                                                    <option value="">Select logo type...</option>
+                                                                </select>
+                                                                <div id="brand-logo-description" class="mt-2 p-2" style="background: rgba(99, 102, 241, 0.1); border-radius: 6px; font-size: 12px; color: #a5b4fc; display: none;">
+                                                                    <!-- Logo description appears here -->
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Custom Feedback -->
+                                                        <div class="mb-3">
+                                                            <label class="form-label" style="color: #a5b4fc;">
+                                                                💬 Additional Feedback <small class="text-muted">(optional)</small>
+                                                            </label>
+                                                            <textarea id="brand-custom-feedback" class="form-control" rows="2"
+                                                                      placeholder="e.g., 'Make it more playful', 'Use warm earth tones', 'Avoid generic tech aesthetics'..."
+                                                                      style="background: #0d0d0d; border: 1px solid #333; color: white;"></textarea>
+                                                        </div>
+
+                                                        <!-- Industry Notes -->
+                                                        <div id="brand-industry-notes" class="mb-3 p-2" style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; border-radius: 4px; display: none;">
+                                                            <small style="color: #fcd34d;">
+                                                                <strong>💡 Industry Tip:</strong> <span id="brand-notes-text"></span>
+                                                            </small>
+                                                        </div>
+
+                                                        <!-- Styles to Avoid Warning -->
+                                                        <div id="brand-avoid-warning" class="mb-3 p-2" style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 4px; display: none;">
+                                                            <small style="color: #fca5a5;">
+                                                                <strong>⚠️ Styles to Avoid:</strong> <span id="brand-avoid-text"></span>
+                                                            </small>
+                                                        </div>
+
+                                                        <!-- Action Buttons -->
+                                                        <div class="d-flex gap-2 justify-content-end">
+                                                            <button class="btn btn-outline-secondary" onclick="resetBrandSelections()">
+                                                                🔄 Reset to Recommendations
+                                                            </button>
+                                                            <button class="btn btn-success btn-lg" id="generate-with-brand-btn" onclick="runCreativePipelineWithBrandChoices()">
+                                                                🚀 Generate Brand Assets
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Legacy continue section (hidden, kept for backwards compatibility) -->
                                             <div id="continue-creative-section" style="display: none;" class="mt-3">
                                                 <div class="alert d-flex align-items-center justify-content-between" style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e;">
                                                     <div>
                                                         <strong style="color: #22c55e;">✅ Research Complete!</strong>
-                                                        <span class="text-muted ms-2">Project ID: <code id="completed-project-id">-</code></span>
+                                                        <span class="text-muted ms-2">Project ID: <code id="completed-project-id-legacy">-</code></span>
                                                     </div>
                                                     <button class="btn btn-success" id="continue-creative-btn" onclick="runCreativePipeline()">
                                                         🎨 Continue to Creative Pipeline →
@@ -25991,6 +26113,12 @@
                     // Clear existing options
                     select.innerHTML = '';
 
+                    // Session 394: Add "No Project" option first
+                    const noProjectOption = document.createElement('option');
+                    noProjectOption.value = '';
+                    noProjectOption.textContent = '🌐 No Project (General)';
+                    select.appendChild(noProjectOption);
+
                     // Add projects as options
                     sortedProjects.forEach(project => {
                         const option = document.createElement('option');
@@ -25999,7 +26127,7 @@
                         if (project.is_quick_starts) {
                             option.textContent = `⚡ ${project.name}`;
                         } else {
-                            option.textContent = `📁 Project #${project.sequential_number} - ${project.name}`;
+                            option.textContent = `📁 ${project.name}`;
                         }
                         select.appendChild(option);
                     });
@@ -26038,31 +26166,50 @@
                 console.log('📁 Switching to project:', projectId);
 
                 // Update active project
-                this.activeProjectId = projectId;
+                this.activeProjectId = projectId || null;
 
                 // Get project name if not provided
-                if (!projectName) {
-                    const select = document.getElementById('activeProjectSelect');
-                    const selectedOption = select.options[select.selectedIndex];
-                    projectName = selectedOption ? selectedOption.textContent.replace(/^[⚡📁]\s/, '') : 'Unknown';
+                if (projectId && !projectName) {
+                    // Try tab dropdown first, then sidebar
+                    const tabSelect = document.getElementById('tabActiveProjectSelect');
+                    const sidebarSelect = document.getElementById('activeProjectSelect');
+                    const select = tabSelect || sidebarSelect;
+                    if (select) {
+                        const selectedOption = Array.from(select.options).find(opt => opt.value === projectId);
+                        projectName = selectedOption ? selectedOption.textContent.replace(/^[⚡📁🌐]\s*/, '').trim() : 'Unknown';
+                    }
                 }
 
-                this.activeProjectName = projectName;
+                this.activeProjectName = projectName || null;
 
-                // Update dropdown selection
-                const select = document.getElementById('activeProjectSelect');
-                if (select) {
-                    select.value = projectId;
+                // Session 394: Update BOTH dropdowns (tab and sidebar)
+                const tabSelect = document.getElementById('tabActiveProjectSelect');
+                const sidebarSelect = document.getElementById('activeProjectSelect');
+                if (tabSelect) tabSelect.value = projectId || '';
+                if (sidebarSelect) sidebarSelect.value = projectId || '';
+
+                // Session 394: Update the project indicator
+                const indicator = document.getElementById('activeProjectIndicator');
+                const nameSpan = document.getElementById('activeProjectName');
+                if (indicator && nameSpan) {
+                    if (projectId && projectName) {
+                        nameSpan.textContent = projectName;
+                        indicator.style.display = 'block';
+                    } else {
+                        indicator.style.display = 'none';
+                    }
                 }
 
                 // Save to localStorage (unless it's the initial auto-select)
                 if (!skipSave) {
-                    localStorage.setItem('lastActiveProject', projectId);
+                    if (projectId) {
+                        localStorage.setItem('lastActiveProject', projectId);
+                    } else {
+                        localStorage.removeItem('lastActiveProject');
+                    }
                 }
 
-                console.log(`✅ Active project: ${projectName} (${projectId})`);
-
-                // Future: Update session creation to use this project
+                console.log(`✅ Active project: ${projectName || 'None'} (${projectId || 'general'})`);
             }
 
             toggle() {
@@ -27406,15 +27553,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 if (this.sessionId) {
                     requestBody.session_id = this.sessionId;
                 }
-                // Session 117: FIXED - Only send project_id if:
-                // 1. Session was resumed WITH a project (sessionStartedWithProject = true), OR
-                // 2. User explicitly selected a project after session started
-                // DO NOT send project_id for NEW sessions - let backend auto-create!
-                if (this.activeProjectId && (this.sessionStartedWithProject || !this.isNewSession)) {
+                // Session 394: SIMPLIFIED - Send project_id if user has selected one
+                // This lets users pre-select a customer/project from the dropdown
+                // If no project selected, backend handles it (general mode or auto-create)
+                if (this.activeProjectId) {
                     requestBody.project_id = this.activeProjectId;
                     console.log('📁 Including project in request:', this.activeProjectName);
-                } else if (this.isNewSession) {
-                    console.log('✨ New session - letting backend handle project creation');
+                } else {
+                    console.log('🌐 No project selected - general mode');
                 }
 
                 // Session 191: Create AbortController for cancellable requests
@@ -27850,6 +27996,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     try {
                         // Execute tool via backend
                         // Session 96: Include session_id for content linking
+                        // Session 394: Always include project_id if selected (not either/or)
                         const requestBody = {
                             tool_name: name,
                             parameters: params
@@ -27857,12 +28004,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         if (this.sessionId) {
                             requestBody.session_id = this.sessionId;
                             console.log('🔗 Sending session_id with tool:', name, 'session:', this.sessionId);
-                        } else if (this.activeProjectId) {
-                            // Session 188 FIX: Use activeProjectId (not projectId) to match class property
+                        }
+                        if (this.activeProjectId) {
                             requestBody.project_id = this.activeProjectId;
-                            console.log('🔗 Sending project_id with tool:', name, 'project:', this.activeProjectId);
-                        } else {
-                            console.warn('⚠️ No session_id or project_id available for tool:', name);
+                            console.log('📁 Sending project_id with tool:', name, 'project:', this.activeProjectId);
+                        }
+                        if (!this.sessionId && !this.activeProjectId) {
+                            console.log('🌐 No session or project context for tool:', name);
                         }
 
                         const response = await authenticatedFetch('/api/executor/run-tool/', {
@@ -59446,6 +59594,330 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
         let currentPipelineProjectId = null;
         let shouldRunCreativeAfterResearch = false;
 
+        // Session 394: Brand Review State
+        let currentBrandReviewData = null;
+        let selectedBrandChoices = {
+            style: null,
+            palette: null,
+            logoDirection: null,
+            customFeedback: ''
+        };
+
+        // Session 394: Show Brand Review UI with recommendations
+        async function showBrandReviewUI(pipelineData) {
+            const brandReviewSection = document.getElementById('brand-review-section');
+            if (!brandReviewSection) return;
+
+            // Fetch brand recommendations from the style library API
+            const projectId = pipelineData.project_id;
+            const businessIdea = document.getElementById('pipeline-idea-input')?.value || '';
+
+            try {
+                const response = await fetch(`/api/brand-recommendations/?idea=${encodeURIComponent(businessIdea)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentBrandReviewData = data;
+                    populateBrandReviewUI(data);
+                    brandReviewSection.style.display = 'block';
+                    addPipelineActivity('🎨', 'Brand Review ready - customize your visual direction!', '#22c55e');
+                } else {
+                    // Fallback: Show the UI with default options
+                    currentBrandReviewData = getDefaultBrandOptions();
+                    populateBrandReviewUI(currentBrandReviewData);
+                    brandReviewSection.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to fetch brand recommendations:', error);
+                // Fallback: Show the UI with default options
+                currentBrandReviewData = getDefaultBrandOptions();
+                populateBrandReviewUI(currentBrandReviewData);
+                brandReviewSection.style.display = 'block';
+            }
+        }
+
+        // Default brand options if API fails
+        function getDefaultBrandOptions() {
+            return {
+                detected_industry: 'tech_startup',
+                style_options: [
+                    { name: 'minimalist', display_name: 'Minimalist', description: 'Clean, simple, modern', mood: 'sophisticated' },
+                    { name: 'vector', display_name: 'Vector Art', description: 'Clean scalable illustration', mood: 'clean' },
+                    { name: 'digital_art', display_name: 'Digital Art', description: 'Modern digital illustration', mood: 'modern' },
+                    { name: 'pixar', display_name: 'Pixar 3D', description: 'Friendly 3D animation style', mood: 'friendly' }
+                ],
+                color_palettes: [
+                    { id: 'tech_modern', name: 'Modern Tech', colors: ['#6366f1', '#8b5cf6', '#a855f7', '#06b6d4', '#0ea5e9'], description: 'Vibrant gradients' },
+                    { id: 'professional', name: 'Professional', colors: ['#1e3a5f', '#3d5a80', '#98c1d9', '#e0e1dd', '#293241'], description: 'Trust-inspiring blues' },
+                    { id: 'friendly', name: 'Friendly', colors: ['#ff6b6b', '#feca57', '#48dbfb', '#1dd1a1', '#5f27cd'], description: 'Warm and inviting' }
+                ],
+                logo_directions: [
+                    { id: 'icon_wordmark', name: 'Icon + Wordmark', description: 'Symbol paired with brand name', examples: ['Apple', 'Nike'] },
+                    { id: 'wordmark_only', name: 'Wordmark Only', description: 'Stylized text-only logo', examples: ['Google', 'FedEx'] },
+                    { id: 'icon_only', name: 'Icon Only', description: 'Standalone symbol', examples: ['Apple', 'Twitter'] }
+                ],
+                avoid_styles: ['cyberpunk'],
+                industry_notes: 'Modern tech brands benefit from clean, scalable designs.'
+            };
+        }
+
+        // Populate the Brand Review UI with options
+        function populateBrandReviewUI(data) {
+            // Set detected industry
+            const industryBadge = document.getElementById('brand-detected-industry');
+            if (industryBadge) {
+                const industryName = (data.detected_industry || 'general').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                industryBadge.textContent = industryName;
+            }
+
+            // Populate style dropdown
+            const styleSelect = document.getElementById('brand-style-select');
+            if (styleSelect && data.style_options) {
+                styleSelect.innerHTML = '<option value="">Select a style...</option>';
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = 'Recommended for your industry';
+                data.style_options.forEach(style => {
+                    const option = document.createElement('option');
+                    option.value = style.name;
+                    option.textContent = `${style.display_name} - ${style.description}`;
+                    option.dataset.description = style.description;
+                    option.dataset.mood = style.mood;
+                    optgroup.appendChild(option);
+                });
+                styleSelect.appendChild(optgroup);
+
+                // Add more options group
+                const moreGroup = document.createElement('optgroup');
+                moreGroup.label = 'More styles';
+                const moreStyles = [
+                    { name: 'watercolor', display_name: 'Watercolor', description: 'Soft artistic watercolor' },
+                    { name: 'art_deco', display_name: 'Art Deco', description: '1920s luxury geometric' },
+                    { name: 'anime', display_name: 'Anime', description: 'Japanese animation style' },
+                    { name: 'vintage', display_name: 'Vintage', description: 'Retro nostalgic look' },
+                    { name: 'pop_art', display_name: 'Pop Art', description: 'Bold colorful Andy Warhol' },
+                    { name: 'fantasy', display_name: 'Fantasy', description: 'Magical ethereal art' }
+                ];
+                moreStyles.forEach(style => {
+                    const option = document.createElement('option');
+                    option.value = style.name;
+                    option.textContent = `${style.display_name} - ${style.description}`;
+                    moreGroup.appendChild(option);
+                });
+                styleSelect.appendChild(moreGroup);
+
+                // Add event listener for style description
+                styleSelect.addEventListener('change', function() {
+                    const descDiv = document.getElementById('brand-style-description');
+                    const selected = this.options[this.selectedIndex];
+                    if (this.value && descDiv) {
+                        descDiv.innerHTML = `<strong>${selected.textContent.split(' - ')[0]}</strong>: ${selected.dataset.description || 'Modern visual style'}`;
+                        descDiv.style.display = 'block';
+                        selectedBrandChoices.style = this.value;
+                    } else {
+                        descDiv.style.display = 'none';
+                    }
+                });
+
+                // Pre-select first recommended style
+                if (data.style_options.length > 0) {
+                    styleSelect.value = data.style_options[0].name;
+                    styleSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Populate color palette dropdown
+            const paletteSelect = document.getElementById('brand-palette-select');
+            if (paletteSelect && data.color_palettes) {
+                paletteSelect.innerHTML = '<option value="">Select a palette...</option>';
+                data.color_palettes.forEach(palette => {
+                    const option = document.createElement('option');
+                    option.value = palette.id;
+                    option.textContent = `${palette.name} - ${palette.description}`;
+                    option.dataset.colors = JSON.stringify(palette.colors);
+                    paletteSelect.appendChild(option);
+                });
+
+                // Add event listener for palette preview
+                paletteSelect.addEventListener('change', function() {
+                    const previewDiv = document.getElementById('brand-palette-preview');
+                    const selected = this.options[this.selectedIndex];
+                    if (this.value && previewDiv && selected.dataset.colors) {
+                        const colors = JSON.parse(selected.dataset.colors);
+                        previewDiv.innerHTML = colors.map(c =>
+                            `<div style="width: 30px; height: 30px; background: ${c}; border-radius: 4px; border: 1px solid #444;" title="${c}"></div>`
+                        ).join('');
+                        previewDiv.style.display = 'flex';
+                        selectedBrandChoices.palette = {
+                            id: this.value,
+                            colors: colors
+                        };
+                    } else {
+                        previewDiv.style.display = 'none';
+                    }
+                });
+
+                // Pre-select first palette
+                if (data.color_palettes.length > 0) {
+                    paletteSelect.value = data.color_palettes[0].id;
+                    paletteSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Populate logo direction dropdown
+            const logoSelect = document.getElementById('brand-logo-select');
+            if (logoSelect && data.logo_directions) {
+                logoSelect.innerHTML = '<option value="">Select logo type...</option>';
+                data.logo_directions.forEach(logo => {
+                    const option = document.createElement('option');
+                    option.value = logo.id;
+                    option.textContent = logo.name;
+                    option.dataset.description = logo.description;
+                    option.dataset.examples = (logo.examples || []).join(', ');
+                    logoSelect.appendChild(option);
+                });
+
+                // Add event listener for logo description
+                logoSelect.addEventListener('change', function() {
+                    const descDiv = document.getElementById('brand-logo-description');
+                    const selected = this.options[this.selectedIndex];
+                    if (this.value && descDiv) {
+                        descDiv.innerHTML = `${selected.dataset.description}<br><small class="text-muted">Examples: ${selected.dataset.examples}</small>`;
+                        descDiv.style.display = 'block';
+                        selectedBrandChoices.logoDirection = this.value;
+                    } else {
+                        descDiv.style.display = 'none';
+                    }
+                });
+
+                // Pre-select first logo direction
+                if (data.logo_directions.length > 0) {
+                    logoSelect.value = data.logo_directions[0].id;
+                    logoSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Show industry notes
+            const notesDiv = document.getElementById('brand-industry-notes');
+            const notesText = document.getElementById('brand-notes-text');
+            if (notesDiv && notesText && data.industry_notes) {
+                notesText.textContent = data.industry_notes;
+                notesDiv.style.display = 'block';
+            }
+
+            // Show avoid styles warning
+            const avoidDiv = document.getElementById('brand-avoid-warning');
+            const avoidText = document.getElementById('brand-avoid-text');
+            if (avoidDiv && avoidText && data.avoid_styles && data.avoid_styles.length > 0) {
+                avoidText.textContent = data.avoid_styles.join(', ');
+                avoidDiv.style.display = 'block';
+            }
+        }
+
+        // Reset brand selections to recommendations
+        function resetBrandSelections() {
+            if (currentBrandReviewData) {
+                populateBrandReviewUI(currentBrandReviewData);
+                document.getElementById('brand-custom-feedback').value = '';
+                addPipelineActivity('🔄', 'Reset to recommended brand settings', '#8b5cf6');
+            }
+        }
+
+        // Run Creative Pipeline with user's brand choices
+        async function runCreativePipelineWithBrandChoices() {
+            if (!currentPipelineProjectId) {
+                addPipelineActivity('⚠️', 'No project ID available. Run Research Pipeline first.', '#f59e0b');
+                return;
+            }
+
+            // Gather user selections
+            const styleSelect = document.getElementById('brand-style-select');
+            const paletteSelect = document.getElementById('brand-palette-select');
+            const logoSelect = document.getElementById('brand-logo-select');
+            const feedbackInput = document.getElementById('brand-custom-feedback');
+
+            selectedBrandChoices = {
+                style: styleSelect?.value || 'minimalist',
+                palette: paletteSelect?.value || 'tech_modern',
+                logoDirection: logoSelect?.value || 'icon_wordmark',
+                customFeedback: feedbackInput?.value?.trim() || ''
+            };
+
+            // Get palette colors
+            if (paletteSelect?.selectedIndex > 0) {
+                const selected = paletteSelect.options[paletteSelect.selectedIndex];
+                if (selected.dataset.colors) {
+                    selectedBrandChoices.paletteColors = JSON.parse(selected.dataset.colors);
+                }
+            }
+
+            const generateBtn = document.getElementById('generate-with-brand-btn');
+            if (generateBtn) {
+                generateBtn.disabled = true;
+                generateBtn.innerHTML = '⏳ Generating Brand Assets...';
+            }
+
+            addPipelineActivity('🎨', `Starting Creative Pipeline with: ${selectedBrandChoices.style} style, ${selectedBrandChoices.palette} palette`, '#ec4899');
+
+            // Update creative pipeline stages to "running"
+            updateCreativePipelineStage('creative_brief', 'running', 'Extracting...');
+
+            try {
+                const response = await fetch(`/api/business-ideas/${currentPipelineProjectId}/generate-assets/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        asset_types: ['logo', 'banner', 'thumbnail'],
+                        // Session 394: Include brand choices
+                        brand_choices: selectedBrandChoices
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    addPipelineActivity('✅', 'Creative Pipeline complete! Assets generated with your brand choices.', '#22c55e');
+
+                    // Update completed count
+                    const completedEl = document.getElementById('pipeline-completed-count');
+                    if (completedEl) {
+                        completedEl.textContent = parseInt(completedEl.textContent || '0') + 1;
+                    }
+
+                    // Simulate creative pipeline stage updates
+                    simulateCreativePipelineUpdates(data);
+
+                    // Display generated assets
+                    const totalAssets = (data.all_images?.length || 0) + (data.all_videos?.length || 0) + (data.all_audio?.length || 0);
+                    const assetTypes = data.assets_generated || [];
+
+                    if (totalAssets > 0) {
+                        addPipelineActivity('🖼️', `Generated ${totalAssets} assets: ${assetTypes.join(', ')}`, '#8b5cf6');
+                        displayGeneratedAssets(data);
+                    } else if (assetTypes.length > 0) {
+                        addPipelineActivity('🖼️', `Asset types generated: ${assetTypes.join(', ')}`, '#8b5cf6');
+                    }
+
+                    // Hide brand review section
+                    document.getElementById('brand-review-section').style.display = 'none';
+
+                } else {
+                    addPipelineActivity('❌', `Creative Pipeline Error: ${data.error || 'Asset generation failed'}`, '#ef4444');
+                    updateCreativePipelineStage('creative_brief', 'failed', 'Error');
+                }
+            } catch (error) {
+                console.error('Creative Pipeline error:', error);
+                addPipelineActivity('❌', `Network error: ${error.message}`, '#ef4444');
+            } finally {
+                if (generateBtn) {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = '🚀 Generate Brand Assets';
+                }
+            }
+        }
+
         async function runPipeline(runCreative = false) {
             const ideaInput = document.getElementById('pipeline-idea-input');
             const runBtn = document.getElementById('run-pipeline-btn');
@@ -59509,15 +59981,16 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
                         simulatePipelineUpdates(data);
                     }
 
-                    // If Full Pipeline was selected, automatically run Creative Pipeline
-                    if (runCreative && data.project_id) {
+                    // Session 394: Show Brand Review UI for human-in-the-loop customization
+                    // Fetch brand recommendations and populate the review UI
+                    await showBrandReviewUI(data);
+
+                    // If Full Pipeline was selected AND user skips review, auto-continue
+                    if (runCreative && data.project_id && !data.brand_review_data?.requires_human_review) {
                         addPipelineActivity('🎨', 'Auto-continuing to Creative Pipeline...', '#ec4899');
                         setTimeout(() => {
-                            runCreativePipeline();
+                            runCreativePipelineWithBrandChoices();
                         }, 1500);
-                    } else {
-                        // Show the "Continue to Creative" button
-                        document.getElementById('continue-creative-section').style.display = 'block';
                     }
                 } else {
                     addPipelineActivity('❌', `Error: ${data.error || 'Failed to start pipeline'}`, '#ef4444');

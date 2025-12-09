@@ -260,13 +260,20 @@ def generate_assets(request, project_id):
 
         asset_types = data.get('asset_types', ['logo'])
 
+        # Session 394: Extract brand choices from Human-in-the-Loop review
+        brand_choices = data.get('brand_choices', {})
+
         # Session 339: Use CreativeOrchestrator for asset generation
         logger.info(f"Starting asset generation for project: {project_id}")
+        if brand_choices:
+            logger.info(f"Using user brand choices: style={brand_choices.get('style')}, "
+                       f"palette={brand_choices.get('palette')}, logo={brand_choices.get('logoDirection')}")
 
         orchestrator = get_creative_orchestrator(user=user)
         result = orchestrator.execute_asset_generation(
             project_id=str(project_id),
-            asset_types=asset_types
+            asset_types=asset_types,
+            brand_choices=brand_choices
         )
 
         return JsonResponse(result.to_dict())
@@ -401,6 +408,43 @@ def pipeline_stats(request):
 
     except Exception as e:
         logger.error(f"Failed to get pipeline stats: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_brand_recommendations(request):
+    """
+    Session 394: Get brand style recommendations for a business idea.
+
+    GET /api/brand-recommendations/?idea=AI-powered podcast platform
+
+    Returns style options, color palettes, and logo directions based on
+    detected industry.
+    """
+    try:
+        from core.services.style_library import get_brand_recommendations
+
+        idea = request.GET.get('idea', '')
+
+        if not idea:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required parameter: idea'
+            }, status=400)
+
+        recommendations = get_brand_recommendations(idea)
+
+        return JsonResponse({
+            'success': True,
+            **recommendations
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to get brand recommendations: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': str(e)
