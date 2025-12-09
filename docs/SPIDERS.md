@@ -19,10 +19,10 @@ The Spider Network consists of **62 registered spiders**, with **57 actually wor
 | With Configured URLs | 48 |
 | Legal Spiders (working) | 3 |
 | Need API Keys | 6 |
-| Records in DB | 13,700+ |
-| Searchable (with embeddings) | ~2,000 |
+| Records in DB | 7,143 |
+| Searchable (with embeddings) | 1,830 (25.6%) |
 
-**Session 397:** Cleaned registry - removed 26 broken spiders, added 4 legal spiders (3 working)
+**Session 398:** Database cleaned - deleted 6,906 placeholder records from removed spiders, fixed broken RSS feeds
 
 ---
 
@@ -134,7 +134,7 @@ These are registered but need credentials:
 
 ---
 
-## Semantic Search (Session 394)
+## Semantic Search (Session 394, Updated Session 398)
 
 Spider data can be searched semantically using embeddings:
 
@@ -143,12 +143,14 @@ from core.services.spider_semantic_search import get_spider_semantic_search
 
 search = get_spider_semantic_search()
 
-# Semantic search
+# Semantic search - returns SemanticSearchResult objects (use attributes, not .get())
 results = search.semantic_search("AI tools for developers", limit=10)
+for r in results:
+    print(f'[{r.source}] {r.title[:50]} (similarity: {r.similarity:.3f})')
 
 # Get stats
 stats = search.get_embedding_stats()
-# {'total_entries': 13783, 'with_embedding': 2006, 'marked_empty': 9298, ...}
+# {'total_entries': 7143, 'with_embedding': 1830, 'marked_empty': 5313, ...}
 ```
 
 ### Bulk Embedding Command
