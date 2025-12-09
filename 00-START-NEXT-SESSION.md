@@ -6,6 +6,60 @@
 
 ---
 
+## Next Session: 403 - Pro Se Legal Assistant MVP
+
+### Goal
+Add a **Pro Se Legal Assistant** module to help self-represented users generate procedural drafts (motions and meet-and-confer emails) based on their case info.
+
+**Key Principle:** Procedural document generation ONLY - NO legal advice.
+
+### MVP Scope
+
+1. **Case Profile**
+   - Case number, court, parties, key dates
+   - Stored per user
+
+2. **Document Types (Start Simple)**
+   - Motion to Continue
+   - Meet-and-Confer Email
+   - Declaration template
+
+3. **Guided Flow**
+   - "What happened?" → Extract facts
+   - "What do you need?" → Select document type
+   - Generate draft with proper formatting
+
+4. **Disclaimers**
+   - Clear "not legal advice" warnings
+   - Suggest attorney review
+
+### Implementation Plan
+
+```
+core/
+├── agents/
+│   └── legal_doc_drafter_agent.py   # New agent
+├── models_legal.py                   # LegalCase, LegalDocument models
+├── views_legal.py                    # API endpoints
+└── urls.py                           # Add routes
+
+ai_core/templates/
+└── components/panels/
+    └── legal_assistant_panel.html    # UI component
+```
+
+### Existing Assets to Use
+- BaseAgent infrastructure
+- Document ingestion (PDF upload now working!)
+- Agent routing system
+- Template rendering
+
+### Reference
+- Full handoff: `docs/handoffs/SESSION_402_COMPLETE_HANDOFF.md`
+- The `legal-doc-drafter` agent type is already defined in system
+
+---
+
 ## Session 402 Accomplishments
 
 ### Bug Fixes - COMPLETE!
