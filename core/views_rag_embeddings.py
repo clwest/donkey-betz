@@ -69,7 +69,7 @@ def upload_document_for_rag(request):
             'json': DocumentType.JSON,
         }
         document = Document.objects.create(
-            user=user,
+            owner=user,
             title=title,
             document_type=doc_type_map.get(document_type, DocumentType.TEXT),
             raw_content=content,
@@ -189,7 +189,7 @@ def semantic_search(request):
         ]
 
         # Get total documents searched
-        total_docs = Document.objects.filter(user=user, status='processed').count()
+        total_docs = Document.objects.filter(owner=user, status='processed').count()
 
         return Response({
             'success': True,
@@ -836,6 +836,249 @@ def delete_document_embeddings(request, document_id):
         }, status=404)
     except Exception as e:
         logger.error(f"Error deleting document embeddings: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# Session 402: Document Ingestion API Endpoints
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_documents(request):
+    """
+    List all documents for the current user.
+    Session 402: Document ingestion system.
+    """
+    user = request.user
+
+    try:
+        documents = Document.objects.filter(owner=user).order_by('-created_at')
+
+        # Calculate stats
+        total = documents.count()
+        youtube_count = documents.filter(document_type=DocumentType.YOUTUBE).count()
+        url_count = documents.filter(document_type=DocumentType.URL).count()
+        pdf_count = documents.filter(document_type=DocumentType.PDF).count()
+        processed_count = documents.filter(status='processed').count()
+
+        # Get documents with embedding counts
+        docs_data = []
+        for doc in documents[:50]:  # Limit to 50 most recent
+            embedding_count = doc.embeddings.count() if hasattr(doc, 'embeddings') else 0
+            docs_data.append({
+                'id': str(doc.id),
+                'title': doc.title,
+                'document_type': doc.document_type,
+                'status': doc.status,
+                'source_url': doc.source_url if hasattr(doc, 'source_url') else '',
+                'embedding_count': embedding_count,
+                'word_count': len(doc.processed_content.split()) if doc.processed_content else 0,
+                'created_at': doc.created_at.isoformat(),
+                'updated_at': doc.updated_at.isoformat() if doc.updated_at else None,
+            })
+
+        return Response({
+            'success': True,
+            'documents': docs_data,
+            'stats': {
+                'total': total,
+                'youtube': youtube_count,
+                'urls': url_count,
+                'pdfs': pdf_count,
+                'processed': processed_count,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing documents: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ingest_url(request):
+    """
+    Ingest a URL (YouTube video or web page) and create a document.
+    Session 402: Document ingestion system.
+
+    Accepts:
+    - url: The URL to ingest (YouTube or web page)
+    - title: Optional custom title
+    - generate_embeddings: Whether to generate embeddings (default: true)
+    """
+    user = request.user
+    data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
+
+    url = data.get('url', '').strip()
+    title = data.get('title', '').strip()
+    generate_embeddings = data.get('generate_embeddings', True)
+
+    if not url:
+        return Response({
+            'success': False,
+            'error': 'URL is required'
+        }, status=400)
+
+    try:
+        from content.processors import DocumentProcessingPipeline
+
+        pipeline = DocumentProcessingPipeline()
+        result = pipeline.process_url(url)
+
+        if not result.success:
+            return Response({
+                'success': False,
+                'error': result.error or 'Failed to process URL'
+            }, status=400)
+
+        # Determine document type
+        is_youtube = 'youtube.com' in url or 'youtu.be' in url
+        doc_type = DocumentType.YOUTUBE if is_youtube else DocumentType.URL
+
+        # Check if we got meaningful content
+        has_content = result.processed_content and len(result.processed_content.strip()) > 50
+        warning_message = None
+
+        if not has_content:
+            # Check if it's likely a JavaScript-rendered SPA
+            if result.raw_content and '<script' in result.raw_content and len(result.raw_content) < 10000:
+                warning_message = "This page appears to be JavaScript-rendered (SPA). Content may be incomplete."
+            else:
+                warning_message = "Limited content extracted from this page."
+
+        # Create document
+        document = Document.objects.create(
+            owner=user,
+            title=title or result.metadata.get('title', url[:100]),
+            document_type=doc_type,
+            raw_content=result.raw_content,
+            processed_content=result.processed_content or '',
+            source_url=url,
+            metadata=result.metadata,
+            status='processed' if has_content else 'processed',  # Still mark as processed
+            tags=[]
+        )
+
+        embedding_count = 0
+        if generate_embeddings and has_content:
+            # Generate embeddings in background
+            from core.tasks import generate_document_embeddings
+            generate_document_embeddings.delay(str(document.id))
+            document.status = 'embedding'
+            document.save(update_fields=['status'])
+
+        response_data = {
+            'success': True,
+            'document': {
+                'id': str(document.id),
+                'title': document.title,
+                'document_type': document.document_type,
+                'status': document.status,
+                'source_url': document.source_url,
+                'word_count': len(result.processed_content.split()) if result.processed_content else 0,
+                'metadata': result.metadata,
+                'created_at': document.created_at.isoformat(),
+            },
+            'message': f"Successfully ingested {'YouTube video' if is_youtube else 'web page'}"
+        }
+
+        if warning_message:
+            response_data['warning'] = warning_message
+
+        return Response(response_data)
+
+    except Exception as e:
+        logger.error(f"Error ingesting URL: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_document(request, document_id):
+    """
+    Get a single document with full content.
+    Session 402: Document ingestion system.
+    """
+    user = request.user
+
+    try:
+        document = Document.objects.get(id=document_id, owner=user)
+        embedding_count = document.embeddings.count() if hasattr(document, 'embeddings') else 0
+
+        return Response({
+            'success': True,
+            'document': {
+                'id': str(document.id),
+                'title': document.title,
+                'document_type': document.document_type,
+                'status': document.status,
+                'source_url': document.source_url if hasattr(document, 'source_url') else '',
+                'raw_content': document.raw_content,
+                'processed_content': document.processed_content,
+                'metadata': document.metadata,
+                'embedding_count': embedding_count,
+                'word_count': len(document.processed_content.split()) if document.processed_content else 0,
+                'tags': document.tags,
+                'created_at': document.created_at.isoformat(),
+                'updated_at': document.updated_at.isoformat() if document.updated_at else None,
+            }
+        })
+
+    except Document.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Document not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error getting document: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_document(request, document_id):
+    """
+    Delete a document and its embeddings.
+    Session 402: Document ingestion system.
+    """
+    user = request.user
+
+    try:
+        document = Document.objects.get(id=document_id, owner=user)
+        title = document.title
+
+        # Delete embeddings first
+        if hasattr(document, 'embeddings'):
+            document.embeddings.all().delete()
+
+        # Delete document
+        document.delete()
+
+        return Response({
+            'success': True,
+            'message': f'Deleted document: {title}'
+        })
+
+    except Document.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Document not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting document: {e}")
         return Response({
             'success': False,
             'error': str(e)

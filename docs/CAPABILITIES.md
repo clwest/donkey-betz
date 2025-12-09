@@ -271,7 +271,57 @@ POST /api/generate/video/
 # Spider data
 GET /api/spiders/trending/
 GET /api/spiders/search/?q=AI
+
+# Document ingestion (Session 402)
+GET /api/documents/
+POST /api/documents/ingest-url/
+GET /api/documents/<uuid>/
+DELETE /api/documents/<uuid>/delete/
 ```
+
+---
+
+## Document Ingestion & RAG (Session 402)
+
+Build your knowledge base by ingesting documents from multiple sources.
+
+### Supported Sources
+
+| Source | Method | Features |
+|--------|--------|----------|
+| YouTube Videos | URL paste | Transcript extraction with timestamps |
+| Web Pages | URL paste | Playwright-powered JS rendering |
+| PDF Documents | File upload | Text extraction |
+| Text/Markdown | File upload | Direct processing |
+
+### Processing Pipeline
+
+1. **URL Detection** - Automatically detects YouTube vs web pages
+2. **Content Extraction** - Uses requests (fast) or Playwright (JS-rendered)
+3. **Text Processing** - Cleans HTML, extracts main content
+4. **Embedding Generation** - Creates vector embeddings for RAG search
+
+### Playwright Integration
+
+For JavaScript-rendered SPAs:
+- Automatically falls back to Playwright when content is insufficient
+- Launches headless Chromium browser
+- Waits for network idle + JS rendering
+- Attempts to dismiss cookie banners
+- Extracts fully rendered content
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/documents/` | GET | List all documents with stats |
+| `/api/documents/ingest-url/` | POST | Ingest YouTube or web page |
+| `/api/documents/<id>/` | GET | Get document with full content |
+| `/api/documents/<id>/delete/` | DELETE | Delete document and embeddings |
+
+### UI Location
+
+Intelligence Tab → Documents sub-tab
 
 ---
 

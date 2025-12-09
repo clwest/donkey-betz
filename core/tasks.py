@@ -9103,3 +9103,267 @@ def auto_resolve_knowledge_gaps(self):
     except Exception as e:
         logger.error(f"🧠 [SESSION 373] Error auto-resolving knowledge gaps: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+# ==================== SESSION 402: DOCUMENT INGESTION TASKS ====================
+
+
+@shared_task(bind=True, max_retries=3)
+def process_document_async(self, document_id: int, generate_embeddings: bool = True, embedding_model: str = 'openai_text_embedding_3_small'):
+    """
+    Process a document asynchronously.
+
+    Session 402: Document Ingestion Pipeline
+
+    Args:
+        document_id: ID of the Document to process
+        generate_embeddings: Whether to generate embeddings after processing
+        embedding_model: Which embedding model to use
+    """
+    from content.models import Document, ContentStatus
+    from content.processors import DocumentProcessingPipeline
+
+    try:
+        document = Document.objects.get(id=document_id)
+        logger.info(f"📄 [SESSION 402] Processing document: {document.title} (ID: {document_id})")
+
+        # Update status
+        document.status = ContentStatus.PROCESSING
+        document.save(update_fields=['status'])
+
+        # Process the document
+        pipeline = DocumentProcessingPipeline()
+        result = pipeline.process_document(document.file_path)
+
+        if result.success:
+            # Update document with processed content
+            document.processed_content = result.processed_content
+            document.raw_content = result.raw_content
+            document.word_count = result.word_count
+            document.language = result.language
+            document.key_phrases = result.key_phrases
+            document.entities = result.entities
+            document.extracted_metadata = result.metadata
+            document.status = ContentStatus.PROCESSED
+            document.add_processing_log('document_processing', 'success', {'word_count': result.word_count})
+            document.save()
+
+            logger.info(f"📄 [SESSION 402] Document processed successfully: {document.title}")
+
+            # Generate embeddings if requested
+            if generate_embeddings:
+                generate_document_embeddings.delay(document_id, embedding_model)
+
+            return {
+                'status': 'success',
+                'document_id': document_id,
+                'word_count': result.word_count,
+                'language': result.language
+            }
+        else:
+            document.status = ContentStatus.FAILED
+            document.error_message = result.error_message
+            document.add_processing_log('document_processing', 'failed', {'error': result.error_message})
+            document.save(update_fields=['status', 'error_message'])
+
+            logger.error(f"📄 [SESSION 402] Document processing failed: {result.error_message}")
+            return {
+                'status': 'failed',
+                'document_id': document_id,
+                'error': result.error_message
+            }
+
+    except Document.DoesNotExist:
+        logger.error(f"📄 [SESSION 402] Document not found: {document_id}")
+        return {'status': 'error', 'error': f'Document {document_id} not found'}
+    except Exception as e:
+        logger.error(f"📄 [SESSION 402] Error processing document {document_id}: {e}")
+        # Retry on transient errors
+        self.retry(exc=e, countdown=60 * (self.request.retries + 1))
+
+
+@shared_task(bind=True, max_retries=3)
+def process_url_async(self, url: str, title: str = None, user_id: int = None, generate_embeddings: bool = True):
+    """
+    Process a URL (YouTube or web page) asynchronously and create a Document.
+
+    Session 402: Document Ingestion Pipeline
+
+    Args:
+        url: The URL to process (YouTube or web page)
+        title: Optional title override
+        user_id: Owner user ID
+        generate_embeddings: Whether to generate embeddings
+    """
+    from content.models import Document, DocumentType, ContentStatus, ContentSource
+    from content.processors import DocumentProcessingPipeline
+    from django.contrib.auth import get_user_model
+
+    try:
+        logger.info(f"🌐 [SESSION 402] Processing URL: {url}")
+
+        # Process the URL
+        pipeline = DocumentProcessingPipeline()
+        result = pipeline.process_url(url)
+
+        if not result.success:
+            logger.error(f"🌐 [SESSION 402] URL processing failed: {result.error_message}")
+            return {
+                'status': 'failed',
+                'url': url,
+                'error': result.error_message
+            }
+
+        # Determine document type
+        processor_name = result.metadata.get('processor', '')
+        if processor_name == 'YouTubeProcessor':
+            doc_type = DocumentType.YOUTUBE
+        else:
+            doc_type = DocumentType.URL
+
+        # Create document record
+        User = get_user_model()
+        owner = User.objects.get(id=user_id) if user_id else User.objects.first()
+
+        document = Document.objects.create(
+            title=title or result.metadata.get('title', url[:100]),
+            document_type=doc_type,
+            processed_content=result.processed_content,
+            raw_content=result.raw_content,
+            word_count=result.word_count,
+            language=result.language,
+            key_phrases=result.key_phrases,
+            entities=result.entities,
+            extracted_metadata=result.metadata,
+            source_url=url,
+            status=ContentStatus.PROCESSED,
+            source=ContentSource.API,
+            owner=owner,
+        )
+
+        # Add processing log
+        document.add_processing_log('url_ingestion', 'success', {
+            'processor': processor_name,
+            'word_count': result.word_count
+        })
+
+        logger.info(f"🌐 [SESSION 402] Created document from URL: {document.title} (ID: {document.id})")
+
+        # Generate embeddings if requested
+        if generate_embeddings:
+            generate_document_embeddings.delay(document.id)
+
+        return {
+            'status': 'success',
+            'document_id': document.id,
+            'title': document.title,
+            'word_count': result.word_count,
+            'url': url,
+            'type': str(doc_type)
+        }
+
+    except Exception as e:
+        logger.error(f"🌐 [SESSION 402] Error processing URL {url}: {e}")
+        self.retry(exc=e, countdown=60 * (self.request.retries + 1))
+
+
+@shared_task(bind=True, max_retries=3)
+def generate_document_embeddings(self, document_id: str, embedding_model: str = 'openai_small'):
+    """
+    Generate embeddings for a document's content.
+
+    Session 402: Document Ingestion Pipeline
+
+    Args:
+        document_id: ID of the Document (UUID string)
+        embedding_model: Which embedding model to use (openai_small, openai_large, etc.)
+    """
+    import asyncio
+    from content.models import Document, DocumentEmbedding, EmbeddingModel
+    from content.embeddings import RAGSystem
+
+    try:
+        document = Document.objects.get(id=document_id)
+        logger.info(f"🔢 [SESSION 402] Generating embeddings for: {document.title}")
+
+        content = document.get_content()
+        if not content:
+            logger.warning(f"🔢 [SESSION 402] No content to embed for document {document_id}")
+            return {'status': 'skipped', 'reason': 'No content'}
+
+        # Map string model name to enum
+        model_map = {
+            'openai_small': EmbeddingModel.OPENAI_SMALL,
+            'openai_large': EmbeddingModel.OPENAI_LARGE,
+            'openai_ada': EmbeddingModel.OPENAI_ADA,
+            'sentence_transformers': EmbeddingModel.SENTENCE_TRANSFORMERS,
+            'cohere': EmbeddingModel.COHERE,
+        }
+        model_enum = model_map.get(embedding_model, EmbeddingModel.OPENAI_SMALL)
+
+        # Initialize RAG system and process document
+        rag = RAGSystem()
+
+        # Run async method in sync context
+        async def run_embedding():
+            return await rag.process_document_for_rag(document, model_enum)
+
+        # Get or create event loop
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        success = loop.run_until_complete(run_embedding())
+
+        if success:
+            # Count embeddings created
+            embedding_count = DocumentEmbedding.objects.filter(document=document).count()
+            logger.info(f"🔢 [SESSION 402] Generated {embedding_count} embeddings for: {document.title}")
+
+            return {
+                'status': 'success',
+                'document_id': str(document_id),
+                'chunk_count': embedding_count,
+                'embedding_model': embedding_model
+            }
+        else:
+            logger.error(f"🔢 [SESSION 402] Embedding generation failed for: {document.title}")
+            return {
+                'status': 'failed',
+                'document_id': str(document_id),
+                'error': 'Embedding generation returned False'
+            }
+
+    except Document.DoesNotExist:
+        logger.error(f"🔢 [SESSION 402] Document not found: {document_id}")
+        return {'status': 'error', 'error': f'Document {document_id} not found'}
+    except Exception as e:
+        logger.error(f"🔢 [SESSION 402] Error generating embeddings for {document_id}: {e}")
+        self.retry(exc=e, countdown=60 * (self.request.retries + 1))
+
+
+@shared_task
+def batch_process_urls(urls: list, user_id: int = None, generate_embeddings: bool = True):
+    """
+    Process multiple URLs in batch.
+
+    Session 402: Document Ingestion Pipeline
+
+    Args:
+        urls: List of URLs to process
+        user_id: Owner user ID
+        generate_embeddings: Whether to generate embeddings
+    """
+    results = []
+    for url in urls:
+        task = process_url_async.delay(
+            url=url,
+            user_id=user_id,
+            generate_embeddings=generate_embeddings
+        )
+        results.append({'url': url, 'task_id': task.id})
+
+    logger.info(f"📦 [SESSION 402] Queued {len(urls)} URLs for processing")
+    return {'status': 'queued', 'count': len(urls), 'tasks': results}

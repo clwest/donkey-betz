@@ -9,10 +9,11 @@ Sub-tabs:
 1. Trending - Hot topics across all categories
 2. Markets - Crypto, stocks, financial data
 3. Opportunities - Jobs, freelance, business opportunities
-4. Data Feed - Browse actual spider data items (NEW)
-5. Knowledge - What agents learned from spiders (NEW)
-6. Timeline - Data collection timeline + freshness (NEW)
-7. Spiders - Spider network status and management
+4. Data Feed - Browse actual spider data items (Session 399)
+5. Knowledge - What agents learned from spiders (Session 399)
+6. Documents - PDF/YouTube/URL ingestion + embeddings (Session 402)
+7. Timeline - Data collection timeline + freshness (Session 399)
+8. Spiders - Spider network status and management
 {% endcomment %}
 
 <div class="tab-pane fade" id="trending" role="tabpanel">
@@ -110,6 +111,12 @@ Sub-tabs:
                     &#129504; Knowledge
                 </button>
             </li>
+            <!-- Session 402: Document Ingestion -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="intel-documents-tab" data-bs-toggle="pill" data-bs-target="#intel-documents" type="button" role="tab" style="color: #3b82f6;" onclick="loadDocuments()">
+                    &#128196; Documents
+                </button>
+            </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="intel-timeline-tab" data-bs-toggle="pill" data-bs-target="#intel-timeline" type="button" role="tab" style="color: #06b6d4;" onclick="loadTimeline()">
                     &#128200; Timeline
@@ -155,6 +162,7 @@ Sub-tabs:
             {% include "components/panels/intelligence/intel_opportunities.html" %}
             {% include "components/panels/intelligence/intel_data_feed.html" %}
             {% include "components/panels/intelligence/intel_knowledge.html" %}
+            {% include "components/panels/intelligence/intel_documents.html" %}
             {% include "components/panels/intelligence/intel_timeline.html" %}
             {% include "components/panels/intelligence/intel_spiders.html" %}
         </div>
