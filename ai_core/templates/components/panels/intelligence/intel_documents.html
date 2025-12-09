@@ -387,10 +387,11 @@ function getStatusBadge(status) {
     const badges = {
         'processed': '<span class="badge bg-success">&#10004; Ready</span>',
         'processing': '<span class="badge bg-warning text-dark">&#9203; Processing</span>',
+        'embedding': '<span class="badge bg-info text-dark">&#9881; Embedding</span>',
         'pending': '<span class="badge bg-secondary">&#8987; Pending</span>',
         'failed': '<span class="badge bg-danger">&#10006; Failed</span>',
     };
-    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+    return badges[status] || `<span class="badge bg-secondary">${status || 'Unknown'}</span>`;
 }
 
 function formatDate(dateStr) {
