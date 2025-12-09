@@ -1262,6 +1262,304 @@ async def _collect_finnhub_data() -> Dict[str, Any]:
         }
 
 
+# === SESSION 397: LEGAL SPIDERS ===
+
+async def _collect_courtlistener_data() -> Dict[str, Any]:
+    """Collect legal opinions from CourtListener FREE API.
+
+    CourtListener is the Free Law Project's open legal data API.
+    No API key required for basic access!
+    API docs: https://www.courtlistener.com/help/api/rest/
+    """
+    from datetime import timedelta
+
+    all_items = []
+    base_url = "https://www.courtlistener.com/api/rest/v4"
+
+    try:
+        # Fetch recent opinions (last 7 days)
+        date_filed_after = (datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%d')
+
+        async with aiohttp.ClientSession() as session:
+            # Search for recent opinions
+            search_url = f"{base_url}/search/"
+            params = {
+                'type': 'o',  # Opinions
+                'order_by': 'dateFiled desc',
+                'date_filed__gte': date_filed_after,
+                'page_size': 50
+            }
+
+            headers = {
+                'User-Agent': 'AI-Content-Studio/1.0 (Legal Research)',
+                'Accept': 'application/json'
+            }
+
+            async with session.get(search_url, params=params, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    results = data.get('results', [])
+
+                    for opinion in results:
+                        # Generate tags based on content
+                        tags = ['legal', 'case_law', 'court_opinion']
+                        court = opinion.get('court', '').lower()
+                        if 'supreme' in court:
+                            tags.append('supreme_court')
+                        elif 'circuit' in court or 'appellate' in court:
+                            tags.append('appellate')
+                        elif 'district' in court:
+                            tags.append('district_court')
+
+                        case_name = opinion.get('caseName', '').lower()
+                        if any(term in case_name for term in ['patent', 'copyright', 'trademark']):
+                            tags.append('intellectual_property')
+                        if any(term in case_name for term in ['criminal', 'united states v']):
+                            tags.append('criminal_law')
+
+                        all_items.append({
+                            'title': opinion.get('caseName', 'Unknown Case'),
+                            'description': opinion.get('snippet', '')[:500],
+                            'link': f"https://www.courtlistener.com{opinion.get('absolute_url', '')}",
+                            'court': opinion.get('court', 'Unknown Court'),
+                            'date_filed': opinion.get('dateFiled', ''),
+                            'docket_number': opinion.get('docketNumber', ''),
+                            'precedential_status': opinion.get('precedentialStatus', ''),
+                            'citation': opinion.get('citation', []),
+                            'tags': tags,
+                            'source': 'courtlistener',
+                            'type': 'legal_opinion',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+                else:
+                    logger.warning(f"CourtListener API returned {response.status}")
+
+        logger.info(f"CourtListener: collected {len(all_items)} legal opinions")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'courtlistener',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"CourtListener collection error: {e}")
+        return {
+            'items': [],
+            'source': 'courtlistener',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_justia_data() -> Dict[str, Any]:
+    """Collect legal news and case summaries from Justia.
+
+    Note: Justia has Cloudflare protection, so scraping may not work reliably.
+    Uses RSS feeds instead which are more reliable.
+    """
+    all_items = []
+
+    # Justia has some RSS feeds we can use
+    rss_feeds = [
+        'https://law.justia.com/cases/new/feed.xml',  # New cases feed
+        'https://www.justia.com/feed/',  # Main feed
+    ]
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+
+            for feed_url in rss_feeds:
+                try:
+                    async with session.get(feed_url, headers=headers,
+                                           timeout=aiohttp.ClientTimeout(total=15)) as response:
+                        if response.status == 200:
+                            text = await response.text()
+                            # Parse RSS
+                            feed = feedparser.parse(text)
+                            for entry in feed.entries[:15]:
+                                all_items.append({
+                                    'title': entry.get('title', ''),
+                                    'description': strip_html_tags(entry.get('summary', entry.get('description', '')))[:500],
+                                    'link': entry.get('link', ''),
+                                    'published': entry.get('published', ''),
+                                    'tags': ['legal', 'news', 'justia'],
+                                    'source': 'justia',
+                                    'type': 'legal_news',
+                                    'fetched_at': datetime.now(timezone.utc).isoformat()
+                                })
+                except Exception as e:
+                    logger.debug(f"Failed to fetch Justia feed {feed_url}: {e}")
+                    continue
+
+        logger.info(f"Justia: collected {len(all_items)} legal news items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'justia',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Justia collection error: {e}")
+        return {
+            'items': [],
+            'source': 'justia',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_findlaw_data() -> Dict[str, Any]:
+    """Collect legal blogs and articles from FindLaw.
+
+    FindLaw is a Thomson Reuters legal portal - no API, uses web scraping.
+    """
+    from bs4 import BeautifulSoup
+
+    all_items = []
+    practice_areas = ['criminal', 'family', 'business', 'employment']
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'text/html,application/xhtml+xml'
+            }
+
+            for area in practice_areas:
+                url = f"https://www.findlaw.com/{area}/"
+                async with session.get(url, headers=headers,
+                                       timeout=aiohttp.ClientTimeout(total=15)) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        soup = BeautifulSoup(html, 'html.parser')
+
+                        # Find article links
+                        for link in soup.find_all('a', href=lambda h: h and f'/{area}/' in h, limit=10):
+                            title = link.get_text(strip=True)
+                            if not title or len(title) < 15:
+                                continue
+
+                            article_url = link.get('href', '')
+                            if not article_url.startswith('http'):
+                                article_url = f"https://www.findlaw.com{article_url}"
+
+                            # Skip duplicate base URLs
+                            if article_url == url:
+                                continue
+
+                            all_items.append({
+                                'title': title,
+                                'link': article_url,
+                                'practice_area': area,
+                                'tags': ['legal', 'article', area],
+                                'source': 'findlaw',
+                                'type': 'legal_article',
+                                'fetched_at': datetime.now(timezone.utc).isoformat()
+                            })
+
+                await asyncio.sleep(0.5)  # Be polite with rate limiting
+
+        logger.info(f"FindLaw: collected {len(all_items)} legal articles")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'findlaw',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"FindLaw collection error: {e}")
+        return {
+            'items': [],
+            'source': 'findlaw',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
+async def _collect_lii_data() -> Dict[str, Any]:
+    """Collect legal resources from Cornell's Legal Information Institute.
+
+    LII provides free access to Supreme Court opinions, US Code, and CFR.
+    """
+    from bs4 import BeautifulSoup
+
+    all_items = []
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': USER_AGENT,
+                'Accept': 'text/html,application/xhtml+xml'
+            }
+
+            # Fetch Supreme Court opinions
+            scotus_url = "https://www.law.cornell.edu/supct/index.html"
+            async with session.get(scotus_url, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status == 200:
+                    html = await response.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+
+                    for link in soup.find_all('a', href=lambda h: h and '/supct/' in h, limit=30):
+                        title = link.get_text(strip=True)
+                        if not title or len(title) < 10:
+                            continue
+
+                        opinion_url = link.get('href', '')
+                        if not opinion_url.startswith('http'):
+                            opinion_url = f"https://www.law.cornell.edu{opinion_url}"
+
+                        # Try to extract citation
+                        import re
+                        citation = ''
+                        parent = link.find_parent(['div', 'li', 'p'])
+                        if parent:
+                            citation_match = re.search(r'\d+\s+U\.S\.\s+\d+', parent.get_text())
+                            if citation_match:
+                                citation = citation_match.group()
+
+                        all_items.append({
+                            'title': title,
+                            'case_name': title,
+                            'citation': citation,
+                            'link': opinion_url,
+                            'court': 'Supreme Court of the United States',
+                            'tags': ['legal', 'supreme_court', 'scotus', 'opinion'],
+                            'source': 'lii',
+                            'type': 'supreme_court_opinion',
+                            'fetched_at': datetime.now(timezone.utc).isoformat()
+                        })
+
+        logger.info(f"LII: collected {len(all_items)} Supreme Court items")
+
+        return {
+            'items': all_items,
+            'item_count': len(all_items),
+            'source': 'lii',
+            'collected_at': datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"LII collection error: {e}")
+        return {
+            'items': [],
+            'source': 'lii',
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+
 async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     """
     Collect real data for a specific spider.
@@ -1269,6 +1567,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
 
     Session 394: Special handling for HackerNews to fetch full story content.
     Session 396: Added Phase 3 API handlers for key-based spiders.
+    Session 397: Added legal spiders (courtlistener, justia, findlaw, lii).
     """
     # API-based spiders use their own implementations
     API_SPIDERS = ['bluesky', 'youtube', 'discord']
@@ -1276,7 +1575,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
     if spider_name in API_SPIDERS:
         return await _collect_api_spider_data(spider_name)
 
-    # Session 396-397: Phase 3 API key-based spiders
+    # Session 396-397: Phase 3 API key-based spiders + Legal spiders
     PHASE3_API_SPIDERS = {
         'polygon_finance': _collect_polygon_data,
         'etherscan': _collect_etherscan_data,
@@ -1285,6 +1584,11 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         'unsplash': _collect_unsplash_data,
         'adzuna': _collect_adzuna_data,
         'finnhub': _collect_finnhub_data,
+        # Session 397: Legal spiders
+        'courtlistener': _collect_courtlistener_data,
+        'justia': _collect_justia_data,
+        'findlaw': _collect_findlaw_data,
+        'lii': _collect_lii_data,
     }
 
     if spider_name in PHASE3_API_SPIDERS:
