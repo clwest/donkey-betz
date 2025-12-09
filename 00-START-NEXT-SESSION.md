@@ -43,16 +43,16 @@ Removed spiders with no public API:
 | adzuna | Adzuna API | Remote job listings |
 | finnhub | Finnhub API | Stock quotes, market news |
 
-### Legal Spiders (4 - Ready for your idea!)
+### Legal Spiders (4 configured, 3 working)
 
-| Spider | Source | API Type | Data |
-|--------|--------|----------|------|
-| courtlistener | Free Law Project | **REST API (free!)** | Court opinions, judges, oral arguments |
-| justia | Justia.com | Web scraping | Legal news, case summaries, dockets |
-| findlaw | FindLaw | Web scraping | Legal blogs, practice area content |
-| lii | Cornell Law | Web scraping | Supreme Court, US Code, CFR |
+| Spider | Source | API Type | Status | Data |
+|--------|--------|----------|--------|------|
+| courtlistener | Free Law Project | **REST API (free!)** | ✓ Working (20 items) | Court opinions, case law |
+| findlaw | FindLaw | Web scraping | ✓ Working (25 items) | Legal blogs, practice areas |
+| lii | Cornell Law | Web scraping | ✓ Working (15 items) | Supreme Court, US Code, CFR |
+| justia | Justia.com | RSS/Scraping | ✗ Cloudflare blocked | - |
 
-**CourtListener is the most valuable** - proper REST API at `courtlistener.com/api/rest/v4/`
+**~60 legal items per run** from CourtListener, FindLaw, and LII combined
 
 ---
 
@@ -61,9 +61,10 @@ Removed spiders with no public API:
 | Category | Count | Notes |
 |----------|-------|-------|
 | **Total Registered** | 62 | Registry cleaned |
-| **Actually Working** | 54 | With configured URLs |
+| **Actually Working** | 57 | With configured URLs/handlers |
 | **Need API Keys** | 6 | bluesky, discord, spotify, sec_edgar |
-| **Legal (Working)** | 4 | Ready for your idea |
+| **Legal (Working)** | 3 | courtlistener, findlaw, lii |
+| **Legal (Blocked)** | 1 | justia (Cloudflare) |
 
 ---
 
@@ -99,7 +100,7 @@ open http://localhost:8000/ai-studio/
 | File | Changes |
 |------|---------|
 | `ai_core/spiders/spider_registry.py` | Removed 26 broken spiders, cleaned imports |
-| `ai_core/spiders/real_data_collector.py` | Added 7 Phase 3 API handlers + 6 RSS spiders |
+| `ai_core/spiders/real_data_collector.py` | Added 7 Phase 3 API handlers + 6 RSS spiders + 4 legal spider handlers |
 | `00-START-NEXT-SESSION.md` | Updated for Session 397 cleanup |
-| `docs/SPIDERS.md` | Updated spider counts, documented removals |
+| `docs/SPIDERS.md` | Updated spider counts, documented removals + legal spiders |
 | `.env` | Updated GitHub, Runway, HuggingFace, added Finnhub keys |

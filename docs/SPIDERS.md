@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Spider Network consists of **62 registered spiders**, with **54 actually working** after Session 397 cleanup. Session 397 removed 26 broken spiders that had no public API.
+The Spider Network consists of **62 registered spiders**, with **57 actually working** after Session 397 cleanup. Session 397 removed 26 broken spiders that had no public API and added 4 legal spiders (3 working).
 
 ---
 
@@ -15,13 +15,14 @@ The Spider Network consists of **62 registered spiders**, with **54 actually wor
 | Metric | Count |
 |--------|-------|
 | Total Registered | 62 |
-| **Actually Working** | **54** |
+| **Actually Working** | **57** |
 | With Configured URLs | 48 |
+| Legal Spiders (working) | 3 |
 | Need API Keys | 6 |
 | Records in DB | 13,700+ |
 | Searchable (with embeddings) | ~2,000 |
 
-**Session 397:** Cleaned registry - removed 26 broken spiders (no public API/placeholders)
+**Session 397:** Cleaned registry - removed 26 broken spiders, added 4 legal spiders (3 working)
 
 ---
 
@@ -96,6 +97,16 @@ These spiders are configured and collecting real data:
 | unsplash | Unsplash API | Working (popular photos) |
 | adzuna | Adzuna API | Working (remote jobs) |
 | finnhub | Finnhub API | Working (stock quotes, market news) |
+
+#### Session 397 Additions (Legal - 4 spiders, 3 working)
+| Spider | Source Type | Status |
+|--------|-------------|--------|
+| courtlistener | REST API (free!) | Working (~20 items - court opinions, case law) |
+| findlaw | Web scraping | Working (~25 items - legal blogs, practice areas) |
+| lii | Web scraping | Working (~15 items - Cornell Law, US Code, CFR) |
+| justia | RSS/Scraping | Blocked (Cloudflare) |
+
+**Legal spiders collect ~60 items per run** covering court opinions, legal news, and legislation.
 
 ### Session 397 Cleanup - Removed Spiders (26)
 
