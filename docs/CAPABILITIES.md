@@ -16,7 +16,7 @@
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
 | Spiders | 64 | Active (59 working) |
-| Clean Agents | 12 | Production |
+| Clean Agents | 13 | Production |
 | Legacy Agents | 22 | Production |
 | Advisors | 25 | Production |
 | Sci-Fi Features | 15 | Production |
@@ -325,6 +325,59 @@ For JavaScript-rendered SPAs:
 ### UI Location
 
 Intelligence Tab → Documents sub-tab
+
+---
+
+## Pro Se Legal Assistant (Session 403)
+
+AI-powered legal document assistant for Colorado family law self-represented litigants.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| Legal Guidance | General legal information for Colorado family law |
+| Motion Templates | Generate motion templates (continuance, modify parenting time, etc.) |
+| Meet-and-Confer Emails | Professional correspondence templates |
+| Declaration Templates | Sworn statement templates |
+| Procedure Explanations | Step-by-step guides for common procedures |
+| JDF Form Reference | Colorado Judicial Department form information |
+| **Case File Upload** | Upload PDFs, DOC, TXT for AI analysis |
+| **Document Analysis** | AI identifies issues and recommends corrections |
+| **Corrective Filing Generation** | Generate properly formatted refilings |
+
+### Document Types Supported
+
+| Type | Use Case |
+|------|----------|
+| Court Order / Ruling | Analyze orders and understand requirements |
+| Denied Motion | Understand why motion was denied, get correction guidance |
+| Filed Motion | Review filed motions |
+| Correspondence | Opposing party communications |
+| Opposing Filing | Analyze other party's filings |
+| Financial Document | Support worksheets, disclosures |
+| Evidence / Exhibit | Supporting documents |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/legal/case-files/` | GET | List uploaded legal documents |
+| `/api/legal/case-files/upload/` | POST | Upload and process document |
+| `/api/legal/case-files/<id>/` | GET | Get document details |
+| `/api/legal/case-files/<id>/analyze/` | POST | AI-powered document analysis |
+| `/api/legal/case-files/<id>/delete/` | DELETE | Delete document |
+
+### UI Location
+
+Legal Assistant Tab → My Case Files sub-tab
+
+### Important Disclaimers
+
+- Provides **general legal information only**, NOT legal advice
+- Does NOT create an attorney-client relationship
+- Users should consult a licensed Colorado attorney
+- Generated documents are **templates** requiring review
 
 ---
 
