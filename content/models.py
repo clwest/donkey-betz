@@ -75,6 +75,10 @@ class DocumentType(models.TextChoices):
     AGENT_LOG = 'agent_log', 'Agent Execution Log'
     KNOWLEDGE_EXTRACT = 'knowledge_extract', 'Knowledge Base Extract'
 
+    # Web content (Session 402)
+    YOUTUBE = 'youtube', 'YouTube Video Transcript'
+    URL = 'url', 'Web Page Content'
+
 
 class ContentStatus(models.TextChoices):
     """Content processing status"""
@@ -515,6 +519,13 @@ class Document(UnifiedBaseModel):
         max_length=500,
         blank=True,
         help_text="Reference ID in source system"
+    )
+
+    # Session 402: URL source for web/YouTube documents
+    source_url = models.URLField(
+        max_length=2000,
+        blank=True,
+        help_text="Original URL for web pages and YouTube videos"
     )
     
     cross_references = models.JSONField(

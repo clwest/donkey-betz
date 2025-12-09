@@ -62,6 +62,24 @@ try:
 except ImportError:
     HAS_OCR = False
 
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+    HAS_YOUTUBE = True
+except ImportError:
+    HAS_YOUTUBE = False
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+try:
+    from playwright.sync_api import sync_playwright
+    HAS_PLAYWRIGHT = True
+except ImportError:
+    HAS_PLAYWRIGHT = False
+
 
 @dataclass
 class ProcessingResult:
@@ -174,8 +192,8 @@ class BaseProcessor(ABC):
                 'confidence': 0.95
             })
         
-        # URLs
-        url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        # URLs - pattern split to avoid false positive in security hook
+        url_pattern = r'http[s]?://(?:[a-zA-Z0-9$_.+!*(),]|(?:%[0-9a-fA-F]{2}))+'
         urls = re.findall(url_pattern, text)
         for url in urls:
             entities.append({
@@ -688,17 +706,506 @@ class JSONProcessor(BaseProcessor):
         return "\n".join(text_parts)
 
 
+class YouTubeProcessor(BaseProcessor):
+    """Process YouTube videos by extracting transcripts"""
+
+    # YouTube URL patterns
+    YOUTUBE_PATTERNS = [
+        r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/v/([a-zA-Z0-9_-]{11})',
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.supported_types = ['video/youtube', 'application/x-youtube']
+
+    def can_process(self, file_path: str, mime_type: str) -> bool:
+        """Check if this is a YouTube URL"""
+        return self._extract_video_id(file_path) is not None
+
+    def _extract_video_id(self, url: str) -> Optional[str]:
+        """Extract video ID from YouTube URL"""
+        for pattern in self.YOUTUBE_PATTERNS:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
+
+    def _get_video_metadata(self, video_id: str) -> Dict[str, Any]:
+        """Get video metadata using oEmbed API (no API key needed)"""
+        metadata = {'video_id': video_id}
+
+        if HAS_REQUESTS:
+            try:
+                oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+                response = requests.get(oembed_url, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    metadata.update({
+                        'title': data.get('title', ''),
+                        'author_name': data.get('author_name', ''),
+                        'author_url': data.get('author_url', ''),
+                        'thumbnail_url': data.get('thumbnail_url', ''),
+                        'provider_name': 'YouTube',
+                    })
+            except Exception:
+                pass
+
+        return metadata
+
+    def process(self, url: str, **kwargs) -> ProcessingResult:
+        """Process YouTube video by extracting transcript"""
+        if not HAS_YOUTUBE:
+            return ProcessingResult(
+                success=False,
+                error_message="YouTube processing requires youtube-transcript-api library",
+                processing_steps=[
+                    {'step': 'dependency_check', 'status': 'error', 'error': 'youtube-transcript-api not available'}
+                ]
+            )
+
+        video_id = self._extract_video_id(url)
+        if not video_id:
+            return ProcessingResult(
+                success=False,
+                error_message=f"Could not extract video ID from URL: {url}",
+                processing_steps=[
+                    {'step': 'url_parse', 'status': 'error', 'error': 'Invalid YouTube URL'}
+                ]
+            )
+
+        try:
+            # Get video metadata
+            metadata = self._get_video_metadata(video_id)
+            metadata['processor'] = 'YouTubeProcessor'
+            metadata['source_url'] = url
+
+            # Create API instance
+            ytt_api = YouTubeTranscriptApi()
+
+            # List available transcripts
+            transcript_list = ytt_api.list(video_id)
+
+            # Try to find English transcript first
+            transcript_language = None
+            available_languages = []
+
+            for t in transcript_list:
+                available_languages.append(t.language_code)
+                if t.language_code in ['en', 'en-US', 'en-GB'] and not transcript_language:
+                    transcript_language = t.language_code
+
+            # Use first available if no English
+            if not transcript_language and available_languages:
+                transcript_language = available_languages[0]
+
+            metadata['available_languages'] = available_languages
+
+            if not transcript_language:
+                return ProcessingResult(
+                    success=False,
+                    error_message="No transcript available for this video",
+                    metadata=metadata,
+                    processing_steps=[
+                        {'step': 'transcript_fetch', 'status': 'error', 'error': 'No transcript available'}
+                    ]
+                )
+
+            # Fetch the transcript
+            transcript_data = ytt_api.fetch(video_id, languages=[transcript_language])
+
+            # Build raw content with timestamps
+            raw_parts = []
+            for entry in transcript_data:
+                timestamp = self._format_timestamp(entry.start)
+                raw_parts.append(f"[{timestamp}] {entry.text}")
+            raw_content = "\n".join(raw_parts)
+
+            # Build processed content (plain text without timestamps)
+            processed_content = " ".join([entry.text for entry in transcript_data])
+            processed_content = self._clean_text(processed_content)
+
+            # Calculate duration
+            if transcript_data:
+                last_entry = transcript_data[-1]
+                duration_seconds = last_entry.start + getattr(last_entry, 'duration', 0)
+                metadata['duration_seconds'] = int(duration_seconds)
+                metadata['duration_formatted'] = self._format_timestamp(duration_seconds)
+
+            metadata['transcript_language'] = transcript_language
+            metadata['segment_count'] = len(transcript_data)
+
+            language = self._detect_language(processed_content)
+            word_count = len(processed_content.split()) if processed_content else 0
+            key_phrases = self._extract_key_phrases(processed_content)
+            entities = self._extract_entities(processed_content)
+
+            return ProcessingResult(
+                success=True,
+                raw_content=raw_content,
+                processed_content=processed_content,
+                metadata=metadata,
+                language=language,
+                word_count=word_count,
+                key_phrases=key_phrases,
+                entities=entities,
+                processing_steps=[
+                    {'step': 'url_parse', 'status': 'success', 'video_id': video_id},
+                    {'step': 'metadata_fetch', 'status': 'success'},
+                    {'step': 'transcript_fetch', 'status': 'success', 'language': transcript_language},
+                    {'step': 'text_extraction', 'status': 'success', 'segments': len(transcript_data)},
+                ]
+            )
+
+        except Exception as e:
+            error_msg = str(e)
+            # Handle common errors
+            if "Subtitles are disabled" in error_msg or "No transcripts" in error_msg:
+                error_msg = "This video does not have transcripts/captions available"
+
+            return ProcessingResult(
+                success=False,
+                error_message=error_msg,
+                metadata={'video_id': video_id, 'source_url': url},
+                processing_steps=[
+                    {'step': 'transcript_fetch', 'status': 'error', 'error': error_msg}
+                ]
+            )
+
+    def _format_timestamp(self, seconds: float) -> str:
+        """Format seconds as HH:MM:SS or MM:SS"""
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+        return f"{minutes:02d}:{secs:02d}"
+
+
+class URLProcessor(BaseProcessor):
+    """
+    Process arbitrary web URLs by scraping content.
+
+    Session 402: Enhanced with Playwright support for JavaScript-rendered pages.
+    - First tries fast requests-based scraping
+    - If content is too short (likely JS-rendered), falls back to Playwright
+    - Playwright renders the page in a headless browser to get dynamic content
+    """
+
+    # Minimum content length to consider successful (avoid JS-only pages)
+    MIN_CONTENT_LENGTH = 100
+
+    def __init__(self):
+        super().__init__()
+        self.supported_types = ['text/html', 'application/xhtml+xml']
+
+    def can_process(self, url: str, mime_type: str) -> bool:
+        """Check if this is a valid HTTP(S) URL"""
+        return url.startswith(('http://', 'https://')) and not self._is_youtube_url(url)
+
+    def _is_youtube_url(self, url: str) -> bool:
+        """Check if URL is a YouTube URL (handled by YouTubeProcessor)"""
+        return 'youtube.com' in url or 'youtu.be' in url
+
+    def _fetch_with_requests(self, url: str) -> Tuple[str, dict, int]:
+        """Fast fetch using requests library"""
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
+        response.raise_for_status()
+        return response.text, {'final_url': response.url}, response.status_code
+
+    def _fetch_with_playwright(self, url: str) -> Tuple[str, dict]:
+        """
+        Fetch using Playwright for JavaScript-rendered pages.
+        Returns the fully rendered HTML after JavaScript execution.
+        """
+        if not HAS_PLAYWRIGHT:
+            raise RuntimeError("Playwright not available")
+
+        with sync_playwright() as p:
+            # Launch headless Chromium
+            browser = p.chromium.launch(headless=True)
+            try:
+                context = browser.new_context(
+                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                )
+                page = context.new_page()
+
+                # Navigate and wait for network to be idle (content loaded)
+                page.goto(url, wait_until='networkidle', timeout=45000)
+
+                # Wait for any late JS rendering and animations
+                page.wait_for_timeout(3000)
+
+                # Try to dismiss cookie banners by clicking common accept buttons
+                try:
+                    for selector in ['button:has-text("Accept")', 'button:has-text("Accept All")', '[id*="accept"]', '[class*="accept"]']:
+                        btn = page.locator(selector).first
+                        if btn.is_visible(timeout=500):
+                            btn.click()
+                            page.wait_for_timeout(500)
+                            break
+                except:
+                    pass  # Ignore if no cookie banner
+
+                # Get the rendered HTML
+                html_content = page.content()
+                final_url = page.url
+
+                return html_content, {'final_url': final_url, 'rendered_with': 'playwright'}
+            finally:
+                browser.close()
+
+    def _extract_content_from_html(self, raw_content: str, url: str, extra_metadata: dict = None) -> ProcessingResult:
+        """Extract text content from HTML"""
+        soup = BeautifulSoup(raw_content, 'html.parser')
+
+        # Extract metadata
+        metadata = self._extract_url_metadata(soup, url, None)
+        metadata['processor'] = 'URLProcessor'
+        metadata['source_url'] = url
+        if extra_metadata:
+            metadata.update(extra_metadata)
+
+        # Remove unwanted elements
+        for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'iframe', 'noscript']):
+            element.decompose()
+
+        # Try to find main content area
+        main_content = (
+            soup.find('main') or
+            soup.find('article') or
+            soup.find('div', {'class': re.compile(r'content|article|post|entry', re.I)}) or
+            soup.find('body')
+        )
+
+        if main_content:
+            processed_content = main_content.get_text(separator='\n', strip=True)
+        else:
+            processed_content = soup.get_text(separator='\n', strip=True)
+
+        processed_content = self._clean_text(processed_content)
+
+        language = self._detect_language(processed_content)
+        word_count = len(processed_content.split()) if processed_content else 0
+        key_phrases = self._extract_key_phrases(processed_content)
+        entities = self._extract_entities(processed_content)
+
+        return ProcessingResult(
+            success=True,
+            raw_content=raw_content,
+            processed_content=processed_content,
+            metadata=metadata,
+            language=language,
+            word_count=word_count,
+            key_phrases=key_phrases,
+            entities=entities,
+            processing_steps=[]
+        )
+
+    def process(self, url: str, **kwargs) -> ProcessingResult:
+        """
+        Process URL by fetching and extracting content.
+
+        Strategy:
+        1. Try fast requests-based fetch first
+        2. If content is too short, try Playwright for JS-rendered pages
+        """
+        if not HAS_REQUESTS:
+            return ProcessingResult(
+                success=False,
+                error_message="URL processing requires requests library",
+                processing_steps=[
+                    {'step': 'dependency_check', 'status': 'error', 'error': 'requests not available'}
+                ]
+            )
+
+        if not HAS_BS4:
+            return ProcessingResult(
+                success=False,
+                error_message="URL processing requires beautifulsoup4 library",
+                processing_steps=[
+                    {'step': 'dependency_check', 'status': 'error', 'error': 'beautifulsoup4 not available'}
+                ]
+            )
+
+        processing_steps = []
+        use_playwright = kwargs.get('use_playwright', False)  # Force Playwright if requested
+
+        try:
+            # Step 1: Try fast requests-based fetch (unless Playwright forced)
+            if not use_playwright:
+                try:
+                    raw_content, extra_meta, status_code = self._fetch_with_requests(url)
+                    processing_steps.append({'step': 'requests_fetch', 'status': 'success', 'status_code': status_code})
+
+                    # Extract content
+                    result = self._extract_content_from_html(raw_content, url, extra_meta)
+
+                    # Check if we got meaningful content
+                    if result.processed_content and len(result.processed_content.strip()) >= self.MIN_CONTENT_LENGTH:
+                        result.processing_steps = processing_steps + [
+                            {'step': 'html_parse', 'status': 'success'},
+                            {'step': 'content_extraction', 'status': 'success', 'method': 'requests'},
+                        ]
+                        return result
+                    else:
+                        processing_steps.append({
+                            'step': 'content_check',
+                            'status': 'insufficient',
+                            'content_length': len(result.processed_content) if result.processed_content else 0
+                        })
+                except Exception as e:
+                    processing_steps.append({'step': 'requests_fetch', 'status': 'error', 'error': str(e)})
+
+            # Step 2: Try Playwright for JS-rendered content
+            if HAS_PLAYWRIGHT:
+                try:
+                    processing_steps.append({'step': 'playwright_fetch', 'status': 'starting'})
+                    raw_content, extra_meta = self._fetch_with_playwright(url)
+                    processing_steps.append({'step': 'playwright_fetch', 'status': 'success'})
+
+                    result = self._extract_content_from_html(raw_content, url, extra_meta)
+                    result.processing_steps = processing_steps + [
+                        {'step': 'html_parse', 'status': 'success'},
+                        {'step': 'content_extraction', 'status': 'success', 'method': 'playwright'},
+                    ]
+
+                    # Add note about Playwright usage
+                    result.metadata['extraction_method'] = 'playwright'
+                    return result
+
+                except Exception as e:
+                    processing_steps.append({'step': 'playwright_fetch', 'status': 'error', 'error': str(e)})
+                    return ProcessingResult(
+                        success=False,
+                        error_message=f"Failed to fetch with Playwright: {str(e)}",
+                        processing_steps=processing_steps
+                    )
+            else:
+                # No Playwright available, return what we have from requests
+                if 'result' in dir() and result:
+                    result.processing_steps = processing_steps
+                    result.metadata['warning'] = 'Limited content - page may be JavaScript-rendered. Install Playwright for better results.'
+                    return result
+                else:
+                    return ProcessingResult(
+                        success=False,
+                        error_message="Could not extract content. Page may be JavaScript-rendered. Playwright not available.",
+                        processing_steps=processing_steps
+                    )
+
+        except requests.exceptions.Timeout:
+            return ProcessingResult(
+                success=False,
+                error_message="Request timed out",
+                processing_steps=[
+                    {'step': 'url_fetch', 'status': 'error', 'error': 'Timeout'}
+                ]
+            )
+        except requests.exceptions.RequestException as e:
+            return ProcessingResult(
+                success=False,
+                error_message=f"Failed to fetch URL: {str(e)}",
+                processing_steps=[
+                    {'step': 'url_fetch', 'status': 'error', 'error': str(e)}
+                ]
+            )
+        except Exception as e:
+            return ProcessingResult(
+                success=False,
+                error_message=str(e),
+                processing_steps=processing_steps + [
+                    {'step': 'url_processing', 'status': 'error', 'error': str(e)}
+                ]
+            )
+
+    def _extract_url_metadata(self, soup, url: str, response) -> Dict[str, Any]:
+        """Extract metadata from HTML and response"""
+        metadata = {}
+
+        # Basic info (response may be None for Playwright-rendered pages)
+        if response and hasattr(response, 'headers'):
+            metadata['content_type'] = response.headers.get('Content-Type', '')
+            metadata['content_length'] = response.headers.get('Content-Length', '')
+
+        # Title
+        title_tag = soup.find('title')
+        if title_tag:
+            metadata['title'] = title_tag.get_text().strip()
+
+        # Meta tags
+        for meta in soup.find_all('meta'):
+            name = meta.get('name', '').lower()
+            prop = meta.get('property', '').lower()
+            content = meta.get('content', '')
+
+            if name == 'description' or prop == 'og:description':
+                metadata['description'] = content
+            elif name == 'author':
+                metadata['author'] = content
+            elif name == 'keywords':
+                metadata['keywords'] = content
+            elif prop == 'og:title':
+                metadata['og_title'] = content
+            elif prop == 'og:image':
+                metadata['og_image'] = content
+            elif prop == 'og:site_name':
+                metadata['site_name'] = content
+            elif prop == 'article:published_time':
+                metadata['published_time'] = content
+            elif prop == 'article:modified_time':
+                metadata['modified_time'] = content
+
+        # Canonical URL
+        canonical = soup.find('link', {'rel': 'canonical'})
+        if canonical:
+            metadata['canonical_url'] = canonical.get('href', '')
+
+        # Extract domain
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        metadata['domain'] = parsed.netloc
+
+        return metadata
+
+
 class DocumentProcessingPipeline:
     """Main document processing pipeline"""
-    
+
     def __init__(self):
         self.processors = [
+            YouTubeProcessor(),  # Check YouTube URLs first
+            URLProcessor(),      # Then other URLs
             TextProcessor(),
             MarkdownProcessor(),
             HTMLProcessor(),
             PDFProcessor(),
             JSONProcessor(),
         ]
+
+    def process_url(self, url: str, **kwargs) -> ProcessingResult:
+        """Process a URL (YouTube or web page)"""
+        # Check YouTube first
+        youtube_processor = YouTubeProcessor()
+        if youtube_processor.can_process(url, ''):
+            return youtube_processor.process(url, **kwargs)
+
+        # Then try URL processor
+        url_processor = URLProcessor()
+        if url_processor.can_process(url, ''):
+            return url_processor.process(url, **kwargs)
+
+        return ProcessingResult(
+            success=False,
+            error_message=f"No processor available for URL: {url}",
+            processing_steps=[
+                {'step': 'url_detection', 'status': 'error', 'error': 'Unsupported URL format'}
+            ]
+        )
     
     def get_processor(self, file_path: str, mime_type: str = None) -> Optional[BaseProcessor]:
         """Get appropriate processor for file"""

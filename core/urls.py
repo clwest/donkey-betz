@@ -985,7 +985,9 @@ from core.views_odds_sports import (
 # Import Phase 2 advanced features
 from core.views_rag_embeddings import (
     upload_document_for_rag, semantic_search, rag_generate, embeddings_stats,
-    create_knowledge_collection, list_knowledge_collections, advanced_rag_query, optimize_embeddings
+    create_knowledge_collection, list_knowledge_collections, advanced_rag_query, optimize_embeddings,
+    # Session 402: Document ingestion APIs
+    list_documents, ingest_url, get_document, delete_document
 )
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
@@ -2185,7 +2187,13 @@ urlpatterns = [
     path('api/v1/knowledge/collections/list/', list_knowledge_collections, name='list-knowledge-collections'),
     path('api/v1/rag/advanced-query/', advanced_rag_query, name='advanced-rag-query'),
     path('api/v1/rag/optimize/', optimize_embeddings, name='optimize-embeddings'),
-    
+
+    # Session 402: Document Ingestion APIs
+    path('api/documents/', list_documents, name='documents-list'),
+    path('api/documents/ingest-url/', ingest_url, name='documents-ingest-url'),
+    path('api/documents/<uuid:document_id>/', get_document, name='documents-get'),
+    path('api/documents/<uuid:document_id>/delete/', delete_document, name='documents-delete'),
+
     # Multi-LLM Provider Integration APIs
     path('api/v1/llm/providers/', available_llm_providers, name='llm-providers'),
     path('api/v1/llm/intelligent-selection/', intelligent_model_selection, name='intelligent-model-selection'),
