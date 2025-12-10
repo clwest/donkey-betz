@@ -2557,15 +2557,23 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         # =====================================================================
         # STEP 6: Session 405 Enhancement #5 - Likelihood of Success Assessment
+        # Session 406 PATCH-5.1: Extract relief items ONCE and pass to scoring
         # =====================================================================
         logger.info("Step 6: Assessing likelihood of success...")
+
+        # Session 406 PATCH-5.1: Extract relief items from corrected_relief (NOT full document!)
+        # This ensures we count only the actual relief items, not evidence checklist, conferral, etc.
+        relief_items_for_scoring = self._extract_relief_items_list(corrected_relief)
+        logger.info(f"[PATCH-5.1] Extracted {len(relief_items_for_scoring)} relief items for scoring")
+
         # Check for evidence mentions in rewritten motion
         has_evidence = 'exhibit' in motion_document.lower() or 'attached' in motion_document.lower()
         success_result = self._assess_likelihood_of_success(
             motion_text=motion_document,  # Score the REWRITTEN motion
             relief_type=relief_type,
             has_evidence=has_evidence,
-            is_rewrite=True  # This is a rewrite of a denied motion
+            is_rewrite=True,  # This is a rewrite of a denied motion
+            relief_items=relief_items_for_scoring  # Session 406 PATCH-5.1: Pass pre-extracted items
         )
         tool_calls_made.append({'tool': 'assess_likelihood_of_success', 'result': 'success'})
 
@@ -5318,7 +5326,7 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
         - VERIFICATION / AFFIDAVIT
         - PROPOSED ORDER
         - CERTIFICATE OF SERVICE
-        - PART 5: FULL RESTATEMENT (all user content, cleaned)
+        - APPENDIX A: FULL RESTATEMENT (optional exhibit)
         """
         # =====================================================================
         # Session 406 PATCH-5: Create MotionContext from case_details
@@ -5607,11 +5615,13 @@ Date: _________________________________
 
                 # Session 405 Patch 4D: Removed debug output from final motion
                 # The INTERNAL MAPPING LOG was showing in court documents - now hidden
+                # Session 406 PATCH-5.1: Renamed from PART 5 to APPENDIX A per ChatGPT
+                # This keeps court-facing stuff (PARTS 1-6) separate from optional attachments
                 full_restatement_section = f"""
 
 ============================================================
-PART 5: FULL RESTATEMENT OF PETITIONER'S FACTUAL NARRATIVE
-(OPTIONAL ATTACHMENT - NOT FOR COURT FILING UNLESS ATTACHED AS EXHIBIT)
+APPENDIX A: FULL RESTATEMENT OF PETITIONER'S FACTUAL NARRATIVE
+(OPTIONAL EXHIBIT - NOT FOR COURT FILING UNLESS ATTACHED)
 ============================================================
 
 This section restates all factual content from your original motion in cleaned,
@@ -7193,12 +7203,15 @@ MAGISTRATE / JUDGE
         motion_text: str,
         relief_type: str = '',
         has_evidence: bool = False,
-        is_rewrite: bool = False
+        is_rewrite: bool = False,
+        relief_items: List[str] = None  # Session 406 PATCH-5.1: Accept pre-extracted relief items
     ) -> Dict[str, Any]:
         """
         Calculate a likelihood of success score for a motion.
 
         Session 405 Enhancement #5: The "killer feature" per ChatGPT.
+        Session 406 PATCH-5.1: Accept relief_items parameter to avoid counting
+        evidence checklist items, narrative bullets, or conferral steps.
 
         Scores based on:
         - Relief scope (narrower = better)
@@ -7225,25 +7238,34 @@ MAGISTRATE / JUDGE
         # =====================================================================
         # FACTOR 1: RELIEF SCOPE (0-25 points)
         # Courts prefer NARROW, specific relief over broad requests
-        # Session 406 PATCH-5: Unified relief counting with score_relief_scope()
+        # Session 406 PATCH-5.1: Use pre-extracted relief items if provided
         # =====================================================================
 
-        # Extract relief items using the same function as the main pipeline
-        relief_items = self._extract_relief_items_list(motion_text)
-        relief_count = len(relief_items)
-
-        # Fallback: if no items found by structured extraction, use regex patterns
-        if relief_count == 0:
-            relief_count = len(re.findall(r'\d+\.\s+(?:Order|Require|Grant|Direct|Respondent shall)', motion_text))
-        if relief_count == 0:
-            relief_count = len(re.findall(r'(?:order|require|grant|direct)\s+(?:that|the|respondent)', motion_lower))
-        if relief_count == 0:
-            relief_section_match = re.search(r'RELIEF REQUESTED.*?(?:CERTIFICATE|VERIFICATION|$)', motion_text, re.DOTALL | re.IGNORECASE)
+        # Session 406 PATCH-5.1: Use provided relief_items, or extract ONLY from RELIEF REQUESTED section
+        if relief_items is not None:
+            # Use the pre-extracted relief items from the pipeline
+            relief_count = len(relief_items)
+            logger.debug(f"[PATCH-5.1] Using provided relief_items: {relief_count} items")
+        else:
+            # Extract ONLY from the RELIEF REQUESTED section, not the whole document
+            relief_section_match = re.search(
+                r'RELIEF REQUESTED.*?(?=------------------------------------------------------------|\Z)',
+                motion_text,
+                re.DOTALL | re.IGNORECASE
+            )
             if relief_section_match:
                 relief_section = relief_section_match.group(0)
-                relief_count = len(re.findall(r'^\s*\d+\.', relief_section, re.MULTILINE))
-        if relief_count == 0:
-            relief_count = len(re.findall(r'Respondent shall', motion_text, re.IGNORECASE))
+                # Count only numbered items in the relief section
+                relief_count = len(re.findall(r'^\s*\d+\.\s+(?:Respondent|IT IS ORDERED|Order|Require|Grant|Direct)', relief_section, re.MULTILINE | re.IGNORECASE))
+                if relief_count == 0:
+                    relief_count = len(re.findall(r'Respondent shall', relief_section, re.IGNORECASE))
+                logger.debug(f"[PATCH-5.1] Extracted from RELIEF REQUESTED section: {relief_count} items")
+            else:
+                # Final fallback: count "Respondent shall" in entire text
+                relief_count = len(re.findall(r'^\s*\d+\.\s+Respondent shall', motion_text, re.MULTILINE | re.IGNORECASE))
+                if relief_count == 0:
+                    relief_count = 3  # Safe default for Colorado family motions
+                logger.debug(f"[PATCH-5.1] Fallback count: {relief_count} items")
 
         # Check for overly broad relief
         broad_relief_terms = ['full custody', 'sole custody', 'all parenting time', 'terminate', 'revoke']
