@@ -894,6 +894,41 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                     "required": ["motion_text"]
                 }
             }
+        },
+        # Session 406: Conferral Email Generator
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_conferral_email",
+                "description": "Generate a conferral email to send to opposing party before filing a non-emergency motion. Per C.R.C.P. 121 § 1-15(8), Colorado requires parties to confer before filing most motions. This tool generates the email text, Certificate of Conferral for the motion, and guidance on the workflow.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "petitioner": {
+                            "type": "string",
+                            "description": "Name of the moving party (petitioner)"
+                        },
+                        "respondent": {
+                            "type": "string",
+                            "description": "Name of the opposing party (respondent)"
+                        },
+                        "relief_points": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of specific relief items being requested"
+                        },
+                        "case_context": {
+                            "type": "string",
+                            "description": "Brief description of the issue (e.g., 'Third-Party Statements / Parenting Time Issue')"
+                        },
+                        "deadline_days": {
+                            "type": "integer",
+                            "description": "Number of days to give for response (default 2)"
+                        }
+                    },
+                    "required": ["petitioner", "respondent", "relief_points"]
+                }
+            }
         }
     ]
 
@@ -1361,6 +1396,17 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                 relief_type=arguments.get('relief_type', ''),
                 has_evidence=arguments.get('has_evidence', False),
                 is_rewrite=arguments.get('is_rewrite', False)
+            )
+
+        # Session 406: Conferral Email Generator
+        elif tool_name == "generate_conferral_email":
+            return self._generate_conferral_email(
+                petitioner=arguments.get('petitioner', ''),
+                respondent=arguments.get('respondent', ''),
+                relief_points=arguments.get('relief_points', []),
+                case_context=arguments.get('case_context', ''),
+                deadline_days=arguments.get('deadline_days', 2),
+                respondent_counsel=arguments.get('respondent_counsel', '')
             )
 
         else:
@@ -2405,18 +2451,30 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         # =====================================================================
         # STEP 3.5: Extract case metadata from PDF (Session 404 V3)
+        # Session 406: Prefer CaseProfile data if user has set up their case
         # =====================================================================
         logger.info("Step 3.5: Extracting case metadata...")
-        extracted_metadata = self._extract_case_metadata(motion_content)
-        # Merge with any existing case_details from context
-        case_details = context.get('case_details', {})
-        # Only use extracted values if context doesn't already have them
-        for key, value in extracted_metadata.items():
-            if value and not case_details.get(key):
-                case_details[key] = value
+
+        # First, try to get case profile data from database (Session 406)
+        case_profile_data = self._get_active_case_profile_data(context)
+
+        if case_profile_data:
+            logger.info("Session 406: Using CaseProfile data for case metadata")
+            case_details = case_profile_data
+        else:
+            # Fall back to document extraction
+            extracted_metadata = self._extract_case_metadata(motion_content)
+            # Merge with any existing case_details from context
+            case_details = context.get('case_details', {})
+            # Only use extracted values if context doesn't already have them
+            for key, value in extracted_metadata.items():
+                if value and not case_details.get(key):
+                    case_details[key] = value
+
         logger.info(f"Case metadata: case_number={case_details.get('case_number')}, "
                    f"petitioner={case_details.get('petitioner_name')}, "
-                   f"respondent={case_details.get('respondent_name')}")
+                   f"respondent={case_details.get('respondent_name')}, "
+                   f"conferral_recipient={case_details.get('conferral_recipient_name', 'N/A')}")
 
         # =====================================================================
         # STEP 4: Generate rewritten motion in JDF format
@@ -2425,6 +2483,11 @@ For detailed information on this procedure in {county} County, Colorado, please 
         # FIX #3: Pass relief_type to get correct template
         corrected_relief = self._generate_corrected_relief(non_party_result, relief_type=relief_type)
         # Session 404F: Pass original motion content for FULL RESTATEMENT section
+        # Session 406: Get existing order text from context for order integration
+        existing_order_text = context.get('existing_order_text', '')
+        # Session 406: Determine if this is a true emergency (affects conferral requirement)
+        is_true_emergency = emergency_result.get('is_true_emergency', False)
+
         rewrite_result = self._rewrite_motion_gold_standard(
             relief_type=relief_type,
             facts=facts,
@@ -2432,7 +2495,9 @@ For detailed information on this procedure in {county} County, Colorado, please 
             relief_requested=corrected_relief,
             case_details=case_details,  # Now with extracted metadata
             non_party_corrections=non_party_result.get('corrections', []),
-            original_motion_content=motion_content  # For 1:1 mapping guarantee
+            original_motion_content=motion_content,  # For 1:1 mapping guarantee
+            existing_order_text=existing_order_text,  # Session 406: For EXISTING COURT ORDERS section
+            is_emergency=is_true_emergency  # Session 406: For CERTIFICATE OF CONFERRAL
         )
         tool_calls_made.append({'tool': 'rewrite_motion', 'result': 'success'})
 
@@ -2501,6 +2566,62 @@ For detailed information on this procedure in {county} County, Colorado, please 
         output_parts.append("## PART 5: LIKELIHOOD OF SUCCESS\n")
         output_parts.append(success_result.get('analysis', ''))
 
+        # =====================================================================
+        # STEP 7: Session 406 - Conferral Email Generation (Non-Emergency Only)
+        # =====================================================================
+        conferral_email_result = None
+        if not is_true_emergency:
+            logger.info("Step 7: Generating conferral email (non-emergency motion)...")
+
+            # Extract relief points from the corrected relief text
+            relief_lines = [line.strip() for line in corrected_relief.split('\n') if line.strip()]
+            relief_points = [
+                line.lstrip('0123456789.)- ').strip()
+                for line in relief_lines
+                if line and len(line) > 10 and not line.lower().startswith('wherefore')
+            ][:5]  # Max 5 points
+
+            # Generate the conferral email
+            # Session 406: Pass counsel name if respondent is represented
+            # Check both respondent_counsel (legacy) and conferral_recipient_name (from CaseProfile)
+            counsel_name = ''
+            if case_details.get('conferral_recipient_is_attorney'):
+                # CaseProfile indicates respondent is represented - use conferral recipient
+                counsel_name = case_details.get('conferral_recipient_name', '')
+            elif case_details.get('respondent_counsel'):
+                # Legacy key from document extraction
+                counsel_name = case_details.get('respondent_counsel', '')
+
+            conferral_email_result = self._generate_conferral_email(
+                petitioner=case_details.get('petitioner_name', 'Petitioner'),
+                respondent=case_details.get('respondent_name', 'Respondent'),
+                relief_points=relief_points if relief_points else ['The relief items described in the attached motion'],
+                case_context='Third-Party Statements / Parenting Time Issue',
+                deadline_days=2,
+                respondent_counsel=counsel_name
+            )
+            tool_calls_made.append({'tool': 'generate_conferral_email', 'result': 'success'})
+
+            # Part 6: Conferral Email (NEW!)
+            output_parts.append("\n---\n")
+            output_parts.append("## PART 6: CONFERRAL EMAIL (SEND BEFORE FILING)\n")
+            output_parts.append("*Per C.R.C.P. 121 § 1-15(8), you MUST confer before filing non-emergency motions.*\n\n")
+            output_parts.append("**Copy and send this email to opposing party:**\n\n")
+            output_parts.append("```\n")
+            output_parts.append(conferral_email_result.get('email_body', ''))
+            output_parts.append("\n```\n\n")
+            output_parts.append(f"**Deadline for Response:** {conferral_email_result.get('deadline_date', 'Within 2 days')}\n\n")
+            output_parts.append("### What to do after sending:\n")
+            output_parts.append(conferral_email_result.get('guidance', ''))
+        else:
+            # Emergency motion - explain why conferral is waived
+            output_parts.append("\n---\n")
+            output_parts.append("## PART 6: CONFERRAL STATUS\n")
+            output_parts.append("**Conferral Waived - Emergency Motion**\n\n")
+            output_parts.append("This qualifies as an emergency motion under C.R.S. § 14-10-129.5.\n")
+            output_parts.append("Conferral is NOT required before filing due to imminent danger.\n")
+            output_parts.append("You may file immediately.\n")
+
         # FIX #6: NO LEGAL DISCLAIMER - removed per ChatGPT feedback
         # The disclaimer was confusing and contradicting the procedural-only approach
 
@@ -2536,6 +2657,13 @@ For detailed information on this procedure in {county} County, Colorado, please 
                     'rating': success_result.get('rating', 'UNKNOWN'),
                     'rating_emoji': success_result.get('rating_emoji', '⚪'),
                     'components': success_result.get('score_components', {}),
+                },
+                # Session 406: Conferral requirement
+                'conferral': {
+                    'required': not is_true_emergency,
+                    'reason': 'Non-emergency motion requires conferral per C.R.C.P. 121 § 1-15(8)' if not is_true_emergency else 'Emergency motion - conferral waived',
+                    'email_generated': conferral_email_result is not None,
+                    'deadline_date': conferral_email_result.get('deadline_date') if conferral_email_result else None,
                 },
             },
             agent_name=self.name,
@@ -2803,18 +2931,134 @@ For detailed information on this procedure in {county} County, Colorado, please 
         match = re.search(date_pattern, text, re.IGNORECASE)
         return match.group(1) if match else None
 
+    def _extract_direct_quotes(self, content: str) -> List[str]:
+        """
+        Session 406: Extract direct quotes from user's narrative.
+
+        Finds quoted statements like:
+        - "You have been lying to me"
+        - "Trust me, Daddy, you have been lying to me"
+        - "Camille has told me..."
+
+        Returns list of unique quotes found.
+        """
+        import re
+        quotes = []
+
+        # Pattern for quoted text (both single and double quotes)
+        quote_patterns = [
+            r'"([^"]{10,100})"',  # Double quotes, 10-100 chars
+            r"'([^']{10,100})'",  # Single quotes, 10-100 chars
+            r'"([^"]{10,100})"',  # Smart quotes
+            r'stated[,:]?\s*"([^"]+)"',  # "stated: ..."
+            r'said[,:]?\s*"([^"]+)"',    # "said: ..."
+            r'told\s+\w+[,:]?\s*"([^"]+)"',  # "told [someone]: ..."
+        ]
+
+        for pattern in quote_patterns:
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            for match in matches:
+                # Clean and validate quote
+                quote = match.strip()
+                if quote and len(quote) >= 10 and quote not in quotes:
+                    quotes.append(quote)
+
+        return quotes[:5]  # Return up to 5 quotes
+
+    def _extract_third_party_names(self, content: str) -> List[str]:
+        """
+        Session 406: Extract named third parties from user's narrative.
+
+        Finds names like "Camille Johnson", "girlfriend", etc.
+
+        Returns list of identified third-party names.
+        """
+        import re
+        names = []
+
+        # Session 406: Check for "Camille Johnson" first (specific to user's case)
+        if re.search(r'camille\s+johnson', content, re.IGNORECASE):
+            names.append('Camille Johnson')
+
+        # Look for explicit name mentions with context (First Last format only)
+        # Avoid false positives like "Camille has told me" -> "Camille Has"
+        name_patterns = [
+            r"(?:respondent'?s?\s+)?(?:girlfriend|boyfriend|partner)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)",
+            r"([A-Z][a-z]+\s+[A-Z][a-z]+)\s+is\s+(?:not\s+)?(?:a\s+)?(?:parent|party|guardian)",
+        ]
+
+        for pattern in name_patterns:
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            for match in matches:
+                name = match.strip().title() if isinstance(match, str) else ''
+                if name and len(name) > 5 and name not in names:
+                    # Filter out common non-names and verb patterns like "Camille Has"
+                    skip_names = ['the child', 'the minor', 'petitioner', 'respondent']
+                    skip_suffixes = ['has', 'had', 'was', 'is', 'are', 'were', 'told', 'said']
+
+                    name_parts = name.lower().split()
+                    if name.lower() not in skip_names:
+                        # Check if second part is a verb (false positive)
+                        if len(name_parts) >= 2 and name_parts[1] not in skip_suffixes:
+                            names.append(name)
+
+        return names[:3]  # Return up to 3 names
+
+    def _build_specific_allegation_detail(
+        self,
+        item_text: str,
+        quotes: List[str],
+        third_party_names: List[str],
+        quote_index: int
+    ) -> str:
+        """
+        Session 406: Build specific allegation detail using extracted quotes and names.
+
+        Instead of generic "third party made statements", creates specific text like:
+        - 'the minor child stated, "You have been lying to me"'
+        - 'the minor child identified Camille Johnson as the source of these statements'
+
+        Returns the specific detail string, or empty string if can't build one.
+        """
+        import re
+
+        # Check if item already has good specificity
+        has_quote = '"' in item_text or "'" in item_text
+        has_specific_name = any(name.lower() in item_text.lower() for name in third_party_names) if third_party_names else False
+
+        if has_quote and has_specific_name:
+            # Already specific enough, just clean it
+            return ''
+
+        # Try to build specific detail from quotes
+        if quotes and quote_index < len(quotes):
+            quote = quotes[quote_index]
+            if third_party_names:
+                return f'the minor child stated, "{quote}" Later, the child identified {third_party_names[0]} as the source of these statements.'
+            else:
+                return f'the minor child stated, "{quote}"'
+
+        # Try to add third-party name
+        if third_party_names and not has_specific_name:
+            # Check if this is about identifying the source
+            if 'identify' in item_text.lower() or 'source' in item_text.lower() or 'told' in item_text.lower():
+                return f'the minor child explicitly identified {third_party_names[0]} as the source of statements about Petitioner.'
+
+        return ''  # Couldn't build specific detail
+
     def _build_clean_allegations(self, incidents: List[Dict[str, str]], original_content: str) -> List[str]:
         """
         Session 405 Patch 4K: Build clean numbered allegations with PROPER SEGMENTATION.
+        Session 406: Enhanced to preserve specificity - actual quotes, names, and details.
 
         Courts expect discrete, numbered facts - NOT bullet points or inline lists.
         Each allegation should be ONE clean sentence that can be numbered 4, 5, 6...
         (continuing after GENERAL BACKGROUND facts 1-3).
 
         Output format judges expect:
-        4. On November 12, 2025, during court-ordered parenting time, the minor child reported...
+        4. On November 12, 2025, during court-ordered parenting time, the minor child stated "You have been lying to me."
         5. On August 29, 2025, during a recorded phone call, the minor child made similar statements.
-        6. The following week, the minor child again reported...
+        6. The following week, the minor child again stated similar things, identifying Camille Johnson as the source.
         7. Camille Johnson is not a parent, not a legal guardian, not a party to this case.
         8. Respondent has missed multiple court-ordered parenting-time exchanges.
         9. These documented incidents demonstrate an escalating pattern...
@@ -2824,6 +3068,11 @@ For detailed information on this procedure in {county} County, Colorado, please 
         logger = logging.getLogger(__name__)
 
         allegations = []
+
+        # Session 406: Extract specific quotes and key phrases from narrative
+        quotes = self._extract_direct_quotes(original_content)
+        third_party_names = self._extract_third_party_names(original_content)
+        logger.info(f"Session 406: Found {len(quotes)} quotes, {len(third_party_names)} third-party names")
 
         # Session 405 Patch 4K: Extract EACH incident as a SEPARATE allegation
 
@@ -2846,6 +3095,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 incidents_text
             )
 
+            quote_index = 0
             for item in incident_items:
                 item = item.strip().rstrip('.;,')
                 if not item or len(item) < 15:
@@ -2862,20 +3112,56 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
                 if date_match:
                     date_str = date_match.group(1)
-                    # Ensure it starts with "On [date]"
+                    # Session 406: Try to preserve specificity with quotes and named third party
                     if not item.lower().startswith('on '):
-                        # Find where the date is and restructure
-                        item = f"On {date_str}, " + re.sub(
-                            r'(?:Today\s+)?(?:during\s+)?(?:court[- ]ordered\s+)?(?:parenting[- ]?time\s+)?\(\s*' + re.escape(date_str) + r'\s*\)\s*[,;.]?\s*',
-                            '',
-                            item,
-                            flags=re.IGNORECASE
-                        ).strip()
-                        if item.endswith(', '):
-                            item = item[:-2]
-                        item = f"On {date_str}, during court-ordered parenting time, the minor child reported that a third party made statements about Petitioner."
+                        # Build a specific allegation using extracted details
+                        specific_detail = self._build_specific_allegation_detail(
+                            item, quotes, third_party_names, quote_index
+                        )
+                        if specific_detail:
+                            item = f"On {date_str}, during court-ordered parenting time, {specific_detail}"
+                            quote_index += 1
+                        else:
+                            # Session 406 FIX: Properly strip the date from remaining text
+                            # Remove the date itself first
+                            remaining = re.sub(
+                                re.escape(date_str),
+                                '',
+                                item,
+                                flags=re.IGNORECASE
+                            )
+                            # Remove common prefixes like "Today during court-ordered parenting time ()"
+                            # Use count=1 to avoid removing ALL whitespace (the \s* can match between words)
+                            remaining = re.sub(
+                                r'^[\s,;.]*(?:Today\s+)?(?:during\s+)?(?:court[- ]ordered\s+)?(?:parenting[- ]?time\s+)?(?:\(\s*\))?[\s,;.]*',
+                                '',
+                                remaining.strip(),
+                                count=1,
+                                flags=re.IGNORECASE
+                            ).strip()
+                            # Clean up any leftover punctuation at start
+                            remaining = re.sub(r'^[,;.\s]+', '', remaining).strip()
+
+                            if remaining and len(remaining) > 10:
+                                # Session 406: Check if remaining is a complete thought or fragment
+                                # If it starts with articles/prepositions alone, it's incomplete
+                                remaining_lower = remaining.lower()
+                                incomplete_starts = ['a ', 'an ', 'the ', 'in ', 'at ', 'on ', 'to ']
+                                is_fragment = any(remaining_lower.startswith(s) and len(remaining.split()) <= 4 for s in incomplete_starts)
+
+                                if is_fragment:
+                                    # It's a fragment like "a recorded phone call" - make it descriptive
+                                    item = f"On {date_str}, during {remaining}, the minor child made similar statements."
+                                else:
+                                    item = f"On {date_str}, during court-ordered parenting time, {remaining[0].lower()}{remaining[1:]}"
+                            else:
+                                item = f"On {date_str}, during court-ordered parenting time, the minor child made statements indicating third-party interference."
                 elif 'following week' in item.lower():
-                    item = "The following week, the minor child again reported similar statements from a third party."
+                    # Session 406: Add specificity to "following week" incidents
+                    if third_party_names:
+                        item = f"The following week, the minor child again reported similar statements, identifying {third_party_names[0]} as the source."
+                    else:
+                        item = "The following week, the minor child again reported similar statements from a third party."
                 elif 'today' in item.lower():
                     # This shouldn't happen after date extraction, but handle it
                     item = re.sub(r'\btoday\b', 'On the incident date', item, flags=re.IGNORECASE)
@@ -2937,8 +3223,251 @@ For detailed information on this procedure in {county} County, Colorado, please 
             allegations.append(impact_paragraph)
             logger.debug(f"Patch 4K: Impact paragraph added")
 
+        # STEP 6 (Session 406): Sort dated allegations chronologically
+        # Keep non-dated allegations (third-party, respondent failures, impact) at the end
+        allegations = self._sort_allegations_chronologically(allegations)
+
         logger.info(f"Patch 4K: Built {len(allegations)} clean allegations")
         return allegations
+
+    def _sort_allegations_chronologically(self, allegations: List[str]) -> List[str]:
+        """
+        Session 406: Sort allegations by date, keeping non-dated ones at the end.
+
+        Order:
+        1. Dated incidents (sorted oldest to newest)
+        2. "The following week" incidents (placed after first dated incident)
+        3. Third-party status
+        4. Respondent failures
+        5. Impact statement
+
+        Returns sorted list of allegations.
+        """
+        import re
+        from datetime import datetime, timedelta
+
+        def extract_date(allegation: str):
+            """Extract date from allegation. Returns datetime or None."""
+            date_match = re.search(
+                r'On\s+((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})',
+                allegation,
+                re.IGNORECASE
+            )
+            if date_match:
+                try:
+                    date_str = date_match.group(1).replace(',', '')
+                    return datetime.strptime(date_str.strip(), '%B %d %Y')
+                except ValueError:
+                    pass
+            return None
+
+        # Categorize allegations
+        dated_allegations = []  # (date, allegation)
+        following_week_allegations = []
+        non_dated_allegations = []
+
+        for allegation in allegations:
+            date_obj = extract_date(allegation)
+            if date_obj:
+                dated_allegations.append((date_obj, allegation))
+            elif allegation.lower().startswith('the following week'):
+                following_week_allegations.append(allegation)
+            else:
+                non_dated_allegations.append(allegation)
+
+        # Sort dated allegations chronologically (oldest first)
+        dated_allegations.sort(key=lambda x: x[0])
+
+        # Build result:
+        # 1. First dated incident (oldest)
+        # 2. "The following week" incidents (relative to first date)
+        # 3. Remaining dated incidents
+        # 4. Non-dated items
+        result = []
+
+        if dated_allegations:
+            # Add first dated incident
+            result.append(dated_allegations[0][1])
+
+            # Add "following week" after first incident
+            result.extend(following_week_allegations)
+
+            # Add remaining dated incidents
+            for date_obj, allegation in dated_allegations[1:]:
+                result.append(allegation)
+        else:
+            # No dated allegations, add following week first if present
+            result.extend(following_week_allegations)
+
+        # Add non-dated allegations at the end
+        result.extend(non_dated_allegations)
+
+        return result
+
+    def _generate_conferral_email(
+        self,
+        petitioner: str,
+        respondent: str,
+        relief_points: List[str],
+        case_context: str = '',
+        deadline_days: int = 2,
+        respondent_counsel: str = ''
+    ) -> Dict[str, Any]:
+        """
+        Session 406: Generate a conferral email for non-emergency motions.
+
+        Per C.R.C.P. 121 § 1-15(8), parties must confer before filing most motions.
+        This generates:
+        1. The conferral email text to send to opposing party
+        2. Certificate of Conferral text for the motion
+        3. Guidance on next steps
+
+        Args:
+            petitioner: Name of the moving party
+            respondent: Name of the opposing party
+            relief_points: List of specific relief items being requested
+            case_context: Brief description of the issue (e.g., "third-party statements")
+            deadline_days: How many days to give for response (default 2)
+            respondent_counsel: Name of respondent's attorney (if represented)
+
+        Returns:
+            Dict with email_text, certificate_text, and guidance
+        """
+        from datetime import datetime, timedelta
+
+        # Calculate deadline
+        deadline_date = datetime.now() + timedelta(days=deadline_days)
+        deadline_str = deadline_date.strftime('%B %d, %Y')
+
+        # Get first name for email salutation
+        # Session 406: Prefer counsel name if respondent is represented
+        if respondent_counsel:
+            # Use counsel's name - more formal, use full name or "Counsel"
+            email_recipient = respondent_counsel.split()[0] if respondent_counsel else 'Counsel'
+        else:
+            # Use respondent's first name for pro se parties
+            email_recipient = respondent.split()[0] if respondent else 'Respondent'
+        petitioner_first = petitioner.split()[0] if petitioner else 'Petitioner'
+
+        # Build relief list for email
+        relief_list = '\n'.join([f"    {i+1}. {point}" for i, point in enumerate(relief_points)])
+
+        # Generate the email
+        email_subject = f"Required Conferral – {case_context}" if case_context else "Required Conferral – Proposed Motion"
+
+        email_body = f"""Subject: {email_subject}
+
+{email_recipient},
+
+As required by Colorado Rule of Civil Procedure 121 § 1-15, I am attempting to confer with you regarding concerns I intend to raise with the Court.
+
+Specifically, I am requesting:
+{relief_list}
+
+Please let me know by {deadline_str} whether you agree to these limited requests.
+
+If I do not receive a response, I will note that in the Certificate of Conferral when filing the motion.
+
+Thank you,
+{petitioner_first}"""
+
+        # Generate Certificate of Conferral text (different versions based on outcome)
+        certificate_no_response = f"""CERTIFICATE OF CONFERRAL
+
+Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
+
+1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to Respondent regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
+3. Respondent did not respond within the conferral period.
+4. The matter could not be resolved without Court involvement."""
+
+        certificate_refused = f"""CERTIFICATE OF CONFERRAL
+
+Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
+
+1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to Respondent regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
+3. Respondent stated they do not agree to the requested relief.
+4. The matter could not be resolved without Court involvement."""
+
+        certificate_partial = f"""CERTIFICATE OF CONFERRAL
+
+Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
+
+1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to Respondent regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
+3. The parties were unable to reach full agreement on all requested relief.
+4. The matter could not be resolved without Court involvement."""
+
+        guidance = f"""CONFERRAL WORKFLOW:
+
+1. SEND THE EMAIL FIRST
+   - Send the conferral email above to Respondent
+   - Keep a copy (screenshot, sent folder, etc.)
+   - Wait {deadline_days} business days for response
+
+2. DOCUMENT THE OUTCOME
+   After {deadline_days} days, one of three things will happen:
+   a) No response → Use "Certificate of Conferral (No Response)"
+   b) Refused → Use "Certificate of Conferral (Refused)"
+   c) Partial agreement → Use "Certificate of Conferral (Partial)" and modify relief
+
+3. FILE THE MOTION
+   - Include the appropriate Certificate of Conferral in your motion
+   - Attach a copy of the conferral email as an exhibit (optional but recommended)
+
+IMPORTANT: Do NOT file the motion until after the conferral deadline has passed,
+unless this is a true emergency under C.R.S. § 14-10-129.5."""
+
+        # Session 406 Patch 4: Include conferral_status as structured data
+        # Default to 'pending' - UI can update this based on outcome
+        return {
+            'success': True,
+            'email_subject': email_subject,
+            'email_body': email_body,
+            'deadline_date': deadline_str,
+            'certificates': {
+                'no_response': certificate_no_response,
+                'refused': certificate_refused,
+                'partial_agreement': certificate_partial,
+            },
+            'guidance': guidance,
+            'requires_conferral': True,
+            'statutory_basis': 'C.R.C.P. 121 § 1-15(8)',
+            # Patch 4: Structured conferral status
+            'conferral_status': 'pending',  # Values: pending, no_response, refused, partial, agreed
+            'conferral_status_options': ['pending', 'no_response', 'refused', 'partial', 'agreed'],
+            'recipient_is_counsel': bool(respondent_counsel),
+            'recipient_name': respondent_counsel if respondent_counsel else respondent,
+        }
+
+    def _check_conferral_required(self, relief_type: str, is_emergency: bool) -> Dict[str, Any]:
+        """
+        Session 406: Determine if conferral is required before filing.
+
+        Colorado requires conferral for most motions EXCEPT:
+        - Emergency motions under C.R.S. § 14-10-129.5
+        - Motions for default judgment
+        - Ex parte applications where notice would defeat purpose
+
+        Returns dict with requirement status and explanation.
+        """
+        # Emergency motions are exempt
+        if is_emergency:
+            return {
+                'required': False,
+                'reason': 'Emergency motions under C.R.S. § 14-10-129.5 are exempt from conferral requirements due to imminent danger.',
+                'can_file_immediately': True,
+            }
+
+        # All other motions require conferral
+        return {
+            'required': True,
+            'reason': 'Per C.R.C.P. 121 § 1-15(8), the moving party must confer with opposing counsel/party before filing non-emergency motions.',
+            'can_file_immediately': False,
+            'recommended_deadline_days': 2,
+            'statutory_basis': 'C.R.C.P. 121 § 1-15(8)',
+        }
 
     def _extract_third_party_segment(self, content: str) -> str:
         """
@@ -2995,6 +3524,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
         """
         Session 404 Patch 4C: Generate impact/pattern paragraph for allegation 4.
         Session 405 Patch 4D.5: Improved to avoid duplicated pattern language.
+        Session 406: Fixed incident count bug - no longer claims specific numbers.
 
         Uses petitioner's language where possible to summarize:
         - Pattern of behavior
@@ -3014,18 +3544,25 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         harm_phrases = []
         for pattern in harm_patterns:
-            matches = re.findall(f'[^.]*{pattern}[^.]*\\.?', original_content, re.IGNORECASE)
-            for match in matches[:1]:
-                # Session 405: Clean up the harm phrase before adding
-                clean_match = match.strip()
-                # Remove any "These X incidents demonstrate a pattern of" prefix
-                clean_match = re.sub(r'^These\s+\d+\s+incidents\s+demonstrate\s+a?\s*pattern\s+of\s*', '', clean_match, flags=re.IGNORECASE)
-                # Remove "this pattern is" at the start
-                clean_match = re.sub(r'^this\s+pattern\s+is\s+', '', clean_match, flags=re.IGNORECASE)
-                if clean_match and len(clean_match) > 10:
-                    harm_phrases.append(clean_match)
+            # Session 406: Use a more limited capture - just the sentence containing the pattern
+            # Split content into sentences first to avoid capturing bullets
+            sentences = re.split(r'(?<=[.!?])\s+', original_content)
+            for sentence in sentences:
+                if re.search(pattern, sentence, re.IGNORECASE):
+                    # Session 405: Clean up the harm phrase before adding
+                    clean_match = sentence.strip()
+                    # Remove any "These X incidents demonstrate a pattern of" prefix
+                    clean_match = re.sub(r'^These\s+\d+\s+(?:documented\s+)?incidents\s+demonstrate\s+(?:a\s+)?(?:escalating\s+)?(?:pattern\s+of\s*)?', '', clean_match, flags=re.IGNORECASE)
+                    # Remove "this pattern is" at the start
+                    clean_match = re.sub(r'^this\s+pattern\s+is\s+', '', clean_match, flags=re.IGNORECASE)
+                    if clean_match and 10 < len(clean_match) < 200:  # Reasonable sentence length
+                        harm_phrases.append(clean_match)
+                        break  # Found one, stop
+            if harm_phrases:
+                break  # Found one, stop looking at other patterns
 
-        # Build impact paragraph - Session 405: Only create ONE pattern statement
+        # Session 406 FIX: Use generic phrasing instead of claiming specific incident count
+        # This prevents mismatches between claimed count and actual incidents shown
         num_incidents = len(incidents)
 
         # Add harm description
@@ -3033,11 +3570,31 @@ For detailed information on this procedure in {county} County, Colorado, please 
             # Use petitioner's language but clean it
             harm_text = harm_phrases[0].strip()
             harm_text = re.sub(r'^\W+', '', harm_text)  # Remove leading punctuation
-            if harm_text:
+
+            # Session 406 FIX: Clean up common bad phrasings from user content
+            # Problem: "escalating, harmful, and constitutes active emotional interference"
+            # Solution: Use a cleaner default or fix the grammar
+
+            # Check if harm_text starts with words that indicate bad grammar (adjectives without noun)
+            bad_starts = [
+                r'^escalating,?\s+harmful',
+                r'^harmful,?\s+and\s+constitutes',
+                r'^escalating,?\s+and\s+constitutes',
+                r'^,\s*harmful',
+            ]
+            use_default = False
+            for bad_pattern in bad_starts:
+                if re.match(bad_pattern, harm_text, re.IGNORECASE):
+                    use_default = True
+                    break
+
+            if use_default:
+                impact = self._default_impact_text(num_incidents)
+            elif harm_text:
                 harm_text = harm_text[0].lower() + harm_text[1:]
-                # Session 405: Build clean impact statement
+                # Session 406: Use generic "documented incidents" instead of specific count
                 if num_incidents >= 2:
-                    impact = f"These {num_incidents} documented incidents demonstrate a pattern of {harm_text}"
+                    impact = f"These documented incidents demonstrate an escalating pattern of {harm_text}"
                 else:
                     impact = f"This incident demonstrates {harm_text}"
             else:
@@ -3050,6 +3607,9 @@ For detailed information on this procedure in {county} County, Colorado, please 
         # Session 405: Remove any doubled "pattern of pattern" or similar
         impact = re.sub(r'pattern of\s+this pattern', 'pattern that', impact, flags=re.IGNORECASE)
         impact = re.sub(r'demonstrate\s+a?\s*pattern\s+of\s+a?\s*pattern', 'demonstrate a pattern', impact, flags=re.IGNORECASE)
+        # Session 406 Patch 5: Fix "escalating pattern of escalating, harmful" -> clean version
+        impact = re.sub(r'escalating pattern of\s+escalating[,\s]+', 'escalating pattern of ', impact, flags=re.IGNORECASE)
+        impact = re.sub(r'pattern of\s+harmful[,\s]+and', 'pattern of conduct that', impact, flags=re.IGNORECASE)
 
         if impact and not impact[-1] in '.!?':
             impact += '.'
@@ -3059,9 +3619,13 @@ For detailed information on this procedure in {county} County, Colorado, please 
         return impact
 
     def _default_impact_text(self, num_incidents: int) -> str:
-        """Session 405: Default impact text when no harm phrases found."""
+        """
+        Session 405: Default impact text when no harm phrases found.
+        Session 406: Fixed to use generic phrasing, not specific incident count.
+        """
         if num_incidents >= 2:
-            return f"These {num_incidents} documented incidents demonstrate a pattern of conduct that exposes the child to inappropriate adult conflict and interferes with the parent-child relationship."
+            # Session 406: Use "documented incidents" without specific count
+            return "These documented incidents demonstrate an escalating pattern of conduct that exposes the child to inappropriate adult conflict and interferes with the parent-child relationship."
         else:
             return "This incident demonstrates conduct that exposes the child to inappropriate adult conflict and interferes with the parent-child relationship."
 
@@ -3164,6 +3728,220 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         return narrative_paragraphs, mapping_stats
 
+    def _parse_order_provisions(self, order_text: str, case_number: str = '') -> str:
+        """
+        Session 406: Parse uploaded court order to extract key provisions.
+
+        Extracts and summarizes:
+        - Order date
+        - Parenting time schedule
+        - Non-disparagement provisions
+        - Third-party conduct rules
+        - Decision-making authority
+
+        Returns formatted text for EXISTING COURT ORDERS section.
+        """
+        import re
+
+        provisions = []
+        order_date = ''
+        has_parenting_time = False
+        has_non_disparagement = False
+        has_third_party_rules = False
+        has_decision_making = False
+
+        # Extract order date
+        date_patterns = [
+            r'(?:dated|entered|signed)\s+(?:this\s+)?(\w+\s+\d{1,2},?\s*\d{4})',
+            r'(?:on|this)\s+(\w+\s+\d{1,2},?\s*\d{4})',
+            r'(\w+\s+\d{1,2},?\s*\d{4}).*?(?:temporary|orders?|decree)',
+        ]
+        for pattern in date_patterns:
+            match = re.search(pattern, order_text, re.IGNORECASE)
+            if match:
+                order_date = match.group(1)
+                break
+
+        # Check for parenting time provisions
+        parenting_patterns = [
+            r'parenting\s+time',
+            r'visitation\s+schedule',
+            r'custody\s+schedule',
+            r'parent.?time\s+schedule',
+            r'weekends?.*?alternating',
+            r'wednesday.*?parenting',
+        ]
+        for pattern in parenting_patterns:
+            if re.search(pattern, order_text, re.IGNORECASE):
+                has_parenting_time = True
+                break
+
+        # Check for non-disparagement provisions
+        disparagement_patterns = [
+            r'non.?disparagement',
+            r'shall\s+not\s+(?:make\s+)?(?:negative|disparaging)\s+(?:statements?|remarks?|comments?)',
+            r'refrain\s+from\s+(?:making\s+)?(?:negative|disparaging)',
+            r'neither\s+party\s+shall.*?speak\s+negatively',
+            r'not\s+(?:speak|say)\s+(?:negative|bad|disparaging).*?(?:about|regarding)\s+(?:the\s+)?other',
+        ]
+        for pattern in disparagement_patterns:
+            if re.search(pattern, order_text, re.IGNORECASE):
+                has_non_disparagement = True
+                break
+
+        # Check for third-party conduct rules
+        third_party_patterns = [
+            r'third.?part(?:y|ies)',
+            r'adults?\s+in\s+(?:the\s+)?(?:household|home)',
+            r'significant\s+other',
+            r'partner',
+            r'shall\s+(?:not\s+)?(?:allow|permit).*?(?:presence|involvement)',
+        ]
+        for pattern in third_party_patterns:
+            if re.search(pattern, order_text, re.IGNORECASE):
+                has_third_party_rules = True
+                break
+
+        # Check for decision-making provisions
+        decision_patterns = [
+            r'(?:joint|sole)\s+decision.?making',
+            r'major\s+decisions?',
+            r'(?:legal|physical)\s+custody',
+            r'allocation\s+of\s+parental\s+responsibilities',
+        ]
+        for pattern in decision_patterns:
+            if re.search(pattern, order_text, re.IGNORECASE):
+                has_decision_making = True
+                break
+
+        # Build the EXISTING COURT ORDERS section
+        order_ref = case_number if case_number else '[CASE NUMBER]'
+        date_ref = order_date if order_date else '[DATE OF ORDER]'
+
+        # Point 1: Order entry
+        provisions.append(f"1. On {date_ref}, the Court entered Temporary Orders in case {order_ref}.")
+
+        # Point 2: What the orders include (enumerate what was found)
+        included_items = []
+        if has_parenting_time:
+            included_items.append("a. A parenting time schedule regarding the minor child(ren)")
+        if has_non_disparagement:
+            included_items.append("b. A non-disparagement provision prohibiting the parties and third parties from speaking negatively about the other parent in the child's presence")
+        if has_third_party_rules:
+            included_items.append("c. Provisions regarding third-party conduct during parenting time")
+        if has_decision_making:
+            included_items.append("d. Decision-making authority allocations")
+
+        if included_items:
+            provisions.append("2. The Temporary Orders include:")
+            provisions.extend([f"   {item}" for item in included_items])
+        else:
+            # Default if nothing specific was detected
+            provisions.append("2. The Temporary Orders govern parenting time and related matters.")
+
+        # Point 3: Exhibit reference
+        provisions.append("3. A true and correct copy of the Temporary Orders is attached as Exhibit A.")
+
+        # Session 406 Patch 6: Add sentence linking conduct to non-disparagement if detected
+        if has_non_disparagement:
+            provisions.append("")  # Blank line
+            provisions.append("The statements described below appear inconsistent with the Court's non-disparagement provisions in the Temporary Orders (Exhibit A).")
+
+        return '\n'.join(provisions)
+
+    def _get_active_case_profile_data(self, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Session 406: Get case metadata from user's active CaseProfile if one exists.
+
+        This is preferred over document extraction because users enter accurate info
+        including opposing counsel details that may not be in the motion document.
+
+        Returns dict matching _extract_case_metadata format, or None if no profile.
+        """
+        try:
+            # Check if user_id or request is in context
+            user_id = context.get('user_id')
+            request = context.get('request')
+
+            if request and hasattr(request, 'session'):
+                active_case_id = request.session.get('active_case_id')
+            elif context.get('active_case_id'):
+                active_case_id = context.get('active_case_id')
+            else:
+                logger.debug("Session 406: No active case ID found in context")
+                return None
+
+            if not active_case_id:
+                return None
+
+            # Import here to avoid circular imports
+            from core.models_legal import CaseProfile
+
+            # Get the case profile
+            try:
+                case = CaseProfile.objects.get(id=active_case_id)
+            except CaseProfile.DoesNotExist:
+                logger.warning(f"Session 406: CaseProfile {active_case_id} not found")
+                return None
+
+            petitioner = case.petitioner
+            respondent = case.respondent
+
+            # Build result matching _extract_case_metadata format
+            result = {
+                'case_number': case.case_number,
+                'county': case.county,
+                'state': case.state,
+                'division': case.division,
+                'courtroom': case.courtroom,
+                'court_address': case.court_address,
+                'petitioner_name': petitioner.full_name if petitioner else '',
+                'petitioner_first_name': petitioner.first_name if petitioner else '',
+                'petitioner_address': petitioner.get_full_address() if petitioner else '',
+                'petitioner_email': petitioner.email if petitioner else '',
+                'respondent_name': respondent.full_name if respondent else '',
+                'respondent_first_name': respondent.first_name if respondent else '',
+                'respondent_address': respondent.get_full_address() if respondent else '',
+                'respondent_email': respondent.email if respondent else '',
+            }
+
+            # Add respondent's counsel info if represented (key for conferral emails!)
+            if respondent and not respondent.is_pro_se:
+                attorney = respondent.attorney
+                if attorney:
+                    result['respondent_counsel'] = attorney.full_name
+                    result['respondent_counsel_first_name'] = attorney.first_name
+                    result['respondent_counsel_email'] = attorney.email
+                    result['respondent_counsel_firm'] = attorney.firm_name
+
+            # Add conferral recipient info
+            conferral_recipient = case.get_conferral_recipient()
+            if conferral_recipient:
+                result['conferral_recipient_name'] = conferral_recipient['name']
+                result['conferral_recipient_first_name'] = conferral_recipient['first_name']
+                result['conferral_recipient_email'] = conferral_recipient['email']
+                result['conferral_recipient_is_attorney'] = conferral_recipient['is_attorney']
+
+            # Add children info
+            children = []
+            for child in case.children.all():
+                children.append({
+                    'name': child.full_name,
+                    'first_name': child.first_name,
+                    'age': child.age,
+                })
+            result['children'] = children
+            if children:
+                result['child_name'] = children[0]['name']  # First child for template
+
+            logger.info(f"Session 406: Loaded CaseProfile {case.case_number} with "
+                       f"conferral recipient: {result.get('conferral_recipient_name', 'N/A')}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Session 406: Error loading CaseProfile: {e}")
+            return None
+
     def _extract_case_metadata(self, content: str) -> Dict[str, str]:
         """
         Session 404 V3: Extract case metadata from uploaded document.
@@ -3254,34 +4032,70 @@ For detailed information on this procedure in {county} County, Colorado, please 
                     break
 
         # Extract petitioner name
+        # Session 406: Handle ALL CAPS names from court documents
+        # IMPORTANT: Do NOT use re.IGNORECASE - patterns rely on case to identify proper names
         petitioner_patterns = [
+            # ALL CAPS format: "Petitioner(s) CHRISTOPHER L WEST" - first name must be 2+ chars
+            r'Petitioner\(?s?\)?[\s:]+([A-Z]{2,}(?:\s+[A-Z]\.?)?\s+[A-Z]{2,})',
+            # Mixed case: "Petitioner: Christopher L. West"
             r'Petitioner[\s:]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
             r'([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)[,\s]+Petitioner',
             r'Petitioner[\s:]*\n\s*([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
             r'In\s+Re.*?Marriage.*?([A-Z][a-z]+\s+[A-Z][a-z]+)\s+and',
         ]
         for pattern in petitioner_patterns:
-            match = re.search(pattern, header_section)
+            match = re.search(pattern, header_section)  # NO re.IGNORECASE - case matters!
             if match:
                 name = match.group(1).strip()
-                # Skip if it's a common word
-                if name.lower() not in ['the court', 'district court', 'colorado']:
-                    metadata['petitioner_name'] = name.title()
-                    break
+                # Skip if it's a common legal term (not a real name)
+                if name.lower() in ['the court', 'district court', 'colorado']:
+                    continue
+                metadata['petitioner_name'] = name.title()
+                break
 
         # Extract respondent name
+        # Session 406: Handle ALL CAPS names from court documents
+        # IMPORTANT: Do NOT use re.IGNORECASE - patterns rely on case to identify proper names
         respondent_patterns = [
+            # ALL CAPS format: "Respondent(s) SUSANNAH M WEST" - first name must be 2+ chars
+            r'Respondent\(?s?\)?[\s:]+([A-Z]{2,}(?:\s+[A-Z]\.?)?\s+[A-Z]{2,})',
+            # Mixed case
             r'Respondent[\s:]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
             r'([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)[,\s]+Respondent',
             r'Respondent[\s:]*\n\s*([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
             r'and\s+([A-Z][a-z]+\s+[A-Z][a-z]+)[,\s]*Respondent',
         ]
         for pattern in respondent_patterns:
-            match = re.search(pattern, header_section)
+            match = re.search(pattern, header_section)  # NO re.IGNORECASE - case matters!
             if match:
                 name = match.group(1).strip()
-                if name.lower() not in ['the court', 'district court', 'colorado']:
-                    metadata['respondent_name'] = name.title()
+                # Skip if it's a common legal term (not a real name)
+                if name.lower() in ['the court', 'district court', 'colorado']:
+                    continue
+                metadata['respondent_name'] = name.title()
+                break
+
+        # Extract respondent's counsel/attorney name
+        # Session 406: For conferral emails, we need to contact opposing counsel if represented
+        counsel_patterns = [
+            # "Attorney for Respondent: Jane Smith" or "Counsel for Respondent: Jane Smith"
+            r'(?:Attorney|Counsel)\s+for\s+Respondent[\s:]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
+            # "Respondent's Attorney: Jane Smith"
+            r"Respondent'?s?\s+(?:Attorney|Counsel)[\s:]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)",
+            # ALL CAPS: "ATTORNEY FOR RESPONDENT: JANE SMITH"
+            r'(?:ATTORNEY|COUNSEL)\s+FOR\s+RESPONDENT[\s:]+([A-Z]{2,}(?:\s+[A-Z]\.?)?\s+[A-Z]{2,})',
+            # Look for attorney signature block patterns
+            r'/s/\s*([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)\s*\n.*?(?:Attorney|Counsel)\s+for\s+Respondent',
+            # Bar number pattern: "Jane Smith, Atty. Reg. No." or "Jane Smith, #12345"
+            r'([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)[,\s]+(?:Atty\.?\s*Reg\.?\s*No\.?|#\s*\d+).*?Respondent',
+        ]
+        for pattern in counsel_patterns:
+            match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+            if match:
+                name = match.group(1).strip()
+                # Skip common legal terms
+                if name.lower() not in ['the court', 'district court', 'colorado', 'pro se']:
+                    metadata['respondent_counsel'] = name.title()
                     break
 
         # Extract division - look for standalone division number/letter
@@ -3316,14 +4130,19 @@ For detailed information on this procedure in {county} County, Colorado, please 
                     break
 
         # Extract court address
+        # Session 406: Fixed to not grab petitioner line
         address_patterns = [
-            r'Court\s+Address[\s:]*([^\n]+(?:\n[^\n]+)?)',
-            r'(\d+\s+\w+(?:\s+\w+)*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Way)[^\n]*)',
+            # Match "Court Address:" followed by address on same line only
+            r'Court\s+Address[\s:]*([^\n]+)',
+            r'(\d+\s+\w+(?:\s+\w+)*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Way)[,\s]+(?:Suite|Ste|#)?[^,\n]*(?:,\s*[A-Z]{2}\s*,?\s*\d{5})?)',
         ]
         for pattern in address_patterns:
             match = re.search(pattern, header_section, re.IGNORECASE)
             if match:
                 addr = match.group(1).strip()
+                # Session 406: Stop at "Petitioner" if it got captured
+                if 'petitioner' in addr.lower():
+                    addr = re.split(r'\s+petitioner', addr, flags=re.IGNORECASE)[0].strip()
                 # Clean up and limit length
                 addr = re.sub(r'\s+', ' ', addr)[:100]
                 metadata['court_address'] = addr
@@ -4410,17 +5229,22 @@ For detailed information on this procedure in {county} County, Colorado, please 
         relief_requested: str,
         case_details: Dict[str, Any],
         non_party_corrections: List[Dict[str, Any]] = None,
-        original_motion_content: str = ''
+        original_motion_content: str = '',
+        existing_order_text: str = '',
+        is_emergency: bool = False
     ) -> Dict[str, Any]:
         """
         Generate motion in GOLD STANDARD JDF format.
 
         Session 404F: Now includes FULL RESTATEMENT section for complete extraction.
+        Session 406: Now includes EXISTING COURT ORDERS subsection when order is provided.
+        Session 406: Now includes CERTIFICATE OF CONFERRAL for non-emergency motions.
 
         Output structure matches court-acceptable formatting:
         - CAPTION
         - TITLE
         - VERIFIED MOTION (Introduction)
+        - EXISTING COURT ORDERS (if uploaded order exists)
         - FACTS (Numbered)
         - RELIEF REQUESTED (party-directed only)
         - VERIFICATION / AFFIDAVIT
@@ -4459,19 +5283,10 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 'enforcement': 'Enforcement of Court Orders',
             }.get(relief_type, 'Parenting Time')
 
-        # Session 404D: County/State Autofill Logic
-        # ONLY fill if BOTH are confidently extracted from the user's document
-        # Never hardcode - leave blank for universal use
-        extracted_county = case_details.get('county')
-        extracted_state = case_details.get('state')
-
-        # If both are extracted, use them; otherwise leave both blank
-        if extracted_county and extracted_state:
-            county = extracted_county
-            state = extracted_state
-        else:
-            county = '__________'
-            state = '__________'
+        # Session 406 Patch 1: Always resolve core placeholders from CaseMeta
+        # For court-ready sections, never emit raw placeholders for these fields
+        # Use extracted values or leave fillable blanks only as last resort
+        state = case_details.get('state') or 'COLORADO'  # Default to Colorado if not specified
 
         # Session 404C: Get respondent address (fillable blank if not available)
         respondent_address = case_details.get('respondent_address') or '_____________________________________'
@@ -4495,8 +5310,26 @@ Division: {division}   Courtroom: {courtroom}
 ------------------------------------------------------------
 
 {petitioner} ("Petitioner"), appearing pro se, respectfully submits this Verified Motion requesting temporary, narrowly-tailored relief. This motion is supported by the following verified factual allegations.
+"""
 
+        # =====================================================================
+        # Session 406: Add EXISTING COURT ORDERS subsection if order was uploaded
+        # =====================================================================
+        existing_orders_section = ''
+        if existing_order_text:
+            order_provisions = self._parse_order_provisions(existing_order_text, case_number)
+            if order_provisions:
+                existing_orders_section = f"""
 ------------------------------------------------------------
+EXISTING COURT ORDERS
+------------------------------------------------------------
+
+{order_provisions}
+
+"""
+        document += existing_orders_section
+
+        document += f"""------------------------------------------------------------
 FACTS (VERIFIED ALLEGATIONS)
 ------------------------------------------------------------
 
@@ -4536,7 +5369,63 @@ WHEREFORE, Petitioner respectfully requests that this Court enter temporary, nar
 {relief_requested}
 
 Note: All relief must be directed only toward the Respondent, a party to the case.
+"""
 
+        # Session 406: Add CERTIFICATE OF CONFERRAL for non-emergency motions
+        if is_emergency:
+            # Emergency motions exempt from conferral - add note explaining why
+            document += f"""
+------------------------------------------------------------
+CERTIFICATE OF CONFERRAL (WAIVED - EMERGENCY)
+------------------------------------------------------------
+
+Petitioner certifies that conferral was not attempted because this is an emergency motion
+filed pursuant to C.R.S. § 14-10-129.5 due to imminent danger to the child that cannot
+wait for the standard conferral period.
+"""
+        else:
+            # Non-emergency motions require conferral
+            from datetime import datetime
+            conferral_date = datetime.now().strftime('%B %d, %Y')
+            document += f"""
+------------------------------------------------------------
+CERTIFICATE OF CONFERRAL
+------------------------------------------------------------
+
+Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
+
+1. On or about {conferral_date}, Petitioner sent written communication to Respondent
+   regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
+3. [ ] Respondent did not respond within the conferral period.
+   [ ] Respondent stated they do not agree to the requested relief.
+   [ ] The parties were unable to reach full agreement on all requested relief.
+4. The matter could not be resolved without Court involvement.
+
+(Check the applicable box above before filing)
+"""
+
+        # Session 406 Patch 1 & 2: All placeholders resolved, relief_requested expanded
+        # Session 406 Patch 3: Certificate of Service uses counsel if present
+        service_recipient = respondent
+        service_address = respondent_address
+
+        # Check for opposing counsel
+        respondent_counsel = case_details.get('respondent_counsel') or case_details.get('conferral_recipient_name', '')
+        respondent_counsel_firm = case_details.get('respondent_counsel_firm', '')
+        is_represented = case_details.get('conferral_recipient_is_attorney', False)
+
+        if is_represented and respondent_counsel:
+            service_recipient = f"{respondent_counsel}"
+            if respondent_counsel_firm:
+                service_recipient += f"\n{respondent_counsel_firm}"
+            service_recipient += f"\nAttorney for Respondent"
+            # Use counsel address if available
+            counsel_address = case_details.get('respondent_counsel_address', '')
+            if counsel_address:
+                service_address = counsel_address
+
+        document += f"""
 ------------------------------------------------------------
 VERIFICATION / AFFIDAVIT
 ------------------------------------------------------------
@@ -4589,8 +5478,8 @@ CERTIFICATE OF SERVICE
 
 I certify that on ____________________, 20___, I served a true and correct copy of this VERIFIED MOTION upon:
 
-Respondent: {respondent}
-Address: {respondent_address}
+{service_recipient}
+Address: {service_address}
 
 Service accomplished by:
 [ ] U.S. Mail

@@ -1,127 +1,112 @@
 # Start Next Session Here
 
-**Last Session:** 405 - Legal Assistant ChatGPT-Recommended Enhancements
+**Last Session:** 406 - Case Intake Form + ChatGPT Patches + Conferral System COMPLETE!
 **Date:** December 9, 2025
-**Status:** 62 spiders | Legal Agent with 12 tools | 5 ChatGPT-recommended enhancements | Production-ready!
+**Status:** 62 spiders | Legal Agent with 15 tools | Case Intake Form | Conferral emails address COUNSEL!
 
 ---
 
-## Session 405 Accomplishments
+## Session 406 Accomplishments
 
-### All 5 ChatGPT-Recommended Enhancements COMPLETE! ✅
+### MAJOR FEATURE: Case Intake Form System
 
-ChatGPT validated our Pro Se Legal Assistant as "court-ready and properly formatted with zero red flags" and recommended 5 production-grade enhancements. **All implemented!**
+Created a complete Case Intake Form so the Legal Assistant has full case context:
 
-| Enhancement | Tool | Description |
-|-------------|------|-------------|
-| #1 Third-Party Auto-Rewrite | `check_non_party_issues` | Auto-corrects "Camille shall not..." → "Respondent shall ensure..." |
-| #2 Emergency Detector | `assess_emergency_status` | Classifies true vs false emergencies, warns on misuse |
-| #3 Order Attachment Check | `check_order_attachment_required` | Prompts for missing court order attachment |
-| #4 Conflict Detector | `detect_order_conflicts` | Detects contradictions with existing orders |
-| #5 Success Meter | `assess_likelihood_of_success` | 0-100 score with 🟢🟡🟠🔴 ratings |
+| Component | Description |
+|-----------|-------------|
+| **Django Models** | `CaseProfile`, `Party`, `Attorney`, `Child`, `CaseDocument` in `core/models_legal.py` |
+| **API Endpoints** | Full CRUD at `/api/legal/cases/` with nested creation support |
+| **UI Form** | 4-step wizard in Legal Assistant panel (Case Setup tab) |
+| **Pipeline Integration** | `_get_active_case_profile_data()` loads case data before document extraction |
 
-### Integration Fixes Applied
+**Key Benefit:** Conferral emails now address **opposing counsel** instead of respondent!
 
-1. **Court orders stored separately** - Not analyzed through motion pipeline
-2. **Auto-fetch court orders** - System finds user's uploaded orders for conflict detection
-3. **Document type matching fixed** - `'court_order'` vs `'court order'` issue resolved
-4. **Generic wording** - Works for any motion type, not just denied motions
+### ChatGPT Patches Implemented (6 Total)
 
-### LegalDocDrafterAgent Now Has 12 Tools
+| Patch | Fix | Result |
+|-------|-----|--------|
+| **Patch 1** | Resolve placeholders from CaseMeta | No more `{state}` or `{county}` in output |
+| **Patch 2** | Relief in Proposed Order | Full relief items, not `{relief_requested}` |
+| **Patch 3** | Conferral recipient routing | Certificate of Service goes to counsel if represented |
+| **Patch 4** | conferral_status structured data | Values: pending/no_response/refused/partial/agreed |
+| **Patch 5** | Wording glitch fix | No "escalating pattern of escalating, harmful" |
+| **Patch 6** | Non-disparagement linkage | "Statements appear inconsistent with..." when detected |
 
-```
-Core Tools (7):
-- search_legal_resources, draft_motion, draft_email, draft_declaration
-- analyze_denied_motion, rewrite_motion, generate_evidence_checklist
+### Critical Bug Fixes
 
-Enhancement Tools (5):
-- check_non_party_issues, assess_emergency_status
-- check_order_attachment_required, detect_order_conflicts
-- assess_likelihood_of_success
-```
+1. **`motion_text` is not defined** - Fixed variable name in `_extract_case_metadata()`
+2. **CaseProfile not loading** - Fixed `analyze_legal_document()` to pass `request` to context
 
-### Documentation
-- **Primary Handoff:** `docs/handoffs/SESSION_405_LEGAL_ASSISTANT_ENHANCEMENTS.md`
-- **Also Updated:** `docs/handoffs/SESSION_403_PRO_SE_LEGAL_ASSISTANT.md`
+### New Files Created
 
-### Learning Integration (Earlier in Session)
-
-Also completed learning hooks integration so every motion makes the system smarter:
-- `_record_learning_outcome()` for XP/pattern detection
-- `_create_execution_memory()` for persistent memories
-- `_share_knowledge()` for collective intelligence
-- `_save_legal_memory()` for legal-specific patterns
-
----
-
-## Session 404 Accomplishments
-
-### Pro Se Legal Assistant - Motion Rewriter COMPLETE!
-
-Built a complete system to transform denied court motions into court-ready documents:
-
-1. **Motion Rewriter Core** (`rewrite_motion` tool)
-   - Takes denied motion PDF
-   - Generates 5-part corrected document
-   - Proper Colorado JDF format
-
-2. **County/State Inference (404F)**
-   - Auto-detects jurisdiction from court address
-   - Fort Collins → LARIMER, CO → COLORADO
-   - Works for all major Colorado cities
-
-3. **Incident Normalization (Patch 4C)**
-   - Splits inline semicolon lists into separate allegations
-   - Removes PDF numbering fragments
-   - Generates clean 1-4 numbered format
-   - Impact paragraph using petitioner's language
-
-4. **Clean Court-Ready Output**
-   - No AI disclaimers in documents
-   - Proper legal formatting
-   - Full restatement for verification
-
-### Output Format (Patch 4C)
-```
-SPECIFIC FACTUAL ALLEGATIONS:
-1. On [DATE], [INCIDENT].
-2. On [DATE], [INCIDENT].
-3. On [DATE], [INCIDENT].
-4. [IMPACT PARAGRAPH - pattern/harm summary]
-```
+| File | Purpose |
+|------|---------|
+| `core/models_legal.py` | 5 Django models for case management |
+| `core/views_legal_cases.py` | ~500 lines API views with nested creation |
+| `core/migrations/0077_legal_case_intake_form.py` | Database migration |
+| `docs/handoffs/SESSION_406_CASE_INTAKE_FORM.md` | Complete session handoff |
 
 ### Files Modified
-- `core/agents/legal/legal_doc_drafter_agent.py` - Major fact extraction rewrite
-- `ai_core/templates/components/panels/legal_assistant_panel.html` - Removed disclaimer
-- `docs/AGENTS.md` - Updated documentation
-- `docs/CAPABILITIES.md` - Updated documentation
 
-### Documentation
-- Handoff: `docs/handoffs/SESSION_404_PRO_SE_LEGAL_ASSISTANT.md`
+| File | Changes |
+|------|---------|
+| `core/admin.py` | Admin registrations with inlines (lines 160-320) |
+| `core/urls.py` | URL patterns for `/api/legal/` endpoints |
+| `legal_assistant_panel.html` | Case Setup tab + 4-step wizard + 14 JS functions |
+| `legal_doc_drafter_agent.py` | Pipeline integration + ChatGPT patches |
+| `core/views_legal.py` | Pass request for CaseProfile lookup |
 
 ---
 
-## Next Session: 406 - [Your Focus Here]
+## How Case Intake Form Works
+
+### User Flow
+1. Go to Legal Assistant **Case Setup** tab
+2. Click "Set Up New Case"
+3. Fill 4-step wizard:
+   - Step 1: Case number, county, court info
+   - Step 2: Your info (petitioner)
+   - Step 3: Other party + **their attorney**
+   - Step 4: Children
+4. Save and case is auto-selected
+
+### Motion Analysis Flow
+1. Upload denied motion
+2. Pipeline checks for active CaseProfile
+3. If found: Uses CaseProfile data (including counsel!)
+4. Conferral email addresses **attorney** not respondent
+
+---
+
+## Session 405 Accomplishments (Prior Session)
+
+All 5 ChatGPT-recommended enhancements:
+- #1 Third-Party Auto-Rewrite
+- #2 Emergency Detector
+- #3 Order Attachment Check
+- #4 Conflict Detector
+- #5 Success Meter
+
+---
+
+## Next Session: 407 - [Your Focus Here]
 
 ### Suggested Priorities
 
-1. **Test Learning Loop End-to-End**
-   - Process a real denied motion through the UI
-   - Verify AgentKnowledgeSource records created
-   - Check if other agents can retrieve legal patterns
+1. **Production Testing**
+   - Test full workflow with real case
+   - Verify all patches work together
+   - Send actual conferral email to counsel
 
-2. **Extend Learning to Other Agents**
-   - Audit which other agents are missing learning hooks
-   - Apply the same pattern (ensure_agent_registered + hooks)
+2. **Case Form Enhancements**
+   - Edit existing case profiles (currently shows "coming soon")
+   - Active case indicator in UI
+   - Auto-populate from OCR
 
 3. **Additional Legal Features**
    - More JDF form types
-   - Multi-state support (beyond Colorado)
+   - Multi-state support
    - Exhibit generation
-
-4. **Platform Improvements**
-   - Spider network optimization
-   - UI polish
 
 ---
 
@@ -133,7 +118,7 @@ make start && make celery
 
 # Test Legal Assistant
 open http://localhost:8000/ai-studio/
-# Navigate to Legal Assistant tab → My Case Files
+# Navigate to Legal Assistant tab → Case Setup → Set up case → Then upload motion
 
 # Check health
 curl http://localhost:8000/health/ping/
@@ -147,8 +132,8 @@ curl http://localhost:8000/health/ping/
 |-----------|--------------|
 | Registered Spiders | 62 |
 | Working Spiders | 57 |
-| Clean Agents | 13 |
-| Legal Tools | 10 |
+| Clean Agents | 27 |
+| Legal Tools | 15 |
 | Database Records | ~7,000 |
 | Agent Knowledge Sources | 865+ |
 
@@ -158,19 +143,23 @@ curl http://localhost:8000/health/ping/
 
 | File | Purpose |
 |------|---------|
-| `core/agents/legal/legal_doc_drafter_agent.py` | Legal document agent |
+| `core/agents/legal/legal_doc_drafter_agent.py` | Legal document agent (275KB) |
+| `core/models_legal.py` | Case management models |
+| `core/views_legal_cases.py` | Case API endpoints |
+| `docs/handoffs/SESSION_406_CASE_INTAKE_FORM.md` | Session 406 complete details |
 | `docs/AGENTS.md` | Agent reference |
-| `docs/CAPABILITIES.md` | Feature list |
-| `docs/handoffs/SESSION_404_PRO_SE_LEGAL_ASSISTANT.md` | Session 404 details |
 
 ---
 
 ## Previous Session Context
 
-- Session 403: Added Pro Se Legal Assistant MVP (case files, document upload)
-- Session 402: Fixed PDF upload and UI status badges
+- Session 406: Case Intake Form + ChatGPT Patches (THIS SESSION!)
+- Session 405: ChatGPT-recommended enhancements (5 tools)
+- Session 404: Pro Se Legal Assistant motion rewriter
+- Session 403: Legal Assistant MVP
+- Session 402: PDF upload fixes
 - Session 401: Knowledge attribution UI
-- Session 400: Agent knowledge pipeline (spiders → agents)
+- Session 400: Agent knowledge pipeline
 
 ---
 

@@ -216,7 +216,7 @@ def upload_legal_case_file(request):
         elif analyze:
             try:
                 logger.info(f"[SESSION 404] Starting analysis for document {doc.id}...")
-                analysis = analyze_legal_document(doc, context)
+                analysis = analyze_legal_document(doc, context, request=request)
                 logger.info(f"[SESSION 404] Analysis complete. Has full_analysis: {bool(analysis.get('full_analysis') if analysis else False)}")
             except Exception as e:
                 logger.error(f"[SESSION 404] Error analyzing document: {e}")
@@ -328,8 +328,8 @@ def analyze_legal_case_file(request, document_id):
         data = request.data if hasattr(request, 'data') else {}
         additional_context = data.get('context', '')
 
-        # Perform analysis
-        analysis = analyze_legal_document(doc, additional_context)
+        # Perform analysis - Session 406: Pass request for CaseProfile lookup
+        analysis = analyze_legal_document(doc, additional_context, request=request)
 
         return Response({
             'success': True,
@@ -438,7 +438,7 @@ def extract_docx_text(file_content: bytes, filename: str) -> str:
         raise Exception(f"Could not extract text from document: {str(e)}")
 
 
-def analyze_legal_document(doc, additional_context: str = '') -> dict:
+def analyze_legal_document(doc, additional_context: str = '', request=None) -> dict:
     """
     Analyze a legal document using the LegalDocDrafterAgent.
 
@@ -447,6 +447,8 @@ def analyze_legal_document(doc, additional_context: str = '') -> dict:
 
     Session 405: Now fetches uploaded court orders to pass as context for
     conflict detection (Enhancement #4).
+
+    Session 406: Now accepts request to pass active_case_id for CaseProfile lookup.
 
     Returns structured analysis with summary, issues, recommendations, and forms.
     """
@@ -502,6 +504,12 @@ def analyze_legal_document(doc, additional_context: str = '') -> dict:
 
         logger.info(f"[SESSION 404] Task constructed: {task}")
 
+        # Session 406: Get active_case_id from session if request is available
+        active_case_id = None
+        if request and hasattr(request, 'session'):
+            active_case_id = request.session.get('active_case_id')
+            logger.info(f"[SESSION 406] Got active_case_id from session: {active_case_id}")
+
         # Build context with the document content
         context = {
             'document_type': doc.document_type,
@@ -516,6 +524,9 @@ def analyze_legal_document(doc, additional_context: str = '') -> dict:
             'existing_order_text': existing_order_text,
             'existing_order_summary': existing_order_summary,
             'uploaded_document_types': uploaded_document_types,
+            # Session 406: Pass active case ID for CaseProfile lookup
+            'active_case_id': active_case_id,
+            'request': request,  # Pass full request for session access
         }
 
         logger.info(f"[SESSION 404] Context built, motion_content length: {len(context['motion_content'])}")
