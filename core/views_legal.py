@@ -207,7 +207,7 @@ def upload_legal_case_file(request):
                     "- **Exhibit Attachment** - Include this as an exhibit when filing modification motions\n\n"
                     "---\n\n"
                     "### Next Steps\n\n"
-                    "1. Upload your **denied motion** to get rewrite assistance\n"
+                    "1. Upload your **motion** to get analysis and rewrite assistance\n"
                     "2. The system will automatically check your motion against this court order\n"
                     "3. Any conflicts will be flagged with recommendations\n"
                 ),
