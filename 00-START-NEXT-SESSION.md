@@ -1,88 +1,79 @@
 # Start Next Session Here
 
-**Last Session:** 407 - Document Download Feature COMPLETE!
-**Date:** December 9, 2025
-**Status:** Downloadable legal documents | Word/PDF/Text/Markdown export | Full lawyer demo ready
+**Last Session:** 409 - CaseProfile Auto-Select + OCR Support + Lawyer Review Sent!
+**Date:** December 10, 2025
+**Status:** Motion output sent to REAL Colorado family law attorney for review!
 
 ---
 
-## Session 407 Accomplishments
+## Session 409 Accomplishments
 
-### MAJOR: Document Download Feature
+### MAJOR: CaseProfile Auto-Select Fix
 
-Users can now download individual sections from the motion rewriter as Word, Text, or Markdown files:
+**Critical bug fixed:** Motion analysis wasn't using CaseProfile data (including opposing counsel info). Conferral emails were addressing respondent instead of opposing counsel.
 
-| Section | Format | Description |
-|---------|--------|-------------|
-| Verified Motion | .docx | Full court-ready motion |
-| Proposed Order | .docx | Separate order for court |
-| Appendix A | .docx | Factual narrative exhibit |
-| Evidence Checklist | .md | Items to gather |
-| Conferral Email | .txt | Ready to send email |
-| Success Analysis | .md | Score breakdown |
+**Root Cause:** `active_case_id` stored in session was lost after server restarts.
 
-### Files Created/Modified
+**Solution:** Added intelligent fallback - if user has exactly 1 active case, automatically uses it without requiring explicit selection.
+
+**Result:** Conferral emails now correctly address "Taylor" (opposing counsel) instead of "Susannah" (respondent)!
+
+### Mythology Validation (Anti-Hallucination)
+
+Added `_validate_output()` calls to `LegalDocDrafterAgent` at:
+- Line 1183 in `execute()`
+- Line 2764 in `_execute_denied_motion_pipeline()`
+
+### OCR Support for Scanned PDFs
+
+Court docket PDFs are often scanned images. Added OCR fallback:
+- Uses PyMuPDF to render PDF pages to images
+- Uses pytesseract for text extraction
+- Does NOT require poppler (avoids disk space issues)
+
+### Document Brain Fixes
+
+1. **Case dropdown** - Fixed API to return `success: true`, frontend to use `data.cases || []`
+2. **Upload auth** - Changed to `authenticatedFetch()` (was plain `fetch()`)
+
+---
+
+## Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/agents/legal/document_bundle.py` | NEW - Section parser + generators (~200 lines) |
-| `core/agents/legal/legal_doc_drafter_agent.py` | Added document_bundle to result |
-| `core/views_legal.py` | Added `export_legal_section()` endpoint |
-| `core/urls.py` | Added `/api/legal/export-section/` route |
-| `legal_assistant_panel.html` | Added download buttons UI + JS |
-
-### API Endpoint
-
-```bash
-POST /api/legal/export-section/
-{
-    "section_id": "motion_core",
-    "format": "docx",
-    "content": "...",
-    "label": "Verified Motion"
-}
-```
-
-Returns: File download (Word, Text, or Markdown)
-
-### Demo Flow
-
-1. Upload denied motion → Click "Analyze"
-2. See full analysis with download buttons
-3. Click "Verified Motion (.docx)" → Opens in Word
-4. Click "Conferral Email (.txt)" → Ready to send
+| `core/agents/legal/legal_doc_drafter_agent.py` | Mythology validation, CaseProfile auto-select |
+| `core/views_legal_cases.py` | Added `success: true` to API responses |
+| `legal_assistant_panel.html` | Document Brain dropdown fix, `authenticatedFetch()` |
+| `core/services/litigation_brain.py` | OCR fallback method |
+| `docs/CAPABILITIES.md` | Updated to Session 409 |
+| `CLAUDE.md` | Updated Recent Sessions |
 
 ---
 
-## Next Session: 408 - Enhanced Features
+## Next Session: 410 - Awaiting Lawyer Feedback
 
-### Priority 1: PDF Export (Optional)
+### Priority 1: Address Lawyer Feedback
+Motion was sent to a real Colorado family law attorney. Wait for feedback on:
+- JDF format compliance
+- Legal accuracy
+- Conferral email appropriateness
+- Any suggested improvements
 
-Add PDF generation using WeasyPrint:
-```python
-pip install weasyprint
-from weasyprint import HTML
-HTML(string=html_content).write_pdf('motion.pdf')
+### Priority 2: Fix "My Case Files" Tab
+User reported this view broke during Session 409. Server logs show API returning 200 OK, so likely frontend JS issue. Need to investigate:
+```javascript
+// Check console for errors when clicking My Case Files tab
+loadLegalCaseFiles()  // Line ~1527
 ```
 
-### Priority 2: Enhanced DOCX Formatting
+### Priority 3: Multiple Case Support
+Currently auto-selects only if user has exactly 1 case. Consider:
+- Add case selector dropdown to motion analysis UI
+- Remember last-used case per user
 
-Improve Word document output:
-- Line numbering (court requirement)
-- Double-spacing option
-- Court-specific templates
-- Page numbering
-
-### Priority 3: Batch Download
-
-Add "Download All" button that:
-- Creates ZIP file with all sections
-- Named by case number
-- Includes folder structure
-
-### Priority 4: Active Case Indicator
-
-Show in UI which case is currently active for analysis.
+### Priority 4: Disk Space Cleanup
+`brew install poppler` failed - user needs to clean up disk.
 
 ---
 
@@ -92,18 +83,29 @@ Show in UI which case is currently active for analysis.
 # Start services
 make start && make celery
 
-# Test Document Bundle
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.agents.legal.document_bundle import parse_motion_output_to_bundle
-bundle = parse_motion_output_to_bundle('## PART 3: TEST', '25DR576', 'LARIMER')
-print(f'Sections: {len(bundle.sections)}')
+# Test CaseProfile auto-select
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python manage.py shell -c "
+from core.models_legal import CaseProfile
+cases = CaseProfile.objects.all()
+for c in cases:
+    print(f'{c.case_number}: {c.petitioner.full_name} v. {c.respondent.full_name}')
+    print(f'  Opposing counsel: {c.get_conferral_recipient()[\"name\"]}')
 "
 
 # Access Legal Assistant
 open http://localhost:8000/ai-studio/
-# Navigate to Legal Assistant → Case Files → Upload → Analyze → Download
 ```
+
+---
+
+## Verification Steps
+
+1. Start server: `make start`
+2. Go to Legal Assistant > Chat tab
+3. Upload a denied motion PDF
+4. Click "Analyze"
+5. Check server logs for: `Session 409: Using user's only active case: 25DR576`
+6. Verify conferral email addresses "Taylor" not "Susannah"
 
 ---
 
@@ -111,36 +113,34 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
-| `core/agents/legal/legal_doc_drafter_agent.py` | Main agent (280KB, 15 tools) |
-| `core/agents/legal/motion_context.py` | MotionContext dataclass |
-| `core/agents/legal/document_bundle.py` | Section parser + export |
-| `core/views_legal.py` | Export API endpoint |
-| `docs/handoffs/SESSION_407_DOCUMENT_DOWNLOAD_FEATURE.md` | Full session details |
+| `core/agents/legal/legal_doc_drafter_agent.py` | Motion rewriter with auto-select |
+| `core/services/litigation_brain.py` | OCR extraction |
+| `core/models_legal.py` | CaseProfile, Party, Attorney models |
+| `docs/handoffs/SESSION_409_CASEPROFILE_AUTOSELECT_OCR.md` | Full session details |
 
 ---
 
-## System Status
+## Database State
 
-| Component | Count/Status |
-|-----------|--------------|
-| Registered Spiders | 64 |
-| Clean Agents | 27 |
-| Legal Tools | 15 |
-| Export Formats | 4 (docx, pdf, txt, md) |
-| Downloadable Sections | 6 |
-| Demo Ready | YES |
+| Model | Count |
+|-------|-------|
+| CaseProfiles | 1 |
+| Parties | 2 (Christopher, Susannah) |
+| Attorneys | 1 (Taylor Hartin) |
+| Children | 1 (Nicolas) |
 
 ---
 
 ## Previous Sessions
 
-- Session 407: Document Download Feature (THIS SESSION!)
-- Session 406: Legal Document Polish (MotionContext, 9 commits)
-- Session 405: ChatGPT enhancements (5 tools)
+- **Session 409: CaseProfile Auto-Select + OCR (THIS SESSION!)**
+- Session 408: Legal Document Brain
+- Session 407: Document Download Feature
+- Session 406: Case Intake Form + ChatGPT Patches
+- Session 405: ChatGPT Legal Enhancements
 - Session 404: Pro Se Legal Assistant motion rewriter
 - Session 403: Legal Assistant MVP
-- Session 400: Agent knowledge pipeline
 
 ---
 
-**The Legal Assistant is now fully demo-ready: upload a denied motion → get analysis → download Word documents!**
+**Motion sent to real Colorado lawyer for review! Awaiting feedback.**

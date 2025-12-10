@@ -1178,6 +1178,10 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                     if generated_documents:
                         self._share_legal_knowledge(task, generated_documents, context)
 
+                # Session 409: Validate output through Mythology Enforcer to prevent hallucinations
+                # This is CRITICAL for legal documents - must not contain unrealistic claims
+                result = self._validate_output(result)
+
                 return result
 
             except Exception as e:
@@ -2755,6 +2759,10 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         logger.info(f"Session 405: Learning hooks fired for {relief_type} motion rewrite")
 
+        # Session 409: Validate output through Mythology Enforcer to prevent hallucinations
+        # CRITICAL for legal documents - must not contain unrealistic claims
+        result = self._validate_output(result)
+
         return result
 
     def _get_motion_content_for_analysis(self, task: str, context: Dict[str, Any]) -> str:
@@ -4011,25 +4019,37 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
             user_id = context.get('user_id')
             request = context.get('request')
 
+            # Import here to avoid circular imports
+            from core.models_legal import CaseProfile
+
+            active_case_id = None
+            case = None
+
             if request and hasattr(request, 'session'):
                 active_case_id = request.session.get('active_case_id')
             elif context.get('active_case_id'):
                 active_case_id = context.get('active_case_id')
-            else:
-                logger.debug("Session 406: No active case ID found in context")
-                return None
 
-            if not active_case_id:
-                return None
+            if active_case_id:
+                # Get the case profile by ID
+                try:
+                    case = CaseProfile.objects.get(id=active_case_id)
+                    logger.info(f"Session 409: Found CaseProfile by active_case_id: {case.case_number}")
+                except CaseProfile.DoesNotExist:
+                    logger.warning(f"Session 406: CaseProfile {active_case_id} not found")
+                    case = None
 
-            # Import here to avoid circular imports
-            from core.models_legal import CaseProfile
+            # Session 409: Fallback - if user has ONLY ONE case, use that
+            if not case and request and hasattr(request, 'user') and request.user.is_authenticated:
+                user_cases = CaseProfile.objects.filter(user=request.user, status='active')
+                if user_cases.count() == 1:
+                    case = user_cases.first()
+                    logger.info(f"Session 409: Using user's only active case: {case.case_number}")
+                elif user_cases.count() > 1:
+                    logger.info(f"Session 409: User has {user_cases.count()} cases - requires explicit selection")
 
-            # Get the case profile
-            try:
-                case = CaseProfile.objects.get(id=active_case_id)
-            except CaseProfile.DoesNotExist:
-                logger.warning(f"Session 406: CaseProfile {active_case_id} not found")
+            if not case:
+                logger.debug("Session 406: No case profile found")
                 return None
 
             petitioner = case.petitioner
