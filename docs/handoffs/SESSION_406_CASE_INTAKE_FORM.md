@@ -229,11 +229,32 @@ User received detailed feedback from ChatGPT reviewing the Legal Doc Drafter out
 
 ---
 
+## Additional Session 406 Updates
+
+### Attorney Address Field
+- Added Attorney Address textarea to Step 3 of Case Setup wizard
+- Updated `_get_active_case_profile_data()` to include `respondent_counsel_address`
+- Certificate of Service now uses attorney address when available
+
+### Edit/Delete Functionality (IMPLEMENTED)
+- **Edit button** now loads case data into form with all fields populated
+- Fixed order bug: call `showCaseSetupForm()` BEFORE setting `editingCaseId` (since reset clears it)
+- Save function detects edit mode (`window.editingCaseId`) and uses PUT instead of POST
+- **Delete button** with confirmation dialog added to case cards
+- All API calls use `authenticatedFetch()` for proper authentication
+
+### Bug Fixes
+- Fixed `getCSRFToken` → `getCsrfToken` typo in delete function
+- Added `case_number` to PUT response for proper toast message
+- Fixed edit/create race condition with `editingCaseId` variable
+
+---
+
 ## Next Steps
 
-1. **Implement edit functionality** for existing case profiles
+1. ~~**Implement edit functionality** for existing case profiles~~ ✅ DONE
 2. **Add case profile indicator** in UI showing which case is active
 3. **Auto-populate form** from uploaded court orders using OCR
 4. **Multiple children** - test with cases having 3+ children
-5. **Address formatting** - verify Certificate of Service uses correct format
+5. ~~**Address formatting** - verify Certificate of Service uses correct format~~ ✅ DONE
 6. **Test ChatGPT patches** - Run full motion analysis to verify patches work

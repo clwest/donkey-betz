@@ -99,7 +99,9 @@ All 5 ChatGPT-recommended enhancements:
    - Send actual conferral email to counsel
 
 2. **Case Form Enhancements**
-   - Edit existing case profiles (currently shows "coming soon")
+   - ~~Edit existing case profiles~~ ✅ DONE
+   - ~~Attorney address field~~ ✅ DONE
+   - ~~Delete case functionality~~ ✅ DONE
    - Active case indicator in UI
    - Auto-populate from OCR
 
