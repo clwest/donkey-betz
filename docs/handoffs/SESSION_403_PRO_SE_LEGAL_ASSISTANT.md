@@ -499,6 +499,38 @@ Rating scale:
 - 🟠 25-49: LOW - Needs significant improvement
 - 🔴 0-24: VERY LOW - Likely to be denied without changes
 
+### Session 405 Integration Fixes
+
+After implementing all 5 enhancements, several integration issues were discovered and fixed:
+
+1. **Court Order Upload Handling**
+   - Court orders were incorrectly being analyzed through the denied motion pipeline
+   - Fixed: Court orders now get a simple acknowledgment message and are stored for future reference
+   - User sees "✅ COURT ORDER SAVED" with explanation of how it will be used
+
+2. **Auto-Fetch Court Orders for Conflict Detection**
+   - When analyzing a motion, the system now automatically fetches uploaded court orders
+   - Court order text is passed to `_detect_order_conflicts()` as context
+   - Up to 5 most recent court orders, 15K chars max to prevent token overflow
+
+3. **Document Type String Matching**
+   - Bug: `_check_order_attachment_required` expected `'court order'` (with space)
+   - Database stores `'court_order'` (with underscore)
+   - Fixed: Now matches both formats
+
+4. **Generic Motion Wording**
+   - Changed "Upload your denied motion" to "Upload your motion"
+   - Works for any motion type, not just denied motions
+
+### Complete Flow
+
+1. **Upload Court Order** → Stored with "✅ COURT ORDER SAVED" message
+2. **Upload Motion** → Full analysis pipeline runs:
+   - Step 2.5: Emergency assessment
+   - Step 2.6: Court order attachment check (recognizes uploaded orders)
+   - Step 2.7: Conflict detection (uses uploaded court order text)
+   - Step 3-6: Facts extraction, rewrite, success meter
+
 ---
 
 ## What's Next (Phase 7 - Optional)
