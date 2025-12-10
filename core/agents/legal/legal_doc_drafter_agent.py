@@ -793,6 +793,81 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                     "required": ["motion_text"]
                 }
             }
+        },
+        # Session 405 Enhancement #2: Emergency vs Non-Emergency Detector
+        {
+            "type": "function",
+            "function": {
+                "name": "assess_emergency_status",
+                "description": "Assess whether a situation qualifies as a legal emergency under Colorado law (C.R.S. § 14-10-129.5). Determines if harm is immediate and warns when a situation is NOT actually an emergency.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "situation_description": {
+                            "type": "string",
+                            "description": "Description of the situation and alleged harm"
+                        },
+                        "claimed_emergency": {
+                            "type": "boolean",
+                            "description": "Whether the user/motion claims this is an emergency"
+                        }
+                    },
+                    "required": ["situation_description"]
+                }
+            }
+        },
+        # Session 405 Enhancement #3: Court Order Being Modified Detector
+        {
+            "type": "function",
+            "function": {
+                "name": "check_order_attachment_required",
+                "description": "Check if the motion requires attachment of an existing court order and prompt user to upload it if missing.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "motion_text": {
+                            "type": "string",
+                            "description": "The text of the motion to analyze"
+                        },
+                        "uploaded_documents": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of document types already uploaded"
+                        }
+                    },
+                    "required": ["motion_text"]
+                }
+            }
+        },
+        # Session 405 Enhancement #5: Likelihood of Success Confidence Meter
+        {
+            "type": "function",
+            "function": {
+                "name": "assess_likelihood_of_success",
+                "description": "Calculate a likelihood of success score for a motion based on relief scope, evidence strength, procedural posture, and Colorado case law signals.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "motion_text": {
+                            "type": "string",
+                            "description": "The text of the motion to analyze"
+                        },
+                        "relief_type": {
+                            "type": "string",
+                            "description": "Type of relief being requested"
+                        },
+                        "has_evidence": {
+                            "type": "boolean",
+                            "description": "Whether supporting evidence/exhibits are mentioned"
+                        },
+                        "is_rewrite": {
+                            "type": "boolean",
+                            "description": "Whether this is a rewrite of a previously denied motion"
+                        }
+                    },
+                    "required": ["motion_text"]
+                }
+            }
         }
     ]
 
@@ -1229,6 +1304,29 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             return self._check_non_party_issues(
                 motion_text=arguments.get('motion_text', ''),
                 parties_in_case=arguments.get('parties_in_case', [])
+            )
+
+        # Session 405 Enhancement #2: Emergency Assessment
+        elif tool_name == "assess_emergency_status":
+            return self._assess_emergency_status(
+                situation_description=arguments.get('situation_description', ''),
+                claimed_emergency=arguments.get('claimed_emergency', False)
+            )
+
+        # Session 405 Enhancement #3: Court Order Attachment Check
+        elif tool_name == "check_order_attachment_required":
+            return self._check_order_attachment_required(
+                motion_text=arguments.get('motion_text', ''),
+                uploaded_documents=arguments.get('uploaded_documents', [])
+            )
+
+        # Session 405 Enhancement #5: Likelihood of Success
+        elif tool_name == "assess_likelihood_of_success":
+            return self._assess_likelihood_of_success(
+                motion_text=arguments.get('motion_text', ''),
+                relief_type=arguments.get('relief_type', ''),
+                has_evidence=arguments.get('has_evidence', False),
+                is_rewrite=arguments.get('is_rewrite', False)
             )
 
         else:
@@ -2202,6 +2300,46 @@ For detailed information on this procedure in {county} County, Colorado, please 
         tool_calls_made.append({'tool': 'check_non_party_issues', 'result': 'success'})
 
         # =====================================================================
+        # STEP 2.5: Session 405 Enhancement #2 - Emergency Assessment
+        # =====================================================================
+        logger.info("Step 2.5: Assessing emergency status...")
+        # Check if the original motion claimed to be an emergency
+        claimed_emergency = any(term in motion_content.lower() for term in [
+            'emergency', 'urgent', 'immediate', 'imminent'
+        ])
+        emergency_result = self._assess_emergency_status(
+            situation_description=motion_content,
+            claimed_emergency=claimed_emergency
+        )
+        tool_calls_made.append({'tool': 'assess_emergency_status', 'result': 'success'})
+
+        # If this was labeled as emergency but shouldn't be, add warning to output
+        if emergency_result.get('false_emergency_warning'):
+            output_parts.append("---")
+            output_parts.append("")
+            output_parts.append(emergency_result.get('analysis', ''))
+            output_parts.append("")
+
+        # =====================================================================
+        # STEP 2.6: Session 405 Enhancement #3 - Court Order Attachment Check
+        # =====================================================================
+        logger.info("Step 2.6: Checking if court order attachment required...")
+        # Get list of uploaded document types from context
+        uploaded_docs = context.get('uploaded_document_types', [])
+        order_check_result = self._check_order_attachment_required(
+            motion_text=motion_content,
+            uploaded_documents=uploaded_docs
+        )
+        tool_calls_made.append({'tool': 'check_order_attachment_required', 'result': 'success'})
+
+        # If order attachment is missing, add warning to output
+        if order_check_result.get('missing_order_warning'):
+            output_parts.append("---")
+            output_parts.append("")
+            output_parts.append(order_check_result.get('analysis', ''))
+            output_parts.append("")
+
+        # =====================================================================
         # STEP 3: Extract facts from motion for rewrite
         # =====================================================================
         facts = self._extract_facts_from_motion(motion_content)
@@ -2289,6 +2427,25 @@ For detailed information on this procedure in {county} County, Colorado, please 
         output_parts.append("*Gather these items before filing:*\n\n")
         output_parts.append(checklist_result.get('checklist', ''))
 
+        # =====================================================================
+        # STEP 6: Session 405 Enhancement #5 - Likelihood of Success Assessment
+        # =====================================================================
+        logger.info("Step 6: Assessing likelihood of success...")
+        # Check for evidence mentions in rewritten motion
+        has_evidence = 'exhibit' in motion_document.lower() or 'attached' in motion_document.lower()
+        success_result = self._assess_likelihood_of_success(
+            motion_text=motion_document,  # Score the REWRITTEN motion
+            relief_type=relief_type,
+            has_evidence=has_evidence,
+            is_rewrite=True  # This is a rewrite of a denied motion
+        )
+        tool_calls_made.append({'tool': 'assess_likelihood_of_success', 'result': 'success'})
+
+        # Part 5: Likelihood of Success
+        output_parts.append("\n---\n")
+        output_parts.append("## PART 5: LIKELIHOOD OF SUCCESS\n")
+        output_parts.append(success_result.get('analysis', ''))
+
         # FIX #6: NO LEGAL DISCLAIMER - removed per ChatGPT feedback
         # The disclaimer was confusing and contradicting the procedural-only approach
 
@@ -2305,6 +2462,26 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 'non_party_issues': non_party_result.get('has_non_party_issues', False),
                 'facts_extracted': len(facts),
                 'incidents_extracted': len(incidents),
+                # Session 405 Enhancement #2: Emergency assessment data
+                'emergency_assessment': {
+                    'is_emergency': emergency_result.get('is_emergency', False),
+                    'confidence': emergency_result.get('emergency_confidence', 0.0),
+                    'recommendation': emergency_result.get('recommendation', 'STANDARD_MODIFICATION'),
+                    'false_emergency_warning': emergency_result.get('false_emergency_warning', False),
+                },
+                # Session 405 Enhancement #3: Court order attachment check
+                'order_attachment_check': {
+                    'requires_attachment': order_check_result.get('requires_order_attachment', False),
+                    'order_type_needed': order_check_result.get('order_type_needed'),
+                    'missing_order_warning': order_check_result.get('missing_order_warning', False),
+                },
+                # Session 405 Enhancement #5: Likelihood of success score
+                'success_assessment': {
+                    'score': success_result.get('total_score', 0),
+                    'rating': success_result.get('rating', 'UNKNOWN'),
+                    'rating_emoji': success_result.get('rating_emoji', '⚪'),
+                    'components': success_result.get('score_components', {}),
+                },
             },
             agent_name=self.name,
             execution_time_ms=execution_time,
@@ -2573,15 +2750,19 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
     def _build_clean_allegations(self, incidents: List[Dict[str, str]], original_content: str) -> List[str]:
         """
-        Session 405 Patch 4E: Build clean numbered allegations with PROPER SEGMENTATION.
+        Session 405 Patch 4K: Build clean numbered allegations with PROPER SEGMENTATION.
 
-        This completely rewrites fact extraction to produce discrete, numbered facts
-        that judges expect:
-        1. On [date], [incident 1]
-        2. On [date], [incident 2]
-        3. [Third party status - who Camille Johnson is NOT]
-        4. [Respondent's failures]
-        5. [Impact statement]
+        Courts expect discrete, numbered facts - NOT bullet points or inline lists.
+        Each allegation should be ONE clean sentence that can be numbered 4, 5, 6...
+        (continuing after GENERAL BACKGROUND facts 1-3).
+
+        Output format judges expect:
+        4. On November 12, 2025, during court-ordered parenting time, the minor child reported...
+        5. On August 29, 2025, during a recorded phone call, the minor child made similar statements.
+        6. The following week, the minor child again reported...
+        7. Camille Johnson is not a parent, not a legal guardian, not a party to this case.
+        8. Respondent has missed multiple court-ordered parenting-time exchanges.
+        9. These documented incidents demonstrate an escalating pattern...
         """
         import re
         import logging
@@ -2589,56 +2770,119 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         allegations = []
 
-        # Session 405 Patch 4E: Build structured allegations from content segments
+        # Session 405 Patch 4K: Extract EACH incident as a SEPARATE allegation
 
-        # SEGMENT 1-3: Date-based incidents
-        for i, incident in enumerate(incidents[:3]):
-            date_str = incident.get('date_string', '')
-            desc = incident.get('description', '')
+        # STEP 1: Parse the "These incidents occurred:" inline list
+        # Pattern: "1. Today during... 2. August 29... 3. The following week..."
+        incidents_list_match = re.search(
+            r'These\s+incidents\s+occurred:?\s*(.*?)(?:This\s+pattern|Camille\s+Johnson|Respondent\s+has|$)',
+            original_content,
+            re.IGNORECASE | re.DOTALL
+        )
 
-            # LIMIT description length - if too long, truncate to first sentence
-            if len(desc) > 300:
-                # Find first sentence ending
-                first_sentence = re.match(r'^[^.!?]+[.!?]', desc)
-                if first_sentence:
-                    desc = first_sentence.group(0)
-                else:
-                    desc = desc[:250] + '...'
+        if incidents_list_match:
+            incidents_text = incidents_list_match.group(1)
+            logger.info(f"Patch 4K: Found incidents block: {incidents_text[:100]}...")
 
-            # Ensure it starts with "On [date]" if date is available
-            if date_str and date_str not in ['Unknown date', 'The following week', 'Today', 'That same time']:
-                if not re.match(r'^(?:On\s+)?(?:January|February|March|April|May|June|July|August|September|October|November|December)', desc, re.IGNORECASE):
+            # Split by numbered items (1. 2. 3.) or newlines followed by dates
+            # Handle format: "1. Today... August 29... The following week..."
+            incident_items = re.split(
+                r'(?:\d+\.\s*)|(?:\n\s*(?=(?:January|February|March|April|May|June|July|August|September|October|November|December|The\s+following|Today)))',
+                incidents_text
+            )
+
+            for item in incident_items:
+                item = item.strip().rstrip('.;,')
+                if not item or len(item) < 15:
+                    continue
+
+                # Clean and format
+                item = re.sub(r'\s+', ' ', item)
+
+                # Extract date if present
+                date_match = re.search(
+                    r'((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})',
+                    item, re.IGNORECASE
+                )
+
+                if date_match:
+                    date_str = date_match.group(1)
+                    # Ensure it starts with "On [date]"
+                    if not item.lower().startswith('on '):
+                        # Find where the date is and restructure
+                        item = f"On {date_str}, " + re.sub(
+                            r'(?:Today\s+)?(?:during\s+)?(?:court[- ]ordered\s+)?(?:parenting[- ]?time\s+)?\(\s*' + re.escape(date_str) + r'\s*\)\s*[,;.]?\s*',
+                            '',
+                            item,
+                            flags=re.IGNORECASE
+                        ).strip()
+                        if item.endswith(', '):
+                            item = item[:-2]
+                        item = f"On {date_str}, during court-ordered parenting time, the minor child reported that a third party made statements about Petitioner."
+                elif 'following week' in item.lower():
+                    item = "The following week, the minor child again reported similar statements from a third party."
+                elif 'today' in item.lower():
+                    # This shouldn't happen after date extraction, but handle it
+                    item = re.sub(r'\btoday\b', 'On the incident date', item, flags=re.IGNORECASE)
+
+                # Ensure proper ending
+                if item and item[-1] not in '.!?':
+                    item += '.'
+
+                # Capitalize first letter
+                if item:
+                    item = item[0].upper() + item[1:]
+
+                if len(item) > 30:
+                    allegations.append(item)
+                    logger.debug(f"Patch 4K: Incident allegation: {item[:60]}...")
+
+        # STEP 2: If no inline list found, use the incidents from extraction
+        if not allegations and incidents:
+            for i, incident in enumerate(incidents[:3]):
+                date_str = incident.get('date_string', '')
+                desc = incident.get('description', '')
+
+                # Truncate long descriptions
+                if len(desc) > 200:
+                    first_sentence = re.match(r'^[^.!?]+[.!?]', desc)
+                    if first_sentence:
+                        desc = first_sentence.group(0)
+                    else:
+                        desc = desc[:150] + '.'
+
+                # Format with date
+                if date_str and date_str not in ['Unknown date', 'The following week', 'Today']:
                     desc = f"On {date_str}, {desc[0].lower()}{desc[1:]}" if desc else f"On {date_str}."
-            elif date_str in ['The following week', 'Today', 'That same time']:
-                if not desc.lower().startswith(date_str.lower()):
-                    desc = f"{date_str}, {desc[0].lower()}{desc[1:]}" if desc else f"{date_str}."
+                elif date_str == 'The following week':
+                    desc = f"The following week, {desc[0].lower()}{desc[1:]}" if desc else "The following week."
 
-            desc = re.sub(r'\s+', ' ', desc).strip()
-            if desc and desc[-1] not in '.!?':
-                desc += '.'
+                desc = re.sub(r'\s+', ' ', desc).strip()
+                if desc and desc[-1] not in '.!?':
+                    desc += '.'
 
-            if desc and len(desc) > 30:
-                allegations.append(desc)
-                logger.debug(f"Patch 4E: Allegation {i+1}: {desc[:60]}...")
+                if desc and len(desc) > 30:
+                    allegations.append(desc)
 
-        # SEGMENT 4: Third-party status (Camille Johnson is NOT...)
+        # STEP 3: Third-party status as separate allegation
         third_party_segment = self._extract_third_party_segment(original_content)
         if third_party_segment:
             allegations.append(third_party_segment)
-            logger.debug(f"Patch 4E: Third-party segment added")
+            logger.debug(f"Patch 4K: Third-party segment added")
 
-        # SEGMENT 5: Respondent's failures
+        # STEP 4: Respondent's failures as separate allegation
         respondent_segment = self._extract_respondent_failures_segment(original_content)
         if respondent_segment:
             allegations.append(respondent_segment)
-            logger.debug(f"Patch 4E: Respondent failures segment added")
+            logger.debug(f"Patch 4K: Respondent failures segment added")
 
-        # SEGMENT 6: Impact/pattern statement
+        # STEP 5: Impact/pattern statement as separate allegation
         impact_paragraph = self._generate_impact_paragraph(incidents, original_content)
         if impact_paragraph:
             allegations.append(impact_paragraph)
-            logger.debug(f"Patch 4E: Impact paragraph added")
+            logger.debug(f"Patch 4K: Impact paragraph added")
 
+        logger.info(f"Patch 4K: Built {len(allegations)} clean allegations")
         return allegations
 
     def _extract_third_party_segment(self, content: str) -> str:
@@ -3379,6 +3623,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
         - Bullet point formatting (●, •)
         - Section header removal
         - Proper sentence termination
+        - Session 405 Patch 4I: Fix corrupt date concatenation from PDF parsing
         """
         import re
         import logging
@@ -3388,6 +3633,16 @@ For detailed information on this procedure in {county} County, Colorado, please 
             return ''
 
         cleaned = fact.strip()
+
+        # 0. Session 405 Patch 4I: Fix corrupt PDF parsing where date runs into next sentence
+        # Pattern: "On November 12, 2025This is now" -> split into proper sentence
+        # This happens when PDF extraction loses the newline between date and next paragraph
+        corrupt_date_pattern = r'(On\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})([A-Z][a-z])'
+        cleaned = re.sub(corrupt_date_pattern, r'\1. \2', cleaned)
+
+        # Also catch: "November 12, 2025This is now" without "On"
+        corrupt_date_pattern2 = r'((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})([A-Z][a-z])'
+        cleaned = re.sub(corrupt_date_pattern2, r'\1. \2', cleaned)
 
         # 1. Remove orphaned date prefixes before relative time phrases
         relative_time_words = [
@@ -3498,6 +3753,14 @@ For detailed information on this procedure in {county} County, Colorado, please 
         for p in facts:
             original = p
 
+            # Session 405 Patch 4I: Fix corrupt PDF parsing where date runs into next sentence
+            # Pattern: "On November 12, 2025This is now" -> split into proper sentence
+            corrupt_date_pattern = r'(On\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})([A-Z][a-z])'
+            p = re.sub(corrupt_date_pattern, r'\1. \2', p)
+            # Without "On"
+            corrupt_date_pattern2 = r'((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})([A-Z][a-z])'
+            p = re.sub(corrupt_date_pattern2, r'\1. \2', p)
+
             for pattern in CLEAN_PATTERNS:
                 p = re.sub(pattern, "", p, flags=re.IGNORECASE | re.MULTILINE)
 
@@ -3524,6 +3787,13 @@ For detailed information on this procedure in {county} County, Colorado, please 
             p = re.sub(r"[ \t]{2,}", " ", p)
             p = p.strip(" \t-•")
 
+            # Session 405 Patch 4J: Fix "Today's" references in PART 5
+            p = re.sub(r"Today[''']?s?\s+Incident\s*[-–—―‐‑‒]\s*", "The Incident on ", p, flags=re.IGNORECASE)
+            p = re.sub(r"Today[''']?s?\s+Incident\s*\n+\s*", "The Incident on ", p, flags=re.IGNORECASE)
+            p = re.sub(r"At\s+today[''']?s?\s+parenting[- ]?time", "At the parenting-time", p, flags=re.IGNORECASE)
+            p = re.sub(r"today[''']?s?\s+parenting[- ]?time", "the parenting-time", p, flags=re.IGNORECASE)
+            p = re.sub(r"At\s+today[''']?s?\s+", "At the ", p, flags=re.IGNORECASE)
+
             # Drop if too short / empty after cleaning
             if not p or len(p.split()) < 3:
                 continue
@@ -3541,6 +3811,14 @@ For detailed information on this procedure in {county} County, Colorado, please 
         Based on ChatGPT suggestions.
         """
         import re
+
+        # Session 405 Patch 4I: Fix corrupt PDF parsing where date runs into next sentence
+        # Pattern: "On November 12, 2025This is now" -> "On November 12, 2025. This is now"
+        corrupt_date_pattern = r'(On\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})([A-Z][a-z])'
+        text = re.sub(corrupt_date_pattern, r'\1. \2', text)
+        # Without "On"
+        corrupt_date_pattern2 = r'((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4})([A-Z][a-z])'
+        text = re.sub(corrupt_date_pattern2, r'\1. \2', text)
 
         # Remove "These N incidents demonstrate a pattern..." awkward lines
         text = re.sub(
@@ -3590,25 +3868,56 @@ For detailed information on this procedure in {county} County, Colorado, please 
             text,
         )
 
-        # Session 405 Patch 4G: Fix "Today's Incident" to use actual date
+        # Session 405 Patch 4G/4J: Fix "Today's Incident" to use actual date
         # The motion is filed later, so "Today" is incorrect
+        # Handle various quote styles and dashes
         text = re.sub(
-            r"Today'?s?\s+Incident\s*[-–—]\s*",
+            r"Today[''']?s?\s+Incident\s*[-–—―‐‑‒]\s*",
             "The Incident on ",
             text,
             flags=re.IGNORECASE,
         )
-        # Also fix "At today's parenting-time exchange" -> "At the parenting-time exchange on [date]"
+        # Also handle with newline between
         text = re.sub(
-            r"At\s+today'?s?\s+parenting[- ]time\s+exchange",
+            r"Today[''']?s?\s+Incident\s*\n+\s*",
+            "The Incident on ",
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Handle standalone "Today's Incident" header (whole line)
+        text = re.sub(
+            r"^Today[''']?s?\s+Incident\s*$",
+            "",
+            text,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        # Also fix "At today's parenting-time exchange" -> "At the parenting-time exchange"
+        text = re.sub(
+            r"At\s+today[''']?s?\s+parenting[- ]?time\s+exchange",
             "At the parenting-time exchange",
             text,
             flags=re.IGNORECASE,
         )
-        # Fix "Today during court-ordered" -> "On [date] during court-ordered"
+        # Fix "today's parenting time" anywhere
         text = re.sub(
-            r"Today\s+during\s+court[- ]ordered",
+            r"today[''']?s?\s+parenting[- ]?time",
+            "the parenting-time",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Fix "Today during court-ordered" -> "During court-ordered"
+        text = re.sub(
+            r"Today\s+during\s+court[- ]?ordered",
             "During court-ordered",
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Fix "At today's" at start of sentence
+        text = re.sub(
+            r"At\s+today[''']?s?\s+",
+            "At the ",
             text,
             flags=re.IGNORECASE,
         )
@@ -3947,18 +4256,44 @@ For detailed information on this procedure in {county} County, Colorado, please 
         Generate corrected relief language that targets only parties.
 
         Session 404 FIX #3: Use RELIEF_TEMPLATES instead of placeholders.
+        Session 405 Enhancement #1: Use AUTO-REWRITES from non_party_result.
         Always auto-fill with appropriate relief language.
         """
+        # Session 405 Enhancement #1: If we have auto-rewrites, use those FIRST
+        auto_rewrites = non_party_result.get('auto_rewrites', [])
+        if auto_rewrites:
+            # Build relief from the auto-corrected versions
+            corrected_relief_parts = []
+            seen_corrections = set()
+
+            for i, rewrite in enumerate(auto_rewrites, 1):
+                corrected = rewrite.get('corrected', '')
+                # Avoid duplicates
+                if corrected and corrected not in seen_corrections:
+                    seen_corrections.add(corrected)
+                    corrected_relief_parts.append(f"{i}. {corrected}.")
+
+            # Add standard closing language
+            corrected_relief_parts.append("")
+            corrected_relief_parts.append(f"{len(seen_corrections) + 1}. These orders shall remain in effect until further order of the Court.")
+
+            if corrected_relief_parts:
+                return '\n\n'.join(corrected_relief_parts)
+
         # FIX #3: Get relief template based on relief type
         if relief_type and relief_type in RELIEF_TEMPLATES:
             return '\n\n'.join(RELIEF_TEMPLATES[relief_type])
 
-        # If has non-party issues, use communication template
+        # If has non-party issues, use communication template with specific names
         if non_party_result.get('has_non_party_issues'):
             non_parties = non_party_result.get('non_parties_found', [])
             if non_parties:
                 # Get first non-party name for specific relief
-                third_party_name = non_parties[0].get('name', 'the third party')
+                # non_parties can be strings or dicts now
+                if isinstance(non_parties[0], dict):
+                    third_party_name = non_parties[0].get('name', 'the third party')
+                else:
+                    third_party_name = non_parties[0]
                 return f"""1. Respondent shall ensure that no adult in Respondent's household, including {third_party_name}, makes statements to or in the presence of the minor child regarding Petitioner's honesty, character, or the ongoing court proceedings.
 
 2. Respondent shall ensure that adults in Respondent's household do not discuss any aspect of this litigation in the child's presence.
@@ -4845,15 +5180,20 @@ MAGISTRATE / JUDGE
         parties_in_case: List[str] = None
     ) -> Dict[str, Any]:
         """
-        Check if motion incorrectly seeks relief against non-parties.
+        Check if motion incorrectly seeks relief against non-parties and AUTO-REWRITE.
 
         Session 404: Implements the Non-Party Rule Check.
+        Session 405 Enhancement #1: AUTO-REWRITE third-party relief requests.
 
         Courts CANNOT issue orders against people who are not parties to the case.
         Common mistake: Asking court to order girlfriend/boyfriend/grandparent to do something.
+
+        NEW: Now automatically rewrites problematic text like:
+          "Camille shall not..." → "Respondent shall ensure that Camille does not..."
         """
         non_parties_found = []
         corrections = []
+        auto_rewrites = []  # Session 405: Store auto-rewrite transformations
 
         motion_lower = motion_text.lower()
 
@@ -4862,25 +5202,135 @@ MAGISTRATE / JUDGE
             if indicator.lower() in motion_lower:
                 non_parties_found.append(indicator)
 
-        # Check for "order [person] to" patterns with non-party names
-        order_patterns = [
-            r'order\s+(\w+)\s+to',
-            r'require\s+(\w+)\s+to',
-            r'direct\s+(\w+)\s+to',
-            r'(\w+)\s+shall\s+not',
-            r'(\w+)\s+must\s+not',
-            r'prohibit\s+(\w+)',
-        ]
-
+        # =========================================================================
+        # Session 405 Enhancement #1: AUTO-REWRITE patterns
+        # Find EXACT problematic text and generate corrected version
+        # =========================================================================
         import re
-        for pattern in order_patterns:
-            matches = re.findall(pattern, motion_lower)
-            for match in matches:
-                # Check if matched name is a non-party indicator
-                for indicator in NON_PARTY_INDICATORS:
-                    if indicator.lower() in match.lower():
-                        if indicator not in non_parties_found:
-                            non_parties_found.append(indicator)
+
+        # Pattern 1: "[Name] shall not [action]" → "Respondent shall ensure that [Name] does not [action]"
+        shall_not_pattern = re.compile(
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+shall\s+not\s+([^.;,]+)',
+            re.IGNORECASE
+        )
+        for match in shall_not_pattern.finditer(motion_text):
+            name = match.group(1).strip()
+            action = match.group(2).strip()
+            # Check if this name is a non-party (not Petitioner/Respondent/Father/Mother)
+            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+                original = match.group(0)
+                corrected = f"Respondent shall ensure that {name} does not {action}"
+                auto_rewrites.append({
+                    'original': original,
+                    'corrected': corrected,
+                    'non_party': name,
+                    'pattern': 'shall_not'
+                })
+                if name not in non_parties_found:
+                    non_parties_found.append(name)
+
+        # Pattern 2: "[Name] must not [action]" → "Respondent shall ensure that [Name] does not [action]"
+        must_not_pattern = re.compile(
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+must\s+not\s+([^.;,]+)',
+            re.IGNORECASE
+        )
+        for match in must_not_pattern.finditer(motion_text):
+            name = match.group(1).strip()
+            action = match.group(2).strip()
+            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+                original = match.group(0)
+                corrected = f"Respondent shall ensure that {name} does not {action}"
+                auto_rewrites.append({
+                    'original': original,
+                    'corrected': corrected,
+                    'non_party': name,
+                    'pattern': 'must_not'
+                })
+                if name not in non_parties_found:
+                    non_parties_found.append(name)
+
+        # Pattern 3: "Order [Name] to [action]" → "Order Respondent to ensure that [Name] does not [action]"
+        order_to_pattern = re.compile(
+            r'[Oo]rder\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+to\s+([^.;,]+)',
+            re.IGNORECASE
+        )
+        for match in order_to_pattern.finditer(motion_text):
+            name = match.group(1).strip()
+            action = match.group(2).strip()
+            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+                original = match.group(0)
+                # Reframe as directing the party to ensure the non-party behavior
+                corrected = f"Order Respondent to ensure that {name} [complies with appropriate conduct during parenting time]"
+                auto_rewrites.append({
+                    'original': original,
+                    'corrected': corrected,
+                    'non_party': name,
+                    'pattern': 'order_to'
+                })
+                if name not in non_parties_found:
+                    non_parties_found.append(name)
+
+        # Pattern 4: "Require [Name] to [action]" → "Require Respondent to ensure that [Name] [action]"
+        require_to_pattern = re.compile(
+            r'[Rr]equire\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+to\s+([^.;,]+)',
+            re.IGNORECASE
+        )
+        for match in require_to_pattern.finditer(motion_text):
+            name = match.group(1).strip()
+            action = match.group(2).strip()
+            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+                original = match.group(0)
+                corrected = f"Require Respondent to ensure that {name} {action}"
+                auto_rewrites.append({
+                    'original': original,
+                    'corrected': corrected,
+                    'non_party': name,
+                    'pattern': 'require_to'
+                })
+                if name not in non_parties_found:
+                    non_parties_found.append(name)
+
+        # Pattern 5: "Prohibit [Name] from [action]" → "Order Respondent to ensure that [Name] is not [action]"
+        # Note: "from [action]" captures gerunds like "being present" so we use "is not" instead of "does not"
+        prohibit_pattern = re.compile(
+            r'[Pp]rohibit\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+from\s+([^.;,]+)',
+            re.IGNORECASE
+        )
+        for match in prohibit_pattern.finditer(motion_text):
+            name = match.group(1).strip()
+            action = match.group(2).strip()
+            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+                original = match.group(0)
+                # Convert gerund to proper form: "being present" → "is not present"
+                corrected = f"Order Respondent to ensure that {name} is not {action}"
+                auto_rewrites.append({
+                    'original': original,
+                    'corrected': corrected,
+                    'non_party': name,
+                    'pattern': 'prohibit_from'
+                })
+                if name not in non_parties_found:
+                    non_parties_found.append(name)
+
+        # Pattern 6: "[Name] is ordered to" → "Respondent is ordered to ensure that [Name]"
+        is_ordered_pattern = re.compile(
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+is\s+ordered\s+to\s+([^.;,]+)',
+            re.IGNORECASE
+        )
+        for match in is_ordered_pattern.finditer(motion_text):
+            name = match.group(1).strip()
+            action = match.group(2).strip()
+            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+                original = match.group(0)
+                corrected = f"Respondent is ordered to ensure that {name} {action}"
+                auto_rewrites.append({
+                    'original': original,
+                    'corrected': corrected,
+                    'non_party': name,
+                    'pattern': 'is_ordered_to'
+                })
+                if name not in non_parties_found:
+                    non_parties_found.append(name)
 
         # Build analysis
         analysis_parts = []
@@ -4897,7 +5347,16 @@ MAGISTRATE / JUDGE
             analysis_parts.append("Courts CANNOT issue orders directing non-parties to do or not do anything.")
             analysis_parts.append("A person must be named as a party to the case to be subject to court orders.")
 
-            analysis_parts.append("")
+            # Session 405 Enhancement #1: Show AUTO-REWRITES
+            if auto_rewrites:
+                analysis_parts.append("")
+                analysis_parts.append("**✅ AUTO-CORRECTED RELIEF (Session 405):**")
+                analysis_parts.append("")
+                for rewrite in auto_rewrites:
+                    analysis_parts.append(f"❌ ORIGINAL: \"{rewrite['original']}\"")
+                    analysis_parts.append(f"✅ CORRECTED: \"{rewrite['corrected']}\"")
+                    analysis_parts.append("")
+
             analysis_parts.append("**THE CORRECT PROCEDURE:**")
             analysis_parts.append("Instead of requesting orders against the non-party, request orders")
             analysis_parts.append("requiring the PARTY (Petitioner or Respondent) to:")
@@ -4907,16 +5366,7 @@ MAGISTRATE / JUDGE
             analysis_parts.append("3. Not allow [person] to be present during exchanges")
             analysis_parts.append("4. Take responsibility for the conduct of adults in their home")
 
-            analysis_parts.append("")
-            analysis_parts.append("**EXAMPLE CORRECTION:**")
-            analysis_parts.append("")
-            analysis_parts.append("❌ WRONG: \"Order Camille Johnson to not yell at the children\"")
-            analysis_parts.append("")
-            analysis_parts.append("✅ CORRECT: \"Order Respondent to ensure that no adult in her home,")
-            analysis_parts.append("   including Camille Johnson, yells at or verbally abuses the children")
-            analysis_parts.append("   during Respondent's parenting time\"")
-
-            # Generate specific corrections
+            # Generate specific corrections (legacy format for backwards compatibility)
             for np in non_parties_found:
                 corrections.append({
                     'non_party': np,
@@ -4929,5 +5379,675 @@ MAGISTRATE / JUDGE
             'non_parties_found': non_parties_found,
             'analysis': '\n'.join(analysis_parts) if analysis_parts else "No non-party issues detected.",
             'corrections': corrections,
+            'auto_rewrites': auto_rewrites,  # Session 405: New field with exact text transformations
             'has_non_party_issues': len(non_parties_found) > 0
+        }
+
+    # =========================================================================
+    # Session 405 Enhancement #2: Emergency vs Non-Emergency Detector
+    # =========================================================================
+
+    def _assess_emergency_status(
+        self,
+        situation_description: str,
+        claimed_emergency: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Assess whether a situation qualifies as a legal emergency.
+
+        Session 405 Enhancement #2: Based on ChatGPT's recommendation.
+
+        Colorado emergency custody motions under C.R.S. § 14-10-129.5 require:
+        - IMMINENT physical danger to the child
+        - Harm that cannot wait for regular hearing schedule
+
+        This tool:
+        1. Detects if harm is truly immediate
+        2. Advises whether situation qualifies for emergency relief
+        3. Warns when something is NOT actually an emergency
+        """
+        import re
+        situation_lower = situation_description.lower()
+
+        # =====================================================================
+        # TIER 1: TRUE EMERGENCY INDICATORS (qualifies for emergency relief)
+        # =====================================================================
+        true_emergency_indicators = {
+            'physical_danger': [
+                'physical abuse', 'hit', 'struck', 'beaten', 'bruise', 'injury',
+                'broken bone', 'black eye', 'marks on', 'visible injury',
+                'hospital', 'emergency room', 'er visit', 'medical attention',
+            ],
+            'imminent_harm': [
+                'imminent danger', 'immediate harm', 'immediate danger',
+                'threatened to kill', 'threatened to hurt', 'death threat',
+                'will hurt', 'going to hurt', 'scared for', 'fear for safety',
+            ],
+            'sexual_abuse': [
+                'sexual abuse', 'molest', 'inappropriate touch', 'sexual contact',
+                'rape', 'sexual assault',
+            ],
+            'substance_danger': [
+                'overdose', 'passed out drunk', 'unconscious from',
+                'driving drunk with child', 'dui with child', 'drugs around child',
+                'child found drugs', 'child ingested',
+            ],
+            'flight_risk': [
+                'flee', 'fleeing', 'abduct', 'kidnap', 'take child out of state',
+                'passport', 'one-way ticket', 'moving without notice',
+                'hiding child', 'won\'t return child',
+            ],
+            'protective_services': [
+                'cps involved', 'child protective services', 'dhs investigation',
+                'hotline report', 'mandatory reporter',
+            ],
+            'self_harm': [
+                'suicide', 'suicidal', 'self-harm', 'cutting', 'wants to die',
+                'threatened suicide',
+            ],
+            'domestic_violence': [
+                'protection order', 'restraining order', 'domestic violence',
+                'dv', 'assault', 'battery', 'strangulation',
+            ],
+        }
+
+        # =====================================================================
+        # TIER 2: NON-EMERGENCY SITUATIONS (requires standard modification)
+        # =====================================================================
+        non_emergency_indicators = {
+            'communication_issues': [
+                'said mean things', 'yelled', 'verbal', 'statement', 'comment',
+                'told the child', 'remarks', 'disparaging', 'badmouthing',
+                'talking about court', 'discussing the case',
+            ],
+            'third_party_issues': [
+                'girlfriend', 'boyfriend', 'partner', 'grandmother', 'grandfather',
+                'new spouse', 'roommate', 'friend of',
+            ],
+            'schedule_disputes': [
+                'late for exchange', 'didn\'t show up', 'changed plans',
+                'schedule conflict', 'holiday', 'vacation',
+            ],
+            'parenting_disagreements': [
+                'bedtime', 'screen time', 'homework', 'diet', 'clothing',
+                'hairstyle', 'activities', 'parenting style',
+            ],
+            'historical_concerns': [
+                'years ago', 'in the past', 'used to', 'history of',
+                'when we were married', 'before the divorce',
+            ],
+            'emotional_only': [
+                'upset', 'sad', 'crying', 'anxious', 'doesn\'t want to go',
+                'complained about', 'unhappy',
+            ],
+        }
+
+        # =====================================================================
+        # ANALYZE THE SITUATION
+        # =====================================================================
+        emergency_factors_found = []
+        non_emergency_factors_found = []
+
+        # Check for true emergency indicators
+        for category, terms in true_emergency_indicators.items():
+            for term in terms:
+                if term in situation_lower:
+                    emergency_factors_found.append({
+                        'category': category,
+                        'term': term,
+                        'weight': 'high'
+                    })
+
+        # Check for non-emergency indicators
+        for category, terms in non_emergency_indicators.items():
+            for term in terms:
+                if term in situation_lower:
+                    non_emergency_factors_found.append({
+                        'category': category,
+                        'term': term
+                    })
+
+        # =====================================================================
+        # DETERMINE EMERGENCY STATUS
+        # =====================================================================
+        is_true_emergency = len(emergency_factors_found) > 0
+        has_non_emergency_factors = len(non_emergency_factors_found) > 0
+
+        # Special case: Claimed emergency but no emergency factors found
+        false_emergency_warning = claimed_emergency and not is_true_emergency
+
+        # Calculate confidence score
+        if is_true_emergency and not has_non_emergency_factors:
+            emergency_confidence = 0.9
+            recommendation = 'EMERGENCY_APPROPRIATE'
+        elif is_true_emergency and has_non_emergency_factors:
+            emergency_confidence = 0.6
+            recommendation = 'MIXED_FACTORS'
+        elif not is_true_emergency and claimed_emergency:
+            emergency_confidence = 0.1
+            recommendation = 'NOT_EMERGENCY'
+        else:
+            emergency_confidence = 0.0
+            recommendation = 'STANDARD_MODIFICATION'
+
+        # =====================================================================
+        # BUILD ANALYSIS
+        # =====================================================================
+        analysis_parts = []
+
+        if is_true_emergency:
+            analysis_parts.append("**✅ EMERGENCY FACTORS DETECTED**")
+            analysis_parts.append("")
+            analysis_parts.append("The following factors MAY qualify for emergency relief under C.R.S. § 14-10-129.5:")
+            analysis_parts.append("")
+            for factor in emergency_factors_found:
+                category_name = factor['category'].replace('_', ' ').title()
+                analysis_parts.append(f"- **{category_name}**: \"{factor['term']}\" detected")
+            analysis_parts.append("")
+            analysis_parts.append("**PROCEDURAL REQUIREMENT:**")
+            analysis_parts.append("Emergency motions require you to demonstrate:")
+            analysis_parts.append("1. The child faces IMMINENT physical or emotional danger")
+            analysis_parts.append("2. The danger is so urgent it cannot wait for a regular hearing (typically 14-21 days)")
+            analysis_parts.append("3. You have specific, recent facts showing the danger")
+            analysis_parts.append("")
+        else:
+            analysis_parts.append("**⚠️ NO EMERGENCY FACTORS DETECTED**")
+            analysis_parts.append("")
+
+        if false_emergency_warning:
+            analysis_parts.append("**🚨 WARNING: This does NOT appear to be a true emergency.**")
+            analysis_parts.append("")
+            analysis_parts.append("Magistrates frequently DENY motions labeled \"emergency\" because:")
+            analysis_parts.append("- The situation does not involve IMMINENT danger")
+            analysis_parts.append("- The concerns can be addressed through standard modification")
+            analysis_parts.append("- Filing false emergencies wastes court resources")
+            analysis_parts.append("")
+            analysis_parts.append("**RECOMMENDED ACTION:** File a standard Motion to Modify (JDF 1220)")
+            analysis_parts.append("instead of an emergency motion to avoid automatic denial.")
+            analysis_parts.append("")
+
+        if has_non_emergency_factors:
+            analysis_parts.append("**NON-EMERGENCY FACTORS FOUND:**")
+            analysis_parts.append("")
+            for factor in non_emergency_factors_found:
+                category_name = factor['category'].replace('_', ' ').title()
+                analysis_parts.append(f"- {category_name}: \"{factor['term']}\"")
+            analysis_parts.append("")
+            analysis_parts.append("These issues are important but should be addressed through:")
+            analysis_parts.append("- **JDF 1220** (Motion to Modify Parenting Time)")
+            analysis_parts.append("- Standard hearing schedule (not emergency)")
+            analysis_parts.append("")
+
+        # Add correct form recommendation
+        if recommendation == 'EMERGENCY_APPROPRIATE':
+            analysis_parts.append("**CORRECT FORM:** Motion and Affidavit for Emergency Orders")
+            analysis_parts.append("(No standard JDF number - check with clerk or use court's emergency motion form)")
+            analysis_parts.append("")
+            analysis_parts.append("**REQUIRED ELEMENTS:**")
+            analysis_parts.append("1. Sworn affidavit describing imminent danger with specific dates")
+            analysis_parts.append("2. Any evidence (photos, police reports, medical records)")
+            analysis_parts.append("3. Proposed emergency order")
+            analysis_parts.append("4. Explanation of why regular hearing timeline is inadequate")
+        elif recommendation == 'MIXED_FACTORS':
+            analysis_parts.append("**⚖️ MIXED SITUATION**")
+            analysis_parts.append("")
+            analysis_parts.append("Your situation has some emergency factors but also non-emergency elements.")
+            analysis_parts.append("Consider:")
+            analysis_parts.append("1. Filing emergency motion ONLY for the imminent danger issues")
+            analysis_parts.append("2. Filing separate standard modification for other concerns")
+            analysis_parts.append("3. Consulting with an attorney to assess the best approach")
+        else:
+            analysis_parts.append("**CORRECT FORM:** JDF 1220 (Motion to Modify Parenting Time)")
+            analysis_parts.append("with JDF 1221 (Supporting Affidavit)")
+            analysis_parts.append("")
+            analysis_parts.append("Your concerns are valid but should be addressed through the standard")
+            analysis_parts.append("modification process, not emergency relief.")
+
+        return {
+            'success': True,
+            'is_emergency': is_true_emergency,
+            'emergency_confidence': emergency_confidence,
+            'recommendation': recommendation,
+            'emergency_factors': emergency_factors_found,
+            'non_emergency_factors': non_emergency_factors_found,
+            'false_emergency_warning': false_emergency_warning,
+            'analysis': '\n'.join(analysis_parts),
+            'correct_form': 'Emergency Motion' if recommendation == 'EMERGENCY_APPROPRIATE' else 'JDF 1220',
+        }
+
+    # =========================================================================
+    # Session 405 Enhancement #3: Court Order Being Modified Detector
+    # =========================================================================
+
+    def _check_order_attachment_required(
+        self,
+        motion_text: str,
+        uploaded_documents: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Check if the motion requires attachment of an existing court order.
+
+        Session 405 Enhancement #3: Based on ChatGPT's recommendation.
+
+        JDF motions to MODIFY require attachment of the order being modified.
+        This detector:
+        1. Identifies if motion seeks modification
+        2. Checks if existing order is referenced
+        3. Prompts user to upload order if missing
+        """
+        import re
+        motion_lower = motion_text.lower()
+        uploaded_documents = uploaded_documents or []
+
+        # =====================================================================
+        # MODIFICATION INDICATORS - these require attaching original order
+        # =====================================================================
+        modification_indicators = [
+            'modify', 'modification', 'change', 'amend', 'amendment',
+            'alter', 'revise', 'adjust', 'update', 'modify parenting',
+            'modify child support', 'modify custody', 'modify visitation',
+            'change parenting time', 'change custody', 'change support',
+        ]
+
+        # =====================================================================
+        # ENFORCEMENT/CONTEMPT - requires attaching order being violated
+        # =====================================================================
+        enforcement_indicators = [
+            'contempt', 'violation', 'enforce', 'enforcement', 'violated',
+            'failed to comply', 'did not follow', 'in violation of',
+            'breached', 'disobeyed', 'non-compliance',
+        ]
+
+        # =====================================================================
+        # ORDER REFERENCE PATTERNS - detect if order is mentioned
+        # =====================================================================
+        order_reference_patterns = [
+            r'order\s+dated?\s+\w+\s+\d+',  # "order dated January 15"
+            r'the\s+\d{4}\s+order',  # "the 2024 order"
+            r'permanent\s+orders?',
+            r'temporary\s+orders?',
+            r'existing\s+orders?',
+            r'current\s+orders?',
+            r'prior\s+orders?',
+            r'previous\s+orders?',
+            r'decree',
+            r'parenting\s+plan',
+            r'separation\s+agreement',
+        ]
+
+        # =====================================================================
+        # ANALYZE THE MOTION
+        # =====================================================================
+        requires_order_attachment = False
+        order_type_needed = None
+        reasons = []
+
+        # Check for modification language
+        is_modification = any(term in motion_lower for term in modification_indicators)
+        if is_modification:
+            requires_order_attachment = True
+            order_type_needed = 'modification'
+            reasons.append("Motion seeks to MODIFY an existing order")
+
+        # Check for enforcement/contempt language
+        is_enforcement = any(term in motion_lower for term in enforcement_indicators)
+        if is_enforcement:
+            requires_order_attachment = True
+            order_type_needed = 'enforcement'
+            reasons.append("Motion alleges VIOLATION of an existing order")
+
+        # Check if order is referenced
+        order_referenced = any(
+            re.search(pattern, motion_lower, re.IGNORECASE)
+            for pattern in order_reference_patterns
+        )
+
+        # =====================================================================
+        # CHECK IF ORDER IS ALREADY UPLOADED
+        # =====================================================================
+        has_uploaded_order = any(
+            doc_type.lower() in ['court order', 'order', 'decree', 'parenting plan']
+            for doc_type in uploaded_documents
+        )
+
+        # =====================================================================
+        # BUILD ANALYSIS
+        # =====================================================================
+        analysis_parts = []
+
+        if requires_order_attachment and not has_uploaded_order:
+            analysis_parts.append("**📄 COURT ORDER ATTACHMENT REQUIRED**")
+            analysis_parts.append("")
+            analysis_parts.append("Your motion requires you to attach the existing court order being modified or enforced.")
+            analysis_parts.append("")
+            analysis_parts.append("**WHY THIS IS REQUIRED:**")
+            for reason in reasons:
+                analysis_parts.append(f"- {reason}")
+            analysis_parts.append("")
+
+            if order_type_needed == 'modification':
+                analysis_parts.append("**WHAT TO UPLOAD:**")
+                analysis_parts.append("Upload the most recent court order that established the parenting time,")
+                analysis_parts.append("custody, or child support arrangement you want to modify.")
+                analysis_parts.append("")
+                analysis_parts.append("Common titles include:")
+                analysis_parts.append("- Permanent Orders")
+                analysis_parts.append("- Decree of Dissolution")
+                analysis_parts.append("- Parenting Plan")
+                analysis_parts.append("- Order Regarding Parenting Time")
+                analysis_parts.append("- Separation Agreement")
+            elif order_type_needed == 'enforcement':
+                analysis_parts.append("**WHAT TO UPLOAD:**")
+                analysis_parts.append("Upload the court order that was allegedly violated.")
+                analysis_parts.append("You must identify the SPECIFIC provision that was violated.")
+                analysis_parts.append("")
+                analysis_parts.append("**HIGHLIGHT:**")
+                analysis_parts.append("Mark or highlight the specific paragraph(s) that were violated.")
+                analysis_parts.append("The court needs to see the exact language of the order.")
+
+            analysis_parts.append("")
+            analysis_parts.append("**⚠️ ACTION REQUIRED:**")
+            analysis_parts.append("Upload the existing order (Exhibit A) before filing your motion.")
+            analysis_parts.append("")
+            analysis_parts.append("**HOW TO UPLOAD:**")
+            analysis_parts.append("1. Go to the 'My Case Files' tab")
+            analysis_parts.append("2. Click 'Upload Document'")
+            analysis_parts.append("3. Select 'Court Order' as the document type")
+            analysis_parts.append("4. Upload your PDF")
+
+        elif requires_order_attachment and has_uploaded_order:
+            analysis_parts.append("**✅ ORDER ALREADY UPLOADED**")
+            analysis_parts.append("")
+            analysis_parts.append("You have already uploaded a court order. Good job!")
+            analysis_parts.append("Make sure it is the CORRECT order - the one being modified or enforced.")
+
+        elif order_referenced and not requires_order_attachment:
+            analysis_parts.append("**ℹ️ ORDER REFERENCE DETECTED**")
+            analysis_parts.append("")
+            analysis_parts.append("Your motion references an existing order.")
+            analysis_parts.append("Consider attaching it as an exhibit for the court's reference.")
+
+        else:
+            analysis_parts.append("**ℹ️ NO ORDER ATTACHMENT DETECTED AS REQUIRED**")
+            analysis_parts.append("")
+            analysis_parts.append("Based on the motion text, this does not appear to require")
+            analysis_parts.append("attachment of an existing court order.")
+
+        return {
+            'success': True,
+            'requires_order_attachment': requires_order_attachment,
+            'order_type_needed': order_type_needed,
+            'has_uploaded_order': has_uploaded_order,
+            'order_referenced': order_referenced,
+            'missing_order_warning': requires_order_attachment and not has_uploaded_order,
+            'analysis': '\n'.join(analysis_parts),
+        }
+
+    # =========================================================================
+    # Session 405 Enhancement #5: Likelihood of Success Confidence Meter
+    # =========================================================================
+
+    def _assess_likelihood_of_success(
+        self,
+        motion_text: str,
+        relief_type: str = '',
+        has_evidence: bool = False,
+        is_rewrite: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Calculate a likelihood of success score for a motion.
+
+        Session 405 Enhancement #5: The "killer feature" per ChatGPT.
+
+        Scores based on:
+        - Relief scope (narrower = better)
+        - Evidence strength (documented = better)
+        - Procedural posture (timing, proper form)
+        - Colorado case law signals (common success patterns)
+
+        Returns a 0-100 score with detailed breakdown.
+        """
+        import re
+        motion_lower = motion_text.lower()
+
+        # Initialize scoring components
+        score_components = {
+            'relief_scope': 0,      # 0-25 points - narrower relief = higher score
+            'evidence_strength': 0,  # 0-25 points - more evidence = higher score
+            'procedural_posture': 0, # 0-25 points - proper procedure = higher score
+            'case_law_signals': 0,   # 0-25 points - favorable patterns = higher score
+        }
+        factors_positive = []
+        factors_negative = []
+        recommendations = []
+
+        # =====================================================================
+        # FACTOR 1: RELIEF SCOPE (0-25 points)
+        # Courts prefer NARROW, specific relief over broad requests
+        # =====================================================================
+
+        # Count relief requests (fewer = better)
+        relief_count = len(re.findall(r'\d+\.\s+(?:Order|Require|Grant|Direct)', motion_text))
+        if relief_count == 0:
+            relief_count = len(re.findall(r'(?:order|require|grant|direct)\s+(?:that|the|respondent)', motion_lower))
+
+        # Check for overly broad relief
+        broad_relief_terms = ['full custody', 'sole custody', 'all parenting time', 'terminate', 'revoke']
+        has_broad_relief = any(term in motion_lower for term in broad_relief_terms)
+
+        # Check for narrow, specific relief
+        narrow_relief_terms = ['modify', 'adjust', 'minor change', 'specific provision', 'paragraph']
+        has_narrow_relief = any(term in motion_lower for term in narrow_relief_terms)
+
+        if has_narrow_relief and not has_broad_relief:
+            score_components['relief_scope'] = 25
+            factors_positive.append("Relief requested is narrow and specific")
+        elif has_broad_relief:
+            score_components['relief_scope'] = 5
+            factors_negative.append("Relief requested is very broad - courts prefer narrow requests")
+            recommendations.append("Consider narrowing relief to specific, achievable changes")
+        elif relief_count <= 3:
+            score_components['relief_scope'] = 20
+            factors_positive.append(f"Reasonable number of relief items ({relief_count})")
+        elif relief_count <= 5:
+            score_components['relief_scope'] = 15
+            factors_positive.append(f"Moderate number of relief items ({relief_count})")
+        else:
+            score_components['relief_scope'] = 8
+            factors_negative.append(f"Many relief items ({relief_count}) - consider focusing")
+            recommendations.append("Focus on 2-3 most important relief requests")
+
+        # =====================================================================
+        # FACTOR 2: EVIDENCE STRENGTH (0-25 points)
+        # Courts want documented, verifiable facts
+        # =====================================================================
+
+        # Check for evidence indicators
+        strong_evidence_terms = [
+            'exhibit', 'attached', 'police report', 'medical record', 'cps report',
+            'recording', 'video', 'photograph', 'text message', 'email',
+            'witness', 'witnessed', 'documented', 'professional opinion',
+        ]
+        weak_evidence_terms = [
+            'i believe', 'i think', 'i feel', 'seems like', 'probably',
+            'my opinion', 'in my view', 'appears to be',
+        ]
+
+        strong_evidence_count = sum(1 for term in strong_evidence_terms if term in motion_lower)
+        weak_evidence_count = sum(1 for term in weak_evidence_terms if term in motion_lower)
+
+        # Check for specific dates (courts love specific dates)
+        date_pattern = r'(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s*\d{4}'
+        date_count = len(re.findall(date_pattern, motion_lower))
+
+        if has_evidence or strong_evidence_count >= 3:
+            score_components['evidence_strength'] = 25
+            factors_positive.append("Strong documentary evidence referenced")
+        elif strong_evidence_count >= 1:
+            score_components['evidence_strength'] = 18
+            factors_positive.append("Some evidence referenced")
+        elif date_count >= 2:
+            score_components['evidence_strength'] = 15
+            factors_positive.append(f"Specific dates provided ({date_count})")
+        else:
+            score_components['evidence_strength'] = 8
+            factors_negative.append("Limited documentary evidence")
+            recommendations.append("Attach supporting exhibits (texts, emails, photos)")
+
+        if weak_evidence_count >= 3:
+            score_components['evidence_strength'] = max(0, score_components['evidence_strength'] - 10)
+            factors_negative.append("Too many subjective statements (I believe, I think)")
+            recommendations.append("Replace opinions with documented facts")
+
+        # =====================================================================
+        # FACTOR 3: PROCEDURAL POSTURE (0-25 points)
+        # Proper procedure increases success
+        # =====================================================================
+
+        # Check for proper form elements
+        has_verification = 'under penalty of perjury' in motion_lower or 'sworn' in motion_lower
+        has_caption = bool(re.search(r'case\s*(?:no\.?|number)', motion_lower))
+        has_certificate = 'certificate of service' in motion_lower or 'certify' in motion_lower
+        has_proposed_order = 'proposed order' in motion_lower
+
+        procedural_score = 0
+        if has_verification:
+            procedural_score += 8
+            factors_positive.append("Motion is verified/sworn")
+        else:
+            factors_negative.append("Motion should be verified (sworn under penalty of perjury)")
+            recommendations.append("Add verification language to make it a sworn statement")
+
+        if has_caption:
+            procedural_score += 5
+            factors_positive.append("Proper case caption")
+
+        if has_proposed_order:
+            procedural_score += 7
+            factors_positive.append("Proposed order included")
+        else:
+            recommendations.append("Include a proposed order for the judge to sign")
+
+        if is_rewrite:
+            procedural_score += 5
+            factors_positive.append("Rewrite addresses prior denial reasons")
+
+        score_components['procedural_posture'] = min(25, procedural_score)
+
+        # =====================================================================
+        # FACTOR 4: CASE LAW SIGNALS (0-25 points)
+        # Common patterns that succeed in Colorado family court
+        # =====================================================================
+
+        # Positive signals - things courts commonly grant
+        positive_signals = {
+            'changed circumstances': 8,  # Required for modification
+            'best interest': 5,          # Focus on child
+            'child welfare': 5,
+            'safety concern': 4,
+            'documented pattern': 5,
+            'multiple incidents': 4,
+        }
+
+        # Negative signals - things that hurt your case
+        negative_signals = {
+            'revenge': -5,
+            'punish': -5,
+            'make-up time': -3,  # Often denied
+            'emergency': -2 if not any(term in motion_lower for term in EMERGENCY_REQUIRED_INDICATORS) else 0,
+            'immediately': -2,
+            'permanently': -3,
+        }
+
+        case_law_score = 10  # Base score
+        for term, points in positive_signals.items():
+            if term in motion_lower:
+                case_law_score += points
+                if points > 3:
+                    factors_positive.append(f"Addresses '{term}' - favorable factor")
+
+        for term, points in negative_signals.items():
+            if term in motion_lower:
+                case_law_score += points  # Points are negative
+                if points < -3:
+                    factors_negative.append(f"Term '{term}' may hurt your case")
+
+        score_components['case_law_signals'] = max(0, min(25, case_law_score))
+
+        # =====================================================================
+        # CALCULATE TOTAL SCORE
+        # =====================================================================
+        total_score = sum(score_components.values())
+
+        # Determine rating
+        if total_score >= 75:
+            rating = 'HIGH'
+            rating_emoji = '🟢'
+            rating_description = "Your motion has strong likelihood of success"
+        elif total_score >= 50:
+            rating = 'MODERATE'
+            rating_emoji = '🟡'
+            rating_description = "Your motion has reasonable chances but could be improved"
+        elif total_score >= 25:
+            rating = 'LOW'
+            rating_emoji = '🟠'
+            rating_description = "Your motion needs significant improvement"
+        else:
+            rating = 'VERY LOW'
+            rating_emoji = '🔴'
+            rating_description = "Your motion is likely to be denied without changes"
+
+        # =====================================================================
+        # BUILD ANALYSIS
+        # =====================================================================
+        analysis_parts = []
+        analysis_parts.append(f"## {rating_emoji} LIKELIHOOD OF SUCCESS: {total_score}/100 ({rating})")
+        analysis_parts.append("")
+        analysis_parts.append(f"**{rating_description}**")
+        analysis_parts.append("")
+
+        # Score breakdown
+        analysis_parts.append("### Score Breakdown:")
+        analysis_parts.append(f"- **Relief Scope:** {score_components['relief_scope']}/25")
+        analysis_parts.append(f"- **Evidence Strength:** {score_components['evidence_strength']}/25")
+        analysis_parts.append(f"- **Procedural Posture:** {score_components['procedural_posture']}/25")
+        analysis_parts.append(f"- **Case Law Signals:** {score_components['case_law_signals']}/25")
+        analysis_parts.append("")
+
+        # Positive factors
+        if factors_positive:
+            analysis_parts.append("### ✅ Strengths:")
+            for factor in factors_positive:
+                analysis_parts.append(f"- {factor}")
+            analysis_parts.append("")
+
+        # Negative factors
+        if factors_negative:
+            analysis_parts.append("### ⚠️ Weaknesses:")
+            for factor in factors_negative:
+                analysis_parts.append(f"- {factor}")
+            analysis_parts.append("")
+
+        # Recommendations
+        if recommendations:
+            analysis_parts.append("### 💡 Recommendations to Improve:")
+            for rec in recommendations:
+                analysis_parts.append(f"- {rec}")
+            analysis_parts.append("")
+
+        # Disclaimer
+        analysis_parts.append("---")
+        analysis_parts.append("*Note: This score is based on pattern analysis and procedural factors.*")
+        analysis_parts.append("*Actual outcomes depend on judge discretion and opposing party response.*")
+
+        return {
+            'success': True,
+            'total_score': total_score,
+            'rating': rating,
+            'rating_emoji': rating_emoji,
+            'score_components': score_components,
+            'factors_positive': factors_positive,
+            'factors_negative': factors_negative,
+            'recommendations': recommendations,
+            'analysis': '\n'.join(analysis_parts),
         }

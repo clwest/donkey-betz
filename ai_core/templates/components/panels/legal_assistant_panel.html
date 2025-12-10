@@ -769,9 +769,14 @@ async function submitLegalQuery() {
 
 // Format legal response with proper styling
 function formatLegalResponse(content) {
-    // Session 405 Patch 4G: Fix "Today's Incident" -> "The Incident on"
-    content = content.replace(/Today['']?s?\s+Incident\s*[–—-]\s*/gi, 'The Incident on ');
-    content = content.replace(/At\s+today['']?s?\s+parenting[- ]time\s+exchange/gi, 'At the parenting-time exchange');
+    // Session 405 Patch 4G/4J: Fix "Today's Incident" -> "The Incident on"
+    // Handle various quote styles and dashes (en-dash, em-dash, hyphen)
+    content = content.replace(/Today[''\u2019]?s?\s+Incident\s*[\u2013\u2014\u2015\u2010\u2011\u2012-]\s*/gi, 'The Incident on ');
+    content = content.replace(/Today[''\u2019]?s?\s+Incident\s*\n+\s*/gi, 'The Incident on ');
+    content = content.replace(/At\s+today[''\u2019]?s?\s+parenting[- ]?time\s+exchange/gi, 'At the parenting-time exchange');
+    content = content.replace(/At\s+today[''\u2019]?s?\s+parenting[- ]?time/gi, 'At the parenting-time');
+    content = content.replace(/today[''\u2019]?s?\s+parenting[- ]?time/gi, 'the parenting-time');
+    content = content.replace(/At\s+today[''\u2019]?s?\s+/gi, 'At the ');
 
     // Convert markdown-style headers to HTML
     content = content.replace(/^### (.*$)/gim, '<h5 style="color: #a78bfa; margin-top: 16px;">$1</h5>');

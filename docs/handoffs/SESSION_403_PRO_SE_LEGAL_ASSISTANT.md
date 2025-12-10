@@ -395,7 +395,98 @@ ai_core/templates/components/panels/legal_assistant_panel.html
 
 ---
 
-## What's Next (Phase 6 - Optional)
+## Validation (Session 405) ✅
+
+**ChatGPT reviewed the generated motion output and confirmed:**
+
+> "Your system's rewrite is correct, court-ready, and properly formatted. There are zero red flags. If anything, it is better than what many self-represented litigants file."
+
+---
+
+## Phase 6: Recommended Enhancements (ChatGPT Feedback)
+
+Based on expert review, these 5 enhancements would make the system production-grade:
+
+### 1. Relief Against Third Parties Filter ⭐
+**Problem:** System detects non-party issues but doesn't auto-rewrite.
+**Enhancement:** Auto-convert "Camille shall not..." → "Respondent shall ensure that Camille does not..."
+**Priority:** High - This is a common denial reason
+
+### 2. Emergency vs Non-Emergency Detector ⭐⭐
+**Problem:** Magistrates deny motions labeled "emergency" that lack emergency requirements.
+**Enhancement:**
+- Detect if harm is immediate
+- Advise whether situation qualifies for C.R.S. § 14-10-129.5
+- Warn when something is NOT actually an emergency
+**Priority:** Critical - Emergency misuse is a top denial reason
+
+### 3. Court Order Being Modified Detector
+**Problem:** JDF motions require attachment of the order being modified.
+**Enhancement:** Auto-prompt: "Upload the existing order (Exhibit X) before filing."
+**Priority:** Medium - Document requirement
+
+### 4. Conflict With Prior Orders Detector
+**Problem:** Requests may contradict existing court orders.
+**Enhancement:** Flag conflicts between requested relief and uploaded orders.
+**Priority:** Medium - Requires order parsing
+
+### 5. Likelihood of Success Confidence Meter ⭐⭐⭐
+**Problem:** Users don't know if their motion has a chance.
+**Enhancement:** Score based on:
+- Relief scope (narrower = better)
+- Evidence strength (documented = better)
+- Procedural posture (timing)
+- CO case law signals
+**Priority:** High - "Killer feature" per ChatGPT
+
+---
+
+## Session 405 Implementation Status
+
+| Enhancement | Status | Tool Name |
+|-------------|--------|-----------|
+| #1 Relief Against Third Parties Auto-Rewrite | ✅ IMPLEMENTED | `check_non_party_issues` |
+| #2 Emergency vs Non-Emergency Detector | ✅ IMPLEMENTED | `assess_emergency_status` |
+| #3 Court Order Being Modified Detector | ✅ IMPLEMENTED | `check_order_attachment_required` |
+| #4 Conflict With Prior Orders Detector | ⏳ PENDING | (Future) |
+| #5 Likelihood of Success Confidence Meter | ✅ IMPLEMENTED | `assess_likelihood_of_success` |
+
+### Enhancement Details
+
+#### #1: Third-Party Auto-Rewrite
+Automatically converts problematic third-party relief requests:
+- `"Camille shall not..."` → `"Respondent shall ensure that Camille does not..."`
+- `"Order [Name] to..."` → `"Order Respondent to ensure that [Name]..."`
+- `"Prohibit [Name] from..."` → `"Order Respondent to ensure that [Name] is not..."`
+
+#### #2: Emergency Assessment
+Detects true emergency factors (physical danger, CPS, flight risk) vs non-emergency situations (communication, schedule disputes, parenting disagreements).
+- Returns `is_emergency`, `emergency_confidence`, and `recommendation`
+- Warns when "emergency" is claimed but no emergency factors present
+- Recommends correct form (Emergency Motion vs JDF 1220)
+
+#### #3: Court Order Attachment Check
+Detects when motion requires attachment of existing court order:
+- Modification motions require the order being modified
+- Enforcement/contempt motions require the order being violated
+- Auto-prompts user to upload if missing
+
+#### #5: Likelihood of Success Meter
+Scores motion 0-100 based on four factors (25 points each):
+- **Relief Scope:** Narrower requests score higher
+- **Evidence Strength:** Documentary evidence, specific dates
+- **Procedural Posture:** Verification, caption, proposed order
+- **Case Law Signals:** Favorable terms ("changed circumstances") vs harmful ("revenge")
+
+Rating scale:
+- 🟢 75-100: HIGH - Strong likelihood of success
+- 🟡 50-74: MODERATE - Reasonable chances, could be improved
+- 🟠 25-49: LOW - Needs significant improvement
+- 🔴 0-24: VERY LOW - Likely to be denied without changes
+
+---
+
+## What's Next (Phase 7 - Optional)
 
 1. **Document Pinning** - Reference specific documents in ongoing chat
 2. **OCR Support** - Handle scanned PDF documents
@@ -429,10 +520,22 @@ print(f'LegalDocDrafterAgent registered: {router.is_valid_agent(\"LegalDocDrafte
 
 The LegalDocDrafterAgent follows the clean architecture pattern:
 - Inherits from BaseAgent (with TimeTravelMixin)
-- Uses GPT function calling with 6 specialized tools
+- Uses GPT function calling with **10 specialized tools**:
+  1. `search_legal_resources` - Search spider data for legal info
+  2. `draft_motion` - Generate motion templates
+  3. `draft_email` - Generate meet-and-confer emails
+  4. `draft_declaration` - Generate sworn declarations
+  5. `analyze_denied_motion` - Analyze why motion was denied
+  6. `rewrite_motion` - Generate corrected JDF-style motion
+  7. `generate_evidence_checklist` - Create exhibit checklist
+  8. `check_non_party_issues` - Detect & auto-rewrite third-party relief
+  9. `assess_emergency_status` - Emergency vs non-emergency classification
+  10. `check_order_attachment_required` - Detect missing court order attachment
+  11. `assess_likelihood_of_success` - Calculate 0-100 success score
 - Integrates with spider network for legal data
 - Records decisions for debugging (Time Travel)
 - Generates knowledge attribution for transparency
+- Participates in collective intelligence (shares learned patterns)
 
 ---
 
