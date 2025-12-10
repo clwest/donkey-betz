@@ -305,9 +305,24 @@ def clean_motion_text(text: str) -> str:
     # Fix " ," spacing
     text = text.replace(" ,", ",")
 
+    # Session 406 PATCH-5.1: Fix stray space before periods
+    text = re.sub(r'\s+\.(?=\s|$)', '.', text)
+    text = re.sub(r'\s+;(?=\s|$)', ';', text)
+
+    # Session 406 PATCH-5.1: Fix "( date )" pattern - remove spaces inside parens
+    text = re.sub(r'\(\s+', '(', text)
+    text = re.sub(r'\s+\)', ')', text)
+
     # Fix orphaned periods
     text = re.sub(r':\s*\.', ':', text)
     text = re.sub(r'\.\s*\.', '.', text)
+
+    # Session 406 PATCH-5.1: Fix semicolon followed by period
+    text = text.replace(";.", ";")
+
+    # Session 406 PATCH-5.1: Clean up "repeat" text that may have slipped through
+    text = text.replace("repeat .", "")
+    text = text.replace(" repeat .", "")
 
     # Fix multiple newlines (more than 2)
     text = re.sub(r'\n{4,}', '\n\n\n', text)
