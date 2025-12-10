@@ -5388,6 +5388,11 @@ WHEREFORE, Petitioner respectfully requests that this Court enter temporary, nar
 Note: All relief must be directed only toward the Respondent, a party to the case.
 """
 
+        # Session 406 Polish: Determine if respondent is represented (needed for conferral + service)
+        respondent_counsel = case_details.get('respondent_counsel') or case_details.get('conferral_recipient_name', '')
+        respondent_counsel_firm = case_details.get('respondent_counsel_firm', '')
+        is_represented = case_details.get('conferral_recipient_is_attorney', False)
+
         # Session 406: Add CERTIFICATE OF CONFERRAL for non-emergency motions
         if is_emergency:
             # Emergency motions exempt from conferral - add note explaining why
@@ -5430,11 +5435,7 @@ Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
         service_recipient = respondent
         service_address = respondent_address
 
-        # Check for opposing counsel
-        respondent_counsel = case_details.get('respondent_counsel') or case_details.get('conferral_recipient_name', '')
-        respondent_counsel_firm = case_details.get('respondent_counsel_firm', '')
-        is_represented = case_details.get('conferral_recipient_is_attorney', False)
-
+        # Use counsel info defined earlier (respondent_counsel, is_represented already set above)
         if is_represented and respondent_counsel:
             service_recipient = f"{respondent_counsel}"
             if respondent_counsel_firm:
