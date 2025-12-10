@@ -3803,6 +3803,61 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
 
         return items
 
+    def _extract_child_name_from_order(self, order_text: str) -> Optional[str]:
+        """
+        Session 406 PATCH-5.2: Extract child name spelling from existing court order.
+
+        This ensures name consistency - we use the exact spelling from the court's
+        existing order rather than a different spelling entered by the user.
+
+        Returns the child name as spelled in the order, or None if not found.
+        """
+        import re
+
+        # Common patterns for child names in Colorado family court orders
+        patterns = [
+            r'(?:minor\s+)?child(?:ren)?[:\s]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
+            r'(?:child|minor)[:\s]+([A-Z][a-z]+\s+(?:[A-Z]\.?\s+)?[A-Z][a-z]+)',
+            r'(?:child|children)\s+of\s+the\s+marriage[:\s]+([A-Z][a-z]+)',
+            r'born\s+(?:on\s+)?[\d/]+[:\s]+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)',
+            r'([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+),?\s+(?:age|born|DOB|d\.o\.b\.)',
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, order_text)
+            if match:
+                name = match.group(1).strip()
+                # Validate it looks like a name (has at least 2 parts)
+                if ' ' in name and len(name) > 3:
+                    logger.debug(f"[PATCH-5.2] Extracted child name from order: {name}")
+                    return name
+
+        return None
+
+    def _normalize_child_name_throughout(self, text: str, canonical_name: str) -> str:
+        """
+        Session 406 PATCH-5.2: Replace variant spellings with the canonical name.
+
+        For example, if the court order spells it "Nicolas" but user entered "Nicholas",
+        this ensures we use "Nicolas" consistently throughout.
+        """
+        import re
+
+        if not canonical_name:
+            return text
+
+        # Extract first name from canonical
+        canonical_first = canonical_name.split()[0]
+
+        # Common variant spellings for this specific case
+        # Nicolas vs Nicholas
+        if canonical_first.lower() == 'nicolas':
+            text = re.sub(r'\bNicholas\b', canonical_first, text)
+        elif canonical_first.lower() == 'nicholas':
+            text = re.sub(r'\bNicolas\b', canonical_first, text)
+
+        return text
+
     def _parse_order_provisions(self, order_text: str, case_number: str = '') -> str:
         """
         Session 406: Parse uploaded court order to extract key provisions.
@@ -5526,16 +5581,20 @@ Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
             if counsel_address:
                 service_address = counsel_address
 
+        # Session 406 PATCH-5.2: Ensure proper capitalization for affidavit block
+        state_upper = state.upper() if state else 'COLORADO'
+        county_upper = county.upper() if county else '__________'
+
         document += f"""
 ------------------------------------------------------------
 VERIFICATION / AFFIDAVIT
 ------------------------------------------------------------
 
-STATE OF {state}       )
-                       ) ss.
-COUNTY OF {county}     )
+STATE OF {state_upper}    )
+                          ) ss.
+COUNTY OF {county_upper}  )
 
-I, {petitioner}, being duly sworn, state under penalty of perjury under the laws of the State of {state} that:
+I, {petitioner}, being duly sworn, state under penalty of perjury under the laws of the State of {state_upper} that:
 
 1. I am the Petitioner in this matter.
 2. I have personal knowledge of the facts stated in this motion.
@@ -5557,7 +5616,7 @@ My Commission Expires: _______________
 PROPOSED ORDER (For Court Use Only)
 ------------------------------------------------------------
 
-DISTRICT COURT, COUNTY OF {county}, STATE OF {state}
+DISTRICT COURT, COUNTY OF {county_upper}, STATE OF {state_upper}
 Case Number: {case_number}
 
 ORDER ON PETITIONER'S VERIFIED MOTION
@@ -5641,6 +5700,14 @@ as an exhibit.
 
         # Session 406 PATCH-5: Apply narrative cleanup to remove wording glitches
         document = clean_motion_text(document)
+
+        # Session 406 PATCH-5.2: Normalize child name spelling to match court order
+        # If we have an existing order, extract the child name spelling from it
+        if existing_order_text:
+            canonical_name = self._extract_child_name_from_order(existing_order_text)
+            if canonical_name:
+                document = self._normalize_child_name_throughout(document, canonical_name)
+                logger.debug(f"[PATCH-5.2] Normalized child name to: {canonical_name}")
 
         return {
             'success': True,

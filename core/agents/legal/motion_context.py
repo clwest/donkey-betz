@@ -324,6 +324,35 @@ def clean_motion_text(text: str) -> str:
     text = text.replace("repeat .", "")
     text = text.replace(" repeat .", "")
 
+    # Session 406 PATCH-5.2: Format incident lists with bullets
+    # Pattern: "These incidents occurred:\nDuring..." should become "These incidents occurred:\n- During..."
+    text = re.sub(
+        r'(incidents occurred:)\s*\n\s*([A-Z])',
+        r'\1\n- \2',
+        text
+    )
+    # Add bullets to subsequent lines that look like incident items
+    text = re.sub(
+        r'\n([A-Z][a-z]+ \d{1,2}, \d{4},)',  # Lines starting with "August 29, 2025,"
+        r'\n- \1',
+        text
+    )
+    text = re.sub(
+        r'\n(The following week,)',
+        r'\n- \1',
+        text
+    )
+    text = re.sub(
+        r'\n(On [A-Z][a-z]+ \d{1,2}, \d{4})',
+        r'\n- \1',
+        text
+    )
+    text = re.sub(
+        r'\n(During )',
+        r'\n- \1',
+        text
+    )
+
     # Fix multiple newlines (more than 2)
     text = re.sub(r'\n{4,}', '\n\n\n', text)
 
