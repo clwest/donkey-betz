@@ -677,3 +677,472 @@ def export_legal_section(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 408: Litigation Document Management APIs
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_litigation_documents(request, case_profile_id):
+    """
+    List all litigation documents for a case, organized by category.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile, LitigationDocument
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        # Get documents by category
+        documents = LitigationDocument.objects.filter(case_profile=case_profile)
+
+        # Organize by category
+        categories = {
+            'court_order': {'label': 'Court Orders', 'documents': []},
+            'motion': {'label': 'Motions', 'documents': []},
+            'response': {'label': 'Responses/Replies', 'documents': []},
+            'evidence': {'label': 'Evidence', 'documents': []},
+            'court_rule': {'label': 'Court Rules', 'documents': []},
+        }
+
+        for doc in documents:
+            doc_data = {
+                'id': str(doc.id),
+                'title': doc.title,
+                'document_type': doc.document_type,
+                'document_type_display': doc.get_document_type_display(),
+                'filing_party': doc.filing_party,
+                'filing_party_display': doc.get_filing_party_display(),
+                'status': doc.status,
+                'document_date': str(doc.document_date) if doc.document_date else None,
+                'filed_date': str(doc.filed_date) if doc.filed_date else None,
+                'deadline_date': str(doc.deadline_date) if doc.deadline_date else None,
+                'word_count': len(doc.extracted_text.split()) if doc.extracted_text else 0,
+                'uploaded_at': doc.uploaded_at.isoformat(),
+                'responds_to': str(doc.responds_to_id) if doc.responds_to_id else None,
+                'has_responses': doc.responses.exists(),
+            }
+
+            if doc.category in categories:
+                categories[doc.category]['documents'].append(doc_data)
+
+        # Calculate stats
+        stats = {
+            'total': documents.count(),
+            'court_orders': len(categories['court_order']['documents']),
+            'motions': len(categories['motion']['documents']),
+            'responses': len(categories['response']['documents']),
+            'evidence': len(categories['evidence']['documents']),
+            'pending_responses': documents.filter(
+                category='motion',
+                filing_party='respondent',
+                status__in=['uploaded', 'analyzed']
+            ).count(),
+        }
+
+        return Response({
+            'success': True,
+            'case_number': case_profile.case_number,
+            'categories': categories,
+            'stats': stats,
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error listing litigation documents: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_litigation_document(request, case_profile_id):
+    """
+    Upload a document to the litigation brain.
+    Automatically processes, classifies, and indexes the document.
+    """
+    print(f"[Session 409] upload_litigation_document called: case_profile_id={case_profile_id}")
+    logger.info(f"[Session 409] upload_litigation_document called: case_profile_id={case_profile_id}")
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile
+        from core.services.litigation_brain import get_document_ingestor
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        # Get file
+        uploaded_file = request.FILES.get('file')
+        print(f"[Session 409] uploaded_file: {uploaded_file}")
+        if not uploaded_file:
+            print("[Session 409] No file in request.FILES")
+            return Response({
+                'success': False,
+                'error': 'No file provided'
+            }, status=400)
+
+        # Validate file type
+        filename = uploaded_file.name.lower()
+        print(f"[Session 409] filename: {filename}, size: {uploaded_file.size}")
+        if not any(filename.endswith(ext) for ext in ['.pdf', '.txt', '.doc', '.docx', '.png', '.jpg', '.jpeg']):
+            print(f"[Session 409] Invalid file type: {filename}")
+            return Response({
+                'success': False,
+                'error': 'Invalid file type. Supported: PDF, TXT, DOC, DOCX, PNG, JPG'
+            }, status=400)
+
+        # Get classification info from form data
+        category = request.POST.get('category')
+        document_type = request.POST.get('document_type')
+        filing_party = request.POST.get('filing_party')
+        document_date = request.POST.get('document_date')
+        filed_date = request.POST.get('filed_date')
+        responds_to_id = request.POST.get('responds_to')
+        notes = request.POST.get('notes', '')
+        print(f"[Session 409] category={category}, document_type={document_type}, filing_party={filing_party}")
+
+        # Process the document
+        ingestor = get_document_ingestor()
+        print(f"[Session 409] Calling ingestor.process_document...")
+        result = ingestor.process_document(
+            case_profile_id=case_profile.id,
+            file_content=uploaded_file.read(),
+            filename=uploaded_file.name,
+            user_category=category,
+            user_document_type=document_type,
+            filing_party=filing_party,
+            document_date=document_date,
+            filed_date=filed_date,
+            responds_to_id=responds_to_id if responds_to_id else None,
+            notes=notes,
+        )
+
+        return Response(result)
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error uploading litigation document: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_case_knowledge_graph(request, case_profile_id):
+    """
+    Get the case knowledge graph (case_context.json equivalent).
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile, CaseKnowledgeGraph
+        from core.services.litigation_brain import get_context_builder
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        # Get or build knowledge graph
+        try:
+            kg = CaseKnowledgeGraph.objects.get(case_profile=case_profile)
+            if kg.rebuild_needed:
+                builder = get_context_builder()
+                builder.rebuild_knowledge_graph(case_profile.id)
+                kg.refresh_from_db()
+        except CaseKnowledgeGraph.DoesNotExist:
+            builder = get_context_builder()
+            builder.rebuild_knowledge_graph(case_profile.id)
+            kg = CaseKnowledgeGraph.objects.get(case_profile=case_profile)
+
+        return Response({
+            'success': True,
+            'knowledge_graph': kg.to_json(),
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error getting knowledge graph: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rebuild_knowledge_graph(request, case_profile_id):
+    """
+    Force rebuild of the case knowledge graph.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile
+        from core.services.litigation_brain import get_context_builder
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        builder = get_context_builder()
+        result = builder.rebuild_knowledge_graph(case_profile.id)
+
+        return Response(result)
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error rebuilding knowledge graph: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_response_to_filing(request, document_id):
+    """
+    Generate a response to an opposing party's filing.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import LitigationDocument
+        from core.services.litigation_brain import get_response_writer
+
+        # Verify user owns this document's case
+        try:
+            doc = LitigationDocument.objects.get(id=document_id)
+            if doc.case_profile.user != user:
+                return Response({
+                    'success': False,
+                    'error': 'Document not found'
+                }, status=404)
+        except LitigationDocument.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Document not found'
+            }, status=404)
+
+        writer = get_response_writer()
+        result = writer.generate_response(doc.id)
+
+        return Response(result)
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error generating response: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_generated_responses(request, case_profile_id):
+    """
+    List all generated responses for a case.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile, GeneratedResponse
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        responses = GeneratedResponse.objects.filter(case_profile=case_profile)
+
+        data = []
+        for r in responses:
+            data.append({
+                'id': str(r.id),
+                'responds_to': {
+                    'id': str(r.responds_to.id),
+                    'title': r.responds_to.title,
+                },
+                'status': r.status,
+                'exhibits_count': len(r.exhibits),
+                'created_at': r.created_at.isoformat(),
+                'updated_at': r.updated_at.isoformat(),
+            })
+
+        return Response({
+            'success': True,
+            'responses': data,
+            'count': len(data),
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error listing responses: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_generated_response(request, response_id):
+    """
+    Get a specific generated response with all components.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import GeneratedResponse
+
+        try:
+            r = GeneratedResponse.objects.get(id=response_id)
+            if r.case_profile.user != user:
+                return Response({
+                    'success': False,
+                    'error': 'Response not found'
+                }, status=404)
+        except GeneratedResponse.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Response not found'
+            }, status=404)
+
+        return Response({
+            'success': True,
+            'response': {
+                'id': str(r.id),
+                'responds_to': {
+                    'id': str(r.responds_to.id),
+                    'title': r.responds_to.title,
+                },
+                'response_content': r.response_content,
+                'factual_corrections': r.factual_corrections,
+                'legal_standard': r.legal_standard,
+                'argument': r.argument,
+                'relief_requested': r.relief_requested,
+                'full_document': r.full_document,
+                'proposed_order': r.proposed_order,
+                'exhibits': r.exhibits,
+                'status': r.status,
+                'created_at': r.created_at.isoformat(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error getting response: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_filing_package(request, response_id):
+    """
+    Create a filing package (ZIP with all documents) for a response.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import GeneratedResponse
+        from core.services.litigation_brain import get_filing_packager
+
+        try:
+            r = GeneratedResponse.objects.get(id=response_id)
+            if r.case_profile.user != user:
+                return Response({
+                    'success': False,
+                    'error': 'Response not found'
+                }, status=404)
+        except GeneratedResponse.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Response not found'
+            }, status=404)
+
+        # Get requested formats
+        formats = request.data.get('formats', ['docx', 'txt'])
+
+        packager = get_filing_packager()
+        result = packager.create_filing_package(r.id, formats=formats)
+
+        if not result.get('success'):
+            return Response(result, status=500)
+
+        # Return package info (files would be downloaded separately)
+        return Response({
+            'success': True,
+            'package': {
+                'response_id': result['response_id'],
+                'documents_count': len(result['documents']),
+                'files': [
+                    {'name': f['name'], 'document_type': f['document_type']}
+                    for f in result['files']
+                ],
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 408] Error creating filing package: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_document_types(request):
+    """
+    Get all available document types and categories.
+    """
+    from core.models_legal import LitigationDocument
+
+    return Response({
+        'success': True,
+        'categories': dict(LitigationDocument.CATEGORY_CHOICES),
+        'document_types': {
+            'court_order': dict(LitigationDocument.COURT_ORDER_TYPES),
+            'motion': dict(LitigationDocument.MOTION_TYPES),
+            'response': dict(LitigationDocument.RESPONSE_TYPES),
+            'evidence': dict(LitigationDocument.EVIDENCE_TYPES),
+            'court_rule': dict(LitigationDocument.COURT_RULE_TYPES),
+        },
+        'filing_parties': dict(LitigationDocument.FILING_PARTY_CHOICES),
+    })

@@ -108,6 +108,11 @@ NOT legal advice - always recommends attorney consultation
                 &#9881; Case Setup
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="legal-document-brain-tab" data-bs-toggle="pill" data-bs-target="#legal-document-brain" type="button" role="tab" style="color: #f59e0b;" onclick="loadDocumentBrain()">
+                &#129504; Document Brain
+            </button>
+        </li>
     </ul>
     <style>
         #legal-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
@@ -941,6 +946,281 @@ NOT legal advice - always recommends attorney consultation
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Session 408: Document Brain Sub-Tab -->
+        <div class="tab-pane fade" id="legal-document-brain" role="tabpanel">
+            <div class="alert mb-4" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b;">
+                <div class="d-flex align-items-start">
+                    <span style="font-size: 1.5rem; margin-right: 12px;">&#129504;</span>
+                    <div>
+                        <strong style="color: #fbbf24;">Legal Document Brain</strong>
+                        <p class="mb-0 mt-1" style="font-size: 0.9rem; color: #fcd34d;">
+                            Upload ALL your case documents here. The system will automatically build a <strong>Case Knowledge Graph</strong>
+                            that links everything together: court orders, motions, responses, and evidence.
+                            Then it can <strong>generate responses</strong> to opposing filings!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Selector -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid rgba(245, 158, 11, 0.3);">
+                    <h6 class="mb-0" style="color: #fbbf24;">&#128193; Select Case</h6>
+                    <button class="btn btn-sm" onclick="refreshDocumentBrain()" style="background: rgba(245, 158, 11, 0.3); border: none; color: #fbbf24;">
+                        &#8635; Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <select id="document-brain-case-select" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;" onchange="onDocumentBrainCaseChange()">
+                        <option value="">-- Select a Case --</option>
+                    </select>
+                    <div id="document-brain-active-case" class="mt-2" style="display: none;">
+                        <small class="text-muted">Active Case: <span id="document-brain-case-number" style="color: #fbbf24;"></span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Brain Inner Tabs -->
+            <ul class="nav nav-pills mb-3" id="document-brain-tabs" role="tablist" style="border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="db-court-orders-tab" data-bs-toggle="pill" data-bs-target="#db-court-orders" type="button" role="tab" style="font-size: 12px;">
+                        &#9878; Court Orders
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="db-motions-tab" data-bs-toggle="pill" data-bs-target="#db-motions" type="button" role="tab" style="font-size: 12px;">
+                        &#128221; Motions
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="db-responses-tab" data-bs-toggle="pill" data-bs-target="#db-responses" type="button" role="tab" style="font-size: 12px;">
+                        &#128172; Responses
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="db-evidence-tab" data-bs-toggle="pill" data-bs-target="#db-evidence" type="button" role="tab" style="font-size: 12px;">
+                        &#128206; Evidence
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="db-knowledge-tab" data-bs-toggle="pill" data-bs-target="#db-knowledge" type="button" role="tab" style="font-size: 12px;">
+                        &#129504; Knowledge Graph
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="db-generated-tab" data-bs-toggle="pill" data-bs-target="#db-generated" type="button" role="tab" style="font-size: 12px;">
+                        &#128196; Auto-Generated
+                    </button>
+                </li>
+            </ul>
+
+            <style>
+                #document-brain-tabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; padding: 4px 10px; color: #888; }
+                #document-brain-tabs .nav-link:hover { background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; }
+                #document-brain-tabs .nav-link.active { background: rgba(245, 158, 11, 0.2) !important; border-color: #f59e0b !important; color: #f59e0b !important; }
+            </style>
+
+            <!-- Document Brain Tab Content -->
+            <div class="tab-content" id="document-brain-content">
+
+                <!-- Court Orders Tab -->
+                <div class="tab-pane fade show active" id="db-court-orders" role="tabpanel">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Upload: Temporary Orders, Prior Parenting Orders, Status Quo Orders, Restrictions, Emergency Rulings</span>
+                        <button class="btn btn-sm" onclick="showDocumentUploadModal('court_order')" style="background: #f59e0b; border: none; color: black;">
+                            &#10133; Upload Court Order
+                        </button>
+                    </div>
+                    <div id="db-court-orders-list" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center py-4">Select a case to view court orders</p>
+                    </div>
+                </div>
+
+                <!-- Motions Tab -->
+                <div class="tab-pane fade" id="db-motions" role="tabpanel">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Upload: Your Motions, Opposing Party's Motions, Pending Motions</span>
+                        <button class="btn btn-sm" onclick="showDocumentUploadModal('motion')" style="background: #f59e0b; border: none; color: black;">
+                            &#10133; Upload Motion
+                        </button>
+                    </div>
+                    <div id="db-motions-list" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center py-4">Select a case to view motions</p>
+                    </div>
+                </div>
+
+                <!-- Responses Tab -->
+                <div class="tab-pane fade" id="db-responses" role="tabpanel">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Upload: Responses, Replies, Exhibits, Affidavits from opposing party</span>
+                        <button class="btn btn-sm" onclick="showDocumentUploadModal('response')" style="background: #f59e0b; border: none; color: black;">
+                            &#10133; Upload Response/Reply
+                        </button>
+                    </div>
+                    <div id="db-responses-list" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center py-4">Select a case to view responses</p>
+                    </div>
+                </div>
+
+                <!-- Evidence Tab -->
+                <div class="tab-pane fade" id="db-evidence" role="tabpanel">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Upload: Messages, Call Logs, Calendars, Photos, Transcripts, Notes</span>
+                        <button class="btn btn-sm" onclick="showDocumentUploadModal('evidence')" style="background: #f59e0b; border: none; color: black;">
+                            &#10133; Upload Evidence
+                        </button>
+                    </div>
+                    <div id="db-evidence-list" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center py-4">Select a case to view evidence</p>
+                    </div>
+                </div>
+
+                <!-- Knowledge Graph Tab -->
+                <div class="tab-pane fade" id="db-knowledge" role="tabpanel">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Extracted Case Knowledge - Parties, Timeline, Allegations, Contradictions</span>
+                        <button class="btn btn-sm" onclick="rebuildKnowledgeGraph()" style="background: rgba(245, 158, 11, 0.3); border: 1px solid #f59e0b; color: #f59e0b;">
+                            &#8635; Rebuild Graph
+                        </button>
+                    </div>
+                    <div id="db-knowledge-content">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header" style="background: rgba(245, 158, 11, 0.1);">
+                                        <small style="color: #fbbf24;">&#128101; Parties</small>
+                                    </div>
+                                    <div class="card-body" id="kg-parties" style="max-height: 150px; overflow-y: auto;">
+                                        <p class="text-muted">No parties extracted yet</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header" style="background: rgba(239, 68, 68, 0.1);">
+                                        <small style="color: #f87171;">&#9888; Contradictions</small>
+                                    </div>
+                                    <div class="card-body" id="kg-contradictions" style="max-height: 150px; overflow-y: auto;">
+                                        <p class="text-muted">No contradictions detected</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header" style="background: rgba(34, 197, 94, 0.1);">
+                                        <small style="color: #4ade80;">&#128203; Timeline</small>
+                                    </div>
+                                    <div class="card-body" id="kg-timeline" style="max-height: 150px; overflow-y: auto;">
+                                        <p class="text-muted">No timeline events</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3" style="background: #1a1a1a; border: 1px solid #333;">
+                                    <div class="card-header" style="background: rgba(6, 182, 212, 0.1);">
+                                        <small style="color: #22d3ee;">&#128680; Pending Deadlines</small>
+                                    </div>
+                                    <div class="card-body" id="kg-deadlines" style="max-height: 150px; overflow-y: auto;">
+                                        <p class="text-muted">No pending deadlines</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                            <div class="card-header" style="background: rgba(139, 92, 246, 0.1);">
+                                <small style="color: #a78bfa;">&#128269; Unaddressed Issues</small>
+                            </div>
+                            <div class="card-body" id="kg-unaddressed" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted">No unaddressed issues identified</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Generated Tab -->
+                <div class="tab-pane fade" id="db-generated" role="tabpanel">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Auto-Generated Responses to Opposing Filings</span>
+                    </div>
+                    <div id="db-generated-list" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center py-4">No auto-generated filings yet. Upload opposing party's filings and click "Generate Response".</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+</div>
+
+<!-- Document Upload Modal -->
+<div class="modal fade" id="documentUploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: #1a1a1a; border: 1px solid #444;">
+            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                <h5 class="modal-title" style="color: #fbbf24;">&#128194; Upload Document</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="document-upload-form">
+                    <input type="hidden" id="upload-category" value="">
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Document Type</label>
+                        <select id="upload-document-type" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Filed By</label>
+                        <select id="upload-filing-party" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                            <option value="petitioner">Petitioner (Me)</option>
+                            <option value="respondent">Respondent (Opposing Party)</option>
+                            <option value="court">Court</option>
+                            <option value="third_party">Third Party</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Document Date</label>
+                            <input type="date" id="upload-document-date" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Filed Date (if filed with court)</label>
+                            <input type="date" id="upload-filed-date" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="responds-to-container" style="display: none;">
+                        <label class="form-label text-muted">Responds To (if this is a response)</label>
+                        <select id="upload-responds-to" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                            <option value="">-- Select original motion --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Notes</label>
+                        <textarea id="upload-notes" class="form-control" rows="2" placeholder="Optional notes about this document" style="background: #2a2a2a; border: 1px solid #444; color: white;"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">File</label>
+                        <input type="file" id="upload-file" class="form-control" accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                        <small class="text-muted">Supported: PDF, TXT, DOC, DOCX, PNG, JPG</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #333;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" onclick="uploadLitigationDocument()" style="background: #f59e0b; border: none; color: black;">
+                    &#128194; Upload & Process
+                </button>
             </div>
         </div>
     </div>
@@ -2180,6 +2460,527 @@ async function deleteCase(caseId) {
     } catch (error) {
         console.error('Error deleting case:', error);
         showToast('Failed to delete case: ' + error.message, 'error');
+    }
+}
+
+// =============================================================================
+// Session 408: Document Brain Functions
+// =============================================================================
+
+// State
+let currentDocumentBrainCase = null;
+let documentTypeOptions = null;
+
+// Load Document Brain tab
+async function loadDocumentBrain() {
+    console.log('[Document Brain] Loading...');
+
+    // Load cases for selector
+    try {
+        const response = await authenticatedFetch('/api/legal/cases/');
+        const data = await response.json();
+
+        const selector = document.getElementById('document-brain-case-select');
+        selector.innerHTML = '<option value="">-- Select a Case --</option>';
+
+        // Session 409: Fixed API response handling - API returns {cases: [...]} without success field
+        const cases = data.cases || [];
+        if (cases.length > 0) {
+            cases.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                // Build display text with case number, parties, and type
+                let displayText = c.case_number || 'Case';
+                if (c.petitioner_name && c.respondent_name) {
+                    displayText += ` - ${c.petitioner_name} v. ${c.respondent_name}`;
+                } else if (c.case_title) {
+                    displayText += ` - ${c.case_title}`;
+                }
+                displayText += ` (${c.case_type_display || c.case_type})`;
+                // Check if active (status === 'active')
+                if (c.status === 'active') {
+                    displayText += ' ★';
+                    opt.selected = true;
+                    currentDocumentBrainCase = c.id;
+                }
+                opt.textContent = displayText;
+                selector.appendChild(opt);
+            });
+            console.log(`[Document Brain] Loaded ${cases.length} cases`);
+        } else {
+            console.log('[Document Brain] No cases found. Create a case in Case Setup first.');
+        }
+
+        // Load document types
+        await loadDocumentTypes();
+
+        // If active case selected, load documents
+        if (currentDocumentBrainCase) {
+            loadCaseDocuments();
+        }
+
+    } catch (error) {
+        console.error('[Document Brain] Error loading:', error);
+        showToast('Error loading Document Brain', 'error');
+    }
+}
+
+// Refresh Document Brain
+function refreshDocumentBrain() {
+    if (currentDocumentBrainCase) {
+        loadCaseDocuments();
+        loadKnowledgeGraph();
+    } else {
+        loadDocumentBrain();
+    }
+}
+
+// Handle case selection change
+function onDocumentBrainCaseChange() {
+    const selector = document.getElementById('document-brain-case-select');
+    currentDocumentBrainCase = selector.value;
+
+    if (currentDocumentBrainCase) {
+        const selectedOption = selector.options[selector.selectedIndex];
+        document.getElementById('document-brain-case-number').textContent = selectedOption.textContent;
+        document.getElementById('document-brain-active-case').style.display = 'block';
+        loadCaseDocuments();
+        loadKnowledgeGraph();
+    } else {
+        document.getElementById('document-brain-active-case').style.display = 'none';
+        clearDocumentLists();
+    }
+}
+
+// Load document types from API
+async function loadDocumentTypes() {
+    try {
+        const response = await authenticatedFetch('/api/legal/litigation/document-types/');
+        const data = await response.json();
+        if (data.success) {
+            documentTypeOptions = data;
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error loading document types:', error);
+    }
+}
+
+// Clear all document lists
+function clearDocumentLists() {
+    ['db-court-orders-list', 'db-motions-list', 'db-responses-list', 'db-evidence-list'].forEach(id => {
+        document.getElementById(id).innerHTML = '<p class="text-muted text-center py-4">Select a case to view documents</p>';
+    });
+}
+
+// Load case documents
+async function loadCaseDocuments() {
+    if (!currentDocumentBrainCase) return;
+
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/documents/`);
+        const data = await response.json();
+
+        if (data.success) {
+            // Populate each category list
+            renderDocumentList('db-court-orders-list', data.categories.court_order.documents, 'court_order');
+            renderDocumentList('db-motions-list', data.categories.motion.documents, 'motion');
+            renderDocumentList('db-responses-list', data.categories.response.documents, 'response');
+            renderDocumentList('db-evidence-list', data.categories.evidence.documents, 'evidence');
+
+            // Load generated responses
+            loadGeneratedResponses();
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error loading documents:', error);
+        showToast('Error loading documents', 'error');
+    }
+}
+
+// Render document list
+function renderDocumentList(containerId, documents, category) {
+    const container = document.getElementById(containerId);
+
+    if (!documents || documents.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No documents uploaded yet. Click "Upload" to add documents.</p>';
+        return;
+    }
+
+    let html = '';
+    documents.forEach(doc => {
+        const filingColor = doc.filing_party === 'respondent' ? '#ef4444' :
+                           doc.filing_party === 'court' ? '#3b82f6' : '#22c55e';
+
+        html += `
+            <div class="card mb-2" style="background: #2a2a2a; border: 1px solid #444;">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong style="color: #fbbf24;">${doc.title}</strong>
+                            <div class="mt-1">
+                                <span class="badge" style="background: ${filingColor}; font-size: 10px;">${doc.filing_party_display}</span>
+                                <span class="badge" style="background: rgba(139, 92, 246, 0.5); font-size: 10px;">${doc.document_type_display}</span>
+                                ${doc.filed_date ? `<span class="text-muted ms-2" style="font-size: 11px;">Filed: ${doc.filed_date}</span>` : ''}
+                            </div>
+                        </div>
+                        <div>
+                            ${doc.filing_party === 'respondent' && category === 'motion' ?
+                                `<button class="btn btn-sm me-1" onclick="generateResponseToFiling('${doc.id}')" style="background: #f59e0b; border: none; color: black; font-size: 11px;">
+                                    Generate Response
+                                </button>` : ''
+                            }
+                            <span class="badge" style="background: rgba(107, 114, 128, 0.5); font-size: 10px;">${doc.word_count} words</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// Show document upload modal
+function showDocumentUploadModal(category) {
+    if (!currentDocumentBrainCase) {
+        showToast('Please select a case first', 'warning');
+        return;
+    }
+
+    document.getElementById('upload-category').value = category;
+
+    // Populate document type dropdown based on category
+    const typeSelect = document.getElementById('upload-document-type');
+    typeSelect.innerHTML = '';
+
+    if (documentTypeOptions && documentTypeOptions.document_types[category]) {
+        const types = documentTypeOptions.document_types[category];
+        Object.entries(types).forEach(([value, label]) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = label;
+            typeSelect.appendChild(opt);
+        });
+    }
+
+    // Show/hide responds_to field for responses
+    const respondsToContainer = document.getElementById('responds-to-container');
+    if (category === 'response') {
+        respondsToContainer.style.display = 'block';
+        loadMotionsForRespondsTo();
+    } else {
+        respondsToContainer.style.display = 'none';
+    }
+
+    // Clear form
+    document.getElementById('upload-document-date').value = '';
+    document.getElementById('upload-filed-date').value = '';
+    document.getElementById('upload-notes').value = '';
+    document.getElementById('upload-file').value = '';
+    document.getElementById('upload-filing-party').value = category === 'court_order' ? 'court' :
+                                                          category === 'response' ? 'respondent' : 'petitioner';
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('documentUploadModal'));
+    modal.show();
+}
+
+// Load motions for responds_to dropdown
+async function loadMotionsForRespondsTo() {
+    if (!currentDocumentBrainCase) return;
+
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/documents/`);
+        const data = await response.json();
+
+        const select = document.getElementById('upload-responds-to');
+        select.innerHTML = '<option value="">-- Select original motion --</option>';
+
+        if (data.success && data.categories.motion.documents) {
+            data.categories.motion.documents.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.title;
+                select.appendChild(opt);
+            });
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error loading motions:', error);
+    }
+}
+
+// Upload litigation document
+async function uploadLitigationDocument() {
+    if (!currentDocumentBrainCase) {
+        showToast('Please select a case first', 'warning');
+        return;
+    }
+
+    const file = document.getElementById('upload-file').files[0];
+    if (!file) {
+        showToast('Please select a file', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', document.getElementById('upload-category').value);
+    formData.append('document_type', document.getElementById('upload-document-type').value);
+    formData.append('filing_party', document.getElementById('upload-filing-party').value);
+    formData.append('document_date', document.getElementById('upload-document-date').value);
+    formData.append('filed_date', document.getElementById('upload-filed-date').value);
+    formData.append('notes', document.getElementById('upload-notes').value);
+
+    const respondsTo = document.getElementById('upload-responds-to').value;
+    if (respondsTo) {
+        formData.append('responds_to', respondsTo);
+    }
+
+    try {
+        showToast('Uploading and processing document...', 'info');
+
+        // Session 409: Use authenticatedFetch for proper auth credentials
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/documents/upload/`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast(`Document uploaded: ${data.title}`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('documentUploadModal')).hide();
+            loadCaseDocuments();
+            loadKnowledgeGraph();
+        } else {
+            showToast(data.error || 'Upload failed', 'error');
+            console.error('[Document Brain] Upload error response:', data);
+        }
+    } catch (error) {
+        console.error('[Document Brain] Upload error:', error);
+        showToast('Error uploading document: ' + error.message, 'error');
+    }
+}
+
+// Load knowledge graph
+async function loadKnowledgeGraph() {
+    if (!currentDocumentBrainCase) return;
+
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/knowledge-graph/`);
+        const data = await response.json();
+
+        if (data.success && data.knowledge_graph) {
+            const kg = data.knowledge_graph;
+
+            // Render parties
+            const partiesEl = document.getElementById('kg-parties');
+            if (kg.parties && Object.keys(kg.parties).length > 0) {
+                partiesEl.innerHTML = Object.entries(kg.parties).map(([name, info]) =>
+                    `<div class="mb-1"><strong>${name}</strong> <span class="badge" style="background: rgba(245, 158, 11, 0.3); font-size: 10px;">${info.role}</span></div>`
+                ).join('');
+            } else {
+                partiesEl.innerHTML = '<p class="text-muted">No parties extracted yet</p>';
+            }
+
+            // Render contradictions
+            const contradictionsEl = document.getElementById('kg-contradictions');
+            if (kg.contradictions && kg.contradictions.length > 0) {
+                contradictionsEl.innerHTML = kg.contradictions.map(c =>
+                    `<div class="mb-2 p-2" style="background: rgba(239, 68, 68, 0.1); border-radius: 4px;">
+                        <small class="text-danger">${c.analysis}</small>
+                    </div>`
+                ).join('');
+            } else {
+                contradictionsEl.innerHTML = '<p class="text-muted">No contradictions detected</p>';
+            }
+
+            // Render timeline
+            const timelineEl = document.getElementById('kg-timeline');
+            if (kg.timeline && kg.timeline.length > 0) {
+                timelineEl.innerHTML = kg.timeline.slice(0, 10).map(t =>
+                    `<div class="mb-1"><small style="color: #4ade80;">${t.date || 'N/A'}:</small> <small>${t.event}</small></div>`
+                ).join('');
+            } else {
+                timelineEl.innerHTML = '<p class="text-muted">No timeline events</p>';
+            }
+
+            // Render deadlines
+            const deadlinesEl = document.getElementById('kg-deadlines');
+            if (kg.deadlines && kg.deadlines.length > 0) {
+                deadlinesEl.innerHTML = kg.deadlines.map(d =>
+                    `<div class="mb-1 p-2" style="background: rgba(6, 182, 212, 0.1); border-radius: 4px;">
+                        <strong style="color: ${d.days_remaining < 7 ? '#ef4444' : '#22d3ee'};">${d.date}</strong>
+                        <small class="d-block">${d.motion_title} (${d.days_remaining} days)</small>
+                    </div>`
+                ).join('');
+            } else {
+                deadlinesEl.innerHTML = '<p class="text-muted">No pending deadlines</p>';
+            }
+
+            // Render unaddressed issues
+            const unaddressedEl = document.getElementById('kg-unaddressed');
+            if (kg.unaddressed_issues && kg.unaddressed_issues.length > 0) {
+                unaddressedEl.innerHTML = kg.unaddressed_issues.map(u =>
+                    `<div class="mb-2 p-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 4px;">
+                        <small>${u.issue}</small>
+                        <small class="d-block text-muted">Type: ${u.type}</small>
+                    </div>`
+                ).join('');
+            } else {
+                unaddressedEl.innerHTML = '<p class="text-muted">No unaddressed issues identified</p>';
+            }
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error loading knowledge graph:', error);
+    }
+}
+
+// Rebuild knowledge graph
+async function rebuildKnowledgeGraph() {
+    if (!currentDocumentBrainCase) {
+        showToast('Please select a case first', 'warning');
+        return;
+    }
+
+    try {
+        showToast('Rebuilding knowledge graph...', 'info');
+
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/knowledge-graph/rebuild/`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast(`Knowledge graph rebuilt! Found ${data.contradictions_found} contradictions.`, 'success');
+            loadKnowledgeGraph();
+        } else {
+            showToast(data.error || 'Rebuild failed', 'error');
+        }
+    } catch (error) {
+        console.error('[Document Brain] Rebuild error:', error);
+        showToast('Error rebuilding knowledge graph', 'error');
+    }
+}
+
+// Generate response to filing
+async function generateResponseToFiling(documentId) {
+    try {
+        showToast('Generating response... This may take a moment.', 'info');
+
+        const response = await authenticatedFetch(`/api/legal/litigation/${documentId}/generate-response/`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Response generated! Check the Auto-Generated tab.', 'success');
+            loadGeneratedResponses();
+            // Switch to generated tab
+            document.getElementById('db-generated-tab').click();
+        } else {
+            showToast(data.error || 'Generation failed', 'error');
+        }
+    } catch (error) {
+        console.error('[Document Brain] Generation error:', error);
+        showToast('Error generating response', 'error');
+    }
+}
+
+// Load generated responses
+async function loadGeneratedResponses() {
+    if (!currentDocumentBrainCase) return;
+
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/responses/`);
+        const data = await response.json();
+
+        const container = document.getElementById('db-generated-list');
+
+        if (data.success && data.responses && data.responses.length > 0) {
+            let html = '';
+            data.responses.forEach(r => {
+                html += `
+                    <div class="card mb-2" style="background: #2a2a2a; border: 1px solid #444;">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong style="color: #22c55e;">Response to: ${r.responds_to.title}</strong>
+                                    <div class="mt-1">
+                                        <span class="badge" style="background: rgba(34, 197, 94, 0.5); font-size: 10px;">${r.status}</span>
+                                        <span class="text-muted ms-2" style="font-size: 11px;">Generated: ${new Date(r.created_at).toLocaleDateString()}</span>
+                                        <span class="badge ms-2" style="background: rgba(139, 92, 246, 0.5); font-size: 10px;">${r.exhibits_count} exhibits</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm" onclick="viewGeneratedResponse('${r.id}')" style="background: rgba(139, 92, 246, 0.5); border: none; color: white; font-size: 11px;">
+                                        View
+                                    </button>
+                                    <button class="btn btn-sm ms-1" onclick="downloadFilingPackage('${r.id}')" style="background: #22c55e; border: none; color: black; font-size: 11px;">
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-muted text-center py-4">No auto-generated filings yet. Upload opposing party\'s filings and click "Generate Response".</p>';
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error loading responses:', error);
+    }
+}
+
+// View generated response
+async function viewGeneratedResponse(responseId) {
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/response/${responseId}/`);
+        const data = await response.json();
+
+        if (data.success && data.response) {
+            // Show in the legal documents preview area
+            document.getElementById('legal-documents-tab').click();
+            document.getElementById('legal-doc-preview').style.display = 'block';
+            document.getElementById('legal-doc-content').textContent = data.response.full_document;
+            document.getElementById('legal-doc-preview').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showToast(data.error || 'Could not load response', 'error');
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error viewing response:', error);
+        showToast('Error loading response', 'error');
+    }
+}
+
+// Download filing package
+async function downloadFilingPackage(responseId) {
+    showToast('Creating filing package...', 'info');
+
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/response/${responseId}/package/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ formats: ['docx', 'txt'] })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast(`Filing package created with ${data.package.documents_count} documents!`, 'success');
+            // For now just show info - full download would require ZIP endpoint
+            alert(`Package contains:\n${data.package.files.map(f => '- ' + f.name).join('\n')}`);
+        } else {
+            showToast(data.error || 'Could not create package', 'error');
+        }
+    } catch (error) {
+        console.error('[Document Brain] Error creating package:', error);
+        showToast('Error creating filing package', 'error');
     }
 }
 </script>

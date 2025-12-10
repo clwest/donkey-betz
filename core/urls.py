@@ -993,7 +993,11 @@ from core.views_rag_embeddings import (
 # Session 407: Added export_legal_section for document downloads
 from core.views_legal import (
     list_legal_case_files, upload_legal_case_file, get_legal_case_file,
-    analyze_legal_case_file, delete_legal_case_file, export_legal_section
+    analyze_legal_case_file, delete_legal_case_file, export_legal_section,
+    # Session 408: Litigation Document Management
+    list_litigation_documents, upload_litigation_document, get_case_knowledge_graph,
+    rebuild_knowledge_graph, generate_response_to_filing, list_generated_responses,
+    get_generated_response, create_filing_package, get_document_types,
 )
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
@@ -2644,6 +2648,17 @@ urlpatterns += [
 
     # Active Case
     path('api/legal/active-case/', active_case, name='legal-active-case'),
+
+    # Session 408: Litigation Document Management
+    path('api/legal/litigation/<uuid:case_profile_id>/documents/', list_litigation_documents, name='litigation-documents-list'),
+    path('api/legal/litigation/<uuid:case_profile_id>/documents/upload/', upload_litigation_document, name='litigation-documents-upload'),
+    path('api/legal/litigation/<uuid:case_profile_id>/knowledge-graph/', get_case_knowledge_graph, name='litigation-knowledge-graph'),
+    path('api/legal/litigation/<uuid:case_profile_id>/knowledge-graph/rebuild/', rebuild_knowledge_graph, name='litigation-knowledge-graph-rebuild'),
+    path('api/legal/litigation/<uuid:case_profile_id>/responses/', list_generated_responses, name='litigation-responses-list'),
+    path('api/legal/litigation/<uuid:document_id>/generate-response/', generate_response_to_filing, name='litigation-generate-response'),
+    path('api/legal/litigation/response/<uuid:response_id>/', get_generated_response, name='litigation-response-detail'),
+    path('api/legal/litigation/response/<uuid:response_id>/package/', create_filing_package, name='litigation-filing-package'),
+    path('api/legal/litigation/document-types/', get_document_types, name='litigation-document-types'),
 ]
 
 # Serve media files in development

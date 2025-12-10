@@ -41,7 +41,7 @@ def case_profiles_list(request):
     if request.method == "GET":
         if not user:
             # Return empty list for anonymous users
-            return JsonResponse({'cases': [], 'count': 0})
+            return JsonResponse({'success': True, 'cases': [], 'count': 0})
 
         cases = CaseProfile.objects.filter(user=user).order_by('-updated_at')
         case_list = []
@@ -66,7 +66,7 @@ def case_profiles_list(request):
                 'updated_at': case.updated_at.isoformat(),
             })
 
-        return JsonResponse({'cases': case_list, 'count': len(case_list)})
+        return JsonResponse({'success': True, 'cases': case_list, 'count': len(case_list)})
 
     elif request.method == "POST":
         if not user:
