@@ -400,6 +400,10 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 406:** Case Intake Form + ChatGPT Patches - MAJOR: Created Case Intake Form system (`CaseProfile`, `Party`, `Attorney`, `Child` models), 4-step wizard UI, full API endpoints. Implemented 6 ChatGPT patches (placeholder resolution, conferral routing, wording fixes, non-disparagement linkage). Fixed critical bug where CaseProfile wasn't loading (request not passed to context). **Conferral emails now address opposing counsel!** Handoff: `docs/handoffs/SESSION_406_CASE_INTAKE_FORM.md`
+- **Session 405:** ChatGPT Legal Enhancements - 5 new tools: Third-Party Auto-Rewrite, Emergency Detector, Order Attachment Check, Conflict Detector, Success Meter. Conferral email system. Handoff: `docs/handoffs/SESSION_405_LEGAL_ASSISTANT_CHATGPT_ENHANCEMENTS.md`
+- **Session 404:** Pro Se Legal Assistant Motion Rewriter - Complete denied motion rewrite pipeline with JDF format, 12 legal tools, deterministic pipeline. Handoff: `docs/handoffs/SESSION_404_PRO_SE_LEGAL_ASSISTANT.md`
+- **Session 403:** Legal Assistant MVP - Case files, document upload, PDF extraction.
 - **Session 400:** Agent Knowledge Pipeline Complete - Fixed spider_data_bridge.py (was listening to wrong model), added `_get_relevant_knowledge_for_task()` and `_get_fresh_spider_intelligence()` to BaseAgent, updated `_build_prompt()` to automatically inject learned knowledge. Agents now USE their accumulated knowledge! Handoff: `docs/handoffs/SESSION_400_AGENT_KNOWLEDGE_PIPELINE.md`
 - **Session 399:** Spider Renames + Data Feed API + Intelligence UI - Renamed 6 spiders to match actual sources (cnn→google_news, etc.), fixed Data Feed API empty string bug, added 3 new Intelligence sub-tabs (Data Feed, Knowledge, Timeline). Handoff: `docs/handoffs/SESSION_399_SPIDER_RENAMES_AND_DATA_FEED_FIX.md`
 - **Session 398:** Spider Database Cleanup - Deleted 6,906 placeholder records, fixed broken RSS feeds, comprehensive spider audit. Handoff: `docs/handoffs/SESSION_398_SPIDER_DATA_EXPLORATION.md`

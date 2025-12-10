@@ -103,6 +103,11 @@ NOT legal advice - always recommends attorney consultation
                 &#128193; My Case Files
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="legal-case-setup-tab" data-bs-toggle="pill" data-bs-target="#legal-case-setup" type="button" role="tab" style="color: #10b981;" onclick="loadCaseProfiles()">
+                &#9881; Case Setup
+            </button>
+        </li>
     </ul>
     <style>
         #legal-subtabs .nav-link { background: transparent; border: 1px solid #333; margin-right: 5px; font-size: 13px; padding: 6px 12px; }
@@ -647,6 +652,281 @@ NOT legal advice - always recommends attorney consultation
                             </div>
                         </div>
                         <!-- Session 404E: DISCLAIMER REMOVED - Court-ready documents should not have disclaimers -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session 406: Case Setup Sub-Tab -->
+        <div class="tab-pane fade" id="legal-case-setup" role="tabpanel">
+            <div class="alert mb-4" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);">
+                <strong style="color: #6ee7b7;">&#9881; Set Up Your Case Profile</strong>
+                <p class="mb-0 mt-1" style="color: #a7f3d0; font-size: 0.9rem;">
+                    Enter your case information once. The Legal Assistant will use this for all documents,
+                    conferral emails, and motion analysis. No more extracting names from PDFs!
+                </p>
+            </div>
+
+            <!-- Case Profile Cards -->
+            <div id="case-profiles-list" class="mb-4">
+                <!-- Existing cases will be loaded here -->
+            </div>
+
+            <!-- New Case Button -->
+            <button class="btn mb-4" onclick="showCaseSetupForm()" id="new-case-btn" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;">
+                &#10133; Set Up New Case
+            </button>
+
+            <!-- Case Setup Form (Hidden by default) -->
+            <div id="case-setup-form-container" style="display: none;">
+                <div class="card" style="background: #1a1a1a; border: 1px solid #10b981;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.2); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                        <h6 class="mb-0" style="color: #6ee7b7;">&#9881; Case Setup Form</h6>
+                        <button class="btn btn-sm" onclick="hideCaseSetupForm()" style="background: transparent; border: none; color: #6ee7b7;">&#10005;</button>
+                    </div>
+                    <div class="card-body">
+                        <!-- Step Indicator -->
+                        <div class="d-flex justify-content-between mb-4" id="case-setup-steps">
+                            <div class="text-center case-step active" data-step="1">
+                                <div class="step-circle">1</div>
+                                <small>Case Info</small>
+                            </div>
+                            <div class="text-center case-step" data-step="2">
+                                <div class="step-circle">2</div>
+                                <small>You</small>
+                            </div>
+                            <div class="text-center case-step" data-step="3">
+                                <div class="step-circle">3</div>
+                                <small>Other Party</small>
+                            </div>
+                            <div class="text-center case-step" data-step="4">
+                                <div class="step-circle">4</div>
+                                <small>Children</small>
+                            </div>
+                        </div>
+                        <style>
+                            .case-step .step-circle {
+                                width: 30px; height: 30px; border-radius: 50%;
+                                background: #333; color: #888;
+                                display: flex; align-items: center; justify-content: center;
+                                margin: 0 auto 5px; font-weight: bold;
+                            }
+                            .case-step.active .step-circle { background: #10b981; color: white; }
+                            .case-step.completed .step-circle { background: #059669; color: white; }
+                            .case-step small { color: #888; font-size: 11px; }
+                            .case-step.active small { color: #6ee7b7; }
+                        </style>
+
+                        <!-- Step 1: Case Information -->
+                        <div class="case-setup-step" id="case-step-1">
+                            <h6 style="color: #6ee7b7;" class="mb-3">Case Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">Case Number <span class="text-danger">*</span></label>
+                                    <input type="text" id="case-number" class="form-control" placeholder="e.g., 2025DR576" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">Case Type</label>
+                                    <select id="case-type" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                        <option value="custody">Child Custody</option>
+                                        <option value="divorce">Divorce</option>
+                                        <option value="modification">Modification</option>
+                                        <option value="enforcement">Enforcement</option>
+                                        <option value="paternity">Paternity</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">County <span class="text-danger">*</span></label>
+                                    <input type="text" id="case-county" class="form-control" placeholder="e.g., Larimer" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">State</label>
+                                    <input type="text" id="case-state" class="form-control" value="Colorado" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-muted">Division</label>
+                                    <input type="text" id="case-division" class="form-control" placeholder="e.g., 2B" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label text-muted">Court Address</label>
+                                    <input type="text" id="case-court-address" class="form-control" placeholder="e.g., 201 LaPorte Avenue, Suite 100, Fort Collins, CO 80521" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button class="btn" onclick="nextCaseStep(2)" style="background: #10b981; border: none; color: white;">Next: Your Information &#8594;</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Petitioner (You) -->
+                        <div class="case-setup-step" id="case-step-2" style="display: none;">
+                            <h6 style="color: #6ee7b7;" class="mb-3">Your Information (Petitioner)</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">Your Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" id="petitioner-name" class="form-control" placeholder="e.g., Christopher L. West" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">Email</label>
+                                    <input type="email" id="petitioner-email" class="form-control" placeholder="your@email.com" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label text-muted">Address</label>
+                                    <input type="text" id="petitioner-address" class="form-control" placeholder="Street address" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-muted">Phone</label>
+                                    <input type="text" id="petitioner-phone" class="form-control" placeholder="(970) 555-1234" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label text-muted">City</label>
+                                    <input type="text" id="petitioner-city" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label text-muted">State</label>
+                                    <input type="text" id="petitioner-state" class="form-control" value="CO" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-muted">ZIP</label>
+                                    <input type="text" id="petitioner-zip" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="petitioner-pro-se" checked onchange="togglePetitionerAttorney()">
+                                    <label class="form-check-label text-muted" for="petitioner-pro-se">I am representing myself (Pro Se)</label>
+                                </div>
+                            </div>
+                            <!-- Petitioner's Attorney (hidden if pro se) -->
+                            <div id="petitioner-attorney-section" style="display: none;">
+                                <h6 style="color: #a78bfa;" class="mb-2 mt-3">Your Attorney</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Attorney Name</label>
+                                        <input type="text" id="petitioner-attorney-name" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Firm Name</label>
+                                        <input type="text" id="petitioner-attorney-firm" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Attorney Email</label>
+                                        <input type="email" id="petitioner-attorney-email" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Bar Number</label>
+                                        <input type="text" id="petitioner-attorney-bar" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-outline-secondary" onclick="prevCaseStep(1)">&#8592; Back</button>
+                                <button class="btn" onclick="nextCaseStep(3)" style="background: #10b981; border: none; color: white;">Next: Other Party &#8594;</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Respondent (Other Party) -->
+                        <div class="case-setup-step" id="case-step-3" style="display: none;">
+                            <h6 style="color: #6ee7b7;" class="mb-3">Other Party (Respondent)</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">Their Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" id="respondent-name" class="form-control" placeholder="e.g., Susannah M. West" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-muted">Email</label>
+                                    <input type="email" id="respondent-email" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label text-muted">Address</label>
+                                    <input type="text" id="respondent-address" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-muted">Phone</label>
+                                    <input type="text" id="respondent-phone" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label text-muted">City</label>
+                                    <input type="text" id="respondent-city" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label text-muted">State</label>
+                                    <input type="text" id="respondent-state" class="form-control" value="CO" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-muted">ZIP</label>
+                                    <input type="text" id="respondent-zip" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="respondent-pro-se" onchange="toggleRespondentAttorney()">
+                                    <label class="form-check-label text-muted" for="respondent-pro-se">They are representing themselves (Pro Se)</label>
+                                </div>
+                            </div>
+                            <!-- Respondent's Attorney -->
+                            <div id="respondent-attorney-section">
+                                <h6 style="color: #f97316;" class="mb-2 mt-3">Their Attorney (Opposing Counsel)</h6>
+                                <p class="text-muted" style="font-size: 0.85rem;">This is who conferral emails will be sent to.</p>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Attorney Name <span class="text-danger">*</span></label>
+                                        <input type="text" id="respondent-attorney-name" class="form-control" placeholder="e.g., Jane Smith, Esq." style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Firm Name</label>
+                                        <input type="text" id="respondent-attorney-firm" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Attorney Email <span class="text-danger">*</span></label>
+                                        <input type="email" id="respondent-attorney-email" class="form-control" placeholder="jane@smithlaw.com" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label text-muted">Bar Number</label>
+                                        <input type="text" id="respondent-attorney-bar" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-outline-secondary" onclick="prevCaseStep(2)">&#8592; Back</button>
+                                <button class="btn" onclick="nextCaseStep(4)" style="background: #10b981; border: none; color: white;">Next: Children &#8594;</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Children -->
+                        <div class="case-setup-step" id="case-step-4" style="display: none;">
+                            <h6 style="color: #6ee7b7;" class="mb-3">Children (if applicable)</h6>
+                            <p class="text-muted">Add any minor children involved in this case.</p>
+                            <div id="children-list">
+                                <!-- Children will be added here dynamically -->
+                            </div>
+                            <button class="btn btn-sm mb-3" onclick="addChildRow()" style="background: transparent; border: 1px solid #10b981; color: #10b981;">
+                                &#10133; Add Child
+                            </button>
+                            <hr style="border-color: #333;">
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-outline-secondary" onclick="prevCaseStep(3)">&#8592; Back</button>
+                                <button class="btn" onclick="saveCaseProfile()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white;">
+                                    &#128190; Save Case Profile
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1361,5 +1641,285 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// =============================================================================
+// Session 406: Case Setup Functions
+// =============================================================================
+
+let currentCaseStep = 1;
+let childCounter = 0;
+
+// Load existing case profiles
+async function loadCaseProfiles() {
+    const container = document.getElementById('case-profiles-list');
+    container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm" style="color: #10b981;"></div> Loading cases...</div>';
+
+    try {
+        const response = await fetch('/api/legal/cases/', {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+
+        if (data.cases && data.cases.length > 0) {
+            container.innerHTML = data.cases.map(c => `
+                <div class="card mb-3" style="background: #1a1a1a; border: 1px solid #333;">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1" style="color: #6ee7b7;">${escapeHtml(c.case_number)} - ${escapeHtml(c.case_type_display)}</h6>
+                            <small class="text-muted">
+                                ${escapeHtml(c.petitioner_name || 'No petitioner')} v. ${escapeHtml(c.respondent_name || 'No respondent')}
+                                &bull; ${escapeHtml(c.county)} County
+                                ${c.children_count > 0 ? '&bull; ' + c.children_count + ' child(ren)' : ''}
+                            </small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm me-2" onclick="setActiveCase('${c.id}')" style="background: #10b981; border: none; color: white;">
+                                &#9989; Use This Case
+                            </button>
+                            <button class="btn btn-sm" onclick="editCase('${c.id}')" style="background: transparent; border: 1px solid #666; color: #888;">
+                                &#9998; Edit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-4" style="background: #1a1a1a; border: 1px dashed #333; border-radius: 8px;">
+                    <span style="font-size: 2rem;">&#128193;</span>
+                    <p class="mb-2 text-muted">No cases set up yet</p>
+                    <p class="text-muted" style="font-size: 0.9rem;">Click "Set Up New Case" to get started</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading cases:', error);
+        container.innerHTML = '<div class="alert alert-danger">Error loading cases. Please try again.</div>';
+    }
+}
+
+// Set a case as active for motion analysis
+async function setActiveCase(caseId) {
+    try {
+        const response = await fetch('/api/legal/active-case/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ case_id: caseId })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Active case set to ' + data.case_number, 'success');
+            loadCaseProfiles();
+        } else {
+            showToast('Error setting active case', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error setting active case', 'error');
+    }
+}
+
+// Show the case setup form
+function showCaseSetupForm() {
+    document.getElementById('case-setup-form-container').style.display = 'block';
+    document.getElementById('new-case-btn').style.display = 'none';
+    resetCaseForm();
+}
+
+// Hide the case setup form
+function hideCaseSetupForm() {
+    document.getElementById('case-setup-form-container').style.display = 'none';
+    document.getElementById('new-case-btn').style.display = 'block';
+}
+
+// Reset form to initial state
+function resetCaseForm() {
+    currentCaseStep = 1;
+    childCounter = 0;
+    document.querySelectorAll('.case-setup-step').forEach(el => el.style.display = 'none');
+    document.getElementById('case-step-1').style.display = 'block';
+    document.querySelectorAll('.case-step').forEach(el => {
+        el.classList.remove('active', 'completed');
+    });
+    document.querySelector('.case-step[data-step="1"]').classList.add('active');
+    document.getElementById('children-list').innerHTML = '';
+
+    // Clear form fields
+    ['case-number', 'case-county', 'case-division', 'case-court-address',
+     'petitioner-name', 'petitioner-email', 'petitioner-address', 'petitioner-phone',
+     'petitioner-city', 'petitioner-zip', 'petitioner-attorney-name', 'petitioner-attorney-firm',
+     'petitioner-attorney-email', 'petitioner-attorney-bar',
+     'respondent-name', 'respondent-email', 'respondent-address', 'respondent-phone',
+     'respondent-city', 'respondent-zip', 'respondent-attorney-name', 'respondent-attorney-firm',
+     'respondent-attorney-email', 'respondent-attorney-bar'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+// Navigate to next step
+function nextCaseStep(step) {
+    // Mark current step as completed
+    document.querySelector('.case-step[data-step="' + currentCaseStep + '"]').classList.remove('active');
+    document.querySelector('.case-step[data-step="' + currentCaseStep + '"]').classList.add('completed');
+
+    // Show new step
+    document.getElementById('case-step-' + currentCaseStep).style.display = 'none';
+    document.getElementById('case-step-' + step).style.display = 'block';
+    document.querySelector('.case-step[data-step="' + step + '"]').classList.add('active');
+
+    currentCaseStep = step;
+}
+
+// Navigate to previous step
+function prevCaseStep(step) {
+    document.querySelector('.case-step[data-step="' + currentCaseStep + '"]').classList.remove('active');
+    document.getElementById('case-step-' + currentCaseStep).style.display = 'none';
+    document.getElementById('case-step-' + step).style.display = 'block';
+    document.querySelector('.case-step[data-step="' + step + '"]').classList.add('active');
+    document.querySelector('.case-step[data-step="' + step + '"]').classList.remove('completed');
+
+    currentCaseStep = step;
+}
+
+// Toggle petitioner attorney section
+function togglePetitionerAttorney() {
+    const isProSe = document.getElementById('petitioner-pro-se').checked;
+    document.getElementById('petitioner-attorney-section').style.display = isProSe ? 'none' : 'block';
+}
+
+// Toggle respondent attorney section
+function toggleRespondentAttorney() {
+    const isProSe = document.getElementById('respondent-pro-se').checked;
+    document.getElementById('respondent-attorney-section').style.display = isProSe ? 'none' : 'block';
+}
+
+// Add a child row
+function addChildRow() {
+    childCounter++;
+    const childrenList = document.getElementById('children-list');
+    const childHtml = '<div class="row mb-2 child-row" id="child-row-' + childCounter + '">' +
+        '<div class="col-md-6">' +
+        '<input type="text" class="form-control child-name" placeholder="Child\'s full name" style="background: #2a2a2a; border: 1px solid #444; color: white;">' +
+        '</div>' +
+        '<div class="col-md-4">' +
+        '<input type="date" class="form-control child-dob" style="background: #2a2a2a; border: 1px solid #444; color: white;">' +
+        '</div>' +
+        '<div class="col-md-2">' +
+        '<button class="btn btn-sm w-100" onclick="removeChildRow(' + childCounter + ')" style="background: transparent; border: 1px solid #ef4444; color: #ef4444;">&#128465;</button>' +
+        '</div>' +
+        '</div>';
+    childrenList.insertAdjacentHTML('beforeend', childHtml);
+}
+
+// Remove a child row
+function removeChildRow(id) {
+    document.getElementById('child-row-' + id).remove();
+}
+
+// Save the case profile
+async function saveCaseProfile() {
+    // Gather all form data
+    const caseData = {
+        case_number: document.getElementById('case-number').value,
+        case_type: document.getElementById('case-type').value,
+        county: document.getElementById('case-county').value,
+        state: document.getElementById('case-state').value,
+        division: document.getElementById('case-division').value,
+        court_address: document.getElementById('case-court-address').value,
+        petitioner: {
+            full_name: document.getElementById('petitioner-name').value,
+            email: document.getElementById('petitioner-email').value,
+            address: document.getElementById('petitioner-address').value,
+            phone: document.getElementById('petitioner-phone').value,
+            city: document.getElementById('petitioner-city').value,
+            state: document.getElementById('petitioner-state').value,
+            zip_code: document.getElementById('petitioner-zip').value,
+            is_pro_se: document.getElementById('petitioner-pro-se').checked,
+            attorney: !document.getElementById('petitioner-pro-se').checked ? {
+                full_name: document.getElementById('petitioner-attorney-name').value,
+                firm_name: document.getElementById('petitioner-attorney-firm').value,
+                email: document.getElementById('petitioner-attorney-email').value,
+                bar_number: document.getElementById('petitioner-attorney-bar').value,
+            } : null
+        },
+        respondent: {
+            full_name: document.getElementById('respondent-name').value,
+            email: document.getElementById('respondent-email').value,
+            address: document.getElementById('respondent-address').value,
+            phone: document.getElementById('respondent-phone').value,
+            city: document.getElementById('respondent-city').value,
+            state: document.getElementById('respondent-state').value,
+            zip_code: document.getElementById('respondent-zip').value,
+            is_pro_se: document.getElementById('respondent-pro-se').checked,
+            attorney: !document.getElementById('respondent-pro-se').checked ? {
+                full_name: document.getElementById('respondent-attorney-name').value,
+                firm_name: document.getElementById('respondent-attorney-firm').value,
+                email: document.getElementById('respondent-attorney-email').value,
+                bar_number: document.getElementById('respondent-attorney-bar').value,
+            } : null
+        },
+        children: []
+    };
+
+    // Gather children
+    document.querySelectorAll('.child-row').forEach(row => {
+        const name = row.querySelector('.child-name').value;
+        const dob = row.querySelector('.child-dob').value;
+        if (name) {
+            caseData.children.push({ full_name: name, date_of_birth: dob || null });
+        }
+    });
+
+    // Validation
+    if (!caseData.case_number) {
+        showToast('Please enter a case number', 'warning');
+        return;
+    }
+    if (!caseData.petitioner.full_name) {
+        showToast('Please enter your name', 'warning');
+        return;
+    }
+    if (!caseData.respondent.full_name) {
+        showToast('Please enter the other party\'s name', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/legal/cases/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(caseData)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Case ' + data.case_number + ' created successfully!', 'success');
+            hideCaseSetupForm();
+            loadCaseProfiles();
+
+            // Auto-set as active case
+            setActiveCase(data.case_id);
+        } else {
+            showToast(data.error || 'Error creating case', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving case:', error);
+        showToast('Error saving case. Please try again.', 'error');
+    }
+}
+
+// Edit an existing case
+async function editCase(caseId) {
+    showToast('Edit functionality coming soon!', 'info');
+    // TODO: Implement edit functionality
 }
 </script>

@@ -2615,6 +2615,34 @@ try:
 except ImportError:
     pass
 
+# =============================================================================
+# Session 406: Legal Case Management API
+# =============================================================================
+from core.views_legal_cases import (
+    case_profiles_list, case_profile_detail,
+    add_child, delete_child,
+    add_document, delete_document,
+    get_case_context, active_case
+)
+
+urlpatterns += [
+    # Case Profiles
+    path('api/legal/cases/', case_profiles_list, name='legal-cases-list'),
+    path('api/legal/cases/<uuid:case_id>/', case_profile_detail, name='legal-case-detail'),
+    path('api/legal/cases/<uuid:case_id>/context/', get_case_context, name='legal-case-context'),
+
+    # Children
+    path('api/legal/cases/<uuid:case_id>/children/', add_child, name='legal-case-add-child'),
+    path('api/legal/cases/<uuid:case_id>/children/<uuid:child_id>/', delete_child, name='legal-case-delete-child'),
+
+    # Documents
+    path('api/legal/cases/<uuid:case_id>/documents/', add_document, name='legal-case-add-document'),
+    path('api/legal/cases/<uuid:case_id>/documents/<uuid:document_id>/', delete_document, name='legal-case-delete-document'),
+
+    # Active Case
+    path('api/legal/active-case/', active_case, name='legal-active-case'),
+]
+
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -155,3 +155,166 @@ class GeneratedCodeAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset with related objects."""
         return super().get_queryset(request).select_related('project', 'user')
+
+
+# =============================================================================
+# Session 406: Legal Case Management Admin
+# =============================================================================
+from .models_legal import CaseProfile, Party, Attorney, Child, CaseDocument
+
+
+class PartyInline(admin.TabularInline):
+    """Inline display of parties in case profile."""
+    model = Party
+    extra = 0
+    fields = ('party_type', 'full_name', 'email', 'phone', 'is_pro_se')
+
+
+class ChildInline(admin.TabularInline):
+    """Inline display of children in case profile."""
+    model = Child
+    extra = 0
+    fields = ('full_name', 'date_of_birth', 'age')
+    readonly_fields = ('age',)
+
+
+class CaseDocumentInline(admin.TabularInline):
+    """Inline display of documents in case profile."""
+    model = CaseDocument
+    extra = 0
+    fields = ('document_type', 'title', 'entered_date', 'file')
+
+
+@admin.register(CaseProfile)
+class CaseProfileAdmin(admin.ModelAdmin):
+    """Admin interface for legal case profiles."""
+
+    list_display = ('case_number', 'case_type', 'county', 'status', 'user', 'updated_at')
+    list_filter = ('case_type', 'status', 'county', 'state')
+    search_fields = ('case_number', 'case_title', 'county')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+
+    inlines = [PartyInline, ChildInline, CaseDocumentInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'case_number', 'case_title', 'case_type', 'status')
+        }),
+        ('Court Information', {
+            'fields': ('county', 'state', 'district', 'division', 'courtroom', 'court_address')
+        }),
+        ('Dates', {
+            'fields': ('filing_date',)
+        }),
+        ('Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+class AttorneyInline(admin.TabularInline):
+    """Inline display of attorneys for a party."""
+    model = Attorney
+    extra = 0
+    fields = ('full_name', 'firm_name', 'email', 'phone', 'bar_number')
+
+
+@admin.register(Party)
+class PartyAdmin(admin.ModelAdmin):
+    """Admin interface for parties."""
+
+    list_display = ('full_name', 'party_type', 'case_profile', 'is_pro_se', 'email')
+    list_filter = ('party_type', 'is_pro_se')
+    search_fields = ('full_name', 'email', 'case_profile__case_number')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+
+    inlines = [AttorneyInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('case_profile', 'party_type', 'full_name', 'first_name', 'is_pro_se')
+        }),
+        ('Contact Information', {
+            'fields': ('address', 'city', 'state', 'zip_code', 'phone', 'email')
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Attorney)
+class AttorneyAdmin(admin.ModelAdmin):
+    """Admin interface for attorneys."""
+
+    list_display = ('full_name', 'firm_name', 'party', 'email', 'bar_number')
+    search_fields = ('full_name', 'firm_name', 'email', 'bar_number')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('party', 'full_name', 'first_name', 'firm_name')
+        }),
+        ('Contact Information', {
+            'fields': ('address', 'city', 'state', 'zip_code', 'phone', 'email')
+        }),
+        ('Bar Information', {
+            'fields': ('bar_number',)
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Child)
+class ChildAdmin(admin.ModelAdmin):
+    """Admin interface for children."""
+
+    list_display = ('full_name', 'case_profile', 'date_of_birth', 'age')
+    search_fields = ('full_name', 'case_profile__case_number')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'age')
+
+    fieldsets = (
+        (None, {
+            'fields': ('case_profile', 'full_name', 'first_name', 'date_of_birth')
+        }),
+        ('System Info', {
+            'fields': ('id', 'age', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(CaseDocument)
+class CaseDocumentAdmin(admin.ModelAdmin):
+    """Admin interface for case documents."""
+
+    list_display = ('title', 'document_type', 'case_profile', 'entered_date', 'uploaded_at')
+    list_filter = ('document_type', 'entered_date')
+    search_fields = ('title', 'case_profile__case_number')
+    readonly_fields = ('id', 'uploaded_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('case_profile', 'document_type', 'title', 'file')
+        }),
+        ('Dates', {
+            'fields': ('entered_date',)
+        }),
+        ('Content', {
+            'fields': ('extracted_text', 'notes'),
+            'classes': ('collapse',)
+        }),
+        ('System Info', {
+            'fields': ('id', 'uploaded_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
