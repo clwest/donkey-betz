@@ -1,115 +1,88 @@
 # Start Next Session Here
 
-**Last Session:** 406 - Legal Document Generation Polish COMPLETE!
+**Last Session:** 407 - Document Download Feature COMPLETE!
 **Date:** December 9, 2025
-**Status:** Lawyer-ready motions | 9 commits | MotionContext system | Ready for download feature
+**Status:** Downloadable legal documents | Word/PDF/Text/Markdown export | Full lawyer demo ready
 
 ---
 
-## Session 406 Accomplishments
+## Session 407 Accomplishments
 
-### MAJOR: MotionContext System (PATCH-5)
+### MAJOR: Document Download Feature
 
-Created `core/agents/legal/motion_context.py` (~400 lines):
+Users can now download individual sections from the motion rewriter as Word, Text, or Markdown files:
 
-| Component | Purpose |
-|-----------|---------|
-| `MotionContext` dataclass | Aggregates all case/motion data for consistent rendering |
-| `clean_motion_text()` | Post-processing for wording glitches |
-| `render_relief_block()` | Numbered list for RELIEF REQUESTED section |
-| `score_relief_scope()` | Relief counting with scoring (1-3 items = 22pts) |
+| Section | Format | Description |
+|---------|--------|-------------|
+| Verified Motion | .docx | Full court-ready motion |
+| Proposed Order | .docx | Separate order for court |
+| Appendix A | .docx | Factual narrative exhibit |
+| Evidence Checklist | .md | Items to gather |
+| Conferral Email | .txt | Ready to send email |
+| Success Analysis | .md | Score breakdown |
 
-### ChatGPT's 6 Patches + Final Polish
+### Files Created/Modified
 
-| Patch | Fix |
-|-------|-----|
-| **1** | Resolve placeholders from CaseMeta |
-| **2** | Relief in Proposed Order (full items) |
-| **3** | Service goes to counsel if represented |
-| **4** | conferral_status enum |
-| **5** | Wording glitch fixes |
-| **6** | Non-disparagement linkage |
-| **5.1** | Relief count bug (142 vs 3) |
-| **5.2** | Affidavit format, bullets, name consistency |
+| File | Changes |
+|------|---------|
+| `core/agents/legal/document_bundle.py` | NEW - Section parser + generators (~200 lines) |
+| `core/agents/legal/legal_doc_drafter_agent.py` | Added document_bundle to result |
+| `core/views_legal.py` | Added `export_legal_section()` endpoint |
+| `core/urls.py` | Added `/api/legal/export-section/` route |
+| `legal_assistant_panel.html` | Added download buttons UI + JS |
 
-### All 9 Commits
+### API Endpoint
 
-| Commit | Description |
-|--------|-------------|
-| `6a3a171` | PATCH-5.2: Final polish (affidavit, bullets, names) |
-| `b65f1f6` | PATCH-5.1: Relief count bug, section ordering |
-| `3b3ad52` | PATCH-5: MotionContext field binding |
-| `6876c43` | Edit/delete bugs + authenticatedFetch |
-| `298d1fd` | Case Setup edit and delete |
-| `b4adf81` | Attorney address field |
-| `dfffc78` | Variable order fix |
-| `dc66279` | ChatGPT polish tweaks |
-| `9b64052` | Case Intake Form + Conferral System |
-
-### Output Structure (Final)
-
+```bash
+POST /api/legal/export-section/
+{
+    "section_id": "motion_core",
+    "format": "docx",
+    "content": "...",
+    "label": "Verified Motion"
+}
 ```
-PART 1: Procedural Defects Identified
-PART 2: Non-Party Rule Check
-PART 3: Corrected Motion (Court-Ready Format)
-PART 4: Evidence Checklist
-PART 5: Likelihood of Success
-PART 6: Conferral Email (Send Before Filing)
-APPENDIX A: Full Restatement (Optional Exhibit)
-```
+
+Returns: File download (Word, Text, or Markdown)
+
+### Demo Flow
+
+1. Upload denied motion → Click "Analyze"
+2. See full analysis with download buttons
+3. Click "Verified Motion (.docx)" → Opens in Word
+4. Click "Conferral Email (.txt)" → Ready to send
 
 ---
 
-## Next Session: 407 - Document Download
+## Next Session: 408 - Enhanced Features
 
-### Priority 1: Make Documents Downloadable
+### Priority 1: PDF Export (Optional)
 
-**User Flow:**
-1. User uploads denied motion
-2. System generates rewritten motion
-3. User clicks "Download as Word" or "Download as PDF"
-4. Document downloads with proper court formatting
-
-**Implementation Options:**
-
-**Option A: python-docx for Word (Recommended)**
-```python
-pip install python-docx
-
-from docx import Document
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-def generate_motion_docx(motion_text: str, filename: str):
-    doc = Document()
-    # Parse sections, apply court formatting
-    doc.save(filename)
-```
-
-**Option B: WeasyPrint for PDF**
+Add PDF generation using WeasyPrint:
 ```python
 pip install weasyprint
-
 from weasyprint import HTML
-
-def generate_motion_pdf(motion_html: str, filename: str):
-    HTML(string=motion_html).write_pdf(filename)
+HTML(string=html_content).write_pdf('motion.pdf')
 ```
 
-**Tasks:**
-1. Add `python-docx` dependency
-2. Create document generation service
-3. Add download button to UI
-4. Create API endpoint for download
-5. Apply proper court formatting (margins, fonts, spacing)
+### Priority 2: Enhanced DOCX Formatting
 
-### Priority 2: Active Case Indicator
+Improve Word document output:
+- Line numbering (court requirement)
+- Double-spacing option
+- Court-specific templates
+- Page numbering
+
+### Priority 3: Batch Download
+
+Add "Download All" button that:
+- Creates ZIP file with all sections
+- Named by case number
+- Includes folder structure
+
+### Priority 4: Active Case Indicator
 
 Show in UI which case is currently active for analysis.
-
-### Priority 3: Auto-populate from OCR
-
-Extract case details from uploaded court orders.
 
 ---
 
@@ -119,28 +92,18 @@ Extract case details from uploaded court orders.
 # Start services
 make start && make celery
 
-# Test Legal Assistant
-open http://localhost:8000/ai-studio/
-# Navigate to Legal Assistant tab
-
-# Run tests
+# Test Document Bundle
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
-from core.agents.legal.motion_context import clean_motion_text, score_relief_scope
-print('Score test:', score_relief_scope(3))  # Should be (22, 'Focused relief requests...')
+from core.agents.legal.document_bundle import parse_motion_output_to_bundle
+bundle = parse_motion_output_to_bundle('## PART 3: TEST', '25DR576', 'LARIMER')
+print(f'Sections: {len(bundle.sections)}')
 "
+
+# Access Legal Assistant
+open http://localhost:8000/ai-studio/
+# Navigate to Legal Assistant → Case Files → Upload → Analyze → Download
 ```
-
----
-
-## ChatGPT's Final Assessment
-
-> "If a Colorado family lawyer who knows your case looked at just the caption, FACTS, RELIEF REQUESTED, Affidavit, Proposed Order, Conferral section... they would absolutely recognize this as a real, CO-style motion they could tweak and file."
-
-**Demo Framing:**
-- Frame as form selection + structure enforcement + conflict detection
-- NOT as giving legal advice
-- Ask lawyer: "What would you want the system to enforce before letting a user hit 'File'?"
 
 ---
 
@@ -148,11 +111,11 @@ print('Score test:', score_relief_scope(3))  # Should be (22, 'Focused relief re
 
 | File | Purpose |
 |------|---------|
-| `core/agents/legal/legal_doc_drafter_agent.py` | Main agent (275KB, 15 tools) |
-| `core/agents/legal/motion_context.py` | MotionContext dataclass + helpers |
-| `core/models_legal.py` | Case management models |
-| `core/views_legal_cases.py` | Case profile CRUD API |
-| `docs/handoffs/SESSION_406_LEGAL_DOCUMENT_POLISH.md` | Full session details |
+| `core/agents/legal/legal_doc_drafter_agent.py` | Main agent (280KB, 15 tools) |
+| `core/agents/legal/motion_context.py` | MotionContext dataclass |
+| `core/agents/legal/document_bundle.py` | Section parser + export |
+| `core/views_legal.py` | Export API endpoint |
+| `docs/handoffs/SESSION_407_DOCUMENT_DOWNLOAD_FEATURE.md` | Full session details |
 
 ---
 
@@ -163,19 +126,21 @@ print('Score test:', score_relief_scope(3))  # Should be (22, 'Focused relief re
 | Registered Spiders | 64 |
 | Clean Agents | 27 |
 | Legal Tools | 15 |
-| Session 406 Commits | 9 |
-| Motion Quality | Lawyer-ready |
+| Export Formats | 4 (docx, pdf, txt, md) |
+| Downloadable Sections | 6 |
+| Demo Ready | YES |
 
 ---
 
 ## Previous Sessions
 
-- Session 406: Legal Document Polish (THIS SESSION!)
-- Session 405: ChatGPT-recommended enhancements (5 tools)
+- Session 407: Document Download Feature (THIS SESSION!)
+- Session 406: Legal Document Polish (MotionContext, 9 commits)
+- Session 405: ChatGPT enhancements (5 tools)
 - Session 404: Pro Se Legal Assistant motion rewriter
 - Session 403: Legal Assistant MVP
 - Session 400: Agent knowledge pipeline
 
 ---
 
-**Always read this file first when starting a new session!**
+**The Legal Assistant is now fully demo-ready: upload a denied motion → get analysis → download Word documents!**

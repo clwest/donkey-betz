@@ -990,9 +990,10 @@ from core.views_rag_embeddings import (
     list_documents, ingest_url, ingest_file, get_document, delete_document
 )
 # Session 403: Legal Case Files APIs
+# Session 407: Added export_legal_section for document downloads
 from core.views_legal import (
     list_legal_case_files, upload_legal_case_file, get_legal_case_file,
-    analyze_legal_case_file, delete_legal_case_file
+    analyze_legal_case_file, delete_legal_case_file, export_legal_section
 )
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
@@ -2206,6 +2207,8 @@ urlpatterns = [
     path('api/legal/case-files/<uuid:document_id>/', get_legal_case_file, name='legal-case-files-get'),
     path('api/legal/case-files/<uuid:document_id>/analyze/', analyze_legal_case_file, name='legal-case-files-analyze'),
     path('api/legal/case-files/<uuid:document_id>/delete/', delete_legal_case_file, name='legal-case-files-delete'),
+    # Session 407: Document section export
+    path('api/legal/export-section/', export_legal_section, name='legal-export-section'),
 
     # Multi-LLM Provider Integration APIs
     path('api/v1/llm/providers/', available_llm_providers, name='llm-providers'),
