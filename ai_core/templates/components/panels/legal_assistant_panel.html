@@ -769,12 +769,23 @@ async function submitLegalQuery() {
 
 // Format legal response with proper styling
 function formatLegalResponse(content) {
+    // Session 405 Patch 4G: Fix "Today's Incident" -> "The Incident on"
+    content = content.replace(/Today['']?s?\s+Incident\s*[–—-]\s*/gi, 'The Incident on ');
+    content = content.replace(/At\s+today['']?s?\s+parenting[- ]time\s+exchange/gi, 'At the parenting-time exchange');
+
     // Convert markdown-style headers to HTML
     content = content.replace(/^### (.*$)/gim, '<h5 style="color: #a78bfa; margin-top: 16px;">$1</h5>');
     content = content.replace(/^## (.*$)/gim, '<h4 style="color: #8b5cf6; margin-top: 20px;">$1</h4>');
     content = content.replace(/^# (.*$)/gim, '<h3 style="color: #7c3aed; margin-top: 24px;">$1</h3>');
 
-    // Convert bullet points
+    // Session 405 Patch 4H: Convert Unicode bullet points to HTML list items
+    // Handle bullets that are on separate lines (after newline or at start)
+    content = content.replace(/^\s*[●•○■▪▸►]\s*(.*$)/gim, '<li style="margin-left: 20px;">$1</li>');
+
+    // Handle inline bullets - add line break before them first
+    content = content.replace(/([^\n])\s*([●•○■▪▸►])\s*/g, '$1<br><span style="margin-left: 20px;">$2 </span>');
+
+    // Convert markdown bullet points
     content = content.replace(/^\* (.*$)/gim, '<li style="margin-left: 20px;">$1</li>');
     content = content.replace(/^- (.*$)/gim, '<li style="margin-left: 20px;">$1</li>');
 
@@ -784,8 +795,12 @@ function formatLegalResponse(content) {
     // Convert bold
     content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-    // Convert line breaks to paragraphs
-    content = content.split('\n\n').map(p => `<p>${p}</p>`).join('');
+    // Convert single newlines to <br> (preserving paragraph structure)
+    // First split on double newlines for paragraphs
+    content = content.split('\n\n').map(p => {
+        // Within each paragraph, convert single newlines to <br>
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
 
     return content;
 }

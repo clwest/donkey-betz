@@ -1,8 +1,8 @@
-# Session 403: Pro Se Legal Assistant MVP
+# Session 403/404/405: Pro Se Legal Assistant MVP
 
 **Date:** December 9, 2025
-**Status:** Phase 1 + Phase 2 + Phase 3 Complete ✅
-**Focus:** Colorado Divorce with Children + Case File Upload/Analysis
+**Status:** Phase 1 + Phase 2 + Phase 3 + Phase 4 (Motion Rewriting) + Phase 5 (Text Cleanup & Learning) Complete ✅
+**Focus:** Colorado Divorce with Children + Case File Upload/Analysis + Motion Rewriting + Text Formatting
 
 ---
 
@@ -246,13 +246,162 @@ Upload a denied motion PDF and magistrate's denial letter to:
 
 ---
 
-## What's Next (Phase 4 - Optional)
+## Phase 4: Motion Rewriting Engine (Session 404) ✅
 
-1. **Enhanced Corrective Filing** - Structured form-filling templates
-2. **Document Pinning** - Reference specific documents in ongoing chat
-3. **OCR Support** - Handle scanned PDF documents
-4. **Case Timeline** - Visual timeline of case events from documents
-5. **Auto-Detection** - Automatically detect document type from content
+Based on real-world feedback from a denied motion, implemented comprehensive motion rewriting capabilities.
+
+### Key Feedback Addressed
+
+**What was working:**
+- ✅ Correctly identified all denial reasons
+- ✅ Stayed on safe side of legal advice line
+- ✅ Understood Colorado specifics without hallucinating statutes
+
+**What needed improvement:**
+- ❌ Was analyzing but not converting to correct JDF format
+- ❌ Over-explained optional strategy instead of "do this, not that"
+- ❌ Used placeholders like "JDF XXXX" instead of form names
+- ❌ Did not output ready-to-file affidavit-style drafts
+
+### New Tools Added (Session 404)
+
+| Tool | Purpose |
+|------|---------|
+| `analyze_denied_motion` | Analyze why motion was denied, identify all deficiencies |
+| `rewrite_motion` | Generate corrected motion in proper JDF format with affidavit |
+| `generate_evidence_checklist` | Create checklist of required exhibits for motion type |
+| `check_non_party_issues` | Detect non-party relief requests and provide corrections |
+
+### JDF Form Scaffolding
+
+Added comprehensive form mapping (`JDF_FORM_MAPPING`) for:
+- `emergency_parenting` - Emergency Orders (no standard JDF)
+- `restrict_parenting` - JDF 1220 (Motion to Modify Parenting Time)
+- `modify_parenting_time` - JDF 1220 + JDF 1221 (Affidavit)
+- `enforce_order` - Motion for Citation for Contempt
+- `modify_child_support` - JDF 1820 or JDF 1821
+- `third_party_interference` - JDF 1220 or Contempt
+
+### Statutory Criteria Categories
+
+Added `STATUTORY_CRITERIA` mapping to align facts with procedural requirements WITHOUT citing statute numbers:
+- `emergency_restriction` - Imminent danger requirements
+- `modification` - Changed circumstances + best interests
+- `contempt` - Willful violation requirements
+
+### Non-Party Rule Detection
+
+Added `NON_PARTY_INDICATORS` list and detection logic:
+- Detects requests for relief against girlfriends, boyfriends, grandparents, etc.
+- Explains why courts cannot order non-parties
+- Provides correct procedure: "Order [Party] to ensure [non-party] does not..."
+
+### Updated System Prompt
+
+Completely rewrote system prompt to:
+1. ONLY discuss procedural paths, not strategy
+2. Never say "Consider requesting..." (that's strategy)
+3. Always identify correct JDF form by official title
+4. When user uploads denied motion, follow structured analysis:
+   - A. Correct form identification
+   - B. Why original was denied
+   - C. Separate filings needed
+   - D. Draft affidavit in proper sworn format
+   - E. Draft motion in JDF structure
+   - F. Proposed order template
+   - G. Evidence/exhibit checklist
+
+### Motion Rewriter Output Structure
+
+When `rewrite_motion` is called, output includes:
+1. **Header** - Case caption with form reference
+2. **Motion Section** - Numbered factual allegations
+3. **Specific Incidents** - Dated incident timeline
+4. **Relief Requested** - What court is being asked to do
+5. **Legal Basis** - Criteria category (no statute citations)
+6. **Sworn Affidavit** - Facts restated under penalty of perjury
+7. **Proposed Order** - Ready for judge signature
+8. **Evidence Checklist** - Motion-type specific requirements
+9. **Filing Instructions** - Next steps
+
+---
+
+## Phase 5: Text Cleanup & Collective Learning (Session 405) ✅
+
+Based on ChatGPT's review of the generated motion output, implemented comprehensive text cleanup and learning integration.
+
+### Issues Fixed (Patches 4D-4H)
+
+| Issue | Fix | Patch |
+|-------|-----|-------|
+| PDF artifacts (docket refs, page numbers) | Pre-extraction cleanup patterns | 4D |
+| "Immediate Emergency Basis" showing in output | Multiple regex cleanup patterns | 4D.7 |
+| Grammar errors ("escalating, harmful, and constitutes") | Regex replacement for clean prose | 4D.7 |
+| "Today's Incident" (wrong for later filing) | Replaced with "The Incident on [date]" | 4G |
+| Bullet points on same line (`● A ● B ● C`) | Newline insertion + HTML formatting | 4F, 4H |
+| Giant paragraphs instead of numbered facts | Proper segmentation in `_build_clean_allegations()` | 4E |
+| Single newlines collapsing in HTML | Convert `\n` to `<br>` in frontend | 4H |
+
+### New Methods Added
+
+| Method | Purpose |
+|--------|---------|
+| `postprocess_extracted_facts()` | Final cleanup layer after fact extraction |
+| `cleanup_generated_facts_block()` | Remove boilerplate patterns from generated text |
+| `_extract_third_party_segment()` | Extract third-party status bullet list |
+| `_extract_respondent_failures_segment()` | Extract respondent failures bullet list |
+| `_save_legal_memory()` | Save legal-specific patterns to LegalMemory |
+| `_ensure_agent_registered()` | Ensure LegalDocDrafterAgent is in Agent database |
+
+### Collective Intelligence Integration
+
+The LegalDocDrafterAgent now participates in collective learning:
+
+1. **Agent Registration** - Auto-registers in Agent database on init
+2. **Learning Hooks** - Fires after every denied motion rewrite:
+   - `_record_learning_outcome()` - XP and pattern detection
+   - `_create_execution_memory()` - Persistent execution memory
+   - `_share_knowledge()` - Share pattern with other agents
+   - `_save_legal_memory()` - Legal-specific memory storage
+3. **LegalMemory Records** - Created for each motion rewrite with:
+   - Relief type, jurisdiction, facts count
+   - Key insights and applicable scenarios
+   - Agent FK linkage
+
+### Frontend Improvements (Patch 4H)
+
+Updated `formatLegalResponse()` in `legal_assistant_panel.html`:
+- Unicode bullet points (`●`, `•`, etc.) → HTML list items
+- Single newlines → `<br>` tags
+- "Today's Incident" → "The Incident on" (frontend fallback)
+- Proper indentation for bullet lists
+
+### Files Modified
+
+```
+# Backend
+core/agents/legal/legal_doc_drafter_agent.py
+  - Added postprocess_extracted_facts() (~80 lines)
+  - Added cleanup_generated_facts_block() (~70 lines)
+  - Added _save_legal_memory() (~30 lines)
+  - Added _ensure_agent_registered() (~15 lines)
+  - Modified _execute_denied_motion_pipeline() (learning hooks)
+  - Modified _build_clean_allegations() (proper segmentation)
+
+# Frontend
+ai_core/templates/components/panels/legal_assistant_panel.html
+  - Updated formatLegalResponse() (bullet and newline handling)
+```
+
+---
+
+## What's Next (Phase 6 - Optional)
+
+1. **Document Pinning** - Reference specific documents in ongoing chat
+2. **OCR Support** - Handle scanned PDF documents
+3. **Case Timeline** - Visual timeline of case events from documents
+4. **Auto-Detection** - Automatically detect document type from content
+5. **Multi-Motion Package** - Generate all required separate filings at once
 
 ---
 
