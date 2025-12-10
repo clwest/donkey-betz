@@ -374,6 +374,7 @@ def case_profile_detail(request, case_id):
         return JsonResponse({
             'success': True,
             'case_id': str(case.id),
+            'case_number': case.case_number,
             'message': f'Case {case.case_number} updated successfully'
         })
 

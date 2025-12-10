@@ -1905,12 +1905,8 @@ async function saveCaseProfile() {
         const url = isEditing ? `/api/legal/cases/${window.editingCaseId}/` : '/api/legal/cases/';
         const method = isEditing ? 'PUT' : 'POST';
 
-        const response = await fetch(url, {
+        const response = await authenticatedFetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
             body: JSON.stringify(caseData)
         });
         const data = await response.json();
@@ -1939,17 +1935,15 @@ async function saveCaseProfile() {
 async function editCase(caseId) {
     try {
         // Fetch the case data
-        const response = await fetch(`/api/legal/cases/${caseId}/`, {
-            credentials: 'include'
-        });
+        const response = await authenticatedFetch(`/api/legal/cases/${caseId}/`);
         if (!response.ok) throw new Error('Failed to fetch case');
         const caseData = await response.json();
 
-        // Store the case ID for update
-        window.editingCaseId = caseId;
-
-        // Show the form
+        // Show the form FIRST (which resets editingCaseId to null)
         showCaseSetupForm();
+
+        // THEN store the case ID for update (AFTER reset)
+        window.editingCaseId = caseId;
 
         // Populate Step 1: Case Info
         document.getElementById('case-number').value = caseData.case_number || '';
@@ -2029,10 +2023,8 @@ async function deleteCase(caseId) {
         return;
     }
     try {
-        const response = await fetch(`/api/legal/cases/${caseId}/`, {
-            method: 'DELETE',
-            credentials: 'include',
-            headers: { 'X-CSRFToken': getCSRFToken() }
+        const response = await authenticatedFetch(`/api/legal/cases/${caseId}/`, {
+            method: 'DELETE'
         });
         if (!response.ok) throw new Error('Failed to delete case');
         showToast('Case deleted', 'success');
