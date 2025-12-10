@@ -5759,9 +5759,10 @@ MAGISTRATE / JUDGE
 
         # =====================================================================
         # CHECK IF ORDER IS ALREADY UPLOADED
+        # Session 405: Fixed to match actual document_type values from database
         # =====================================================================
         has_uploaded_order = any(
-            doc_type.lower() in ['court order', 'order', 'decree', 'parenting plan']
+            doc_type.lower() in ['court_order', 'court order', 'order', 'decree', 'parenting plan', 'parenting_plan']
             for doc_type in uploaded_documents
         )
 
