@@ -1,8 +1,50 @@
 # Start Next Session Here
 
-**Last Session:** 404 - Pro Se Legal Assistant Motion Rewriter
+**Last Session:** 405 - Legal Agent Learning Integration
 **Date:** December 9, 2025
-**Status:** 62 spiders | Legal Motion Rewriter complete | Clean numbered allegations!
+**Status:** 62 spiders | Legal Agent connected to Collective Intelligence | Every motion makes the system smarter!
+
+---
+
+## Session 405 Accomplishments
+
+### Legal Agent Learning Integration COMPLETE!
+
+GPT-4 observed that our platform has all the primitives for inter-agent learning. We audited and **fixed** the gaps:
+
+1. **Agent Registration**
+   - LegalDocDrafterAgent now auto-registers in Agent database
+   - Learning hooks require `agent_model` to not be None
+
+2. **Learning Hooks in Denied Motion Pipeline**
+   - Added `_record_learning_outcome()` for XP/pattern detection
+   - Added `_create_execution_memory()` for persistent memories
+   - Added `_share_knowledge()` for collective intelligence
+   - Added `_save_legal_memory()` for legal-specific patterns
+
+3. **Verification Results**
+   - Before: 0 AgentKnowledgeSource records from legal agent
+   - After: Records created for every motion processed
+   - LegalMemory records track motion patterns
+
+### The Learning Loop Is Now LIVE
+
+```
+Motion Filed → Analyze → Rewrite
+                    ↓
+            _record_learning_outcome()
+                    ↓
+            _create_execution_memory()
+                    ↓
+            _share_knowledge()
+                    ↓
+            _save_legal_memory()
+                    ↓
+        Future Motions Benefit!
+```
+
+### Documentation
+- Handoff: `docs/SESSION_405_LEGAL_AGENT_LEARNING_AUDIT.md`
 
 ---
 
@@ -53,23 +95,26 @@ SPECIFIC FACTUAL ALLEGATIONS:
 
 ---
 
-## Next Session: 405 - [Your Focus Here]
+## Next Session: 406 - [Your Focus Here]
 
 ### Suggested Priorities
 
-1. **Testing the Motion Rewriter**
-   - Upload various denied motion PDFs
-   - Verify output quality
-   - Fine-tune extraction as needed
+1. **Test Learning Loop End-to-End**
+   - Process a real denied motion through the UI
+   - Verify AgentKnowledgeSource records created
+   - Check if other agents can retrieve legal patterns
 
-2. **Additional Legal Features**
+2. **Extend Learning to Other Agents**
+   - Audit which other agents are missing learning hooks
+   - Apply the same pattern (ensure_agent_registered + hooks)
+
+3. **Additional Legal Features**
    - More JDF form types
    - Multi-state support (beyond Colorado)
    - Exhibit generation
 
-3. **Platform Improvements**
+4. **Platform Improvements**
    - Spider network optimization
-   - Agent learning enhancements
    - UI polish
 
 ---
