@@ -641,6 +641,14 @@ NOT legal advice - always recommends attorney consultation
                                 <h6 style="color: #fdba74;">Relevant Forms</h6>
                                 <div id="legal-analysis-forms" class="p-3 rounded" style="background: #0a0a0a;"></div>
                             </div>
+                            <!-- Session 407: Download Buttons Section -->
+                            <div id="legal-download-section" class="mb-3" style="display: none;">
+                                <h6 style="color: #38bdf8;">&#128229; Download Documents</h6>
+                                <div id="legal-download-buttons" class="d-flex flex-wrap gap-2 p-3 rounded" style="background: #0a0a0a;">
+                                    <!-- Buttons will be dynamically populated -->
+                                </div>
+                            </div>
+
                             <!-- Action Buttons -->
                             <div class="d-flex gap-2 mt-3">
                                 <button class="btn" onclick="askAboutDocument()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: none; color: white;">
@@ -1518,11 +1526,151 @@ function showDocumentAnalysis(analysis, docId) {
         document.getElementById('legal-analysis-forms').innerHTML = formatLegalResponse(analysis.forms || analysis.relevant_forms || 'No specific forms identified');
     }
 
+    // Session 407: Populate download buttons if document_bundle is available
+    const downloadSection = document.getElementById('legal-download-section');
+    const downloadButtons = document.getElementById('legal-download-buttons');
+
+    if (analysis.document_bundle && analysis.document_bundle.sections && analysis.document_bundle.sections.length > 0) {
+        console.log('[SESSION 407] Document bundle available with', analysis.document_bundle.sections.length, 'sections');
+
+        // Store the bundle for download functions
+        window.currentDocumentBundle = analysis.document_bundle;
+
+        // Generate download buttons for each section
+        let buttonsHtml = '';
+        analysis.document_bundle.sections.forEach(section => {
+            // Choose appropriate icon and color based on role
+            let icon = '&#128196;';  // Default document icon
+            let btnClass = 'btn-outline-primary';
+            let defaultFormat = 'docx';
+
+            switch (section.role) {
+                case 'filing_motion':
+                    icon = '&#128221;';  // Memo
+                    btnClass = 'btn-primary';
+                    break;
+                case 'proposed_order':
+                    icon = '&#128203;';  // Clipboard
+                    btnClass = 'btn-success';
+                    break;
+                case 'optional_exhibit':
+                    icon = '&#128193;';  // Folder
+                    btnClass = 'btn-warning';
+                    break;
+                case 'checklist':
+                    icon = '&#9745;';  // Checkbox
+                    btnClass = 'btn-info';
+                    defaultFormat = 'md';
+                    break;
+                case 'communication_template':
+                    icon = '&#9993;';  // Envelope
+                    btnClass = 'btn-secondary';
+                    defaultFormat = 'txt';
+                    break;
+                case 'analysis':
+                    icon = '&#128202;';  // Chart
+                    btnClass = 'btn-outline-secondary';
+                    defaultFormat = 'md';
+                    break;
+            }
+
+            buttonsHtml += `
+                <div class="btn-group me-2 mb-2">
+                    <button class="btn ${btnClass}" onclick="downloadLegalSection('${section.id}', 'docx')"
+                            style="font-size: 0.85rem;" title="Download as Word document">
+                        ${icon} ${section.label} <small>(.docx)</small>
+                    </button>
+                    <button type="button" class="btn ${btnClass} dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu" style="background: #1a1a1a; border: 1px solid #333;">
+                        <li><a class="dropdown-item" href="#" onclick="downloadLegalSection('${section.id}', 'docx'); return false;" style="color: #ccc;">&#128196; Word (.docx)</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="downloadLegalSection('${section.id}', 'pdf'); return false;" style="color: #ccc;">&#128203; PDF (.pdf)</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="downloadLegalSection('${section.id}', 'txt'); return false;" style="color: #ccc;">&#128221; Text (.txt)</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="downloadLegalSection('${section.id}', 'md'); return false;" style="color: #ccc;">&#128196; Markdown (.md)</a></li>
+                    </ul>
+                </div>
+            `;
+        });
+
+        downloadButtons.innerHTML = buttonsHtml;
+        downloadSection.style.display = 'block';
+    } else {
+        // No document bundle - hide download section
+        downloadSection.style.display = 'none';
+        window.currentDocumentBundle = null;
+    }
+
     analysisLoading.style.display = 'none';
     analysisContent.style.display = 'block';
 
     document.getElementById('legal-file-analysis').style.display = 'block';
     document.getElementById('legal-file-analysis').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Session 407: Download a specific section from the document bundle
+async function downloadLegalSection(sectionId, format) {
+    if (!window.currentDocumentBundle) {
+        showToast('No document bundle available', 'error');
+        return;
+    }
+
+    const section = window.currentDocumentBundle.sections.find(s => s.id === sectionId);
+    if (!section) {
+        showToast('Section not found: ' + sectionId, 'error');
+        return;
+    }
+
+    console.log('[SESSION 407] Downloading section:', sectionId, 'as', format);
+
+    try {
+        const response = await fetch('/api/legal/export-section/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                section_id: section.id,
+                format: format,
+                content: section.content,
+                label: section.label
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Export failed');
+        }
+
+        // Get the filename from Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `${section.label.replace(/\s+/g, '_')}.${format}`;
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        // Download the file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        showToast(`Downloaded: ${filename}`, 'success');
+
+    } catch (error) {
+        console.error('[SESSION 407] Download error:', error);
+        showToast('Error downloading document: ' + error.message, 'error');
+    }
 }
 
 // Delete case file

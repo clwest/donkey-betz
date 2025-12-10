@@ -547,12 +547,17 @@ def analyze_legal_document(doc, additional_context: str = '', request=None) -> d
         if result.success and result.message:
             logger.info(f"[SESSION 404] Returning full_analysis, message length: {len(result.message)}")
             # Return the full agent output
-            return {
+            response_data = {
                 'summary': 'Document analyzed using Legal Assistant pipeline.',
                 'full_analysis': result.message,
                 'pipeline_used': result.data.get('type', 'standard'),
                 'tools_called': result.data.get('tools_called', []),
             }
+            # Session 407: Include document bundle if available for downloads
+            if result.data.get('document_bundle'):
+                response_data['document_bundle'] = result.data.get('document_bundle')
+                logger.info(f"[SESSION 407] Document bundle included with {len(result.data['document_bundle'].get('sections', []))} sections")
+            return response_data
         else:
             # Fallback if agent failed
             logger.warning(f"[SESSION 404] Agent failed or no message. Error: {result.error}")
@@ -573,3 +578,102 @@ def analyze_legal_document(doc, additional_context: str = '', request=None) -> d
             'recommendations': 'Consider consulting with a licensed Colorado attorney.',
             'forms': 'Unable to determine relevant forms automatically.'
         }
+
+
+# =============================================================================
+# Session 407: Export Legal Document Section
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def export_legal_section(request):
+    """
+    Export a specific section from a legal document analysis as downloadable file.
+
+    POST body:
+    {
+        "section_id": "motion_core",      # Required - ID of the section to export
+        "format": "docx",                  # Optional - docx (default), md, txt
+        "content": "...",                  # Required - The section content
+        "label": "Verified Motion"         # Optional - For filename
+    }
+
+    Returns: File download response
+    """
+    from django.http import HttpResponse
+    from io import BytesIO
+
+    try:
+        data = request.data
+        section_id = data.get('section_id')
+        export_format = data.get('format', 'docx').lower()
+        content = data.get('content', '')
+        label = data.get('label', section_id or 'document')
+
+        if not section_id or not content:
+            return Response({
+                'success': False,
+                'error': 'Missing required fields: section_id and content'
+            }, status=400)
+
+        # Sanitize filename
+        safe_label = "".join(c for c in label if c.isalnum() or c in ' -_').strip()
+        safe_label = safe_label.replace(' ', '_')[:50]  # Max 50 chars
+
+        # Import the document bundle helpers
+        from core.agents.legal.document_bundle import (
+            DocumentSection,
+            generate_docx_from_section,
+            generate_txt_from_section,
+            generate_md_from_section,
+            generate_pdf_from_section
+        )
+
+        # Create a section object
+        section = DocumentSection(
+            id=section_id,
+            label=label,
+            role='exported',
+            format='markdown',
+            content=content
+        )
+
+        # Generate the file based on format
+        if export_format == 'docx':
+            file_bytes = generate_docx_from_section(section)
+            content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            filename = f'{safe_label}.docx'
+        elif export_format == 'pdf':
+            file_bytes = generate_pdf_from_section(section)
+            content_type = 'application/pdf'
+            filename = f'{safe_label}.pdf'
+        elif export_format == 'txt':
+            file_bytes = generate_txt_from_section(section)
+            content_type = 'text/plain'
+            filename = f'{safe_label}.txt'
+        elif export_format == 'md':
+            file_bytes = generate_md_from_section(section)
+            content_type = 'text/markdown'
+            filename = f'{safe_label}.md'
+        else:
+            return Response({
+                'success': False,
+                'error': f'Unsupported format: {export_format}. Use docx, pdf, md, or txt.'
+            }, status=400)
+
+        # Create response with file download
+        response = HttpResponse(file_bytes, content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = len(file_bytes)
+
+        logger.info(f"[Session 407] Exported section '{section_id}' as {export_format} ({len(file_bytes)} bytes)")
+        return response
+
+    except Exception as e:
+        logger.error(f"[Session 407] Export error: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)

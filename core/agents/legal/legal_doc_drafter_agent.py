@@ -46,6 +46,10 @@ from core.agents.legal.motion_context import (
     count_relief_items,
     score_relief_scope
 )
+from core.agents.legal.document_bundle import (
+    parse_motion_output_to_bundle,
+    LegalDocumentBundle
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2641,9 +2645,21 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         execution_time = int((time.time() - start_time) * 1000)
 
+        # =====================================================================
+        # Session 407: Parse output into downloadable sections (document bundle)
+        # =====================================================================
+        full_output = "\n".join(output_parts)
+        document_bundle = parse_motion_output_to_bundle(
+            full_output=full_output,
+            case_number=case_details.get('case_number', ''),
+            county=case_details.get('county', ''),
+            state=case_details.get('state', 'CO')
+        )
+        logger.info(f"[Session 407] Created document bundle with {len(document_bundle.sections)} sections")
+
         result = AgentResult(
             success=True,
-            message="\n".join(output_parts),
+            message=full_output,
             data={
                 'type': 'denied_motion_rewrite',
                 'pipeline_executed': True,
@@ -2679,6 +2695,8 @@ For detailed information on this procedure in {county} County, Colorado, please 
                     'email_generated': conferral_email_result is not None,
                     'deadline_date': conferral_email_result.get('deadline_date') if conferral_email_result else None,
                 },
+                # Session 407: Downloadable document sections
+                'document_bundle': document_bundle.to_dict(),
             },
             agent_name=self.name,
             execution_time_ms=execution_time,
