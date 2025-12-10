@@ -135,6 +135,7 @@ class LegalDocumentIngestor:
         user_category: Optional[str] = None,
         user_document_type: Optional[str] = None,
         filing_party: Optional[str] = None,
+        litigation_role: Optional[str] = None,  # Session 410: Added litigation role
         document_date: Optional[str] = None,
         filed_date: Optional[str] = None,
         responds_to_id: Optional[UUID] = None,
@@ -150,6 +151,7 @@ class LegalDocumentIngestor:
             user_category: User-specified category (court_order, motion, etc.)
             user_document_type: User-specified type (temporary_orders, etc.)
             filing_party: Who filed this (petitioner, respondent, court)
+            litigation_role: Role in thread (motion, response, reply, order) - Session 410
             document_date: Date on the document
             filed_date: Date filed with court
             responds_to_id: UUID of document this responds to
@@ -179,6 +181,10 @@ class LegalDocumentIngestor:
         if not filing_party:
             filing_party = self._detect_filing_party(extracted_text)
 
+        # Session 410: Auto-detect litigation role if not provided
+        if not litigation_role:
+            litigation_role = self._detect_litigation_role(extracted_text, document_type, category)
+
         # Parse dates
         doc_date = None
         file_date = None
@@ -202,6 +208,7 @@ class LegalDocumentIngestor:
             category=category,
             document_type=document_type,
             filing_party=filing_party or 'petitioner',
+            litigation_role=litigation_role or 'other',  # Session 410
             title=self._generate_title(filename, document_type),
             original_filename=filename,
             file_size=len(file_content),
@@ -384,6 +391,79 @@ class LegalDocumentIngestor:
             return 'respondent'
 
         return 'petitioner'  # Default
+
+    def _detect_litigation_role(self, text: str, document_type: str, category: str) -> str:
+        """
+        Session 410: Detect litigation role (motion, response, reply, order).
+        Used for document threading.
+        """
+        text_lower = text.lower()
+
+        # Court orders are easy
+        if category == 'court_order':
+            return 'order'
+
+        # Check document type for hints
+        motion_types = ['my_motion', 'opposing_motion', 'pending_motion', 'emergency_motion']
+        response_types = ['response', 'objection', 'opposition']
+        reply_types = ['reply', 'rebuttal']
+
+        if document_type in motion_types:
+            return 'motion'
+        if document_type in response_types:
+            return 'response'
+        if document_type in reply_types:
+            return 'reply'
+
+        # Text pattern matching
+        reply_patterns = [
+            r'reply\s+(to|in\s+support)',
+            r'petitioner.s?\s+reply',
+            r'respondent.s?\s+reply',
+            r'rebuttal',
+        ]
+        for pattern in reply_patterns:
+            if re.search(pattern, text_lower):
+                return 'reply'
+
+        response_patterns = [
+            r'response\s+to.*motion',
+            r'opposition\s+to',
+            r'objection\s+to',
+            r'answer\s+to.*petition',
+        ]
+        for pattern in response_patterns:
+            if re.search(pattern, text_lower):
+                return 'response'
+
+        motion_patterns = [
+            r'motion\s+(to|for)',
+            r'verified\s+motion',
+            r'emergency\s+motion',
+            r'petitioner.*moves',
+            r'respondent.*moves',
+        ]
+        for pattern in motion_patterns:
+            if re.search(pattern, text_lower):
+                return 'motion'
+
+        order_patterns = [
+            r'it\s+is\s+ordered',
+            r'the\s+court\s+orders',
+            r'hereby\s+ordered',
+            r'court\s+order',
+        ]
+        for pattern in order_patterns:
+            if re.search(pattern, text_lower):
+                return 'order'
+
+        # Default based on category
+        if category == 'motion':
+            return 'motion'
+        if category == 'response':
+            return 'response'
+
+        return 'other'
 
     def _extract_metadata(self, text: str, category: str) -> Dict[str, Any]:
         """Extract structured metadata from document text."""

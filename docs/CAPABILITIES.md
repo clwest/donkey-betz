@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 409 (December 10, 2025)
+**Last Updated:** Session 410 (December 10, 2025)
 
 ---
 
@@ -23,9 +23,11 @@
 | Style Presets | 80+ | Built-in |
 | Multi-Agent Orchestration | Yes | Production |
 | Collective Intelligence Search | Yes | Production |
-| **Legal Assistant** | **1** | **Production (Session 409)** |
-| **Document Brain** | **1** | **Production (Session 409)** |
-| **OCR PDF Support** | **Yes** | **Production (Session 409)** |
+| **Legal Assistant** | **1** | **Production** |
+| **Document Brain** | **1** | **Production** |
+| **OCR PDF Support** | **Yes** | **Production** |
+| **Document Threading** | **Yes** | **Production (Session 410)** |
+| **Response Session UI** | **Yes** | **Production (Session 410)** |
 
 ---
 

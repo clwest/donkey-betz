@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 10, 2025 - Session 409 (CaseProfile Auto-Select + OCR Support)
+**Last Updated:** December 10, 2025 - Session 410 (Document Threading + Response Session UI)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
@@ -400,6 +400,7 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 410:** Document Threading + Response Session UI - Added `litigation_role` field to LitigationDocument model (motion/response/reply/order/exhibit/other). Created 3 new API endpoints for document threading. Added client-side filtering (party filter, role filter) with cached data. New "Draft Response" tab with config panel and preview. Handoff: `docs/handoffs/SESSION_410_DOCUMENT_THREADING_RESPONSE_SESSION.md`
 - **Session 409:** CaseProfile Auto-Select + OCR Support + Mythology Validation - Major bugfixes: (1) Added mythology validation to LegalDocDrafterAgent at lines 1183, 2764 to prevent hallucinations; (2) Fixed Document Brain case dropdown (API now returns `success: true`, frontend uses `data.cases || []`); (3) Fixed document upload auth (switched to `authenticatedFetch()`); (4) Added OCR fallback for scanned PDFs using PyMuPDF + pytesseract; (5) **Critical fix:** CaseProfile auto-select fallback - if user has only 1 active case, motion analysis automatically uses it without requiring explicit session selection. Conferral emails now correctly address opposing counsel (Taylor Hartin) instead of respondent! **Sent to real Colorado lawyer for review!** Handoff: `docs/handoffs/SESSION_409_CASEPROFILE_AUTOSELECT_OCR.md`
 - **Session 407:** Document Download Feature - Users can download individual sections (Verified Motion, Proposed Order, Appendix A, Evidence Checklist, Conferral Email) as Word (.docx), Text (.txt), or Markdown (.md) files. Created `document_bundle.py` section parser, `export_legal_section()` API endpoint, frontend download buttons with format dropdown. **Lawyer demo ready!** Handoff: `docs/handoffs/SESSION_407_DOCUMENT_DOWNLOAD_FEATURE.md`
 - **Session 406:** Case Intake Form + ChatGPT Patches - MAJOR: Created Case Intake Form system (`CaseProfile`, `Party`, `Attorney`, `Child` models), 4-step wizard UI, full API endpoints. Implemented 6 ChatGPT patches (placeholder resolution, conferral routing, wording fixes, non-disparagement linkage). Fixed critical bug where CaseProfile wasn't loading (request not passed to context). **Conferral emails now address opposing counsel!** Handoff: `docs/handoffs/SESSION_406_CASE_INTAKE_FORM.md`

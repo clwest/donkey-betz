@@ -688,6 +688,11 @@ def export_legal_section(request):
 def list_litigation_documents(request, case_profile_id):
     """
     List all litigation documents for a case, organized by category.
+
+    Session 410: Added query parameter filtering:
+    - ?party=petitioner|respondent|court|third_party
+    - ?role=motion|response|reply|order|exhibit|other
+    - ?category=court_order|motion|response|evidence|court_rule
     """
     user = request.user
 
@@ -706,6 +711,18 @@ def list_litigation_documents(request, case_profile_id):
         # Get documents by category
         documents = LitigationDocument.objects.filter(case_profile=case_profile)
 
+        # Session 410: Apply filters from query params
+        party_filter = request.query_params.get('party')
+        role_filter = request.query_params.get('role')
+        category_filter = request.query_params.get('category')
+
+        if party_filter:
+            documents = documents.filter(filing_party=party_filter)
+        if role_filter:
+            documents = documents.filter(litigation_role=role_filter)
+        if category_filter:
+            documents = documents.filter(category=category_filter)
+
         # Organize by category
         categories = {
             'court_order': {'label': 'Court Orders', 'documents': []},
@@ -723,6 +740,9 @@ def list_litigation_documents(request, case_profile_id):
                 'document_type_display': doc.get_document_type_display(),
                 'filing_party': doc.filing_party,
                 'filing_party_display': doc.get_filing_party_display(),
+                # Session 410: Add litigation_role for thread tracking
+                'litigation_role': doc.litigation_role,
+                'litigation_role_display': doc.get_litigation_role_display(),
                 'status': doc.status,
                 'document_date': str(doc.document_date) if doc.document_date else None,
                 'filed_date': str(doc.filed_date) if doc.filed_date else None,
@@ -731,6 +751,8 @@ def list_litigation_documents(request, case_profile_id):
                 'uploaded_at': doc.uploaded_at.isoformat(),
                 'responds_to': str(doc.responds_to_id) if doc.responds_to_id else None,
                 'has_responses': doc.responses.exists(),
+                # Session 410: Include thread info
+                'response_count': doc.responses.count(),
             }
 
             if doc.category in categories:
@@ -813,11 +835,12 @@ def upload_litigation_document(request, case_profile_id):
         category = request.POST.get('category')
         document_type = request.POST.get('document_type')
         filing_party = request.POST.get('filing_party')
+        litigation_role = request.POST.get('litigation_role')  # Session 410
         document_date = request.POST.get('document_date')
         filed_date = request.POST.get('filed_date')
         responds_to_id = request.POST.get('responds_to')
         notes = request.POST.get('notes', '')
-        print(f"[Session 409] category={category}, document_type={document_type}, filing_party={filing_party}")
+        print(f"[Session 409] category={category}, document_type={document_type}, filing_party={filing_party}, litigation_role={litigation_role}")
 
         # Process the document
         ingestor = get_document_ingestor()
@@ -829,6 +852,7 @@ def upload_litigation_document(request, case_profile_id):
             user_category=category,
             user_document_type=document_type,
             filing_party=filing_party,
+            litigation_role=litigation_role,  # Session 410
             document_date=document_date,
             filed_date=filed_date,
             responds_to_id=responds_to_id if responds_to_id else None,
@@ -1126,11 +1150,286 @@ def create_filing_package(request, response_id):
         }, status=500)
 
 
+# =============================================================================
+# Session 410: Document Thread APIs
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_document_threads(request, case_profile_id):
+    """
+    Session 410: Get all document threads for a case.
+    Returns Motion → Response → Reply chains grouped together.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile, LitigationDocument
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        # Get all root motions (motions that don't respond to anything)
+        root_motions = LitigationDocument.objects.filter(
+            case_profile=case_profile,
+            litigation_role='motion',
+            responds_to__isnull=True
+        ).order_by('-filed_date', '-document_date', '-uploaded_at')
+
+        threads = []
+        for motion in root_motions:
+            thread = {
+                'id': str(motion.id),
+                'title': motion.title,
+                'chain': []
+            }
+
+            # Add the motion as first item
+            thread['chain'].append({
+                'id': str(motion.id),
+                'title': motion.title,
+                'litigation_role': 'motion',
+                'litigation_role_display': motion.get_litigation_role_display(),
+                'filing_party': motion.filing_party,
+                'filing_party_display': motion.get_filing_party_display(),
+                'filed_date': str(motion.filed_date) if motion.filed_date else None,
+                'status': motion.status,
+            })
+
+            # Find response to this motion
+            response = motion.responses.filter(litigation_role='response').first()
+            if response:
+                thread['chain'].append({
+                    'id': str(response.id),
+                    'title': response.title,
+                    'litigation_role': 'response',
+                    'litigation_role_display': response.get_litigation_role_display(),
+                    'filing_party': response.filing_party,
+                    'filing_party_display': response.get_filing_party_display(),
+                    'filed_date': str(response.filed_date) if response.filed_date else None,
+                    'status': response.status,
+                })
+
+                # Find reply to the response
+                reply = response.responses.filter(litigation_role='reply').first()
+                if reply:
+                    thread['chain'].append({
+                        'id': str(reply.id),
+                        'title': reply.title,
+                        'litigation_role': 'reply',
+                        'litigation_role_display': reply.get_litigation_role_display(),
+                        'filing_party': reply.filing_party,
+                        'filing_party_display': reply.get_filing_party_display(),
+                        'filed_date': str(reply.filed_date) if reply.filed_date else None,
+                        'status': reply.status,
+                    })
+
+            # Find any court orders related to this motion
+            orders = motion.responses.filter(litigation_role='order')
+            for order in orders:
+                thread['chain'].append({
+                    'id': str(order.id),
+                    'title': order.title,
+                    'litigation_role': 'order',
+                    'litigation_role_display': order.get_litigation_role_display(),
+                    'filing_party': 'court',
+                    'filing_party_display': 'Court',
+                    'filed_date': str(order.filed_date) if order.filed_date else None,
+                    'status': order.status,
+                })
+
+            thread['document_count'] = len(thread['chain'])
+            thread['needs_response'] = (
+                len(thread['chain']) == 1 and
+                motion.filing_party == 'respondent'
+            )
+            thread['needs_reply'] = (
+                len(thread['chain']) == 2 and
+                response and response.filing_party == 'respondent' and
+                motion.filing_party == 'petitioner'
+            )
+
+            threads.append(thread)
+
+        return Response({
+            'success': True,
+            'threads': threads,
+            'count': len(threads),
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 410] Error getting document threads: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_document_thread(request, document_id):
+    """
+    Session 410: Get the document thread for a specific document.
+    Returns the full Motion → Response → Reply chain this document belongs to.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import LitigationDocument
+
+        try:
+            doc = LitigationDocument.objects.get(id=document_id)
+            if doc.case_profile.user != user:
+                return Response({
+                    'success': False,
+                    'error': 'Document not found'
+                }, status=404)
+        except LitigationDocument.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Document not found'
+            }, status=404)
+
+        # Use model method to get thread
+        thread_data = doc.get_document_thread()
+        chain = doc.get_thread_chain()
+
+        result_chain = []
+        for item in chain:
+            result_chain.append({
+                'id': str(item.id),
+                'title': item.title,
+                'litigation_role': item.litigation_role,
+                'litigation_role_display': item.get_litigation_role_display(),
+                'filing_party': item.filing_party,
+                'filing_party_display': item.get_filing_party_display(),
+                'filed_date': str(item.filed_date) if item.filed_date else None,
+                'document_date': str(item.document_date) if item.document_date else None,
+                'status': item.status,
+                'word_count': len(item.extracted_text.split()) if item.extracted_text else 0,
+            })
+
+        return Response({
+            'success': True,
+            'document_id': str(doc.id),
+            'thread': {
+                'chain': result_chain,
+                'motion_id': str(thread_data['motion'].id) if thread_data['motion'] else None,
+                'response_id': str(thread_data['response'].id) if thread_data['response'] else None,
+                'reply_id': str(thread_data['reply'].id) if thread_data['reply'] else None,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 410] Error getting document thread: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_documents_needing_response(request, case_profile_id):
+    """
+    Session 410: Get documents from opposing party that need a response.
+    Returns motions/filings from respondent that user hasn't responded to yet.
+    """
+    user = request.user
+
+    try:
+        from core.models_legal import CaseProfile, LitigationDocument
+
+        # Verify user owns this case
+        try:
+            case_profile = CaseProfile.objects.get(id=case_profile_id, user=user)
+        except CaseProfile.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Case profile not found'
+            }, status=404)
+
+        # Get motions from respondent that don't have a response from petitioner
+        respondent_motions = LitigationDocument.objects.filter(
+            case_profile=case_profile,
+            filing_party='respondent',
+            litigation_role='motion',
+        )
+
+        needs_response = []
+        for motion in respondent_motions:
+            # Check if petitioner has responded
+            has_response = motion.responses.filter(
+                filing_party='petitioner',
+                litigation_role='response'
+            ).exists()
+
+            if not has_response:
+                needs_response.append({
+                    'id': str(motion.id),
+                    'title': motion.title,
+                    'document_type': motion.document_type,
+                    'document_type_display': motion.get_document_type_display(),
+                    'filed_date': str(motion.filed_date) if motion.filed_date else None,
+                    'deadline_date': str(motion.deadline_date) if motion.deadline_date else None,
+                    'word_count': len(motion.extracted_text.split()) if motion.extracted_text else 0,
+                    'status': motion.status,
+                })
+
+        # Also get responses from respondent that need a reply
+        respondent_responses = LitigationDocument.objects.filter(
+            case_profile=case_profile,
+            filing_party='respondent',
+            litigation_role='response',
+        )
+
+        needs_reply = []
+        for response in respondent_responses:
+            # Check if petitioner has replied
+            has_reply = response.responses.filter(
+                filing_party='petitioner',
+                litigation_role='reply'
+            ).exists()
+
+            # Only suggest reply if the original motion was from petitioner
+            if not has_reply and response.responds_to and response.responds_to.filing_party == 'petitioner':
+                needs_reply.append({
+                    'id': str(response.id),
+                    'title': response.title,
+                    'responds_to_title': response.responds_to.title if response.responds_to else None,
+                    'filed_date': str(response.filed_date) if response.filed_date else None,
+                    'deadline_date': str(response.deadline_date) if response.deadline_date else None,
+                    'word_count': len(response.extracted_text.split()) if response.extracted_text else 0,
+                    'status': response.status,
+                })
+
+        return Response({
+            'success': True,
+            'needs_response': needs_response,
+            'needs_reply': needs_reply,
+            'total_action_items': len(needs_response) + len(needs_reply),
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 410] Error getting documents needing response: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_document_types(request):
     """
     Get all available document types and categories.
+    Session 410: Added litigation_roles for thread tracking.
     """
     from core.models_legal import LitigationDocument
 
@@ -1145,4 +1444,6 @@ def get_document_types(request):
             'court_rule': dict(LitigationDocument.COURT_RULE_TYPES),
         },
         'filing_parties': dict(LitigationDocument.FILING_PARTY_CHOICES),
+        # Session 410: Add litigation roles for Motion → Response → Reply chain
+        'litigation_roles': dict(LitigationDocument.LITIGATION_ROLE_CHOICES),
     })

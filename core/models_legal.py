@@ -441,6 +441,16 @@ class LitigationDocument(models.Model):
         ('third_party', 'Third Party'),
     ]
 
+    # Session 410: Litigation role - where does this fit in motion/response/reply chain
+    LITIGATION_ROLE_CHOICES = [
+        ('motion', 'Motion'),
+        ('response', 'Response'),
+        ('reply', 'Reply'),
+        ('order', 'Court Order'),
+        ('exhibit', 'Exhibit'),
+        ('other', 'Other'),
+    ]
+
     STATUS_CHOICES = [
         ('uploaded', 'Uploaded'),
         ('processing', 'Processing'),
@@ -464,6 +474,13 @@ class LitigationDocument(models.Model):
         max_length=20,
         choices=FILING_PARTY_CHOICES,
         default='petitioner'
+    )
+    # Session 410: Litigation role - where does this fit in motion/response/reply chain
+    litigation_role = models.CharField(
+        max_length=20,
+        choices=LITIGATION_ROLE_CHOICES,
+        default='other',
+        help_text="Role in litigation chain: motion, response, reply, order"
     )
 
     # Document info
@@ -515,11 +532,56 @@ class LitigationDocument(models.Model):
         indexes = [
             models.Index(fields=['case_profile', 'category']),
             models.Index(fields=['case_profile', 'document_type']),
+            models.Index(fields=['case_profile', 'filing_party']),
+            models.Index(fields=['case_profile', 'litigation_role']),
             models.Index(fields=['status']),
         ]
 
     def __str__(self):
         return f"{self.title} ({self.get_document_type_display()})"
+
+    def get_document_thread(self):
+        """
+        Session 410: Get the full document thread this filing belongs to.
+        Returns: {'motion': doc, 'response': doc, 'reply': doc} chain
+        """
+        thread = {'motion': None, 'response': None, 'reply': None}
+
+        # Find the root motion
+        current = self
+        while current.responds_to:
+            current = current.responds_to
+
+        # Build thread from root
+        if current.litigation_role == 'motion':
+            thread['motion'] = current
+            # Find response
+            response = current.responses.filter(litigation_role='response').first()
+            if response:
+                thread['response'] = response
+                # Find reply
+                reply = response.responses.filter(litigation_role='reply').first()
+                if reply:
+                    thread['reply'] = reply
+
+        return thread
+
+    def get_thread_chain(self):
+        """
+        Session 410: Get ordered list of documents in this thread.
+        Returns list of docs in order: [motion, response, reply, ...]
+        """
+        chain = []
+        thread = self.get_document_thread()
+
+        if thread['motion']:
+            chain.append(thread['motion'])
+        if thread['response']:
+            chain.append(thread['response'])
+        if thread['reply']:
+            chain.append(thread['reply'])
+
+        return chain
 
 
 class CaseKnowledgeGraph(models.Model):

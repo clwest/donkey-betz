@@ -998,6 +998,8 @@ from core.views_legal import (
     list_litigation_documents, upload_litigation_document, get_case_knowledge_graph,
     rebuild_knowledge_graph, generate_response_to_filing, list_generated_responses,
     get_generated_response, create_filing_package, get_document_types,
+    # Session 410: Document Threading APIs
+    get_document_threads, get_document_thread, get_documents_needing_response,
 )
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
@@ -2659,6 +2661,11 @@ urlpatterns += [
     path('api/legal/litigation/response/<uuid:response_id>/', get_generated_response, name='litigation-response-detail'),
     path('api/legal/litigation/response/<uuid:response_id>/package/', create_filing_package, name='litigation-filing-package'),
     path('api/legal/litigation/document-types/', get_document_types, name='litigation-document-types'),
+
+    # Session 410: Document Threading APIs
+    path('api/legal/litigation/<uuid:case_profile_id>/threads/', get_document_threads, name='litigation-document-threads'),
+    path('api/legal/litigation/document/<uuid:document_id>/thread/', get_document_thread, name='litigation-document-thread'),
+    path('api/legal/litigation/<uuid:case_profile_id>/needs-response/', get_documents_needing_response, name='litigation-needs-response'),
 ]
 
 # Serve media files in development
