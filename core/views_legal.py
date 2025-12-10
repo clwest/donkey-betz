@@ -189,9 +189,31 @@ def upload_legal_case_file(request):
                 logger.warning(f"Could not queue embedding generation: {e}")
 
         # Analyze document if requested
+        # Session 405: Only run full analysis on denied motions, not court orders
         analysis = None
         logger.info(f"[SESSION 404] Analyze requested: {analyze}, document_type: {document_type}")
-        if analyze:
+
+        # Court orders should NOT go through the motion analysis pipeline
+        if document_type == 'court_order':
+            logger.info(f"[SESSION 405] Court order uploaded - storing for future reference, not analyzing as motion")
+            analysis = {
+                'summary': '✅ Court Order Uploaded Successfully',
+                'full_analysis': (
+                    "## ✅ COURT ORDER SAVED\n\n"
+                    f"**Document:** {uploaded_file.name}\n\n"
+                    "This court order has been saved to your case files and will be used for:\n\n"
+                    "- **Conflict Detection** - When you upload a motion, we'll check if your requests conflict with this order\n"
+                    "- **Reference** - You can view this document anytime in your case files\n"
+                    "- **Exhibit Attachment** - Include this as an exhibit when filing modification motions\n\n"
+                    "---\n\n"
+                    "### Next Steps\n\n"
+                    "1. Upload your **denied motion** to get rewrite assistance\n"
+                    "2. The system will automatically check your motion against this court order\n"
+                    "3. Any conflicts will be flagged with recommendations\n"
+                ),
+                'document_stored': True,
+            }
+        elif analyze:
             try:
                 logger.info(f"[SESSION 404] Starting analysis for document {doc.id}...")
                 analysis = analyze_legal_document(doc, context)
