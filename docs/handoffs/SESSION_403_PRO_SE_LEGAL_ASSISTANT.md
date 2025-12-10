@@ -448,7 +448,7 @@ Based on expert review, these 5 enhancements would make the system production-gr
 | #1 Relief Against Third Parties Auto-Rewrite | ✅ IMPLEMENTED | `check_non_party_issues` |
 | #2 Emergency vs Non-Emergency Detector | ✅ IMPLEMENTED | `assess_emergency_status` |
 | #3 Court Order Being Modified Detector | ✅ IMPLEMENTED | `check_order_attachment_required` |
-| #4 Conflict With Prior Orders Detector | ⏳ PENDING | (Future) |
+| #4 Conflict With Prior Orders Detector | ✅ IMPLEMENTED | `detect_order_conflicts` |
 | #5 Likelihood of Success Confidence Meter | ✅ IMPLEMENTED | `assess_likelihood_of_success` |
 
 ### Enhancement Details
@@ -470,6 +470,21 @@ Detects when motion requires attachment of existing court order:
 - Modification motions require the order being modified
 - Enforcement/contempt motions require the order being violated
 - Auto-prompts user to upload if missing
+
+#### #4: Conflict With Prior Orders Detector
+Analyzes motion requests against existing court orders to detect:
+- **Direct Contradictions:** Motion asks for opposite of what's ordered (e.g., joint→sole custody)
+- **Duplicate Requests:** Motion asks for what's already in place
+- **Missing Order Reference:** Modification without citing the order being modified
+- **Holiday/Schedule Conflicts:** Changes to existing holiday provisions
+
+Conflict severity levels: LOW (⚠️), MEDIUM (🟡), HIGH (🟠), CRITICAL (🔴)
+
+Provides specific recommendations:
+- "Cite the specific provision you want changed"
+- "Explain changed circumstances"
+- "Acknowledge the existing order"
+- References C.R.S. § 14-10-129 modification requirements
 
 #### #5: Likelihood of Success Meter
 Scores motion 0-100 based on four factors (25 points each):
@@ -520,7 +535,7 @@ print(f'LegalDocDrafterAgent registered: {router.is_valid_agent(\"LegalDocDrafte
 
 The LegalDocDrafterAgent follows the clean architecture pattern:
 - Inherits from BaseAgent (with TimeTravelMixin)
-- Uses GPT function calling with **10 specialized tools**:
+- Uses GPT function calling with **12 specialized tools**:
   1. `search_legal_resources` - Search spider data for legal info
   2. `draft_motion` - Generate motion templates
   3. `draft_email` - Generate meet-and-confer emails
@@ -531,7 +546,8 @@ The LegalDocDrafterAgent follows the clean architecture pattern:
   8. `check_non_party_issues` - Detect & auto-rewrite third-party relief
   9. `assess_emergency_status` - Emergency vs non-emergency classification
   10. `check_order_attachment_required` - Detect missing court order attachment
-  11. `assess_likelihood_of_success` - Calculate 0-100 success score
+  11. `detect_order_conflicts` - Detect conflicts with existing orders
+  12. `assess_likelihood_of_success` - Calculate 0-100 success score
 - Integrates with spider network for legal data
 - Records decisions for debugging (Time Travel)
 - Generates knowledge attribution for transparency
