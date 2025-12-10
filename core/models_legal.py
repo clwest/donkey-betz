@@ -97,6 +97,8 @@ class CaseProfile(models.Model):
                     'name': attorney.full_name,
                     'first_name': attorney.first_name,
                     'email': attorney.email,
+                    'address': attorney.get_full_address(),
+                    'firm': attorney.firm_name,
                     'is_attorney': True
                 }
         if respondent:
@@ -104,6 +106,7 @@ class CaseProfile(models.Model):
                 'name': respondent.full_name,
                 'first_name': respondent.first_name,
                 'email': respondent.email,
+                'address': respondent.get_full_address(),
                 'is_attorney': False
             }
         return None

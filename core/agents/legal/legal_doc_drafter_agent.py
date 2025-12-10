@@ -3920,6 +3920,7 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
                     result['respondent_counsel_first_name'] = attorney.first_name
                     result['respondent_counsel_email'] = attorney.email
                     result['respondent_counsel_firm'] = attorney.firm_name
+                    result['respondent_counsel_address'] = attorney.get_full_address()
 
             # Add conferral recipient info
             conferral_recipient = case.get_conferral_recipient()
