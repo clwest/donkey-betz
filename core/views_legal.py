@@ -110,6 +110,7 @@ def upload_legal_case_file(request):
     Processes the file, extracts text, and optionally analyzes it.
     """
     user = request.user
+    logger.info(f"[SESSION 404] upload_legal_case_file called by user: {user.id}")
 
     try:
         # Get file from request
@@ -125,6 +126,8 @@ def upload_legal_case_file(request):
         context = request.POST.get('context', '')
         analyze = request.POST.get('analyze', 'false').lower() == 'true'
         generate_embeddings = request.POST.get('generate_embeddings', 'true').lower() == 'true'
+
+        logger.info(f"[SESSION 404] Upload params: document_type={document_type}, analyze={analyze}, context={context[:50] if context else 'none'}")
 
         # Validate file type
         filename = uploaded_file.name.lower()
@@ -187,11 +190,16 @@ def upload_legal_case_file(request):
 
         # Analyze document if requested
         analysis = None
+        logger.info(f"[SESSION 404] Analyze requested: {analyze}, document_type: {document_type}")
         if analyze:
             try:
+                logger.info(f"[SESSION 404] Starting analysis for document {doc.id}...")
                 analysis = analyze_legal_document(doc, context)
+                logger.info(f"[SESSION 404] Analysis complete. Has full_analysis: {bool(analysis.get('full_analysis') if analysis else False)}")
             except Exception as e:
-                logger.error(f"Error analyzing document: {e}")
+                logger.error(f"[SESSION 404] Error analyzing document: {e}")
+                import traceback
+                traceback.print_exc()
                 analysis = {
                     'summary': 'Document uploaded successfully.',
                     'issues': 'Analysis could not be completed at this time.',
@@ -199,6 +207,7 @@ def upload_legal_case_file(request):
                     'forms': 'Unable to determine relevant forms.'
                 }
 
+        logger.info(f"[SESSION 404] Returning response with analysis: {bool(analysis)}")
         return Response({
             'success': True,
             'document': {
@@ -409,109 +418,83 @@ def extract_docx_text(file_content: bytes, filename: str) -> str:
 
 def analyze_legal_document(doc, additional_context: str = '') -> dict:
     """
-    Analyze a legal document using the LegalDocDrafterAgent or GPT.
+    Analyze a legal document using the LegalDocDrafterAgent.
+
+    Session 404: Now routes through the LegalDocDrafterAgent to use the
+    denied motion pipeline and motion rewriting tools.
+
     Returns structured analysis with summary, issues, recommendations, and forms.
     """
+    logger.info(f"[SESSION 404] analyze_legal_document called for doc: {doc.id}, type: {doc.document_type}")
+
     try:
-        from openai import OpenAI
+        from core.agents.legal import LegalDocDrafterAgent
 
-        client = OpenAI()
-
-        # Build analysis prompt
+        # Build task string that triggers the denied motion pipeline
         doc_type_label = LEGAL_DOCUMENT_TYPES.get(doc.document_type, doc.document_type)
+        logger.info(f"[SESSION 404] Document type label: {doc_type_label}")
 
-        prompt = f"""You are a legal document analysis assistant specializing in Colorado family law.
-Analyze the following legal document and provide structured feedback.
+        # Construct task that will trigger denied motion mode if appropriate
+        if doc.document_type == 'denied_motion':
+            task = f"My motion was denied. Please analyze this denied motion and help me rewrite it correctly."
+        else:
+            task = f"Please analyze this {doc_type_label} and provide guidance."
 
-DOCUMENT TYPE: {doc_type_label}
-DOCUMENT TITLE: {doc.title}
+        logger.info(f"[SESSION 404] Task constructed: {task}")
 
-{f"USER CONTEXT: {additional_context}" if additional_context else ""}
-
-DOCUMENT CONTENT:
----
-{doc.content[:15000]}
----
-
-Please provide analysis in the following format:
-
-## SUMMARY
-[Brief 2-3 sentence summary of what this document is and its key points]
-
-## ISSUES IDENTIFIED
-[List any problems, deficiencies, procedural errors, or missing elements. If this is a denied motion, explain why it may have been denied based on the content.]
-
-## RECOMMENDED ACTIONS
-[Specific steps the pro se litigant should take to address the issues. Be specific about what forms to use and what information is needed.]
-
-## RELEVANT COLORADO JDF FORMS
-[List the specific JDF form numbers and names that are relevant to this document or any corrective filings needed. Format: JDF XXXX - Form Name]
-
-Important: This is general legal information only. Always recommend consulting with a licensed Colorado attorney.
-"""
-
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful legal document analysis assistant for Colorado family law pro se litigants."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=4000,
-        )
-
-        analysis_text = response.choices[0].message.content
-
-        # Parse the response into sections
-        sections = {
-            'summary': '',
-            'issues': '',
-            'recommendations': '',
-            'forms': ''
+        # Build context with the document content
+        context = {
+            'document_type': doc.document_type,
+            'motion_content': doc.content[:15000],  # Limit content length
+            'analyzing_document': True,
+            'case_file_id': str(doc.id),
+            'additional_context': additional_context,
+            'case_details': {
+                'document_title': doc.title,
+            }
         }
 
-        current_section = None
-        current_content = []
+        logger.info(f"[SESSION 404] Context built, motion_content length: {len(context['motion_content'])}")
 
-        for line in analysis_text.split('\n'):
-            line_lower = line.lower().strip()
-            if '## summary' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
-                current_section = 'summary'
-                current_content = []
-            elif '## issues' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
-                current_section = 'issues'
-                current_content = []
-            elif '## recommended' in line_lower or '## actions' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
-                current_section = 'recommendations'
-                current_content = []
-            elif '## relevant' in line_lower or '## forms' in line_lower or '## jdf' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
-                current_section = 'forms'
-                current_content = []
-            elif current_section:
-                current_content.append(line)
+        # Create agent and execute
+        agent = LegalDocDrafterAgent(user=doc.user)
+        logger.info(f"[SESSION 404] LegalDocDrafterAgent created, calling execute()...")
 
-        # Don't forget the last section
-        if current_section and current_content:
-            sections[current_section] = '\n'.join(current_content).strip()
+        result = agent.execute(
+            task=task,
+            context=context,
+            scifi_context={},
+            spider_context={}
+        )
 
-        # Fallback if parsing didn't work well
-        if not any(sections.values()):
-            sections['summary'] = analysis_text
+        logger.info(f"[SESSION 404] Agent execute() returned: success={result.success}, has_message={bool(result.message)}, data_type={result.data.get('type') if result.data else 'N/A'}")
 
-        return sections
+        if result.success and result.message:
+            logger.info(f"[SESSION 404] Returning full_analysis, message length: {len(result.message)}")
+            # Return the full agent output
+            return {
+                'summary': 'Document analyzed using Legal Assistant pipeline.',
+                'full_analysis': result.message,
+                'pipeline_used': result.data.get('type', 'standard'),
+                'tools_called': result.data.get('tools_called', []),
+            }
+        else:
+            # Fallback if agent failed
+            logger.warning(f"[SESSION 404] Agent failed or no message. Error: {result.error}")
+            return {
+                'summary': f'Document: {doc.title}',
+                'issues': result.error if result.error else 'Analysis could not be completed.',
+                'recommendations': 'Consider consulting with a licensed Colorado attorney.',
+                'forms': 'Unable to determine relevant forms automatically.'
+            }
 
     except Exception as e:
-        logger.error(f"Error in AI analysis: {e}")
+        logger.error(f"[SESSION 404] Exception in analyze_legal_document: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'summary': f'Document: {doc.title}',
-            'issues': 'AI analysis could not be completed. Please review manually.',
+            'issues': f'AI analysis error: {str(e)}',
             'recommendations': 'Consider consulting with a licensed Colorado attorney.',
             'forms': 'Unable to determine relevant forms automatically.'
         }
