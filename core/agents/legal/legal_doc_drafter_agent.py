@@ -839,6 +839,32 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                 }
             }
         },
+        # Session 405 Enhancement #4: Conflict With Prior Orders Detector
+        {
+            "type": "function",
+            "function": {
+                "name": "detect_order_conflicts",
+                "description": "Detect potential conflicts between requested relief and existing court orders. Analyzes uploaded orders and flags requests that contradict, duplicate, or ignore existing provisions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "motion_text": {
+                            "type": "string",
+                            "description": "The text of the motion to analyze"
+                        },
+                        "existing_order_text": {
+                            "type": "string",
+                            "description": "Text from the existing court order (if uploaded)"
+                        },
+                        "existing_order_summary": {
+                            "type": "string",
+                            "description": "Summary of key provisions from existing order"
+                        }
+                    },
+                    "required": ["motion_text"]
+                }
+            }
+        },
         # Session 405 Enhancement #5: Likelihood of Success Confidence Meter
         {
             "type": "function",
@@ -1318,6 +1344,14 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             return self._check_order_attachment_required(
                 motion_text=arguments.get('motion_text', ''),
                 uploaded_documents=arguments.get('uploaded_documents', [])
+            )
+
+        # Session 405 Enhancement #4: Conflict With Prior Orders Detector
+        elif tool_name == "detect_order_conflicts":
+            return self._detect_order_conflicts(
+                motion_text=arguments.get('motion_text', ''),
+                existing_order_text=arguments.get('existing_order_text', ''),
+                existing_order_summary=arguments.get('existing_order_summary', '')
             )
 
         # Session 405 Enhancement #5: Likelihood of Success
@@ -2337,6 +2371,27 @@ For detailed information on this procedure in {county} County, Colorado, please 
             output_parts.append("---")
             output_parts.append("")
             output_parts.append(order_check_result.get('analysis', ''))
+            output_parts.append("")
+
+        # =====================================================================
+        # STEP 2.7: Session 405 Enhancement #4 - Conflict With Prior Orders
+        # =====================================================================
+        logger.info("Step 2.7: Checking for conflicts with existing orders...")
+        # Get existing order text if uploaded
+        existing_order_text = context.get('existing_order_text', '')
+        existing_order_summary = context.get('existing_order_summary', '')
+        conflict_result = self._detect_order_conflicts(
+            motion_text=motion_content,
+            existing_order_text=existing_order_text,
+            existing_order_summary=existing_order_summary
+        )
+        tool_calls_made.append({'tool': 'detect_order_conflicts', 'result': 'success'})
+
+        # If conflicts found, add warning to output
+        if conflict_result.get('has_conflicts') or conflict_result.get('warning_count', 0) > 0:
+            output_parts.append("---")
+            output_parts.append("")
+            output_parts.append(conflict_result.get('analysis', ''))
             output_parts.append("")
 
         # =====================================================================
@@ -5780,6 +5835,361 @@ MAGISTRATE / JUDGE
             'has_uploaded_order': has_uploaded_order,
             'order_referenced': order_referenced,
             'missing_order_warning': requires_order_attachment and not has_uploaded_order,
+            'analysis': '\n'.join(analysis_parts),
+        }
+
+    # =========================================================================
+    # Session 405 Enhancement #4: Conflict With Prior Orders Detector
+    # =========================================================================
+
+    def _detect_order_conflicts(
+        self,
+        motion_text: str,
+        existing_order_text: str = '',
+        existing_order_summary: str = ''
+    ) -> Dict[str, Any]:
+        """
+        Detect conflicts between requested relief and existing court orders.
+
+        Session 405 Enhancement #4: Per ChatGPT recommendation.
+
+        This checks for:
+        1. Direct contradictions (requesting what's already ordered differently)
+        2. Duplicate requests (asking for what's already in place)
+        3. Ignored provisions (overlooking relevant existing terms)
+        4. Modification without acknowledgment (changing terms without citing them)
+
+        Args:
+            motion_text: The motion being analyzed
+            existing_order_text: Full text of existing order if available
+            existing_order_summary: Summary of key provisions if full text unavailable
+
+        Returns:
+            Dict with conflicts found, severity, and recommendations
+        """
+        import re
+        motion_lower = motion_text.lower()
+
+        conflicts = []
+        warnings = []
+        suggestions = []
+
+        # =====================================================================
+        # PART 1: Extract key provisions from existing order (if available)
+        # =====================================================================
+
+        existing_provisions = {
+            'parenting_time': [],
+            'decision_making': [],
+            'child_support': [],
+            'holidays': [],
+            'exchanges': [],
+            'restrictions': [],
+            'third_party': [],
+            'communication': [],
+        }
+
+        order_text = existing_order_text or existing_order_summary
+        order_lower = order_text.lower() if order_text else ''
+
+        if order_text:
+            # Extract parenting time provisions
+            parenting_patterns = [
+                r'(?:father|mother|petitioner|respondent)\s+shall\s+have\s+parenting\s+time[^.]*\.',
+                r'parenting\s+time\s+shall\s+be[^.]*\.',
+                r'(?:every|each|alternate|alternating)\s+(?:weekend|week|other)[^.]*\.',
+                r'(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)[^.]*(?:to|through|until)[^.]*\.',
+            ]
+            for pattern in parenting_patterns:
+                matches = re.findall(pattern, order_lower, re.IGNORECASE)
+                existing_provisions['parenting_time'].extend(matches)
+
+            # Extract decision-making provisions
+            decision_patterns = [
+                r'(?:joint|sole)\s+(?:legal|physical)\s+(?:custody|decision-making)[^.]*\.',
+                r'(?:major\s+)?decisions?\s+(?:shall|will|must)\s+be[^.]*\.',
+                r'(?:education|medical|religious|extracurricular)\s+decisions?[^.]*\.',
+            ]
+            for pattern in decision_patterns:
+                matches = re.findall(pattern, order_lower, re.IGNORECASE)
+                existing_provisions['decision_making'].extend(matches)
+
+            # Extract restrictions
+            restriction_patterns = [
+                r'(?:shall\s+not|must\s+not|is\s+prohibited|may\s+not)[^.]*\.',
+                r'(?:no|without)\s+(?:overnight|alcohol|drugs|marijuana)[^.]*\.',
+                r'(?:supervised|supervision)[^.]*\.',
+            ]
+            for pattern in restriction_patterns:
+                matches = re.findall(pattern, order_lower, re.IGNORECASE)
+                existing_provisions['restrictions'].extend(matches)
+
+            # Extract third-party provisions
+            third_party_patterns = [
+                r'(?:girlfriend|boyfriend|partner|significant\s+other)[^.]*\.',
+                r'(?:no\s+introduction|shall\s+not\s+introduce)[^.]*\.',
+                r'(?:presence\s+of|around)[^.]*(?:child|children)[^.]*\.',
+            ]
+            for pattern in third_party_patterns:
+                matches = re.findall(pattern, order_lower, re.IGNORECASE)
+                existing_provisions['third_party'].extend(matches)
+
+            # Extract holidays
+            holiday_patterns = [
+                r'(?:christmas|thanksgiving|easter|new\s+year|spring\s+break|summer|birthday)[^.]*\.',
+                r'holiday\s+(?:schedule|parenting\s+time)[^.]*\.',
+            ]
+            for pattern in holiday_patterns:
+                matches = re.findall(pattern, order_lower, re.IGNORECASE)
+                existing_provisions['holidays'].extend(matches)
+
+        # =====================================================================
+        # PART 2: Extract relief requests from motion
+        # =====================================================================
+
+        motion_requests = {
+            'parenting_time': [],
+            'decision_making': [],
+            'restrictions': [],
+            'third_party': [],
+            'modifications': [],
+        }
+
+        # Extract parenting time requests
+        pt_request_patterns = [
+            r'(?:order|grant|modify|restrict|suspend)\s+(?:the\s+)?(?:father\'?s?|mother\'?s?|respondent\'?s?|petitioner\'?s?)?\s*parenting\s+time[^.]*\.',
+            r'(?:father|mother|respondent|petitioner)\s+(?:shall|should|must)\s+(?:have|be\s+granted)[^.]*parenting[^.]*\.',
+            r'parenting\s+time\s+(?:shall|should|must|be)[^.]*(?:modified|restricted|suspended|supervised)[^.]*\.',
+        ]
+        for pattern in pt_request_patterns:
+            matches = re.findall(pattern, motion_lower, re.IGNORECASE)
+            motion_requests['parenting_time'].extend(matches)
+
+        # Extract restriction requests
+        restriction_request_patterns = [
+            r'(?:order|require|prohibit|restrict)\s+(?:that\s+)?(?:respondent|father|mother)[^.]*(?:shall\s+not|must\s+not|may\s+not)[^.]*\.',
+            r'(?:no\s+contact|no\s+overnight|supervised)[^.]*\.',
+            r'(?:prohibit|restrict|prevent)[^.]*(?:from|the)[^.]*\.',
+        ]
+        for pattern in restriction_request_patterns:
+            matches = re.findall(pattern, motion_lower, re.IGNORECASE)
+            motion_requests['restrictions'].extend(matches)
+
+        # Extract third-party requests
+        tp_request_patterns = [
+            r'(?:girlfriend|boyfriend|partner|significant\s+other|camille|new\s+partner)[^.]*(?:shall\s+not|must\s+not|prohibited|no\s+contact)[^.]*\.',
+            r'(?:order|require)\s+(?:that\s+)?(?:no|neither)[^.]*(?:girlfriend|boyfriend|partner)[^.]*\.',
+        ]
+        for pattern in tp_request_patterns:
+            matches = re.findall(pattern, motion_lower, re.IGNORECASE)
+            motion_requests['third_party'].extend(matches)
+
+        # =====================================================================
+        # PART 3: Detect conflicts
+        # =====================================================================
+
+        has_conflicts = False
+        conflict_severity = 'none'  # none, low, medium, high, critical
+
+        # Check 1: Already existing parenting schedule being requested differently
+        if existing_provisions['parenting_time'] and motion_requests['parenting_time']:
+            # Check if motion requests contradict existing schedule
+            existing_schedule = ' '.join(existing_provisions['parenting_time'])
+            requested_changes = ' '.join(motion_requests['parenting_time'])
+
+            # Look for time conflicts
+            if 'every weekend' in existing_schedule and 'no weekend' in requested_changes:
+                conflicts.append({
+                    'type': 'DIRECT_CONTRADICTION',
+                    'existing': 'Existing order grants weekend parenting time',
+                    'requested': 'Motion requests removal of weekend parenting time',
+                    'severity': 'high',
+                    'recommendation': 'Acknowledge the existing schedule and explain why modification is needed'
+                })
+                has_conflicts = True
+                conflict_severity = 'high'
+
+        # Check 2: Requesting restrictions that already exist
+        if existing_provisions['restrictions'] and motion_requests['restrictions']:
+            existing_restrictions = ' '.join(existing_provisions['restrictions'])
+            requested_restrictions = ' '.join(motion_requests['restrictions'])
+
+            # Check for duplicate supervision requests
+            if 'supervised' in existing_restrictions and 'supervised' in requested_restrictions:
+                if 'continue' not in motion_lower and 'maintain' not in motion_lower:
+                    conflicts.append({
+                        'type': 'DUPLICATE_REQUEST',
+                        'existing': 'Supervision is already ordered',
+                        'requested': 'Motion requests supervision without acknowledging existing order',
+                        'severity': 'low',
+                        'recommendation': 'Reference the existing supervision order and specify if you want it continued or modified'
+                    })
+                    has_conflicts = True
+                    if conflict_severity == 'none':
+                        conflict_severity = 'low'
+
+        # Check 3: Third-party restrictions that conflict
+        if existing_provisions['third_party'] and motion_requests['third_party']:
+            # Already has third-party provisions
+            warnings.append({
+                'type': 'EXISTING_THIRD_PARTY_PROVISION',
+                'detail': 'Existing order already addresses third-party presence',
+                'recommendation': 'Review existing provisions before requesting new restrictions'
+            })
+
+        # Check 4: Modification without citing existing order
+        modification_keywords = ['modify', 'change', 'amend', 'alter', 'revise']
+        is_modification_motion = any(kw in motion_lower for kw in modification_keywords)
+
+        if is_modification_motion and not order_text:
+            conflicts.append({
+                'type': 'MISSING_ORDER_REFERENCE',
+                'existing': 'No existing order provided for reference',
+                'requested': 'Motion seeks to modify an order',
+                'severity': 'medium',
+                'recommendation': 'Upload the existing order and cite specific provisions being modified'
+            })
+            has_conflicts = True
+            if conflict_severity in ['none', 'low']:
+                conflict_severity = 'medium'
+
+        # Check 5: Requesting opposite of what's already ordered
+        opposite_check_pairs = [
+            ('joint decision', 'sole decision'),
+            ('joint custody', 'sole custody'),
+            ('unsupervised', 'supervised'),
+            ('liberal parenting', 'restricted parenting'),
+            ('equal parenting', 'primary'),
+        ]
+
+        for existing_term, opposite_term in opposite_check_pairs:
+            if existing_term in order_lower and opposite_term in motion_lower:
+                conflicts.append({
+                    'type': 'DIRECT_CONTRADICTION',
+                    'existing': f'Existing order provides for {existing_term}',
+                    'requested': f'Motion requests {opposite_term}',
+                    'severity': 'high',
+                    'recommendation': f'Provide substantial evidence and changed circumstances to justify change from {existing_term} to {opposite_term}'
+                })
+                has_conflicts = True
+                conflict_severity = 'high'
+            elif opposite_term in order_lower and existing_term in motion_lower:
+                # Reverse check
+                conflicts.append({
+                    'type': 'DIRECT_CONTRADICTION',
+                    'existing': f'Existing order provides for {opposite_term}',
+                    'requested': f'Motion requests {existing_term}',
+                    'severity': 'high',
+                    'recommendation': f'Provide substantial evidence and changed circumstances to justify change from {opposite_term} to {existing_term}'
+                })
+                has_conflicts = True
+                conflict_severity = 'high'
+
+        # Check 6: Holiday schedule conflicts
+        holiday_terms = ['christmas', 'thanksgiving', 'easter', 'summer', 'spring break', 'birthday']
+        for holiday in holiday_terms:
+            if holiday in order_lower and holiday in motion_lower:
+                # Check if changing existing holiday arrangement
+                if 'modify' in motion_lower or 'change' in motion_lower:
+                    warnings.append({
+                        'type': 'HOLIDAY_MODIFICATION',
+                        'detail': f'Existing order addresses {holiday.title()} - ensure you cite the specific provision being modified',
+                        'recommendation': f'Quote the existing {holiday.title()} provision and explain why change is needed'
+                    })
+
+        # =====================================================================
+        # PART 4: Generate analysis output
+        # =====================================================================
+
+        analysis_parts = []
+
+        if not order_text:
+            analysis_parts.append("## ⚠️ ORDER CONFLICT ANALYSIS - NO EXISTING ORDER PROVIDED")
+            analysis_parts.append("")
+            analysis_parts.append("**IMPORTANT:** No existing court order was provided for conflict analysis.")
+            analysis_parts.append("")
+            analysis_parts.append("To properly analyze potential conflicts:")
+            analysis_parts.append("1. Upload the existing court order in the 'My Case Files' tab")
+            analysis_parts.append("2. Re-run the motion analysis")
+            analysis_parts.append("")
+            analysis_parts.append("**Why this matters:**")
+            analysis_parts.append("- Courts expect you to acknowledge existing orders")
+            analysis_parts.append("- Contradicting an order without explanation looks uninformed")
+            analysis_parts.append("- Citing the specific provision you want changed strengthens your motion")
+
+        elif not has_conflicts and not warnings:
+            analysis_parts.append("## ✅ ORDER CONFLICT ANALYSIS - NO CONFLICTS DETECTED")
+            analysis_parts.append("")
+            analysis_parts.append("Your motion does not appear to conflict with the existing order provisions.")
+            analysis_parts.append("")
+            analysis_parts.append("**Provisions reviewed:**")
+            for category, provisions in existing_provisions.items():
+                if provisions:
+                    analysis_parts.append(f"- {category.replace('_', ' ').title()}: {len(provisions)} provision(s) checked")
+
+        else:
+            # Determine overall severity indicator
+            severity_emoji = {
+                'none': '✅',
+                'low': '⚠️',
+                'medium': '🟡',
+                'high': '🟠',
+                'critical': '🔴'
+            }
+
+            analysis_parts.append(f"## {severity_emoji.get(conflict_severity, '⚠️')} ORDER CONFLICT ANALYSIS - {len(conflicts)} CONFLICT(S) FOUND")
+            analysis_parts.append("")
+
+            if conflicts:
+                analysis_parts.append("### ⚠️ CONFLICTS WITH EXISTING ORDER:")
+                analysis_parts.append("")
+
+                for i, conflict in enumerate(conflicts, 1):
+                    analysis_parts.append(f"**Conflict #{i}: {conflict['type']}**")
+                    analysis_parts.append(f"- **Existing Order:** {conflict['existing']}")
+                    analysis_parts.append(f"- **Your Request:** {conflict['requested']}")
+                    analysis_parts.append(f"- **Severity:** {conflict['severity'].upper()}")
+                    analysis_parts.append(f"- **Recommendation:** {conflict['recommendation']}")
+                    analysis_parts.append("")
+
+            if warnings:
+                analysis_parts.append("### ⚠️ WARNINGS:")
+                analysis_parts.append("")
+
+                for warning in warnings:
+                    analysis_parts.append(f"**{warning['type']}:** {warning['detail']}")
+                    analysis_parts.append(f"- Recommendation: {warning['recommendation']}")
+                    analysis_parts.append("")
+
+            # Add general guidance
+            analysis_parts.append("### 📋 HOW TO FIX CONFLICTS:")
+            analysis_parts.append("")
+            analysis_parts.append("1. **Cite the specific provision** you want changed (e.g., 'Paragraph 5.a of the current order')")
+            analysis_parts.append("2. **Explain changed circumstances** that justify the modification")
+            analysis_parts.append("3. **Acknowledge the existing order** - don't pretend it doesn't exist")
+            analysis_parts.append("4. **Focus on the child's best interests** - not punishment of the other parent")
+            analysis_parts.append("")
+            analysis_parts.append("**Colorado Law Note:** Under C.R.S. § 14-10-129, modification requires")
+            analysis_parts.append("showing a 'substantial and continuing' change in circumstances.")
+
+        # Count total conflicts by severity
+        severity_counts = {'low': 0, 'medium': 0, 'high': 0, 'critical': 0}
+        for conflict in conflicts:
+            sev = conflict.get('severity', 'low')
+            if sev in severity_counts:
+                severity_counts[sev] += 1
+
+        return {
+            'success': True,
+            'has_conflicts': has_conflicts,
+            'conflict_count': len(conflicts),
+            'warning_count': len(warnings),
+            'overall_severity': conflict_severity,
+            'severity_counts': severity_counts,
+            'conflicts': conflicts,
+            'warnings': warnings,
+            'existing_provisions_found': {k: len(v) for k, v in existing_provisions.items()},
+            'has_existing_order': bool(order_text),
             'analysis': '\n'.join(analysis_parts),
         }
 
