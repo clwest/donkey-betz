@@ -902,6 +902,10 @@ NOT legal advice - always recommends attorney consultation
                                         <input type="text" id="respondent-attorney-bar" class="form-control" style="background: #2a2a2a; border: 1px solid #444; color: white;">
                                     </div>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Attorney Address (for Certificate of Service)</label>
+                                    <textarea id="respondent-attorney-address" class="form-control" rows="2" placeholder="123 Main St, Suite 100&#10;Fort Collins, CO 80521" style="background: #2a2a2a; border: 1px solid #444; color: white;"></textarea>
+                                </div>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-outline-secondary" onclick="prevCaseStep(2)">&#8592; Back</button>
@@ -1756,7 +1760,7 @@ function resetCaseForm() {
      'petitioner-attorney-email', 'petitioner-attorney-bar',
      'respondent-name', 'respondent-email', 'respondent-address', 'respondent-phone',
      'respondent-city', 'respondent-zip', 'respondent-attorney-name', 'respondent-attorney-firm',
-     'respondent-attorney-email', 'respondent-attorney-bar'].forEach(id => {
+     'respondent-attorney-email', 'respondent-attorney-bar', 'respondent-attorney-address'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -1862,6 +1866,7 @@ async function saveCaseProfile() {
                 firm_name: document.getElementById('respondent-attorney-firm').value,
                 email: document.getElementById('respondent-attorney-email').value,
                 bar_number: document.getElementById('respondent-attorney-bar').value,
+                address: document.getElementById('respondent-attorney-address').value,
             } : null
         },
         children: []
