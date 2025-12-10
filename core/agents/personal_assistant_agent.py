@@ -163,7 +163,11 @@ INTENT_KEYWORDS = {
         'pro se', 'self-represented', 'family law', 'family court',
         'jdf', 'colorado court', 'colorado divorce', 'colorado custody',
         'modification', 'enforce', 'order', 'decree', 'separation',
-        'parental responsibilities', 'parenting plan', 'child custody'
+        'parental responsibilities', 'parenting plan', 'child custody',
+        # Session 404: Added keywords for denied motion analysis
+        'denied', 'denied motion', 'motion denied', 'rejected', 'dismissal',
+        'rewrite motion', 'fix motion', 'correct motion', 'refile',
+        'magistrate', 'ruling', 'contempt', 'affidavit',
     ],
 }
 
@@ -545,7 +549,10 @@ Available agents:
                 'divorce', 'custody', 'child support', 'parenting time', 'court',
                 'attorney', 'lawyer', 'legal', 'family law', 'pro se',
                 'file motion', 'draft motion', 'motion to', 'jdf', 'parental responsibilities',
-                'separation', 'decree', 'modification', 'enforcement'
+                'separation', 'decree', 'modification', 'enforcement',
+                # Session 404: Added keywords for denied motion analysis
+                'denied', 'denied motion', 'motion denied', 'rejected', 'dismissal',
+                'rewrite', 'refile', 'magistrate', 'ruling', 'contempt', 'affidavit',
             ]),
             # Most specific compound terms first
             ('AudioAgent', ['voiceover', 'text to speech', 'tts', 'narration']),
