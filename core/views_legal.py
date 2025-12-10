@@ -423,12 +423,50 @@ def analyze_legal_document(doc, additional_context: str = '') -> dict:
     Session 404: Now routes through the LegalDocDrafterAgent to use the
     denied motion pipeline and motion rewriting tools.
 
+    Session 405: Now fetches uploaded court orders to pass as context for
+    conflict detection (Enhancement #4).
+
     Returns structured analysis with summary, issues, recommendations, and forms.
     """
     logger.info(f"[SESSION 404] analyze_legal_document called for doc: {doc.id}, type: {doc.document_type}")
 
     try:
         from core.agents.legal import LegalDocDrafterAgent
+        from core.models_unified_system import LegalDocument
+
+        # =====================================================================
+        # Session 405: Fetch uploaded court orders for conflict analysis
+        # =====================================================================
+        existing_order_text = ''
+        existing_order_summary = ''
+        uploaded_document_types = []
+
+        try:
+            # Get all court orders uploaded by this user
+            court_orders = LegalDocument.objects.filter(
+                user=doc.user,
+                document_type='court_order'
+            ).order_by('-created_at')[:5]  # Get up to 5 most recent orders
+
+            if court_orders.exists():
+                # Combine court order text (limit to prevent token overflow)
+                order_texts = []
+                for order in court_orders:
+                    if order.content:
+                        order_texts.append(f"--- Court Order: {order.title} ---\n{order.content[:5000]}")
+                        uploaded_document_types.append('court_order')
+
+                existing_order_text = '\n\n'.join(order_texts)[:15000]  # Cap total length
+                logger.info(f"[SESSION 405] Found {court_orders.count()} court orders, total text length: {len(existing_order_text)}")
+            else:
+                logger.info("[SESSION 405] No court orders found for user")
+
+            # Also check for any other uploaded documents to track types
+            other_docs = LegalDocument.objects.filter(user=doc.user).exclude(id=doc.id).values_list('document_type', flat=True).distinct()
+            uploaded_document_types.extend(list(other_docs))
+
+        except Exception as e:
+            logger.warning(f"[SESSION 405] Error fetching court orders: {e}")
 
         # Build task string that triggers the denied motion pipeline
         doc_type_label = LEGAL_DOCUMENT_TYPES.get(doc.document_type, doc.document_type)
@@ -451,7 +489,11 @@ def analyze_legal_document(doc, additional_context: str = '') -> dict:
             'additional_context': additional_context,
             'case_details': {
                 'document_title': doc.title,
-            }
+            },
+            # Session 405: Add court order context for conflict detection
+            'existing_order_text': existing_order_text,
+            'existing_order_summary': existing_order_summary,
+            'uploaded_document_types': uploaded_document_types,
         }
 
         logger.info(f"[SESSION 404] Context built, motion_content length: {len(context['motion_content'])}")
