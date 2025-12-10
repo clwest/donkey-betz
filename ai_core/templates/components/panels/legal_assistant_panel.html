@@ -1016,6 +1016,12 @@ NOT legal advice - always recommends attorney consultation
                         &#128196; Auto-Generated
                     </button>
                 </li>
+                <!-- Session 410: Response Session Tab -->
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="db-response-session-tab" data-bs-toggle="pill" data-bs-target="#db-response-session" type="button" role="tab" style="font-size: 12px;">
+                        &#9998; Draft Response
+                    </button>
+                </li>
             </ul>
 
             <style>
@@ -1042,11 +1048,31 @@ NOT legal advice - always recommends attorney consultation
 
                 <!-- Motions Tab -->
                 <div class="tab-pane fade" id="db-motions" role="tabpanel">
+                    <!-- Session 410: Party & Role Filters -->
+                    <div class="mb-2 d-flex gap-2 flex-wrap align-items-center" style="border-bottom: 1px solid #333; padding-bottom: 8px;">
+                        <small class="text-muted">Filter by:</small>
+                        <div class="btn-group btn-group-sm" role="group" id="motion-party-filter">
+                            <button type="button" class="btn btn-outline-secondary active" data-party="all" onclick="filterMotionsByParty('all')">All</button>
+                            <button type="button" class="btn btn-outline-primary" data-party="petitioner" onclick="filterMotionsByParty('petitioner')">Mine (Petitioner)</button>
+                            <button type="button" class="btn btn-outline-danger" data-party="respondent" onclick="filterMotionsByParty('respondent')">Theirs (Respondent)</button>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group" id="motion-role-filter">
+                            <button type="button" class="btn btn-outline-secondary active" data-role="all" onclick="filterMotionsByRole('all')">All Roles</button>
+                            <button type="button" class="btn btn-outline-warning" data-role="motion" onclick="filterMotionsByRole('motion')">Motion</button>
+                            <button type="button" class="btn btn-outline-info" data-role="response" onclick="filterMotionsByRole('response')">Response</button>
+                            <button type="button" class="btn btn-outline-success" data-role="reply" onclick="filterMotionsByRole('reply')">Reply</button>
+                        </div>
+                    </div>
                     <div class="mb-3 d-flex justify-content-between align-items-center">
                         <span class="text-muted">Upload: Your Motions, Opposing Party's Motions, Pending Motions</span>
-                        <button class="btn btn-sm" onclick="showDocumentUploadModal('motion')" style="background: #f59e0b; border: none; color: black;">
-                            &#10133; Upload Motion
-                        </button>
+                        <div>
+                            <button class="btn btn-sm me-1" onclick="showDocumentUploadModal('motion', 'respondent')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444;">
+                                &#10133; Upload Their Filing
+                            </button>
+                            <button class="btn btn-sm" onclick="showDocumentUploadModal('motion')" style="background: #f59e0b; border: none; color: black;">
+                                &#10133; Upload Motion
+                            </button>
+                        </div>
                     </div>
                     <div id="db-motions-list" style="max-height: 400px; overflow-y: auto;">
                         <p class="text-muted text-center py-4">Select a case to view motions</p>
@@ -1055,11 +1081,25 @@ NOT legal advice - always recommends attorney consultation
 
                 <!-- Responses Tab -->
                 <div class="tab-pane fade" id="db-responses" role="tabpanel">
+                    <!-- Session 410: Party Filter for Responses -->
+                    <div class="mb-2 d-flex gap-2 flex-wrap align-items-center" style="border-bottom: 1px solid #333; padding-bottom: 8px;">
+                        <small class="text-muted">Filter by:</small>
+                        <div class="btn-group btn-group-sm" role="group" id="response-party-filter">
+                            <button type="button" class="btn btn-outline-secondary active" data-party="all" onclick="filterResponsesByParty('all')">All</button>
+                            <button type="button" class="btn btn-outline-primary" data-party="petitioner" onclick="filterResponsesByParty('petitioner')">Mine (Petitioner)</button>
+                            <button type="button" class="btn btn-outline-danger" data-party="respondent" onclick="filterResponsesByParty('respondent')">Theirs (Respondent)</button>
+                        </div>
+                    </div>
                     <div class="mb-3 d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Upload: Responses, Replies, Exhibits, Affidavits from opposing party</span>
-                        <button class="btn btn-sm" onclick="showDocumentUploadModal('response')" style="background: #f59e0b; border: none; color: black;">
-                            &#10133; Upload Response/Reply
-                        </button>
+                        <span class="text-muted">Upload: Responses, Replies, Exhibits, Affidavits</span>
+                        <div>
+                            <button class="btn btn-sm me-1" onclick="showDocumentUploadModal('response', 'respondent')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444;">
+                                &#10133; Upload Their Response
+                            </button>
+                            <button class="btn btn-sm" onclick="showDocumentUploadModal('response')" style="background: #f59e0b; border: none; color: black;">
+                                &#10133; Upload Response/Reply
+                            </button>
+                        </div>
                     </div>
                     <div id="db-responses-list" style="max-height: 400px; overflow-y: auto;">
                         <p class="text-muted text-center py-4">Select a case to view responses</p>
@@ -1153,6 +1193,115 @@ NOT legal advice - always recommends attorney consultation
                     </div>
                 </div>
 
+                <!-- Session 410: Response Session Tab - Draft responses with context control -->
+                <div class="tab-pane fade" id="db-response-session" role="tabpanel">
+                    <div class="row">
+                        <!-- Left column: Setup -->
+                        <div class="col-md-5">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid #333;">
+                                    <small style="color: #fbbf24;">&#9998; Response Configuration</small>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Select opposing document -->
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Responding To</label>
+                                        <select id="response-session-target" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;" onchange="onResponseTargetChange()">
+                                            <option value="">-- Select opposing filing --</option>
+                                        </select>
+                                        <small class="text-muted d-block mt-1" id="response-session-target-info"></small>
+                                    </div>
+
+                                    <!-- Response type -->
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Response Type</label>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="response-type" id="response-type-response" value="response" checked>
+                                            <label class="btn btn-outline-info" for="response-type-response" style="font-size: 12px;">Response</label>
+                                            <input type="radio" class="btn-check" name="response-type" id="response-type-reply" value="reply">
+                                            <label class="btn btn-outline-success" for="response-type-reply" style="font-size: 12px;">Reply (to their response)</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Context toggles -->
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Include Context From</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="context-court-orders" checked>
+                                            <label class="form-check-label" for="context-court-orders" style="font-size: 12px;">
+                                                Court Orders (existing orders, restrictions)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="context-prior-filings" checked>
+                                            <label class="form-check-label" for="context-prior-filings" style="font-size: 12px;">
+                                                Prior Filings (original motion if responding)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="context-evidence">
+                                            <label class="form-check-label" for="context-evidence" style="font-size: 12px;">
+                                                Uploaded Evidence (messages, logs)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="context-knowledge-graph" checked>
+                                            <label class="form-check-label" for="context-knowledge-graph" style="font-size: 12px;">
+                                                Knowledge Graph (contradictions, timeline)
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Additional instructions -->
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Additional Instructions (optional)</label>
+                                        <textarea id="response-session-instructions" class="form-control" rows="2"
+                                                  placeholder="e.g., Focus on the scheduling conflict claims, emphasize safety concerns..."
+                                                  style="background: #2a2a2a; border: 1px solid #444; color: white; font-size: 12px;"></textarea>
+                                    </div>
+
+                                    <!-- Generate button -->
+                                    <button class="btn w-100" onclick="startResponseSession()" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: black; font-weight: 600;">
+                                        &#9998; Generate Draft Response
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right column: Preview/Output -->
+                        <div class="col-md-7">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333; height: 100%;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid #333;">
+                                    <small style="color: #22c55e;">&#128196; Draft Preview</small>
+                                    <div id="response-session-actions" style="display: none;">
+                                        <button class="btn btn-sm me-1" onclick="copyResponseDraft()" style="background: rgba(139, 92, 246, 0.5); border: none; color: white; font-size: 11px;">
+                                            &#128203; Copy
+                                        </button>
+                                        <button class="btn btn-sm" onclick="downloadResponseDraft()" style="background: #22c55e; border: none; color: black; font-size: 11px;">
+                                            &#128190; Save
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body" style="overflow-y: auto; max-height: 450px;">
+                                    <div id="response-session-preview">
+                                        <p class="text-muted text-center py-5">
+                                            Select an opposing filing and click "Generate Draft Response" to create a response.<br>
+                                            <small>The AI will analyze the filing and draft a point-by-point response.</small>
+                                        </p>
+                                    </div>
+                                    <div id="response-session-loading" style="display: none;" class="text-center py-5">
+                                        <div class="spinner-border" style="color: #f59e0b;" role="status">
+                                            <span class="visually-hidden">Generating...</span>
+                                        </div>
+                                        <p class="mt-2" style="color: #f59e0b;">Analyzing filing and generating response...</p>
+                                        <small class="text-muted">This may take 30-60 seconds</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1176,14 +1325,28 @@ NOT legal advice - always recommends attorney consultation
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Filed By</label>
-                        <select id="upload-filing-party" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
-                            <option value="petitioner">Petitioner (Me)</option>
-                            <option value="respondent">Respondent (Opposing Party)</option>
-                            <option value="court">Court</option>
-                            <option value="third_party">Third Party</option>
-                        </select>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Filed By</label>
+                            <select id="upload-filing-party" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                <option value="petitioner">Petitioner (Me)</option>
+                                <option value="respondent">Respondent (Opposing Party)</option>
+                                <option value="court">Court</option>
+                                <option value="third_party">Third Party</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Session 410: Litigation role for threading -->
+                            <label class="form-label text-muted">Role in Case</label>
+                            <select id="upload-litigation-role" class="form-select" style="background: #2a2a2a; border: 1px solid #444; color: white;">
+                                <option value="motion">Motion</option>
+                                <option value="response">Response</option>
+                                <option value="reply">Reply</option>
+                                <option value="order">Court Order</option>
+                                <option value="exhibit">Exhibit</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="row mb-3">
@@ -2471,6 +2634,19 @@ async function deleteCase(caseId) {
 let currentDocumentBrainCase = null;
 let documentTypeOptions = null;
 
+// Session 410: Filter state and document cache for filtering
+let documentBrainCache = {
+    court_order: [],
+    motion: [],
+    response: [],
+    evidence: []
+};
+let currentFilters = {
+    motionParty: 'all',
+    motionRole: 'all',
+    responseParty: 'all'
+};
+
 // Load Document Brain tab
 async function loadDocumentBrain() {
     console.log('[Document Brain] Loading...');
@@ -2581,11 +2757,17 @@ async function loadCaseDocuments() {
         const data = await response.json();
 
         if (data.success) {
-            // Populate each category list
-            renderDocumentList('db-court-orders-list', data.categories.court_order.documents, 'court_order');
-            renderDocumentList('db-motions-list', data.categories.motion.documents, 'motion');
-            renderDocumentList('db-responses-list', data.categories.response.documents, 'response');
-            renderDocumentList('db-evidence-list', data.categories.evidence.documents, 'evidence');
+            // Session 410: Cache documents for filtering
+            documentBrainCache.court_order = data.categories.court_order.documents || [];
+            documentBrainCache.motion = data.categories.motion.documents || [];
+            documentBrainCache.response = data.categories.response.documents || [];
+            documentBrainCache.evidence = data.categories.evidence.documents || [];
+
+            // Populate each category list (with filters applied)
+            renderDocumentList('db-court-orders-list', documentBrainCache.court_order, 'court_order');
+            applyMotionFilters();  // Session 410: Apply current filters
+            applyResponseFilters();  // Session 410: Apply current filters
+            renderDocumentList('db-evidence-list', documentBrainCache.evidence, 'evidence');
 
             // Load generated responses
             loadGeneratedResponses();
@@ -2605,10 +2787,26 @@ function renderDocumentList(containerId, documents, category) {
         return;
     }
 
+    // Session 410: Role badge colors
+    const roleColors = {
+        'motion': '#f59e0b',
+        'response': '#06b6d4',
+        'reply': '#22c55e',
+        'order': '#3b82f6',
+        'exhibit': '#8b5cf6',
+        'other': '#6b7280'
+    };
+
     let html = '';
     documents.forEach(doc => {
         const filingColor = doc.filing_party === 'respondent' ? '#ef4444' :
                            doc.filing_party === 'court' ? '#3b82f6' : '#22c55e';
+
+        // Session 410: Add litigation role badge if available
+        const roleColor = roleColors[doc.litigation_role] || '#6b7280';
+        const roleBadge = doc.litigation_role && doc.litigation_role !== 'other'
+            ? `<span class="badge" style="background: ${roleColor}; font-size: 10px;">${doc.litigation_role_display || doc.litigation_role}</span>`
+            : '';
 
         html += `
             <div class="card mb-2" style="background: #2a2a2a; border: 1px solid #444;">
@@ -2618,6 +2816,7 @@ function renderDocumentList(containerId, documents, category) {
                             <strong style="color: #fbbf24;">${doc.title}</strong>
                             <div class="mt-1">
                                 <span class="badge" style="background: ${filingColor}; font-size: 10px;">${doc.filing_party_display}</span>
+                                ${roleBadge}
                                 <span class="badge" style="background: rgba(139, 92, 246, 0.5); font-size: 10px;">${doc.document_type_display}</span>
                                 ${doc.filed_date ? `<span class="text-muted ms-2" style="font-size: 11px;">Filed: ${doc.filed_date}</span>` : ''}
                             </div>
@@ -2640,7 +2839,8 @@ function renderDocumentList(containerId, documents, category) {
 }
 
 // Show document upload modal
-function showDocumentUploadModal(category) {
+// Session 410: Added defaultParty parameter for "Upload Their Filing" buttons
+function showDocumentUploadModal(category, defaultParty = null) {
     if (!currentDocumentBrainCase) {
         showToast('Please select a case first', 'warning');
         return;
@@ -2662,9 +2862,29 @@ function showDocumentUploadModal(category) {
         });
     }
 
+    // Session 410: Populate litigation role dropdown
+    const roleSelect = document.getElementById('upload-litigation-role');
+    if (roleSelect && documentTypeOptions && documentTypeOptions.litigation_roles) {
+        roleSelect.innerHTML = '';
+        Object.entries(documentTypeOptions.litigation_roles).forEach(([value, label]) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = label;
+            roleSelect.appendChild(opt);
+        });
+        // Set default based on category
+        if (category === 'court_order') {
+            roleSelect.value = 'order';
+        } else if (category === 'motion') {
+            roleSelect.value = 'motion';
+        } else if (category === 'response') {
+            roleSelect.value = 'response';
+        }
+    }
+
     // Show/hide responds_to field for responses
     const respondsToContainer = document.getElementById('responds-to-container');
-    if (category === 'response') {
+    if (category === 'response' || category === 'motion') {
         respondsToContainer.style.display = 'block';
         loadMotionsForRespondsTo();
     } else {
@@ -2676,8 +2896,17 @@ function showDocumentUploadModal(category) {
     document.getElementById('upload-filed-date').value = '';
     document.getElementById('upload-notes').value = '';
     document.getElementById('upload-file').value = '';
-    document.getElementById('upload-filing-party').value = category === 'court_order' ? 'court' :
-                                                          category === 'response' ? 'respondent' : 'petitioner';
+
+    // Session 410: Set filing party based on defaultParty or category
+    let filingParty;
+    if (defaultParty) {
+        filingParty = defaultParty;
+    } else if (category === 'court_order') {
+        filingParty = 'court';
+    } else {
+        filingParty = 'petitioner';
+    }
+    document.getElementById('upload-filing-party').value = filingParty;
 
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('documentUploadModal'));
@@ -2726,6 +2955,8 @@ async function uploadLitigationDocument() {
     formData.append('category', document.getElementById('upload-category').value);
     formData.append('document_type', document.getElementById('upload-document-type').value);
     formData.append('filing_party', document.getElementById('upload-filing-party').value);
+    // Session 410: Include litigation_role
+    formData.append('litigation_role', document.getElementById('upload-litigation-role').value);
     formData.append('document_date', document.getElementById('upload-document-date').value);
     formData.append('filed_date', document.getElementById('upload-filed-date').value);
     formData.append('notes', document.getElementById('upload-notes').value);
@@ -2862,6 +3093,339 @@ async function rebuildKnowledgeGraph() {
         showToast('Error rebuilding knowledge graph', 'error');
     }
 }
+
+// =============================================================================
+// Session 410: Document Filtering Functions
+// =============================================================================
+
+// Filter motions by party (petitioner/respondent/all)
+function filterMotionsByParty(party) {
+    currentFilters.motionParty = party;
+
+    // Update button states
+    document.querySelectorAll('#motion-party-filter button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.party === party) {
+            btn.classList.add('active');
+        }
+    });
+
+    applyMotionFilters();
+}
+
+// Filter motions by role (motion/response/reply/all)
+function filterMotionsByRole(role) {
+    currentFilters.motionRole = role;
+
+    // Update button states
+    document.querySelectorAll('#motion-role-filter button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.role === role) {
+            btn.classList.add('active');
+        }
+    });
+
+    applyMotionFilters();
+}
+
+// Filter responses by party
+function filterResponsesByParty(party) {
+    currentFilters.responseParty = party;
+
+    // Update button states
+    document.querySelectorAll('#response-party-filter button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.party === party) {
+            btn.classList.add('active');
+        }
+    });
+
+    applyResponseFilters();
+}
+
+// Apply motion filters and re-render
+function applyMotionFilters() {
+    let filtered = [...documentBrainCache.motion];
+
+    // Filter by party
+    if (currentFilters.motionParty !== 'all') {
+        filtered = filtered.filter(doc => doc.filing_party === currentFilters.motionParty);
+    }
+
+    // Filter by role
+    if (currentFilters.motionRole !== 'all') {
+        filtered = filtered.filter(doc => doc.litigation_role === currentFilters.motionRole);
+    }
+
+    renderDocumentList('db-motions-list', filtered, 'motion');
+
+    // Show filter status if filters are active
+    const filterCount = (currentFilters.motionParty !== 'all' ? 1 : 0) +
+                        (currentFilters.motionRole !== 'all' ? 1 : 0);
+
+    if (filterCount > 0 && documentBrainCache.motion.length > 0) {
+        const total = documentBrainCache.motion.length;
+        const showing = filtered.length;
+        const statusHtml = `<small class="text-muted d-block mb-2">Showing ${showing} of ${total} documents</small>`;
+        document.getElementById('db-motions-list').insertAdjacentHTML('afterbegin', statusHtml);
+    }
+}
+
+// Apply response filters and re-render
+function applyResponseFilters() {
+    let filtered = [...documentBrainCache.response];
+
+    // Filter by party
+    if (currentFilters.responseParty !== 'all') {
+        filtered = filtered.filter(doc => doc.filing_party === currentFilters.responseParty);
+    }
+
+    renderDocumentList('db-responses-list', filtered, 'response');
+
+    // Show filter status if filters are active
+    if (currentFilters.responseParty !== 'all' && documentBrainCache.response.length > 0) {
+        const total = documentBrainCache.response.length;
+        const showing = filtered.length;
+        const statusHtml = `<small class="text-muted d-block mb-2">Showing ${showing} of ${total} documents</small>`;
+        document.getElementById('db-responses-list').insertAdjacentHTML('afterbegin', statusHtml);
+    }
+}
+
+// =============================================================================
+// Session 410: Response Session Functions
+// =============================================================================
+
+// State for response session
+let responseSessionTargetDoc = null;
+let currentResponseDraft = null;
+
+// Load opposing filings for response session dropdown
+async function loadResponseSessionTargets() {
+    if (!currentDocumentBrainCase) return;
+
+    try {
+        // Get documents needing response (respondent's filings)
+        const response = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/needs-response/`);
+        const data = await response.json();
+
+        const select = document.getElementById('response-session-target');
+        select.innerHTML = '<option value="">-- Select opposing filing --</option>';
+
+        if (data.success && data.documents && data.documents.length > 0) {
+            data.documents.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = `${doc.title} (${doc.document_type_display})`;
+                opt.dataset.wordCount = doc.word_count;
+                opt.dataset.filedDate = doc.filed_date || 'Not filed';
+                opt.dataset.litigationRole = doc.litigation_role;
+                select.appendChild(opt);
+            });
+        }
+
+        // Also add option to select from all motion/response documents
+        const allDocsResponse = await authenticatedFetch(`/api/legal/litigation/${currentDocumentBrainCase}/documents/`);
+        const allData = await allDocsResponse.json();
+
+        if (allData.success) {
+            // Add respondent motions
+            const respondentMotions = (allData.categories.motion.documents || [])
+                .filter(d => d.filing_party === 'respondent');
+            const respondentResponses = (allData.categories.response.documents || [])
+                .filter(d => d.filing_party === 'respondent');
+
+            const allRespondentDocs = [...respondentMotions, ...respondentResponses];
+
+            if (allRespondentDocs.length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = 'All Respondent Filings';
+                allRespondentDocs.forEach(doc => {
+                    // Skip if already added
+                    if (select.querySelector(`option[value="${doc.id}"]`)) return;
+
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.textContent = `${doc.title} (${doc.document_type_display})`;
+                    opt.dataset.wordCount = doc.word_count;
+                    opt.dataset.filedDate = doc.filed_date || 'Not filed';
+                    opt.dataset.litigationRole = doc.litigation_role;
+                    optgroup.appendChild(opt);
+                });
+                if (optgroup.children.length > 0) {
+                    select.appendChild(optgroup);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[Response Session] Error loading targets:', error);
+    }
+}
+
+// Handle target selection change
+function onResponseTargetChange() {
+    const select = document.getElementById('response-session-target');
+    const infoEl = document.getElementById('response-session-target-info');
+
+    if (select.value) {
+        const selectedOption = select.options[select.selectedIndex];
+        const wordCount = selectedOption.dataset.wordCount || 'Unknown';
+        const filedDate = selectedOption.dataset.filedDate || 'Not filed';
+        const role = selectedOption.dataset.litigationRole || 'other';
+
+        infoEl.innerHTML = `<span style="color: #ef4444;">Filed: ${filedDate}</span> | ${wordCount} words | Role: ${role}`;
+        responseSessionTargetDoc = select.value;
+
+        // Auto-select response type based on litigation role
+        if (role === 'response') {
+            document.getElementById('response-type-reply').checked = true;
+        } else {
+            document.getElementById('response-type-response').checked = true;
+        }
+    } else {
+        infoEl.innerHTML = '';
+        responseSessionTargetDoc = null;
+    }
+}
+
+// Start response session - generate draft
+async function startResponseSession() {
+    if (!currentDocumentBrainCase) {
+        showToast('Please select a case first', 'warning');
+        return;
+    }
+
+    const targetDocId = document.getElementById('response-session-target').value;
+    if (!targetDocId) {
+        showToast('Please select an opposing filing to respond to', 'warning');
+        return;
+    }
+
+    // Get context toggles
+    const includeCourtOrders = document.getElementById('context-court-orders').checked;
+    const includePriorFilings = document.getElementById('context-prior-filings').checked;
+    const includeEvidence = document.getElementById('context-evidence').checked;
+    const includeKnowledgeGraph = document.getElementById('context-knowledge-graph').checked;
+
+    // Get response type
+    const responseType = document.querySelector('input[name="response-type"]:checked').value;
+
+    // Get additional instructions
+    const instructions = document.getElementById('response-session-instructions').value.trim();
+
+    // Show loading
+    document.getElementById('response-session-preview').style.display = 'none';
+    document.getElementById('response-session-loading').style.display = 'block';
+    document.getElementById('response-session-actions').style.display = 'none';
+
+    try {
+        const response = await authenticatedFetch(`/api/legal/litigation/${targetDocId}/generate-response/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                response_type: responseType,
+                include_court_orders: includeCourtOrders,
+                include_prior_filings: includePriorFilings,
+                include_evidence: includeEvidence,
+                include_knowledge_graph: includeKnowledgeGraph,
+                additional_instructions: instructions
+            })
+        });
+
+        const data = await response.json();
+
+        document.getElementById('response-session-loading').style.display = 'none';
+        document.getElementById('response-session-preview').style.display = 'block';
+
+        if (data.success && data.response) {
+            currentResponseDraft = data.response.full_document || data.response.content;
+
+            // Format and display the draft
+            document.getElementById('response-session-preview').innerHTML = `
+                <div class="mb-3 p-3" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border-left: 4px solid #22c55e;">
+                    <strong style="color: #22c55e;">Draft Generated Successfully</strong>
+                    <small class="d-block text-muted mt-1">Review below and make any needed edits before filing</small>
+                </div>
+                <pre style="white-space: pre-wrap; font-size: 12px; background: #0a0a0a; padding: 16px; border-radius: 8px; border: 1px solid #333; color: #d1d5db; max-height: 350px; overflow-y: auto;">${escapeHtml(currentResponseDraft)}</pre>
+            `;
+            document.getElementById('response-session-actions').style.display = 'block';
+
+            showToast('Draft response generated!', 'success');
+        } else {
+            document.getElementById('response-session-preview').innerHTML = `
+                <div class="alert" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;">
+                    <strong>Generation Failed</strong>
+                    <p class="mb-0 mt-1">${data.error || 'Unknown error occurred'}</p>
+                </div>
+            `;
+            showToast('Failed to generate draft', 'error');
+        }
+    } catch (error) {
+        console.error('[Response Session] Error:', error);
+        document.getElementById('response-session-loading').style.display = 'none';
+        document.getElementById('response-session-preview').style.display = 'block';
+        document.getElementById('response-session-preview').innerHTML = `
+            <div class="alert" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;">
+                <strong>Error</strong>
+                <p class="mb-0 mt-1">${error.message}</p>
+            </div>
+        `;
+        showToast('Error generating draft', 'error');
+    }
+}
+
+// Copy response draft to clipboard
+function copyResponseDraft() {
+    if (!currentResponseDraft) {
+        showToast('No draft to copy', 'warning');
+        return;
+    }
+
+    navigator.clipboard.writeText(currentResponseDraft).then(() => {
+        showToast('Draft copied to clipboard!', 'success');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        showToast('Failed to copy', 'error');
+    });
+}
+
+// Download response draft as file
+function downloadResponseDraft() {
+    if (!currentResponseDraft) {
+        showToast('No draft to download', 'warning');
+        return;
+    }
+
+    const blob = new Blob([currentResponseDraft], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `response_draft_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('Draft downloaded!', 'success');
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load response session targets when the tab is opened
+document.addEventListener('DOMContentLoaded', function() {
+    const responseSessionTab = document.getElementById('db-response-session-tab');
+    if (responseSessionTab) {
+        responseSessionTab.addEventListener('shown.bs.tab', function() {
+            loadResponseSessionTargets();
+        });
+    }
+});
 
 // Generate response to filing
 async function generateResponseToFiling(documentId) {
