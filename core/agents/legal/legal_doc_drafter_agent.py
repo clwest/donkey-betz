@@ -3372,37 +3372,44 @@ Thank you,
 {petitioner_first}"""
 
         # Generate Certificate of Conferral text (different versions based on outcome)
+        # Session 406 Polish: Use "Respondent's counsel" if represented
+        conferral_target = "Respondent's counsel" if respondent_counsel else "Respondent"
+        conferral_target_short = "Counsel" if respondent_counsel else "Respondent"
+
         certificate_no_response = f"""CERTIFICATE OF CONFERRAL
 
 Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
 
-1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to Respondent regarding the relief requested in this motion.
-2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
-3. Respondent did not respond within the conferral period.
+1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to {conferral_target} regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with {conferral_target_short}.
+3. {conferral_target_short} did not respond within the conferral period.
 4. The matter could not be resolved without Court involvement."""
 
         certificate_refused = f"""CERTIFICATE OF CONFERRAL
 
 Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
 
-1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to Respondent regarding the relief requested in this motion.
-2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
-3. Respondent stated they do not agree to the requested relief.
+1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to {conferral_target} regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with {conferral_target_short}.
+3. {conferral_target_short} stated they do not agree to the requested relief.
 4. The matter could not be resolved without Court involvement."""
 
         certificate_partial = f"""CERTIFICATE OF CONFERRAL
 
 Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
 
-1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to Respondent regarding the relief requested in this motion.
-2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
+1. On or about {datetime.now().strftime('%B %d, %Y')}, Petitioner sent written communication to {conferral_target} regarding the relief requested in this motion.
+2. Petitioner made reasonable and good-faith efforts to confer with {conferral_target_short}.
 3. The parties were unable to reach full agreement on all requested relief.
 4. The matter could not be resolved without Court involvement."""
+
+        # Session 406 Polish: Guidance text reflects counsel vs respondent
+        send_target = "opposing counsel" if respondent_counsel else "Respondent"
 
         guidance = f"""CONFERRAL WORKFLOW:
 
 1. SEND THE EMAIL FIRST
-   - Send the conferral email above to Respondent
+   - Send the conferral email above to {send_target}
    - Keep a copy (screenshot, sent folder, etc.)
    - Wait {deadline_days} business days for response
 
@@ -5358,6 +5365,16 @@ SPECIFIC FACTUAL ALLEGATIONS:
         # This prevents duplication and keeps facts consolidated in one section
         # The dates_incidents parameter is no longer used for a separate section
 
+        # Session 406 Polish: Add child name clarification if available from CaseProfile
+        children_info = case_details.get('children', [])
+        if children_info:
+            child_names_ages = [f"{c.get('name', 'the minor child')}, age {c.get('age', 'N/A')}" for c in children_info if c.get('name')]
+            if child_names_ages:
+                if len(child_names_ages) == 1:
+                    document += f"The minor child referenced above is {child_names_ages[0]}.\n\n"
+                else:
+                    document += f"The minor children referenced above are: {'; '.join(child_names_ages)}.\n\n"
+
         # Session 404C: Add relief requested section with clean separators
         document += f"""
 ------------------------------------------------------------
@@ -5387,6 +5404,9 @@ wait for the standard conferral period.
             # Non-emergency motions require conferral
             from datetime import datetime
             conferral_date = datetime.now().strftime('%B %d, %Y')
+            # Session 406 Polish: Use "Respondent's counsel" if represented
+            cert_target = "Respondent's counsel" if is_represented else "Respondent"
+            cert_target_short = "Counsel" if is_represented else "Respondent"
             document += f"""
 ------------------------------------------------------------
 CERTIFICATE OF CONFERRAL
@@ -5394,11 +5414,11 @@ CERTIFICATE OF CONFERRAL
 
 Pursuant to C.R.C.P. 121 § 1-15(8), Petitioner certifies that:
 
-1. On or about {conferral_date}, Petitioner sent written communication to Respondent
+1. On or about {conferral_date}, Petitioner sent written communication to {cert_target}
    regarding the relief requested in this motion.
-2. Petitioner made reasonable and good-faith efforts to confer with Respondent.
-3. [ ] Respondent did not respond within the conferral period.
-   [ ] Respondent stated they do not agree to the requested relief.
+2. Petitioner made reasonable and good-faith efforts to confer with {cert_target_short}.
+3. [ ] {cert_target_short} did not respond within the conferral period.
+   [ ] {cert_target_short} stated they do not agree to the requested relief.
    [ ] The parties were unable to reach full agreement on all requested relief.
 4. The matter could not be resolved without Court involvement.
 
@@ -7127,9 +7147,20 @@ MAGISTRATE / JUDGE
         # =====================================================================
 
         # Count relief requests (fewer = better)
-        relief_count = len(re.findall(r'\d+\.\s+(?:Order|Require|Grant|Direct)', motion_text))
+        # Session 406 Polish: Better patterns for relief item counting
+        relief_count = len(re.findall(r'\d+\.\s+(?:Order|Require|Grant|Direct|Respondent shall)', motion_text))
         if relief_count == 0:
+            # Try alternative patterns
             relief_count = len(re.findall(r'(?:order|require|grant|direct)\s+(?:that|the|respondent)', motion_lower))
+        if relief_count == 0:
+            # Count numbered items in RELIEF REQUESTED section
+            relief_section_match = re.search(r'RELIEF REQUESTED.*?(?:CERTIFICATE|VERIFICATION|$)', motion_text, re.DOTALL | re.IGNORECASE)
+            if relief_section_match:
+                relief_section = relief_section_match.group(0)
+                relief_count = len(re.findall(r'^\s*\d+\.', relief_section, re.MULTILINE))
+        if relief_count == 0:
+            # Count "Respondent shall" statements
+            relief_count = len(re.findall(r'Respondent shall', motion_text, re.IGNORECASE))
 
         # Check for overly broad relief
         broad_relief_terms = ['full custody', 'sole custody', 'all parenting time', 'terminate', 'revoke']
