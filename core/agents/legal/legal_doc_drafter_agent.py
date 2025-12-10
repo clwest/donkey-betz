@@ -38,6 +38,14 @@ from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.legal.motion_context import (
+    MotionContext,
+    clean_motion_text,
+    render_relief_block,
+    render_proposed_order_relief,
+    count_relief_items,
+    score_relief_scope
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2573,32 +2581,30 @@ For detailed information on this procedure in {county} County, Colorado, please 
         if not is_true_emergency:
             logger.info("Step 7: Generating conferral email (non-emergency motion)...")
 
-            # Extract relief points from the corrected relief text
-            relief_lines = [line.strip() for line in corrected_relief.split('\n') if line.strip()]
-            relief_points = [
-                line.lstrip('0123456789.)- ').strip()
-                for line in relief_lines
-                if line and len(line) > 10 and not line.lower().startswith('wherefore')
-            ][:5]  # Max 5 points
+            # Session 406 PATCH-5: Use extracted relief items from the pipeline
+            # These are the same items shown in RELIEF REQUESTED and PROPOSED ORDER
+            relief_items_for_email = self._extract_relief_items_list(corrected_relief)
+            if not relief_items_for_email:
+                # Fallback: extract from corrected relief text manually
+                relief_lines = [line.strip() for line in corrected_relief.split('\n') if line.strip()]
+                relief_items_for_email = [
+                    line.lstrip('0123456789.)- ').strip()
+                    for line in relief_lines
+                    if line and len(line) > 10 and not line.lower().startswith('wherefore')
+                ][:5]
 
-            # Generate the conferral email
-            # Session 406: Pass counsel name if respondent is represented
-            # Check both respondent_counsel (legacy) and conferral_recipient_name (from CaseProfile)
-            counsel_name = ''
-            if case_details.get('conferral_recipient_is_attorney'):
-                # CaseProfile indicates respondent is represented - use conferral recipient
-                counsel_name = case_details.get('conferral_recipient_name', '')
-            elif case_details.get('respondent_counsel'):
-                # Legacy key from document extraction
-                counsel_name = case_details.get('respondent_counsel', '')
+            # Session 406 PATCH-5: Build MotionContext for conferral email
+            conferral_ctx = MotionContext.from_case_details(case_details)
+            conferral_ctx.relief_items = relief_items_for_email
 
+            # Generate the conferral email using MotionContext for consistent data binding
             conferral_email_result = self._generate_conferral_email(
-                petitioner=case_details.get('petitioner_name', 'Petitioner'),
-                respondent=case_details.get('respondent_name', 'Respondent'),
-                relief_points=relief_points if relief_points else ['The relief items described in the attached motion'],
+                petitioner=conferral_ctx.petitioner_name or 'Petitioner',
+                respondent=conferral_ctx.respondent_name or 'Respondent',
+                relief_points=conferral_ctx.relief_items if conferral_ctx.relief_items else ['The relief items described in the attached motion'],
                 case_context='Third-Party Statements / Parenting Time Issue',
                 deadline_days=2,
-                respondent_counsel=counsel_name
+                respondent_counsel=conferral_ctx.respondent_counsel_name if conferral_ctx.is_respondent_represented else ''
             )
             tool_calls_made.append({'tool': 'generate_conferral_email', 'result': 'success'})
 
@@ -3734,6 +3740,60 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
         logger.info(f"SESSION 404F: Mapping stats: {mapping_stats}")
 
         return narrative_paragraphs, mapping_stats
+
+    def _extract_relief_items_list(self, relief_requested: str) -> List[str]:
+        """
+        Session 406 PATCH-5: Extract individual relief items from the relief_requested text.
+
+        Parses the relief string to extract individual items that can be:
+        1. Used in the RELIEF REQUESTED section
+        2. Rendered in the PROPOSED ORDER
+        3. Counted for likelihood scoring
+        4. Used in conferral emails
+
+        Returns list of cleaned relief item strings.
+        """
+        if not relief_requested:
+            return []
+
+        items = []
+        lines = relief_requested.strip().split('\n')
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Remove numbered prefixes like "1. ", "2. ", "a. ", etc.
+            clean_line = re.sub(r'^\s*(?:\d+\.|\w\.)\s*', '', line)
+
+            # Skip generic/boilerplate lines
+            skip_patterns = [
+                r'^wherefore',
+                r'^petitioner\s+(?:respectfully\s+)?requests',
+                r'^the court',
+                r'^note:',
+                r'^all relief',
+                r'^\[',  # Placeholder brackets
+            ]
+            if any(re.match(p, clean_line.lower()) for p in skip_patterns):
+                continue
+
+            # Skip very short lines
+            if len(clean_line) < 15:
+                continue
+
+            # Ensure it starts with proper subject (usually "Respondent shall")
+            # or reformat to be a proper relief item
+            if clean_line and not clean_line.lower().startswith(('respondent', 'it is ordered', 'the court')):
+                # Check if it's a complete sentence
+                if not clean_line.endswith('.'):
+                    clean_line += '.'
+
+            if clean_line:
+                items.append(clean_line)
+
+        return items
 
     def _parse_order_provisions(self, order_text: str, case_number: str = '') -> str:
         """
@@ -5260,29 +5320,45 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
         - CERTIFICATE OF SERVICE
         - PART 5: FULL RESTATEMENT (all user content, cleaned)
         """
-        # Case details with placeholders - Session 404 V3: Use extracted metadata
-        case_number = case_details.get('case_number') or '____________________'
-        county = case_details.get('county') or '__________'
-        petitioner = case_details.get('petitioner_name') or '[PETITIONER NAME]'
-        respondent = case_details.get('respondent_name') or '[RESPONDENT NAME]'
-        child_name = case_details.get('child_name') or 'the minor child'
-        division = case_details.get('division') or '______'
-        courtroom = case_details.get('courtroom') or '______'
-        court_address = case_details.get('court_address') or '________________________________________'
+        # =====================================================================
+        # Session 406 PATCH-5: Create MotionContext from case_details
+        # This ensures all placeholders are properly bound from a single source
+        # =====================================================================
+        ctx = MotionContext.from_case_details(case_details)
+
+        # Extract relief items from the relief_requested string
+        relief_items = self._extract_relief_items_list(relief_requested)
+        ctx.relief_items = relief_items
+        ctx.is_emergency = is_emergency
+        ctx.original_motion_content = original_motion_content
+
+        # Validate context - log warnings for missing fields but continue
+        validation_errors = ctx.validate()
+        if validation_errors:
+            logger.warning(f"[PATCH-5] MotionContext validation warnings: {validation_errors}")
+
+        # Local variables for backward compatibility during transition
+        # Session 406 PATCH-5: Use fillable blanks for missing data, not raw placeholders
+        case_number = ctx.case_number or '____________________'
+        county = ctx.county or '__________'
+        state = ctx.state or 'COLORADO'
+        petitioner = ctx.petitioner_name or '[PETITIONER NAME]'
+        respondent = ctx.respondent_name or '[RESPONDENT NAME]'
+        child_name = ctx.child_name or 'the minor child'
+        division = ctx.division or '______'
+        courtroom = ctx.courtroom or '______'
+        court_address = ctx.court_address or '________________________________________'
+        respondent_address = ctx.get_service_address()
 
         # Get form info
         form_info = JDF_FORM_MAPPING.get(relief_type, JDF_FORM_MAPPING['modify_parenting_time'])
 
         # Session 404 V4: Extract subject matter to avoid title redundancy
-        # e.g., "Motion to Modify Parenting Time" -> "Parenting Time"
-        import re
         official_title = form_info.get('official_title', 'Parenting Time')
-        # Extract just the subject matter (after "Motion to Modify", "Motion for", etc.)
         subject_match = re.search(r'(?:Motion\s+(?:to\s+Modify|for|and\s+Affidavit\s+for))\s+(.+)', official_title, re.IGNORECASE)
         if subject_match:
             motion_subject = subject_match.group(1)
         else:
-            # If no match, use a simple default based on relief type
             motion_subject = {
                 'emergency_parenting': 'Emergency Parenting Time Restrictions',
                 'restrict_parenting': 'Parenting Time Modification',
@@ -5290,14 +5366,6 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
                 'contempt': 'Contempt of Court',
                 'enforcement': 'Enforcement of Court Orders',
             }.get(relief_type, 'Parenting Time')
-
-        # Session 406 Patch 1: Always resolve core placeholders from CaseMeta
-        # For court-ready sections, never emit raw placeholders for these fields
-        # Use extracted values or leave fillable blanks only as last resort
-        state = case_details.get('state') or 'COLORADO'  # Default to Colorado if not specified
-
-        # Session 404C: Get respondent address (fillable blank if not available)
-        respondent_address = case_details.get('respondent_address') or '_____________________________________'
 
         # Session 404C: GOLD STANDARD COURT-READY TEMPLATE
         # - Clean dashed separators only (----)
@@ -5377,6 +5445,8 @@ SPECIFIC FACTUAL ALLEGATIONS:
                     document += f"The minor children referenced above are: {'; '.join(child_names_ages)}.\n\n"
 
         # Session 404C: Add relief requested section with clean separators
+        # Session 406 PATCH-5: Use render_relief_block for consistent formatting
+        relief_block = render_relief_block(ctx.relief_items) if ctx.relief_items else relief_requested
         document += f"""
 ------------------------------------------------------------
 RELIEF REQUESTED
@@ -5384,15 +5454,16 @@ RELIEF REQUESTED
 
 WHEREFORE, Petitioner respectfully requests that this Court enter temporary, narrowly-tailored orders as follows:
 
-{relief_requested}
+{relief_block}
 
 Note: All relief must be directed only toward the Respondent, a party to the case.
 """
 
         # Session 406 Polish: Determine if respondent is represented (needed for conferral + service)
-        respondent_counsel = case_details.get('respondent_counsel') or case_details.get('conferral_recipient_name', '')
-        respondent_counsel_firm = case_details.get('respondent_counsel_firm', '')
-        is_represented = case_details.get('conferral_recipient_is_attorney', False)
+        # Session 406 PATCH-5: Use MotionContext for consistent access
+        respondent_counsel = ctx.respondent_counsel_name
+        respondent_counsel_firm = ctx.respondent_counsel_firm
+        is_represented = ctx.is_respondent_represented
 
         # Session 406: Add CERTIFICATE OF CONFERRAL for non-emergency motions
         if is_emergency:
@@ -5485,7 +5556,7 @@ ORDER ON PETITIONER'S VERIFIED MOTION
 
 The Court, having reviewed Petitioner's Verified Motion and being fully advised, hereby ORDERS:
 
-{relief_requested}
+{render_proposed_order_relief(ctx.relief_items) if ctx.relief_items else relief_requested}
 
 These orders shall remain in effect until further order of the Court.
 
@@ -5558,13 +5629,21 @@ as an exhibit.
                             f"skipped_denial={mapping_stats.get('paragraphs_skipped_denial_order', 0)}")
                 document += full_restatement_section
 
+        # Session 406 PATCH-5: Apply narrative cleanup to remove wording glitches
+        document = clean_motion_text(document)
+
         return {
             'success': True,
             'document': document,
             'document_type': 'gold_standard_motion',
             'relief_type': relief_type,
             'form_used': form_info.get('primary_form', 'See coloradojudicial.gov'),
-            'has_full_restatement': bool(original_motion_content)
+            'has_full_restatement': bool(original_motion_content),
+            'motion_context': {  # Session 406 PATCH-5: Include context for debugging
+                'relief_items_count': len(ctx.relief_items),
+                'is_represented': ctx.is_respondent_represented,
+                'validation_errors': validation_errors,
+            }
         }
 
     # =========================================================================
@@ -7146,22 +7225,24 @@ MAGISTRATE / JUDGE
         # =====================================================================
         # FACTOR 1: RELIEF SCOPE (0-25 points)
         # Courts prefer NARROW, specific relief over broad requests
+        # Session 406 PATCH-5: Unified relief counting with score_relief_scope()
         # =====================================================================
 
-        # Count relief requests (fewer = better)
-        # Session 406 Polish: Better patterns for relief item counting
-        relief_count = len(re.findall(r'\d+\.\s+(?:Order|Require|Grant|Direct|Respondent shall)', motion_text))
+        # Extract relief items using the same function as the main pipeline
+        relief_items = self._extract_relief_items_list(motion_text)
+        relief_count = len(relief_items)
+
+        # Fallback: if no items found by structured extraction, use regex patterns
         if relief_count == 0:
-            # Try alternative patterns
+            relief_count = len(re.findall(r'\d+\.\s+(?:Order|Require|Grant|Direct|Respondent shall)', motion_text))
+        if relief_count == 0:
             relief_count = len(re.findall(r'(?:order|require|grant|direct)\s+(?:that|the|respondent)', motion_lower))
         if relief_count == 0:
-            # Count numbered items in RELIEF REQUESTED section
             relief_section_match = re.search(r'RELIEF REQUESTED.*?(?:CERTIFICATE|VERIFICATION|$)', motion_text, re.DOTALL | re.IGNORECASE)
             if relief_section_match:
                 relief_section = relief_section_match.group(0)
                 relief_count = len(re.findall(r'^\s*\d+\.', relief_section, re.MULTILINE))
         if relief_count == 0:
-            # Count "Respondent shall" statements
             relief_count = len(re.findall(r'Respondent shall', motion_text, re.IGNORECASE))
 
         # Check for overly broad relief
@@ -7179,16 +7260,19 @@ MAGISTRATE / JUDGE
             score_components['relief_scope'] = 5
             factors_negative.append("Relief requested is very broad - courts prefer narrow requests")
             recommendations.append("Consider narrowing relief to specific, achievable changes")
-        elif relief_count <= 3:
-            score_components['relief_scope'] = 20
-            factors_positive.append(f"Reasonable number of relief items ({relief_count})")
-        elif relief_count <= 5:
-            score_components['relief_scope'] = 15
-            factors_positive.append(f"Moderate number of relief items ({relief_count})")
         else:
-            score_components['relief_scope'] = 8
-            factors_negative.append(f"Many relief items ({relief_count}) - consider focusing")
-            recommendations.append("Focus on 2-3 most important relief requests")
+            # Session 406 PATCH-5: Use centralized score_relief_scope function
+            scope_score, scope_explanation = score_relief_scope(relief_count)
+            score_components['relief_scope'] = scope_score
+
+            # Add to appropriate factors based on score
+            if scope_score >= 20:
+                factors_positive.append(scope_explanation)
+            elif scope_score >= 15:
+                factors_positive.append(scope_explanation)
+            else:
+                factors_negative.append(scope_explanation)
+                recommendations.append("Focus on 2-3 most important relief requests")
 
         # =====================================================================
         # FACTOR 2: EVIDENCE STRENGTH (0-25 points)
