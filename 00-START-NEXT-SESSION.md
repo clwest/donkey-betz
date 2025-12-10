@@ -1,114 +1,115 @@
 # Start Next Session Here
 
-**Last Session:** 406 - Case Intake Form + ChatGPT Patches + Conferral System COMPLETE!
+**Last Session:** 406 - Legal Document Generation Polish COMPLETE!
 **Date:** December 9, 2025
-**Status:** 62 spiders | Legal Agent with 15 tools | Case Intake Form | Conferral emails address COUNSEL!
+**Status:** Lawyer-ready motions | 9 commits | MotionContext system | Ready for download feature
 
 ---
 
 ## Session 406 Accomplishments
 
-### MAJOR FEATURE: Case Intake Form System
+### MAJOR: MotionContext System (PATCH-5)
 
-Created a complete Case Intake Form so the Legal Assistant has full case context:
+Created `core/agents/legal/motion_context.py` (~400 lines):
 
-| Component | Description |
-|-----------|-------------|
-| **Django Models** | `CaseProfile`, `Party`, `Attorney`, `Child`, `CaseDocument` in `core/models_legal.py` |
-| **API Endpoints** | Full CRUD at `/api/legal/cases/` with nested creation support |
-| **UI Form** | 4-step wizard in Legal Assistant panel (Case Setup tab) |
-| **Pipeline Integration** | `_get_active_case_profile_data()` loads case data before document extraction |
+| Component | Purpose |
+|-----------|---------|
+| `MotionContext` dataclass | Aggregates all case/motion data for consistent rendering |
+| `clean_motion_text()` | Post-processing for wording glitches |
+| `render_relief_block()` | Numbered list for RELIEF REQUESTED section |
+| `score_relief_scope()` | Relief counting with scoring (1-3 items = 22pts) |
 
-**Key Benefit:** Conferral emails now address **opposing counsel** instead of respondent!
+### ChatGPT's 6 Patches + Final Polish
 
-### ChatGPT Patches Implemented (6 Total)
+| Patch | Fix |
+|-------|-----|
+| **1** | Resolve placeholders from CaseMeta |
+| **2** | Relief in Proposed Order (full items) |
+| **3** | Service goes to counsel if represented |
+| **4** | conferral_status enum |
+| **5** | Wording glitch fixes |
+| **6** | Non-disparagement linkage |
+| **5.1** | Relief count bug (142 vs 3) |
+| **5.2** | Affidavit format, bullets, name consistency |
 
-| Patch | Fix | Result |
-|-------|-----|--------|
-| **Patch 1** | Resolve placeholders from CaseMeta | No more `{state}` or `{county}` in output |
-| **Patch 2** | Relief in Proposed Order | Full relief items, not `{relief_requested}` |
-| **Patch 3** | Conferral recipient routing | Certificate of Service goes to counsel if represented |
-| **Patch 4** | conferral_status structured data | Values: pending/no_response/refused/partial/agreed |
-| **Patch 5** | Wording glitch fix | No "escalating pattern of escalating, harmful" |
-| **Patch 6** | Non-disparagement linkage | "Statements appear inconsistent with..." when detected |
+### All 9 Commits
 
-### Critical Bug Fixes
+| Commit | Description |
+|--------|-------------|
+| `6a3a171` | PATCH-5.2: Final polish (affidavit, bullets, names) |
+| `b65f1f6` | PATCH-5.1: Relief count bug, section ordering |
+| `3b3ad52` | PATCH-5: MotionContext field binding |
+| `6876c43` | Edit/delete bugs + authenticatedFetch |
+| `298d1fd` | Case Setup edit and delete |
+| `b4adf81` | Attorney address field |
+| `dfffc78` | Variable order fix |
+| `dc66279` | ChatGPT polish tweaks |
+| `9b64052` | Case Intake Form + Conferral System |
 
-1. **`motion_text` is not defined** - Fixed variable name in `_extract_case_metadata()`
-2. **CaseProfile not loading** - Fixed `analyze_legal_document()` to pass `request` to context
+### Output Structure (Final)
 
-### New Files Created
-
-| File | Purpose |
-|------|---------|
-| `core/models_legal.py` | 5 Django models for case management |
-| `core/views_legal_cases.py` | ~500 lines API views with nested creation |
-| `core/migrations/0077_legal_case_intake_form.py` | Database migration |
-| `docs/handoffs/SESSION_406_CASE_INTAKE_FORM.md` | Complete session handoff |
-
-### Files Modified
-
-| File | Changes |
-|------|---------|
-| `core/admin.py` | Admin registrations with inlines (lines 160-320) |
-| `core/urls.py` | URL patterns for `/api/legal/` endpoints |
-| `legal_assistant_panel.html` | Case Setup tab + 4-step wizard + 14 JS functions |
-| `legal_doc_drafter_agent.py` | Pipeline integration + ChatGPT patches |
-| `core/views_legal.py` | Pass request for CaseProfile lookup |
-
----
-
-## How Case Intake Form Works
-
-### User Flow
-1. Go to Legal Assistant **Case Setup** tab
-2. Click "Set Up New Case"
-3. Fill 4-step wizard:
-   - Step 1: Case number, county, court info
-   - Step 2: Your info (petitioner)
-   - Step 3: Other party + **their attorney**
-   - Step 4: Children
-4. Save and case is auto-selected
-
-### Motion Analysis Flow
-1. Upload denied motion
-2. Pipeline checks for active CaseProfile
-3. If found: Uses CaseProfile data (including counsel!)
-4. Conferral email addresses **attorney** not respondent
+```
+PART 1: Procedural Defects Identified
+PART 2: Non-Party Rule Check
+PART 3: Corrected Motion (Court-Ready Format)
+PART 4: Evidence Checklist
+PART 5: Likelihood of Success
+PART 6: Conferral Email (Send Before Filing)
+APPENDIX A: Full Restatement (Optional Exhibit)
+```
 
 ---
 
-## Session 405 Accomplishments (Prior Session)
+## Next Session: 407 - Document Download
 
-All 5 ChatGPT-recommended enhancements:
-- #1 Third-Party Auto-Rewrite
-- #2 Emergency Detector
-- #3 Order Attachment Check
-- #4 Conflict Detector
-- #5 Success Meter
+### Priority 1: Make Documents Downloadable
 
----
+**User Flow:**
+1. User uploads denied motion
+2. System generates rewritten motion
+3. User clicks "Download as Word" or "Download as PDF"
+4. Document downloads with proper court formatting
 
-## Next Session: 407 - [Your Focus Here]
+**Implementation Options:**
 
-### Suggested Priorities
+**Option A: python-docx for Word (Recommended)**
+```python
+pip install python-docx
 
-1. **Production Testing**
-   - Test full workflow with real case
-   - Verify all patches work together
-   - Send actual conferral email to counsel
+from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-2. **Case Form Enhancements**
-   - ~~Edit existing case profiles~~ ✅ DONE
-   - ~~Attorney address field~~ ✅ DONE
-   - ~~Delete case functionality~~ ✅ DONE
-   - Active case indicator in UI
-   - Auto-populate from OCR
+def generate_motion_docx(motion_text: str, filename: str):
+    doc = Document()
+    # Parse sections, apply court formatting
+    doc.save(filename)
+```
 
-3. **Additional Legal Features**
-   - More JDF form types
-   - Multi-state support
-   - Exhibit generation
+**Option B: WeasyPrint for PDF**
+```python
+pip install weasyprint
+
+from weasyprint import HTML
+
+def generate_motion_pdf(motion_html: str, filename: str):
+    HTML(string=motion_html).write_pdf(filename)
+```
+
+**Tasks:**
+1. Add `python-docx` dependency
+2. Create document generation service
+3. Add download button to UI
+4. Create API endpoint for download
+5. Apply proper court formatting (margins, fonts, spacing)
+
+### Priority 2: Active Case Indicator
+
+Show in UI which case is currently active for analysis.
+
+### Priority 3: Auto-populate from OCR
+
+Extract case details from uploaded court orders.
 
 ---
 
@@ -120,47 +121,59 @@ make start && make celery
 
 # Test Legal Assistant
 open http://localhost:8000/ai-studio/
-# Navigate to Legal Assistant tab → Case Setup → Set up case → Then upload motion
+# Navigate to Legal Assistant tab
 
-# Check health
-curl http://localhost:8000/health/ping/
+# Run tests
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.agents.legal.motion_context import clean_motion_text, score_relief_scope
+print('Score test:', score_relief_scope(3))  # Should be (22, 'Focused relief requests...')
+"
 ```
 
 ---
 
-## Current System Status
+## ChatGPT's Final Assessment
 
-| Component | Count/Status |
-|-----------|--------------|
-| Registered Spiders | 62 |
-| Working Spiders | 57 |
-| Clean Agents | 27 |
-| Legal Tools | 15 |
-| Database Records | ~7,000 |
-| Agent Knowledge Sources | 865+ |
+> "If a Colorado family lawyer who knows your case looked at just the caption, FACTS, RELIEF REQUESTED, Affidavit, Proposed Order, Conferral section... they would absolutely recognize this as a real, CO-style motion they could tweak and file."
+
+**Demo Framing:**
+- Frame as form selection + structure enforcement + conflict detection
+- NOT as giving legal advice
+- Ask lawyer: "What would you want the system to enforce before letting a user hit 'File'?"
 
 ---
 
-## Key Reference Files
+## Key Files
 
 | File | Purpose |
 |------|---------|
-| `core/agents/legal/legal_doc_drafter_agent.py` | Legal document agent (275KB) |
+| `core/agents/legal/legal_doc_drafter_agent.py` | Main agent (275KB, 15 tools) |
+| `core/agents/legal/motion_context.py` | MotionContext dataclass + helpers |
 | `core/models_legal.py` | Case management models |
-| `core/views_legal_cases.py` | Case API endpoints |
-| `docs/handoffs/SESSION_406_CASE_INTAKE_FORM.md` | Session 406 complete details |
-| `docs/AGENTS.md` | Agent reference |
+| `core/views_legal_cases.py` | Case profile CRUD API |
+| `docs/handoffs/SESSION_406_LEGAL_DOCUMENT_POLISH.md` | Full session details |
 
 ---
 
-## Previous Session Context
+## System Status
 
-- Session 406: Case Intake Form + ChatGPT Patches (THIS SESSION!)
+| Component | Count/Status |
+|-----------|--------------|
+| Registered Spiders | 64 |
+| Clean Agents | 27 |
+| Legal Tools | 15 |
+| Session 406 Commits | 9 |
+| Motion Quality | Lawyer-ready |
+
+---
+
+## Previous Sessions
+
+- Session 406: Legal Document Polish (THIS SESSION!)
 - Session 405: ChatGPT-recommended enhancements (5 tools)
 - Session 404: Pro Se Legal Assistant motion rewriter
 - Session 403: Legal Assistant MVP
-- Session 402: PDF upload fixes
-- Session 401: Knowledge attribution UI
 - Session 400: Agent knowledge pipeline
 
 ---
