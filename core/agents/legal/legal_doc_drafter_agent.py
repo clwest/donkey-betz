@@ -802,6 +802,8 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
         self._semantic_search = None
         self.case_id = case_id  # Optional: Link to LegalCase
         self._current_case = None
+        # Session 405: Ensure agent is registered in database for learning hooks
+        self._ensure_agent_registered()
 
     @property
     def current_case(self):
@@ -829,6 +831,37 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             from core.services.spider_semantic_search import get_spider_semantic_search
             self._semantic_search = get_spider_semantic_search()
         return self._semantic_search
+
+    def _ensure_agent_registered(self):
+        """
+        Session 405: Ensure LegalDocDrafterAgent is registered in the Agent database.
+
+        This is required for learning hooks to work:
+        - _share_knowledge() needs agent_model to not be None
+        - _create_execution_memory() needs agent_model
+        - _track_contribution() needs agent_model
+
+        Without this, the legal agent is isolated from collective intelligence.
+        """
+        try:
+            from core.models_unified_system import Agent
+
+            # Force agent_model to be created if it doesn't exist
+            if self._agent_model is None:
+                self._agent_model, created = Agent.objects.get_or_create(
+                    name=self.name,
+                    defaults={
+                        'agent_type': 'legal',
+                        'description': 'Pro Se Legal Assistant for Colorado Family Law. '
+                                      'Helps self-represented litigants draft motions, '
+                                      'analyze denied filings, and generate court-ready documents.',
+                        'is_active': True
+                    }
+                )
+                if created:
+                    logger.info(f"Session 405: Registered {self.name} in Agent database for collective learning")
+        except Exception as e:
+            logger.warning(f"Could not ensure agent registration: {e}")
 
     def execute(
         self,
@@ -1984,6 +2017,59 @@ For detailed information on this procedure in {county} County, Colorado, please 
             logger.warning(f"Failed to get legal memories: {e}")
             return []
 
+    def _save_legal_memory(
+        self,
+        task: str,
+        relief_type: str,
+        facts: List[str],
+        success: bool,
+        execution_time_ms: int
+    ) -> Optional[Any]:
+        """
+        Session 405: Save a legal-specific memory for pattern learning.
+
+        This creates entries in LegalMemory for Colorado family law patterns,
+        enabling the agent to learn from successful motion rewrites.
+        """
+        try:
+            from core.models_unified_system import LegalMemory
+
+            # Build memory content
+            title = f"Motion Rewrite: {relief_type.replace('_', ' ').title()}"
+            content = f"Successfully rewrote denied {relief_type} motion.\n"
+            content += f"Facts extracted: {len(facts)}\n"
+            if facts:
+                content += f"Sample facts: {'; '.join(facts[:2])[:200]}"
+
+            # Use 'pattern' which is a valid MEMORY_TYPE_CHOICE
+            memory = LegalMemory.objects.create(
+                agent=self.agent_model,  # Link to agent FK
+                title=title[:300],
+                content=content[:2000],
+                memory_type='pattern',  # Valid choice from MEMORY_TYPE_CHOICES
+                case_type='family_law',
+                jurisdiction='Colorado',
+                document_type='denied_motion_rewrite',
+                confidence_score=0.85 if success else 0.3,
+                key_insights=[
+                    f'Relief type: {relief_type}',
+                    f'Facts count: {len(facts)}',
+                    f'Execution time: {execution_time_ms}ms',
+                ],
+                applicable_scenarios=[
+                    f'Colorado {relief_type.replace("_", " ")} motions',
+                    'Denied motion rewrites',
+                    'Family law pro se filings',
+                ],
+            )
+
+            logger.info(f"Session 405: Saved LegalMemory for {relief_type}")
+            return memory
+
+        except Exception as e:
+            logger.warning(f"Failed to save legal memory: {e}")
+            return None
+
     def get_prior_legal_research(
         self,
         query: str = '',
@@ -2119,6 +2205,8 @@ For detailed information on this procedure in {county} County, Colorado, please 
         # STEP 3: Extract facts from motion for rewrite
         # =====================================================================
         facts = self._extract_facts_from_motion(motion_content)
+        # Session 405 Patch 4D.5: Apply comprehensive postprocessing cleanup
+        facts = self.postprocess_extracted_facts(facts)
         incidents = self._extract_incidents_from_motion(motion_content)
         relief_type = analysis_result.get('relief_type_detected', 'modify_parenting_time')
 
@@ -2206,7 +2294,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         execution_time = int((time.time() - start_time) * 1000)
 
-        return AgentResult(
+        result = AgentResult(
             success=True,
             message="\n".join(output_parts),
             data={
@@ -2222,6 +2310,60 @@ For detailed information on this procedure in {county} County, Colorado, please 
             execution_time_ms=execution_time,
             tool_calls=tool_calls_made
         )
+
+        # =====================================================================
+        # Session 405: LEARNING HOOKS - Every motion makes the system smarter!
+        # =====================================================================
+        # Record this execution for the learning loop (XP, pattern detection)
+        self._record_learning_outcome(
+            result=result,
+            task=task,
+            context=context,
+            spider_data_used=False,
+            scifi_context_used=False
+        )
+
+        # Create a memory of this successful motion rewrite
+        self._create_execution_memory(
+            result=result,
+            task=f"Denied Motion Rewrite: {relief_type}",
+            memory_type="success",
+            importance=0.9  # Legal documents are high importance
+        )
+
+        # Share learned pattern with collective intelligence
+        # This allows other agents to learn from legal patterns
+        self._share_knowledge(
+            knowledge_type='content_idea',  # Maps to valid type
+            title=f"Legal Motion Pattern: {relief_type.replace('_', ' ').title()}",
+            knowledge_value={
+                'document_type': 'denied_motion_rewrite',
+                'relief_type': relief_type,
+                'jurisdiction': 'Colorado',
+                'focus_area': 'Family Law',
+                'facts_count': len(facts),
+                'incidents_count': len(incidents),
+                'non_party_issues_found': non_party_result.get('has_non_party_issues', False),
+                'non_party_corrections': len(non_party_result.get('corrections', [])),
+                'execution_time_ms': execution_time,
+                'success': True,
+                'task_pattern': task[:200],  # First 200 chars for pattern matching
+            },
+            confidence=0.85
+        )
+
+        # Also save to LegalMemory for legal-specific retrieval
+        self._save_legal_memory(
+            task=task,
+            relief_type=relief_type,
+            facts=facts,
+            success=True,
+            execution_time_ms=execution_time
+        )
+
+        logger.info(f"Session 405: Learning hooks fired for {relief_type} motion rewrite")
+
+        return result
 
     def _get_motion_content_for_analysis(self, task: str, context: Dict[str, Any]) -> str:
         """Get the motion content from uploaded document or context."""
@@ -2431,15 +2573,15 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
     def _build_clean_allegations(self, incidents: List[Dict[str, str]], original_content: str) -> List[str]:
         """
-        Session 404 Patch 4C (Part A): Build clean numbered allegations.
+        Session 405 Patch 4E: Build clean numbered allegations with PROPER SEGMENTATION.
 
-        OUTPUT FORMAT:
-        1. [First incident: full sentence with date + what happened]
-        2. [Second incident: full sentence with date + what happened]
-        3. [Third incident: full sentence with date + what happened]
-        4. [Impact/pattern paragraph summarizing harm to child/relationship]
-
-        Each item is a complete sentence, no nested numbering.
+        This completely rewrites fact extraction to produce discrete, numbered facts
+        that judges expect:
+        1. On [date], [incident 1]
+        2. On [date], [incident 2]
+        3. [Third party status - who Camille Johnson is NOT]
+        4. [Respondent's failures]
+        5. [Impact statement]
         """
         import re
         import logging
@@ -2447,42 +2589,113 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         allegations = []
 
-        # Build allegations 1-3 from incidents
+        # Session 405 Patch 4E: Build structured allegations from content segments
+
+        # SEGMENT 1-3: Date-based incidents
         for i, incident in enumerate(incidents[:3]):
             date_str = incident.get('date_string', '')
             desc = incident.get('description', '')
 
+            # LIMIT description length - if too long, truncate to first sentence
+            if len(desc) > 300:
+                # Find first sentence ending
+                first_sentence = re.match(r'^[^.!?]+[.!?]', desc)
+                if first_sentence:
+                    desc = first_sentence.group(0)
+                else:
+                    desc = desc[:250] + '...'
+
             # Ensure it starts with "On [date]" if date is available
             if date_str and date_str not in ['Unknown date', 'The following week', 'Today', 'That same time']:
-                # Check if description already starts with date reference
                 if not re.match(r'^(?:On\s+)?(?:January|February|March|April|May|June|July|August|September|October|November|December)', desc, re.IGNORECASE):
-                    # Prepend "On [date],"
                     desc = f"On {date_str}, {desc[0].lower()}{desc[1:]}" if desc else f"On {date_str}."
             elif date_str in ['The following week', 'Today', 'That same time']:
-                # Ensure proper capitalization for relative dates
                 if not desc.lower().startswith(date_str.lower()):
                     desc = f"{date_str}, {desc[0].lower()}{desc[1:]}" if desc else f"{date_str}."
 
-            # Final cleanup
             desc = re.sub(r'\s+', ' ', desc).strip()
-            if desc and not desc[-1] in '.!?':
+            if desc and desc[-1] not in '.!?':
                 desc += '.'
 
             if desc and len(desc) > 30:
                 allegations.append(desc)
-                logger.debug(f"Patch 4C: Allegation {i+1}: {desc[:60]}...")
+                logger.debug(f"Patch 4E: Allegation {i+1}: {desc[:60]}...")
 
-        # Build allegation 4: Impact/pattern paragraph
+        # SEGMENT 4: Third-party status (Camille Johnson is NOT...)
+        third_party_segment = self._extract_third_party_segment(original_content)
+        if third_party_segment:
+            allegations.append(third_party_segment)
+            logger.debug(f"Patch 4E: Third-party segment added")
+
+        # SEGMENT 5: Respondent's failures
+        respondent_segment = self._extract_respondent_failures_segment(original_content)
+        if respondent_segment:
+            allegations.append(respondent_segment)
+            logger.debug(f"Patch 4E: Respondent failures segment added")
+
+        # SEGMENT 6: Impact/pattern statement
         impact_paragraph = self._generate_impact_paragraph(incidents, original_content)
         if impact_paragraph:
             allegations.append(impact_paragraph)
-            logger.debug(f"Patch 4C: Impact paragraph: {impact_paragraph[:60]}...")
+            logger.debug(f"Patch 4E: Impact paragraph added")
 
         return allegations
+
+    def _extract_third_party_segment(self, content: str) -> str:
+        """
+        Session 405 Patch 4E: Extract the third-party status segment.
+        Formats: "Camille Johnson is not a parent, not a legal guardian, not a party..."
+        """
+        import re
+
+        # Look for "Camille Johnson is:" or similar patterns
+        match = re.search(
+            r'Camille\s+Johnson\s+is[:\s]*(.*?)(?:Her\s+repeated|This\s+conduct|Respondent\s+has)',
+            content,
+            re.IGNORECASE | re.DOTALL
+        )
+
+        if match:
+            segment = match.group(1).strip()
+            # Clean up bullet points into a readable list
+            bullet_items = re.findall(r'[●•]\s*([^●•]+)', segment)
+            if bullet_items:
+                clean_items = [item.strip().rstrip('.').lower() for item in bullet_items if item.strip()]
+                if clean_items:
+                    return f"Camille Johnson is {', '.join(clean_items)}."
+
+        return ""
+
+    def _extract_respondent_failures_segment(self, content: str) -> str:
+        """
+        Session 405 Patch 4E: Extract the Respondent's failures segment.
+        """
+        import re
+
+        # Look for "Respondent has:" pattern
+        match = re.search(
+            r'Respondent\s+has[:\s]*(.*?)(?:The\s+child|These\s+\d+|This\s+pattern|$)',
+            content,
+            re.IGNORECASE | re.DOTALL
+        )
+
+        if match:
+            segment = match.group(1).strip()
+            # Clean up bullet points
+            bullet_items = re.findall(r'[●•]\s*([^●•]+)', segment)
+            if bullet_items:
+                clean_items = [item.strip().rstrip('.') for item in bullet_items if item.strip() and len(item.strip()) > 10]
+                if clean_items:
+                    # Capitalize first letter of each
+                    clean_items = [item[0].upper() + item[1:] if item else item for item in clean_items]
+                    return f"Respondent has: {'; '.join(clean_items[:4])}."
+
+        return ""
 
     def _generate_impact_paragraph(self, incidents: List[Dict[str, str]], original_content: str) -> str:
         """
         Session 404 Patch 4C: Generate impact/pattern paragraph for allegation 4.
+        Session 405 Patch 4D.5: Improved to avoid duplicated pattern language.
 
         Uses petitioner's language where possible to summarize:
         - Pattern of behavior
@@ -2494,7 +2707,6 @@ For detailed information on this procedure in {county} County, Colorado, please 
         # Look for impact/harm language in original content
         harm_patterns = [
             r'(?:emotional|psychological)\s+(?:harm|damage|interference)',
-            r'(?:pattern|repeated|continuing)\s+(?:of|behavior|incidents)',
             r'(?:parent|child)\s*[-–]\s*(?:child|parent)\s+relationship',
             r'inappropriate\s+(?:adult\s+)?conflict',
             r'best\s+interest(?:s)?\s+of\s+the\s+child',
@@ -2504,34 +2716,55 @@ For detailed information on this procedure in {county} County, Colorado, please 
         harm_phrases = []
         for pattern in harm_patterns:
             matches = re.findall(f'[^.]*{pattern}[^.]*\\.?', original_content, re.IGNORECASE)
-            harm_phrases.extend(matches[:1])  # Take at most 1 match per pattern
+            for match in matches[:1]:
+                # Session 405: Clean up the harm phrase before adding
+                clean_match = match.strip()
+                # Remove any "These X incidents demonstrate a pattern of" prefix
+                clean_match = re.sub(r'^These\s+\d+\s+incidents\s+demonstrate\s+a?\s*pattern\s+of\s*', '', clean_match, flags=re.IGNORECASE)
+                # Remove "this pattern is" at the start
+                clean_match = re.sub(r'^this\s+pattern\s+is\s+', '', clean_match, flags=re.IGNORECASE)
+                if clean_match and len(clean_match) > 10:
+                    harm_phrases.append(clean_match)
 
-        # Build impact paragraph
+        # Build impact paragraph - Session 405: Only create ONE pattern statement
         num_incidents = len(incidents)
-        if num_incidents >= 2:
-            base = f"These {num_incidents} incidents demonstrate a pattern of"
-        else:
-            base = "This incident demonstrates"
 
         # Add harm description
         if harm_phrases:
-            # Use petitioner's language
+            # Use petitioner's language but clean it
             harm_text = harm_phrases[0].strip()
             harm_text = re.sub(r'^\W+', '', harm_text)  # Remove leading punctuation
-            harm_text = harm_text[0].lower() + harm_text[1:] if harm_text else ''
-            impact = f"{base} {harm_text}"
+            if harm_text:
+                harm_text = harm_text[0].lower() + harm_text[1:]
+                # Session 405: Build clean impact statement
+                if num_incidents >= 2:
+                    impact = f"These {num_incidents} documented incidents demonstrate a pattern of {harm_text}"
+                else:
+                    impact = f"This incident demonstrates {harm_text}"
+            else:
+                impact = self._default_impact_text(num_incidents)
         else:
-            # Default harm language
-            impact = f"{base} conduct that exposes the child to inappropriate adult conflict and interferes with the parent-child relationship."
+            impact = self._default_impact_text(num_incidents)
 
         # Clean up
         impact = re.sub(r'\s+', ' ', impact).strip()
+        # Session 405: Remove any doubled "pattern of pattern" or similar
+        impact = re.sub(r'pattern of\s+this pattern', 'pattern that', impact, flags=re.IGNORECASE)
+        impact = re.sub(r'demonstrate\s+a?\s*pattern\s+of\s+a?\s*pattern', 'demonstrate a pattern', impact, flags=re.IGNORECASE)
+
         if impact and not impact[-1] in '.!?':
             impact += '.'
         if impact:
             impact = impact[0].upper() + impact[1:]
 
         return impact
+
+    def _default_impact_text(self, num_incidents: int) -> str:
+        """Session 405: Default impact text when no harm phrases found."""
+        if num_incidents >= 2:
+            return f"These {num_incidents} documented incidents demonstrate a pattern of conduct that exposes the child to inappropriate adult conflict and interferes with the parent-child relationship."
+        else:
+            return "This incident demonstrates conduct that exposes the child to inappropriate adult conflict and interferes with the parent-child relationship."
 
     def _extract_full_narrative(self, motion_content: str) -> Tuple[List[str], Dict[str, int]]:
         """
@@ -2974,7 +3207,439 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         result = '\n'.join(cleaned).strip()
         logger.info(f"SESSION 404B: Final cleaned section: {len(result)} chars")
+
+        # Session 405 Patch 4D: Apply pre-extraction cleanup
+        result = self._patch_4d_pre_extraction_cleanup(result)
+
         return result
+
+    def _patch_4d_pre_extraction_cleanup(self, content: str) -> str:
+        """
+        Session 405 Patch 4D: Pre-extraction cleanup to remove PDF artifacts.
+
+        This runs BEFORE fact grouping to eliminate:
+        1. Docket artifacts ("Attachment to Order - 2025DR576")
+        2. Section headers mixed into facts ("2. Today's Incident –")
+        3. Orphaned statute symbols ("(§)")
+        4. Page break artifacts
+        5. Repeated case number fragments
+
+        Called on extracted text BEFORE fact grouping.
+        """
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+
+        original_len = len(content)
+
+        # =====================================================================
+        # 1. DOCKET ARTIFACTS - Remove "Attachment to Order - XXXX" patterns
+        # =====================================================================
+        docket_patterns = [
+            r'Attachment\s+to\s+Order\s*[-–—]\s*\d{4}DR\d+',
+            r'Attachment\s+to\s+Order\s*[-–—]\s*[A-Z0-9]+',
+            r'Page\s+\d+\s+of\s+\d+',
+            r'[-–—]\s*\d+\s*[-–—]',  # Page numbers like "- 1 -"
+            r'\d{4}DR\d+\s*$',  # Trailing case numbers
+        ]
+        for pattern in docket_patterns:
+            content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+
+        # =====================================================================
+        # 2. SECTION HEADERS - Remove numbered headers that aren't facts
+        # =====================================================================
+        # These are section dividers, not factual allegations
+        section_header_patterns = [
+            r'^\s*\d+\.\s*Today\'s\s+Incident\s*[-–—].*$',
+            r'^\s*\d+\.\s*Harm\s+and\s+Improper\s+Interference\s*$',
+            r'^\s*\d+\.\s*Pattern\s+of\s+Conduct.*$',
+            r'^\s*\d+\.\s*Background\s*$',
+            r'^\s*\d+\.\s*Prior\s+Incidents?\s*$',
+            r'^\s*\d+\.\s*Relief\s+Requested\s*$',
+            r'^\s*\d+\.\s*Legal\s+Basis\s*$',
+            r'^\s*\d+\.\s*Conclusion\s*$',
+        ]
+        for pattern in section_header_patterns:
+            content = re.sub(pattern, '', content, flags=re.IGNORECASE | re.MULTILINE)
+
+        # =====================================================================
+        # 3. ORPHANED STATUTE SYMBOLS - Remove truncated references
+        # =====================================================================
+        statute_artifacts = [
+            r'\(§\)',  # Orphaned section symbol
+            r'\(§\s*\)',
+            r'§\s*$',  # Trailing section symbol
+            r'\(\s*\)',  # Empty parentheses
+            r'C\.R\.S\.\s*§?\s*$',  # Incomplete statute refs
+        ]
+        for pattern in statute_artifacts:
+            content = re.sub(pattern, '', content, flags=re.MULTILINE)
+
+        # =====================================================================
+        # 4. CLEAN UP WHITESPACE ARTIFACTS
+        # =====================================================================
+        # Multiple newlines to single
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        # Multiple spaces to single
+        content = re.sub(r'  +', ' ', content)
+        # Leading/trailing whitespace per line
+        lines = [line.strip() for line in content.splitlines()]
+        # Remove empty lines at start/end
+        while lines and not lines[0]:
+            lines.pop(0)
+        while lines and not lines[-1]:
+            lines.pop()
+
+        content = '\n'.join(lines)
+
+        # =====================================================================
+        # 5. REMOVE INLINE NUMBERING ARTIFACTS
+        # =====================================================================
+        # Sometimes PDFs have weird numbering like "1. 2. 3." on same line
+        content = re.sub(r'(?<!\d)\d+\.\s*(?=\d+\.)', '', content)
+
+        # =====================================================================
+        # 6. BULLET POINT FORMATTING (Session 405 Patch 4D.1)
+        # =====================================================================
+        # PDF bullet points (●, •, ○, ■) often run together without line breaks
+        # Convert inline bullets to proper line breaks for readability
+        bullet_chars = r'[●•○■▪▸►]'
+
+        # Add newline before bullets that are preceded by text (not start of line)
+        content = re.sub(rf'([^\n])\s*({bullet_chars})\s*', r'\1\n\2 ', content)
+
+        # Ensure bullets at start of content don't have leading newline issues
+        content = re.sub(rf'^\s*({bullet_chars})\s*', r'\1 ', content)
+
+        # Also handle "Camille Johnson is:" followed by bullets on same line
+        content = re.sub(r':\s*(' + bullet_chars + r')', r':\n\1', content)
+
+        # =====================================================================
+        # 7. NARRATIVE HEADER CLEANUP (Session 405 Patch 4D.2)
+        # =====================================================================
+        # Remove inline section headers that break up the narrative
+        # These are headers like "2. Today's Incident – November 12, 2025"
+        # that appear mid-paragraph
+        inline_header_patterns = [
+            r'\d+\.\s*Today\'s\s+Incident\s*[-–—]\s*\w+\s+\d+,\s*\d{4}',
+            r'\d+\.\s*Harm\s+and\s+Improper\s+Interference',
+            r'\d+\.\s*Pattern\s+of\s+Conduct\s+by\s+\w+',
+        ]
+        for pattern in inline_header_patterns:
+            content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+
+        # =====================================================================
+        # 8. ORPHANED DATE PREFIX CLEANUP (Session 405 Patch 4D.3)
+        # =====================================================================
+        # Problem: PDF extraction merges section header dates into narrative
+        # Example: "On November 12, 2025, the following week" - the date prefix
+        # from a header gets merged with "the following week" from another line
+        #
+        # Pattern: "On [Date], [timeword]" where timeword indicates it's a RELATIVE
+        # reference (like "the following week", "that same day", "later that month")
+        # In this case, the date prefix is wrong and should be removed.
+
+        # Relative time indicators that shouldn't follow an absolute date
+        relative_time_words = [
+            'the following',
+            'that same',
+            'the next',
+            'the previous',
+            'later that',
+            'earlier that',
+            'the week after',
+            'the day after',
+            'the month after',
+        ]
+
+        for rel_word in relative_time_words:
+            # Match: "On [Month] [Day], [Year], [relative word]"
+            # Replace with just the relative word (remove the contradictory date)
+            pattern = rf'On\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{{1,2}},?\s*\d{{4}},?\s*({rel_word})'
+            content = re.sub(pattern, r'\1', content, flags=re.IGNORECASE)
+
+        # Also catch: "On [Date], immediate" patterns (header artifact)
+        content = re.sub(
+            r'On\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4},?\s*(immediate\s+Emergency\s+Basis)',
+            r'\1',
+            content,
+            flags=re.IGNORECASE
+        )
+
+        logger.info(f"SESSION 405 Patch 4D: Cleaned {original_len} -> {len(content)} chars")
+
+        return content
+
+    def _patch_4d_clean_single_fact(self, fact: str) -> str:
+        """
+        Session 405 Patch 4D.4: Clean a single fact/allegation for court-ready output.
+
+        This applies comprehensive cleanup including:
+        - Orphaned date prefixes (On November 12, 2025, the following week)
+        - Bullet point formatting (●, •)
+        - Section header removal
+        - Proper sentence termination
+        """
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if not fact:
+            return ''
+
+        cleaned = fact.strip()
+
+        # 1. Remove orphaned date prefixes before relative time phrases
+        relative_time_words = [
+            'the following', 'that same', 'the next', 'the previous',
+            'later that', 'earlier that', 'the week after', 'immediate'
+        ]
+        for rel_word in relative_time_words:
+            pattern = rf'On\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{{1,2}},?\s*\d{{4}},?\s*({rel_word})'
+            cleaned = re.sub(pattern, r'\1', cleaned, flags=re.IGNORECASE)
+
+        # 2. Format bullet points onto separate lines
+        # Session 405 Patch 4E.1: More aggressive bullet formatting
+        bullet_chars = r'[●•○■▪▸►]'
+
+        # Add newline before EVERY bullet (except at very start)
+        cleaned = re.sub(rf'([^\n])(\s*)({bullet_chars})', r'\1\n   \3', cleaned)
+
+        # Ensure bullets after colons have newlines
+        cleaned = re.sub(r':\s*\n?\s*(' + bullet_chars + r')', r':\n   \1', cleaned)
+
+        # Clean up any double newlines created
+        cleaned = re.sub(r'\n\s*\n\s*(' + bullet_chars + r')', r'\n   \1', cleaned)
+
+        # 3. Remove section headers that got mixed into facts
+        section_patterns = [
+            r"^\d+\.\s*Today's\s+Incident\s*[-–—]\s*\w+\s+\d+,\s*\d{4}\s*",
+            r"\d+\.\s*Today's\s+Incident\s*[-–—]\s*\w+\s+\d+,\s*\d{4}\s*",
+            r"\d+\.\s*Harm\s+and\s+Improper\s+Interference\s*",
+            r"\d+\.\s*Pattern\s+of\s+Conduct\s+by\s+\w+\s*",
+        ]
+        for pattern in section_patterns:
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+
+        # 4. Clean up docket artifacts
+        cleaned = re.sub(r'Attachment\s+to\s+Order\s*[-–—]\s*\d{4}DR\d+', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\d{4}DR\d+', '', cleaned)
+
+        # 5. Clean up orphaned statute symbols
+        cleaned = re.sub(r'\(§\)', '', cleaned)
+        cleaned = re.sub(r'§\s*$', '', cleaned)
+
+        # 6. Session 405 Patch 4D.7: Remove "Immediate Emergency Basis"
+        cleaned = re.sub(r',?\s*[Ii]mmediate\s+[Ee]mergency\s+[Bb]asis\b[^.]*\.?\s*', ' ', cleaned)
+
+        # 7. Session 405 Patch 4D.7: Fix grammar in pattern sentences
+        cleaned = re.sub(
+            r"demonstrate\s+a\s+pattern\s+of\s+escalating,?\s*harmful,?\s*and\s+constitutes[^.]*",
+            "demonstrate an escalating pattern of emotional interference with the parent-child relationship",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+        # 8. Clean up whitespace
+        cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+        cleaned = re.sub(r'  +', ' ', cleaned)
+        cleaned = cleaned.strip()
+
+        # 9. Ensure proper ending
+        if cleaned and cleaned[-1] not in '.!?':
+            cleaned += '.'
+
+        # 10. Capitalize first letter
+        if cleaned:
+            cleaned = cleaned[0].upper() + cleaned[1:]
+
+        return cleaned
+
+    def postprocess_extracted_facts(self, facts: List[str]) -> List[str]:
+        """
+        Session 405 Patch 4D.5: Final cleanup layer applied AFTER fact extraction
+        and BEFORE building SPECIFIC FACTUAL ALLEGATIONS and FULL RESTATEMENT sections.
+
+        Based on ChatGPT suggestions for comprehensive cleanup.
+        """
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+
+        CLEAN_PATTERNS = [
+            # Session 405 Patch 4D.7: Emergency-label artifacts - MUST BE REMOVED
+            r",?\s*[Ii]mmediate\s+[Ee]mergency\s+[Bb]asis\b\.?\s*",
+            r"\bImmediate Emergency Basis\b\.?\s*",
+            r"\bOn an immediate emergency basis\b[^.]*\.?\s*",
+            r"[Ii]mmediate\s+[Ee]mergency\s+[Bb]asis\s+",
+            r"Attachment to Order\s*[-–]\s*\d{4}DR\d+[^.]*\.?\s*",
+
+            # Docket / case artifacts
+            r"Case Number[:\s]*\d{4}DR\d+[^.]*\.?\s*",
+            r"Division[:\s]*\S+\s*Courtroom[:\s]*\S+",
+            r"COURT USE ONLY[^.]*\.?\s*",
+
+            # Parenthetical statute references e.g. (§14124) or (§ 14-10-124)
+            r"\(§[^)]*\)",
+            r"§\s*\d+[-–]\d+[-–]\d+",
+            r"\(§\s*\d+[-–]?\d*[-–]?\d*\)",
+
+            # Orphaned numbering lines
+            r"^\s*\d+\.\s*$",
+
+            # Session 405: Additional patterns
+            r"DISTRICT COURT.*?STATE OF \w+",
+            r"Court Address:.*",
+            r"Petitioner:.*?Respondent:.*",
+        ]
+
+        cleaned: List[str] = []
+
+        for p in facts:
+            original = p
+
+            for pattern in CLEAN_PATTERNS:
+                p = re.sub(pattern, "", p, flags=re.IGNORECASE | re.MULTILINE)
+
+            # Session 405 Patch 4E.2: Format bullet points onto separate lines
+            # Convert inline bullets to newline-separated format
+            bullet_chars = r'[●•○■▪▸►]'
+
+            # First, add newline before EVERY bullet that follows text on same line
+            p = re.sub(rf'([^\n])(\s*)({bullet_chars})', r'\1\n   \3', p)
+
+            # Handle bullets at start of line - ensure proper indentation
+            p = re.sub(rf'^(\s*)({bullet_chars})', r'   \2', p, flags=re.MULTILINE)
+
+            # Handle bullets after newline (normalize indentation)
+            p = re.sub(rf'\n\s*({bullet_chars})', r'\n   \1', p)
+
+            # Ensure bullets after colons have newlines
+            p = re.sub(r':\s*\n?\s*(' + bullet_chars + r')', r':\n   \1', p)
+
+            # Clean up any double newlines created
+            p = re.sub(r'\n\s*\n\s*(' + bullet_chars + r')', r'\n   \1', p)
+
+            # Collapse excessive whitespace (but preserve intentional newlines)
+            p = re.sub(r"[ \t]{2,}", " ", p)
+            p = p.strip(" \t-•")
+
+            # Drop if too short / empty after cleaning
+            if not p or len(p.split()) < 3:
+                continue
+
+            cleaned.append(p)
+
+        logger.info(f"SESSION 405 Patch 4D.5: Postprocessed {len(facts)} facts -> {len(cleaned)} clean facts")
+        return cleaned
+
+    def cleanup_generated_facts_block(self, text: str) -> str:
+        """
+        Session 405 Patch 4D.5: Remove awkward boilerplate pattern lines from
+        generated SPECIFIC FACTUAL ALLEGATIONS block.
+
+        Based on ChatGPT suggestions.
+        """
+        import re
+
+        # Remove "These N incidents demonstrate a pattern..." awkward lines
+        text = re.sub(
+            r"These\s+\d+\s+incidents\s+demonstrate\s+a\s+pattern.*",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Session 405 Patch 4D.7: Fix grammar issues in pattern sentences
+        # "demonstrate a pattern of escalating, harmful, and constitutes" -> clean version
+        text = re.sub(
+            r"demonstrate\s+a\s+pattern\s+of\s+escalating,?\s*harmful,?\s*and\s+constitutes[^.]*",
+            "demonstrate an escalating pattern of emotional interference with the parent-child relationship",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Fix "this pattern is escalating, harmful, and constitutes..."
+        text = re.sub(
+            r"this pattern is escalating,?\s*harmful,?\s*and\s+constitutes\s+active\s+emotional\s+interference[^.]*",
+            "This pattern is escalating, harmful, and constitutes emotional interference with the parent-child relationship",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Remove "These X incidents demonstrate..." at start of facts
+        text = re.sub(
+            r"^\s*These\s+\d+\s+incidents\s+demonstrate\s+",
+            "",
+            text,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        # Clean up any remaining duplicate "pattern of pattern" language
+        text = re.sub(
+            r"pattern of this pattern",
+            "pattern that",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Session 405 Patch 4D.7: Remove "Immediate Emergency Basis" anywhere
+        text = re.sub(
+            r",?\s*[Ii]mmediate\s+[Ee]mergency\s+[Bb]asis\b[^.]*\.?\s*",
+            " ",
+            text,
+        )
+
+        # Session 405 Patch 4G: Fix "Today's Incident" to use actual date
+        # The motion is filed later, so "Today" is incorrect
+        text = re.sub(
+            r"Today'?s?\s+Incident\s*[-–—]\s*",
+            "The Incident on ",
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Also fix "At today's parenting-time exchange" -> "At the parenting-time exchange on [date]"
+        text = re.sub(
+            r"At\s+today'?s?\s+parenting[- ]time\s+exchange",
+            "At the parenting-time exchange",
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Fix "Today during court-ordered" -> "On [date] during court-ordered"
+        text = re.sub(
+            r"Today\s+during\s+court[- ]ordered",
+            "During court-ordered",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Session 405 Patch 4F: FINAL FALLBACK - Format bullet points in full text
+        # This catches any bullets that survived the per-paragraph processing
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Check if there are bullets to format
+        bullet_chars = r'[●•○■▪▸►]'
+        bullets_found = re.findall(bullet_chars, text)
+        logger.info(f"SESSION 405 Patch 4F: Found {len(bullets_found)} bullets in text")
+
+        # Add newline before EVERY bullet that follows text on same line
+        # Using a function to log each replacement
+        def add_newline_before_bullet(match):
+            logger.debug(f"SESSION 405: Adding newline before bullet: '{match.group(0)[:30]}...'")
+            return f"{match.group(1)}\n   {match.group(3)}"
+
+        text = re.sub(rf'([^\n])(\s*)({bullet_chars})', add_newline_before_bullet, text)
+
+        # Ensure bullets at start of content have proper indentation
+        text = re.sub(rf'^(\s*)({bullet_chars})', r'   \2', text, flags=re.MULTILINE)
+
+        # Normalize bullets after newlines
+        text = re.sub(rf'\n\s*({bullet_chars})', r'\n   \1', text)
+
+        logger.info(f"SESSION 405 Patch 4F: Bullet formatting complete")
+
+        return text.strip()
 
     def _is_denial_order_content(self, text: str) -> bool:
         """Check if text is from the judge's denial order (not user's motion)."""
@@ -3452,12 +4117,16 @@ GENERAL BACKGROUND:
 
 SPECIFIC FACTUAL ALLEGATIONS:
 """
-        # Session 404C: Add extracted facts with simple numbering starting at 4
+        # Session 405 Patch 4D.4: Apply comprehensive cleanup to each fact
         fact_num = 4
         for fact in facts:
             # Clean the fact text - remove any leading numbers/bullets
             clean_fact = re.sub(r'^\d+[\.\)]\s*', '', fact.strip())
-            if clean_fact:
+
+            # Session 405: Apply Patch 4D cleanup to each fact
+            clean_fact = self._patch_4d_clean_single_fact(clean_fact)
+
+            if clean_fact and len(clean_fact) > 20:
                 document += f"{fact_num}. {clean_fact}\n\n"
                 fact_num += 1
 
@@ -3551,6 +4220,9 @@ Date: _________________________________
             full_narrative, mapping_stats = self._extract_full_narrative(original_motion_content)
 
             if full_narrative:
+                # Session 405 Patch 4D.5: Apply postprocessing to full narrative paragraphs
+                full_narrative = self.postprocess_extracted_facts(full_narrative)
+
                 # Format as numbered paragraphs
                 restatement_paragraphs = []
                 for idx, para in enumerate(full_narrative, 1):
@@ -3558,6 +4230,11 @@ Date: _________________________________
 
                 restatement_text = "\n\n".join(restatement_paragraphs)
 
+                # Session 405 Patch 4D.5: Apply template pattern cleanup
+                restatement_text = self.cleanup_generated_facts_block(restatement_text)
+
+                # Session 405 Patch 4D: Removed debug output from final motion
+                # The INTERNAL MAPPING LOG was showing in court documents - now hidden
                 full_restatement_section = f"""
 
 ============================================================
@@ -3570,21 +4247,14 @@ readable form. It is not filed with the court unless you choose to attach it
 as an exhibit.
 
 {restatement_text}
-
-------------------------------------------------------------
-INTERNAL MAPPING LOG (DEBUG - NOT FOR COURT)
-------------------------------------------------------------
-Total paragraphs found: {mapping_stats.get('total_paragraphs_found', 0)}
-Paragraphs in FULL RESTATEMENT: {mapping_stats.get('paragraphs_in_restatement', 0)}
-Paragraphs in SPECIFIC FACTUAL ALLEGATIONS: {len(facts)}
-Paragraphs skipped (court metadata): {mapping_stats.get('paragraphs_skipped_metadata', 0)}
-Paragraphs skipped (denial order): {mapping_stats.get('paragraphs_skipped_denial_order', 0)}
-
-1:1 MAPPING GUARANTEE: Every petitioner-written narrative fragment from the
-original motion has been mapped into either SPECIFIC FACTUAL ALLEGATIONS
-or this FULL RESTATEMENT section. No content was silently dropped.
-------------------------------------------------------------
 """
+                # Debug logging (not included in output)
+                logger.debug(f"SESSION 405 Patch 4D: Mapping stats - "
+                            f"total={mapping_stats.get('total_paragraphs_found', 0)}, "
+                            f"restatement={mapping_stats.get('paragraphs_in_restatement', 0)}, "
+                            f"facts={len(facts)}, "
+                            f"skipped_meta={mapping_stats.get('paragraphs_skipped_metadata', 0)}, "
+                            f"skipped_denial={mapping_stats.get('paragraphs_skipped_denial_order', 0)}")
                 document += full_restatement_section
 
         return {
