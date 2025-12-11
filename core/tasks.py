@@ -6388,19 +6388,33 @@ Guidelines:
                     title = title_response.choices[0].message.content.strip().strip('"\'')[:200] if title_response.choices[0].message.content else "Creative Thought"
 
                     # Create the dream
-                    AgentDream.objects.create(
+                    vividness = random.uniform(0.6, 1.0)
+                    dream = AgentDream.objects.create(
                         agent=agent,
                         title=title,
                         content=dream_content,
                         dream_type=dream_type,
                         inspiration_source=topic[:200],
                         related_topics=[topic, agent.specialization or 'general'],
-                        vividness_score=random.uniform(0.6, 1.0),
+                        vividness_score=vividness,
                         creativity_score=random.uniform(0.6, 1.0)
                     )
 
                     stats['dreams_generated'] += 1
                     logger.debug(f"💭 [DREAMS] {agent.name} dreamed: {title}")
+
+                    # Session 419: Send Discord notification
+                    try:
+                        from core.services.discord_notifications import discord_notify
+                        discord_notify.send_dream(
+                            agent_name=agent.name,
+                            dream_title=title,
+                            dream_content=dream_content,
+                            dream_type=dream_type,
+                            vividness=vividness
+                        )
+                    except Exception as discord_err:
+                        logger.debug(f"Discord notification failed: {discord_err}")
 
                 except Exception as e:
                     logger.warning(f"💭 [DREAMS] Failed to generate dream for {agent.name}: {e}")

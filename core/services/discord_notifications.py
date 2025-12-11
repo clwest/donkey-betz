@@ -1,0 +1,335 @@
+"""
+Discord Notification Service - Session 419
+
+Sends agent activity notifications to Discord channels:
+- #agent-dreams - When agents dream
+- #agent-conversations - When HiveMind sessions complete
+- #system-status - System health and status updates
+
+Usage:
+    from core.services.discord_notifications import discord_notify
+
+    # Send a dream notification
+    discord_notify.send_dream(agent_name, dream_title, dream_content)
+
+    # Send a conversation notification
+    discord_notify.send_conversation(participants, topic, synthesis)
+
+    # Send a status update
+    discord_notify.send_status("System started", "All services running")
+"""
+
+import os
+import logging
+import requests
+from django.conf import settings
+from typing import Optional, List
+
+logger = logging.getLogger(__name__)
+
+
+class DiscordNotificationService:
+    """Service for sending notifications to Discord channels."""
+
+    # Discord channel IDs (provided by user)
+    CHANNEL_DREAMS = "1448809858274033684"
+    CHANNEL_CONVERSATIONS = "1448809914783895583"
+    CHANNEL_STATUS = "1448809955326169149"
+
+    # Discord API base URL
+    API_BASE = "https://discord.com/api/v10"
+
+    def __init__(self):
+        self.bot_token = os.environ.get('DISCORD_BOT_TOKEN', '')
+        self.enabled = bool(self.bot_token)
+
+        if not self.enabled:
+            logger.warning("Discord notifications disabled - DISCORD_BOT_TOKEN not set")
+
+    def _get_headers(self) -> dict:
+        """Get authorization headers for Discord API."""
+        return {
+            "Authorization": f"Bot {self.bot_token}",
+            "Content-Type": "application/json"
+        }
+
+    def _send_message(self, channel_id: str, content: str, embed: Optional[dict] = None) -> bool:
+        """
+        Send a message to a Discord channel.
+
+        Args:
+            channel_id: Discord channel ID
+            content: Message content (can be empty if using embed)
+            embed: Optional embed object for rich formatting
+
+        Returns:
+            True if message sent successfully, False otherwise
+        """
+        if not self.enabled:
+            logger.debug(f"Discord disabled, would send to {channel_id}: {content[:50]}...")
+            return False
+
+        url = f"{self.API_BASE}/channels/{channel_id}/messages"
+
+        payload = {}
+        if content:
+            payload["content"] = content[:2000]  # Discord limit
+        if embed:
+            payload["embeds"] = [embed]
+
+        try:
+            response = requests.post(url, headers=self._get_headers(), json=payload, timeout=10)
+
+            if response.status_code == 200:
+                logger.info(f"Discord message sent to channel {channel_id}")
+                return True
+            else:
+                logger.error(f"Discord API error {response.status_code}: {response.text}")
+                return False
+
+        except requests.exceptions.Timeout:
+            logger.error("Discord API timeout")
+            return False
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Discord request failed: {e}")
+            return False
+
+    def send_dream(self, agent_name: str, dream_title: str, dream_content: str,
+                   dream_type: str = "creative", vividness: float = 0.0) -> bool:
+        """
+        Send a dream notification to #agent-dreams.
+
+        Args:
+            agent_name: Name of the dreaming agent
+            dream_title: Title of the dream
+            dream_content: Full dream content
+            dream_type: Type of dream (creative_idea, what_if, prediction, observation)
+            vividness: Vividness score (0-1)
+        """
+        # Dream type emojis
+        type_emojis = {
+            "creative_idea": "💡",
+            "what_if": "🤔",
+            "prediction": "🔮",
+            "observation": "👁️",
+            "nightmare": "😱",
+            "lucid": "✨",
+        }
+        emoji = type_emojis.get(dream_type, "💭")
+
+        # Create rich embed
+        embed = {
+            "title": f"{emoji} {dream_title}",
+            "description": dream_content[:4096],  # Discord embed limit
+            "color": 0x9B59B6,  # Purple for dreams
+            "author": {
+                "name": f"🤖 {agent_name} is dreaming..."
+            },
+            "fields": [
+                {"name": "Dream Type", "value": dream_type.replace("_", " ").title(), "inline": True},
+                {"name": "Vividness", "value": f"{'🌟' * int(vividness * 5)} ({vividness:.0%})", "inline": True}
+            ],
+            "footer": {
+                "text": "AI Studio Agent Dreams"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_DREAMS, "", embed=embed)
+
+    def send_conversation(self, participants: List[str], topic: str,
+                          synthesis: str, mode: str = "conversation") -> bool:
+        """
+        Send a conversation/HiveMind notification to #agent-conversations.
+
+        Args:
+            participants: List of participating agent names
+            topic: Conversation topic/question
+            synthesis: The synthesized output
+            mode: Session mode (conversation, brainstorm, consensus, debate)
+        """
+        # Mode emojis
+        mode_emojis = {
+            "conversation": "💬",
+            "brainstorm": "🧠",
+            "consensus": "🤝",
+            "debate": "⚔️",
+        }
+        emoji = mode_emojis.get(mode, "💬")
+
+        # Format participants
+        participant_str = ", ".join(participants[:5])
+        if len(participants) > 5:
+            participant_str += f" +{len(participants) - 5} more"
+
+        embed = {
+            "title": f"{emoji} {topic[:200]}",
+            "description": synthesis[:4096],
+            "color": 0xE91E63,  # Pink for conversations
+            "author": {
+                "name": f"🐝 HiveMind Session ({len(participants)} agents)"
+            },
+            "fields": [
+                {"name": "Participants", "value": participant_str, "inline": False},
+                {"name": "Mode", "value": mode.title(), "inline": True}
+            ],
+            "footer": {
+                "text": "AI Studio Collective Intelligence"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_CONVERSATIONS, "", embed=embed)
+
+    def send_knowledge(self, agent_name: str, title: str, summary: str,
+                       knowledge_type: str = "insight", confidence: float = 0.0) -> bool:
+        """
+        Send a knowledge learning notification to #agent-conversations.
+
+        Args:
+            agent_name: Name of the learning agent
+            title: Knowledge title
+            summary: Knowledge summary
+            knowledge_type: Type (best_practice, insight, lesson_learned, etc.)
+            confidence: Confidence score (0-1)
+        """
+        type_emojis = {
+            "best_practice": "⭐",
+            "insight": "💡",
+            "lesson_learned": "📚",
+            "tip": "💡",
+            "warning": "⚠️",
+        }
+        emoji = type_emojis.get(knowledge_type, "📖")
+
+        embed = {
+            "title": f"{emoji} {title}",
+            "description": summary[:4096],
+            "color": 0x3498DB,  # Blue for knowledge
+            "author": {
+                "name": f"🎓 {agent_name} learned something!"
+            },
+            "fields": [
+                {"name": "Type", "value": knowledge_type.replace("_", " ").title(), "inline": True},
+                {"name": "Confidence", "value": f"{'📊' * int(confidence * 5)} ({confidence:.0%})", "inline": True}
+            ],
+            "footer": {
+                "text": "AI Studio Knowledge Sharing"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_CONVERSATIONS, "", embed=embed)
+
+    def send_status(self, title: str, message: str, status_type: str = "info") -> bool:
+        """
+        Send a system status notification to #system-status.
+
+        Args:
+            title: Status title
+            message: Status message
+            status_type: Type (info, success, warning, error)
+        """
+        # Status colors and emojis
+        status_config = {
+            "info": {"color": 0x3498DB, "emoji": "ℹ️"},
+            "success": {"color": 0x2ECC71, "emoji": "✅"},
+            "warning": {"color": 0xF39C12, "emoji": "⚠️"},
+            "error": {"color": 0xE74C3C, "emoji": "❌"},
+        }
+        config = status_config.get(status_type, status_config["info"])
+
+        embed = {
+            "title": f"{config['emoji']} {title}",
+            "description": message[:4096],
+            "color": config["color"],
+            "footer": {
+                "text": "AI Studio System Status"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
+
+    def send_spider_update(self, spider_name: str, records_collected: int,
+                           source: str = "") -> bool:
+        """
+        Send a spider data collection notification to #system-status.
+
+        Args:
+            spider_name: Name of the spider
+            records_collected: Number of records collected
+            source: Data source name
+        """
+        embed = {
+            "title": f"🕷️ Spider Activity: {spider_name}",
+            "description": f"Collected **{records_collected}** new records",
+            "color": 0x9B59B6,
+            "fields": [
+                {"name": "Source", "value": source or spider_name, "inline": True}
+            ],
+            "footer": {
+                "text": "AI Studio Spider Network"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
+
+    def test_connection(self) -> dict:
+        """
+        Test the Discord connection by sending test messages to all channels.
+
+        Returns:
+            Dict with results for each channel
+        """
+        results = {}
+
+        # Test dreams channel
+        results["dreams"] = self.send_dream(
+            agent_name="Test Agent",
+            dream_title="Connection Test Dream",
+            dream_content="This is a test message to verify Discord integration is working!",
+            dream_type="creative_idea",
+            vividness=0.8
+        )
+
+        # Test conversations channel
+        results["conversations"] = self.send_conversation(
+            participants=["Test Agent 1", "Test Agent 2"],
+            topic="Testing Discord Integration",
+            synthesis="The agents agreed that Discord integration is awesome!",
+            mode="consensus"
+        )
+
+        # Test status channel
+        results["status"] = self.send_status(
+            title="Discord Integration Test",
+            message="✅ All systems connected! AI Studio is now posting to Discord.",
+            status_type="success"
+        )
+
+        return results
+
+
+# Singleton instance for easy imports
+discord_notify = DiscordNotificationService()
+
+
+# Convenience functions for direct use
+def send_dream_notification(agent_name: str, dream_title: str, dream_content: str,
+                            dream_type: str = "creative", vividness: float = 0.0) -> bool:
+    """Send a dream notification to Discord."""
+    return discord_notify.send_dream(agent_name, dream_title, dream_content, dream_type, vividness)
+
+
+def send_conversation_notification(participants: List[str], topic: str,
+                                   synthesis: str, mode: str = "conversation") -> bool:
+    """Send a conversation notification to Discord."""
+    return discord_notify.send_conversation(participants, topic, synthesis, mode)
+
+
+def send_knowledge_notification(agent_name: str, title: str, summary: str,
+                                knowledge_type: str = "insight", confidence: float = 0.0) -> bool:
+    """Send a knowledge notification to Discord."""
+    return discord_notify.send_knowledge(agent_name, title, summary, knowledge_type, confidence)
+
+
+def send_status_notification(title: str, message: str, status_type: str = "info") -> bool:
+    """Send a status notification to Discord."""
+    return discord_notify.send_status(title, message, status_type)
