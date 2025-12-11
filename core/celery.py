@@ -307,13 +307,22 @@ app.conf.beat_schedule = {
             'expires': 55,
         }
     },
-    # Session 244: Daily Learning Embeddings
-    # Convert all agent learning into searchable vector embeddings
+    # Session 244: Daily Learning Embeddings (LEGACY - kept for knowledge transfers)
+    # Convert knowledge transfers into searchable vector embeddings
     'embed-daily-agent-learning': {
         'task': 'core.tasks.embed_daily_agent_learning',
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
         'options': {
             'expires': 7200,  # 2 hours
+        }
+    },
+    # Session 417: Comprehensive Agent Activity Embeddings
+    # Embed ALL agent activity (dreams, hive minds, knowledge) every 30 minutes
+    'embed-agent-activity': {
+        'task': 'core.tasks.embed_agent_activity',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
         }
     },
     # Session 244: Agent Conversations (Inter-Agent Chat)

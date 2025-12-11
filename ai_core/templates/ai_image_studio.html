@@ -7303,6 +7303,11 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="agents-profile-tab" data-bs-toggle="pill" data-bs-target="#agents-profile" type="button" role="tab" style="color: #10b981;">
+                            👤 Profile
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link" id="agents-social-tab" data-bs-toggle="pill" data-bs-target="#agents-social" type="button" role="tab" style="color: #ec4899;">
                             💬 Social
                         </button>
@@ -7453,6 +7458,110 @@
 
                         </div>
                         <!-- END OVERVIEW SUB-TAB -->
+
+                        <!-- ========== PROFILE SUB-TAB (Session 417) ========== -->
+                        <div class="tab-pane fade" id="agents-profile" role="tabpanel">
+                            <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #10b981;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.2); border-bottom: 1px solid #10b981;">
+                                    <h5 class="mb-0" style="color: #10b981;">
+                                        👤 Agent Profile
+                                    </h5>
+                                    <div>
+                                        <select id="profile-agent-select" class="form-select form-select-sm"
+                                                style="background: #2a2a2a; border: 1px solid #10b981; color: white; min-width: 200px;"
+                                                onchange="loadAgentProfile()">
+                                            <option value="">Select an Agent...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Agent Profile Content -->
+                                    <div id="agent-profile-placeholder" class="text-center py-5">
+                                        <div style="font-size: 4rem; opacity: 0.3;">👤</div>
+                                        <p class="text-muted mt-3">Select an agent to view their complete profile</p>
+                                        <p class="text-muted small">See their dreams, conversations, boardroom decisions, and knowledge</p>
+                                    </div>
+
+                                    <div id="agent-profile-content" style="display: none;">
+                                        <!-- Agent Header -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-8">
+                                                <h4 id="profile-agent-name" style="color: #10b981;"></h4>
+                                                <p id="profile-agent-description" class="text-muted"></p>
+                                                <span class="badge me-2" id="profile-agent-specialization" style="background: #10b981;"></span>
+                                                <span class="badge" id="profile-agent-status" style="background: #22c55e;">Active</span>
+                                            </div>
+                                            <div class="col-md-4 text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <div class="text-center px-3">
+                                                        <h3 id="profile-total-dreams" class="mb-0" style="color: #a855f7;">0</h3>
+                                                        <small class="text-muted">Dreams</small>
+                                                    </div>
+                                                    <div class="text-center px-3">
+                                                        <h3 id="profile-total-convos" class="mb-0" style="color: #ec4899;">0</h3>
+                                                        <small class="text-muted">Convos</small>
+                                                    </div>
+                                                    <div class="text-center px-3">
+                                                        <h3 id="profile-total-decisions" class="mb-0" style="color: #f59e0b;">0</h3>
+                                                        <small class="text-muted">Decisions</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Activity Sections -->
+                                        <div class="row">
+                                            <!-- Dreams Column -->
+                                            <div class="col-md-4">
+                                                <div class="card" style="background: #2a2a2a; border: 1px solid #a855f7;">
+                                                    <div class="card-header" style="background: rgba(168, 85, 247, 0.2); border-bottom: 1px solid #a855f7;">
+                                                        <h6 class="mb-0" style="color: #a855f7;">💭 Recent Dreams</h6>
+                                                    </div>
+                                                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                                        <div id="profile-dreams-list"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Conversations Column -->
+                                            <div class="col-md-4">
+                                                <div class="card" style="background: #2a2a2a; border: 1px solid #ec4899;">
+                                                    <div class="card-header" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
+                                                        <h6 class="mb-0" style="color: #ec4899;">💬 Recent Conversations</h6>
+                                                    </div>
+                                                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                                        <div id="profile-conversations-list"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Decisions Column -->
+                                            <div class="col-md-4">
+                                                <div class="card" style="background: #2a2a2a; border: 1px solid #f59e0b;">
+                                                    <div class="card-header" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                                                        <h6 class="mb-0" style="color: #f59e0b;">🏛️ Boardroom Decisions</h6>
+                                                    </div>
+                                                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                                        <div id="profile-decisions-list"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Knowledge Section -->
+                                        <div class="card mt-4" style="background: #2a2a2a; border: 1px solid #06b6d4;">
+                                            <div class="card-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+                                                <h6 class="mb-0" style="color: #06b6d4;">📚 Knowledge Sources</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="profile-knowledge-list" class="row"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END PROFILE SUB-TAB -->
 
                         <!-- ========== SOCIAL SUB-TAB ========== -->
                         <div class="tab-pane fade" id="agents-social" role="tabpanel">
@@ -14028,6 +14137,34 @@
                 </div>
             </div>
             <!-- END A/B Test Results Modal -->
+
+            <!-- ============================================================ -->
+            <!-- Session 417: Agent Activity Detail Modal -->
+            <!-- ============================================================ -->
+            <div class="modal fade" id="agent-activity-detail-modal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                        <div class="modal-header" style="border-bottom: 1px solid #333;">
+                            <h5 class="modal-title" id="activity-detail-title">
+                                <span id="activity-detail-icon"></span>
+                                <span id="activity-detail-heading">Loading...</span>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="activity-detail-body" style="max-height: 70vh; overflow-y: auto;">
+                            <div class="text-center p-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid #333;">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END Agent Activity Detail Modal -->
 
             <!-- ============================================================ -->
             <!-- Session 403: LEGAL ASSISTANT TAB - Pro Se Colorado Family Law -->
@@ -50274,6 +50411,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     </div>
                 `;
 
+                // Session 412: Show source type (conversation vs hive_session)
+                const sourceIcon = d.source_type === 'hive_session' ? '🐝' : '💬';
+                const sourceBadge = d.source_type === 'hive_session'
+                    ? '<span class="badge" style="background: #8b5cf6; font-size: 10px;">Hive Mind</span>'
+                    : '<span class="badge" style="background: #374151; font-size: 10px;">Conversation</span>';
+
                 return `
                     <div class="decision-card decision-type-${d.decision_type}">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -50282,7 +50425,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 <strong style="color: ${color};">${d.topic.substring(0, 60)}${d.topic.length > 60 ? '...' : ''}</strong>
                                 ${canonicalBadge}
                             </div>
-                            <small class="text-muted">${timeAgo}</small>
+                            <div class="text-end">
+                                <small class="text-muted">${timeAgo}</small><br>
+                                ${sourceBadge}
+                            </div>
                         </div>
                         <div class="mb-2">
                             <span class="badge" style="background: ${color};">${d.decision_type_display}</span>
@@ -50291,7 +50437,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <p style="color: #e5e7eb; font-size: 14px; margin-bottom: 8px;">${d.recommended_stance}</p>
                         <ul style="margin: 0; padding-left: 20px;">${insights}</ul>
                         <div class="mt-2">
-                            <small class="text-muted">Participants: ${d.participants.join(', ')}</small>
+                            <small class="text-muted">${sourceIcon} Participants: ${d.participants.join(', ')}</small>
                         </div>
                         ${actionButtons}
                     </div>
@@ -52209,6 +52355,542 @@ This idea came from agent discussions (Decision ID: ${decisionId}).`;
 
         // =========================================================================
         // End Session 257: Memory Clusters Functions
+        // =========================================================================
+
+        // =========================================================================
+        // Session 417: Agent Profile Functions
+        // =========================================================================
+
+        // Initialize Agent Profile on tab show
+        document.getElementById('agents-profile-tab')?.addEventListener('shown.bs.tab', function() {
+            populateProfileAgentSelect();
+        });
+
+        // Populate agent dropdown for profile view
+        async function populateProfileAgentSelect() {
+            try {
+                const response = await authenticatedFetch('/api/agents/');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('profile-agent-select');
+                    if (!select) return;
+
+                    // Clear existing options except first
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+
+                    // Add agents sorted by name
+                    const agents = data.agents || [];
+                    agents.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                    for (const agent of agents) {
+                        const option = document.createElement('option');
+                        option.value = agent.id;
+                        option.textContent = `${agent.name} (Level ${agent.level || 1})`;
+                        select.appendChild(option);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agents for profile:', error);
+            }
+        }
+
+        // Load agent profile data
+        async function loadAgentProfile() {
+            const select = document.getElementById('profile-agent-select');
+            const agentId = select?.value;
+
+            // Hide content and show empty state if no agent selected
+            const contentEl = document.getElementById('agent-profile-content');
+            const emptyEl = document.getElementById('agent-profile-placeholder');
+
+            if (!agentId) {
+                if (contentEl) contentEl.style.display = 'none';
+                if (emptyEl) emptyEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/agents/${agentId}/profile/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderAgentProfile(data);
+                        if (contentEl) contentEl.style.display = 'block';
+                        if (emptyEl) emptyEl.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading agent profile:', error);
+            }
+        }
+
+        // Render agent profile data
+        function renderAgentProfile(data) {
+            const agent = data.agent;
+            const stats = data.stats;
+
+            // Update agent header info
+            const nameEl = document.getElementById('profile-agent-name');
+            const descEl = document.getElementById('profile-agent-description');
+            const specEl = document.getElementById('profile-agent-specialization');
+            const statusEl = document.getElementById('profile-agent-status');
+
+            if (nameEl) nameEl.textContent = `${agent.mood_emoji || '🤖'} ${agent.name} (Level ${agent.level || 1})`;
+            if (descEl) descEl.textContent = agent.description || 'No description available';
+            if (specEl) specEl.textContent = agent.specialization || 'General';
+            if (statusEl) {
+                statusEl.textContent = agent.is_active ? 'Active' : 'Inactive';
+                statusEl.style.background = agent.is_active ? '#22c55e' : '#6b7280';
+            }
+
+            // Update stats
+            const dreamsCountEl = document.getElementById('profile-total-dreams');
+            const convosCountEl = document.getElementById('profile-total-convos');
+            const decisionsCountEl = document.getElementById('profile-total-decisions');
+
+            if (dreamsCountEl) dreamsCountEl.textContent = stats.total_dreams || 0;
+            if (convosCountEl) convosCountEl.textContent = stats.total_conversations || 0;
+            if (decisionsCountEl) decisionsCountEl.textContent = stats.total_decisions || 0;
+
+            // Render dreams list (Session 417: Made clickable)
+            const dreamsEl = document.getElementById('profile-dreams-list');
+            if (dreamsEl) {
+                if (data.dreams && data.dreams.length > 0) {
+                    dreamsEl.innerHTML = data.dreams.map(dream => `
+                        <div class="p-2 mb-2 rounded agent-activity-card"
+                             style="background: rgba(168, 85, 247, 0.1); border-left: 3px solid #a855f7; cursor: pointer; transition: all 0.2s ease;"
+                             onclick="showDreamDetail('${dream.id}')"
+                             onmouseover="this.style.background='rgba(168, 85, 247, 0.2)'; this.style.transform='translateX(3px)';"
+                             onmouseout="this.style.background='rgba(168, 85, 247, 0.1)'; this.style.transform='translateX(0)';">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span class="small text-truncate" style="max-width: 150px;">${dream.title || 'Dream'}</span>
+                                <span class="badge" style="background: #a855f7; font-size: 10px;">
+                                    ${dream.dream_type || 'reflection'}
+                                </span>
+                            </div>
+                            <div class="small text-muted mt-1" style="max-height: 60px; overflow: hidden;">
+                                ${(dream.content || '').substring(0, 150)}${dream.content?.length > 150 ? '...' : ''}
+                            </div>
+                            <div class="small text-muted mt-1">${formatTimeAgo(dream.dreamed_at)} <span style="color: #a855f7; font-size: 10px;">Click to view</span></div>
+                        </div>
+                    `).join('');
+                } else {
+                    dreamsEl.innerHTML = '<div class="text-center text-muted p-3 small">No dreams yet</div>';
+                }
+            }
+
+            // Render conversations list (Session 417: Made clickable - supports both AgentConversation and HiveMindSession)
+            const convoEl = document.getElementById('profile-conversations-list');
+            if (convoEl) {
+                if (data.conversations && data.conversations.length > 0) {
+                    convoEl.innerHTML = data.conversations.map(convo => {
+                        // Determine if this is a HiveMindSession or AgentConversation
+                        const isHiveMind = convo.type === 'hivemind' || convo.session_mode;
+                        const clickHandler = isHiveMind ? `showHiveMindDetail('${convo.id}')` : `showConversationDetail('${convo.id}')`;
+                        const typeLabel = isHiveMind ? 'Hive Mind' : `${convo.participants?.length || 2} agents`;
+                        return `
+                        <div class="p-2 mb-2 rounded agent-activity-card"
+                             style="background: rgba(236, 72, 153, 0.1); border-left: 3px solid #ec4899; cursor: pointer; transition: all 0.2s ease;"
+                             onclick="${clickHandler}"
+                             onmouseover="this.style.background='rgba(236, 72, 153, 0.2)'; this.style.transform='translateX(3px)';"
+                             onmouseout="this.style.background='rgba(236, 72, 153, 0.1)'; this.style.transform='translateX(0)';">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span class="small text-truncate" style="max-width: 150px;">${convo.topic || 'Discussion'}</span>
+                                <span class="badge" style="background: #ec4899; font-size: 10px;">
+                                    ${typeLabel}
+                                </span>
+                            </div>
+                            <div class="small text-muted mt-1" style="max-height: 60px; overflow: hidden;">
+                                ${(convo.conclusion || '').substring(0, 150)}${convo.conclusion?.length > 150 ? '...' : ''}
+                            </div>
+                            <div class="small text-muted mt-1">${formatTimeAgo(convo.started_at)} <span style="color: #ec4899; font-size: 10px;">Click to view</span></div>
+                        </div>
+                    `}).join('');
+                } else {
+                    convoEl.innerHTML = '<div class="text-center text-muted p-3 small">No conversations yet</div>';
+                }
+            }
+
+            // Render decisions list (Session 417: Made clickable)
+            const decisionsEl = document.getElementById('profile-decisions-list');
+            if (decisionsEl) {
+                if (data.decisions && data.decisions.length > 0) {
+                    decisionsEl.innerHTML = data.decisions.map(decision => {
+                        // Handle key_insights which can be an array or string
+                        let insightText = '';
+                        if (Array.isArray(decision.key_insights)) {
+                            insightText = decision.key_insights.slice(0, 2).join('; ');
+                        } else if (typeof decision.key_insights === 'string') {
+                            insightText = decision.key_insights;
+                        } else if (decision.recommended_stance) {
+                            insightText = decision.recommended_stance;
+                        }
+                        return `
+                        <div class="p-2 mb-2 rounded agent-activity-card"
+                             style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; cursor: pointer; transition: all 0.2s ease;"
+                             onclick="showDecisionDetail('${decision.id}')"
+                             onmouseover="this.style.background='rgba(245, 158, 11, 0.2)'; this.style.transform='translateX(3px)';"
+                             onmouseout="this.style.background='rgba(245, 158, 11, 0.1)'; this.style.transform='translateX(0)';">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span class="small text-truncate" style="max-width: 150px;">${decision.topic || 'Decision'}</span>
+                                <span class="badge" style="background: #f59e0b; color: #000; font-size: 10px;">
+                                    ${decision.impact_area || 'general'}
+                                </span>
+                            </div>
+                            <div class="small text-muted mt-1" style="max-height: 60px; overflow: hidden;">
+                                ${insightText.substring(0, 150)}${insightText.length > 150 ? '...' : ''}
+                            </div>
+                            <div class="small text-muted mt-1">${formatTimeAgo(decision.created_at)} <span style="color: #f59e0b; font-size: 10px;">Click to view</span></div>
+                        </div>
+                    `}).join('');
+                } else {
+                    decisionsEl.innerHTML = '<div class="text-center text-muted p-3 small">No boardroom decisions yet</div>';
+                }
+            }
+
+            // Render knowledge list
+            const knowledgeEl = document.getElementById('profile-knowledge-list');
+            if (knowledgeEl) {
+                if (data.knowledge && data.knowledge.length > 0) {
+                    knowledgeEl.innerHTML = data.knowledge.map(item => `
+                        <div class="col-md-6 mb-2">
+                            <div class="p-2 rounded" style="background: rgba(6, 182, 212, 0.1); border-left: 3px solid #06b6d4;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <span class="small text-truncate" style="max-width: 200px;">${item.title || 'Knowledge'}</span>
+                                    <span class="badge" style="background: #06b6d4; font-size: 10px;">
+                                        ${item.knowledge_type || 'learned'}
+                                    </span>
+                                </div>
+                                <div class="small text-muted mt-1" style="max-height: 40px; overflow: hidden;">
+                                    ${(item.summary || '').substring(0, 100)}...
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    knowledgeEl.innerHTML = '<div class="col-12 text-center text-muted p-3 small">No knowledge sources yet</div>';
+                }
+            }
+        }
+
+        // Helper function to format time ago
+        function formatTimeAgo(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        // =========================================================================
+        // Session 417: Agent Activity Detail Modal Functions
+        // =========================================================================
+
+        // Show dream detail in modal
+        async function showDreamDetail(dreamId) {
+            const modal = new bootstrap.Modal(document.getElementById('agent-activity-detail-modal'));
+            const bodyEl = document.getElementById('activity-detail-body');
+            const iconEl = document.getElementById('activity-detail-icon');
+            const headingEl = document.getElementById('activity-detail-heading');
+
+            // Show loading state
+            iconEl.textContent = '💭';
+            headingEl.textContent = 'Loading Dream...';
+            bodyEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            modal.show();
+
+            try {
+                const response = await authenticatedFetch(`/api/dreams/${dreamId}/`);
+                if (!response.ok) throw new Error('Failed to fetch dream');
+                const data = await response.json();
+
+                if (data.success && data.dream) {
+                    const dream = data.dream;
+                    headingEl.textContent = dream.title || 'Dream';
+                    bodyEl.innerHTML = `
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge" style="background: #a855f7; font-size: 12px;">${dream.dream_type || 'reflection'}</span>
+                                <span class="text-muted small">${formatTimeAgo(dream.dreamed_at)}</span>
+                            </div>
+                            <div class="p-3 rounded" style="background: rgba(168, 85, 247, 0.1); border-left: 4px solid #a855f7;">
+                                <p style="white-space: pre-wrap; line-height: 1.6;">${dream.content || 'No content'}</p>
+                            </div>
+                        </div>
+                        ${dream.interpretation ? `
+                        <div class="mb-4">
+                            <h6 class="text-purple mb-2" style="color: #c4b5fd;">Interpretation</h6>
+                            <p class="text-muted" style="white-space: pre-wrap;">${dream.interpretation}</p>
+                        </div>
+                        ` : ''}
+                        <div class="row text-muted small">
+                            ${dream.vividness_score ? `<div class="col-6"><strong>Vividness:</strong> ${Math.round(dream.vividness_score * 100)}%</div>` : ''}
+                            ${dream.creativity_score ? `<div class="col-6"><strong>Creativity:</strong> ${Math.round(dream.creativity_score * 100)}%</div>` : ''}
+                            ${dream.related_topics?.length ? `<div class="col-12 mt-2"><strong>Topics:</strong> ${dream.related_topics.join(', ')}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    bodyEl.innerHTML = '<div class="alert alert-warning">Dream not found</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching dream:', error);
+                bodyEl.innerHTML = '<div class="alert alert-danger">Failed to load dream details</div>';
+            }
+        }
+
+        // Show conversation detail in modal
+        async function showConversationDetail(conversationId) {
+            const modal = new bootstrap.Modal(document.getElementById('agent-activity-detail-modal'));
+            const bodyEl = document.getElementById('activity-detail-body');
+            const iconEl = document.getElementById('activity-detail-icon');
+            const headingEl = document.getElementById('activity-detail-heading');
+
+            iconEl.textContent = '💬';
+            headingEl.textContent = 'Loading Conversation...';
+            bodyEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            modal.show();
+
+            try {
+                const response = await authenticatedFetch(`/api/conversations/${conversationId}/`);
+                if (!response.ok) throw new Error('Failed to fetch conversation');
+                const data = await response.json();
+
+                if (data.success && data.conversation) {
+                    const convo = data.conversation;
+                    headingEl.textContent = convo.topic || 'Agent Conversation';
+
+                    // Build messages HTML
+                    let messagesHtml = '';
+                    if (convo.messages && convo.messages.length > 0) {
+                        messagesHtml = convo.messages.map(msg => `
+                            <div class="mb-3 p-3 rounded" style="background: rgba(236, 72, 153, 0.1); border-left: 3px solid #ec4899;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong style="color: #f472b6;">${msg.agent_name || 'Agent'}</strong>
+                                    <span class="text-muted small">${formatTimeAgo(msg.timestamp)}</span>
+                                </div>
+                                <p class="mb-0" style="white-space: pre-wrap;">${msg.content}</p>
+                            </div>
+                        `).join('');
+                    } else if (convo.transcript) {
+                        messagesHtml = `<div class="p-3 rounded" style="background: rgba(236, 72, 153, 0.1);"><pre style="white-space: pre-wrap; color: #e5e7eb; margin: 0;">${convo.transcript}</pre></div>`;
+                    }
+
+                    bodyEl.innerHTML = `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge" style="background: #ec4899; font-size: 12px;">${convo.participants?.length || 2} Participants</span>
+                                <span class="text-muted small">${formatTimeAgo(convo.started_at)}</span>
+                            </div>
+                            ${convo.participants?.length ? `
+                            <div class="mb-3">
+                                <strong class="text-muted small">Participants:</strong>
+                                <div class="mt-1">${convo.participants.map(p => `<span class="badge bg-secondary me-1">${p.name || p}</span>`).join('')}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <h6 class="mb-3" style="color: #f472b6;">Conversation</h6>
+                        ${messagesHtml || '<p class="text-muted">No messages recorded</p>'}
+                        ${convo.conclusion ? `
+                        <div class="mt-4 p-3 rounded" style="background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e;">
+                            <h6 style="color: #4ade80;">Conclusion</h6>
+                            <p class="mb-0" style="white-space: pre-wrap;">${convo.conclusion}</p>
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    bodyEl.innerHTML = '<div class="alert alert-warning">Conversation not found</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching conversation:', error);
+                bodyEl.innerHTML = '<div class="alert alert-danger">Failed to load conversation details</div>';
+            }
+        }
+
+        // Show HiveMind session detail in modal
+        async function showHiveMindDetail(sessionId) {
+            const modal = new bootstrap.Modal(document.getElementById('agent-activity-detail-modal'));
+            const bodyEl = document.getElementById('activity-detail-body');
+            const iconEl = document.getElementById('activity-detail-icon');
+            const headingEl = document.getElementById('activity-detail-heading');
+
+            iconEl.textContent = '🧠';
+            headingEl.textContent = 'Loading Hive Mind Session...';
+            bodyEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            modal.show();
+
+            try {
+                const response = await authenticatedFetch(`/api/hivemind/${sessionId}/`);
+                if (!response.ok) throw new Error('Failed to fetch hive mind session');
+                const data = await response.json();
+
+                if (data.success && data.session) {
+                    const session = data.session;
+                    headingEl.textContent = session.conversation_topic || session.question || 'Hive Mind Session';
+
+                    // Build contributions HTML
+                    let contributionsHtml = '';
+                    if (session.contributions && session.contributions.length > 0) {
+                        contributionsHtml = session.contributions.map(contrib => `
+                            <div class="mb-3 p-3 rounded" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong style="color: #a78bfa;">${contrib.agent_name || 'Agent'}</strong>
+                                    <span class="text-muted small">${formatTimeAgo(contrib.contributed_at)}</span>
+                                </div>
+                                <p class="mb-0" style="white-space: pre-wrap;">${contrib.content}</p>
+                            </div>
+                        `).join('');
+                    }
+
+                    bodyEl.innerHTML = `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge" style="background: #8b5cf6; font-size: 12px;">${session.session_mode || 'collective'}</span>
+                                <span class="badge" style="background: ${session.status === 'completed' ? '#22c55e' : '#f59e0b'}; font-size: 12px;">${session.status || 'active'}</span>
+                            </div>
+                            ${session.question ? `
+                            <div class="p-3 rounded mb-3" style="background: rgba(6, 182, 212, 0.1); border-left: 4px solid #06b6d4;">
+                                <h6 style="color: #22d3ee;">Question</h6>
+                                <p class="mb-0">${session.question}</p>
+                            </div>
+                            ` : ''}
+                            ${session.participant_names?.length ? `
+                            <div class="mb-3">
+                                <strong class="text-muted small">Participants (${session.participant_names.length}):</strong>
+                                <div class="mt-1">${session.participant_names.map(p => `<span class="badge bg-secondary me-1">${p}</span>`).join('')}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        ${contributionsHtml ? `
+                        <h6 class="mb-3" style="color: #a78bfa;">Contributions (${session.contributions?.length || 0})</h6>
+                        ${contributionsHtml}
+                        ` : ''}
+                        ${session.synthesis ? `
+                        <div class="mt-4 p-3 rounded" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b;">
+                            <h6 style="color: #fbbf24;">Collective Synthesis</h6>
+                            <p class="mb-0" style="white-space: pre-wrap;">${session.synthesis}</p>
+                        </div>
+                        ` : ''}
+                        ${session.synthesis_summary ? `
+                        <div class="mt-3 text-muted small">
+                            <strong>Summary:</strong> ${session.synthesis_summary}
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    bodyEl.innerHTML = '<div class="alert alert-warning">Hive Mind session not found</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching hive mind session:', error);
+                bodyEl.innerHTML = '<div class="alert alert-danger">Failed to load Hive Mind session details</div>';
+            }
+        }
+
+        // Show decision detail in modal
+        async function showDecisionDetail(decisionId) {
+            const modal = new bootstrap.Modal(document.getElementById('agent-activity-detail-modal'));
+            const bodyEl = document.getElementById('activity-detail-body');
+            const iconEl = document.getElementById('activity-detail-icon');
+            const headingEl = document.getElementById('activity-detail-heading');
+
+            iconEl.textContent = '⚖️';
+            headingEl.textContent = 'Loading Decision...';
+            bodyEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            modal.show();
+
+            try {
+                const response = await authenticatedFetch(`/api/decisions/${decisionId}/`);
+                if (!response.ok) throw new Error('Failed to fetch decision');
+                const data = await response.json();
+
+                if (data.success && data.decision) {
+                    const decision = data.decision;
+                    headingEl.textContent = decision.topic || 'Boardroom Decision';
+
+                    // Build key insights list
+                    let insightsHtml = '';
+                    if (decision.key_insights) {
+                        const insights = Array.isArray(decision.key_insights) ? decision.key_insights : [decision.key_insights];
+                        if (insights.length > 0) {
+                            insightsHtml = `
+                            <div class="mb-4">
+                                <h6 style="color: #fbbf24;">Key Insights</h6>
+                                <ul class="mb-0">${insights.map(i => `<li>${i}</li>`).join('')}</ul>
+                            </div>
+                            `;
+                        }
+                    }
+
+                    // Build participants list
+                    let participantsHtml = '';
+                    if (decision.participants && decision.participants.length > 0) {
+                        participantsHtml = decision.participants.map(p => `
+                            <div class="mb-2 p-2 rounded" style="background: rgba(245, 158, 11, 0.1);">
+                                <strong style="color: #fcd34d;">${p.agent_name || 'Agent'}</strong>
+                                <span class="badge ms-2" style="background: ${p.vote === 'approve' ? '#22c55e' : p.vote === 'reject' ? '#ef4444' : '#6b7280'}; font-size: 10px;">${p.vote || 'abstain'}</span>
+                                ${p.reasoning ? `<p class="mb-0 mt-1 small text-muted">${p.reasoning}</p>` : ''}
+                            </div>
+                        `).join('');
+                    }
+
+                    bodyEl.innerHTML = `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge" style="background: #f59e0b; color: #000; font-size: 12px;">${decision.impact_area || 'general'}</span>
+                                <span class="text-muted small">${formatTimeAgo(decision.created_at)}</span>
+                            </div>
+                        </div>
+                        ${decision.context ? `
+                        <div class="mb-4">
+                            <h6 style="color: #fbbf24;">Context</h6>
+                            <p style="white-space: pre-wrap;">${decision.context}</p>
+                        </div>
+                        ` : ''}
+                        ${decision.recommended_stance ? `
+                        <div class="p-3 rounded mb-4" style="background: rgba(245, 158, 11, 0.15); border-left: 4px solid #f59e0b;">
+                            <h6 style="color: #fbbf24;">Recommended Stance</h6>
+                            <p class="mb-0" style="white-space: pre-wrap;">${decision.recommended_stance}</p>
+                        </div>
+                        ` : ''}
+                        ${insightsHtml}
+                        ${participantsHtml ? `
+                        <div class="mb-4">
+                            <h6 style="color: #fbbf24;">Participants & Votes</h6>
+                            ${participantsHtml}
+                        </div>
+                        ` : ''}
+                        ${decision.final_decision ? `
+                        <div class="mt-4 p-3 rounded" style="background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e;">
+                            <h6 style="color: #4ade80;">Final Decision</h6>
+                            <p class="mb-0" style="white-space: pre-wrap;">${decision.final_decision}</p>
+                        </div>
+                        ` : ''}
+                        ${decision.confidence_score ? `
+                        <div class="mt-3 text-muted small">
+                            <strong>Confidence:</strong> ${Math.round(decision.confidence_score * 100)}%
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    bodyEl.innerHTML = '<div class="alert alert-warning">Decision not found</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching decision:', error);
+                bodyEl.innerHTML = '<div class="alert alert-danger">Failed to load decision details</div>';
+            }
+        }
+
+        // =========================================================================
+        // End Session 417: Agent Profile Functions
         // =========================================================================
 
         // =========================================================================

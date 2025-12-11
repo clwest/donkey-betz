@@ -3580,6 +3580,314 @@ def embed_daily_agent_learning():
 
 
 # =============================================================================
+# Session 417: Comprehensive Agent Activity Embeddings
+# Runs every 30 minutes to embed ALL agent activity:
+# - Dreams (AgentDream)
+# - Hive Mind Sessions (HiveMindSession)
+# - Knowledge Sources (AgentKnowledgeSource) - including non-prefixed ones
+# =============================================================================
+
+@shared_task
+def embed_agent_activity(hours: int = 2):
+    """
+    Session 417: Create embeddings for ALL agent activity within the last N hours.
+
+    This task embeds:
+    1. Agent Dreams - Creative thoughts and ideas
+    2. Hive Mind Sessions - Collective intelligence outputs
+    3. Agent Knowledge Sources - All knowledge (not just [Learned]/[Synthesis] prefixed)
+
+    Runs every 30 minutes to keep embeddings fresh for semantic search.
+    """
+    import asyncio
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db import transaction
+    from core.models_unified_system import Agent, AgentDream, HiveMindSession, AgentKnowledgeSource
+    from content.models import Document, DocumentEmbedding, DocumentType, EmbeddingModel, ContentStatus, ContentSource
+    from content.embeddings import EmbeddingManager
+
+    logger.info(f"🧠 [EMBEDDINGS] Starting agent activity embedding (last {hours} hours)...")
+
+    def run_async(coro):
+        """Run an async coroutine synchronously."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        embedding_manager = EmbeddingManager()
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        stats = {
+            'dreams_processed': 0,
+            'dreams_embedded': 0,
+            'hive_minds_processed': 0,
+            'hive_minds_embedded': 0,
+            'knowledge_processed': 0,
+            'knowledge_embedded': 0,
+            'total_embedded': 0,
+            'failed': 0,
+            'total_cost': 0.0
+        }
+
+        # Get or create system user
+        system_user, _ = User.objects.get_or_create(
+            username='system_learning',
+            defaults={
+                'email': 'system@learning.internal',
+                'is_active': True,
+            }
+        )
+
+        # Get or create the agent activity document
+        activity_doc, created = Document.objects.get_or_create(
+            title='Agent Activity Knowledge Base',
+            document_type=DocumentType.KNOWLEDGE_EXTRACT,
+            defaults={
+                'owner': system_user,
+                'description': 'Embedded content from agent dreams, hive minds, and knowledge',
+                'raw_content': '',
+                'processed_content': '',
+                'status': ContentStatus.PROCESSED,
+                'source': ContentSource.WORKFLOW,
+                'tags': ['agent_activity', 'dreams', 'hive_mind', 'knowledge', 'embedded']
+            }
+        )
+
+        # Track existing embeddings to avoid duplicates (by metadata type+id)
+        existing_embeddings = set()
+        for emb in DocumentEmbedding.objects.filter(document=activity_doc).values('metadata'):
+            if emb['metadata']:
+                key = f"{emb['metadata'].get('type', '')}_{emb['metadata'].get('id', '')}"
+                existing_embeddings.add(key)
+
+        next_index = DocumentEmbedding.objects.filter(document=activity_doc).count()
+
+        # =================================================================
+        # 1. EMBED AGENT DREAMS
+        # =================================================================
+        recent_dreams = AgentDream.objects.filter(
+            dreamed_at__gte=cutoff
+        ).select_related('agent')
+
+        for dream in recent_dreams:
+            dream_key = f"dream_{dream.id}"
+            if dream_key in existing_embeddings:
+                continue  # Already embedded
+
+            text_parts = [
+                f"Agent Dream: {dream.title or 'Untitled'}",
+                f"Agent: {dream.agent.name if dream.agent else 'Unknown'}",
+                f"Type: {dream.dream_type}",
+                f"Content: {dream.content or 'No content'}",
+                f"Topics: {', '.join(dream.related_topics) if dream.related_topics else 'None'}",
+                f"Inspiration: {dream.inspiration_source or 'Unknown'}",
+                f"Vividness: {dream.vividness_score:.2f}" if dream.vividness_score else "",
+                f"Creativity: {dream.creativity_score:.2f}" if dream.creativity_score else "",
+                f"Created: {dream.dreamed_at.isoformat()}"
+            ]
+            text = "\n".join([p for p in text_parts if p])
+
+            result = run_async(
+                embedding_manager.generate_embedding(text, EmbeddingModel.OPENAI_SMALL)
+            )
+
+            if result.success:
+                with transaction.atomic():
+                    DocumentEmbedding.objects.create(
+                        document=activity_doc,
+                        chunk_index=next_index,
+                        embedding_model=EmbeddingModel.OPENAI_SMALL,
+                        chunk_text=text,
+                        chunk_size=len(text),
+                        embedding_vector=result.embedding,
+                        embedding_dimension=result.dimension,
+                        processing_time_ms=result.processing_time_ms,
+                        embedding_cost=result.cost,
+                        metadata={
+                            'type': 'dream',
+                            'id': str(dream.id),
+                            'agent': dream.agent.name if dream.agent else None,
+                            'dream_type': dream.dream_type,
+                            'date': dream.dreamed_at.isoformat()
+                        }
+                    )
+                next_index += 1
+                stats['dreams_embedded'] += 1
+                stats['total_embedded'] += 1
+                stats['total_cost'] += float(result.cost)
+            else:
+                stats['failed'] += 1
+
+            stats['dreams_processed'] += 1
+
+        # =================================================================
+        # 2. EMBED HIVE MIND SESSIONS
+        # =================================================================
+        recent_hive_minds = HiveMindSession.objects.filter(
+            created_at__gte=cutoff,
+            status='completed'
+        )
+
+        for session in recent_hive_minds:
+            session_key = f"hive_mind_{session.id}"
+            if session_key in existing_embeddings:
+                continue
+
+            # Get participant names
+            participant_names = []
+            if session.participant_ids:
+                participants = Agent.objects.filter(id__in=session.participant_ids)
+                participant_names = [p.name for p in participants]
+
+            text_parts = [
+                f"Hive Mind Session: {session.conversation_topic or session.question}",
+                f"Mode: {session.session_mode}",
+                f"Participants: {', '.join(participant_names) if participant_names else 'Unknown'}",
+                f"Question: {session.question}",
+                f"Context: {session.context}" if session.context else "",
+                f"Synthesis: {session.synthesis}" if session.synthesis else "",
+                f"Summary: {session.synthesis_summary}" if session.synthesis_summary else "",
+                f"Contributions: {session.contribution_count}",
+                f"Created: {session.created_at.isoformat()}"
+            ]
+            text = "\n".join([p for p in text_parts if p])
+
+            result = run_async(
+                embedding_manager.generate_embedding(text, EmbeddingModel.OPENAI_SMALL)
+            )
+
+            if result.success:
+                with transaction.atomic():
+                    DocumentEmbedding.objects.create(
+                        document=activity_doc,
+                        chunk_index=next_index,
+                        embedding_model=EmbeddingModel.OPENAI_SMALL,
+                        chunk_text=text,
+                        chunk_size=len(text),
+                        embedding_vector=result.embedding,
+                        embedding_dimension=result.dimension,
+                        processing_time_ms=result.processing_time_ms,
+                        embedding_cost=result.cost,
+                        metadata={
+                            'type': 'hive_mind',
+                            'id': str(session.id),
+                            'mode': session.session_mode,
+                            'participants': participant_names,
+                            'date': session.created_at.isoformat()
+                        }
+                    )
+                next_index += 1
+                stats['hive_minds_embedded'] += 1
+                stats['total_embedded'] += 1
+                stats['total_cost'] += float(result.cost)
+            else:
+                stats['failed'] += 1
+
+            stats['hive_minds_processed'] += 1
+
+        # =================================================================
+        # 3. EMBED ALL KNOWLEDGE SOURCES (not just prefixed ones)
+        # =================================================================
+        recent_knowledge = AgentKnowledgeSource.objects.filter(
+            first_discovered_at__gte=cutoff,
+            is_active=True
+        ).select_related('agent')
+
+        for knowledge in recent_knowledge:
+            knowledge_key = f"knowledge_{knowledge.id}"
+            if knowledge_key in existing_embeddings:
+                continue
+
+            text_parts = [
+                f"Agent Knowledge: {knowledge.title}",
+                f"Agent: {knowledge.agent.name if knowledge.agent else 'Unknown'}",
+                f"Type: {knowledge.knowledge_type}",
+                f"Summary: {knowledge.summary or 'No summary'}",
+                f"Insights: {', '.join(str(i) for i in knowledge.key_insights) if knowledge.key_insights else 'None'}",
+                f"Confidence: {knowledge.confidence_score:.2f}" if knowledge.confidence_score else "",
+                f"Relevance: {knowledge.relevance_score:.2f}" if knowledge.relevance_score else "",
+                f"Data Points: {knowledge.data_points_count}",
+                f"Discovered: {knowledge.first_discovered_at.isoformat()}"
+            ]
+            text = "\n".join([p for p in text_parts if p])
+
+            result = run_async(
+                embedding_manager.generate_embedding(text, EmbeddingModel.OPENAI_SMALL)
+            )
+
+            if result.success:
+                with transaction.atomic():
+                    DocumentEmbedding.objects.create(
+                        document=activity_doc,
+                        chunk_index=next_index,
+                        embedding_model=EmbeddingModel.OPENAI_SMALL,
+                        chunk_text=text,
+                        chunk_size=len(text),
+                        embedding_vector=result.embedding,
+                        embedding_dimension=result.dimension,
+                        processing_time_ms=result.processing_time_ms,
+                        embedding_cost=result.cost,
+                        metadata={
+                            'type': 'knowledge',
+                            'id': str(knowledge.id),
+                            'agent': knowledge.agent.name if knowledge.agent else None,
+                            'knowledge_type': knowledge.knowledge_type,
+                            'date': knowledge.first_discovered_at.isoformat()
+                        }
+                    )
+                next_index += 1
+                stats['knowledge_embedded'] += 1
+                stats['total_embedded'] += 1
+                stats['total_cost'] += float(result.cost)
+            else:
+                stats['failed'] += 1
+
+            stats['knowledge_processed'] += 1
+
+        # Update document timestamp
+        activity_doc.save()
+
+        # Broadcast completion
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'activity_embeddings_complete',
+                'stats': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except:
+            pass
+
+        logger.info(
+            f"🧠 [EMBEDDINGS] Agent activity embedding complete: "
+            f"{stats['dreams_embedded']}/{stats['dreams_processed']} dreams, "
+            f"{stats['hive_minds_embedded']}/{stats['hive_minds_processed']} hive minds, "
+            f"{stats['knowledge_embedded']}/{stats['knowledge_processed']} knowledge, "
+            f"${stats['total_cost']:.4f} cost"
+        )
+
+        return {
+            'status': 'success',
+            'stats': stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🧠 [EMBEDDINGS] Agent activity embedding failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # =============================================================================
 
@@ -3610,14 +3918,13 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
     logger.info("💬 [CONVERSATIONS] Starting agent conversation cycle...")
 
     try:
-        # Get agents that have knowledge
-        agents_with_knowledge = Agent.objects.filter(
-            is_active=True,
-            knowledge_sources__isnull=False
-        ).distinct()[:20]
+        # Session 417: Get ALL active agents, not just those with knowledge
+        # Agents can converse based on their specialty/description even without
+        # accumulated knowledge. This ensures all 31 agents participate.
+        eligible_agents = Agent.objects.filter(is_active=True)[:30]
 
-        if agents_with_knowledge.count() < 2:
-            logger.warning("💬 [CONVERSATIONS] Need at least 2 agents with knowledge")
+        if eligible_agents.count() < 2:
+            logger.warning("💬 [CONVERSATIONS] Need at least 2 active agents")
             return {'status': 'skipped', 'reason': 'insufficient_agents'}
 
         stats = {
@@ -3678,8 +3985,8 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
         client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
         for _ in range(max_conversations):
-            # Pick two random agents with learning connections
-            agents_list = list(agents_with_knowledge)
+            # Pick two random agents
+            agents_list = list(eligible_agents)
             if len(agents_list) < 2:
                 break
 
@@ -3701,16 +4008,20 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
 
             responder = random.choice(possible_responders)
 
-            # Get a knowledge item to discuss
+            # Get a knowledge item to discuss (or use agent's specialty if no knowledge yet)
             initiator_knowledge = AgentKnowledgeSource.objects.filter(
                 agent=initiator
             ).order_by('-last_updated_at')[:10]
 
-            if not initiator_knowledge.exists():
-                continue
-
-            knowledge_item = random.choice(list(initiator_knowledge))
-            topic = knowledge_item.title or "recent insights"
+            # Session 417: Allow agents without knowledge to participate using their specialty
+            knowledge_item = None
+            if initiator_knowledge.exists():
+                knowledge_item = random.choice(list(initiator_knowledge))
+                topic = knowledge_item.title or "recent insights"
+            else:
+                # Use agent's specialty or description as conversation topic
+                topic = initiator.specialization or initiator.description or f"{initiator.name}'s area of expertise"
+                topic = topic[:100]  # Truncate for safety
 
             # Choose conversation type
             template = random.choice(conversation_templates)
@@ -5863,16 +6174,16 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
         ).values_list('participants__id', flat=True)
         recently_active_ids.update(recent_conversations)
 
-        # Find idle agents with knowledge (so they have something to dream about)
+        # Session 417: Find ALL idle agents (not just those with knowledge)
+        # Agents can dream about their specialty/expertise even without accumulated knowledge
         idle_agents = Agent.objects.filter(
-            is_active=True,
-            knowledge_sources__isnull=False
+            is_active=True
         ).exclude(
             id__in=recently_active_ids
-        ).distinct()[:max_dreamers]
+        )[:max_dreamers]
 
         if not idle_agents.exists():
-            logger.info("💭 [DREAMS] No idle agents with knowledge found")
+            logger.info("💭 [DREAMS] No idle agents found")
             return {'status': 'skipped', 'reason': 'no_idle_agents'}
 
         stats = {
@@ -5933,13 +6244,13 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
         client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
         for agent in idle_agents:
-            # Get agent's recent knowledge for inspiration
+            # Get agent's recent knowledge for inspiration (if any)
             knowledge_items = AgentKnowledgeSource.objects.filter(
                 agent=agent
             ).order_by('-last_updated_at')[:10]
 
-            if not knowledge_items.exists():
-                continue
+            # Session 417: Allow agents without knowledge to dream using their specialty
+            has_knowledge = knowledge_items.exists()
 
             stats['agents_dreaming'] += 1
 
@@ -5958,27 +6269,35 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                 pass
 
             for _ in range(dreams_per_agent):
-                # Pick a random knowledge item as inspiration
+                # Pick a random knowledge item as inspiration (or use agent specialty)
                 # Session 249: Prefer topics that users have reacted positively to
-                knowledge_list = list(knowledge_items)
-                if preferred_topics:
-                    # Sort knowledge by whether they match preferred topics
-                    def topic_score(k):
-                        title = (k.title or '').lower()
-                        for i, pt in enumerate(preferred_topics):
-                            if pt.lower() in title or title in pt.lower():
-                                return len(preferred_topics) - i  # Higher score for higher preference
-                        return 0
-                    knowledge_list.sort(key=topic_score, reverse=True)
-                    # 60% chance to pick from top 3, 40% random
-                    if random.random() < 0.6 and len(knowledge_list) > 3:
-                        knowledge = random.choice(knowledge_list[:3])
+                # Session 417: Allow agents without knowledge to dream using their specialty
+                knowledge = None
+                topic = None
+
+                if has_knowledge:
+                    knowledge_list = list(knowledge_items)
+                    if preferred_topics:
+                        # Sort knowledge by whether they match preferred topics
+                        def topic_score(k):
+                            title = (k.title or '').lower()
+                            for i, pt in enumerate(preferred_topics):
+                                if pt.lower() in title or title in pt.lower():
+                                    return len(preferred_topics) - i  # Higher score for higher preference
+                            return 0
+                        knowledge_list.sort(key=topic_score, reverse=True)
+                        # 60% chance to pick from top 3, 40% random
+                        if random.random() < 0.6 and len(knowledge_list) > 3:
+                            knowledge = random.choice(knowledge_list[:3])
+                        else:
+                            knowledge = random.choice(knowledge_list)
                     else:
                         knowledge = random.choice(knowledge_list)
+                    topic = knowledge.title or knowledge.source_type or "general insights"
                 else:
-                    knowledge = random.choice(knowledge_list)
-
-                topic = knowledge.title or knowledge.source_type or "general insights"
+                    # Session 417: No knowledge yet - use agent's specialty as dream topic
+                    topic = agent.specialization or agent.description or f"{agent.name}'s expertise"
+                    topic = topic[:100]  # Truncate for safety
 
                 # Session 249: Pick dream type using weighted random selection
                 # instead of uniform random
@@ -6004,10 +6323,15 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                 stats['dream_types'][dream_type] = stats['dream_types'].get(dream_type, 0) + 1
 
                 # Generate the dream using GPT
+                # Session 417: Handle agents without knowledge gracefully
+                background_knowledge = 'Various insights and learnings from your specialty'
+                if knowledge and knowledge.summary:
+                    background_knowledge = knowledge.summary[:500]
+
                 system_prompt = f"""You are {agent.name}, an AI agent specialized in {agent.specialization or 'creative thinking'}.
 You are in a relaxed, creative state - dreaming up new ideas while idle.
 
-Your background knowledge: {knowledge.summary[:500] if knowledge.summary else 'Various insights and learnings'}
+Your background knowledge: {background_knowledge}
 
 Guidelines:
 - Be creative, imaginative, and playful

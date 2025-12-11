@@ -226,6 +226,13 @@ from core.views_agent_learning import (
     validate_implementation,
     rate_dream,
     get_validation_metrics,
+    # Session 417: Agent Profile
+    get_agent_profile,
+    # Session 417: Activity Detail endpoints
+    get_conversation_detail,
+    get_hivemind_detail,
+    get_decision_detail,
+    get_dream_detail,
 )
 
 # Session 250: Hive Mind Mode
@@ -1437,6 +1444,12 @@ urlpatterns = [
     path('api/ai/configuration/', ai_configuration, name='ai-configuration'),
     path('api/agents/', all_agents_list, name='agents-list'),  # Session 267: Add agents list endpoint for sci-fi features
     path('api/agents/assigned/', agents_assigned, name='agents-assigned'),
+    path('api/agents/<uuid:agent_id>/profile/', get_agent_profile, name='agent-profile'),  # Session 417: Agent Profile
+    # Session 417: Detail endpoints for conversations, decisions, dreams, hivemind
+    path('api/conversations/<uuid:conversation_id>/', get_conversation_detail, name='conversation-detail'),
+    path('api/hivemind/<uuid:session_id>/', get_hivemind_detail, name='hivemind-detail'),
+    path('api/decisions/<uuid:decision_id>/', get_decision_detail, name='decision-detail'),
+    path('api/dreams/<uuid:dream_id>/', get_dream_detail, name='dream-detail'),
     path('api/commands/execute/', execute_command, name='execute-command'),
 
     # Session 206: Preferences Dashboard APIs
