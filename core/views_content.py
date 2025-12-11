@@ -685,7 +685,7 @@ The journey toward excellence in {topic.lower()} is ongoing, requiring dedicatio
         })
         
     except Exception as e:
-        print(f"Error creating blog content: {e}")
+        logger.error(f"Error creating blog content: {e}")
         return Response({
             'success': False,
             'error': f'Failed to generate blog content: {str(e)}'
@@ -759,7 +759,7 @@ def generate_social_media_post(request):
         })
         
     except Exception as e:
-        print(f"Error creating social content: {e}")
+        logger.error(f"Error creating social content: {e}")
         return Response({
             'success': False,
             'error': f'Failed to generate social content: {str(e)}'

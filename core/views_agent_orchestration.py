@@ -130,11 +130,9 @@ def execute_agent(request):
     from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
     from agents.tasks import execute_agent as execute_agent_task
     
-    # DEBUG: This should help identify if this function is being called
-    print("🔥 FIXED EXECUTE_AGENT FUNCTION CALLED!")
     import logging
     logger = logging.getLogger(__name__)
-    logger.error("🔥 FIXED EXECUTE_AGENT FUNCTION CALLED!")
+    logger.debug("execute_agent function called")
     
     user = request.user
     data = json.loads(request.body or b"{}")
