@@ -150,6 +150,7 @@ class Command(BaseCommand):
                         title = title_response.choices[0].message.content.strip('"\'')[:200]
 
                         # Create the dream with correct fields
+                        vividness = random.uniform(0.6, 0.9)
                         dream = AgentDream.objects.create(
                             agent=agent,
                             title=title,
@@ -157,12 +158,25 @@ class Command(BaseCommand):
                             dream_type=dream_type,
                             inspiration_source='force_cycle',
                             related_topics=[specialty],
-                            vividness_score=random.uniform(0.6, 0.9),
+                            vividness_score=vividness,
                             creativity_score=random.uniform(0.6, 0.9),
                         )
 
                         self.stdout.write(self.style.SUCCESS(f"  Created dream: {title[:40]}..."))
                         stats['dreams_created'] += 1
+
+                        # Session 419: Send Discord notification
+                        try:
+                            from core.services.discord_notifications import discord_notify
+                            discord_notify.send_dream(
+                                agent_name=agent.name,
+                                dream_title=title,
+                                dream_content=dream_content,
+                                dream_type=dream_type,
+                                vividness=vividness
+                            )
+                        except Exception:
+                            pass  # Don't fail the cycle if Discord is down
 
                     except Exception as e:
                         self.stdout.write(self.style.ERROR(f"  Error creating dream: {e}"))
@@ -244,6 +258,18 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"  Created session about: {topic[:40]}..."))
                     stats['conversations_created'] += 1
 
+                    # Session 419: Send Discord notification
+                    try:
+                        from core.services.discord_notifications import discord_notify
+                        discord_notify.send_conversation(
+                            participants=[agent1.name, agent2.name],
+                            topic=topic,
+                            synthesis=conversation_content,
+                            mode='conversation'
+                        )
+                    except Exception:
+                        pass  # Don't fail the cycle if Discord is down
+
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"  Error creating session: {e}"))
                     stats['errors'].append(f"{agent1.name}-{agent2.name} session: {e}")
@@ -305,17 +331,31 @@ class Command(BaseCommand):
                     title = title_response.choices[0].message.content.strip('"\'')[:200]
 
                     # Create AgentKnowledgeSource
+                    confidence = random.uniform(0.7, 0.95)
                     knowledge = AgentKnowledgeSource.objects.create(
                         agent=agent,
                         title=title,
                         knowledge_type='best_practice',
                         summary=knowledge_content,
-                        confidence_score=random.uniform(0.7, 0.95),
+                        confidence_score=confidence,
                         relevance_score=random.uniform(0.7, 0.95),
                     )
 
                     self.stdout.write(self.style.SUCCESS(f"  Created knowledge: {title[:40]}..."))
                     stats['knowledge_created'] += 1
+
+                    # Session 419: Send Discord notification
+                    try:
+                        from core.services.discord_notifications import discord_notify
+                        discord_notify.send_knowledge(
+                            agent_name=agent.name,
+                            title=title,
+                            summary=knowledge_content,
+                            knowledge_type='best_practice',
+                            confidence=confidence
+                        )
+                    except Exception:
+                        pass  # Don't fail the cycle if Discord is down
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"  Error creating knowledge: {e}"))

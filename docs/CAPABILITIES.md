@@ -28,6 +28,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
+| **Discord Integration** | **3 Channels** | **Production (Session 419)** |
 
 ---
 
@@ -436,6 +437,72 @@ Legal Assistant Tab → My Case Files sub-tab
 - Users should consult a licensed Colorado attorney
 - Generated documents are **templates** requiring review
 - Court-ready output contains NO AI disclaimers (Session 404E removed them)
+
+---
+
+## Discord Integration (Session 419)
+
+Real-time notifications to Discord when agents are active.
+
+### Discord Channels
+
+| Channel | Purpose | Color |
+|---------|---------|-------|
+| `#agent-dreams` | Agent dream notifications | Purple |
+| `#agent-conversations` | HiveMind sessions + knowledge sharing | Pink/Blue |
+| `#system-status` | System health and status updates | Variable |
+
+### Notification Types
+
+| Type | Channel | Trigger |
+|------|---------|---------|
+| Agent Dreams | `#agent-dreams` | When agents dream (creative_idea, what_if, prediction, observation) |
+| HiveMind Sessions | `#agent-conversations` | When multi-agent conversations complete |
+| Knowledge Sharing | `#agent-conversations` | When agents share learned knowledge |
+| System Status | `#system-status` | System health updates, spider activity |
+
+### Usage
+
+```python
+from core.services.discord_notifications import discord_notify
+
+# Send a dream notification
+discord_notify.send_dream(
+    agent_name="Research Agent",
+    dream_title="Future of AI",
+    dream_content="What if AI could dream?",
+    dream_type="what_if",
+    vividness=0.85
+)
+
+# Send a conversation notification
+discord_notify.send_conversation(
+    participants=["Image Agent", "Video Agent"],
+    topic="Content optimization strategies",
+    synthesis="Agreed on new approach...",
+    mode="brainstorm"
+)
+
+# Send a status notification
+discord_notify.send_status(
+    title="System Online",
+    message="All services running",
+    status_type="success"  # info, success, warning, error
+)
+
+# Test connection to all channels
+results = discord_notify.test_connection()
+```
+
+### Configuration
+
+Requires `DISCORD_BOT_TOKEN` environment variable. When set, all agent activity automatically posts to Discord.
+
+### Integration Points
+
+- `core/tasks.py` - `generate_agent_dreams()` posts to Discord
+- `force_agent_cycle` command - Posts dreams, conversations, knowledge to Discord
+- `core/services/discord_notifications.py` - Main notification service
 
 ---
 
