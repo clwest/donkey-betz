@@ -162,6 +162,18 @@ From running `embed_agent_activity` backfill:
 
 ---
 
+## Additional Work: Code Cleanup
+
+Converted debug `print()` statements to proper logging:
+
+| File | Change |
+|------|--------|
+| `core/views_legal.py` | 7 prints → logger.debug/warning/info |
+| `core/views_agent_orchestration.py` | Removed noisy "FIXED" debug prints |
+| `core/views_content.py` | 2 error prints → logger.error |
+
+---
+
 ## Next Session Suggestions
 
 1. Add knowledge items as clickable (currently only dreams/convos/decisions)

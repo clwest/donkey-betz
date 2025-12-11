@@ -29,6 +29,10 @@
 - Fixed HiveMindSession creation (wrong field names in cached .pyc)
 - Cleared Python cache to resolve model field mismatches
 
+### 5. Code Cleanup
+- Converted 10+ debug `print()` statements to proper `logger` calls
+- Cleaned up `views_legal.py`, `views_agent_orchestration.py`, `views_content.py`
+
 ---
 
 ## System Health (Session 417)
