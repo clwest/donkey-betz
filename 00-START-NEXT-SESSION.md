@@ -1,45 +1,41 @@
 # Start Next Session Here
 
-**Last Session:** 413 - Agent Conversation Fix + Database Recovery
+**Last Session:** 414 - My Case Files Fix + PA UI Navigation
 **Date:** December 10, 2025
-**Status:** Fixed duplicate replies bug, added reasoning model timeouts, restored database
+**Status:** Fixed authentication bug, added UI navigation guidance to Personal Assistant
 
 ---
 
-## Session 413 Accomplishments
+## Session 414 Accomplishments
 
-### 1. Fixed Agent Conversation Duplicate Replies Bug
+### 1. Fixed "My Case Files" Tab
 
-**Problem:** Conversations showed same agent replying multiple times in a row.
+**Problem:** Tab showed empty state - documents wouldn't load.
 
-**Root Cause:** Double-swap in empty response handling - swapped on empty AND after successful message.
+**Root Cause:** Session 403 code used plain `fetch()` instead of `authenticatedFetch()`.
 
-**Fix:** `core/tasks.py:3918-3934` - Removed swap on empty, only swap after successful messages.
+**Fix:** Changed 5 fetch calls in `legal_assistant_panel.html` to use `authenticatedFetch()`:
+- `loadLegalCaseFiles()`
+- `uploadLegalCaseFile()`
+- `viewLegalCaseFile()`
+- `analyzeLegalCaseFile()`
+- `deleteLegalCaseFile()`
 
-### 2. Added GPT-5 Reasoning Model Timeouts
+### 2. Added PA UI Navigation Guide
 
-| Location | Timeout | Tokens |
-|----------|---------|--------|
-| Conversation messages | 120s | 1000 |
-| Conclusion | 90s | 600 |
-| Multi-agent panel | 120s | 2000 |
-| Dreams | 120s | 1000 |
-| Dream titles | 60s | 500 |
+**Problem:** Personal Assistant couldn't direct users to platform features.
 
-### 3. Database Recovery
+**Fix:** Added `UI_NAVIGATION_GUIDE` with 6 feature categories:
+| Category | Keywords | Navigation |
+|----------|----------|------------|
+| Spider | spider, crawl, data collection | Intelligence tab |
+| Conversations | conversations, agent chat | Social tab |
+| Dreams | dreams, dreaming | Social tab > Dreams |
+| Boardroom | boardroom, decisions, policies | Decisions tab |
+| Evolution | evolution, xp, levels | Growth tab |
+| Hive Mind | collective, shared learning | Hive Mind tab |
 
-Restored from Dec 7 backup after data loss discovery:
-- 1,725 conversations (was 671)
-- 1,851 dreams (was 793)
-- 11,735 spider data (was 10,600)
-- 50 shared knowledge (was 0)
-
-### 4. Daily Backup Script
-
-Created `scripts/daily_backup.sh` - run via cron at 2am:
-```bash
-0 2 * * * /Users/donkeyking/development/unified-donkey-betz/scripts/daily_backup.sh
-```
+Now asking "how do I see spider data?" gives instant helpful guidance!
 
 ---
 
@@ -63,18 +59,9 @@ open http://localhost:8000/ai-studio/
 ### Priority 1: Test Legal Assistant Motion Analysis
 Need to test denied motion flow with actual document upload. Ensure context flows correctly.
 
-### Priority 2: Fix "My Case Files" Tab
-User reported this view broke. Likely frontend JS issue.
-
-### Priority 3: Add PA Keywords for System Features
-Personal Assistant can't route to:
-- Spider data collection ("spider", "crawl")
-- Agent conversations/dreams viewing
-- Boardroom/decisions access
-
 ---
 
-## System Health (Session 413)
+## System Health (Session 414)
 
 | Component | Status | Count |
 |-----------|--------|-------|
@@ -86,6 +73,7 @@ Personal Assistant can't route to:
 | Agent Dreams | Restored | 1,851 |
 | Shared Knowledge | Restored | 50 |
 | Canonical Policies | Active | 20+ |
+| UI Navigation Categories | NEW | 6 |
 
 ---
 
@@ -93,20 +81,20 @@ Personal Assistant can't route to:
 
 | File | Change |
 |------|--------|
-| `core/tasks.py` | Fixed empty response swap bug, added timeouts |
-| `scripts/daily_backup.sh` | NEW - Daily backup script |
-| `docs/handoffs/SESSION_413_CONVERSATION_FIX.md` | Session documentation |
+| `ai_core/templates/components/panels/legal_assistant_panel.html` | Fixed 5 fetch() -> authenticatedFetch() |
+| `core/agents/personal_assistant_agent.py` | Added UI_NAVIGATION_GUIDE + _check_ui_navigation() |
+| `docs/handoffs/SESSION_414_MY_CASE_FILES_FIX.md` | Session documentation |
 
 ---
 
 ## Previous Sessions
 
-- **Session 413: Conversation Fix + DB Recovery (THIS SESSION)**
+- **Session 414: My Case Files Fix + PA UI Navigation (THIS SESSION)**
+- Session 413: Conversation Fix + DB Recovery
 - Session 412: Boardroom Decisions Implementation
 - Session 411: System Review + Routing Gap Fix
 - Session 410: Document Threading + Response Session UI
-- Session 409: CaseProfile Auto-Select + OCR Support
 
 ---
 
-**Conversation bug fixed. Agents now properly alternate in discussions.**
+**My Case Files works again. PA now provides UI navigation guidance!**
