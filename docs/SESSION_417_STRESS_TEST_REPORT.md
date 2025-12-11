@@ -16,7 +16,14 @@ The unified-donkey-betz platform was pushed to its limits with concurrent API re
 ### 1. API Throughput Test
 - **100 concurrent requests:** Completed in <1 second (100+ req/sec)
 - **500 concurrent requests:** Completed in 1 second (250 req/sec)
-- **Result:** BLAZING FAST
+- **1000 concurrent requests:** Rate limiter triggered (60 sec cooldown)
+- **Result:** BLAZING FAST until rate limiter kicks in
+
+### 1b. EXTREME API Test (1000 requests)
+- 1000 requests completed in 1.3 seconds
+- Rate limiter activated: `rate_limit_exceeded` after ~750 requests
+- Server remained stable throughout
+- **FINDING:** Rate limiter protects the system at scale
 
 ### 2. Spider Network Activation
 - Queued 15 spiders for concurrent execution
@@ -44,6 +51,18 @@ The unified-donkey-betz platform was pushed to its limits with concurrent API re
 - 56 new embeddings created in one pass
 - Some failures due to rate limiting (expected under load)
 
+### 7. Database Connection Pool Stress
+- **50 concurrent threads:** 0.06s, 0 errors (BLAZING)
+- **200 concurrent threads:** 0.28s, 102 errors
+- **FINDING:** Connection pool maxes out around 100 concurrent connections
+- PostgreSQL default `max_connections` likely set to 100
+
+### 8. Dream Factory Results
+- `force_agent_cycle --dreams-only --dreams-per-agent=3`
+- **101 dreams created** (1 error from token limit)
+- 34 agents × 3 dreams = 102 attempted
+- 99% success rate under load
+
 ---
 
 ## Results Summary
@@ -53,13 +72,29 @@ The unified-donkey-betz platform was pushed to its limits with concurrent API re
 | Metric | Before | After | Change |
 |--------|--------|-------|--------|
 | Agents | 34 | 34 | - |
-| Dreams | 1,979 | 2,028 | **+49** |
-| HiveMind Sessions | 38 | 67 | **+29** |
-| Knowledge Sources | 877 | 910 | **+33** |
+| Dreams | 1,979 | **2,080** | **+101** |
+| HiveMind Sessions | 38 | **68** | **+30** |
+| Knowledge Sources | 877 | **910** | **+33** |
 | Spider Data | 12,119 | 12,119 | - |
 | Embeddings | 2,903 | 2,903+ | - |
 
-*Final counts after all background tasks completed*
+*Final counts after all stress tests completed*
+
+---
+
+## System Limits Discovered
+
+| Resource | Limit | Behavior at Limit |
+|----------|-------|-------------------|
+| API Rate Limit | ~750 req/min | Returns `rate_limit_exceeded`, 60s cooldown |
+| DB Connections | ~100 concurrent | Connection refused errors |
+| GPT-5-mini tokens | 6000 max | `max_tokens` exceeded error |
+| Shell job table | ~500 concurrent | "job table full" warning |
+
+### Mythology Validation
+- Legal documents pass through `_validate_output()` (Session 409)
+- Prevents AI hallucinations in court documents
+- CRITICAL for pro se legal assistant use case
 
 ---
 
