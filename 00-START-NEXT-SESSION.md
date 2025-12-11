@@ -1,79 +1,45 @@
 # Start Next Session Here
 
-**Last Session:** 409 - CaseProfile Auto-Select + OCR Support + Lawyer Review Sent!
+**Last Session:** 413 - Agent Conversation Fix + Database Recovery
 **Date:** December 10, 2025
-**Status:** Motion output sent to REAL Colorado family law attorney for review!
+**Status:** Fixed duplicate replies bug, added reasoning model timeouts, restored database
 
 ---
 
-## Session 409 Accomplishments
+## Session 413 Accomplishments
 
-### MAJOR: CaseProfile Auto-Select Fix
+### 1. Fixed Agent Conversation Duplicate Replies Bug
 
-**Critical bug fixed:** Motion analysis wasn't using CaseProfile data (including opposing counsel info). Conferral emails were addressing respondent instead of opposing counsel.
+**Problem:** Conversations showed same agent replying multiple times in a row.
 
-**Root Cause:** `active_case_id` stored in session was lost after server restarts.
+**Root Cause:** Double-swap in empty response handling - swapped on empty AND after successful message.
 
-**Solution:** Added intelligent fallback - if user has exactly 1 active case, automatically uses it without requiring explicit selection.
+**Fix:** `core/tasks.py:3918-3934` - Removed swap on empty, only swap after successful messages.
 
-**Result:** Conferral emails now correctly address "Taylor" (opposing counsel) instead of "Susannah" (respondent)!
+### 2. Added GPT-5 Reasoning Model Timeouts
 
-### Mythology Validation (Anti-Hallucination)
+| Location | Timeout | Tokens |
+|----------|---------|--------|
+| Conversation messages | 120s | 1000 |
+| Conclusion | 90s | 600 |
+| Multi-agent panel | 120s | 2000 |
+| Dreams | 120s | 1000 |
+| Dream titles | 60s | 500 |
 
-Added `_validate_output()` calls to `LegalDocDrafterAgent` at:
-- Line 1183 in `execute()`
-- Line 2764 in `_execute_denied_motion_pipeline()`
+### 3. Database Recovery
 
-### OCR Support for Scanned PDFs
+Restored from Dec 7 backup after data loss discovery:
+- 1,725 conversations (was 671)
+- 1,851 dreams (was 793)
+- 11,735 spider data (was 10,600)
+- 50 shared knowledge (was 0)
 
-Court docket PDFs are often scanned images. Added OCR fallback:
-- Uses PyMuPDF to render PDF pages to images
-- Uses pytesseract for text extraction
-- Does NOT require poppler (avoids disk space issues)
+### 4. Daily Backup Script
 
-### Document Brain Fixes
-
-1. **Case dropdown** - Fixed API to return `success: true`, frontend to use `data.cases || []`
-2. **Upload auth** - Changed to `authenticatedFetch()` (was plain `fetch()`)
-
----
-
-## Files Modified
-
-| File | Changes |
-|------|---------|
-| `core/agents/legal/legal_doc_drafter_agent.py` | Mythology validation, CaseProfile auto-select |
-| `core/views_legal_cases.py` | Added `success: true` to API responses |
-| `legal_assistant_panel.html` | Document Brain dropdown fix, `authenticatedFetch()` |
-| `core/services/litigation_brain.py` | OCR fallback method |
-| `docs/CAPABILITIES.md` | Updated to Session 409 |
-| `CLAUDE.md` | Updated Recent Sessions |
-
----
-
-## Next Session: 410 - Awaiting Lawyer Feedback
-
-### Priority 1: Address Lawyer Feedback
-Motion was sent to a real Colorado family law attorney. Wait for feedback on:
-- JDF format compliance
-- Legal accuracy
-- Conferral email appropriateness
-- Any suggested improvements
-
-### Priority 2: Fix "My Case Files" Tab
-User reported this view broke during Session 409. Server logs show API returning 200 OK, so likely frontend JS issue. Need to investigate:
-```javascript
-// Check console for errors when clicking My Case Files tab
-loadLegalCaseFiles()  // Line ~1527
+Created `scripts/daily_backup.sh` - run via cron at 2am:
+```bash
+0 2 * * * /Users/donkeyking/development/unified-donkey-betz/scripts/daily_backup.sh
 ```
-
-### Priority 3: Multiple Case Support
-Currently auto-selects only if user has exactly 1 case. Consider:
-- Add case selector dropdown to motion analysis UI
-- Remember last-used case per user
-
-### Priority 4: Disk Space Cleanup
-`brew install poppler` failed - user needs to clean up disk.
 
 ---
 
@@ -83,64 +49,64 @@ Currently auto-selects only if user has exactly 1 case. Consider:
 # Start services
 make start && make celery
 
-# Test CaseProfile auto-select
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python manage.py shell -c "
-from core.models_legal import CaseProfile
-cases = CaseProfile.objects.all()
-for c in cases:
-    print(f'{c.case_number}: {c.petitioner.full_name} v. {c.respondent.full_name}')
-    print(f'  Opposing counsel: {c.get_conferral_recipient()[\"name\"]}')
-"
-
-# Access Legal Assistant
+# Access AI Studio
 open http://localhost:8000/ai-studio/
+
+# Manual backup
+./scripts/daily_backup.sh
 ```
 
 ---
 
-## Verification Steps
+## Next Session Priorities
 
-1. Start server: `make start`
-2. Go to Legal Assistant > Chat tab
-3. Upload a denied motion PDF
-4. Click "Analyze"
-5. Check server logs for: `Session 409: Using user's only active case: 25DR576`
-6. Verify conferral email addresses "Taylor" not "Susannah"
+### Priority 1: Test Legal Assistant Motion Analysis
+Need to test denied motion flow with actual document upload. Ensure context flows correctly.
 
----
+### Priority 2: Fix "My Case Files" Tab
+User reported this view broke. Likely frontend JS issue.
 
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `core/agents/legal/legal_doc_drafter_agent.py` | Motion rewriter with auto-select |
-| `core/services/litigation_brain.py` | OCR extraction |
-| `core/models_legal.py` | CaseProfile, Party, Attorney models |
-| `docs/handoffs/SESSION_409_CASEPROFILE_AUTOSELECT_OCR.md` | Full session details |
+### Priority 3: Add PA Keywords for System Features
+Personal Assistant can't route to:
+- Spider data collection ("spider", "crawl")
+- Agent conversations/dreams viewing
+- Boardroom/decisions access
 
 ---
 
-## Database State
+## System Health (Session 413)
 
-| Model | Count |
-|-------|-------|
-| CaseProfiles | 1 |
-| Parties | 2 (Christopher, Susannah) |
-| Attorneys | 1 (Taylor Hartin) |
-| Children | 1 (Nicolas) |
+| Component | Status | Count |
+|-----------|--------|-------|
+| Agents in Database | Active | 31 |
+| Agents in Router | Routable | 25 |
+| Spider Classes | Registered | 64 |
+| Spider Data | Restored | 11,735 |
+| Agent Conversations | Restored | 1,725 |
+| Agent Dreams | Restored | 1,851 |
+| Shared Knowledge | Restored | 50 |
+| Canonical Policies | Active | 20+ |
+
+---
+
+## Key Files Changed This Session
+
+| File | Change |
+|------|--------|
+| `core/tasks.py` | Fixed empty response swap bug, added timeouts |
+| `scripts/daily_backup.sh` | NEW - Daily backup script |
+| `docs/handoffs/SESSION_413_CONVERSATION_FIX.md` | Session documentation |
 
 ---
 
 ## Previous Sessions
 
-- **Session 409: CaseProfile Auto-Select + OCR (THIS SESSION!)**
-- Session 408: Legal Document Brain
-- Session 407: Document Download Feature
-- Session 406: Case Intake Form + ChatGPT Patches
-- Session 405: ChatGPT Legal Enhancements
-- Session 404: Pro Se Legal Assistant motion rewriter
-- Session 403: Legal Assistant MVP
+- **Session 413: Conversation Fix + DB Recovery (THIS SESSION)**
+- Session 412: Boardroom Decisions Implementation
+- Session 411: System Review + Routing Gap Fix
+- Session 410: Document Threading + Response Session UI
+- Session 409: CaseProfile Auto-Select + OCR Support
 
 ---
 
-**Motion sent to real Colorado lawyer for review! Awaiting feedback.**
+**Conversation bug fixed. Agents now properly alternate in discussions.**

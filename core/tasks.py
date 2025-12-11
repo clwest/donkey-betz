@@ -3894,13 +3894,15 @@ Guidelines:
                     # Use chat.completions for gpt-5-mini with high max_completion_tokens
                     # GPT-5 reasoning models use tokens for internal reasoning first,
                     # so we need ~500+ tokens to ensure room for reasoning + actual output
+                    # Session 413: Added timeout=120 for reasoning model thinking time
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_content}
                         ],
-                        max_completion_tokens=800,  # Higher for GPT-5 reasoning models
+                        max_completion_tokens=1000,  # Session 413: Increased for reasoning models
+                        timeout=120,  # Session 413: 2 min timeout for reasoning model
                     )
 
                     content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
@@ -3913,18 +3915,22 @@ Guidelines:
                     if content.startswith(f"{current_speaker.name}:"):
                         content = content[len(current_speaker.name)+1:].strip()
 
-                    # Session 321: Skip empty messages - don't save if content is empty
-                    # Session 364: DON'T swap on empty - let next iteration try other speaker
-                    # This prevents the bug where initiator responds to themselves
+                    # Session 413: FIX - Empty response handling
+                    # Previously swapped speakers on empty which caused duplicate replies bug
+                    # (e.g., A speaks, B speaks, B empty->swap->A, A speaks = B,B,A sequence)
+                    # Now: DON'T swap on empty - just skip this turn and let the normal
+                    # swap at end of loop maintain proper alternation
                     if not content:
-                        logger.warning(f"💬 [CONVERSATIONS] Empty content from {current_speaker.name}, skipping message {msg_num + 1}")
+                        logger.warning(f"💬 [CONVERSATIONS] Empty content from {current_speaker.name}, skipping turn {msg_num + 1}")
                         consecutive_empty += 1
                         if consecutive_empty >= 2:
                             # Both agents failed to produce content, end conversation
                             logger.warning(f"💬 [CONVERSATIONS] Both agents returned empty, ending conversation early")
                             break
-                        # Swap to other speaker and try again
-                        current_speaker, other_speaker = other_speaker, current_speaker
+                        # Session 413: DO NOT swap here - the swap at end of successful message
+                        # will handle alternation. If we swap here AND there, we get duplicates.
+                        # Just continue to next iteration (same speaker will try again with
+                        # different diversity prompt since msg_num increments)
                         continue
 
                     # Determine message type based on content
@@ -3974,7 +3980,7 @@ Guidelines:
             if messages:
                 # Generate a conclusion
                 try:
-                    # GPT-5 reasoning models need higher token limits for reasoning + output
+                    # Session 413: GPT-5 reasoning models need higher token limits + timeout
                     conclusion_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
@@ -3982,7 +3988,8 @@ Guidelines:
                             {"role": "user", "content": f"Discussion between {initiator.name} and {responder.name} about {topic}:\n\n" +
                                 "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
                         ],
-                        max_completion_tokens=400,
+                        max_completion_tokens=600,  # Session 413: Increased for reasoning
+                        timeout=90,  # Session 413: 90s timeout for reasoning model
                     )
                     conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
                     # Session 359: Validate conclusion for mythology violations
@@ -4440,6 +4447,7 @@ Guidelines:
                         # Session 364: Retry up to 2 times if empty response
                         content = ""
                         for retry in range(2):
+                            # Session 413: Added timeout for reasoning model thinking time
                             response = client.chat.completions.create(
                                 model="gpt-5-mini",
                                 messages=[
@@ -4447,6 +4455,7 @@ Guidelines:
                                     {"role": "user", "content": user_prompt}
                                 ],
                                 max_completion_tokens=2000,  # Session 364: Increased from 500 for reasoning models
+                                timeout=120,  # Session 413: 2 min timeout for reasoning model
                             )
 
                             content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
@@ -6016,7 +6025,7 @@ Guidelines:
 
                 try:
                     # Session 317: GPT-5 reasoning models split tokens between reasoning + output
-                    # Need 1000+ tokens to ensure room for both (like Session 315 fix)
+                    # Session 413: Added timeout for reasoning model thinking time
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
@@ -6024,6 +6033,7 @@ Guidelines:
                             {"role": "user", "content": user_prompt}
                         ],
                         max_completion_tokens=1000,  # Higher for GPT-5 reasoning (Session 317)
+                        timeout=120,  # Session 413: 2 min timeout for reasoning model
                     )
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
@@ -6040,6 +6050,7 @@ Guidelines:
                             dream_content = dream_content[len(prefix):].strip()
 
                     # Session 317: Generate catchy title with adequate tokens for reasoning
+                    # Session 413: Added timeout for reasoning model
                     title_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
@@ -6047,6 +6058,7 @@ Guidelines:
                             {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
                         ],
                         max_completion_tokens=500,  # Higher for GPT-5 reasoning (Session 317)
+                        timeout=60,  # Session 413: 1 min timeout for simple title
                     )
 
                     title = title_response.choices[0].message.content.strip().strip('"\'')[:200] if title_response.choices[0].message.content else "Creative Thought"
