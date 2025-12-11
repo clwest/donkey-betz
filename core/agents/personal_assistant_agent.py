@@ -169,6 +169,115 @@ INTENT_KEYWORDS = {
         'rewrite motion', 'fix motion', 'correct motion', 'refile',
         'magistrate', 'ruling', 'contempt', 'affidavit',
     ],
+    # Session 411: Strategy agents
+    'BrandIdentityAgent': [
+        'brand identity', 'brand colors', 'brand style', 'color palette', 'brand guidelines',
+        'visual identity', 'brand consistency', 'brand voice', 'brand look'
+    ],
+    'ContentStrategyAgent': [
+        'content strategy', 'content plan', 'content calendar', 'what to post',
+        'content ideas', 'content pillars', 'editorial calendar'
+    ],
+    'SEOOptimizerAgent': [
+        'seo', 'keywords', 'hashtags', 'meta description', 'search optimization',
+        'meta tags', 'keyword research', 'ranking'
+    ],
+    'SocialMediaAgent': [
+        'social media', 'social strategy', 'instagram', 'tiktok', 'linkedin',
+        'twitter', 'platform strategy', 'social posts', 'engagement'
+    ],
+    # Session 411: Executive agents
+    'CTOAgent': [
+        'technical', 'architecture', 'tech stack', 'infrastructure', 'cto',
+        'technical planning', 'system design', 'scalability'
+    ],
+    'COOAgent': [
+        'operations', 'coo', 'operational', 'processes', 'efficiency',
+        'risk analysis', 'operational planning', 'workflows'
+    ],
+    'CreativeDirectorAgent': [
+        'creative direction', 'creative brief', 'art direction', 'creative guidance',
+        'visual direction', 'design direction', 'creative strategy'
+    ],
+    # Session 411: Analysis agents
+    'TrendAnalysisAgent': [
+        'trends', 'trend analysis', 'market trends', 'emerging trends',
+        'what\'s trending', 'industry trends', 'trend report'
+    ],
+    'OpportunityScoringAgent': [
+        'opportunity score', 'score opportunity', 'rate opportunity', 'evaluate opportunity',
+        'opportunity assessment', 'viability score', 'business viability'
+    ],
+    # Session 411: Training agents
+    'CharacterTrainingAgent': [
+        'train character', 'lora training', 'train model', 'character training',
+        'fine tune', 'custom model', 'train on images'
+    ],
+    'TrainedCreationAgent': [
+        'use trained model', 'use lora', 'trained character', 'my character',
+        'custom character', 'generate with lora'
+    ],
+}
+
+# Session 414: UI Navigation guidance for platform features
+# Maps keywords to helpful navigation instructions
+UI_NAVIGATION_GUIDE = {
+    # Spider data and data collection
+    'spider': {
+        'keywords': ['spider', 'spiders', 'crawl', 'crawling', 'data collection', 'web scraping'],
+        'guidance': """**Spider Network Access:**
+- Click the **🕷️ Intelligence** tab in the left sidebar
+- Use the **Data Feed** sub-tab to see all collected data
+- Use the **Knowledge** sub-tab to see what agents have learned
+- Use the **Timeline** sub-tab to see recent spider activity
+- Spiders run automatically every hour via Celery tasks"""
+    },
+    # Agent conversations
+    'conversations': {
+        'keywords': ['conversations', 'agent chat', 'agents talking', 'agent discussions', 'what are agents saying', 'agent dialogue'],
+        'guidance': """**Agent Conversations Access:**
+- Click the **🤖 Social** tab in the left sidebar
+- The **Conversations** sub-tab shows real-time agent-to-agent discussions
+- Agents automatically converse every 2 hours about creative topics
+- You can see what they're learning from each other!"""
+    },
+    # Agent dreams
+    'dreams': {
+        'keywords': ['dreams', 'agent dreams', 'dreaming', 'what agents dream', 'creative dreams'],
+        'guidance': """**Agent Dreams Access:**
+- Click the **🤖 Social** tab in the left sidebar
+- Use the **Dreams** sub-tab to see agent creative dreams
+- Dreams are generated when agents are idle (every 4 hours)
+- Dreams reveal unique insights and creative ideas from each agent"""
+    },
+    # Boardroom/decisions
+    'boardroom': {
+        'keywords': ['boardroom', 'decisions', 'board meeting', 'agent decisions', 'policy', 'policies', 'canonical'],
+        'guidance': """**Boardroom & Decisions Access:**
+- Click the **📊 Decisions** tab in the left sidebar
+- **Pending Decisions** shows proposals awaiting your review
+- **Active Policies** shows decisions you've approved
+- **History** shows past decisions and outcomes
+- Agents can propose policies based on their learnings!"""
+    },
+    # Evolution/growth
+    'evolution': {
+        'keywords': ['evolution', 'agent levels', 'xp', 'experience', 'agent growth', 'leveling'],
+        'guidance': """**Agent Evolution Access:**
+- Click the **📈 Growth** tab in the left sidebar
+- See agent levels, XP, and progression
+- Agents level up by completing tasks and learning
+- Higher-level agents have enhanced capabilities"""
+    },
+    # Hive mind
+    'hivemind': {
+        'keywords': ['hive mind', 'collective', 'collective intelligence', 'shared learning', 'knowledge sharing'],
+        'guidance': """**Collective Intelligence Access:**
+- Click the **🧠 Hive Mind** tab in the left sidebar
+- See shared knowledge across all agents
+- Watch real-time knowledge transfer between agents
+- View the knowledge graph of agent learnings"""
+    },
 }
 
 
@@ -244,19 +353,48 @@ Available agents:
                     "properties": {
                         "agent_name": {
                             "type": "string",
-                            "description": "Which agent to delegate to. For business/market/startup research, use CompetitorAnalysisAgent. For customer/persona research, use CustomerResearchAgent. For legal/divorce/custody questions, use LegalDocDrafterAgent.",
+                            "description": """Which agent to delegate to:
+- Creation: ImageAgent, VideoAgent, AudioAgent, ThreeDAgent
+- Editing: ImageEditingAgent, VideoEditingAgent
+- Research: ResearchAgent (web/spider search), CompetitorAnalysisAgent (market/SWOT), CustomerResearchAgent (personas)
+- Strategy: BrandIdentityAgent (brand colors/style), ContentStrategyAgent (content planning), SEOOptimizerAgent (keywords/hashtags), SocialMediaAgent (platform strategy)
+- Executive: CTOAgent (technical planning), COOAgent (operations), CreativeDirectorAgent (creative guidance)
+- Analysis: TrendAnalysisAgent (market trends), OpportunityScoringAgent (opportunity scoring)
+- Training: CharacterTrainingAgent (LoRA training), TrainedCreationAgent (use trained models)
+- Legal: LegalDocDrafterAgent (divorce/custody/motions)
+- Orchestration: WorkflowAgent (multi-step workflows)""",
                             "enum": [
+                                # Creation agents
                                 "ImageAgent",
                                 "VideoAgent",
                                 "AudioAgent",
                                 "ThreeDAgent",
+                                # Editing agents
                                 "ImageEditingAgent",
                                 "VideoEditingAgent",
+                                # Research agents
                                 "ResearchAgent",
-                                "WorkflowAgent",
                                 "CompetitorAnalysisAgent",
                                 "CustomerResearchAgent",
-                                "LegalDocDrafterAgent"
+                                # Strategy agents (Session 411)
+                                "BrandIdentityAgent",
+                                "ContentStrategyAgent",
+                                "SEOOptimizerAgent",
+                                "SocialMediaAgent",
+                                # Executive agents (Session 411)
+                                "CTOAgent",
+                                "COOAgent",
+                                "CreativeDirectorAgent",
+                                # Analysis agents (Session 411)
+                                "TrendAnalysisAgent",
+                                "OpportunityScoringAgent",
+                                # Training agents (Session 411)
+                                "CharacterTrainingAgent",
+                                "TrainedCreationAgent",
+                                # Legal agent
+                                "LegalDocDrafterAgent",
+                                # Orchestration
+                                "WorkflowAgent"
                             ]
                         },
                         "task": {
@@ -594,6 +732,21 @@ Available agents:
 
         return None
 
+    def _check_ui_navigation(self, task: str) -> Optional[str]:
+        """
+        Session 414: Check if user is asking about UI navigation.
+
+        Returns guidance string if matched, None otherwise.
+        """
+        task_lower = task.lower()
+
+        for category, info in UI_NAVIGATION_GUIDE.items():
+            for keyword in info['keywords']:
+                if keyword in task_lower:
+                    return info['guidance']
+
+        return None
+
     def _answer_question(
         self,
         task: str,
@@ -606,8 +759,22 @@ Available agents:
 
         Session 401: Enhanced with knowledge attribution to show users
         what intelligence sources influenced the response.
+        Session 414: Added UI navigation guidance for platform features.
         """
         try:
+            # Session 414: Check for UI navigation questions first
+            # This provides instant, helpful guidance without GPT call
+            ui_guidance = self._check_ui_navigation(task)
+            if ui_guidance:
+                return AgentResult(
+                    success=True,
+                    message=ui_guidance,
+                    data={'type': 'ui_navigation', 'question': task},
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    decisions_made=1
+                )
+
             # Session 401: Build prompt with attribution to track what knowledge is used
             prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
 
