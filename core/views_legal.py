@@ -794,8 +794,7 @@ def upload_litigation_document(request, case_profile_id):
     Upload a document to the litigation brain.
     Automatically processes, classifies, and indexes the document.
     """
-    print(f"[Session 409] upload_litigation_document called: case_profile_id={case_profile_id}")
-    logger.info(f"[Session 409] upload_litigation_document called: case_profile_id={case_profile_id}")
+    logger.info(f"upload_litigation_document called: case_profile_id={case_profile_id}")
     user = request.user
 
     try:
@@ -813,9 +812,9 @@ def upload_litigation_document(request, case_profile_id):
 
         # Get file
         uploaded_file = request.FILES.get('file')
-        print(f"[Session 409] uploaded_file: {uploaded_file}")
+        logger.debug(f"uploaded_file: {uploaded_file}")
         if not uploaded_file:
-            print("[Session 409] No file in request.FILES")
+            logger.warning("No file in request.FILES")
             return Response({
                 'success': False,
                 'error': 'No file provided'
@@ -823,9 +822,9 @@ def upload_litigation_document(request, case_profile_id):
 
         # Validate file type
         filename = uploaded_file.name.lower()
-        print(f"[Session 409] filename: {filename}, size: {uploaded_file.size}")
+        logger.debug(f"filename: {filename}, size: {uploaded_file.size}")
         if not any(filename.endswith(ext) for ext in ['.pdf', '.txt', '.doc', '.docx', '.png', '.jpg', '.jpeg']):
-            print(f"[Session 409] Invalid file type: {filename}")
+            logger.warning(f"Invalid file type: {filename}")
             return Response({
                 'success': False,
                 'error': 'Invalid file type. Supported: PDF, TXT, DOC, DOCX, PNG, JPG'
@@ -840,11 +839,11 @@ def upload_litigation_document(request, case_profile_id):
         filed_date = request.POST.get('filed_date')
         responds_to_id = request.POST.get('responds_to')
         notes = request.POST.get('notes', '')
-        print(f"[Session 409] category={category}, document_type={document_type}, filing_party={filing_party}, litigation_role={litigation_role}")
+        logger.debug(f"category={category}, document_type={document_type}, filing_party={filing_party}, litigation_role={litigation_role}")
 
         # Process the document
         ingestor = get_document_ingestor()
-        print(f"[Session 409] Calling ingestor.process_document...")
+        logger.debug("Calling ingestor.process_document...")
         result = ingestor.process_document(
             case_profile_id=case_profile.id,
             file_content=uploaded_file.read(),
