@@ -1,12 +1,12 @@
 # Start Next Session Here
 
-**Last Session:** 423 - Spider-to-Discord Pipeline
+**Last Session:** 424 - Opportunities Discord Channel
 **Date:** December 11, 2025
-**Status:** Sessions 421, 422 & 423 COMPLETE - Spider notifications live!
+**Status:** Sessions 421-424 COMPLETE - Spider + Opportunity notifications live!
 
 ---
 
-## Sessions 421-423 Accomplishments
+## Sessions 421-424 Accomplishments
 
 ### Session 421: LMSYS Dataset Unlock
 - Unlocked **1M+ conversations** from LMSYS dataset
@@ -34,14 +34,21 @@ New Discord notification methods for spider activity:
 | `send_spider_summary()` | Batch summary for network runs |
 | `send_system_status()` | Generic component status |
 
-**Rate Limiting Strategy:**
-- Batch runs: Only summary notification (prevents 65+ message flood)
-- On-demand runs: Individual activity notification
-- Errors: Always notified immediately
+### Session 424: Opportunities Discord Channel
+New Discord channel for high-value opportunity alerts:
+| Method | Purpose |
+|--------|---------|
+| `send_opportunity()` | High-value opportunity alert (70+/100) |
+| `send_opportunity_summary()` | Opportunity scan summary |
+
+**Features:**
+- Score threshold: 70/100 (7.0/10 normalized)
+- Category emojis + score-based colors
+- Integration with OpportunityScoringAgent
 
 ---
 
-## System Health (Post-Session-423)
+## System Health (Post-Session-424)
 
 | Component | Status | Count |
 |-----------|--------|-------|
@@ -53,7 +60,7 @@ New Discord notification methods for spider activity:
 | Spider Data | Active | 12,250+ |
 | Spider Embeddings | 91% coverage | 11,076+ |
 | **Training Datasets** | **Working** | **12** |
-| **Discord** | **Connected** | **5 channels** |
+| **Discord** | **Connected** | **6 channels** |
 
 ---
 
@@ -81,18 +88,16 @@ python manage.py shell -c "from core.tasks import collect_training_data; collect
 
 ---
 
-## Roadmap: Session 424+
+## Roadmap: Session 425+
 
 See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
-### Next: Session 424 - Opportunities Discord Channel
-- Create `#opportunities` channel in Discord
-- Add `send_opportunity()` method with rich embeds
-- Hook into `OpportunityScoringAgent` output
-- Add score threshold filter (7+/10)
-
-### Quick Wins Remaining
-- **Session 425:** Opportunity Pipeline Automation
+### Next: Session 425 - Opportunity Pipeline Automation
+- Auto-create tasks from high-scoring opportunities
+- Link opportunities to relevant agents
+- Track opportunity outcomes (applied, won, lost)
+- Revenue attribution from opportunities
+- Weekly opportunity digest in #boardroom
 
 ### Discord Bot Build-Out (Sessions 426-429)
 - **Session 426:** Basic Bot Commands (`/status`, `/agents`, `/trending`)
@@ -111,11 +116,13 @@ See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 | #system-status | 1448809955326169149 | System health + spider activity |
 | #agent-learning | 1448819275459465257 | Knowledge sharing (blue) |
 | #boardroom | 1448819855557136595 | Strategic decisions (gold) |
+| **#opportunities** | **1448867150948335777** | **High-value opportunity alerts** |
 
 ---
 
 ## Key Documentation
 
+- **Session 424 Handoff:** `docs/handoffs/SESSION_424_OPPORTUNITIES_DISCORD_CHANNEL.md`
 - **Session 423 Handoff:** `docs/handoffs/SESSION_423_SPIDER_DISCORD_NOTIFICATIONS.md`
 - **Roadmap:** `docs/SESSION_421_ROADMAP.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
@@ -124,7 +131,8 @@ See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
 ## Previous Sessions
 
-- **Session 423: Spider-to-Discord Pipeline (THIS SESSION)**
+- **Session 424: Opportunities Discord Channel (THIS SESSION)**
+- Session 423: Spider-to-Discord Pipeline
 - Session 422: Domain-Specific Training Datasets
 - Session 421: LMSYS Dataset Unlock
 - Session 420: Discord Boardroom + Training Data Spider
@@ -132,4 +140,4 @@ See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
 ---
 
-**Sessions 421-423 COMPLETE - Spider notifications, 12 training datasets, 1M+ LMSYS conversations!**
+**Sessions 421-424 COMPLETE - 6 Discord channels, 12 training datasets, spider + opportunity notifications!**
