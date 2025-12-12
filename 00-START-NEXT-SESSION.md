@@ -31,6 +31,15 @@
   - `/gallery` displays `Image #1 of 142` format
   - `/client-deliver` accepts the sequential number shown in gallery
 
+**Discord Agent Notifications Fix (Late Session 431):**
+- Fixed silent Discord notification failures in `force_agent_cycle` command
+- All agent activity now posts to Discord with proper logging:
+  - Dreams → #agent-dreams ✅
+  - Conversations → #agent-conversations ✅
+  - Strategic discussions → #boardroom ✅
+  - Knowledge → #agent-learning ✅
+- Tested: 68 notifications posted successfully
+
 **New Models (Phase 3):**
 - `DiscordClient` - Tracks clients per server (name, email, channel_id, status, revenue)
 - `ClientDeliverable` - Tracks deliverables sent to clients
@@ -136,6 +145,8 @@ open http://localhost:8000/ai-studio/
 | #opportunities | 1448867150948335777 | Job alerts |
 | #agent-dreams | 1448809858274033684 | Agent dreams |
 | #agent-conversations | 1448809914783895583 | HiveMind sessions |
+| #agent-learning | 1448819275459465257 | Knowledge sharing |
+| #boardroom | 1448819855557136595 | Strategic decisions |
 | #system-status | 1448809955326169149 | System updates |
 
 ---

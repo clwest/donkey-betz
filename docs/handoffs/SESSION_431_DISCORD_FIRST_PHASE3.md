@@ -155,4 +155,31 @@ async def client_deliver(interaction, client_name: str, image_id: int, message: 
 
 ---
 
+---
+
+## Discord Agent Notifications Fix (Late Session 431)
+
+**Problem Identified:**
+- Agent dreams were posting to Discord, but conversations, knowledge, and boardroom updates weren't
+- Root cause: `except Exception: pass` blocks in `force_agent_cycle.py` were silently swallowing errors
+
+**Fix Applied:**
+- Modified `core/management/commands/force_agent_cycle.py`:
+  - Dream notifications (lines 169-184): Added result capture and logging
+  - Conversation notifications (lines 274-297): Added result capture and logging
+  - Boardroom notifications: Added result capture and logging
+  - Knowledge notifications (lines 378-389): Added result capture and logging
+
+**Testing Results:**
+| Notification Type | Count | Channel | Status |
+|-------------------|-------|---------|--------|
+| Dreams | ✓ | #agent-dreams | Working |
+| Conversations | 17 | #agent-conversations | ✅ All posted |
+| Boardroom | 17 | #boardroom | ✅ All posted |
+| Knowledge | 34 | #agent-learning | ✅ All posted |
+
+**Commit:** `5986206` - fix(Session 431): Add Discord notification logging to force_agent_cycle
+
+---
+
 **Handoff prepared for Session 432**
