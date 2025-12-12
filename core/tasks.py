@@ -3024,6 +3024,19 @@ def run_agent_learning_cycle():
                     f"'{knowledge.title[:30]}...' (usefulness: {usefulness:.2f})"
                 )
 
+                # Session 429: Send Discord notification for knowledge transfer
+                try:
+                    from core.services.discord_notifications import discord_notify
+                    discord_notify.send_knowledge(
+                        agent_name=f"{teacher.name} → {student.name}",
+                        title=clean_title[:100],
+                        summary=f"{teacher.name} shared knowledge with {student.name}: {knowledge.summary[:200] if knowledge.summary else 'Knowledge transfer'}",
+                        knowledge_type=knowledge.knowledge_type or 'insight',
+                        confidence=usefulness
+                    )
+                except Exception as discord_err:
+                    logger.debug(f"Discord notification failed: {discord_err}")
+
                 # Only transfer one piece of knowledge per connection per cycle
                 break
 
@@ -4389,6 +4402,18 @@ Guidelines:
                 conversation.message_count = len(messages)
                 conversation.save()
 
+                # Session 429: Send Discord notification for completed conversation
+                try:
+                    from core.services.discord_notifications import discord_notify
+                    discord_notify.send_conversation(
+                        participants=[initiator.name, responder.name],
+                        topic=topic,
+                        synthesis=conclusion,
+                        mode=template['type'].replace('_', ' ')
+                    )
+                except Exception as discord_err:
+                    logger.debug(f"Discord notification failed: {discord_err}")
+
                 # Session 323: Extract decision from conversation
                 try:
                     from core.services.decision_extractor import get_decision_extractor
@@ -4935,6 +4960,18 @@ Provide a 2-3 sentence summary highlighting the key insights and any points of c
                 conversation.quality_score = min(1.0, len(messages) / (max_rounds * len(panel_agents)) * 0.8 + 0.2)
                 conversation.message_count = len(messages)
                 conversation.save()
+
+                # Session 429: Send Discord notification for multi-agent panel
+                try:
+                    from core.services.discord_notifications import discord_notify
+                    discord_notify.send_conversation(
+                        participants=[a.name for a in panel_agents],
+                        topic=topic,
+                        synthesis=conclusion,
+                        mode=template['type'].replace('_', ' ')
+                    )
+                except Exception as discord_err:
+                    logger.debug(f"Discord notification failed: {discord_err}")
 
                 # Extract decision if possible
                 try:
