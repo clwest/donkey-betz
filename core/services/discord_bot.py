@@ -39,12 +39,13 @@ class DonkeyBetzBot(commands.Bot):
     """
 
     def __init__(self):
-        # Set up intents
+        # Set up intents - only use default intents for slash commands
+        # message_content is a privileged intent that requires explicit approval
         intents = discord.Intents.default()
-        intents.message_content = True
+        # Don't enable message_content - we only use slash commands
 
         super().__init__(
-            command_prefix="!",  # Fallback prefix for text commands
+            command_prefix="!",  # Fallback prefix (not used with slash commands)
             intents=intents,
             description="Donkey Betz AI Platform Bot"
         )
