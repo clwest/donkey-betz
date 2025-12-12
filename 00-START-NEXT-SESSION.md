@@ -1,54 +1,60 @@
 # Start Next Session Here
 
-**Last Session:** 419 - Discord Integration
+**Last Session:** 420 - Discord Boardroom + Agent Name Fix + Training Data Spider
 **Date:** December 11, 2025
-**Status:** Discord notifications working - 3 channels connected
+**Status:** 5 Discord channels + Automated Training Data Collection from HuggingFace
 
 ---
 
-## Session 419 Accomplishments
+## Session 420 Accomplishments
 
-### 1. Discord Integration Complete
-- Created `core/services/discord_notifications.py` - Full notification service
-- Integrated with Discord REST API v10
-- Bot token authentication via `DISCORD_BOT_TOKEN` environment variable
-- Rich embeds with color-coded messages
-
-### 2. Discord Channels Configured
+### 1. New Discord Channels
 | Channel | ID | Purpose |
 |---------|-----|---------|
 | `#agent-dreams` | 1448809858274033684 | Agent dream notifications (purple) |
-| `#agent-conversations` | 1448809914783895583 | HiveMind + knowledge sharing (pink/blue) |
+| `#agent-conversations` | 1448809914783895583 | HiveMind sessions (pink) |
 | `#system-status` | 1448809955326169149 | System health updates (variable) |
+| `#agent-learning` | 1448819275459465257 | Knowledge sharing (blue) - **NEW** |
+| `#boardroom` | 1448819855557136595 | Strategic decisions (gold) - **NEW** |
 
-### 3. Integration Points
-- `core/tasks.py` - `generate_agent_dreams()` posts to Discord
-- `force_agent_cycle` command - All 3 phases post to Discord
-- Non-blocking design - Discord failures don't break main operations
+### 2. Automatic Boardroom Notifications
+- HiveMind consensus automatically posts to #boardroom
+- Strategic topic detection for conversations
+- Impact-based coloring (low=blue, medium=orange, high=red)
 
-### 4. Testing Results
-```
-Discord Integration Status:
-  Enabled: True
-  Dreams Channel: Success (HTTP 200)
-  Conversations Channel: Success (HTTP 200)
-  Status Channel: Success (HTTP 200)
-```
+### 3. GPT-5-mini Token Fix
+Fixed empty/short conversation content by increasing token limits:
+| API Call | Old | New |
+|----------|-----|-----|
+| Dream generation | 500 | 1500 |
+| Conversation | 800 | 2000 |
+| Knowledge insight | 400 | 1500 |
+
+### 4. Agent Name Fix
+Conversations now show actual agent names (e.g., "CreativeDirectorAgent:", "VideoAgent:") instead of generic "Agent1:", "Agent2:"
+
+### 5. Training Data Collection Spider (NEW!)
+Created automated training data collection from HuggingFace datasets:
+- **14 datasets configured** (OpenAssistant, Alpaca, SlimOrca, WizardLM, etc.)
+- **290 conversations/run**, **94% high quality**
+- **Celery Beat scheduled**: Daily at 1 AM, Full weekly on Sundays
+- Data automatically feeds into Spider Data Bridge for agent learning
 
 ---
 
-## System Health (Post-Session-419)
+## System Health (Post-Session-420)
 
 | Component | Status | Count |
 |-----------|--------|-------|
 | Agents | Active | 34 |
 | Dreams | Active | 2,080+ |
-| HiveMind Sessions | Working | 85+ |
-| Knowledge Sources | Active | 910+ |
+| HiveMind Sessions | Working | 117+ |
+| Knowledge Sources | Active | 940+ |
 | User Learning | Active | 165 |
-| Spider Data | Active | 12,119+ |
+| Spider Data | Active | 12,250+ |
 | Spider Embeddings | 91% coverage | 11,076+ |
-| **Discord** | **Connected** | **3 channels** |
+| **Training Data** | **NEW** | **150+ records** |
+| **Discord** | **Connected** | **5 channels** |
 
 ---
 
@@ -61,61 +67,57 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Discord notifications
-python manage.py force_agent_cycle --dreams-only --dreams-per-agent=1
+# Run full agent cycle (dreams + conversations + learning)
+python manage.py force_agent_cycle
+
+# Run specific phases
+python manage.py force_agent_cycle --dreams-only
+python manage.py force_agent_cycle --conversations-only
+python manage.py force_agent_cycle --learning-only
 ```
 
 ---
 
-## Session 420 Ideas: Discord Extensions
+## Session 421 Ideas
 
-Now that Discord is integrated, potential enhancements:
+### 1. Training Data Enhancements
+- Accept LMSYS terms on HuggingFace to unlock 1M+ conversation dataset
+- Add more domain-specific datasets (legal, coding, creative writing)
 
-### 1. Spider Activity Notifications
+### 2. Spider Activity Notifications
 - Post to `#system-status` when spiders collect new data
-- Show record counts and sources
 
-### 2. Revenue/Opportunity Alerts
+### 3. Revenue/Opportunity Alerts
 - Create `#opportunities` channel
 - Post when high-value opportunities are scored
 
-### 3. Scheduled Digest Messages
-- Daily summary of agent activity
-- Weekly knowledge accumulation report
-
-### 4. Discord Commands (Bot Interactions)
+### 4. Discord Bot Commands
 - `/status` - Get system health
 - `/agents` - List active agents
-- `/dreams` - Get recent dreams
 - `/trending` - Get trending spider data
 
 ### 5. Two-Way Integration
-- Discord messages trigger AI responses
 - Users can ask the Personal Assistant via Discord
-
-### 6. Agent Evolution Notifications
-- Post when agents level up
-- Announce new skills/abilities
 
 ---
 
 ## Key Documentation
 
+- **Session 420 Handoff:** `docs/handoffs/SESSION_420_DISCORD_BOARDROOM_AGENT_NAMES.md`
 - **Session 419 Handoff:** `docs/handoffs/SESSION_419_DISCORD_INTEGRATION.md`
-- **Capabilities:** `docs/CAPABILITIES.md` (Discord section added)
+- **Capabilities:** `docs/CAPABILITIES.md`
 
 ---
 
 ## Previous Sessions
 
-- **Session 419: Discord Integration (THIS SESSION)**
+- **Session 420: Discord Boardroom + Agent Name Fix (THIS SESSION)**
+- Session 419: Discord Integration
 - Session 418: Stress Test Learning System + Human-in-the-Loop
 - Session 417: Clickable Agent Activity + Stress Test
 - Session 416: Unified Learning System Verification
 - Session 415: Comprehensive System Audit
-- Session 414: My Case Files Fix + PA UI Navigation
-- Session 413: Conversation Fix + DB Recovery
 
 ---
 
-**Discord is LIVE - Agent activity now posts to your server in real-time!**
+**5 Discord channels LIVE - Full agent activity + boardroom decisions posting in real-time!**

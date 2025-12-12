@@ -113,6 +113,7 @@ class Command(BaseCommand):
                         specialty = agent.specialization or agent.description or agent.name
 
                         # GPT-5-mini is a reasoning model: use max_completion_tokens, no temperature
+                        # Needs ~1500 tokens for reasoning + output
                         response = client.chat.completions.create(
                             model="gpt-5-mini",
                             messages=[
@@ -127,7 +128,7 @@ class Command(BaseCommand):
                                     "content": dream_prompt
                                 }
                             ],
-                            max_completion_tokens=500
+                            max_completion_tokens=1500
                         )
 
                         dream_content = response.choices[0].message.content
@@ -145,7 +146,7 @@ class Command(BaseCommand):
                                     "content": dream_content
                                 }
                             ],
-                            max_completion_tokens=100
+                            max_completion_tokens=500  # Increased for reasoning model
                         )
                         title = title_response.choices[0].message.content.strip('"\'')[:200]
 
@@ -221,23 +222,31 @@ class Command(BaseCommand):
                     topic = topic_template.format(specialty=combined_specialty)
 
                     # Generate the conversation
+                    # Note: GPT-5-mini is a reasoning model - needs high max_completion_tokens
+                    # because tokens are split between internal reasoning + visible output
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {
                                 "role": "system",
-                                "content": f"You are simulating a brief conversation between two AI agents:\n"
+                                "content": f"You are simulating a conversation between two AI agents:\n"
                                            f"1. {agent1.name} (specializes in {agent1.specialization or 'general tasks'})\n"
                                            f"2. {agent2.name} (specializes in {agent2.specialization or 'general tasks'})\n\n"
-                                           f"Generate a short 2-turn conversation where they discuss: {topic}\n"
-                                           f"Format: Agent1: [message]\\nAgent2: [message]\\nAgent1: [response]\\nAgent2: [response]"
+                                           f"Generate a 2-turn conversation where they discuss: {topic}\n\n"
+                                           f"IMPORTANT: Use the ACTUAL agent names in the conversation, not 'Agent1' or 'Agent2'.\n"
+                                           f"Format each line as: [AgentName]: [message]\n\n"
+                                           f"Example format:\n"
+                                           f"{agent1.name}: [first message]\n"
+                                           f"{agent2.name}: [response]\n"
+                                           f"{agent1.name}: [follow-up]\n"
+                                           f"{agent2.name}: [conclusion]"
                             },
                             {
                                 "role": "user",
                                 "content": f"Create the conversation about: {topic}"
                             }
                         ],
-                        max_completion_tokens=800
+                        max_completion_tokens=2000  # Increased for reasoning model (was 800)
                     )
 
                     conversation_content = response.choices[0].message.content
@@ -258,7 +267,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"  Created session about: {topic[:40]}..."))
                     stats['conversations_created'] += 1
 
-                    # Session 419: Send Discord notification
+                    # Session 419: Send Discord notification to conversations
                     try:
                         from core.services.discord_notifications import discord_notify
                         discord_notify.send_conversation(
@@ -267,6 +276,17 @@ class Command(BaseCommand):
                             synthesis=conversation_content,
                             mode='conversation'
                         )
+
+                        # Session 420: Also send to boardroom for strategic topics
+                        strategic_keywords = ['strategy', 'future', 'improve', 'best practice', 'common mistake', 'emerging trend']
+                        if any(kw in topic.lower() for kw in strategic_keywords):
+                            discord_notify.send_boardroom_decision(
+                                title=f"Agent Discussion: {topic[:60]}{'...' if len(topic) > 60 else ''}",
+                                decision=conversation_content[:3500],
+                                participants=[agent1.name, agent2.name],
+                                decision_type="strategy",
+                                impact="low"
+                            )
                     except Exception:
                         pass  # Don't fail the cycle if Discord is down
 
@@ -294,6 +314,7 @@ class Command(BaseCommand):
                     specialty = agent.specialization or agent.description or agent.name
 
                     # Generate a knowledge insight
+                    # GPT-5-mini needs high token count for reasoning + output
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
@@ -308,7 +329,7 @@ class Command(BaseCommand):
                                 "content": "Share your most valuable piece of knowledge."
                             }
                         ],
-                        max_completion_tokens=400
+                        max_completion_tokens=1500  # Increased for reasoning model
                     )
 
                     knowledge_content = response.choices[0].message.content
@@ -326,7 +347,7 @@ class Command(BaseCommand):
                                 "content": knowledge_content
                             }
                         ],
-                        max_completion_tokens=100
+                        max_completion_tokens=500  # Increased for reasoning model
                     )
                     title = title_response.choices[0].message.content.strip('"\'')[:200]
 

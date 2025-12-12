@@ -82,6 +82,8 @@ from .specialized.adzuna_spider import AdzunaSpider
 from .specialized.bluesky_spider import BlueSkySpider
 from .specialized.youtube_spider import YouTubeSpider
 from .specialized.discord_spider import DiscordSpider
+# Session 420: Training data spider for HuggingFace conversation datasets
+from .specialized.discord_training_spider import DiscordTrainingSpider
 
 # Session 343: PHASE 1 SPIDER EXPANSION (10 new spiders)
 # Major News Outlets (RSS - No Auth Required)
@@ -493,6 +495,16 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['discord.com/api/v10']
+        })
+
+        # Session 420: Discord Training Data Spider
+        # Fetches conversation data from HuggingFace for agent training
+        # Optional: HUGGINGFACE_TOKEN for higher rate limits
+        self.register_spider('discord_training', DiscordTrainingSpider, {
+            'category': 'training',
+            'priority': 2,
+            'rate_limit': 2.0,
+            'targets': ['huggingface.co/datasets']
         })
 
         # === SESSION 343: PHASE 1 SPIDER EXPANSION (10 new) ===

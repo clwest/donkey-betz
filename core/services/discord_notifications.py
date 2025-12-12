@@ -35,6 +35,8 @@ class DiscordNotificationService:
     CHANNEL_DREAMS = "1448809858274033684"
     CHANNEL_CONVERSATIONS = "1448809914783895583"
     CHANNEL_STATUS = "1448809955326169149"
+    CHANNEL_LEARNING = "1448819275459465257"  # New: Dedicated agent learning channel
+    CHANNEL_BOARDROOM = "1448819855557136595"  # New: Boardroom decisions channel
 
     # Discord API base URL
     API_BASE = "https://discord.com/api/v10"
@@ -182,7 +184,7 @@ class DiscordNotificationService:
     def send_knowledge(self, agent_name: str, title: str, summary: str,
                        knowledge_type: str = "insight", confidence: float = 0.0) -> bool:
         """
-        Send a knowledge learning notification to #agent-conversations.
+        Send a knowledge learning notification to #agent-learning.
 
         Args:
             agent_name: Name of the learning agent
@@ -216,7 +218,7 @@ class DiscordNotificationService:
             }
         }
 
-        return self._send_message(self.CHANNEL_CONVERSATIONS, "", embed=embed)
+        return self._send_message(self.CHANNEL_LEARNING, "", embed=embed)
 
     def send_status(self, title: str, message: str, status_type: str = "info") -> bool:
         """
@@ -271,6 +273,61 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
 
+    def send_boardroom_decision(self, title: str, decision: str, participants: List[str],
+                                decision_type: str = "policy", impact: str = "medium") -> bool:
+        """
+        Send a boardroom decision notification to #boardroom.
+
+        Args:
+            title: Decision title
+            decision: The decision content
+            participants: Agents involved in the decision
+            decision_type: Type (policy, architecture, workflow, strategy)
+            impact: Impact level (low, medium, high, critical)
+        """
+        # Decision type emojis
+        type_emojis = {
+            "policy": "📜",
+            "architecture": "🏗️",
+            "workflow": "⚙️",
+            "strategy": "🎯",
+            "feature": "✨",
+            "process": "🔄",
+        }
+        emoji = type_emojis.get(decision_type, "📋")
+
+        # Impact colors
+        impact_colors = {
+            "low": 0x3498DB,      # Blue
+            "medium": 0xF39C12,   # Orange
+            "high": 0xE74C3C,     # Red
+            "critical": 0x9B59B6, # Purple
+        }
+        color = impact_colors.get(impact, 0x3498DB)
+
+        participant_str = ", ".join(participants[:5])
+        if len(participants) > 5:
+            participant_str += f" +{len(participants) - 5} more"
+
+        embed = {
+            "title": f"{emoji} {title}",
+            "description": decision[:4096],
+            "color": color,
+            "author": {
+                "name": "🏛️ Boardroom Decision"
+            },
+            "fields": [
+                {"name": "Type", "value": decision_type.title(), "inline": True},
+                {"name": "Impact", "value": impact.upper(), "inline": True},
+                {"name": "Decision Makers", "value": participant_str, "inline": False}
+            ],
+            "footer": {
+                "text": "AI Studio Boardroom"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
+
     def test_connection(self) -> dict:
         """
         Test the Discord connection by sending test messages to all channels.
@@ -304,6 +361,24 @@ class DiscordNotificationService:
             status_type="success"
         )
 
+        # Test learning channel
+        results["learning"] = self.send_knowledge(
+            agent_name="Test Agent",
+            title="Test Learning Entry",
+            summary="Testing the new dedicated learning channel!",
+            knowledge_type="insight",
+            confidence=0.9
+        )
+
+        # Test boardroom channel
+        results["boardroom"] = self.send_boardroom_decision(
+            title="Test Boardroom Decision",
+            decision="Testing the new boardroom decisions channel for agent governance!",
+            participants=["CTO Agent", "COO Agent"],
+            decision_type="policy",
+            impact="low"
+        )
+
         return results
 
 
@@ -333,3 +408,9 @@ def send_knowledge_notification(agent_name: str, title: str, summary: str,
 def send_status_notification(title: str, message: str, status_type: str = "info") -> bool:
     """Send a status notification to Discord."""
     return discord_notify.send_status(title, message, status_type)
+
+
+def send_boardroom_notification(title: str, decision: str, participants: List[str],
+                                decision_type: str = "policy", impact: str = "medium") -> bool:
+    """Send a boardroom decision notification to Discord."""
+    return discord_notify.send_boardroom_decision(title, decision, participants, decision_type, impact)
