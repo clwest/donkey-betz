@@ -35,8 +35,9 @@ class DiscordNotificationService:
     CHANNEL_DREAMS = "1448809858274033684"
     CHANNEL_CONVERSATIONS = "1448809914783895583"
     CHANNEL_STATUS = "1448809955326169149"
-    CHANNEL_LEARNING = "1448819275459465257"  # New: Dedicated agent learning channel
-    CHANNEL_BOARDROOM = "1448819855557136595"  # New: Boardroom decisions channel
+    CHANNEL_LEARNING = "1448819275459465257"  # Dedicated agent learning channel
+    CHANNEL_BOARDROOM = "1448819855557136595"  # Boardroom decisions channel
+    CHANNEL_OPPORTUNITIES = "1448867150948335777"  # Session 424: High-value opportunity alerts
 
     # Discord API base URL
     API_BASE = "https://discord.com/api/v10"
@@ -483,6 +484,149 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
 
+    def send_opportunity(self, title: str, score: float, category: str,
+                         potential: str = "", source: str = "",
+                         description: str = "", urgency: str = "normal",
+                         score_scale: int = 100) -> bool:
+        """
+        Send a high-value opportunity notification to #opportunities (Session 424).
+
+        Args:
+            title: Opportunity title
+            score: Opportunity score (0-100 or 0-10 depending on score_scale)
+            category: Category (freelance, digital_products, content, affiliate, etc.)
+            potential: Revenue potential (e.g., "$500-2000/month")
+            source: Data source (e.g., "ProductHunt", "RemoteOK")
+            description: Brief description of the opportunity
+            urgency: Urgency level (low, normal, high, urgent)
+            score_scale: Maximum score value (100 for match_score, 10 for normalized)
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Normalize score to 0-10 scale for display
+        if score_scale == 100:
+            normalized_score = score / 10.0
+            threshold = 70  # 70/100 = 7.0/10
+        else:
+            normalized_score = score
+            threshold = 7.0
+
+        # Only post high-value opportunities (70+/100 or 7+/10)
+        if score < threshold:
+            logger.debug(f"Opportunity '{title}' score {score}/{score_scale} below threshold, not posting")
+            return False
+
+        # Category emojis
+        category_emojis = {
+            "freelance": "💼",
+            "digital_products": "📦",
+            "content": "📝",
+            "affiliate": "🔗",
+            "saas": "☁️",
+            "consulting": "🎯",
+            "education": "📚",
+            "creative": "🎨",
+            "tech": "💻",
+            "finance": "📈",
+            "financial": "📈",
+            "jobs": "💼",
+            "remote_work": "🏠",
+            "crowdfunding": "🚀",
+        }
+        cat_emoji = category_emojis.get(category.lower(), "💡")
+
+        # Score-based colors (using normalized 0-10 scale)
+        if normalized_score >= 9.0:
+            color = 0xFFD700  # Gold - exceptional
+            score_emoji = "🏆"
+        elif normalized_score >= 8.0:
+            color = 0x2ECC71  # Green - excellent
+            score_emoji = "🌟"
+        elif normalized_score >= 7.0:
+            color = 0x3498DB  # Blue - good
+            score_emoji = "✨"
+        else:
+            color = 0x95A5A6  # Gray - moderate
+            score_emoji = "📊"
+
+        # Urgency indicator
+        urgency_indicators = {
+            "low": "",
+            "normal": "",
+            "high": "🔥 ",
+            "urgent": "🚨 ",
+        }
+        urgency_prefix = urgency_indicators.get(urgency, "")
+
+        # Build embed
+        embed = {
+            "title": f"{urgency_prefix}💰 {title[:200]}",
+            "description": description[:2000] if description else "High-value opportunity detected!",
+            "color": color,
+            "author": {
+                "name": f"{cat_emoji} {category.replace('_', ' ').title()} Opportunity"
+            },
+            "fields": [
+                {"name": f"{score_emoji} Score", "value": f"**{normalized_score:.1f}/10**", "inline": True},
+                {"name": "📂 Category", "value": category.replace("_", " ").title(), "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Opportunity Scanner"
+            }
+        }
+
+        # Add optional fields
+        if potential:
+            embed["fields"].append({"name": "💵 Potential", "value": potential, "inline": True})
+
+        if source:
+            embed["fields"].append({"name": "🔍 Source", "value": source, "inline": True})
+
+        return self._send_message(self.CHANNEL_OPPORTUNITIES, "", embed=embed)
+
+    def send_opportunity_summary(self, total_found: int, high_value_count: int,
+                                  top_categories: List[str] = None,
+                                  avg_score: float = 0.0) -> bool:
+        """
+        Send a summary of opportunity scanning to #opportunities (Session 424).
+
+        Args:
+            total_found: Total opportunities found
+            high_value_count: Number of high-value (7+) opportunities
+            top_categories: Most common opportunity categories
+            avg_score: Average opportunity score
+        """
+        # Color based on high-value count
+        if high_value_count >= 5:
+            color = 0xFFD700  # Gold
+            status_emoji = "🏆"
+        elif high_value_count >= 2:
+            color = 0x2ECC71  # Green
+            status_emoji = "✅"
+        else:
+            color = 0x3498DB  # Blue
+            status_emoji = "📊"
+
+        categories_str = ", ".join(top_categories[:5]) if top_categories else "various"
+
+        embed = {
+            "title": f"{status_emoji} Opportunity Scan Complete",
+            "description": f"Found **{high_value_count}** high-value opportunities!",
+            "color": color,
+            "fields": [
+                {"name": "📊 Total Found", "value": str(total_found), "inline": True},
+                {"name": "🌟 High Value (7+)", "value": str(high_value_count), "inline": True},
+                {"name": "📈 Avg Score", "value": f"{avg_score:.1f}/10", "inline": True},
+                {"name": "📂 Top Categories", "value": categories_str, "inline": False},
+            ],
+            "footer": {
+                "text": "AI Studio Opportunity Scanner"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_OPPORTUNITIES, "", embed=embed)
+
     def test_connection(self) -> dict:
         """
         Test the Discord connection by sending test messages to all channels.
@@ -591,3 +735,19 @@ def send_spider_summary_notification(total_spiders: int, successful: int, failed
     """Send a spider batch summary notification to Discord (Session 423)."""
     return discord_notify.send_spider_summary(total_spiders, successful, failed,
                                                total_records, top_topics, duration_seconds)
+
+
+def send_opportunity_notification(title: str, score: float, category: str,
+                                   potential: str = "", source: str = "",
+                                   description: str = "", urgency: str = "normal") -> bool:
+    """Send a high-value opportunity notification to Discord (Session 424)."""
+    return discord_notify.send_opportunity(title, score, category, potential,
+                                            source, description, urgency)
+
+
+def send_opportunity_summary_notification(total_found: int, high_value_count: int,
+                                           top_categories: List[str] = None,
+                                           avg_score: float = 0.0) -> bool:
+    """Send an opportunity scan summary notification to Discord (Session 424)."""
+    return discord_notify.send_opportunity_summary(total_found, high_value_count,
+                                                    top_categories, avg_score)

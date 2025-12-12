@@ -264,20 +264,62 @@ def opportunity_score(request):
 
         # Build response
         scored_opportunities = []
+        high_value_opportunities = []  # Session 424: Track high-value for Discord
         for result in results:
             if result.success:
-                scored_opportunities.append({
+                opp_data = {
                     'opportunity_id': result.opportunity_id,
                     'overall_score': result.overall_score,
                     'profit_potential': result.profit_potential,
                     'suggested_content_types': result.suggested_content_types,
                     'estimated_revenue': float(result.estimated_revenue),
-                })
+                }
+                scored_opportunities.append(opp_data)
+
+                # Session 424: Collect high-value opportunities for Discord (70+/100)
+                if result.overall_score >= 70:
+                    high_value_opportunities.append(opp_data)
+
+        # Session 424: Send high-value opportunities to Discord
+        if high_value_opportunities:
+            try:
+                from core.services.discord_notifications import discord_notify
+                from core.models_unified_system import Opportunity
+
+                for opp_data in high_value_opportunities[:5]:  # Limit to top 5 to avoid flooding
+                    try:
+                        opp = Opportunity.objects.get(id=opp_data['opportunity_id'])
+                        discord_notify.send_opportunity(
+                            title=opp.title or f"Opportunity {opp.id}",
+                            score=opp_data['overall_score'],
+                            category=opp.category or 'general',
+                            potential=opp_data.get('profit_potential', ''),
+                            source=opp.source or '',
+                            description=opp.description[:500] if opp.description else '',
+                        )
+                    except Exception as opp_err:
+                        logger.debug(f"Discord opportunity notification failed: {opp_err}")
+
+                # Send summary
+                avg_score = sum(o['overall_score'] for o in scored_opportunities) / len(scored_opportunities) if scored_opportunities else 0
+                categories = list(set(Opportunity.objects.filter(
+                    id__in=[o['opportunity_id'] for o in scored_opportunities]
+                ).values_list('category', flat=True)))[:5]
+
+                discord_notify.send_opportunity_summary(
+                    total_found=len(scored_opportunities),
+                    high_value_count=len(high_value_opportunities),
+                    top_categories=categories,
+                    avg_score=avg_score
+                )
+            except Exception as discord_err:
+                logger.debug(f"Discord summary notification failed: {discord_err}")
 
         return JsonResponse({
             'success': True,
             'message': f'Scored {len(scored_opportunities)} opportunities',
             'scored_count': len(scored_opportunities),
+            'high_value_count': len(high_value_opportunities),  # Session 424
             'opportunities': scored_opportunities[:10],  # Return top 10
         })
 
