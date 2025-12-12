@@ -1,16 +1,18 @@
 """
-Discord Training Data Spider
-=============================
+Training Data Spider
+====================
 
-Session 420: Collects Discord conversation data for agent training.
+Session 420: Initial training data collection from HuggingFace.
+Session 422: Added domain-specific datasets for specialized agents.
 
 Sources:
-1. HuggingFace Discord datasets (breadlicker45/discord-chat, etc.)
-2. LMSYS Chat Arena conversations (human-AI interactions)
-3. UltraChat dialogues (filtered high-quality)
+1. General AI conversation datasets (OpenAssistant, LMSYS, etc.)
+2. Coding/Programming datasets (Codeforces) - for CTOAgent
+3. Creative Writing datasets (WritingPrompts, Creative_Writing_Multiturn) - for CreativeDirectorAgent
+4. Legal datasets (coming soon) - for LegalDocDrafterAgent
 
-This spider fetches pre-collected Discord and chat data that can be used
-to train agents on conversational patterns, Q&A, and community interactions.
+This spider fetches pre-collected, publicly available datasets that
+are legal and ToS-compliant to use for training specialized agents.
 """
 
 import aiohttp
@@ -92,6 +94,31 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
             'type': 'ai_chat',
         },
         # ============================================================
+        # DOMAIN-SPECIFIC DATASETS (Session 422)
+        # These target specific agents for specialized learning
+        # ============================================================
+        # CODING/PROGRAMMING - For CTOAgent, technical agents
+        'codeforces': {
+            'repo': 'open-r1/codeforces-cots',
+            'config': 'solutions_py',  # Python solutions specifically
+            'description': 'Codeforces competitive programming - 9.5K Python solutions',
+            'type': 'coding',
+            'target_agents': ['CTOAgent', 'ResearchAgent'],
+        },
+        # CREATIVE WRITING - For CreativeDirectorAgent
+        'writingprompts': {
+            'repo': 'euclaise/writingprompts',
+            'description': 'WritingPrompts - 272K creative writing prompts & stories',
+            'type': 'creative',
+            'target_agents': ['CreativeDirectorAgent', 'ContentStrategyAgent'],
+        },
+        'creative_multiturn': {
+            'repo': 'Dampfinchen/Creative_Writing_Multiturn',
+            'description': 'Multi-turn creative writing conversations - 9K high quality',
+            'type': 'creative',
+            'target_agents': ['CreativeDirectorAgent'],
+        },
+        # ============================================================
         # REMOVED DATASETS (404 errors - Session 420 cleanup)
         # - wizard_vicuna: cognitivecomputations/wizard_vicuna_70k_unfiltered
         # - openhermes: teknium/OpenHermes-2.5
@@ -99,6 +126,21 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
         # - airoboros: jondurbin/airoboros-2.2.1
         # - chatbot_arena: lmsys/chatbot_arena_conversations
         # ============================================================
+        # FUTURE DATASETS (Pending - require different API approach)
+        # - pile-of-law: Legal documents (requires Python code, not API)
+        # - legalbench: Legal reasoning tasks (requires Python code)
+        # - financial_phrasebank: Financial sentiment (renamed dataset)
+        # ============================================================
+    }
+
+    # Agent-to-Topic mapping for targeted learning (Session 422)
+    AGENT_TOPIC_MAPPING = {
+        'CTOAgent': ['coding', 'programming', 'python', 'algorithm', 'data structure'],
+        'CreativeDirectorAgent': ['creative', 'story', 'writing', 'narrative', 'fiction'],
+        'LegalDocDrafterAgent': ['legal', 'law', 'court', 'motion', 'contract'],
+        'ResearchAgent': ['research', 'analysis', 'data', 'study', 'investigation'],
+        'ContentStrategyAgent': ['content', 'strategy', 'marketing', 'engagement'],
+        'BusinessContentStrategyAgent': ['business', 'strategy', 'market', 'revenue'],
     }
 
     # Keywords that indicate high-quality training data
@@ -150,7 +192,8 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
                         conversations = await self._fetch_dataset(
                             session,
                             dataset_info['repo'],
-                            dataset_info['type']
+                            dataset_info['type'],
+                            dataset_info.get('config', 'default')
                         )
                         if conversations:
                             all_conversations.extend(conversations)
@@ -175,7 +218,7 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
             return None
 
     async def _fetch_dataset(self, session: aiohttp.ClientSession, repo: str,
-                            data_type: str) -> List[Dict[str, Any]]:
+                            data_type: str, config: str = 'default') -> List[Dict[str, Any]]:
         """Fetch samples from a HuggingFace dataset"""
         conversations = []
 
@@ -192,12 +235,14 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
 
             # Get first rows (samples)
             # HuggingFace datasets API allows fetching rows
-            rows_url = f"{self.base_url}/rows?dataset={repo}&config=default&split=train&offset=0&length=100"
+            # Use random offset for variety (0-1000)
+            offset = random.randint(0, 1000)
+            rows_url = f"{self.base_url}/rows?dataset={repo}&config={config}&split=train&offset={offset}&length=100"
 
             async with session.get(rows_url, timeout=30) as response:
                 if response.status != 200:
-                    # Try without config
-                    rows_url = f"{self.base_url}/first-rows?dataset={repo}&split=train"
+                    # Try with 'default' config
+                    rows_url = f"{self.base_url}/rows?dataset={repo}&config=default&split=train&offset=0&length=100"
                     async with session.get(rows_url, timeout=30) as retry_response:
                         if retry_response.status != 200:
                             return []
@@ -236,11 +281,26 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
 
             # Handle different dataset formats
             if 'messages' in row:
-                # Standard messages format
+                # Standard messages format (OpenAssistant, Codeforces, etc.)
                 conversation['messages'] = row['messages']
+            elif 'conversations' in row:
+                # Conversations array format (Creative_Writing_Multiturn)
+                # Format: [{'from': 'human', 'value': '...'}, {'from': 'gpt', 'value': '...'}]
+                conv_list = row['conversations']
+                conversation['messages'] = [
+                    {'role': 'user' if m.get('from') in ['human', 'user'] else 'assistant',
+                     'content': m.get('value', m.get('content', ''))}
+                    for m in conv_list if isinstance(m, dict)
+                ]
             elif 'conversation' in row:
-                # Conversation format
+                # Conversation format (LMSYS)
                 conversation['messages'] = row['conversation']
+            elif 'story' in row and 'prompt' in row:
+                # WritingPrompts format: prompt + story
+                conversation['messages'] = [
+                    {'role': 'user', 'content': f"Write a story based on this prompt: {row['prompt']}"},
+                    {'role': 'assistant', 'content': row['story']}
+                ]
             elif 'content' in row:
                 # Single message format
                 conversation['messages'] = [{'role': 'user', 'content': row['content']}]
@@ -254,6 +314,9 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
                 conversation['messages'] = [{'role': 'user', 'content': row['prompt']}]
                 if 'completion' in row:
                     conversation['messages'].append({'role': 'assistant', 'content': row['completion']})
+                elif 'generation' in row:
+                    # Codeforces format with generation
+                    conversation['messages'].append({'role': 'assistant', 'content': row['generation']})
             else:
                 # Try to extract any text-like field
                 for key in ['input', 'question', 'query']:
