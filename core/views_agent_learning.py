@@ -422,76 +422,139 @@ def get_agent_conversations(request):
     - limit: Max conversations to return (default 10)
     - status: Filter by status (active, concluded, paused)
     - today_only: If 'true', only return today's conversations
+
+    Session 431: Now includes HiveMindSession records (preferred)
+    in addition to legacy AgentConversation records.
     """
     try:
         from django.utils import timezone
         from datetime import timedelta
-        from core.models import AgentConversation
+        from core.models import AgentConversation, Agent
+        from core.models_unified_system import HiveMindSession
 
         limit = int(request.GET.get('limit', 10))
         status_filter = request.GET.get('status')
         today_only = request.GET.get('today_only', 'false').lower() == 'true'
 
-        # Build query
-        queryset = AgentConversation.objects.select_related('initiator').prefetch_related(
-            'participants', 'messages__agent'
-        ).order_by('-started_at')
+        conversations_data = []
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # =====================================================================
+        # FIRST: Get HiveMindSession records (newer, preferred)
+        # =====================================================================
+        hivemind_qs = HiveMindSession.objects.filter(
+            session_mode='conversation'
+        ).order_by('-created_at')
 
         if status_filter:
-            queryset = queryset.filter(status=status_filter)
+            hivemind_qs = hivemind_qs.filter(status=status_filter)
 
         if today_only:
-            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            queryset = queryset.filter(started_at__gte=today_start)
+            hivemind_qs = hivemind_qs.filter(created_at__gte=today_start)
 
-        conversations = queryset[:limit]
-
-        # Format response
-        conversations_data = []
-        for conv in conversations:
-            messages_data = []
-            for msg in conv.messages.all()[:10]:  # Limit messages per conversation
-                messages_data.append({
-                    'id': str(msg.id),
-                    'agent': msg.agent.name,
-                    'agent_emoji': _get_agent_emoji(msg.agent.specialization),
-                    'content': msg.content,
-                    'type': msg.message_type,
-                    'sequence': msg.sequence_number,
-                    'relevance': msg.relevance_score,
-                    'created_at': msg.created_at.isoformat()
-                })
+        for session in hivemind_qs[:limit]:
+            # Get participant names from participant_ids
+            participant_names = []
+            if session.participant_ids:
+                try:
+                    agents = Agent.objects.filter(id__in=session.participant_ids)
+                    participant_names = [
+                        {'name': a.name, 'emoji': _get_agent_emoji(a.specialization)}
+                        for a in agents
+                    ]
+                except Exception:
+                    pass
 
             conversations_data.append({
-                'id': str(conv.id),
-                'topic': conv.topic,
-                'type': conv.conversation_type,
-                'type_display': conv.get_conversation_type_display(),
-                'trigger': conv.trigger_type,
-                'status': conv.status,
-                'initiator': conv.initiator.name,
-                'initiator_emoji': _get_agent_emoji(conv.initiator.specialization),
-                'participants': [
-                    {'name': p.name, 'emoji': _get_agent_emoji(p.specialization)}
-                    for p in conv.participants.all()
-                ],
-                'message_count': conv.message_count,
-                'quality_score': conv.quality_score,
-                'conclusion': conv.conclusion,
-                'insights': conv.insights_generated,
-                'started_at': conv.started_at.isoformat(),
-                'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
-                'messages': messages_data
+                'id': str(session.id),
+                'topic': session.conversation_topic or session.question or 'Agent Discussion',
+                'type': 'hivemind_conversation',
+                'type_display': 'Hive Mind Session',
+                'trigger': 'force_cycle',
+                'status': session.status or 'completed',
+                'initiator': participant_names[0]['name'] if participant_names else 'System',
+                'initiator_emoji': participant_names[0]['emoji'] if participant_names else '🤖',
+                'participants': participant_names,
+                'message_count': session.contribution_count or 0,
+                'quality_score': 0.85,
+                'conclusion': session.synthesis_summary or '',
+                'insights': session.synthesis[:500] if session.synthesis else '',
+                'started_at': session.created_at.isoformat() if session.created_at else None,
+                'ended_at': session.completed_at.isoformat() if session.completed_at else None,
+                'messages': [],  # HiveMind stores synthesis, not individual messages
+                'source': 'hivemind'  # Mark source for UI
             })
 
-        # Get today's count
-        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_count = AgentConversation.objects.filter(started_at__gte=today_start).count()
+        # =====================================================================
+        # SECOND: Add legacy AgentConversation records if we need more
+        # =====================================================================
+        remaining_slots = limit - len(conversations_data)
+        if remaining_slots > 0:
+            legacy_qs = AgentConversation.objects.select_related('initiator').prefetch_related(
+                'participants', 'messages__agent'
+            ).order_by('-started_at')
+
+            if status_filter:
+                legacy_qs = legacy_qs.filter(status=status_filter)
+
+            if today_only:
+                legacy_qs = legacy_qs.filter(started_at__gte=today_start)
+
+            for conv in legacy_qs[:remaining_slots]:
+                messages_data = []
+                for msg in conv.messages.all()[:10]:
+                    messages_data.append({
+                        'id': str(msg.id),
+                        'agent': msg.agent.name,
+                        'agent_emoji': _get_agent_emoji(msg.agent.specialization),
+                        'content': msg.content,
+                        'type': msg.message_type,
+                        'sequence': msg.sequence_number,
+                        'relevance': msg.relevance_score,
+                        'created_at': msg.created_at.isoformat()
+                    })
+
+                conversations_data.append({
+                    'id': str(conv.id),
+                    'topic': conv.topic,
+                    'type': conv.conversation_type,
+                    'type_display': conv.get_conversation_type_display(),
+                    'trigger': conv.trigger_type,
+                    'status': conv.status,
+                    'initiator': conv.initiator.name,
+                    'initiator_emoji': _get_agent_emoji(conv.initiator.specialization),
+                    'participants': [
+                        {'name': p.name, 'emoji': _get_agent_emoji(p.specialization)}
+                        for p in conv.participants.all()
+                    ],
+                    'message_count': conv.message_count,
+                    'quality_score': conv.quality_score,
+                    'conclusion': conv.conclusion,
+                    'insights': conv.insights_generated,
+                    'started_at': conv.started_at.isoformat(),
+                    'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
+                    'messages': messages_data,
+                    'source': 'legacy'  # Mark source for UI
+                })
+
+        # Sort combined results by started_at (newest first)
+        conversations_data.sort(
+            key=lambda x: x['started_at'] or '1970-01-01',
+            reverse=True
+        )
+
+        # Get today's combined count
+        hivemind_today = HiveMindSession.objects.filter(
+            session_mode='conversation',
+            created_at__gte=today_start
+        ).count()
+        legacy_today = AgentConversation.objects.filter(started_at__gte=today_start).count()
+        today_count = hivemind_today + legacy_today
 
         return JsonResponse({
             'success': True,
-            'conversations': conversations_data,
-            'count': len(conversations_data),
+            'conversations': conversations_data[:limit],
+            'count': len(conversations_data[:limit]),
             'today_count': today_count
         })
 
