@@ -1092,6 +1092,14 @@ from core.views_research_feedback import (
     get_spider_priorities,
 )
 
+# Session 429: Discord Account Linking API
+from core.views_discord import (
+    generate_discord_link_code,
+    get_discord_status,
+    unlink_discord,
+    verify_discord_link_code,
+)
+
 # Session 327: Project-Scoped Agent Intelligence API
 from core.views_project_intelligence import (
     get_project_intelligence_overview,
@@ -1228,6 +1236,12 @@ urlpatterns = [
     path('api/research/sync/', trigger_knowledge_sync, name='trigger-knowledge-sync'),
     path('api/spiders/priorities/', get_spider_priorities, name='get-spider-priorities'),
     path('api/spiders/recalculate-priorities/', trigger_priority_recalculation, name='recalculate-spider-priorities'),
+
+    # Session 429: Discord Account Linking APIs
+    path('api/discord/generate-link-code/', generate_discord_link_code, name='discord-generate-link-code'),
+    path('api/discord/status/', get_discord_status, name='discord-status'),
+    path('api/discord/unlink/', unlink_discord, name='discord-unlink'),
+    path('api/discord/verify-link-code/', verify_discord_link_code, name='discord-verify-link-code'),
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),

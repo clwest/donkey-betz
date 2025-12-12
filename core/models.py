@@ -135,6 +135,28 @@ class UnifiedUser(AbstractUser):
         default='free'
     )
     
+    # Session 429: Discord integration
+    discord_id = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Discord user ID for account linking"
+    )
+
+    discord_username = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Discord username (cached for display)"
+    )
+
+    discord_linked_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When Discord account was linked"
+    )
+
     # API and usage tracking
     api_key = models.CharField(
         max_length=100,
@@ -187,6 +209,91 @@ class UnifiedUser(AbstractUser):
         """Reset monthly usage counters (called by scheduled task)."""
         self.monthly_api_calls = 0
         self.save(update_fields=['monthly_api_calls'])
+
+
+class DiscordLinkCode(models.Model):
+    """
+    Session 429: Temporary codes for linking Discord accounts to web users.
+
+    Users generate a code in the web app, then use /link <code> in Discord
+    to connect their accounts. Codes expire after 10 minutes.
+    """
+
+    user = models.ForeignKey(
+        'UnifiedUser',
+        on_delete=models.CASCADE,
+        related_name='discord_link_codes'
+    )
+
+    code = models.CharField(
+        max_length=6,
+        unique=True,
+        help_text="6-character linking code"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    expires_at = models.DateTimeField(
+        help_text="Code expiration time (10 minutes after creation)"
+    )
+
+    used = models.BooleanField(
+        default=False,
+        help_text="Whether this code has been used"
+    )
+
+    used_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When the code was used"
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.code} for {self.user.username} (expires: {self.expires_at})"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_valid(self):
+        return not self.used and not self.is_expired
+
+    @classmethod
+    def generate_code(cls):
+        """Generate a unique 6-character alphanumeric code."""
+        import random
+        import string
+        chars = string.ascii_uppercase + string.digits
+        # Remove confusing characters: 0, O, I, 1, L
+        chars = chars.replace('0', '').replace('O', '').replace('I', '').replace('1', '').replace('L', '')
+        while True:
+            code = ''.join(random.choices(chars, k=6))
+            if not cls.objects.filter(code=code, used=False).exists():
+                return code
+
+    @classmethod
+    def create_for_user(cls, user):
+        """Create a new link code for a user, invalidating any previous codes."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Mark any existing unused codes as expired
+        cls.objects.filter(user=user, used=False).update(used=True)
+
+        # Create new code
+        code = cls.generate_code()
+        expires_at = timezone.now() + timedelta(minutes=10)
+
+        return cls.objects.create(
+            user=user,
+            code=code,
+            expires_at=expires_at
+        )
 
 
 class SystemConfiguration(UnifiedBaseModel):

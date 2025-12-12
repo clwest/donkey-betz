@@ -6981,6 +6981,60 @@
                         </div>
                     </div>
 
+                    <!-- Session 429: Discord Integration Card -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(114, 137, 218, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #7289da;">🎮 Discord Integration</h5>
+                            <small class="text-muted">Session 429</small>
+                        </div>
+                        <div class="card-body">
+                            <div id="discord-link-status">
+                                <!-- Loading state -->
+                                <div id="discord-loading" class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="ms-2 text-muted">Checking Discord status...</span>
+                                </div>
+                                <!-- Linked state (hidden initially) -->
+                                <div id="discord-linked" style="display: none;">
+                                    <div class="d-flex align-items-center">
+                                        <span class="fs-4 me-3">✅</span>
+                                        <div>
+                                            <strong class="text-success">Discord Linked</strong>
+                                            <p class="mb-0 small text-muted">Connected as <span id="discord-username" class="text-info">@username</span></p>
+                                            <small class="text-muted">Linked on <span id="discord-linked-at">-</span></small>
+                                        </div>
+                                        <div class="ms-auto">
+                                            <button class="btn btn-sm btn-outline-danger" onclick="unlinkDiscord()">
+                                                Unlink
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Not linked state (hidden initially) -->
+                                <div id="discord-not-linked" style="display: none;">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="fs-4 me-3">🔗</span>
+                                        <div>
+                                            <strong>Link Your Discord Account</strong>
+                                            <p class="mb-0 small text-muted">Images created via Discord bot will appear in your gallery</p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <button class="btn btn-primary" onclick="generateDiscordLinkCode()" id="discord-generate-btn" style="background: #7289da; border-color: #7289da;">
+                                            🎮 Generate Link Code
+                                        </button>
+                                        <div id="discord-code-display" style="display: none;">
+                                            <span class="badge bg-dark text-warning fs-5 px-3 py-2" id="discord-link-code" style="font-family: monospace; letter-spacing: 2px;">------</span>
+                                            <small class="d-block text-muted mt-1">Use <code>/link <span id="discord-code-hint">CODE</span></code> in Discord within 10 minutes</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Domain Preferences Cards -->
                     <div class="row mb-4">
                         <!-- Image Preferences -->
@@ -46336,7 +46390,103 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             loadPreferences();
             // Session 210: Load implicit learning features
             loadSession210Features();
+            // Session 429: Check Discord link status
+            checkDiscordStatus();
         });
+
+        // Session 429: Discord Integration Functions
+        async function checkDiscordStatus() {
+            try {
+                const response = await authenticatedFetch('/api/discord/status/');
+                const data = await response.json();
+
+                document.getElementById('discord-loading').style.display = 'none';
+
+                if (data.success && data.linked) {
+                    document.getElementById('discord-linked').style.display = 'block';
+                    document.getElementById('discord-not-linked').style.display = 'none';
+                    document.getElementById('discord-username').textContent = '@' + (data.discord_username || 'Unknown');
+                    document.getElementById('discord-linked-at').textContent = data.linked_at ?
+                        new Date(data.linked_at).toLocaleDateString() : '-';
+                } else {
+                    document.getElementById('discord-linked').style.display = 'none';
+                    document.getElementById('discord-not-linked').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error checking Discord status:', error);
+                document.getElementById('discord-loading').style.display = 'none';
+                document.getElementById('discord-not-linked').style.display = 'block';
+            }
+        }
+
+        async function generateDiscordLinkCode() {
+            const btn = document.getElementById('discord-generate-btn');
+            const codeDisplay = document.getElementById('discord-code-display');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+
+            try {
+                const response = await authenticatedFetch('/api/discord/generate-link-code/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('discord-link-code').textContent = data.code;
+                    document.getElementById('discord-code-hint').textContent = data.code;
+                    codeDisplay.style.display = 'block';
+                    btn.innerHTML = '🔄 Regenerate Code';
+                    btn.disabled = false;
+
+                    // Auto-check for link completion every 3 seconds
+                    const checkInterval = setInterval(async () => {
+                        const statusResponse = await authenticatedFetch('/api/discord/status/');
+                        const statusData = await statusResponse.json();
+                        if (statusData.linked) {
+                            clearInterval(checkInterval);
+                            showToast('Discord account linked successfully!', 'success');
+                            checkDiscordStatus();
+                        }
+                    }, 3000);
+
+                    // Stop checking after 10 minutes
+                    setTimeout(() => clearInterval(checkInterval), 600000);
+                } else {
+                    showToast('Error: ' + (data.error || 'Failed to generate code'), 'danger');
+                    btn.innerHTML = '🎮 Generate Link Code';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error generating Discord link code:', error);
+                showToast('Error generating link code: ' + error.message, 'danger');
+                btn.innerHTML = '🎮 Generate Link Code';
+                btn.disabled = false;
+            }
+        }
+
+        async function unlinkDiscord() {
+            if (!confirm('Are you sure you want to unlink your Discord account?')) return;
+
+            try {
+                const response = await authenticatedFetch('/api/discord/unlink/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Discord account unlinked successfully', 'success');
+                    checkDiscordStatus();
+                } else {
+                    showToast('Error: ' + (data.error || 'Failed to unlink'), 'danger');
+                }
+            } catch (error) {
+                console.error('Error unlinking Discord:', error);
+                showToast('Error unlinking: ' + error.message, 'danger');
+            }
+        }
 
         // Session 206: Load All Preferences
         async function loadPreferences() {
