@@ -31,6 +31,7 @@ __all__ = [
     # Base models
     'UnifiedBaseModel',
     'UnifiedUser',
+    'DiscordLinkCode',
 
     # System models
     'SystemConfiguration',

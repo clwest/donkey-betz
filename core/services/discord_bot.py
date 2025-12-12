@@ -1,5 +1,5 @@
 """
-Discord Bot Service - Sessions 426-429
+Discord Bot Service - Sessions 426-430
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
@@ -20,6 +20,11 @@ Session 428 Commands:
 Session 429 Commands:
 - /link <code> - Link Discord account to web user
 - /unlink - Check link status and unlink instructions
+
+Session 430 Commands (Phase 1: Discord-First):
+- /gallery [count] - View recent AI-generated images
+- /profile - View AI Studio profile and stats
+- /opportunities [count] [category] - Browse income opportunities
 
 Usage:
     # Run the bot
@@ -262,6 +267,9 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(AgentCommands(self))
         await self.add_cog(SpiderCommands(self))
         await self.add_cog(InteractiveCommands(self))  # Session 427
+        await self.add_cog(ContentCommands(self))  # Session 430: Phase 1 Discord-First
+        await self.add_cog(ServerSetupCommands(self))  # Session 431: Phase 2 Server Setup
+        await self.add_cog(ClientCommands(self))  # Session 431: Phase 3 Client Management
         await self.add_cog(HelpCommands(self))
 
         # Sync slash commands with Discord
@@ -970,6 +978,21 @@ class InteractiveCommands(commands.Cog):
                         )
                         history_id = history.id
                         logger.info(f"/create saved to ImageHistory: {history.id}")
+
+                        # Session 430: Auto-deliver to gallery channel
+                        try:
+                            from core.services.discord_notifications import discord_notify
+                            full_image_url = f"http://localhost:8000{history.image_url}" if history.image_url else image_url
+                            discord_notify.send_image_to_gallery(
+                                username=linked_username or discord_user_name,
+                                prompt=p,
+                                image_url=full_image_url,
+                                image_id=history.id,
+                                model=first_image.get('model', 'stable-diffusion'),
+                                discord_user_id=str(discord_user_id) if linked_user else None
+                            )
+                        except Exception as discord_err:
+                            logger.warning(f"/create Discord gallery delivery failed: {discord_err}")
                     except Exception as db_err:
                         logger.warning(f"/create failed to save to ImageHistory: {db_err}")
 
@@ -1261,6 +1284,1105 @@ class InteractiveCommands(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+# =============================================================================
+# Content & Profile Commands - Session 430 (Phase 1: Discord-First)
+# =============================================================================
+
+class ContentCommands(commands.Cog):
+    """Commands for viewing content, profile, and opportunities - Session 430."""
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+        # Channel IDs for content delivery
+        self.GALLERY_CHANNEL_ID = 1449059813765021859
+        self.PROFILE_CHANNEL_ID = 1449059839581098135
+        self.OPPORTUNITIES_CHANNEL_ID = 1448867150948335777
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+        return await get_user()
+
+    @app_commands.command(name="gallery", description="View your recent AI-generated images")
+    @app_commands.describe(count="Number of images to show (1-10, default 5)")
+    async def gallery(self, interaction: discord.Interaction, count: int = 5):
+        """Display user's recent image creations."""
+        await interaction.response.defer()
+
+        # Clamp count
+        count = max(1, min(10, count))
+
+        try:
+            # Check if user is linked
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            @sync_to_async
+            def get_images(web_user, limit):
+                from content.models import ImageHistory
+                from django.conf import settings
+                import os
+
+                if web_user:
+                    # Get linked user's images
+                    images = ImageHistory.objects.filter(
+                        user=web_user
+                    ).order_by('-created_at')[:limit]
+                else:
+                    # Get recent public images (for non-linked users)
+                    images = ImageHistory.objects.order_by('-created_at')[:limit]
+
+                results = []
+                for img in images:
+                    # Get local file path for uploading to Discord
+                    local_path = None
+                    if img.file_path:
+                        if img.file_path.startswith('data:'):
+                            # Data URI - can't display easily
+                            local_path = None
+                        elif img.file_path.startswith('http'):
+                            # External URL - can't upload as file
+                            local_path = None
+                        elif img.file_path.startswith('/media/'):
+                            # Convert /media/... to actual file path
+                            local_path = os.path.join(settings.BASE_DIR, img.file_path.lstrip('/'))
+                        else:
+                            # Relative path from media root
+                            local_path = os.path.join(settings.MEDIA_ROOT, img.file_path)
+
+                        # Verify file exists
+                        if local_path and not os.path.exists(local_path):
+                            local_path = None
+
+                    results.append({
+                        'id': img.get_sequential_number(),  # Use sequential number, not UUID
+                        'prompt': (img.prompt or 'No prompt')[:100],
+                        'local_path': local_path,
+                        'created_at': img.created_at.strftime('%Y-%m-%d %H:%M') if img.created_at else 'Unknown',
+                        'model': img.model_used or 'Unknown',
+                    })
+                return results
+
+            images = await get_images(user, count)
+
+            if not images:
+                embed = discord.Embed(
+                    title="🖼️ Gallery Empty",
+                    description="No images found. Use `/create <prompt>` to generate your first image!",
+                    color=discord.Color.light_gray(),
+                    timestamp=datetime.now()
+                )
+                if not user:
+                    embed.add_field(
+                        name="💡 Tip",
+                        value="Link your account with `/link <code>` to see your web gallery here!",
+                        inline=False
+                    )
+                embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+                await interaction.followup.send(embed=embed)
+                return
+
+            # Send each image as a separate embed with the file attached (like Midjourney)
+            import os
+            linked_status = f"Linked as **{user.username}**" if user else "Recent public images"
+
+            for idx, img in enumerate(images):
+                prompt_preview = img['prompt'][:150] + "..." if len(img['prompt']) > 150 else img['prompt']
+
+                embed = discord.Embed(
+                    title=f"#{img['id']}",
+                    description=f"📝 {prompt_preview}",
+                    color=discord.Color.purple(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="🤖 Model", value=img['model'], inline=True)
+                embed.add_field(name="🕐 Created", value=img['created_at'], inline=True)
+
+                if idx == 0:
+                    embed.set_author(name=f"🖼️ Your Gallery ({len(images)} images) | {linked_status}")
+
+                embed.set_footer(text=f"Image {idx + 1}/{len(images)} | Use /client-deliver to send to clients")
+
+                # Try to upload the image file directly to Discord
+                file_to_send = None
+                if img.get('local_path'):
+                    file_path = img['local_path']
+                    if os.path.exists(file_path):
+                        filename = os.path.basename(file_path)
+                        file_to_send = discord.File(file_path, filename=filename)
+                        embed.set_image(url=f"attachment://{filename}")
+
+                if file_to_send:
+                    await interaction.followup.send(embed=embed, file=file_to_send)
+                else:
+                    embed.add_field(
+                        name="⚠️ Image",
+                        value="File not available locally. View in [AI Studio](http://localhost:8000/ai-studio/)",
+                        inline=False
+                    )
+                    await interaction.followup.send(embed=embed)
+
+            return
+
+        except Exception as e:
+            logger.error(f"/gallery command error: {e}")
+            await interaction.followup.send(
+                f"Error loading gallery: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="profile", description="View your AI Studio profile and stats")
+    async def profile(self, interaction: discord.Interaction):
+        """Display user's profile information."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            if not user:
+                embed = discord.Embed(
+                    title="🔗 Account Not Linked",
+                    description="Link your Discord to your AI Studio account to see your profile!\n\n**How to link:**\n1. Go to AI Studio > Preferences > Discord\n2. Click 'Generate Link Code'\n3. Use `/link <code>` here",
+                    color=discord.Color.orange(),
+                    timestamp=datetime.now()
+                )
+                embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+                await interaction.followup.send(embed=embed)
+                return
+
+            @sync_to_async
+            def get_profile_data(web_user):
+                from content.models import ImageHistory
+                from core.models_unified_system import AgentExecution, Opportunity, Revenue
+                from core.models.users import EnhancedUserProfile
+                from django.db.models import Sum
+                from django.utils import timezone
+                from datetime import timedelta
+
+                # Basic stats
+                total_images = ImageHistory.objects.filter(user=web_user).count()
+                recent_images = ImageHistory.objects.filter(
+                    user=web_user,
+                    created_at__gte=timezone.now() - timedelta(days=7)
+                ).count()
+
+                # Agent interactions
+                try:
+                    agent_executions = AgentExecution.objects.filter(user=web_user).count()
+                except:
+                    agent_executions = 0
+
+                # Opportunities
+                try:
+                    opportunities_viewed = Opportunity.objects.filter(user=web_user).count()
+                except:
+                    opportunities_viewed = 0
+
+                # Revenue
+                try:
+                    total_revenue = Revenue.objects.filter(user=web_user).aggregate(
+                        total=Sum('amount')
+                    )['total'] or 0
+                except:
+                    total_revenue = 0
+
+                # Enhanced profile (if exists)
+                profile_data = {}
+                try:
+                    enhanced = EnhancedUserProfile.objects.filter(user=web_user).first()
+                    if enhanced:
+                        profile_data = {
+                            'profession': enhanced.profession or 'Not set',
+                            'skills': enhanced.skills[:3] if enhanced.skills else [],
+                            'goals': enhanced.goals[:2] if enhanced.goals else [],
+                            'completeness': enhanced.profile_completeness or 0,
+                        }
+                except:
+                    pass
+
+                return {
+                    'username': web_user.username,
+                    'email': web_user.email,
+                    'tier': web_user.subscription_tier,
+                    'created': web_user.date_joined.strftime('%Y-%m-%d') if web_user.date_joined else 'Unknown',
+                    'discord_linked': web_user.discord_linked_at.strftime('%Y-%m-%d') if web_user.discord_linked_at else 'Just now',
+                    'total_images': total_images,
+                    'recent_images': recent_images,
+                    'agent_executions': agent_executions,
+                    'opportunities': opportunities_viewed,
+                    'revenue': float(total_revenue),
+                    'profile': profile_data,
+                }
+
+            data = await get_profile_data(user)
+
+            # Build profile embed
+            embed = discord.Embed(
+                title=f"👤 {data['username']}'s Profile",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            # Account info
+            tier_emoji = {'free': '🆓', 'pro': '⭐', 'enterprise': '👑'}.get(data['tier'], '🆓')
+            embed.add_field(
+                name="📋 Account",
+                value=f"{tier_emoji} **{data['tier'].title()}** Tier\n📅 Joined: {data['created']}\n🔗 Discord linked: {data['discord_linked']}",
+                inline=True
+            )
+
+            # Creation stats
+            embed.add_field(
+                name="🎨 Creations",
+                value=f"🖼️ Total images: **{data['total_images']}**\n📅 This week: **{data['recent_images']}**\n🤖 Agent tasks: **{data['agent_executions']}**",
+                inline=True
+            )
+
+            # Revenue & Opportunities
+            embed.add_field(
+                name="💰 Business",
+                value=f"🎯 Opportunities: **{data['opportunities']}**\n💵 Revenue: **${data['revenue']:.2f}**",
+                inline=True
+            )
+
+            # Profile info if available
+            if data['profile']:
+                profile = data['profile']
+                profile_text = f"💼 {profile['profession']}"
+                if profile['skills']:
+                    profile_text += f"\n🛠️ Skills: {', '.join(profile['skills'])}"
+                if profile['goals']:
+                    profile_text += f"\n🎯 Goals: {profile['goals'][0][:50]}"
+                profile_text += f"\n📊 Profile: {profile['completeness']}% complete"
+
+                embed.add_field(
+                    name="📝 Your Profile",
+                    value=profile_text,
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Discord: {interaction.user.display_name}")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/profile command error: {e}")
+            await interaction.followup.send(
+                f"Error loading profile: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="opportunities", description="View matching income opportunities")
+    @app_commands.describe(
+        count="Number of opportunities to show (1-10, default 5)",
+        category="Filter by category (e.g., 'design', 'writing', 'tech')"
+    )
+    async def opportunities(self, interaction: discord.Interaction, count: int = 5, category: str = None):
+        """Display matching opportunities for the user."""
+        await interaction.response.defer()
+
+        # Clamp count
+        count = max(1, min(10, count))
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            @sync_to_async
+            def get_opportunities(web_user, limit, cat_filter):
+                from core.models_unified_system import Opportunity
+                from django.utils import timezone
+
+                queryset = Opportunity.objects.filter(
+                    status='active'
+                ).order_by('-score', '-created_at')
+
+                # Filter by category if specified
+                if cat_filter:
+                    queryset = queryset.filter(category__icontains=cat_filter)
+
+                # If user is linked, could filter by their skills in future
+                # For now, just return top opportunities
+
+                opps = queryset[:limit]
+
+                results = []
+                for opp in opps:
+                    results.append({
+                        'id': opp.id,
+                        'title': (opp.title or 'Untitled')[:60],
+                        'description': (opp.description or '')[:100],
+                        'category': opp.category or 'General',
+                        'source': opp.source or 'Unknown',
+                        'url': opp.url or '',
+                        'score': opp.score or 0,
+                        'potential_value': float(opp.potential_value) if opp.potential_value else 0,
+                        'created_at': opp.created_at.strftime('%Y-%m-%d') if opp.created_at else 'Unknown',
+                    })
+                return results
+
+            opportunities = await get_opportunities(user, count, category)
+
+            if not opportunities:
+                embed = discord.Embed(
+                    title="🎯 No Opportunities Found",
+                    description="No active opportunities match your criteria.\n\nTry:\n- Removing the category filter\n- Checking back later for new listings",
+                    color=discord.Color.light_gray(),
+                    timestamp=datetime.now()
+                )
+            else:
+                title = f"🎯 Top {len(opportunities)} Opportunities"
+                if category:
+                    title += f" ({category})"
+
+                linked_status = f"Personalized for **{user.username}**" if user else "💡 Link your account for personalized matches!"
+
+                embed = discord.Embed(
+                    title=title,
+                    description=linked_status,
+                    color=discord.Color.gold(),
+                    timestamp=datetime.now()
+                )
+
+                for opp in opportunities:
+                    # Score indicator
+                    if opp['score'] >= 80:
+                        score_emoji = "🔥"
+                    elif opp['score'] >= 60:
+                        score_emoji = "⭐"
+                    else:
+                        score_emoji = "📌"
+
+                    value = f"{opp['description'][:80]}..." if len(opp['description']) > 80 else opp['description']
+                    value += f"\n📂 {opp['category']} | {score_emoji} Score: {opp['score']}"
+
+                    if opp['potential_value'] > 0:
+                        value += f" | 💰 ${opp['potential_value']:.0f}"
+
+                    if opp['url']:
+                        value += f"\n[🔗 View Details]({opp['url']})"
+
+                    embed.add_field(
+                        name=f"{opp['title']}",
+                        value=value,
+                        inline=False
+                    )
+
+            embed.set_footer(text=f"Requested by {interaction.user.display_name} | Use /apply <id> to apply")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/opportunities command error: {e}")
+            await interaction.followup.send(
+                f"Error loading opportunities: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+
+class ServerSetupCommands(commands.Cog):
+    """
+    Session 431: Server Setup Wizard Commands.
+
+    Allows users to set up their Discord server with AI Studio channels.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+        return await get_user()
+
+    async def _get_or_create_server(self, guild, user, template: str = 'solo_creator'):
+        """Get or create a DiscordServer record."""
+        @sync_to_async
+        def get_or_create():
+            from core.models.base import DiscordServer
+            server, created = DiscordServer.objects.get_or_create(
+                guild_id=str(guild.id),
+                defaults={
+                    'user': user,
+                    'guild_name': guild.name,
+                    'template': template,
+                }
+            )
+            return server, created
+        return await get_or_create()
+
+    async def _save_channel(self, server, channel_id: str, channel_name: str, channel_type: str):
+        """Save a channel to the database."""
+        @sync_to_async
+        def save():
+            from core.models.base import DiscordServerChannel
+            channel, created = DiscordServerChannel.objects.get_or_create(
+                server=server,
+                channel_id=str(channel_id),
+                defaults={
+                    'channel_name': channel_name,
+                    'channel_type': channel_type,
+                }
+            )
+            return channel, created
+        return await save()
+
+    async def _update_server_channel_ids(self, server, channel_type: str, channel_id: str):
+        """Update the server's quick-access channel ID fields."""
+        @sync_to_async
+        def update():
+            field_map = {
+                'gallery': 'gallery_channel_id',
+                'assistant': 'assistant_channel_id',
+                'research': 'research_channel_id',
+                'opportunities': 'opportunities_channel_id',
+                'notifications': 'notifications_channel_id',
+            }
+            if channel_type in field_map:
+                setattr(server, field_map[channel_type], str(channel_id))
+                server.save()
+        return await update()
+
+    @app_commands.command(name="setup", description="Set up AI Studio channels in your server")
+    @app_commands.describe(template="Server template to use")
+    @app_commands.choices(template=[
+        app_commands.Choice(name="Solo Creator - Personal workspace", value="solo_creator"),
+        app_commands.Choice(name="Freelancer - With client channels", value="freelancer"),
+        app_commands.Choice(name="Agency - Team + clients", value="agency"),
+    ])
+    async def setup_server(self, interaction: discord.Interaction, template: str = "solo_creator"):
+        """Set up AI Studio channels in the server using a template."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            # Check if user has permission to manage channels
+            if not interaction.user.guild_permissions.manage_channels:
+                await interaction.followup.send(
+                    "You need 'Manage Channels' permission to run server setup.",
+                    ephemeral=True
+                )
+                return
+
+            # Check if user is linked
+            linked_user = await self._get_linked_user(str(interaction.user.id))
+            if not linked_user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link` command.\n"
+                    "Generate a link code at: http://localhost:8000/ai-studio/ → Settings → Discord",
+                    ephemeral=True
+                )
+                return
+
+            guild = interaction.guild
+
+            # Get template definition
+            from core.models.base import DISCORD_SERVER_TEMPLATES
+            template_def = DISCORD_SERVER_TEMPLATES.get(template)
+            if not template_def:
+                await interaction.followup.send(f"Unknown template: {template}", ephemeral=True)
+                return
+
+            # Create or get server record
+            server, server_created = await self._get_or_create_server(guild, linked_user, template)
+
+            # Progress message
+            progress_embed = discord.Embed(
+                title="Setting Up AI Studio...",
+                description=f"Creating channels for **{template_def['name']}** template...",
+                color=discord.Color.blue()
+            )
+            await interaction.followup.send(embed=progress_embed, ephemeral=True)
+
+            channels_created = []
+
+            # Create categories and channels
+            for category_def in template_def['categories']:
+                # Create or find category
+                category_name = category_def['name']
+                existing_category = discord.utils.get(guild.categories, name=category_name)
+
+                if existing_category:
+                    category = existing_category
+                else:
+                    category = await guild.create_category(category_name)
+
+                # Create channels in category
+                for channel_def in category_def['channels']:
+                    channel_name = channel_def['name']
+                    channel_type = channel_def['type']
+
+                    # Check if channel already exists
+                    existing_channel = discord.utils.get(category.text_channels, name=channel_name)
+
+                    if existing_channel:
+                        channel = existing_channel
+                    else:
+                        channel = await guild.create_text_channel(
+                            name=channel_name,
+                            category=category
+                        )
+                        channels_created.append(f"#{channel_name}")
+
+                    # Save to database
+                    await self._save_channel(server, channel.id, channel_name, channel_type)
+                    await self._update_server_channel_ids(server, channel_type, channel.id)
+
+            # Mark setup complete
+            @sync_to_async
+            def mark_complete():
+                server.is_setup_complete = True
+                server.save()
+            await mark_complete()
+
+            # Success message
+            success_embed = discord.Embed(
+                title="AI Studio Setup Complete!",
+                description=f"Your server is now configured with the **{template_def['name']}** template.",
+                color=discord.Color.green()
+            )
+
+            if channels_created:
+                success_embed.add_field(
+                    name="Channels Created",
+                    value="\n".join(channels_created[:10]) + (f"\n...and {len(channels_created) - 10} more" if len(channels_created) > 10 else ""),
+                    inline=False
+                )
+            else:
+                success_embed.add_field(
+                    name="Note",
+                    value="All channels already existed. No new channels were created.",
+                    inline=False
+                )
+
+            success_embed.add_field(
+                name="Next Steps",
+                value=(
+                    "• Images you create will now appear in your gallery channel\n"
+                    "• Use `/ask` in the assistant channel for AI help\n"
+                    "• Use `/opportunities` to find income opportunities"
+                ),
+                inline=False
+            )
+
+            await interaction.edit_original_response(embed=success_embed)
+
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "I don't have permission to create channels. Please give me 'Manage Channels' permission.",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.error(f"/setup command error: {e}")
+            await interaction.followup.send(
+                f"Error during setup: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="server-info", description="View your server's AI Studio configuration")
+    async def server_info(self, interaction: discord.Interaction):
+        """Show the current server's AI Studio configuration."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            @sync_to_async
+            def get_server():
+                from core.models.base import DiscordServer
+                return DiscordServer.objects.filter(guild_id=str(interaction.guild.id)).first()
+
+            server = await get_server()
+
+            if not server:
+                embed = discord.Embed(
+                    title="Server Not Configured",
+                    description="This server hasn't been set up with AI Studio yet.\n\nUse `/setup` to configure your server.",
+                    color=discord.Color.orange()
+                )
+            else:
+                embed = discord.Embed(
+                    title=f"AI Studio Configuration",
+                    description=f"**Server:** {server.guild_name}\n**Template:** {server.get_template_display()}\n**Setup Complete:** {'Yes' if server.is_setup_complete else 'No'}",
+                    color=discord.Color.green() if server.is_setup_complete else discord.Color.orange()
+                )
+
+                # Show channel IDs
+                channels_info = []
+                if server.gallery_channel_id:
+                    channels_info.append(f"Gallery: <#{server.gallery_channel_id}>")
+                if server.assistant_channel_id:
+                    channels_info.append(f"Assistant: <#{server.assistant_channel_id}>")
+                if server.research_channel_id:
+                    channels_info.append(f"Research: <#{server.research_channel_id}>")
+                if server.opportunities_channel_id:
+                    channels_info.append(f"Opportunities: <#{server.opportunities_channel_id}>")
+
+                if channels_info:
+                    embed.add_field(
+                        name="Configured Channels",
+                        value="\n".join(channels_info),
+                        inline=False
+                    )
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/server-info command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+
+class ClientCommands(commands.Cog):
+    """
+    Session 431: Client Management Commands (Phase 3).
+
+    Manage freelance/agency clients through Discord channels.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+        return await get_user()
+
+    async def _get_server(self, guild_id: str):
+        """Get the DiscordServer record for a guild."""
+        @sync_to_async
+        def get_server():
+            from core.models.base import DiscordServer
+            return DiscordServer.objects.filter(guild_id=guild_id).first()
+        return await get_server()
+
+    async def _get_clients_category(self, guild):
+        """Find or create the CLIENTS category."""
+        # Look for existing CLIENTS category
+        for category in guild.categories:
+            if 'CLIENT' in category.name.upper():
+                return category
+
+        # Create if not exists
+        return await guild.create_category('CLIENTS')
+
+    @app_commands.command(name="client-add", description="Add a new client with their own channel")
+    @app_commands.describe(
+        name="Client name (e.g., 'Acme Corp')",
+        email="Client email (optional)"
+    )
+    async def client_add(self, interaction: discord.Interaction, name: str, email: str = None):
+        """Create a new client with a dedicated Discord channel."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            # Check permissions
+            if not interaction.user.guild_permissions.manage_channels:
+                await interaction.followup.send(
+                    "You need 'Manage Channels' permission to add clients.",
+                    ephemeral=True
+                )
+                return
+
+            # Check if user is linked
+            linked_user = await self._get_linked_user(str(interaction.user.id))
+            if not linked_user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link`.",
+                    ephemeral=True
+                )
+                return
+
+            # Get server record
+            server = await self._get_server(str(interaction.guild.id))
+            if not server:
+                await interaction.followup.send(
+                    "Please run `/setup` first to configure your server.",
+                    ephemeral=True
+                )
+                return
+
+            # Create slug from name
+            import re
+            slug = re.sub(r'[^a-z0-9-]', '-', name.lower())
+            slug = re.sub(r'-+', '-', slug).strip('-')
+
+            # Check if client already exists
+            @sync_to_async
+            def check_existing():
+                from core.models.base import DiscordClient
+                return DiscordClient.objects.filter(server=server, slug=slug).first()
+
+            existing = await check_existing()
+            if existing:
+                await interaction.followup.send(
+                    f"Client '{name}' already exists! Channel: <#{existing.channel_id}>",
+                    ephemeral=True
+                )
+                return
+
+            # Find or create CLIENTS category
+            category = await self._get_clients_category(interaction.guild)
+
+            # Create client channel
+            channel_name = f"client-{slug}"
+            channel = await interaction.guild.create_text_channel(
+                name=channel_name,
+                category=category,
+                topic=f"Client channel for {name}"
+            )
+
+            # Save client to database
+            @sync_to_async
+            def create_client():
+                from core.models.base import DiscordClient
+                return DiscordClient.objects.create(
+                    server=server,
+                    name=name,
+                    slug=slug,
+                    email=email,
+                    channel_id=str(channel.id),
+                    status='active'
+                )
+
+            client = await create_client()
+
+            # Send welcome message to client channel
+            welcome_embed = discord.Embed(
+                title=f"Welcome - {name}",
+                description=(
+                    f"This is the dedicated channel for **{name}**.\n\n"
+                    "All deliverables and updates will be posted here."
+                ),
+                color=discord.Color.green()
+            )
+            welcome_embed.add_field(
+                name="Quick Actions",
+                value=(
+                    "• `/client-deliver` - Send a deliverable\n"
+                    "• `/client-info` - View client details"
+                ),
+                inline=False
+            )
+            await channel.send(embed=welcome_embed)
+
+            # Confirm to user
+            success_embed = discord.Embed(
+                title="Client Added!",
+                description=f"Created client **{name}** with channel {channel.mention}",
+                color=discord.Color.green()
+            )
+            if email:
+                success_embed.add_field(name="Email", value=email, inline=True)
+
+            await interaction.followup.send(embed=success_embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/client-add error: {e}")
+            await interaction.followup.send(
+                f"Error adding client: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="client-list", description="List all your clients")
+    async def client_list(self, interaction: discord.Interaction):
+        """List all clients for this server."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            server = await self._get_server(str(interaction.guild.id))
+            if not server:
+                await interaction.followup.send(
+                    "Please run `/setup` first to configure your server.",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def get_clients():
+                from core.models.base import DiscordClient
+                return list(DiscordClient.objects.filter(server=server).order_by('name'))
+
+            clients = await get_clients()
+
+            if not clients:
+                embed = discord.Embed(
+                    title="No Clients Yet",
+                    description="Use `/client-add <name>` to add your first client!",
+                    color=discord.Color.blue()
+                )
+            else:
+                embed = discord.Embed(
+                    title=f"Your Clients ({len(clients)})",
+                    color=discord.Color.blue()
+                )
+
+                for client in clients[:20]:  # Limit to 20
+                    status_emoji = "🟢" if client.status == 'active' else "🟡" if client.status == 'paused' else "⚫"
+                    channel_link = f"<#{client.channel_id}>" if client.channel_id else "No channel"
+
+                    embed.add_field(
+                        name=f"{status_emoji} {client.name}",
+                        value=f"{channel_link}\nDeliverables: {client.deliverables_count}",
+                        inline=True
+                    )
+
+                if len(clients) > 20:
+                    embed.set_footer(text=f"Showing 20 of {len(clients)} clients")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/client-list error: {e}")
+            await interaction.followup.send(
+                f"Error listing clients: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="client-deliver", description="Send a deliverable to a client")
+    @app_commands.describe(
+        client_name="Client name to deliver to",
+        image_id="Image ID from your gallery (use /gallery to find IDs)",
+        message="Optional message to include"
+    )
+    async def client_deliver(
+        self,
+        interaction: discord.Interaction,
+        client_name: str,
+        image_id: int,
+        message: str = None
+    ):
+        """Deliver an image to a client's channel."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            linked_user = await self._get_linked_user(str(interaction.user.id))
+            if not linked_user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link`.",
+                    ephemeral=True
+                )
+                return
+
+            server = await self._get_server(str(interaction.guild.id))
+            if not server:
+                await interaction.followup.send(
+                    "Please run `/setup` first to configure your server.",
+                    ephemeral=True
+                )
+                return
+
+            # Find client (case-insensitive partial match)
+            @sync_to_async
+            def find_client():
+                from core.models.base import DiscordClient
+                return DiscordClient.objects.filter(
+                    server=server,
+                    name__icontains=client_name
+                ).first()
+
+            client = await find_client()
+            if not client:
+                await interaction.followup.send(
+                    f"Client '{client_name}' not found. Use `/client-list` to see your clients.",
+                    ephemeral=True
+                )
+                return
+
+            if not client.channel_id:
+                await interaction.followup.send(
+                    f"Client '{client.name}' doesn't have a channel. Re-add them with `/client-add`.",
+                    ephemeral=True
+                )
+                return
+
+            # Get image from gallery by sequential number
+            @sync_to_async
+            def get_image():
+                from content.models import ImageHistory
+                # Look up by sequential_number (the user-friendly ID shown in /gallery)
+                return ImageHistory.objects.filter(
+                    sequential_number=image_id,
+                    user=linked_user
+                ).first()
+
+            image = await get_image()
+            if not image:
+                await interaction.followup.send(
+                    f"Image #{image_id} not found in your gallery. Use `/gallery` to see your images.",
+                    ephemeral=True
+                )
+                return
+
+            # Get client channel
+            channel = interaction.guild.get_channel(int(client.channel_id))
+            if not channel:
+                await interaction.followup.send(
+                    f"Client channel not found. It may have been deleted.",
+                    ephemeral=True
+                )
+                return
+
+            # Build deliverable embed
+            deliver_embed = discord.Embed(
+                title="📦 New Deliverable",
+                description=message or "Here's your latest deliverable!",
+                color=discord.Color.purple()
+            )
+
+            deliver_embed.add_field(name="Prompt", value=image.prompt[:200] if image.prompt else "N/A", inline=False)
+            deliver_embed.set_footer(text=f"Delivered by {interaction.user.display_name}")
+
+            # Upload the image file directly to Discord (like /gallery does)
+            import os
+            from django.conf import settings
+            file_to_send = None
+            image_url = None
+
+            if image.file_path:
+                if image.file_path.startswith('http'):
+                    # External URL - can't upload directly
+                    image_url = image.file_path
+                elif image.file_path.startswith('data:'):
+                    # Data URI - can't easily upload
+                    pass
+                elif image.file_path.startswith('/media/'):
+                    local_path = os.path.join(settings.BASE_DIR, image.file_path.lstrip('/'))
+                    if os.path.exists(local_path):
+                        filename = os.path.basename(local_path)
+                        file_to_send = discord.File(local_path, filename=filename)
+                        deliver_embed.set_image(url=f"attachment://{filename}")
+                else:
+                    local_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
+                    if os.path.exists(local_path):
+                        filename = os.path.basename(local_path)
+                        file_to_send = discord.File(local_path, filename=filename)
+                        deliver_embed.set_image(url=f"attachment://{filename}")
+
+            # Send to client channel
+            if file_to_send:
+                sent_msg = await channel.send(embed=deliver_embed, file=file_to_send)
+            else:
+                deliver_embed.add_field(
+                    name="⚠️ Note",
+                    value="Image file not available for inline display.",
+                    inline=False
+                )
+                sent_msg = await channel.send(embed=deliver_embed)
+
+            # Record deliverable
+            @sync_to_async
+            def record_deliverable():
+                from core.models.base import ClientDeliverable
+                client.deliverables_count += 1
+                client.save()
+                return ClientDeliverable.objects.create(
+                    client=client,
+                    deliverable_type='image',
+                    title=image.prompt[:200] if image.prompt else f"Image #{image_id}",
+                    image_history_id=image_id,  # Store sequential number for reference
+                    url=image.file_path or image_url,  # Store file path or URL
+                    discord_message_id=str(sent_msg.id)
+                )
+
+            await record_deliverable()
+
+            # Confirm
+            success_embed = discord.Embed(
+                title="Deliverable Sent!",
+                description=f"Image #{image_id} delivered to **{client.name}** in {channel.mention}",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=success_embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/client-deliver error: {e}")
+            await interaction.followup.send(
+                f"Error delivering: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="client-invite", description="Generate an invite link for a client")
+    @app_commands.describe(client_name="Client name to create invite for")
+    async def client_invite(self, interaction: discord.Interaction, client_name: str):
+        """Generate a Discord invite link that only gives access to the client's channel."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            server = await self._get_server(str(interaction.guild.id))
+            if not server:
+                await interaction.followup.send(
+                    "Please run `/setup` first.",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def find_client():
+                from core.models.base import DiscordClient
+                return DiscordClient.objects.filter(
+                    server=server,
+                    name__icontains=client_name
+                ).first()
+
+            client = await find_client()
+            if not client or not client.channel_id:
+                await interaction.followup.send(
+                    f"Client '{client_name}' not found or has no channel.",
+                    ephemeral=True
+                )
+                return
+
+            channel = interaction.guild.get_channel(int(client.channel_id))
+            if not channel:
+                await interaction.followup.send("Client channel not found.", ephemeral=True)
+                return
+
+            # Create invite to the client's channel
+            invite = await channel.create_invite(
+                max_age=604800,  # 7 days
+                max_uses=5,
+                unique=True,
+                reason=f"Client invite for {client.name}"
+            )
+
+            embed = discord.Embed(
+                title=f"Client Invite - {client.name}",
+                description=(
+                    f"Share this link with your client:\n\n"
+                    f"**{invite.url}**\n\n"
+                    f"This invite expires in 7 days and can be used up to 5 times."
+                ),
+                color=discord.Color.blue()
+            )
+            embed.add_field(
+                name="Note",
+                value="The client will need Discord server permissions configured to restrict them to only their channel.",
+                inline=False
+            )
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "I don't have permission to create invites.",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.error(f"/client-invite error: {e}")
+            await interaction.followup.send(
+                f"Error creating invite: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+
 class HelpCommands(commands.Cog):
     """Help and documentation commands."""
 
@@ -1318,9 +2440,20 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
+        # Content & Profile (Session 430)
+        embed.add_field(
+            name="🖼️ Content",
+            value=(
+                "**/gallery** [count] - View your recent images\n"
+                "**/profile** - View your AI Studio profile\n"
+                "**/opportunities** [count] [category] - Browse income opportunities"
+            ),
+            inline=False
+        )
+
         # Account linking (Session 429)
         embed.add_field(
-            name=" Account",
+            name="🔗 Account",
             value=(
                 "**/link** <code> - Link Discord to AI Studio account\n"
                 "**/unlink** - Check link status"
@@ -1328,14 +2461,36 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
+        # Server Setup (Session 431)
+        embed.add_field(
+            name="🏗️ Server Setup",
+            value=(
+                "**/setup** [template] - Set up AI Studio channels in your server\n"
+                "**/server-info** - View your server's configuration"
+            ),
+            inline=False
+        )
+
+        # Client Management (Session 431 Phase 3)
+        embed.add_field(
+            name="👥 Client Management",
+            value=(
+                "**/client-add** <name> [email] - Create a new client with dedicated channel\n"
+                "**/client-list** - List all your clients\n"
+                "**/client-deliver** <client> <image_id> [message] - Deliver image to client\n"
+                "**/client-invite** <client> - Generate invite link for client"
+            ),
+            inline=False
+        )
+
         # Help
         embed.add_field(
-            name=" Help",
+            name="❓ Help",
             value="**/help** - This command",
             inline=False
         )
 
-        embed.set_footer(text="Session 429 | Rate limits apply to interactive commands")
+        embed.set_footer(text="Session 431 | Discord-First Platform Phase 3")
 
         await interaction.response.send_message(embed=embed)
 
