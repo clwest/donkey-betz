@@ -26,6 +26,7 @@ from typing import Optional
 import discord
 from discord import app_commands
 from discord.ext import commands
+from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +98,18 @@ class StatusCommands(commands.Cog):
             from core.models_unified_system import Agent, SpiderData, AgentDream, HiveMindSession
             from content.models import ImageHistory
 
-            # Gather stats
-            agent_count = Agent.objects.filter(is_active=True).count()
-            spider_data_count = SpiderData.objects.count()
-            dream_count = AgentDream.objects.count()
-            hivemind_count = HiveMindSession.objects.count()
-            image_count = ImageHistory.objects.count()
+            # Gather stats using sync_to_async for ORM calls
+            @sync_to_async
+            def get_stats():
+                return {
+                    'agent_count': Agent.objects.filter(is_active=True).count(),
+                    'spider_data_count': SpiderData.objects.count(),
+                    'dream_count': AgentDream.objects.count(),
+                    'hivemind_count': HiveMindSession.objects.count(),
+                    'image_count': ImageHistory.objects.count(),
+                }
+
+            stats = await get_stats()
 
             # Calculate uptime
             uptime = datetime.now() - self.bot.start_time
@@ -121,12 +128,12 @@ class StatusCommands(commands.Cog):
                 inline=False
             )
 
-            embed.add_field(name="Agents", value=f"```{agent_count}```", inline=True)
-            embed.add_field(name="Spider Data", value=f"```{spider_data_count:,}```", inline=True)
-            embed.add_field(name="Images", value=f"```{image_count:,}```", inline=True)
+            embed.add_field(name="Agents", value=f"```{stats['agent_count']}```", inline=True)
+            embed.add_field(name="Spider Data", value=f"```{stats['spider_data_count']:,}```", inline=True)
+            embed.add_field(name="Images", value=f"```{stats['image_count']:,}```", inline=True)
 
-            embed.add_field(name="Dreams", value=f"```{dream_count:,}```", inline=True)
-            embed.add_field(name="HiveMind", value=f"```{hivemind_count:,}```", inline=True)
+            embed.add_field(name="Dreams", value=f"```{stats['dream_count']:,}```", inline=True)
+            embed.add_field(name="HiveMind", value=f"```{stats['hivemind_count']:,}```", inline=True)
             embed.add_field(name="Bot Uptime", value=f"```{uptime_str}```", inline=True)
 
             embed.set_footer(text="Donkey Betz AI Platform")
@@ -154,15 +161,39 @@ class AgentCommands(commands.Cog):
         await interaction.response.defer()
 
         try:
-            from core.models_unified_system import Agent
+            from core.models_unified_system import Agent, AgentEvolution
 
             # Cap limit
             limit = min(limit, 25)
 
-            # Get top agents by level/XP
-            agents = Agent.objects.filter(is_active=True).order_by('-level', '-xp')[:limit]
+            @sync_to_async
+            def get_agents_with_evolution():
+                # Get agents with their evolution data
+                agents = list(Agent.objects.filter(is_active=True)[:limit])
+                agent_data = []
+                for agent in agents:
+                    # Try to get evolution data
+                    try:
+                        evolution = AgentEvolution.objects.filter(agent=agent).first()
+                        level = evolution.current_level if evolution else 1
+                        xp = evolution.total_xp if evolution else 0
+                    except Exception:
+                        level = 1
+                        xp = 0
+                    agent_data.append({
+                        'name': agent.name,
+                        'mood': agent.mood or 'neutral',
+                        'level': level,
+                        'xp': xp,
+                    })
+                # Sort by level then XP
+                agent_data.sort(key=lambda x: (-x['level'], -x['xp']))
+                total = Agent.objects.filter(is_active=True).count()
+                return agent_data, total
 
-            if not agents:
+            agent_data, total_agents = await get_agents_with_evolution()
+
+            if not agent_data:
                 await interaction.followup.send("No active agents found.")
                 return
 
@@ -184,19 +215,16 @@ class AgentCommands(commands.Cog):
             }
 
             agent_list = []
-            for agent in agents:
-                emoji = mood_emoji.get(agent.mood, '')
-                level_bar = '' * min(agent.level, 10)
+            for agent in agent_data:
+                emoji = mood_emoji.get(agent['mood'], '')
+                level_bar = '' * min(agent['level'], 10)
                 agent_list.append(
-                    f"{emoji} **{agent.name}** (Lv.{agent.level})\n"
-                    f"   {level_bar} | XP: {agent.xp:,}"
+                    f"{emoji} **{agent['name']}** (Lv.{agent['level']})\n"
+                    f"   {level_bar} | XP: {agent['xp']:,}"
                 )
 
             embed.description = "\n".join(agent_list)
-
-            # Add summary
-            total_agents = Agent.objects.filter(is_active=True).count()
-            embed.set_footer(text=f"Showing {len(agents)} of {total_agents} active agents")
+            embed.set_footer(text=f"Showing {len(agent_data)} of {total_agents} active agents")
 
             await interaction.followup.send(embed=embed)
 
@@ -214,47 +242,75 @@ class AgentCommands(commands.Cog):
         await interaction.response.defer()
 
         try:
-            from core.models_unified_system import Agent, AgentDream, AgentConversation
+            from core.models_unified_system import Agent, AgentDream, AgentConversation, AgentEvolution
 
-            # Find agent (case-insensitive)
-            agent = Agent.objects.filter(name__icontains=name, is_active=True).first()
+            @sync_to_async
+            def get_agent_details(search_name):
+                # Find agent (case-insensitive)
+                agent = Agent.objects.filter(name__icontains=search_name, is_active=True).first()
+                if not agent:
+                    return None
 
-            if not agent:
+                # Get evolution data
+                try:
+                    evolution = AgentEvolution.objects.filter(agent=agent).first()
+                    level = evolution.current_level if evolution else 1
+                    xp = evolution.total_xp if evolution else 0
+                except Exception:
+                    level = 1
+                    xp = 0
+
+                # Get recent activity
+                recent_dreams = AgentDream.objects.filter(agent=agent).count()
+                recent_convos = AgentConversation.objects.filter(participants=agent).count()
+
+                return {
+                    'name': agent.name,
+                    'description': agent.description or "No description available.",
+                    'mood': agent.mood or 'neutral',
+                    'level': level,
+                    'xp': xp,
+                    'capabilities': agent.capabilities if agent.capabilities else [],
+                    'dreams': recent_dreams,
+                    'conversations': recent_convos,
+                    'created_at': agent.created_at,
+                }
+
+            agent_data = await get_agent_details(name)
+
+            if not agent_data:
                 await interaction.followup.send(f"Agent '{name}' not found.", ephemeral=True)
                 return
 
-            # Get recent activity
-            recent_dreams = AgentDream.objects.filter(agent=agent).count()
-            recent_convos = AgentConversation.objects.filter(participants=agent).count()
-
             embed = discord.Embed(
-                title=f" {agent.name}",
-                description=agent.description or "No description available.",
+                title=f" {agent_data['name']}",
+                description=agent_data['description'],
                 color=discord.Color.blue(),
                 timestamp=datetime.now()
             )
 
             # Stats
-            embed.add_field(name="Level", value=f"```{agent.level}```", inline=True)
-            embed.add_field(name="XP", value=f"```{agent.xp:,}```", inline=True)
-            embed.add_field(name="Mood", value=f"```{agent.mood}```", inline=True)
+            embed.add_field(name="Level", value=f"```{agent_data['level']}```", inline=True)
+            embed.add_field(name="XP", value=f"```{agent_data['xp']:,}```", inline=True)
+            embed.add_field(name="Mood", value=f"```{agent_data['mood']}```", inline=True)
 
             # Capabilities
-            if agent.capabilities:
-                caps = agent.capabilities[:5] if isinstance(agent.capabilities, list) else []
-                if caps:
+            caps = agent_data['capabilities']
+            if caps and isinstance(caps, list):
+                caps_display = caps[:5]
+                if caps_display:
                     embed.add_field(
                         name="Capabilities",
-                        value="```\n" + "\n".join(f" {c}" for c in caps) + "\n```",
+                        value="```\n" + "\n".join(f" {c}" for c in caps_display) + "\n```",
                         inline=False
                     )
 
             # Activity
-            embed.add_field(name="Dreams", value=f"```{recent_dreams}```", inline=True)
-            embed.add_field(name="Conversations", value=f"```{recent_convos}```", inline=True)
+            embed.add_field(name="Dreams", value=f"```{agent_data['dreams']}```", inline=True)
+            embed.add_field(name="Conversations", value=f"```{agent_data['conversations']}```", inline=True)
 
-            if agent.created_at:
-                embed.set_footer(text=f"Created: {agent.created_at.strftime('%Y-%m-%d')}")
+            if agent_data['created_at']:
+                embed.set_footer(text=f"Created: {agent_data['created_at'].strftime('%Y-%m-%d')}")
 
             await interaction.followup.send(embed=embed)
 
@@ -288,23 +344,32 @@ class SpiderCommands(commands.Cog):
 
         try:
             from core.models_unified_system import SpiderData
-            from django.db.models import Count
             from django.utils import timezone
 
             # Cap limit
             limit = min(limit, 15)
 
-            # Get recent data (last 7 days)
-            week_ago = timezone.now() - timedelta(days=7)
-            queryset = SpiderData.objects.filter(crawled_at__gte=week_ago)
+            @sync_to_async
+            def get_trending_data(cat, lim):
+                week_ago = timezone.now() - timedelta(days=7)
+                queryset = SpiderData.objects.filter(crawled_at__gte=week_ago)
 
-            if category:
-                queryset = queryset.filter(category__icontains=category)
+                if cat:
+                    queryset = queryset.filter(category__icontains=cat)
 
-            # Get latest items
-            recent_items = queryset.order_by('-crawled_at')[:limit]
+                items = list(queryset.order_by('-crawled_at')[:lim])
+                total = queryset.count()
 
-            if not recent_items:
+                return [{
+                    'title': item.title,
+                    'category': item.category,
+                    'url': item.url,
+                    'spider_name': item.spider_name,
+                } for item in items], total
+
+            items_data, total_count = await get_trending_data(category, limit)
+
+            if not items_data:
                 await interaction.followup.send(
                     f"No trending data found{' for ' + category if category else ''}.",
                     ephemeral=True
@@ -330,22 +395,19 @@ class SpiderCommands(commands.Cog):
             )
 
             items_text = []
-            for item in recent_items:
-                emoji = category_emoji.get(item.category, '')
-                title = item.title[:50] + "..." if len(item.title) > 50 else item.title
-                source = item.spider_name or "Unknown"
+            for item in items_data:
+                emoji = category_emoji.get(item['category'], '')
+                title = item['title'][:50] + "..." if len(item['title']) > 50 else item['title']
+                source = item['spider_name'] or "Unknown"
 
                 # Add link if available
-                if item.url:
-                    items_text.append(f"{emoji} [{title}]({item.url})\n   Source: {source}")
+                if item['url']:
+                    items_text.append(f"{emoji} [{title}]({item['url']})\n   Source: {source}")
                 else:
                     items_text.append(f"{emoji} **{title}**\n   Source: {source}")
 
             embed.description = "\n\n".join(items_text)
-
-            # Add stats
-            total_count = queryset.count()
-            embed.set_footer(text=f"Showing {len(recent_items)} of {total_count:,} items this week")
+            embed.set_footer(text=f"Showing {len(items_data)} of {total_count:,} items this week")
 
             await interaction.followup.send(embed=embed)
 
@@ -366,18 +428,23 @@ class SpiderCommands(commands.Cog):
             from django.db.models import Count
             from django.utils import timezone
 
-            # Get category breakdown
-            categories = SpiderData.objects.values('category').annotate(
-                count=Count('id')
-            ).order_by('-count')[:10]
+            @sync_to_async
+            def get_spider_stats():
+                today = timezone.now().date()
+                week_ago = timezone.now() - timedelta(days=7)
 
-            # Get recent activity
-            today = timezone.now().date()
-            week_ago = timezone.now() - timedelta(days=7)
+                categories = list(SpiderData.objects.values('category').annotate(
+                    count=Count('id')
+                ).order_by('-count')[:10])
 
-            total_count = SpiderData.objects.count()
-            today_count = SpiderData.objects.filter(crawled_at__date=today).count()
-            week_count = SpiderData.objects.filter(crawled_at__gte=week_ago).count()
+                return {
+                    'total': SpiderData.objects.count(),
+                    'today': SpiderData.objects.filter(crawled_at__date=today).count(),
+                    'week': SpiderData.objects.filter(crawled_at__gte=week_ago).count(),
+                    'categories': categories,
+                }
+
+            stats = await get_spider_stats()
 
             embed = discord.Embed(
                 title=" Spider Network Stats",
@@ -385,15 +452,15 @@ class SpiderCommands(commands.Cog):
                 timestamp=datetime.now()
             )
 
-            embed.add_field(name="Total Records", value=f"```{total_count:,}```", inline=True)
-            embed.add_field(name="Today", value=f"```{today_count:,}```", inline=True)
-            embed.add_field(name="This Week", value=f"```{week_count:,}```", inline=True)
+            embed.add_field(name="Total Records", value=f"```{stats['total']:,}```", inline=True)
+            embed.add_field(name="Today", value=f"```{stats['today']:,}```", inline=True)
+            embed.add_field(name="This Week", value=f"```{stats['week']:,}```", inline=True)
 
             # Category breakdown
-            if categories:
+            if stats['categories']:
                 cat_text = "\n".join(
                     f" {c['category'] or 'Unknown'}: {c['count']:,}"
-                    for c in categories
+                    for c in stats['categories']
                 )
                 embed.add_field(
                     name="Top Categories",
