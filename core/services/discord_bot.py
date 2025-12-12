@@ -1,13 +1,21 @@
 """
-Discord Bot Service - Session 426
+Discord Bot Service - Sessions 426-428
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
-Commands:
+Session 426 Commands:
 - /status - System health check
 - /agents - List active agents with stats
 - /trending - Get trending spider data
 - /help - Command reference
+
+Session 427 Commands:
+- /ask <question> - Query Personal Assistant
+- /create <prompt> - Trigger image generation
+- /research <topic> - Run spider search
+
+Session 428 Commands:
+- /clear - Clear conversation history
 
 Usage:
     # Run the bot
@@ -20,8 +28,11 @@ Usage:
 import os
 import logging
 import asyncio
+import time
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Dict, Any, List
+from collections import defaultdict
+from dataclasses import dataclass, field
 
 import discord
 from discord import app_commands
@@ -29,6 +40,193 @@ from discord.ext import commands
 from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Rate Limiting / Cooldowns - Session 427
+# =============================================================================
+
+class RateLimiter:
+    """Simple rate limiter for Discord commands."""
+
+    def __init__(self):
+        # Track user command timestamps: {user_id: {command_name: last_used_timestamp}}
+        self._command_cooldowns: Dict[int, Dict[str, float]] = defaultdict(dict)
+        # Cooldowns in seconds per command
+        self._cooldown_times = {
+            'ask': 10,       # 10 seconds between /ask calls
+            'create': 30,    # 30 seconds between /create calls
+            'research': 15,  # 15 seconds between /research calls
+            'default': 3,    # Default 3 seconds
+        }
+
+    def check_cooldown(self, user_id: int, command_name: str) -> tuple[bool, float]:
+        """
+        Check if user can use command. Returns (can_use, remaining_seconds).
+        """
+        cooldown = self._cooldown_times.get(command_name, self._cooldown_times['default'])
+        last_used = self._command_cooldowns[user_id].get(command_name, 0)
+        elapsed = time.time() - last_used
+
+        if elapsed < cooldown:
+            return False, cooldown - elapsed
+        return True, 0
+
+    def record_use(self, user_id: int, command_name: str):
+        """Record that user used a command."""
+        self._command_cooldowns[user_id][command_name] = time.time()
+
+
+# Global rate limiter instance
+rate_limiter = RateLimiter()
+
+
+# =============================================================================
+# Permission Levels - Session 427
+# =============================================================================
+
+class PermissionLevel:
+    """User permission levels for Discord commands."""
+
+    # Admin users (by Discord user ID) - can bypass rate limits
+    ADMIN_USER_IDS = {
+        264555101581082624,  # .donkeyking (owner)
+    }
+
+    # Trusted users - reduced rate limits
+    TRUSTED_USER_IDS = set()
+
+    @classmethod
+    def is_admin(cls, user_id: int) -> bool:
+        """Check if user is an admin."""
+        return user_id in cls.ADMIN_USER_IDS
+
+    @classmethod
+    def is_trusted(cls, user_id: int) -> bool:
+        """Check if user is trusted (admin or explicitly trusted)."""
+        return user_id in cls.ADMIN_USER_IDS or user_id in cls.TRUSTED_USER_IDS
+
+    @classmethod
+    def get_cooldown_multiplier(cls, user_id: int) -> float:
+        """Get cooldown multiplier for user (lower = faster cooldown)."""
+        if cls.is_admin(user_id):
+            return 0.0  # No cooldown for admins
+        if cls.is_trusted(user_id):
+            return 0.5  # 50% cooldown for trusted users
+        return 1.0  # Normal cooldown
+
+
+def check_permission(user_id: int, command_name: str) -> tuple[bool, float]:
+    """
+    Check if user can use command with permission-aware cooldowns.
+    Returns (can_use, remaining_seconds).
+    """
+    multiplier = PermissionLevel.get_cooldown_multiplier(user_id)
+
+    # Admins bypass cooldowns entirely
+    if multiplier == 0.0:
+        return True, 0
+
+    # Check with adjusted cooldown
+    can_use, remaining = rate_limiter.check_cooldown(user_id, command_name)
+    return can_use, remaining * multiplier
+
+
+# =============================================================================
+# Conversation History - Session 428
+# =============================================================================
+
+@dataclass
+class ConversationMessage:
+    """A single message in a conversation."""
+    role: str  # 'user' or 'assistant'
+    content: str
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+class ConversationHistory:
+    """
+    Manages conversation history per Discord user.
+
+    Features:
+    - Stores up to MAX_MESSAGES per user
+    - Auto-expires conversations after EXPIRY_HOURS of inactivity
+    - Thread-safe for async operations
+    """
+
+    MAX_MESSAGES = 20  # Keep last 20 messages per user
+    EXPIRY_HOURS = 2   # Conversations expire after 2 hours of inactivity
+
+    def __init__(self):
+        # {user_id: {'messages': [ConversationMessage], 'last_activity': datetime}}
+        self._conversations: Dict[int, Dict[str, Any]] = {}
+
+    def add_message(self, user_id: int, role: str, content: str):
+        """Add a message to user's conversation history."""
+        now = datetime.now()
+
+        if user_id not in self._conversations:
+            self._conversations[user_id] = {
+                'messages': [],
+                'last_activity': now
+            }
+
+        conv = self._conversations[user_id]
+        conv['messages'].append(ConversationMessage(role=role, content=content, timestamp=now))
+        conv['last_activity'] = now
+
+        # Trim to max messages (keep most recent)
+        if len(conv['messages']) > self.MAX_MESSAGES:
+            conv['messages'] = conv['messages'][-self.MAX_MESSAGES:]
+
+    def get_history(self, user_id: int) -> List[Dict[str, str]]:
+        """
+        Get conversation history for user as list of message dicts.
+        Returns empty list if no history or expired.
+        """
+        if user_id not in self._conversations:
+            return []
+
+        conv = self._conversations[user_id]
+
+        # Check if conversation has expired
+        if datetime.now() - conv['last_activity'] > timedelta(hours=self.EXPIRY_HOURS):
+            self.clear(user_id)
+            return []
+
+        # Return messages in format suitable for LLM
+        return [
+            {'role': msg.role, 'content': msg.content}
+            for msg in conv['messages']
+        ]
+
+    def clear(self, user_id: int) -> bool:
+        """Clear conversation history for user. Returns True if there was history to clear."""
+        if user_id in self._conversations:
+            del self._conversations[user_id]
+            return True
+        return False
+
+    def get_message_count(self, user_id: int) -> int:
+        """Get number of messages in user's history."""
+        if user_id not in self._conversations:
+            return 0
+        return len(self._conversations[user_id]['messages'])
+
+    def cleanup_expired(self):
+        """Remove all expired conversations. Call periodically."""
+        now = datetime.now()
+        expired_users = [
+            user_id for user_id, conv in self._conversations.items()
+            if now - conv['last_activity'] > timedelta(hours=self.EXPIRY_HOURS)
+        ]
+        for user_id in expired_users:
+            del self._conversations[user_id]
+        return len(expired_users)
+
+
+# Global conversation history instance
+conversation_history = ConversationHistory()
 
 
 class DonkeyBetzBot(commands.Bot):
@@ -59,12 +257,24 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(StatusCommands(self))
         await self.add_cog(AgentCommands(self))
         await self.add_cog(SpiderCommands(self))
+        await self.add_cog(InteractiveCommands(self))  # Session 427
         await self.add_cog(HelpCommands(self))
 
         # Sync slash commands with Discord
         try:
+            # Donkey Betz guild ID for instant command availability
+            guild = discord.Object(id=971148613109555212)
+
+            # Copy global commands to guild for instant sync
+            self.tree.copy_global_to(guild=guild)
+
+            # Sync to guild first (instant)
+            guild_synced = await self.tree.sync(guild=guild)
+            logger.info(f"Synced {len(guild_synced)} guild slash commands to Donkey Betz (instant)")
+
+            # Global sync (can take up to an hour to propagate)
             synced = await self.tree.sync()
-            logger.info(f"Synced {len(synced)} slash commands")
+            logger.info(f"Synced {len(synced)} global slash commands")
         except Exception as e:
             logger.error(f"Failed to sync commands: {e}")
 
@@ -352,20 +562,46 @@ class SpiderCommands(commands.Cog):
             @sync_to_async
             def get_trending_data(cat, lim):
                 week_ago = timezone.now() - timedelta(days=7)
-                queryset = SpiderData.objects.filter(crawled_at__gte=week_ago)
+                queryset = SpiderData.objects.filter(created_at__gte=week_ago)
 
                 if cat:
-                    queryset = queryset.filter(category__icontains=cat)
+                    queryset = queryset.filter(data_type__icontains=cat)
 
-                items = list(queryset.order_by('-crawled_at')[:lim])
+                # Get more spider entries to extract items from
+                spider_entries = list(queryset.order_by('-created_at')[:20])
                 total = queryset.count()
 
-                return [{
-                    'title': item.title,
-                    'category': item.category,
-                    'url': item.url,
-                    'spider_name': item.spider_name,
-                } for item in items], total
+                result = []
+                for entry in spider_entries:
+                    raw = entry.raw_data or {}
+                    # Items are stored in raw_data['items'] array
+                    items_list = raw.get('items', [])
+
+                    for item in items_list[:3]:  # Take up to 3 items per spider
+                        if len(result) >= lim:
+                            break
+                        # Extract title - try multiple common field names
+                        title = (
+                            item.get('title') or
+                            item.get('name') or
+                            item.get('headline') or
+                            item.get('id') or
+                            f"Item from {entry.spider_name}"
+                        )
+                        # Extract URL
+                        url = item.get('link') or item.get('url') or item.get('href') or ''
+
+                        result.append({
+                            'title': title,
+                            'category': entry.data_type,
+                            'url': url,
+                            'spider_name': entry.spider_name,
+                        })
+
+                    if len(result) >= lim:
+                        break
+
+                return result[:lim], total
 
             items_data, total_count = await get_trending_data(category, limit)
 
@@ -397,7 +633,8 @@ class SpiderCommands(commands.Cog):
             items_text = []
             for item in items_data:
                 emoji = category_emoji.get(item['category'], '')
-                title = item['title'][:50] + "..." if len(item['title']) > 50 else item['title']
+                title = item['title'] or "Untitled"
+                title = title[:50] + "..." if len(title) > 50 else title
                 source = item['spider_name'] or "Unknown"
 
                 # Add link if available
@@ -480,6 +717,428 @@ class SpiderCommands(commands.Cog):
             )
 
 
+# =============================================================================
+# Session 427: Interactive Commands (/ask, /create, /research)
+# =============================================================================
+
+class InteractiveCommands(commands.Cog):
+    """Commands for interacting with AI agents - Session 427."""
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="ask", description="Ask the Personal Assistant a question")
+    @app_commands.describe(question="Your question for the AI assistant")
+    async def ask(self, interaction: discord.Interaction, question: str):
+        """Query the Personal Assistant agent with conversation memory."""
+        # Check rate limit with permission awareness
+        can_use, remaining = check_permission(interaction.user.id, 'ask')
+        if not can_use:
+            await interaction.response.send_message(
+                f"Please wait {remaining:.1f}s before using /ask again.",
+                ephemeral=True
+            )
+            return
+
+        # Defer for long operation
+        await interaction.response.defer()
+        rate_limiter.record_use(interaction.user.id, 'ask')
+
+        user_id = interaction.user.id
+
+        try:
+            # Get conversation history for this user
+            history = conversation_history.get_history(user_id)
+
+            # Import and call Personal Assistant
+            @sync_to_async
+            def query_assistant(q: str, conv_history: List[Dict[str, str]]) -> Dict[str, Any]:
+                from core.agents.personal_assistant_agent import PersonalAssistantAgent
+                from core.agent_router import AgentRouter
+
+                agent = PersonalAssistantAgent()
+                router = AgentRouter()
+
+                # Build context with conversation history
+                context = {
+                    'source': 'discord',
+                    'user_id': str(interaction.user.id),
+                    'user_name': interaction.user.display_name,
+                    'conversation_history': conv_history,  # Session 428: Add history
+                }
+
+                # Build task with context if there's history
+                task_with_context = q
+                if conv_history:
+                    # Prepend conversation summary for context
+                    history_summary = "\n".join([
+                        f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+                        for m in conv_history[-6:]  # Last 3 exchanges
+                    ])
+                    task_with_context = f"[Previous conversation]\n{history_summary}\n\n[Current question]\n{q}"
+
+                # Execute the agent
+                result = agent.execute(
+                    task=task_with_context,
+                    context=context,
+                    scifi_context={},
+                    spider_context={}
+                )
+
+                # Build response - check both message and data
+                response_text = result.message or ""
+
+                # If message is short/generic, check data for more detail
+                if result.data:
+                    agent_result = result.data.get('agent_result', {})
+                    if isinstance(agent_result, dict):
+                        # Look for actual content in agent_result
+                        if 'results' in agent_result:
+                            response_text += "\n\n**Results:**\n"
+                            for item in agent_result['results'][:5]:
+                                if isinstance(item, dict):
+                                    title = item.get('title', '')[:80]
+                                    url = item.get('url', '')
+                                    if title:
+                                        if url:
+                                            response_text += f"- [{title}]({url})\n"
+                                        else:
+                                            response_text += f"- {title}\n"
+
+                return {
+                    'success': result.success,
+                    'message': response_text,
+                    'agent_name': result.agent_name if hasattr(result, 'agent_name') else 'PersonalAssistant',
+                    'delegated_to': result.data.get('delegated_to') if result.data else None,
+                    'error': result.error,
+                }
+
+            result = await query_assistant(question, history)
+
+            # Session 428: Store conversation in history
+            if result['success']:
+                # Add user question and assistant response to history
+                conversation_history.add_message(user_id, 'user', question)
+                response_for_history = result['message'][:500] if result['message'] else "No response"
+                conversation_history.add_message(user_id, 'assistant', response_for_history)
+
+            # Build response embed
+            if result['success']:
+                # Truncate response if too long (Discord limit is 4096 for embed description)
+                response_text = result['message'] or "No response generated."
+                if len(response_text) > 3800:
+                    response_text = response_text[:3800] + "\n\n*... (response truncated)*"
+
+                embed = discord.Embed(
+                    title="Personal Assistant",
+                    description=response_text,
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+
+                # Show conversation info and which agent handled it
+                msg_count = conversation_history.get_message_count(user_id)
+                footer_parts = [f"Asked by {interaction.user.display_name}"]
+                if result.get('delegated_to'):
+                    footer_parts.append(f"Handled by {result['delegated_to']}")
+                if msg_count > 2:
+                    footer_parts.append(f"Conversation: {msg_count // 2} exchanges")
+                embed.set_footer(text=" | ".join(footer_parts))
+            else:
+                embed = discord.Embed(
+                    title="Error",
+                    description=result.get('error', 'An error occurred processing your request.'),
+                    color=discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/ask command error: {e}")
+            await interaction.followup.send(
+                f"Error processing question: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="create", description="Generate an image with AI")
+    @app_commands.describe(prompt="Describe what you want to create")
+    async def create(self, interaction: discord.Interaction, prompt: str):
+        """Trigger image generation via ImageAgent."""
+        # Check rate limit with permission awareness
+        can_use, remaining = check_permission(interaction.user.id, 'create')
+        if not can_use:
+            await interaction.response.send_message(
+                f"Please wait {remaining:.1f}s before using /create again.",
+                ephemeral=True
+            )
+            return
+
+        # Defer for long operation (image generation takes time!)
+        await interaction.response.defer()
+        rate_limiter.record_use(interaction.user.id, 'create')
+
+        try:
+            @sync_to_async
+            def generate_image(p: str, discord_user_id: int, discord_user_name: str) -> Dict[str, Any]:
+                from core.agents.image_agent import ImageAgent
+                from django.contrib.auth import get_user_model
+                from content.models import ImageHistory
+                import os
+                from django.conf import settings
+
+                User = get_user_model()
+                agent = ImageAgent()
+
+                # Build context
+                context = {
+                    'source': 'discord',
+                    'user_id': str(discord_user_id),
+                    'user_name': discord_user_name,
+                }
+
+                # Execute image generation
+                result = agent.execute(
+                    task=f"Create an image: {p}",
+                    context=context,
+                    scifi_context={},
+                    spider_context={}
+                )
+
+                # Check for images in the data
+                image_url = None
+                local_file_path = None
+                file_path_for_db = None
+                if result.data:
+                    images = result.data.get('images', [])
+                    logger.info(f"/create result.data keys: {result.data.keys() if result.data else 'None'}")
+                    logger.info(f"/create images array: {images}")
+                    if images and len(images) > 0:
+                        # Get the first image - note: uses 'image_url' not 'url'!
+                        first_image = images[0]
+                        # Try both 'image_url' and 'url' for compatibility
+                        image_url = first_image.get('image_url') or first_image.get('url', '')
+                        logger.info(f"/create found image URL: {image_url}")
+                        # Convert media URL to local filesystem path
+                        if image_url and image_url.startswith('/media/'):
+                            # Convert /media/... to actual file path
+                            local_file_path = os.path.join(settings.BASE_DIR, image_url.lstrip('/'))
+                            # For DB storage, we need the relative path from MEDIA_ROOT
+                            file_path_for_db = image_url.replace('/media/', '')
+                            logger.info(f"/create local file path: {local_file_path}")
+
+                # Session 429: Save to ImageHistory so it appears in web app
+                history_id = None
+                if result.success and file_path_for_db:
+                    try:
+                        # Get or create a user for Discord images
+                        discord_user, _ = User.objects.get_or_create(
+                            username='discord_bot',
+                            defaults={
+                                'email': 'discord@donkeybetz.local',
+                                'is_active': True,
+                            }
+                        )
+
+                        # Create ImageHistory record
+                        history = ImageHistory.objects.create(
+                            user=discord_user,
+                            filename=os.path.basename(file_path_for_db),
+                            file_path=file_path_for_db,
+                            image_type='generated',
+                            prompt=p,
+                            parameters={
+                                'source': 'discord',
+                                'discord_user_id': str(discord_user_id),
+                                'discord_user_name': discord_user_name,
+                            },
+                            model_used=first_image.get('model', 'stable-diffusion'),
+                            style=first_image.get('style', ''),
+                        )
+                        history_id = history.id
+                        logger.info(f"/create saved to ImageHistory: {history.id}")
+                    except Exception as db_err:
+                        logger.warning(f"/create failed to save to ImageHistory: {db_err}")
+
+                return {
+                    'success': result.success,
+                    'message': result.message,
+                    'image_url': image_url,
+                    'local_file_path': local_file_path,
+                    'image_count': len(images) if result.data else 0,
+                    'error': result.error,
+                    'history_id': history_id,
+                }
+
+            result = await generate_image(prompt, interaction.user.id, interaction.user.display_name)
+
+            if result['success']:
+                embed = discord.Embed(
+                    title="Image Generated",
+                    description=f"**Prompt:** {prompt[:200]}",
+                    color=discord.Color.purple(),
+                    timestamp=datetime.now()
+                )
+                # Session 429: Add note that image is saved to web app
+                footer_text = f"Created by {interaction.user.display_name}"
+                if result.get('history_id'):
+                    footer_text += " | Saved to AI Studio"
+                embed.set_footer(text=footer_text)
+
+                # Try to upload the image file directly to Discord
+                file_to_send = None
+                if result.get('local_file_path'):
+                    import os
+                    file_path = result['local_file_path']
+                    if os.path.exists(file_path):
+                        # Create Discord File object
+                        filename = os.path.basename(file_path)
+                        file_to_send = discord.File(file_path, filename=filename)
+                        # Set the embed image to reference the attachment
+                        embed.set_image(url=f"attachment://{filename}")
+
+                # If no file, show fallback message
+                if not file_to_send:
+                    response_text = result['message'] or "Image generated"
+                    if result.get('image_url'):
+                        response_text += f"\n\n**View in AI Studio:** [Click here](http://localhost:8000/ai-studio/)"
+                    embed.add_field(name="Result", value=response_text, inline=False)
+                # Send with file if we have one
+                if file_to_send:
+                    await interaction.followup.send(embed=embed, file=file_to_send)
+                else:
+                    await interaction.followup.send(embed=embed)
+                return
+
+            else:
+                embed = discord.Embed(
+                    title="Generation Failed",
+                    description=result.get('error', 'Failed to generate image.'),
+                    color=discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/create command error: {e}")
+            await interaction.followup.send(
+                f"Error generating image: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="research", description="Search spider data for a topic")
+    @app_commands.describe(
+        topic="Topic to research",
+        limit="Number of results (default: 5)"
+    )
+    async def research(
+        self,
+        interaction: discord.Interaction,
+        topic: str,
+        limit: int = 5
+    ):
+        """Run spider search for a topic."""
+        # Check rate limit with permission awareness
+        can_use, remaining = check_permission(interaction.user.id, 'research')
+        if not can_use:
+            await interaction.response.send_message(
+                f"Please wait {remaining:.1f}s before using /research again.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.defer()
+        rate_limiter.record_use(interaction.user.id, 'research')
+
+        try:
+            # Cap limit
+            limit = min(limit, 10)
+
+            @sync_to_async
+            def search_spiders(query: str, lim: int) -> Dict[str, Any]:
+                from core.services.spider_semantic_search import SpiderSemanticSearch
+
+                search = SpiderSemanticSearch()
+                results = search.semantic_search(query, limit=lim)
+
+                return {
+                    'query': query,
+                    'results': results,
+                    'count': len(results),
+                }
+
+            data = await search_spiders(topic, limit)
+
+            if not data['results']:
+                await interaction.followup.send(
+                    f"No results found for '{topic}'.",
+                    ephemeral=True
+                )
+                return
+
+            embed = discord.Embed(
+                title=f"Research: {topic}",
+                description=f"Found {data['count']} results from spider network.",
+                color=discord.Color.teal(),
+                timestamp=datetime.now()
+            )
+
+            for idx, item in enumerate(data['results'][:5], 1):
+                # SemanticSearchResult is a dataclass, use attribute access
+                title = (item.title or 'Untitled')[:100]
+                url = item.url or ''
+                source = item.source or 'Unknown'
+                score = item.similarity or 0
+
+                # Format as clickable link if URL exists
+                if url:
+                    value = f"[{title}]({url})\nSource: {source} | Score: {score:.2f}"
+                else:
+                    value = f"{title}\nSource: {source} | Score: {score:.2f}"
+
+                embed.add_field(
+                    name=f"Result {idx}",
+                    value=value,
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Searched by {interaction.user.display_name}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/research command error: {e}")
+            await interaction.followup.send(
+                f"Error searching: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="clear", description="Clear your conversation history with the assistant")
+    async def clear_history(self, interaction: discord.Interaction):
+        """Clear conversation history for the user - Session 428."""
+        user_id = interaction.user.id
+        msg_count = conversation_history.get_message_count(user_id)
+
+        if conversation_history.clear(user_id):
+            embed = discord.Embed(
+                title="Conversation Cleared",
+                description=f"Your conversation history has been cleared ({msg_count // 2} exchanges removed).\n\nYour next `/ask` will start a fresh conversation.",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+        else:
+            embed = discord.Embed(
+                title="No History",
+                description="You don't have any conversation history to clear.",
+                color=discord.Color.light_gray(),
+                timestamp=datetime.now()
+            )
+
+        embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
 class HelpCommands(commands.Cog):
     """Help and documentation commands."""
 
@@ -494,6 +1153,18 @@ class HelpCommands(commands.Cog):
             description="Available slash commands for the AI Platform.",
             color=discord.Color.blurple(),
             timestamp=datetime.now()
+        )
+
+        # Interactive commands (Sessions 427-428)
+        embed.add_field(
+            name=" Interactive",
+            value=(
+                "**/ask** <question> - Ask the Personal Assistant (remembers context!)\n"
+                "**/create** <prompt> - Generate an image\n"
+                "**/research** <topic> [limit] - Search spider data\n"
+                "**/clear** - Clear your conversation history"
+            ),
+            inline=False
         )
 
         # Status commands
@@ -520,7 +1191,7 @@ class HelpCommands(commands.Cog):
         embed.add_field(
             name=" Data",
             value=(
-                "**/trending** [category] [limit] - Trending topics\n"
+                "**/trending** [category] [limit] - Trending topics"
             ),
             inline=False
         )
@@ -532,7 +1203,7 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text="Session 426 | More commands coming soon!")
+        embed.set_footer(text="Session 427 | Rate limits apply to interactive commands")
 
         await interaction.response.send_message(embed=embed)
 
