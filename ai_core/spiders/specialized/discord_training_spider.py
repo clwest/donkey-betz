@@ -72,49 +72,33 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
         # ============================================================
         # TIER 2: GOOD PUBLIC DATASETS
         # ============================================================
-        'wizard_vicuna': {
-            'repo': 'cognitivecomputations/wizard_vicuna_70k_unfiltered',
-            'description': 'WizardVicuna - 70K complex instructions',
-            'type': 'instruction',
-        },
-        'openhermes': {
-            'repo': 'teknium/OpenHermes-2.5',
-            'description': 'OpenHermes 2.5 - 1M diverse instructions',
-            'type': 'instruction',
-        },
-        'evol_instruct': {
-            'repo': 'WizardLM/WizardLM_evol_instruct_V2_196k',
-            'description': 'WizardLM EvolInstruct - 196K evolved instructions',
-            'type': 'instruction',
-        },
         'topical_chat': {
             'repo': 'Conversational-Reasoning/Topical-Chat',
             'description': 'Topical conversations with knowledge grounding',
             'type': 'conversation',
         },
-        'airoboros': {
-            'repo': 'jondurbin/airoboros-2.2.1',
-            'description': 'Airoboros - diverse synthetic + curated data',
-            'type': 'instruction',
-        },
         # ============================================================
         # TIER 3: GATED DATASETS (Require HUGGINGFACE_TOKEN + terms acceptance)
+        # Now unlocked - Session 420!
         # ============================================================
         'lmsys_chat': {
             'repo': 'lmsys/lmsys-chat-1m',
-            'description': '1M real conversations with LLMs (requires token)',
+            'description': '1M real conversations with LLMs - UNLOCKED!',
             'type': 'ai_chat',
         },
         'ultrachat': {
             'repo': 'HuggingFaceH4/ultrachat_200k',
-            'description': 'High-quality filtered dialogues (requires token)',
+            'description': 'High-quality filtered dialogues',
             'type': 'ai_chat',
         },
-        'chatbot_arena': {
-            'repo': 'lmsys/chatbot_arena_conversations',
-            'description': 'Chatbot Arena conversations (requires token)',
-            'type': 'ai_chat',
-        },
+        # ============================================================
+        # REMOVED DATASETS (404 errors - Session 420 cleanup)
+        # - wizard_vicuna: cognitivecomputations/wizard_vicuna_70k_unfiltered
+        # - openhermes: teknium/OpenHermes-2.5
+        # - evol_instruct: WizardLM/WizardLM_evol_instruct_V2_196k
+        # - airoboros: jondurbin/airoboros-2.2.1
+        # - chatbot_arena: lmsys/chatbot_arena_conversations
+        # ============================================================
     }
 
     # Keywords that indicate high-quality training data
