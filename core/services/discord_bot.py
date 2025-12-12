@@ -1,5 +1,5 @@
 """
-Discord Bot Service - Sessions 426-428
+Discord Bot Service - Sessions 426-429
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
@@ -16,6 +16,10 @@ Session 427 Commands:
 
 Session 428 Commands:
 - /clear - Clear conversation history
+
+Session 429 Commands:
+- /link <code> - Link Discord account to web user
+- /unlink - Check link status and unlink instructions
 
 Usage:
     # Run the bot
@@ -929,16 +933,25 @@ class InteractiveCommands(commands.Cog):
 
                 # Session 429: Save to ImageHistory so it appears in web app
                 history_id = None
+                linked_username = None
                 if result.success and file_path_for_db:
                     try:
-                        # Get or create a user for Discord images
-                        discord_user, _ = User.objects.get_or_create(
-                            username='discord_bot',
-                            defaults={
-                                'email': 'discord@donkeybetz.local',
-                                'is_active': True,
-                            }
-                        )
+                        # Session 429: Check if Discord user has linked account
+                        linked_user = User.objects.filter(discord_id=str(discord_user_id)).first()
+
+                        if linked_user:
+                            # Use linked user's account
+                            discord_user = linked_user
+                            linked_username = linked_user.username
+                        else:
+                            # Fall back to generic discord_bot user
+                            discord_user, _ = User.objects.get_or_create(
+                                username='discord_bot',
+                                defaults={
+                                    'email': 'discord@donkeybetz.local',
+                                    'is_active': True,
+                                }
+                            )
 
                         # Create ImageHistory record
                         history = ImageHistory.objects.create(
@@ -968,6 +981,7 @@ class InteractiveCommands(commands.Cog):
                     'image_count': len(images) if result.data else 0,
                     'error': result.error,
                     'history_id': history_id,
+                    'linked_username': linked_username,  # Session 429: Track if saved to linked account
                 }
 
             result = await generate_image(prompt, interaction.user.id, interaction.user.display_name)
@@ -982,7 +996,10 @@ class InteractiveCommands(commands.Cog):
                 # Session 429: Add note that image is saved to web app
                 footer_text = f"Created by {interaction.user.display_name}"
                 if result.get('history_id'):
-                    footer_text += " | Saved to AI Studio"
+                    if result.get('linked_username'):
+                        footer_text += f" | Saved to {result['linked_username']}'s AI Studio"
+                    else:
+                        footer_text += " | Saved to AI Studio (link your account with /link)"
                 embed.set_footer(text=footer_text)
 
                 # Try to upload the image file directly to Discord
@@ -1138,6 +1155,111 @@ class InteractiveCommands(commands.Cog):
         embed.set_footer(text=f"Requested by {interaction.user.display_name}")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @app_commands.command(name="link", description="Link your Discord account to your AI Studio web account")
+    @app_commands.describe(code="The 6-character link code from the AI Studio web app")
+    async def link_account(self, interaction: discord.Interaction, code: str):
+        """
+        Link Discord account to web user using a verification code.
+
+        Session 429: Discord User Linking
+
+        The user generates a code in the web app, then uses /link <code> here.
+        """
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            import aiohttp
+
+            # Get the API URL (assume localhost for now, could be configurable)
+            api_url = os.environ.get('DJANGO_API_URL', 'http://localhost:8000')
+            bot_secret = os.environ.get('DISCORD_BOT_TOKEN', '')[:20]  # First 20 chars as secret
+
+            # Call the verify endpoint
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{api_url}/api/discord/verify-link-code/",
+                    json={
+                        'code': code.upper().strip(),
+                        'discord_id': str(interaction.user.id),
+                        'discord_username': f"{interaction.user.name}#{interaction.user.discriminator}" if interaction.user.discriminator != '0' else interaction.user.name,
+                        'bot_secret': bot_secret,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    result = await resp.json()
+
+            if result.get('success'):
+                embed = discord.Embed(
+                    title="Account Linked!",
+                    description=f"Your Discord account has been linked to **{result.get('username', 'your account')}**.\n\nImages you create with `/create` will now appear in your AI Studio gallery!",
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+                embed.set_footer(text=f"Linked: {interaction.user.display_name}")
+            else:
+                error_msg = result.get('error', 'Unknown error')
+                embed = discord.Embed(
+                    title="Link Failed",
+                    description=f"**Error:** {error_msg}\n\nMake sure you:\n1. Generated a fresh code in AI Studio\n2. Entered it within 10 minutes\n3. Haven't already linked this Discord account",
+                    color=discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+                embed.set_footer(text="Use /link <code> to try again")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except aiohttp.ClientError as e:
+            logger.error(f"/link API connection error: {e}")
+            await interaction.followup.send(
+                "Could not connect to the AI Studio server. Please try again later.",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.error(f"/link command error: {e}")
+            await interaction.followup.send(
+                f"Error linking account: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="unlink", description="Unlink your Discord account from your AI Studio account")
+    async def unlink_account(self, interaction: discord.Interaction):
+        """
+        Check if Discord account is linked and provide unlink instructions.
+
+        Session 429: Discord User Linking
+        """
+        @sync_to_async
+        def check_link_status(discord_id: str):
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                user = User.objects.filter(discord_id=discord_id).first()
+                if user:
+                    return {'linked': True, 'username': user.username}
+                return {'linked': False}
+            except Exception:
+                return {'linked': False}
+
+        result = await check_link_status(str(interaction.user.id))
+
+        if result.get('linked'):
+            embed = discord.Embed(
+                title="Account Linked",
+                description=f"Your Discord is linked to **{result.get('username')}**.\n\nTo unlink, go to AI Studio > Settings and click 'Unlink Discord'.",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+        else:
+            embed = discord.Embed(
+                title="Not Linked",
+                description="Your Discord account is not linked to any AI Studio account.\n\nUse `/link <code>` with a code from AI Studio to link your accounts.",
+                color=discord.Color.light_gray(),
+                timestamp=datetime.now()
+            )
+
+        embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 class HelpCommands(commands.Cog):
     """Help and documentation commands."""
@@ -1196,6 +1318,16 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
+        # Account linking (Session 429)
+        embed.add_field(
+            name=" Account",
+            value=(
+                "**/link** <code> - Link Discord to AI Studio account\n"
+                "**/unlink** - Check link status"
+            ),
+            inline=False
+        )
+
         # Help
         embed.add_field(
             name=" Help",
@@ -1203,7 +1335,7 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text="Session 427 | Rate limits apply to interactive commands")
+        embed.set_footer(text="Session 429 | Rate limits apply to interactive commands")
 
         await interaction.response.send_message(embed=embed)
 
