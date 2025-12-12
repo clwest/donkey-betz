@@ -1,12 +1,12 @@
 # Start Next Session Here
 
-**Last Session:** 424 - Opportunities Discord Channel
+**Last Session:** 425 - Opportunity Pipeline Automation
 **Date:** December 11, 2025
-**Status:** Sessions 421-424 COMPLETE - Spider + Opportunity notifications live!
+**Status:** Sessions 421-425 COMPLETE - Full opportunity pipeline with revenue tracking!
 
 ---
 
-## Sessions 421-424 Accomplishments
+## Sessions 421-425 Accomplishments
 
 ### Session 421: LMSYS Dataset Unlock
 - Unlocked **1M+ conversations** from LMSYS dataset
@@ -41,14 +41,28 @@ New Discord channel for high-value opportunity alerts:
 | `send_opportunity()` | High-value opportunity alert (70+/100) |
 | `send_opportunity_summary()` | Opportunity scan summary |
 
-**Features:**
-- Score threshold: 70/100 (7.0/10 normalized)
-- Category emojis + score-based colors
-- Integration with OpportunityScoringAgent
+### Session 425: Opportunity Pipeline Automation
+Complete opportunity-to-revenue pipeline:
+| Feature | Description |
+|---------|-------------|
+| **OpportunityTask** | Auto-created from 70+ scoring opportunities |
+| **Agent Linking** | Maps opportunity types to relevant agents |
+| **Outcome Tracking** | applied/won/lost with revenue attribution |
+| **Weekly Digest** | Posts to #boardroom every Sunday 10 AM |
+
+**New Models:** `OpportunityTask`, `OpportunityOutcome`, `OpportunityDigest`
+
+**New API Endpoints:**
+- `GET /api/opportunity-tasks/` - List tasks with filters
+- `GET /api/opportunity-tasks/stats/` - Pipeline statistics
+- `POST /api/opportunity-tasks/<id>/accept/` - Accept task
+- `POST /api/opportunity-tasks/<id>/apply/` - Mark as applied
+- `POST /api/opportunity-tasks/<id>/won/` - Mark as won (creates revenue!)
+- `POST /api/opportunity-tasks/<id>/lost/` - Mark as lost
 
 ---
 
-## System Health (Post-Session-424)
+## System Health (Post-Session-425)
 
 | Component | Status | Count |
 |-----------|--------|-------|
@@ -61,6 +75,7 @@ New Discord channel for high-value opportunity alerts:
 | Spider Embeddings | 91% coverage | 11,076+ |
 | **Training Datasets** | **Working** | **12** |
 | **Discord** | **Connected** | **6 channels** |
+| **Opportunity Tasks** | **NEW** | Auto-created |
 
 ---
 
@@ -88,16 +103,16 @@ python manage.py shell -c "from core.tasks import collect_training_data; collect
 
 ---
 
-## Roadmap: Session 425+
+## Roadmap: Session 426+
 
 See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
-### Next: Session 425 - Opportunity Pipeline Automation
-- Auto-create tasks from high-scoring opportunities
-- Link opportunities to relevant agents
-- Track opportunity outcomes (applied, won, lost)
-- Revenue attribution from opportunities
-- Weekly opportunity digest in #boardroom
+### Next: Session 426 - Basic Discord Bot Commands
+- Set up discord.py bot framework
+- Implement `/status` - System health check
+- Implement `/agents` - List active agents with stats
+- Implement `/trending` - Get trending spider data
+- Implement `/help` - Command reference
 
 ### Discord Bot Build-Out (Sessions 426-429)
 - **Session 426:** Basic Bot Commands (`/status`, `/agents`, `/trending`)
@@ -122,6 +137,7 @@ See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
 ## Key Documentation
 
+- **Session 425 Handoff:** `docs/handoffs/SESSION_425_OPPORTUNITY_PIPELINE_AUTOMATION.md`
 - **Session 424 Handoff:** `docs/handoffs/SESSION_424_OPPORTUNITIES_DISCORD_CHANNEL.md`
 - **Session 423 Handoff:** `docs/handoffs/SESSION_423_SPIDER_DISCORD_NOTIFICATIONS.md`
 - **Roadmap:** `docs/SESSION_421_ROADMAP.md`
@@ -131,7 +147,8 @@ See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
 ## Previous Sessions
 
-- **Session 424: Opportunities Discord Channel (THIS SESSION)**
+- **Session 425: Opportunity Pipeline Automation (THIS SESSION)**
+- Session 424: Opportunities Discord Channel
 - Session 423: Spider-to-Discord Pipeline
 - Session 422: Domain-Specific Training Datasets
 - Session 421: LMSYS Dataset Unlock
@@ -140,4 +157,4 @@ See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
 ---
 
-**Sessions 421-424 COMPLETE - 6 Discord channels, 12 training datasets, spider + opportunity notifications!**
+**Sessions 421-425 COMPLETE - Full opportunity pipeline with auto-tasks, agent linking, and revenue tracking!**

@@ -75,6 +75,14 @@ app.conf.beat_schedule = {
             'expires': 7200,
         }
     },
+    # Session 425: Weekly Opportunity Digest
+    'weekly-opportunity-digest': {
+        'task': 'core.tasks.generate_weekly_opportunity_digest',
+        'schedule': crontab(day_of_week=0, hour=10, minute=0),  # Sunday 10 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
     'cleanup-old-model-files': {
         'task': 'ml.cleanup_old_model_files',
         'schedule': crontab(day_of_week=1, hour=1, minute=0),  # Monday 1 AM

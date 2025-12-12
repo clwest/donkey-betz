@@ -1,8 +1,8 @@
 # Session 421+ Roadmap: Next Phase Priorities
 
 **Created:** December 11, 2025 (Session 420)
-**Last Updated:** December 11, 2025 (Session 424 - Sessions 421-424 COMPLETE!)
-**Status:** Active - Sessions 421, 422, 423 & 424 COMPLETE
+**Last Updated:** December 11, 2025 (Session 425 - Sessions 421-425 COMPLETE!)
+**Status:** Active - Sessions 421, 422, 423, 424 & 425 COMPLETE
 **Purpose:** Break down 7 major initiatives into actionable sessions
 
 ---
@@ -210,20 +210,41 @@ Create AI-powered product descriptions...
 - ✅ Rich embeds with category emojis and score colors
 - ✅ Opportunity scan summaries
 
-### Session 425: Opportunity Pipeline Automation
+### Session 425: Opportunity Pipeline Automation ✅ COMPLETE
 **Goal:** Complete opportunity → action pipeline
+**Status:** ✅ **COMPLETED** (December 11, 2025)
 
 **Tasks:**
-- [ ] Auto-create tasks from high-scoring opportunities
-- [ ] Link opportunities to relevant agents
-- [ ] Track opportunity outcomes (applied, won, lost)
-- [ ] Revenue attribution from opportunities
-- [ ] Weekly opportunity digest in `#boardroom`
+- [x] Auto-create tasks from high-scoring opportunities
+- [x] Link opportunities to relevant agents
+- [x] Track opportunity outcomes (applied, won, lost)
+- [x] Revenue attribution from opportunities
+- [x] Weekly opportunity digest in `#boardroom`
+
+**New Models:**
+| Model | Purpose |
+|-------|---------|
+| `OpportunityTask` | Auto-generated tasks from 70+ scoring opportunities |
+| `OpportunityOutcome` | Track win/loss with revenue and lessons |
+| `OpportunityDigest` | Weekly digest records for #boardroom |
+
+**New API Endpoints (8 total):**
+- `GET /api/opportunity-tasks/` - List tasks with filters
+- `GET /api/opportunity-tasks/stats/` - Pipeline statistics
+- `GET /api/opportunity-tasks/<id>/` - Task details
+- `POST /api/opportunity-tasks/<id>/accept/` - Accept task
+- `POST /api/opportunity-tasks/<id>/apply/` - Mark as applied
+- `POST /api/opportunity-tasks/<id>/won/` - Mark as won (creates Revenue!)
+- `POST /api/opportunity-tasks/<id>/lost/` - Mark as lost
+- `POST /api/opportunity-tasks/<id>/action-items/` - Update checklist
+
+**Weekly Digest:** Celery Beat task runs every Sunday 10 AM, posts to #boardroom
 
 **Deliverables:**
-- Automated task creation from opportunities
-- Outcome tracking and analytics
-- Revenue attribution system
+- ✅ Automated task creation from opportunities (70+/100 threshold)
+- ✅ Agent linking by opportunity type (ResearchAgent, ContentStrategyAgent, etc.)
+- ✅ Outcome tracking with revenue attribution
+- ✅ Weekly digest to Discord #boardroom
 
 ---
 
@@ -443,7 +464,7 @@ Discord Response ← Bot Handler ← Agent Response
 | 422 | Domain Datasets | High | Medium | High | ✅ **COMPLETE** |
 | 423 | Spider Notifications | Medium | Low | Medium | ✅ **COMPLETE** |
 | 424 | Opportunities Channel | High | Low | High | ✅ **COMPLETE** |
-| 425 | Opportunity Pipeline | High | Medium | High | Pending |
+| 425 | Opportunity Pipeline | High | Medium | High | ✅ **COMPLETE** |
 | 426 | Basic Bot Commands | Medium | Medium | Medium | Pending |
 | 427 | Advanced Bot Commands | Medium | Medium | Medium | Pending |
 | 428 | PA Discord Interface | High | High | High | Pending |
@@ -459,15 +480,15 @@ Discord Response ← Bot Handler ← Agent Response
 
 ## Recommended Execution Order
 
-### Quick Wins (Sessions 421-425)
+### Quick Wins (Sessions 421-425) ✅ ALL COMPLETE!
 1. ~~**Session 421:** LMSYS Dataset Unlock (1M+ conversations!)~~ ✅ **DONE!**
 2. ~~**Session 422:** Domain-Specific Datasets~~ ✅ **DONE!**
 3. ~~**Session 423:** Spider Activity Notifications~~ ✅ **DONE!**
 4. ~~**Session 424:** Opportunities Discord Channel~~ ✅ **DONE!**
-5. **Session 425:** Opportunity Pipeline Automation ← **NEXT**
+5. ~~**Session 425:** Opportunity Pipeline Automation~~ ✅ **DONE!**
 
-### Discord Bot Build-Out (Sessions 426-429)
-6. **Session 426:** Basic Bot Commands
+### Discord Bot Build-Out (Sessions 426-429) ← **NEXT**
+6. **Session 426:** Basic Bot Commands ← **NEXT**
 7. **Session 427:** Advanced Bot Commands
 8. **Session 428:** PA Discord Interface
 9. **Session 429:** Discord Workflow Triggers

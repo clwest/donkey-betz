@@ -627,6 +627,100 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_OPPORTUNITIES, "", embed=embed)
 
+    def send_weekly_opportunity_digest(self, period_start: str, period_end: str,
+                                        total_opportunities: int, high_value_count: int,
+                                        tasks_created: int, tasks_won: int, tasks_lost: int,
+                                        total_revenue: float, win_rate: float,
+                                        top_opportunities: list = None,
+                                        by_category: dict = None) -> bool:
+        """
+        Send a weekly opportunity digest to #boardroom (Session 425).
+
+        Args:
+            period_start: Start date string
+            period_end: End date string
+            total_opportunities: Total opportunities found
+            high_value_count: High-value (70+) opportunities
+            tasks_created: Tasks auto-created from opportunities
+            tasks_won: Tasks marked as won
+            tasks_lost: Tasks marked as lost
+            total_revenue: Total revenue from won tasks
+            win_rate: Win rate percentage
+            top_opportunities: List of top opportunity dicts
+            by_category: Category breakdown dict
+        """
+        # Color based on performance
+        if win_rate >= 50:
+            color = 0xFFD700  # Gold
+            performance_emoji = "🏆"
+        elif win_rate >= 30:
+            color = 0x2ECC71  # Green
+            performance_emoji = "✅"
+        elif tasks_won > 0:
+            color = 0x3498DB  # Blue
+            performance_emoji = "📊"
+        else:
+            color = 0x95A5A6  # Gray
+            performance_emoji = "📋"
+
+        # Build description
+        description_lines = [
+            f"**Period:** {period_start} to {period_end}",
+            "",
+            f"📊 **Total Opportunities Found:** {total_opportunities}",
+            f"🌟 **High-Value (70+):** {high_value_count}",
+            f"📋 **Tasks Created:** {tasks_created}",
+        ]
+
+        if tasks_won or tasks_lost:
+            description_lines.append("")
+            description_lines.append("**Outcomes:**")
+            description_lines.append(f"✅ Won: {tasks_won} | ❌ Lost: {tasks_lost}")
+            if win_rate > 0:
+                description_lines.append(f"📈 Win Rate: **{win_rate:.1f}%**")
+
+        if total_revenue > 0:
+            description_lines.append("")
+            description_lines.append(f"💰 **Total Revenue:** ${total_revenue:,.2f}")
+
+        description = "\n".join(description_lines)
+
+        embed = {
+            "title": f"{performance_emoji} Weekly Opportunity Digest",
+            "description": description,
+            "color": color,
+            "fields": [],
+            "footer": {
+                "text": "AI Studio Opportunity Pipeline"
+            }
+        }
+
+        # Add top opportunities if provided
+        if top_opportunities:
+            top_opps_text = "\n".join([
+                f"• **{opp.get('title', 'Unknown')[:30]}** (Score: {opp.get('score', 0)})"
+                for opp in top_opportunities[:5]
+            ])
+            embed["fields"].append({
+                "name": "🌟 Top Opportunities",
+                "value": top_opps_text or "None",
+                "inline": False
+            })
+
+        # Add category breakdown if provided
+        if by_category:
+            categories_text = "\n".join([
+                f"• {cat.replace('_', ' ').title()}: {count}"
+                for cat, count in list(by_category.items())[:5]
+            ])
+            embed["fields"].append({
+                "name": "📂 By Category",
+                "value": categories_text or "None",
+                "inline": False
+            })
+
+        return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
+
     def test_connection(self) -> dict:
         """
         Test the Discord connection by sending test messages to all channels.
@@ -751,3 +845,17 @@ def send_opportunity_summary_notification(total_found: int, high_value_count: in
     """Send an opportunity scan summary notification to Discord (Session 424)."""
     return discord_notify.send_opportunity_summary(total_found, high_value_count,
                                                     top_categories, avg_score)
+
+
+def send_weekly_opportunity_digest_notification(period_start: str, period_end: str,
+                                                 total_opportunities: int, high_value_count: int,
+                                                 tasks_created: int, tasks_won: int, tasks_lost: int,
+                                                 total_revenue: float, win_rate: float,
+                                                 top_opportunities: list = None,
+                                                 by_category: dict = None) -> bool:
+    """Send a weekly opportunity digest to Discord #boardroom (Session 425)."""
+    return discord_notify.send_weekly_opportunity_digest(
+        period_start, period_end, total_opportunities, high_value_count,
+        tasks_created, tasks_won, tasks_lost, total_revenue, win_rate,
+        top_opportunities, by_category
+    )

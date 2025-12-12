@@ -453,6 +453,15 @@ from core.views_opportunity import (
     revenue_stats,
     opportunity_link_content,
     opportunity_content_list,
+    # Session 425: Opportunity Pipeline Automation - Task Management
+    opportunity_task_list,
+    opportunity_task_detail,
+    opportunity_task_accept,
+    opportunity_task_apply,
+    opportunity_task_won,
+    opportunity_task_lost,
+    opportunity_task_update_action_items,
+    opportunity_task_stats,
 )
 
 # Session 227: Import Team Power views (Phase 3 - Multi-Agent Collaboration)
@@ -1263,6 +1272,16 @@ urlpatterns = [
     path('api/opportunities/<uuid:opportunity_id>/revenue/list/', opportunity_revenue_list, name='opportunity-revenue-list'),
     path('api/opportunities/<uuid:opportunity_id>/content/', opportunity_link_content, name='opportunity-link-content'),
     path('api/opportunities/<uuid:opportunity_id>/content/list/', opportunity_content_list, name='opportunity-content-list'),
+
+    # Session 425: Opportunity Pipeline Automation - Task Management API
+    path('api/opportunity-tasks/', opportunity_task_list, name='opportunity-task-list'),
+    path('api/opportunity-tasks/stats/', opportunity_task_stats, name='opportunity-task-stats'),
+    path('api/opportunity-tasks/<uuid:task_id>/', opportunity_task_detail, name='opportunity-task-detail'),
+    path('api/opportunity-tasks/<uuid:task_id>/accept/', opportunity_task_accept, name='opportunity-task-accept'),
+    path('api/opportunity-tasks/<uuid:task_id>/apply/', opportunity_task_apply, name='opportunity-task-apply'),
+    path('api/opportunity-tasks/<uuid:task_id>/won/', opportunity_task_won, name='opportunity-task-won'),
+    path('api/opportunity-tasks/<uuid:task_id>/lost/', opportunity_task_lost, name='opportunity-task-lost'),
+    path('api/opportunity-tasks/<uuid:task_id>/action-items/', opportunity_task_update_action_items, name='opportunity-task-action-items'),
 
     # Session 227: Team Power API (Phase 3 - Multi-Agent Collaboration)
     path('api/teams/', list_teams, name='teams-list'),
