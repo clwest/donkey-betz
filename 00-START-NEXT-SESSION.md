@@ -1,48 +1,47 @@
 # Start Next Session Here
 
-**Last Session:** 420 - Discord Boardroom + Agent Name Fix + Training Data Spider
+**Last Session:** 423 - Spider-to-Discord Pipeline
 **Date:** December 11, 2025
-**Status:** 5 Discord channels + Automated Training Data Collection from HuggingFace
+**Status:** Sessions 421, 422 & 423 COMPLETE - Spider notifications live!
 
 ---
 
-## Session 420 Accomplishments
+## Sessions 421-423 Accomplishments
 
-### 1. New Discord Channels
-| Channel | ID | Purpose |
-|---------|-----|---------|
-| `#agent-dreams` | 1448809858274033684 | Agent dream notifications (purple) |
-| `#agent-conversations` | 1448809914783895583 | HiveMind sessions (pink) |
-| `#system-status` | 1448809955326169149 | System health updates (variable) |
-| `#agent-learning` | 1448819275459465257 | Knowledge sharing (blue) - **NEW** |
-| `#boardroom` | 1448819855557136595 | Strategic decisions (gold) - **NEW** |
+### Session 421: LMSYS Dataset Unlock
+- Unlocked **1M+ conversations** from LMSYS dataset
+- Removed 5 broken datasets (wizard_vicuna, openhermes, evol_instruct, airoboros, chatbot_arena)
+- Saved 50 high-quality training records to SpiderData
+- **9 working datasets** now active
 
-### 2. Automatic Boardroom Notifications
-- HiveMind consensus automatically posts to #boardroom
-- Strategic topic detection for conversations
-- Impact-based coloring (low=blue, medium=orange, high=red)
+### Session 422: Domain-Specific Training Datasets
+- Added **3 new domain-specific datasets**:
+  | Dataset | Type | Target Agents |
+  |---------|------|---------------|
+  | codeforces | coding | CTOAgent, ResearchAgent |
+  | writingprompts | creative | CreativeDirectorAgent |
+  | creative_multiturn | creative | CreativeDirectorAgent |
+- Created **AGENT_TOPIC_MAPPING** for targeted learning
+- **782 conversations** fetched, **97% high quality**
+- **12 total working datasets** now active
 
-### 3. GPT-5-mini Token Fix
-Fixed empty/short conversation content by increasing token limits:
-| API Call | Old | New |
-|----------|-----|-----|
-| Dream generation | 500 | 1500 |
-| Conversation | 800 | 2000 |
-| Knowledge insight | 400 | 1500 |
+### Session 423: Spider-to-Discord Pipeline
+New Discord notification methods for spider activity:
+| Method | Purpose |
+|--------|---------|
+| `send_spider_activity()` | Individual spider run notification |
+| `send_spider_error()` | Spider error notification |
+| `send_spider_summary()` | Batch summary for network runs |
+| `send_system_status()` | Generic component status |
 
-### 4. Agent Name Fix
-Conversations now show actual agent names (e.g., "CreativeDirectorAgent:", "VideoAgent:") instead of generic "Agent1:", "Agent2:"
-
-### 5. Training Data Collection Spider (NEW!)
-Created automated training data collection from HuggingFace datasets:
-- **14 datasets configured** (OpenAssistant, Alpaca, SlimOrca, WizardLM, etc.)
-- **290 conversations/run**, **94% high quality**
-- **Celery Beat scheduled**: Daily at 1 AM, Full weekly on Sundays
-- Data automatically feeds into Spider Data Bridge for agent learning
+**Rate Limiting Strategy:**
+- Batch runs: Only summary notification (prevents 65+ message flood)
+- On-demand runs: Individual activity notification
+- Errors: Always notified immediately
 
 ---
 
-## System Health (Post-Session-420)
+## System Health (Post-Session-423)
 
 | Component | Status | Count |
 |-----------|--------|-------|
@@ -53,7 +52,7 @@ Created automated training data collection from HuggingFace datasets:
 | User Learning | Active | 165 |
 | Spider Data | Active | 12,250+ |
 | Spider Embeddings | 91% coverage | 11,076+ |
-| **Training Data** | **NEW** | **150+ records** |
+| **Training Datasets** | **Working** | **12** |
 | **Discord** | **Connected** | **5 channels** |
 
 ---
@@ -67,57 +66,70 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
+# Test spider Discord notifications
+python manage.py shell -c "
+from core.services.discord_notifications import discord_notify
+discord_notify.send_spider_activity('test', 10, ['tech'], 2.5, status='success')
+"
+
 # Run full agent cycle (dreams + conversations + learning)
 python manage.py force_agent_cycle
 
-# Run specific phases
-python manage.py force_agent_cycle --dreams-only
-python manage.py force_agent_cycle --conversations-only
-python manage.py force_agent_cycle --learning-only
+# Run training data collection
+python manage.py shell -c "from core.tasks import collect_training_data; collect_training_data()"
 ```
 
 ---
 
-## Session 421 Ideas
+## Roadmap: Session 424+
 
-### 1. Training Data Enhancements
-- Accept LMSYS terms on HuggingFace to unlock 1M+ conversation dataset
-- Add more domain-specific datasets (legal, coding, creative writing)
+See `docs/SESSION_421_ROADMAP.md` for full breakdown.
 
-### 2. Spider Activity Notifications
-- Post to `#system-status` when spiders collect new data
+### Next: Session 424 - Opportunities Discord Channel
+- Create `#opportunities` channel in Discord
+- Add `send_opportunity()` method with rich embeds
+- Hook into `OpportunityScoringAgent` output
+- Add score threshold filter (7+/10)
 
-### 3. Revenue/Opportunity Alerts
-- Create `#opportunities` channel
-- Post when high-value opportunities are scored
+### Quick Wins Remaining
+- **Session 425:** Opportunity Pipeline Automation
 
-### 4. Discord Bot Commands
-- `/status` - Get system health
-- `/agents` - List active agents
-- `/trending` - Get trending spider data
+### Discord Bot Build-Out (Sessions 426-429)
+- **Session 426:** Basic Bot Commands (`/status`, `/agents`, `/trending`)
+- **Session 427:** Advanced Bot Commands (`/ask`, `/create`, `/research`)
+- **Session 428:** PA Discord Interface
+- **Session 429:** Discord Workflow Triggers
 
-### 5. Two-Way Integration
-- Users can ask the Personal Assistant via Discord
+---
+
+## Discord Channels Reference
+
+| Channel | ID | Purpose |
+|---------|-----|---------|
+| #agent-dreams | 1448809858274033684 | Agent creative thoughts (purple) |
+| #agent-conversations | 1448809914783895583 | HiveMind sessions (pink) |
+| #system-status | 1448809955326169149 | System health + spider activity |
+| #agent-learning | 1448819275459465257 | Knowledge sharing (blue) |
+| #boardroom | 1448819855557136595 | Strategic decisions (gold) |
 
 ---
 
 ## Key Documentation
 
-- **Session 420 Handoff:** `docs/handoffs/SESSION_420_DISCORD_BOARDROOM_AGENT_NAMES.md`
-- **Session 419 Handoff:** `docs/handoffs/SESSION_419_DISCORD_INTEGRATION.md`
+- **Session 423 Handoff:** `docs/handoffs/SESSION_423_SPIDER_DISCORD_NOTIFICATIONS.md`
+- **Roadmap:** `docs/SESSION_421_ROADMAP.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
 
 ---
 
 ## Previous Sessions
 
-- **Session 420: Discord Boardroom + Agent Name Fix (THIS SESSION)**
+- **Session 423: Spider-to-Discord Pipeline (THIS SESSION)**
+- Session 422: Domain-Specific Training Datasets
+- Session 421: LMSYS Dataset Unlock
+- Session 420: Discord Boardroom + Training Data Spider
 - Session 419: Discord Integration
-- Session 418: Stress Test Learning System + Human-in-the-Loop
-- Session 417: Clickable Agent Activity + Stress Test
-- Session 416: Unified Learning System Verification
-- Session 415: Comprehensive System Audit
 
 ---
 
-**5 Discord channels LIVE - Full agent activity + boardroom decisions posting in real-time!**
+**Sessions 421-423 COMPLETE - Spider notifications, 12 training datasets, 1M+ LMSYS conversations!**

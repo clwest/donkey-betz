@@ -249,27 +249,182 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
 
-    def send_spider_update(self, spider_name: str, records_collected: int,
-                           source: str = "") -> bool:
+    def send_spider_activity(self, spider_name: str, records_collected: int,
+                              topics: List[str] = None, duration_seconds: float = 0,
+                              source_url: str = "", status: str = "success") -> bool:
         """
-        Send a spider data collection notification to #system-status.
+        Send a spider activity notification to #system-status (Session 423).
 
         Args:
             spider_name: Name of the spider
             records_collected: Number of records collected
-            source: Data source name
+            topics: List of topics found in the data
+            duration_seconds: How long the crawl took
+            source_url: Data source URL
+            status: "success", "partial", or "error"
         """
+        # Status colors and emojis
+        status_config = {
+            "success": {"color": 0x2ECC71, "emoji": "✅"},  # Green
+            "partial": {"color": 0xF39C12, "emoji": "⚠️"},  # Orange
+            "error": {"color": 0xE74C3C, "emoji": "❌"},    # Red
+        }
+        config = status_config.get(status, status_config["success"])
+
+        # Format topics
+        topic_str = ", ".join(topics[:5]) if topics else "general"
+        if topics and len(topics) > 5:
+            topic_str += f" +{len(topics) - 5} more"
+
+        # Format duration
+        if duration_seconds > 0:
+            duration_str = f"{duration_seconds:.1f}s"
+        else:
+            duration_str = "N/A"
+
         embed = {
             "title": f"🕷️ Spider Activity: {spider_name}",
-            "description": f"Collected **{records_collected}** new records",
-            "color": 0x9B59B6,
+            "description": f"{config['emoji']} Collected **{records_collected}** records",
+            "color": config["color"],
             "fields": [
-                {"name": "Source", "value": source or spider_name, "inline": True}
+                {"name": "📊 Records", "value": str(records_collected), "inline": True},
+                {"name": "🏷️ Topics", "value": topic_str, "inline": True},
+                {"name": "⏱️ Duration", "value": duration_str, "inline": True},
             ],
             "footer": {
                 "text": "AI Studio Spider Network"
             }
         }
+
+        # Add source URL if provided
+        if source_url:
+            embed["fields"].append({"name": "🔗 Source", "value": source_url[:100], "inline": False})
+
+        return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
+
+    def send_spider_error(self, spider_name: str, error_message: str,
+                          source_url: str = "") -> bool:
+        """
+        Send a spider error notification to #system-status (Session 423).
+
+        Args:
+            spider_name: Name of the spider that failed
+            error_message: Error description
+            source_url: Data source URL that failed
+        """
+        embed = {
+            "title": f"🕷️ Spider Error: {spider_name}",
+            "description": f"❌ **Failed to collect data**\n\n```{error_message[:500]}```",
+            "color": 0xE74C3C,  # Red
+            "fields": [],
+            "footer": {
+                "text": "AI Studio Spider Network"
+            }
+        }
+
+        if source_url:
+            embed["fields"].append({"name": "🔗 Source", "value": source_url[:100], "inline": False})
+
+        return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
+
+    def send_spider_summary(self, total_spiders: int, successful: int, failed: int,
+                            total_records: int, top_topics: List[str] = None,
+                            duration_seconds: float = 0) -> bool:
+        """
+        Send a spider batch summary to #system-status (Session 423).
+
+        Args:
+            total_spiders: Total number of spiders run
+            successful: Number of successful runs
+            failed: Number of failed runs
+            total_records: Total records collected across all spiders
+            top_topics: Most common topics found
+            duration_seconds: Total batch duration
+        """
+        # Determine overall status color
+        if failed == 0:
+            color = 0x2ECC71  # Green - all success
+            status_emoji = "✅"
+        elif failed < successful:
+            color = 0xF39C12  # Orange - mostly success
+            status_emoji = "⚠️"
+        else:
+            color = 0xE74C3C  # Red - mostly failed
+            status_emoji = "❌"
+
+        # Format topics
+        topic_str = ", ".join(top_topics[:8]) if top_topics else "various"
+
+        # Format duration
+        if duration_seconds > 60:
+            duration_str = f"{duration_seconds / 60:.1f} min"
+        else:
+            duration_str = f"{duration_seconds:.1f}s"
+
+        embed = {
+            "title": f"🕸️ Spider Network Summary",
+            "description": f"{status_emoji} **{successful}/{total_spiders}** spiders completed successfully",
+            "color": color,
+            "fields": [
+                {"name": "📊 Total Records", "value": f"**{total_records:,}**", "inline": True},
+                {"name": "✅ Successful", "value": str(successful), "inline": True},
+                {"name": "❌ Failed", "value": str(failed), "inline": True},
+                {"name": "🏷️ Top Topics", "value": topic_str, "inline": False},
+                {"name": "⏱️ Total Duration", "value": duration_str, "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Spider Network Batch Run"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
+
+    # Legacy method for backwards compatibility
+    def send_spider_update(self, spider_name: str, records_collected: int,
+                           source: str = "") -> bool:
+        """Legacy method - use send_spider_activity instead."""
+        return self.send_spider_activity(spider_name, records_collected, source_url=source)
+
+    def send_system_status(self, component: str, status: str, message: str,
+                           details: dict = None) -> bool:
+        """
+        Send a system status update for a specific component (Session 423).
+
+        Args:
+            component: Component name (e.g., 'training_spider', 'celery', 'redis')
+            status: Status (completed, running, error)
+            message: Status message
+            details: Optional dict with additional details
+        """
+        status_config = {
+            "completed": {"color": 0x2ECC71, "emoji": "✅"},
+            "running": {"color": 0x3498DB, "emoji": "🔄"},
+            "error": {"color": 0xE74C3C, "emoji": "❌"},
+            "warning": {"color": 0xF39C12, "emoji": "⚠️"},
+        }
+        config = status_config.get(status, status_config["running"])
+
+        embed = {
+            "title": f"{config['emoji']} {component.replace('_', ' ').title()}",
+            "description": message[:4096],
+            "color": config["color"],
+            "footer": {
+                "text": "AI Studio System Status"
+            }
+        }
+
+        # Add details as fields if provided
+        if details:
+            fields = []
+            for key, value in list(details.items())[:5]:  # Max 5 fields
+                if isinstance(value, list):
+                    value = ", ".join(str(v) for v in value[:5])
+                fields.append({
+                    "name": key.replace("_", " ").title(),
+                    "value": str(value)[:100],
+                    "inline": True
+                })
+            embed["fields"] = fields
 
         return self._send_message(self.CHANNEL_STATUS, "", embed=embed)
 
@@ -414,3 +569,25 @@ def send_boardroom_notification(title: str, decision: str, participants: List[st
                                 decision_type: str = "policy", impact: str = "medium") -> bool:
     """Send a boardroom decision notification to Discord."""
     return discord_notify.send_boardroom_decision(title, decision, participants, decision_type, impact)
+
+
+def send_spider_activity_notification(spider_name: str, records_collected: int,
+                                       topics: List[str] = None, duration_seconds: float = 0,
+                                       source_url: str = "", status: str = "success") -> bool:
+    """Send a spider activity notification to Discord (Session 423)."""
+    return discord_notify.send_spider_activity(spider_name, records_collected, topics,
+                                                duration_seconds, source_url, status)
+
+
+def send_spider_error_notification(spider_name: str, error_message: str,
+                                    source_url: str = "") -> bool:
+    """Send a spider error notification to Discord (Session 423)."""
+    return discord_notify.send_spider_error(spider_name, error_message, source_url)
+
+
+def send_spider_summary_notification(total_spiders: int, successful: int, failed: int,
+                                      total_records: int, top_topics: List[str] = None,
+                                      duration_seconds: float = 0) -> bool:
+    """Send a spider batch summary notification to Discord (Session 423)."""
+    return discord_notify.send_spider_summary(total_spiders, successful, failed,
+                                               total_records, top_topics, duration_seconds)
