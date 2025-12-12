@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 420 (December 11, 2025)
+**Last Updated:** Session 429 (December 12, 2025)
 
 ---
 
@@ -28,7 +28,8 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **5 Channels** | **Production (Session 420)** |
+| **Discord Integration** | **5 Channels + Bot** | **Production (Session 429)** |
+| **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Training Data Collection** | **14 Datasets** | **Production (Session 420)** |
 
 ---
@@ -441,9 +442,9 @@ Legal Assistant Tab → My Case Files sub-tab
 
 ---
 
-## Discord Integration (Session 419)
+## Discord Integration (Sessions 419-429)
 
-Real-time notifications to Discord when agents are active.
+Real-time notifications to Discord when agents are active, plus interactive bot commands.
 
 ### Discord Channels
 
@@ -452,6 +453,39 @@ Real-time notifications to Discord when agents are active.
 | `#agent-dreams` | Agent dream notifications | Purple |
 | `#agent-conversations` | HiveMind sessions + knowledge sharing | Pink/Blue |
 | `#system-status` | System health and status updates | Variable |
+
+### Discord Bot Commands (Sessions 426-429)
+
+| Command | Description |
+|---------|-------------|
+| `/status` | System health check |
+| `/agents [limit]` | List active agents with stats |
+| `/agent <name>` | Get details for a specific agent |
+| `/trending [category]` | Get trending topics from spider data |
+| `/spiders` | Spider network stats |
+| `/ask <question>` | Ask the Personal Assistant (remembers context!) |
+| `/create <prompt>` | Generate an image with AI |
+| `/research <topic>` | Search spider data |
+| `/clear` | Clear conversation history |
+| `/link <code>` | Link Discord to web account (Session 429) |
+| `/unlink` | Check link status |
+| `/help` | Show all commands |
+
+### Discord User Linking (Session 429)
+
+Link your Discord account to your AI Studio web account so images created via `/create` appear in your personal gallery.
+
+**How to Link:**
+1. Go to AI Studio → Preferences tab → Discord Integration
+2. Click "Generate Link Code" to get a 6-character code (e.g., `ABC123`)
+3. In Discord, type `/link ABC123`
+4. Account linked! Images now save to your gallery
+
+**API Endpoints:**
+- `POST /api/discord/generate-link-code/` - Generate temp code for linking
+- `GET /api/discord/status/` - Check if Discord is linked
+- `POST /api/discord/unlink/` - Remove Discord link
+- `POST /api/discord/verify-link-code/` - Bot calls this to verify & link
 
 ### Notification Types
 
@@ -504,6 +538,8 @@ Requires `DISCORD_BOT_TOKEN` environment variable. When set, all agent activity 
 - `core/tasks.py` - `generate_agent_dreams()` posts to Discord
 - `force_agent_cycle` command - Posts dreams, conversations, knowledge to Discord
 - `core/services/discord_notifications.py` - Main notification service
+- `core/services/discord_bot.py` - Interactive bot with slash commands
+- `core/views_discord.py` - User linking API endpoints
 
 ---
 
