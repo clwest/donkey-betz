@@ -169,15 +169,19 @@ class Command(BaseCommand):
                         # Session 419: Send Discord notification
                         try:
                             from core.services.discord_notifications import discord_notify
-                            discord_notify.send_dream(
+                            result = discord_notify.send_dream(
                                 agent_name=agent.name,
                                 dream_title=title,
                                 dream_content=dream_content,
                                 dream_type=dream_type,
                                 vividness=vividness
                             )
-                        except Exception:
-                            pass  # Don't fail the cycle if Discord is down
+                            if result:
+                                self.stdout.write(self.style.SUCCESS(f"    📢 Discord: dream posted"))
+                            else:
+                                self.stdout.write(self.style.WARNING(f"    ⚠️ Discord: failed to post dream"))
+                        except Exception as discord_err:
+                            self.stdout.write(self.style.WARNING(f"    ⚠️ Discord error: {discord_err}"))
 
                     except Exception as e:
                         self.stdout.write(self.style.ERROR(f"  Error creating dream: {e}"))
@@ -270,25 +274,31 @@ class Command(BaseCommand):
                     # Session 419: Send Discord notification to conversations
                     try:
                         from core.services.discord_notifications import discord_notify
-                        discord_notify.send_conversation(
+                        result = discord_notify.send_conversation(
                             participants=[agent1.name, agent2.name],
                             topic=topic,
                             synthesis=conversation_content,
                             mode='conversation'
                         )
+                        if result:
+                            self.stdout.write(self.style.SUCCESS(f"    📢 Discord: conversation posted"))
+                        else:
+                            self.stdout.write(self.style.WARNING(f"    ⚠️ Discord: failed to post conversation"))
 
                         # Session 420: Also send to boardroom for strategic topics
                         strategic_keywords = ['strategy', 'future', 'improve', 'best practice', 'common mistake', 'emerging trend']
                         if any(kw in topic.lower() for kw in strategic_keywords):
-                            discord_notify.send_boardroom_decision(
+                            result2 = discord_notify.send_boardroom_decision(
                                 title=f"Agent Discussion: {topic[:60]}{'...' if len(topic) > 60 else ''}",
                                 decision=conversation_content[:3500],
                                 participants=[agent1.name, agent2.name],
                                 decision_type="strategy",
                                 impact="low"
                             )
-                    except Exception:
-                        pass  # Don't fail the cycle if Discord is down
+                            if result2:
+                                self.stdout.write(self.style.SUCCESS(f"    📢 Discord: boardroom posted"))
+                    except Exception as discord_err:
+                        self.stdout.write(self.style.WARNING(f"    ⚠️ Discord error: {discord_err}"))
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"  Error creating session: {e}"))
@@ -368,15 +378,19 @@ class Command(BaseCommand):
                     # Session 419: Send Discord notification
                     try:
                         from core.services.discord_notifications import discord_notify
-                        discord_notify.send_knowledge(
+                        result = discord_notify.send_knowledge(
                             agent_name=agent.name,
                             title=title,
                             summary=knowledge_content,
                             knowledge_type='best_practice',
                             confidence=confidence
                         )
-                    except Exception:
-                        pass  # Don't fail the cycle if Discord is down
+                        if result:
+                            self.stdout.write(self.style.SUCCESS(f"    📢 Discord: knowledge posted"))
+                        else:
+                            self.stdout.write(self.style.WARNING(f"    ⚠️ Discord: failed to post knowledge"))
+                    except Exception as discord_err:
+                        self.stdout.write(self.style.WARNING(f"    ⚠️ Discord error: {discord_err}"))
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"  Error creating knowledge: {e}"))
