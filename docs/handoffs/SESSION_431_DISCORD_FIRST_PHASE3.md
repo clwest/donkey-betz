@@ -182,4 +182,25 @@ async def client_deliver(interaction, client_name: str, image_id: int, message: 
 
 ---
 
+## WebSocket Broadcast Feature (Late Session 431)
+
+**Problem Identified:**
+- Discord was updating with agent activity but web app was NOT updating
+- Web app relies on WebSocket broadcasts to receive real-time updates
+- `force_agent_cycle` only sent Discord notifications, not WebSocket broadcasts
+
+**Solution:**
+- Added WebSocket broadcast phase after cycle completes
+- Broadcasts to 3 WebSocket groups:
+  - `broadcast_learning_status` - Learning feed (agent knowledge/transfers)
+  - `broadcast_evolution_status` - Evolution status (agent XP/levels)
+  - `broadcast_relationship_status` - Relationships (alliances/rivalries)
+
+**Result:**
+Both Discord AND web app now update simultaneously after running `force_agent_cycle`.
+
+**Commit:** `a580592` - feat(Session 431): Add WebSocket broadcasts to force_agent_cycle
+
+---
+
 **Handoff prepared for Session 432**

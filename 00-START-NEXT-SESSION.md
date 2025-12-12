@@ -40,6 +40,14 @@
   - Knowledge → #agent-learning ✅
 - Tested: 68 notifications posted successfully
 
+**WebSocket Broadcast Feature (Late Session 431):**
+- Added WebSocket broadcasts so web app updates with Discord
+- `force_agent_cycle` now broadcasts to:
+  - Learning feed (knowledge/transfers)
+  - Evolution status (XP/levels)
+  - Relationships (alliances/rivalries)
+- Both Discord AND web app update together!
+
 **New Models (Phase 3):**
 - `DiscordClient` - Tracks clients per server (name, email, channel_id, status, revenue)
 - `ClientDeliverable` - Tracks deliverables sent to clients
