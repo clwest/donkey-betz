@@ -1,40 +1,45 @@
 # Start Next Session Here
 
-**Last Session:** 429 - Discord User Account Linking
+**Last Session:** 431 - Discord-First Phase 3 + UX Improvements
 **Date:** December 12, 2025
-**Status:** Discord integration complete! Ready for User Personalization.
+**Status:** Phase 3 Complete + Inline Images + Sequential IDs!
 
 ---
 
-## Session 429 Accomplishments
+## Session 431 Accomplishments
 
-### Discord User Account Linking (COMPLETE!)
-Users can now link their Discord accounts to their web accounts. Images created via `/create` in Discord appear in their personal AI Studio gallery.
+### Discord-First Platform - Phase 2 & 3 COMPLETE + UX Improvements!
 
-**New Features:**
-| Feature | Description |
+**Phase 2: Server Setup Wizard**
+- `/setup [template]` - Create AI Studio channels using templates
+- `/server-info` - View server configuration
+- 3 Templates: Solo Creator, Freelancer, Agency
+
+**Phase 3: Client Management**
+| Command | Description |
 |---------|-------------|
-| `/link <code>` | Link Discord to web account |
-| `/unlink` | Check link status |
-| **UI Card** | AI Studio → Preferences → Discord Integration |
-| **Auto-polling** | UI auto-detects when linking completes |
+| `/client-add <name> [email]` | Create client with dedicated channel |
+| `/client-list` | List all your clients |
+| `/client-deliver <client> <image_id> [message]` | Send image to client channel |
+| `/client-invite <client>` | Generate client invite link |
 
-**New Models:**
-- `DiscordLinkCode` - Temporary 6-char codes (10-min expiry)
-- Added `discord_id`, `discord_username`, `discord_linked_at` to `UnifiedUser`
+**UX Improvements (Late Session 431):**
+- **Inline Image Display** - Images displayed directly in Discord (like Midjourney!)
+  - Uses `discord.File` attachments instead of external URLs
+  - Works for both `/gallery` and `/client-deliver` commands
+- **User-Friendly Sequential IDs** - Shows `#1`, `#2` instead of UUIDs
+  - `/gallery` displays `Image #1 of 142` format
+  - `/client-deliver` accepts the sequential number shown in gallery
 
-**New API Endpoints:**
-- `POST /api/discord/generate-link-code/` - Generate temp code
-- `GET /api/discord/status/` - Check link status
-- `POST /api/discord/unlink/` - Remove link
-- `POST /api/discord/verify-link-code/` - Bot calls to verify & link
+**New Models (Phase 3):**
+- `DiscordClient` - Tracks clients per server (name, email, channel_id, status, revenue)
+- `ClientDeliverable` - Tracks deliverables sent to clients
 
 **Files Created/Modified:**
-- `core/views_discord.py` (NEW) - API endpoints
-- `core/models.py` - Discord fields + DiscordLinkCode model
-- `core/services/discord_bot.py` - /link and /unlink commands
-- `core/urls.py` - Discord API routes
-- `ai_core/templates/ai_image_studio.html` - Discord Integration UI card
+- `core/models/base/models.py` - Added DiscordClient, ClientDeliverable models
+- `core/services/discord_bot.py` - Added ClientCommands Cog (4 commands), inline images, sequential IDs
+- `core/migrations/0085_session_431_client_management.py` - New migration
+- Help command updated with Client Management section
 
 ---
 
@@ -47,185 +52,108 @@ Users can now link their Discord accounts to their web accounts. Images created 
 | HiveMind Sessions | Working | 117+ |
 | Knowledge Sources | Active | 940+ |
 | Spider Data | Active | 12,250+ |
-| **Discord Bot Commands** | **Working** | **12** |
-| **Discord Channels** | **Active** | **6** |
-| **Discord User Linking** | **NEW** | **Working** |
-| Migrations | Applied | 0082_session_429_discord_linking |
+| **Discord Bot Commands** | **Working** | **21** |
+| Discord User Linking | Active | Working |
+| Discord Auto-Delivery | Active | Working |
+| Discord Server Setup | Active | Working |
+| **Discord Client Management** | **NEW** | **Working** |
+| User Profile System | Active | 24 questions |
+| Migrations | Applied | 0085 |
 
 ---
 
-## CRITICAL GAP: The System Knows Nothing About the USER!
+## Discord-First Roadmap Status
 
-### The Problem
-We have built an incredible AI system with:
-- 28+ agents that can learn and collaborate
-- 65 spiders gathering real-time data
-- Collective intelligence with knowledge sharing
-- Discord integration for anywhere access
-- Revenue tracking and opportunity pipelines
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1. Content Delivery | /gallery, /profile, /opportunities, auto-delivery | **DONE** |
+| 2. Server Setup Wizard | Auto-create channels from templates | **DONE** |
+| **3. Client Management** | **Per-client channels, delivery, invites** | **DONE** |
+| 4. Income Pipeline | /apply, opportunity notifications | Pending |
+| 5. Full Agent Access | All 27 agents via Discord | Pending |
+| 6. Automation | Proactive notifications, digests | Pending |
+| 7. Monetization | Discord roles = subscription tiers | Pending |
+| 8. Advanced | Voice AI, white-label | Pending |
 
-**BUT:** None of this is personalized to the actual user. The system can learn about topics, markets, and trends - but it doesn't know:
-- Who the user IS (name, background, expertise)
-- What their GOALS are (career, financial, creative)
-- What SKILLS they have (so we can find matching opportunities)
-- What their PREFERENCES are (work style, communication, interests)
-- What their CONSTRAINTS are (time availability, budget, limitations)
-
-### Current User Model
-```python
-class UnifiedUser(AbstractUser):
-    # Basic auth fields (from Django)
-    username, email, password, first_name, last_name
-
-    # Profile basics
-    profile_picture, timezone, theme, language
-
-    # AI Learning (Session 206)
-    style_preferences, model_preferences, interaction_history
-
-    # Discord (Session 429)
-    discord_id, discord_username, discord_linked_at
-```
-
-**What's Missing:**
-- Professional background / expertise areas
-- Income goals and financial situation
-- Time availability and schedule
-- Skills inventory (what they can do)
-- Interests and passions
-- Learning style preferences
-- Communication preferences
-- Career/business goals
-- Constraints and limitations
+See `docs/DISCORD_FIRST_ROADMAP.md` for full details.
 
 ---
 
-## Session 430: User Profile System
+## Session 432: Next Steps
 
 ### Priority Tasks
 
-1. **Extended User Profile Model**
-   - Add comprehensive profile fields to UnifiedUser
-   - Skills inventory (JSON field with confidence levels)
-   - Goals (short-term, long-term, financial)
-   - Availability (hours/week, preferred times)
-   - Background (work history, expertise)
+1. **Route Deliveries to User's Server**
+   - When user creates image in web app, check if they have a configured server
+   - Route to their server's gallery channel instead of main server
+   - Support both linked accounts and server-based routing
 
-2. **User Interview System**
-   - Personal Assistant can conduct "getting to know you" interview
-   - Progressive profiling (learn more over time)
-   - Natural conversation to extract profile info
+2. **Test Client Workflow End-to-End**
+   - Create test client with `/client-add Test Client`
+   - Check client channel was created
+   - Create an image with `/create` or web app
+   - Deliver to client with `/client-deliver "Test Client" <image_id>`
+   - Generate invite with `/client-invite "Test Client"`
 
-3. **Profile Integration with Agents**
-   - Agents should query user profile before making recommendations
-   - Opportunity scoring should factor user skills
-   - Content suggestions should match user interests
-
-4. **Profile UI**
-   - Add "My Profile" section to AI Studio
-   - Editable profile fields
-   - Skills tagging interface
-   - Goal setting wizard
-
-### Example Enhanced User Model
-```python
-class UnifiedUser(AbstractUser):
-    # ... existing fields ...
-
-    # Professional Background
-    professional_summary = models.TextField(blank=True)
-    expertise_areas = models.JSONField(default=list)  # ['Python', 'Marketing', 'Design']
-    years_experience = models.IntegerField(null=True)
-    current_role = models.CharField(max_length=200, blank=True)
-    industry = models.CharField(max_length=100, blank=True)
-
-    # Skills Inventory
-    skills = models.JSONField(default=dict)  # {'Python': 0.9, 'Marketing': 0.7}
-    certifications = models.JSONField(default=list)
-    education = models.JSONField(default=list)
-
-    # Goals
-    income_goals = models.JSONField(default=dict)  # {'monthly': 5000, 'annual': 60000}
-    career_goals = models.TextField(blank=True)
-    learning_goals = models.JSONField(default=list)
-
-    # Availability
-    hours_per_week = models.IntegerField(default=40)
-    preferred_work_times = models.JSONField(default=dict)  # {'morning': True, 'evening': False}
-    timezone = models.CharField(max_length=50, default='UTC')
-
-    # Interests & Preferences
-    interests = models.JSONField(default=list)
-    communication_style = models.CharField(max_length=50, default='balanced')  # concise, detailed, balanced
-    learning_style = models.CharField(max_length=50, default='visual')  # visual, reading, hands-on
-
-    # Constraints
-    constraints = models.JSONField(default=dict)  # {'budget': 100, 'time_limit': 20}
-
-    # Profile Completeness
-    profile_completed_at = models.DateTimeField(null=True)
-    profile_completion_score = models.FloatField(default=0.0)  # 0-100%
-```
+3. **Phase 4: Income Pipeline (Optional)**
+   - `/apply <opportunity_id>` - Quick apply to gigs
+   - Opportunity match notifications to #opportunities channel
+   - Application tracking
 
 ---
 
 ## Quick Start
 
 ```bash
-# Start services
-make start && make celery
+# Read this file first!
+cat 00-START-NEXT-SESSION.md
 
-# Start Discord bot
+# Start services (with Discord token)
+export DISCORD_BOT_TOKEN="..."
+make start
+make celery
 make discord-bot
 
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Discord linking
-# 1. Go to AI Studio → Preferences → Discord Integration
-# 2. Click "Generate Link Code"
-# 3. In Discord: /link ABC123
+# Test Discord commands
+/client-add "Acme Corp"        # Create client
+/client-list                   # See all clients
+/gallery 5                     # View recent images (note IDs)
+/client-deliver "Acme Corp" 123 "Here's your logo!"
+/help
 ```
 
 ---
 
-## Discord Bot Commands (12 Total)
+## Discord Channel IDs (Main Server)
 
-| Command | Description | Cooldown |
-|---------|-------------|----------|
-| `/status` | System health check | - |
-| `/agents [limit]` | List active agents | - |
-| `/agent <name>` | Agent details | - |
-| `/trending [category] [limit]` | Trending topics | - |
-| `/spiders` | Spider network stats | - |
-| `/help` | Command reference | - |
-| `/ask <question>` | Query Personal Assistant (with memory!) | 10s |
-| `/create <prompt>` | Generate image | 30s |
-| `/research <topic> [limit]` | Search spider data | 15s |
-| `/clear` | Clear conversation history | - |
-| `/link <code>` | Link Discord to web account | - |
-| `/unlink` | Check link status | - |
+| Channel | ID | Purpose |
+|---------|-----|---------|
+| #gallery | 1449059813765021859 | Image delivery |
+| #profile | 1449059839581098135 | Profile info |
+| #opportunities | 1448867150948335777 | Job alerts |
+| #agent-dreams | 1448809858274033684 | Agent dreams |
+| #agent-conversations | 1448809914783895583 | HiveMind sessions |
+| #system-status | 1448809955326169149 | System updates |
 
 ---
 
-## Key Documentation
+## Discord Commands (21 Total)
 
-- **Capabilities:** `docs/CAPABILITIES.md` - Full feature list
-- **Architecture:** `docs/ARCHITECTURE.md` - System design
-- **Agents:** `docs/AGENTS.md` - Agent reference
-- **Spiders:** `docs/SPIDERS.md` - Spider network
-
----
-
-## Previous Sessions
-
-- **Session 429:** Discord User Account Linking - COMPLETE!
-- Session 428: PA Discord Conversation History
-- Session 427: Advanced Discord Bot Commands
-- Session 426: Basic Discord Bot Commands
-- Session 425: Opportunity Pipeline Automation
-- Sessions 421-424: Training Data + Discord Channels
+| Category | Commands |
+|----------|----------|
+| Interactive | `/ask`, `/create`, `/research`, `/clear` |
+| System | `/status`, `/spiders` |
+| Agents | `/agents`, `/agent` |
+| Data | `/trending` |
+| Content | `/gallery`, `/profile`, `/opportunities` |
+| Account | `/link`, `/unlink` |
+| Server Setup | `/setup`, `/server-info` |
+| **Client Mgmt** | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` |
+| Help | `/help` |
 
 ---
 
-**Ready for Session 430: User Profile System - Making the AI truly personal!**
+**Always read this file first to understand current state!**
