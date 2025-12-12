@@ -10049,3 +10049,144 @@ def collect_training_data_full():
     except Exception as e:
         logger.error(f"📚 [SESSION 420] FULL training data collection failed: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def generate_weekly_opportunity_digest():
+    """
+    Session 425: Generate and send weekly opportunity digest to Discord #boardroom.
+
+    Runs weekly (configured in celery.py) to summarize:
+    - Total opportunities found
+    - High-value opportunities
+    - Tasks created and their outcomes
+    - Revenue generated
+    - Win/loss rates
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db.models import Count, Sum, Avg
+    from core.models_unified_system import (
+        Opportunity, OpportunityTask, OpportunityOutcome, OpportunityDigest
+    )
+
+    logger.info("📊 [SESSION 425] Starting weekly opportunity digest generation")
+
+    try:
+        # Calculate period (last 7 days)
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=7)
+
+        # Get opportunity stats for the period
+        opportunities = Opportunity.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        total_opportunities = opportunities.count()
+        high_value_count = opportunities.filter(overall_score__gte=70).count()
+
+        # Category breakdown
+        by_category = dict(
+            opportunities.exclude(category__isnull=True)
+            .values_list('category')
+            .annotate(count=Count('id'))
+        )
+
+        # Task stats
+        tasks = OpportunityTask.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        tasks_created = tasks.count()
+
+        # Outcome stats (include all outcomes, not just from this period)
+        outcomes = OpportunityOutcome.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        tasks_won = outcomes.filter(outcome='won').count()
+        tasks_lost = outcomes.filter(outcome='lost').count()
+
+        total_outcomes = tasks_won + tasks_lost
+        win_rate = (tasks_won / total_outcomes * 100) if total_outcomes > 0 else 0
+
+        # Revenue from wins
+        total_revenue = outcomes.filter(outcome='won').aggregate(
+            total=Sum('actual_revenue')
+        )['total'] or 0
+
+        # Top opportunities (by score)
+        top_opportunities = list(
+            opportunities.filter(overall_score__gte=70)
+            .order_by('-overall_score')[:5]
+            .values('title', 'overall_score', 'category')
+        )
+        top_opps_formatted = [
+            {'title': o['title'], 'score': o['overall_score'], 'category': o['category']}
+            for o in top_opportunities
+        ]
+
+        # Create digest record
+        digest = OpportunityDigest.objects.create(
+            digest_type='weekly',
+            period_start=start_date,
+            period_end=end_date,
+            total_opportunities=total_opportunities,
+            high_value_opportunities=high_value_count,
+            tasks_created=tasks_created,
+            tasks_won=tasks_won,
+            tasks_lost=tasks_lost,
+            total_revenue=total_revenue,
+            by_category=by_category,
+            top_opportunities=top_opps_formatted,
+            win_rate=win_rate,
+            avg_score_won=outcomes.filter(outcome='won').aggregate(
+                avg=Avg('task__opportunity_score')
+            )['avg'] or 0,
+            avg_score_lost=outcomes.filter(outcome='lost').aggregate(
+                avg=Avg('task__opportunity_score')
+            )['avg'] or 0,
+        )
+
+        # Send to Discord
+        try:
+            from core.services.discord_notifications import discord_notify
+
+            success = discord_notify.send_weekly_opportunity_digest(
+                period_start=str(start_date),
+                period_end=str(end_date),
+                total_opportunities=total_opportunities,
+                high_value_count=high_value_count,
+                tasks_created=tasks_created,
+                tasks_won=tasks_won,
+                tasks_lost=tasks_lost,
+                total_revenue=float(total_revenue),
+                win_rate=win_rate,
+                top_opportunities=top_opps_formatted,
+                by_category=by_category,
+            )
+
+            if success:
+                digest.posted_to_discord = True
+                digest.save()
+                logger.info(f"📊 [SESSION 425] Weekly digest posted to Discord #boardroom")
+        except Exception as discord_err:
+            logger.error(f"📊 [SESSION 425] Discord notification failed: {discord_err}")
+
+        logger.info(f"📊 [SESSION 425] Weekly opportunity digest complete: {total_opportunities} opportunities, {tasks_created} tasks, ${total_revenue} revenue")
+
+        return {
+            'status': 'success',
+            'digest_id': str(digest.id),
+            'total_opportunities': total_opportunities,
+            'high_value_count': high_value_count,
+            'tasks_created': tasks_created,
+            'tasks_won': tasks_won,
+            'tasks_lost': tasks_lost,
+            'total_revenue': float(total_revenue),
+            'win_rate': win_rate,
+        }
+
+    except Exception as e:
+        logger.error(f"📊 [SESSION 425] Weekly opportunity digest failed: {e}")
+        return {'status': 'error', 'error': str(e)}

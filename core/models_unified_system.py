@@ -1499,6 +1499,453 @@ class OpportunityPredictionAccuracy(models.Model):
         return f"{user_str} Accuracy {self.period_start} to {self.period_end}"
 
 
+# =============================================================================
+# Session 425: Opportunity Pipeline Automation
+# =============================================================================
+
+class OpportunityTask(models.Model):
+    """
+    Session 425: Auto-generated tasks from high-scoring opportunities.
+
+    When an opportunity scores 70+/100, a task is automatically created
+    to track the user's progress from discovery → application → outcome.
+    """
+
+    TASK_STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('accepted', 'Task Accepted'),
+        ('in_progress', 'In Progress'),
+        ('applied', 'Applied/Submitted'),
+        ('waiting', 'Waiting for Response'),
+        ('won', 'Won/Accepted'),
+        ('lost', 'Lost/Rejected'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    opportunity = models.OneToOneField(
+        Opportunity,
+        on_delete=models.CASCADE,
+        related_name='task'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='opportunity_tasks'
+    )
+
+    # Task details
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=TASK_STATUS_CHOICES,
+        default='pending'
+    )
+    priority = models.CharField(
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default='medium'
+    )
+
+    # Agent assignment
+    assigned_agents = models.ManyToManyField(
+        Agent,
+        blank=True,
+        related_name='assigned_tasks',
+        help_text="Agents that can help with this opportunity"
+    )
+    primary_agent = models.ForeignKey(
+        Agent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='primary_tasks',
+        help_text="Lead agent for this opportunity"
+    )
+
+    # Score-based metadata (captured at task creation)
+    opportunity_score = models.IntegerField(default=0)
+    score_breakdown = models.JSONField(default=dict)
+
+    # Timing
+    due_date = models.DateTimeField(null=True, blank=True)
+    auto_created = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Notes and tracking
+    user_notes = models.TextField(blank=True)
+    action_items = models.JSONField(default=list, help_text="Suggested action steps")
+    metadata = models.JSONField(default=dict)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['status', 'priority']),
+            models.Index(fields=['due_date']),
+        ]
+
+    def __str__(self):
+        return f"Task: {self.title} ({self.status})"
+
+    def accept_task(self):
+        """User accepts the auto-generated task"""
+        from django.utils import timezone
+        self.status = 'accepted'
+        self.accepted_at = timezone.now()
+        self.save()
+        logger = logging.getLogger(__name__)
+        logger.info(f"✅ Task {self.id} accepted for opportunity {self.opportunity_id}")
+
+    def mark_applied(self, notes=''):
+        """Mark that user has applied for this opportunity"""
+        from django.utils import timezone
+        self.status = 'applied'
+        self.applied_at = timezone.now()
+        if notes:
+            self.user_notes = notes
+        self.save()
+
+        # Also update the opportunity status
+        self.opportunity.status = 'applied'
+        self.opportunity.save()
+
+    def mark_won(self, actual_amount=None, notes=''):
+        """Mark opportunity as won - creates revenue record"""
+        from django.utils import timezone
+        self.status = 'won'
+        self.completed_at = timezone.now()
+        if notes:
+            self.user_notes = notes
+        self.save()
+
+        # Create outcome record and revenue
+        OpportunityOutcome.objects.create(
+            task=self,
+            outcome='won',
+            actual_revenue=actual_amount or self.opportunity.potential_revenue,
+            notes=notes
+        )
+
+        # Trigger revenue creation
+        self.opportunity.mark_as_accepted(actual_amount)
+
+        # Send Discord notification
+        try:
+            from core.services.discord_notifications import discord_notify
+            discord_notify.send_boardroom_decision(
+                title=f"🏆 Opportunity Won: {self.title}",
+                decision=f"${actual_amount or self.opportunity.potential_revenue} revenue captured",
+                reasoning=notes or "User marked opportunity as won",
+                agents_involved=[self.primary_agent.name] if self.primary_agent else []
+            )
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Discord notification failed: {e}")
+
+    def mark_lost(self, reason='', notes=''):
+        """Mark opportunity as lost"""
+        from django.utils import timezone
+        self.status = 'lost'
+        self.completed_at = timezone.now()
+        if notes:
+            self.user_notes = notes
+        self.save()
+
+        # Create outcome record for learning
+        OpportunityOutcome.objects.create(
+            task=self,
+            outcome='lost',
+            loss_reason=reason,
+            notes=notes
+        )
+
+        # Update opportunity
+        self.opportunity.status = 'rejected'
+        self.opportunity.save()
+
+    @classmethod
+    def create_from_opportunity(cls, opportunity, score_data=None):
+        """
+        Factory method to auto-create a task from a high-scoring opportunity.
+        Called when opportunity scores 70+/100.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Determine priority based on score
+        score = opportunity.overall_score if hasattr(opportunity, 'overall_score') else 0
+        if score >= 90:
+            priority = 'urgent'
+        elif score >= 80:
+            priority = 'high'
+        elif score >= 70:
+            priority = 'medium'
+        else:
+            priority = 'low'
+
+        # Set due date based on urgency (default 7 days)
+        due_date = timezone.now() + timedelta(days=7 if score < 80 else 3)
+
+        # Generate action items based on opportunity type
+        action_items = cls._generate_action_items(opportunity)
+
+        # Find relevant agents
+        relevant_agents = cls._find_relevant_agents(opportunity)
+
+        task = cls.objects.create(
+            opportunity=opportunity,
+            user=opportunity.user,
+            title=f"Pursue: {opportunity.title}",
+            description=opportunity.description[:500] if opportunity.description else '',
+            priority=priority,
+            opportunity_score=score,
+            score_breakdown=score_data or {},
+            due_date=due_date,
+            action_items=action_items,
+            primary_agent=relevant_agents[0] if relevant_agents else None,
+        )
+
+        # Add all relevant agents
+        if relevant_agents:
+            task.assigned_agents.set(relevant_agents)
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"📋 Auto-created task {task.id} for opportunity {opportunity.id} (score: {score})")
+
+        return task
+
+    @staticmethod
+    def _generate_action_items(opportunity):
+        """Generate suggested action items based on opportunity type"""
+        category = opportunity.category if hasattr(opportunity, 'category') else ''
+        opp_type = opportunity.opportunity_type
+
+        base_items = [
+            {"step": 1, "action": "Review opportunity details", "completed": False},
+            {"step": 2, "action": "Assess fit with skills/resources", "completed": False},
+        ]
+
+        if opp_type in ['job', 'gig', 'freelance']:
+            base_items.extend([
+                {"step": 3, "action": "Prepare application/proposal", "completed": False},
+                {"step": 4, "action": "Submit application", "completed": False},
+                {"step": 5, "action": "Follow up if no response", "completed": False},
+            ])
+        elif opp_type in ['product', 'digital_product']:
+            base_items.extend([
+                {"step": 3, "action": "Create product/content", "completed": False},
+                {"step": 4, "action": "List on marketplace(s)", "completed": False},
+                {"step": 5, "action": "Promote and track sales", "completed": False},
+            ])
+        else:
+            base_items.extend([
+                {"step": 3, "action": "Take action on opportunity", "completed": False},
+                {"step": 4, "action": "Track progress", "completed": False},
+            ])
+
+        return base_items
+
+    @staticmethod
+    def _find_relevant_agents(opportunity):
+        """Find agents relevant to this opportunity type"""
+        category = opportunity.category if hasattr(opportunity, 'category') else ''
+        opp_type = opportunity.opportunity_type
+
+        # Map opportunity types to agent specialties
+        agent_mapping = {
+            'job': ['PersonalAssistantAgent', 'ResearchAgent'],
+            'gig': ['PersonalAssistantAgent', 'ResearchAgent'],
+            'freelance': ['PersonalAssistantAgent', 'ContentStrategyAgent'],
+            'product': ['ImageAgent', 'VideoAgent', 'CreativeDirectorAgent'],
+            'digital_product': ['ImageAgent', 'ContentStrategyAgent'],
+            'content': ['ContentStrategyAgent', 'SEOOptimizerAgent', 'SocialMediaAgent'],
+            'creative': ['CreativeDirectorAgent', 'ImageAgent', 'VideoAgent'],
+            'tech': ['CTOAgent', 'ResearchAgent'],
+        }
+
+        agent_names = agent_mapping.get(opp_type, ['PersonalAssistantAgent'])
+
+        return list(Agent.objects.filter(name__in=agent_names)[:3])
+
+
+class OpportunityOutcome(models.Model):
+    """
+    Session 425: Track final outcomes for learning and analytics.
+
+    Records whether an opportunity was won/lost and why, enabling
+    the system to learn from outcomes and improve scoring.
+    """
+
+    OUTCOME_CHOICES = [
+        ('won', 'Won/Accepted'),
+        ('lost', 'Lost/Rejected'),
+        ('expired', 'Expired Without Action'),
+        ('cancelled', 'Cancelled by User'),
+        ('partial', 'Partial Success'),
+    ]
+
+    LOSS_REASON_CHOICES = [
+        ('rejected', 'Application Rejected'),
+        ('underbid', 'Underbid by Competitor'),
+        ('not_qualified', 'Not Qualified'),
+        ('timing', 'Bad Timing'),
+        ('competition', 'Too Much Competition'),
+        ('no_response', 'No Response Received'),
+        ('changed_mind', 'Changed Mind'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    task = models.OneToOneField(
+        OpportunityTask,
+        on_delete=models.CASCADE,
+        related_name='outcome'
+    )
+
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES)
+
+    # Revenue tracking (for wins)
+    actual_revenue = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    predicted_revenue = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    revenue_variance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Actual - Predicted"
+    )
+
+    # Loss analysis (for learning)
+    loss_reason = models.CharField(
+        max_length=20,
+        choices=LOSS_REASON_CHOICES,
+        blank=True
+    )
+
+    # Timing metrics
+    days_to_outcome = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Days from task creation to outcome"
+    )
+
+    # Learning metadata
+    notes = models.TextField(blank=True)
+    lessons_learned = models.JSONField(default=list)
+    metadata = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate revenue variance
+        if self.actual_revenue and self.task.opportunity.potential_revenue:
+            self.predicted_revenue = self.task.opportunity.potential_revenue
+            self.revenue_variance = self.actual_revenue - self.predicted_revenue
+
+        # Calculate days to outcome
+        if self.task.created_at:
+            from django.utils import timezone
+            self.days_to_outcome = (timezone.now() - self.task.created_at).days
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.outcome}: {self.task.title}"
+
+
+class OpportunityDigest(models.Model):
+    """
+    Session 425: Weekly opportunity digest for #boardroom.
+
+    Stores digest content for historical reference and tracking.
+    """
+
+    DIGEST_TYPE_CHOICES = [
+        ('weekly', 'Weekly Digest'),
+        ('monthly', 'Monthly Digest'),
+        ('ad_hoc', 'Ad-hoc Report'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="User-specific digest (null for system-wide)"
+    )
+
+    digest_type = models.CharField(max_length=20, choices=DIGEST_TYPE_CHOICES, default='weekly')
+    period_start = models.DateField()
+    period_end = models.DateField()
+
+    # Summary stats
+    total_opportunities = models.IntegerField(default=0)
+    high_value_opportunities = models.IntegerField(default=0)
+    tasks_created = models.IntegerField(default=0)
+    tasks_won = models.IntegerField(default=0)
+    tasks_lost = models.IntegerField(default=0)
+    total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Category breakdown
+    by_category = models.JSONField(default=dict)
+    by_source = models.JSONField(default=dict)
+
+    # Top opportunities
+    top_opportunities = models.JSONField(default=list)
+
+    # Win/loss analysis
+    win_rate = models.FloatField(default=0)
+    avg_score_won = models.FloatField(default=0)
+    avg_score_lost = models.FloatField(default=0)
+
+    # Full digest content (for Discord message)
+    digest_content = models.TextField(blank=True)
+
+    # Discord tracking
+    posted_to_discord = models.BooleanField(default=False)
+    discord_message_id = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-period_end']
+        unique_together = ['user', 'digest_type', 'period_start']
+
+    def __str__(self):
+        return f"{self.digest_type.title()} Digest: {self.period_start} to {self.period_end}"
+
+
 class Application(models.Model):
     """
     Tracks applications to opportunities
@@ -14844,3 +15291,189 @@ class LegalMemory(models.Model):
 
         memory.generate_embedding()
         return memory
+
+
+# =============================================================================
+# SESSION 412: BOARDROOM DECISIONS - AGENT GOVERNANCE SYSTEM
+# =============================================================================
+
+
+class AgentDecisionSummary(models.Model):
+    """
+    Session 412: Structured decisions extracted from agent conversations.
+
+    Agent conversations generate valuable governance artifacts (policies,
+    architecture decisions, pipeline specs) but these insights currently
+    evaporate after the conversation ends. This model captures them.
+
+    These decisions can be promoted to canonical policies that affect
+    future agent behavior, creating a self-improving governance system.
+
+    Links to BOTH:
+    - AgentConversation (legacy, 2,899 records)
+    - HiveMindSession (new, session_mode='conversation')
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to source conversations (one or the other)
+    # Legacy AgentConversation (Session 244-246)
+    conversation = models.ForeignKey(
+        'AgentConversation',
+        on_delete=models.CASCADE,
+        related_name='decisions',
+        null=True,
+        blank=True,
+        help_text="Legacy AgentConversation source"
+    )
+    # New HiveMindSession (Session 284+)
+    hive_session = models.ForeignKey(
+        'HiveMindSession',
+        on_delete=models.CASCADE,
+        related_name='decisions',
+        null=True,
+        blank=True,
+        help_text="HiveMindSession source (session_mode='conversation')"
+    )
+
+    # Decision metadata
+    topic = models.CharField(max_length=255)
+    decision_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('policy', 'Policy'),
+            ('architecture', 'Architecture'),
+            ('pipeline', 'Pipeline'),
+            ('product', 'Product Feature'),
+            ('experiment', 'Experiment'),
+            ('guideline', 'Guideline'),
+        ]
+    )
+    impact_area = models.CharField(
+        max_length=50,
+        choices=[
+            ('prompting', 'Prompt Engineering'),
+            ('memory', 'Memory & Storage'),
+            ('image', 'Image Generation'),
+            ('video', 'Video Generation'),
+            ('audio', 'Audio Generation'),
+            ('workflow', 'Workflows'),
+            ('agents', 'Agent Behavior'),
+            ('security', 'Security & Privacy'),
+            ('infrastructure', 'Infrastructure'),
+            ('product', 'Product/UX'),
+            ('legal', 'Legal Assistant'),
+            ('research', 'Research & Analysis'),
+            ('spider', 'Spider Network'),
+        ]
+    )
+
+    # The actual decision content
+    key_insights = models.JSONField(default=list)  # List of 3-5 bullet points
+    recommended_stance = models.TextField()  # The main policy/decision
+    suggested_feature = models.TextField(blank=True)  # Optional feature suggestion
+    rationale = models.TextField(blank=True)  # Why this decision was made
+
+    # Participants who contributed
+    participants = models.JSONField(default=list)  # List of agent names
+
+    # Governance status
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('draft', 'Draft'),
+            ('review', 'Under Review'),
+            ('canonical', 'Canonical Policy'),
+            ('experiment', 'Active Experiment'),
+            ('superseded', 'Superseded'),
+            ('rejected', 'Rejected'),
+        ],
+        default='draft'
+    )
+    is_canonical = models.BooleanField(default=False)
+    promoted_at = models.DateTimeField(null=True, blank=True)
+    promoted_by = models.CharField(max_length=100, blank=True)  # 'human' or agent name
+
+    # If this supersedes a previous decision (self-reference added after initial migration)
+    # Note: This uses 'core.AgentDecisionSummary' instead of 'self' to avoid migration issues
+    supersedes_id = models.UUIDField(null=True, blank=True, help_text="ID of decision this supersedes")
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Agent Decision Summary"
+        verbose_name_plural = "Agent Decision Summaries"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['decision_type', 'impact_area']),
+            models.Index(fields=['status']),
+            models.Index(fields=['is_canonical']),
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        return f"[{self.decision_type}] {self.topic}"
+
+    def promote_to_canonical(self, promoted_by='human'):
+        """Promote this decision to canonical policy status."""
+        from django.utils import timezone
+        self.status = 'canonical'
+        self.is_canonical = True
+        self.promoted_at = timezone.now()
+        self.promoted_by = promoted_by
+        self.save()
+
+    def get_source_display(self):
+        """Get display name for the source conversation."""
+        if self.conversation:
+            return f"Conversation: {self.conversation.topic}"
+        elif self.hive_session:
+            return f"Hive Session: {self.hive_session.topic}"
+        return "Unknown Source"
+
+    def get_source_id(self):
+        """Get ID of source conversation/session."""
+        if self.conversation:
+            return str(self.conversation.id)
+        elif self.hive_session:
+            return str(self.hive_session.id)
+        return None
+
+    def get_policy_context(self):
+        """Get this decision formatted for injection into agent prompts."""
+        insights = '\n'.join(f'  - {i}' for i in self.key_insights[:3])
+        return f"""
+[CANONICAL POLICY: {self.topic}]
+Type: {self.get_decision_type_display()}
+Area: {self.get_impact_area_display()}
+Key Points:
+{insights}
+Stance: {self.recommended_stance}
+"""
+
+    def to_dict(self):
+        """Return decision as dictionary for API responses."""
+        return {
+            'id': str(self.id),
+            'topic': self.topic,
+            'decision_type': self.decision_type,
+            'decision_type_display': self.get_decision_type_display(),
+            'impact_area': self.impact_area,
+            'impact_area_display': self.get_impact_area_display(),
+            'key_insights': self.key_insights,
+            'recommended_stance': self.recommended_stance,
+            'suggested_feature': self.suggested_feature,
+            'rationale': self.rationale,
+            'participants': self.participants,
+            'status': self.status,
+            'status_display': self.get_status_display(),
+            'is_canonical': self.is_canonical,
+            'promoted_at': self.promoted_at.isoformat() if self.promoted_at else None,
+            'promoted_by': self.promoted_by,
+            'source': self.get_source_display(),
+            'source_id': self.get_source_id(),
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+        }

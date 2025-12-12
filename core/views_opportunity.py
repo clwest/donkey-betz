@@ -315,11 +315,40 @@ def opportunity_score(request):
             except Exception as discord_err:
                 logger.debug(f"Discord summary notification failed: {discord_err}")
 
+        # Session 425: Auto-create tasks for high-value opportunities
+        tasks_created = 0
+        if high_value_opportunities and user:
+            try:
+                from core.models_unified_system import OpportunityTask, Opportunity
+
+                for opp_data in high_value_opportunities:
+                    try:
+                        opp = Opportunity.objects.get(id=opp_data['opportunity_id'])
+                        # Skip if task already exists
+                        if not hasattr(opp, 'task'):
+                            OpportunityTask.create_from_opportunity(
+                                opportunity=opp,
+                                score_data={
+                                    'overall_score': opp_data['overall_score'],
+                                    'profit_potential': opp_data.get('profit_potential'),
+                                    'estimated_revenue': opp_data.get('estimated_revenue'),
+                                }
+                            )
+                            tasks_created += 1
+                    except Exception as task_err:
+                        logger.debug(f"Failed to create task for opportunity: {task_err}")
+
+                if tasks_created > 0:
+                    logger.info(f"📋 Auto-created {tasks_created} tasks for high-value opportunities")
+            except Exception as tasks_err:
+                logger.debug(f"Task creation failed: {tasks_err}")
+
         return JsonResponse({
             'success': True,
             'message': f'Scored {len(scored_opportunities)} opportunities',
             'scored_count': len(scored_opportunities),
             'high_value_count': len(high_value_opportunities),  # Session 424
+            'tasks_created': tasks_created,  # Session 425
             'opportunities': scored_opportunities[:10],  # Return top 10
         })
 
@@ -1143,6 +1172,539 @@ def opportunity_content_list(request, opportunity_id):
         }, status=404)
     except Exception as e:
         logger.error(f"Error getting opportunity content: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# Session 425: Opportunity Pipeline Automation - Task Management APIs
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def opportunity_task_list(request):
+    """
+    GET /api/opportunity-tasks/
+    List opportunity tasks with optional filters.
+
+    Query params:
+        - status: Filter by status (pending, accepted, in_progress, applied, waiting, won, lost, expired, cancelled)
+        - priority: Filter by priority (low, medium, high, urgent)
+        - page: Page number (default: 1)
+        - page_size: Items per page (default: 20, max: 100)
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        # Get query params
+        status = request.GET.get('status')
+        priority = request.GET.get('priority')
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 100)
+
+        # Build queryset
+        if request.user.is_authenticated:
+            queryset = OpportunityTask.objects.filter(user=request.user)
+        else:
+            queryset = OpportunityTask.objects.none()
+
+        if status:
+            queryset = queryset.filter(status=status)
+        if priority:
+            queryset = queryset.filter(priority=priority)
+
+        queryset = queryset.select_related('opportunity', 'primary_agent').order_by('-created_at')
+
+        # Pagination
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+
+        # Build response
+        tasks = []
+        for task in page_obj:
+            tasks.append({
+                'id': str(task.id),
+                'title': task.title,
+                'description': task.description[:200] if task.description else '',
+                'status': task.status,
+                'priority': task.priority,
+                'opportunity_id': str(task.opportunity_id),
+                'opportunity_title': task.opportunity.title,
+                'opportunity_score': task.opportunity_score,
+                'primary_agent': task.primary_agent.name if task.primary_agent else None,
+                'due_date': task.due_date.isoformat() if task.due_date else None,
+                'action_items': task.action_items,
+                'created_at': task.created_at.isoformat(),
+                'auto_created': task.auto_created,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'tasks': tasks,
+            'pagination': {
+                'page': page,
+                'page_size': page_size,
+                'total_pages': paginator.num_pages,
+                'total_count': paginator.count,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing opportunity tasks: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def opportunity_task_detail(request, task_id):
+    """
+    GET /api/opportunity-tasks/<id>/
+    Get task detail with full information.
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        if request.user.is_authenticated:
+            task = OpportunityTask.objects.select_related(
+                'opportunity', 'primary_agent'
+            ).prefetch_related('assigned_agents').get(
+                id=task_id, user=request.user
+            )
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        # Get outcome if exists
+        outcome_data = None
+        if hasattr(task, 'outcome'):
+            outcome = task.outcome
+            outcome_data = {
+                'outcome': outcome.outcome,
+                'actual_revenue': float(outcome.actual_revenue) if outcome.actual_revenue else None,
+                'predicted_revenue': float(outcome.predicted_revenue) if outcome.predicted_revenue else None,
+                'revenue_variance': float(outcome.revenue_variance) if outcome.revenue_variance else None,
+                'loss_reason': outcome.loss_reason,
+                'days_to_outcome': outcome.days_to_outcome,
+                'notes': outcome.notes,
+                'lessons_learned': outcome.lessons_learned,
+                'created_at': outcome.created_at.isoformat(),
+            }
+
+        return JsonResponse({
+            'success': True,
+            'task': {
+                'id': str(task.id),
+                'title': task.title,
+                'description': task.description,
+                'status': task.status,
+                'priority': task.priority,
+                'opportunity': {
+                    'id': str(task.opportunity_id),
+                    'title': task.opportunity.title,
+                    'description': task.opportunity.description[:500] if task.opportunity.description else '',
+                    'potential_revenue': float(task.opportunity.potential_revenue),
+                    'category': task.opportunity.category if hasattr(task.opportunity, 'category') else None,
+                    'source': task.opportunity.source,
+                },
+                'opportunity_score': task.opportunity_score,
+                'score_breakdown': task.score_breakdown,
+                'primary_agent': {
+                    'id': str(task.primary_agent.id),
+                    'name': task.primary_agent.name,
+                } if task.primary_agent else None,
+                'assigned_agents': [
+                    {'id': str(a.id), 'name': a.name}
+                    for a in task.assigned_agents.all()
+                ],
+                'due_date': task.due_date.isoformat() if task.due_date else None,
+                'action_items': task.action_items,
+                'user_notes': task.user_notes,
+                'metadata': task.metadata,
+                'auto_created': task.auto_created,
+                'created_at': task.created_at.isoformat(),
+                'accepted_at': task.accepted_at.isoformat() if task.accepted_at else None,
+                'applied_at': task.applied_at.isoformat() if task.applied_at else None,
+                'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+                'outcome': outcome_data,
+            }
+        })
+
+    except OpportunityTask.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error getting task detail: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def opportunity_task_accept(request, task_id):
+    """
+    POST /api/opportunity-tasks/<id>/accept/
+    Accept a pending task.
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        task = OpportunityTask.objects.get(id=task_id, user=request.user)
+
+        if task.status != 'pending':
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot accept task with status: {task.status}'
+            }, status=400)
+
+        task.accept_task()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Task "{task.title}" accepted',
+            'task_id': str(task.id),
+            'new_status': task.status,
+        })
+
+    except OpportunityTask.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error accepting task: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def opportunity_task_apply(request, task_id):
+    """
+    POST /api/opportunity-tasks/<id>/apply/
+    Mark task as applied/submitted.
+
+    Body:
+        - notes: Optional notes about the application
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        task = OpportunityTask.objects.get(id=task_id, user=request.user)
+
+        if task.status not in ['pending', 'accepted', 'in_progress']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot mark as applied from status: {task.status}'
+            }, status=400)
+
+        # Parse body for notes
+        notes = ''
+        if request.body:
+            try:
+                data = json.loads(request.body)
+                notes = data.get('notes', '')
+            except json.JSONDecodeError:
+                pass
+
+        task.mark_applied(notes=notes)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Task "{task.title}" marked as applied',
+            'task_id': str(task.id),
+            'new_status': task.status,
+        })
+
+    except OpportunityTask.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error marking task as applied: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def opportunity_task_won(request, task_id):
+    """
+    POST /api/opportunity-tasks/<id>/won/
+    Mark task as won - creates revenue record and notifies Discord.
+
+    Body:
+        - actual_amount: Actual revenue amount (optional, defaults to predicted)
+        - notes: Optional notes about the win
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        task = OpportunityTask.objects.select_related('opportunity').get(
+            id=task_id, user=request.user
+        )
+
+        if task.status in ['won', 'lost', 'cancelled', 'expired']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot mark as won from status: {task.status}'
+            }, status=400)
+
+        # Parse body
+        actual_amount = None
+        notes = ''
+        if request.body:
+            try:
+                data = json.loads(request.body)
+                actual_amount = data.get('actual_amount')
+                notes = data.get('notes', '')
+            except json.JSONDecodeError:
+                pass
+
+        task.mark_won(actual_amount=actual_amount, notes=notes)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Congratulations! Task "{task.title}" marked as WON!',
+            'task_id': str(task.id),
+            'new_status': task.status,
+            'revenue_created': True,
+            'amount': float(actual_amount or task.opportunity.potential_revenue),
+        })
+
+    except OpportunityTask.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error marking task as won: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def opportunity_task_lost(request, task_id):
+    """
+    POST /api/opportunity-tasks/<id>/lost/
+    Mark task as lost - records outcome for learning.
+
+    Body:
+        - reason: Loss reason (rejected, underbid, not_qualified, timing, competition, no_response, changed_mind, other)
+        - notes: Optional notes about the loss
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        task = OpportunityTask.objects.get(id=task_id, user=request.user)
+
+        if task.status in ['won', 'lost', 'cancelled', 'expired']:
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot mark as lost from status: {task.status}'
+            }, status=400)
+
+        # Parse body
+        reason = ''
+        notes = ''
+        if request.body:
+            try:
+                data = json.loads(request.body)
+                reason = data.get('reason', '')
+                notes = data.get('notes', '')
+            except json.JSONDecodeError:
+                pass
+
+        task.mark_lost(reason=reason, notes=notes)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Task "{task.title}" marked as lost. Learning from this outcome.',
+            'task_id': str(task.id),
+            'new_status': task.status,
+        })
+
+    except OpportunityTask.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error marking task as lost: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def opportunity_task_update_action_items(request, task_id):
+    """
+    POST /api/opportunity-tasks/<id>/action-items/
+    Update action items for a task.
+
+    Body:
+        - action_items: List of action items with step, action, completed
+    """
+    try:
+        from core.models_unified_system import OpportunityTask
+
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        task = OpportunityTask.objects.get(id=task_id, user=request.user)
+
+        if not request.body:
+            return JsonResponse({
+                'success': False,
+                'error': 'Request body required'
+            }, status=400)
+
+        data = json.loads(request.body)
+        action_items = data.get('action_items', [])
+
+        task.action_items = action_items
+        task.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Action items updated',
+            'task_id': str(task.id),
+            'action_items': task.action_items,
+        })
+
+    except OpportunityTask.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error updating action items: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def opportunity_task_stats(request):
+    """
+    GET /api/opportunity-tasks/stats/
+    Get task statistics for the dashboard.
+    """
+    try:
+        from core.models_unified_system import OpportunityTask, OpportunityOutcome
+        from django.db.models import Count, Sum, Avg
+
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        tasks = OpportunityTask.objects.filter(user=request.user)
+
+        # Status breakdown
+        status_counts = tasks.values('status').annotate(count=Count('id'))
+        status_breakdown = {item['status']: item['count'] for item in status_counts}
+
+        # Priority breakdown
+        priority_counts = tasks.values('priority').annotate(count=Count('id'))
+        priority_breakdown = {item['priority']: item['count'] for item in priority_counts}
+
+        # Win/loss stats
+        outcomes = OpportunityOutcome.objects.filter(task__user=request.user)
+        wins = outcomes.filter(outcome='won')
+        losses = outcomes.filter(outcome='lost')
+
+        total_outcomes = wins.count() + losses.count()
+        win_rate = (wins.count() / total_outcomes * 100) if total_outcomes > 0 else 0
+
+        # Revenue from wins
+        total_revenue = wins.aggregate(total=Sum('actual_revenue'))['total'] or 0
+
+        # Average scores
+        avg_score_won = wins.aggregate(avg=Avg('task__opportunity_score'))['avg'] or 0
+        avg_score_lost = losses.aggregate(avg=Avg('task__opportunity_score'))['avg'] or 0
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'total_tasks': tasks.count(),
+                'status_breakdown': status_breakdown,
+                'priority_breakdown': priority_breakdown,
+                'pending_count': status_breakdown.get('pending', 0),
+                'active_count': sum([
+                    status_breakdown.get('accepted', 0),
+                    status_breakdown.get('in_progress', 0),
+                    status_breakdown.get('applied', 0),
+                    status_breakdown.get('waiting', 0),
+                ]),
+                'completed_count': sum([
+                    status_breakdown.get('won', 0),
+                    status_breakdown.get('lost', 0),
+                ]),
+                'win_rate': round(win_rate, 1),
+                'total_revenue': float(total_revenue),
+                'avg_score_won': round(avg_score_won, 1),
+                'avg_score_lost': round(avg_score_lost, 1),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting task stats: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)
