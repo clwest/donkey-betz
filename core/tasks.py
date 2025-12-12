@@ -532,6 +532,7 @@ def run_spider_network():
     Runs every 30 minutes via Celery Beat.
 
     Session 221 Enhancement: Uses real_data_collector for actual web scraping.
+    Session 423: Added Discord notifications for spider activity.
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
     from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
@@ -539,6 +540,9 @@ def run_spider_network():
     from django.utils import timezone
 
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
+
+    # Session 423: Track timing for Discord notifications
+    batch_start_time = time.time()
 
     registry = SpiderRegistry()
     all_spiders = registry.list_spiders()
@@ -548,7 +552,8 @@ def run_spider_network():
         'data_collected': 0,
         'items_collected': 0,
         'errors': 0,
-        'spider_results': []
+        'spider_results': [],
+        'all_topics': []  # Session 423: Track topics for summary
     }
 
     for spider_name, spider_config in all_spiders.items():
@@ -623,6 +628,10 @@ def run_spider_network():
                 'data_id': str(spider_data.id)
             })
 
+            # Session 423: Track topics for summary notification
+            category = config.get('category', spider_config.get('category', 'general'))
+            results['all_topics'].append(category)
+
             # Session 399: Publish spider completion event for real-time UI updates
             try:
                 import redis
@@ -647,7 +656,40 @@ def run_spider_network():
                 'error': str(e)
             })
 
+            # Session 423: Send error notification to Discord
+            try:
+                from core.services.discord_notifications import discord_notify
+                discord_notify.send_spider_error(
+                    spider_name=spider_name,
+                    error_message=str(e)[:500]
+                )
+            except Exception:
+                pass
+
+    # Session 423: Calculate batch duration and send summary to Discord
+    batch_duration = time.time() - batch_start_time
+
+    # Get top topics (most common)
+    from collections import Counter
+    topic_counts = Counter(results.get('all_topics', []))
+    top_topics = [topic for topic, _ in topic_counts.most_common(8)]
+
     logger.info(f"✅ Spider network complete: {results['spiders_run']} run, {results['items_collected']} items collected, {results['errors']} errors")
+
+    # Session 423: Send batch summary to Discord
+    try:
+        from core.services.discord_notifications import discord_notify
+        discord_notify.send_spider_summary(
+            total_spiders=results['spiders_run'],
+            successful=results['spiders_run'] - results['errors'],
+            failed=results['errors'],
+            total_records=results['items_collected'],
+            top_topics=top_topics if top_topics else ['general'],
+            duration_seconds=batch_duration
+        )
+    except Exception as discord_err:
+        logger.debug(f"Discord summary notification failed (non-critical): {discord_err}")
+
     return results
 
 
@@ -704,11 +746,13 @@ def execute_single_spider(spider_name: str):
 
     Uses lightweight synchronous data collection to avoid macOS fork/async issues.
     Does NOT import SpiderRegistry to avoid aiohttp/fork segfaults.
+    Session 423: Added Discord notifications for individual spider runs.
     """
     from core.models_unified_system import SpiderData
     from django.utils import timezone
 
     logger.info(f"🕷️ On-demand execution: {spider_name}")
+    start_time = time.time()  # Session 423: Track duration
 
     # Spider config lookup without importing SpiderRegistry (avoids aiohttp fork issues)
     SPIDER_CONFIGS = {
@@ -776,6 +820,23 @@ def execute_single_spider(spider_name: str):
             relevance_score=75  # Higher score for on-demand
         )
 
+        # Session 423: Calculate duration and send Discord notification
+        duration = time.time() - start_time
+        item_count = len(data.get('items', [])) if isinstance(data, dict) else 0
+
+        try:
+            from core.services.discord_notifications import discord_notify
+            discord_notify.send_spider_activity(
+                spider_name=spider_name,
+                records_collected=item_count if item_count > 0 else 1,
+                topics=[category],
+                duration_seconds=duration,
+                source_url='on-demand-execution',
+                status='success' if item_count > 0 else 'partial'
+            )
+        except Exception:
+            pass
+
         logger.info(f"✅ Spider {spider_name} executed successfully, saved as SpiderData {spider_data.id}")
         return {
             'success': True,
@@ -785,6 +846,17 @@ def execute_single_spider(spider_name: str):
         }
 
     except Exception as e:
+        # Session 423: Send error notification to Discord
+        try:
+            from core.services.discord_notifications import discord_notify
+            discord_notify.send_spider_error(
+                spider_name=spider_name,
+                error_message=str(e)[:500],
+                source_url='on-demand-execution'
+            )
+        except Exception:
+            pass
+
         logger.error(f"❌ Spider {spider_name} execution failed: {e}")
         return {
             'success': False,
