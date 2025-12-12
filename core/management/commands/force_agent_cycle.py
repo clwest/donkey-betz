@@ -414,4 +414,39 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING(f"\n  [DRY RUN - No changes were made]"))
 
+        # =====================================================================
+        # BROADCAST TO WEB APP (WebSocket)
+        # =====================================================================
+        if not dry_run:
+            self.stdout.write(self.style.HTTP_INFO(f"\n{'='*40}"))
+            self.stdout.write(self.style.HTTP_INFO("  BROADCASTING TO WEB APP"))
+            self.stdout.write(self.style.HTTP_INFO(f"{'='*40}"))
+
+            broadcasts_sent = 0
+            try:
+                from core.tasks import broadcast_learning_status
+                broadcast_learning_status.delay()
+                broadcasts_sent += 1
+                self.stdout.write(self.style.SUCCESS(f"  📡 Learning feed: broadcast sent"))
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"  ⚠️ Learning feed: {e}"))
+
+            try:
+                from core.tasks import broadcast_evolution_status
+                broadcast_evolution_status.delay()
+                broadcasts_sent += 1
+                self.stdout.write(self.style.SUCCESS(f"  📡 Evolution status: broadcast sent"))
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"  ⚠️ Evolution status: {e}"))
+
+            try:
+                from core.tasks import broadcast_relationship_status
+                broadcast_relationship_status.delay()
+                broadcasts_sent += 1
+                self.stdout.write(self.style.SUCCESS(f"  📡 Relationships: broadcast sent"))
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"  ⚠️ Relationships: {e}"))
+
+            self.stdout.write(f"\n  Total broadcasts: {broadcasts_sent}")
+
         self.stdout.write("")
