@@ -335,20 +335,22 @@ app.conf.beat_schedule = {
     },
     # Session 244: Agent Conversations (Inter-Agent Chat)
     # Agents discuss topics with each other autonomously
+    # Session 429: Reduced from 5 to 30 min to save OpenAI credits (DB already populated)
     'agent-conversation-cycle': {
         'task': 'core.tasks.run_agent_conversation',
-        'schedule': crontab(minute='*/5'),  # Every 5 minutes - agents chat frequently
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes (was 5 min before Session 429)
         'options': {
-            'expires': 300,  # 5 minutes
+            'expires': 1800,  # 30 minutes
         }
     },
     # Session 360/361: Multi-Agent Panel Conversations
     # Panel discussions with 3-5 agents for richer insights
+    # Session 429: Reduced from 20 to 60 min to save OpenAI credits
     'multi-agent-panel-cycle': {
         'task': 'core.tasks.run_multi_agent_conversation',
-        'schedule': crontab(minute='*/20'),  # Every 20 minutes - panels take longer
+        'schedule': crontab(minute=0),  # Every hour at :00 (was every 20 min before Session 429)
         'options': {
-            'expires': 1200,  # 20 minutes
+            'expires': 3600,  # 60 minutes
         },
         'kwargs': {
             'max_conversations': 1,  # 1 panel per cycle
