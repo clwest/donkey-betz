@@ -8077,6 +8077,33 @@ The synthesis should read as a cohesive document, not just a collection of separ
         # Broadcast completion
         broadcast_hive_mind_status(session, 'completed')
 
+        # Session 420: Send to Discord #boardroom when consensus is reached
+        try:
+            from core.services.discord_notifications import discord_notify
+
+            # Get participant names
+            participant_names = [c.agent.name for c in completed_contributions]
+
+            # Determine impact based on number of agents
+            if len(participant_names) >= 6:
+                impact = "high"
+            elif len(participant_names) >= 4:
+                impact = "medium"
+            else:
+                impact = "low"
+
+            # Send boardroom decision with the synthesis
+            discord_notify.send_boardroom_decision(
+                title=f"HiveMind Consensus: {session.question[:80]}{'...' if len(session.question) > 80 else ''}",
+                decision=f"**{len(participant_names)} agents reached consensus:**\n\n{synthesis[:3500]}",
+                participants=participant_names,
+                decision_type="strategy",
+                impact=impact
+            )
+            logger.info(f"🏛️ [BOARDROOM] Posted HiveMind consensus to Discord")
+        except Exception as discord_err:
+            logger.warning(f"🏛️ [BOARDROOM] Discord notification failed: {discord_err}")
+
         logger.info(
             f"🧠 [HIVE MIND] Session {session_id} completed! "
             f"{completed_count} contributions, {total_thinking_time:.1f}s total thinking time"
@@ -9717,3 +9744,236 @@ def batch_process_urls(urls: list, user_id: int = None, generate_embeddings: boo
 
     logger.info(f"📦 [SESSION 402] Queued {len(urls)} URLs for processing")
     return {'status': 'queued', 'count': len(urls), 'tasks': results}
+
+
+# ============================================================
+# SESSION 420: Training Data Collection from HuggingFace
+# ============================================================
+
+@shared_task
+def collect_training_data():
+    """
+    Daily training data collection from HuggingFace datasets.
+
+    Session 420: Automated training data collection for agent learning.
+
+    Fetches high-quality conversation data from:
+    - OpenAssistant (human-AI dialogue)
+    - Alpaca (instruction tuning)
+    - Dolly (instruction following)
+    - No Robots (human-written, zero AI)
+    - SlimOrca (reasoning conversations)
+    - And more...
+
+    Data is saved to SpiderData and triggers the Spider Data Bridge
+    to create learning entries for agents.
+    """
+    import asyncio
+
+    logger.info("📚 [SESSION 420] Starting daily training data collection")
+
+    try:
+        from ai_core.spiders.specialized.discord_training_spider import DiscordTrainingSpider
+        from ai_core.spiders.base_spider import SpiderTarget
+
+        # Initialize spider
+        spider = DiscordTrainingSpider()
+
+        # Create target
+        target = SpiderTarget(url='https://huggingface.co/datasets')
+
+        # Run async fetch
+        async def fetch_and_process():
+            raw_data = await spider.fetch_data(target)
+            if raw_data:
+                result = await spider.process_data(raw_data, target)
+                return raw_data, result
+            return None, None
+
+        # Get or create event loop
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        raw_data, result = loop.run_until_complete(fetch_and_process())
+
+        if not result:
+            logger.warning("📚 [SESSION 420] No training data fetched")
+            return {'status': 'no_data', 'records_saved': 0}
+
+        # Save to SpiderData (triggers Spider Data Bridge automatically)
+        from core.models_unified_system import SpiderData
+        import json
+
+        content = result.content
+        high_quality = content.get('high_quality_conversations', [])
+        saved = 0
+
+        for conv in high_quality[:50]:  # Limit to 50 per run
+            try:
+                messages = conv.get('messages', [])
+                if not messages:
+                    continue
+
+                first_msg = messages[0]
+                summary = first_msg.get('content', str(first_msg)) if isinstance(first_msg, dict) else str(first_msg)
+
+                SpiderData.objects.create(
+                    spider_name='discord_training',
+                    source_url=f"https://huggingface.co/datasets/{conv.get('source_dataset', '')}",
+                    data_type='training_data',
+                    raw_data=conv,
+                    processed_data={
+                        'summary': summary[:500],
+                        'message_count': len(messages),
+                        'topics': conv.get('topics', []),
+                        'quality_score': conv.get('quality_score', 0.5),
+                    },
+                    relevance_score=int(conv.get('quality_score', 0.5) * 100),
+                    insights=conv.get('topics', []),
+                )
+                saved += 1
+            except Exception as e:
+                logger.warning(f"📚 [SESSION 420] Error saving conversation: {e}")
+
+        stats = content.get('statistics', {})
+        logger.info(f"📚 [SESSION 420] Training data collection complete: {saved} records saved")
+        logger.info(f"📚 [SESSION 420] Stats: {stats.get('total_conversations', 0)} fetched, "
+                   f"{stats.get('high_quality_count', 0)} high quality, "
+                   f"avg score {stats.get('avg_quality_score', 0):.2f}")
+
+        # Send to Discord
+        try:
+            from core.services.discord_notifications import discord_notify
+            discord_notify.send_system_status(
+                component='training_spider',
+                status='completed',
+                message=f"Collected {saved} training records from HuggingFace datasets",
+                details={
+                    'total_fetched': stats.get('total_conversations', 0),
+                    'high_quality': stats.get('high_quality_count', 0),
+                    'topics': stats.get('topics_found', []),
+                }
+            )
+        except Exception:
+            pass
+
+        return {
+            'status': 'success',
+            'records_saved': saved,
+            'total_fetched': stats.get('total_conversations', 0),
+            'high_quality': stats.get('high_quality_count', 0),
+            'topics': stats.get('topics_found', []),
+        }
+
+    except Exception as e:
+        logger.error(f"📚 [SESSION 420] Training data collection failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def collect_training_data_full():
+    """
+    Weekly full training data refresh.
+
+    Session 420: More comprehensive collection that runs weekly.
+    Fetches more records per dataset for a deeper training corpus.
+    """
+    import asyncio
+
+    logger.info("📚 [SESSION 420] Starting FULL weekly training data collection")
+
+    try:
+        from ai_core.spiders.specialized.discord_training_spider import DiscordTrainingSpider
+        from ai_core.spiders.base_spider import SpiderTarget
+
+        spider = DiscordTrainingSpider()
+        target = SpiderTarget(url='https://huggingface.co/datasets')
+
+        async def fetch_and_process():
+            raw_data = await spider.fetch_data(target)
+            if raw_data:
+                result = await spider.process_data(raw_data, target)
+                return raw_data, result
+            return None, None
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        raw_data, result = loop.run_until_complete(fetch_and_process())
+
+        if not result:
+            logger.warning("📚 [SESSION 420] No training data fetched in full collection")
+            return {'status': 'no_data', 'records_saved': 0}
+
+        from core.models_unified_system import SpiderData
+
+        content = result.content
+        # For weekly full collection, save more records
+        high_quality = content.get('high_quality_conversations', [])
+        medium_quality = content.get('medium_quality_conversations', [])
+        all_quality = high_quality + medium_quality
+        saved = 0
+
+        for conv in all_quality[:200]:  # Save up to 200 per weekly run
+            try:
+                messages = conv.get('messages', [])
+                if not messages:
+                    continue
+
+                first_msg = messages[0]
+                summary = first_msg.get('content', str(first_msg)) if isinstance(first_msg, dict) else str(first_msg)
+
+                SpiderData.objects.create(
+                    spider_name='discord_training',
+                    source_url=f"https://huggingface.co/datasets/{conv.get('source_dataset', '')}",
+                    data_type='training_data',
+                    raw_data=conv,
+                    processed_data={
+                        'summary': summary[:500],
+                        'message_count': len(messages),
+                        'topics': conv.get('topics', []),
+                        'quality_score': conv.get('quality_score', 0.5),
+                    },
+                    relevance_score=int(conv.get('quality_score', 0.5) * 100),
+                    insights=conv.get('topics', []),
+                )
+                saved += 1
+            except Exception as e:
+                logger.warning(f"📚 [SESSION 420] Error saving conversation: {e}")
+
+        stats = content.get('statistics', {})
+        logger.info(f"📚 [SESSION 420] FULL training data collection complete: {saved} records saved")
+
+        # Send to Discord
+        try:
+            from core.services.discord_notifications import discord_notify
+            discord_notify.send_system_status(
+                component='training_spider',
+                status='completed',
+                message=f"Weekly FULL collection: {saved} training records from HuggingFace",
+                details={
+                    'total_fetched': stats.get('total_conversations', 0),
+                    'high_quality': stats.get('high_quality_count', 0),
+                    'medium_quality': stats.get('medium_quality_count', 0),
+                    'topics': stats.get('topics_found', []),
+                }
+            )
+        except Exception:
+            pass
+
+        return {
+            'status': 'success',
+            'records_saved': saved,
+            'total_fetched': stats.get('total_conversations', 0),
+            'collection_type': 'full_weekly',
+        }
+
+    except Exception as e:
+        logger.error(f"📚 [SESSION 420] FULL training data collection failed: {e}")
+        return {'status': 'error', 'error': str(e)}

@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 410 (December 10, 2025)
+**Last Updated:** Session 420 (December 11, 2025)
 
 ---
 
@@ -15,7 +15,7 @@
 | 3D Generation | Complete | Production |
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
-| Spiders | 64 | Active (59 working) |
+| Spiders | 65 | Active (60 working) |
 | Clean Agents | 13 | Production |
 | Legacy Agents | 22 | Production |
 | Advisors | 25 | Production |
@@ -28,7 +28,8 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **3 Channels** | **Production (Session 419)** |
+| **Discord Integration** | **5 Channels** | **Production (Session 420)** |
+| **Training Data Collection** | **14 Datasets** | **Production (Session 420)** |
 
 ---
 

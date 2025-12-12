@@ -1,12 +1,38 @@
 # Spider Network Reference
 
-**Last Updated:** Session 403 (December 9, 2025)
+**Last Updated:** Session 420 (December 11, 2025)
 
 ---
 
 ## Overview
 
-The Spider Network consists of **64 registered spiders**, with **59 actually working** after Session 403 additions. Session 403 added 2 new Playwright-enabled legal spiders for Colorado family law.
+The Spider Network consists of **65 registered spiders**, with **60 actually working** after Session 420 additions. Session 420 added the Training Data Collection Spider for agent learning.
+
+---
+
+## Session 420 Addition: Training Data Spider
+
+**New:** `discord_training` spider - Collects high-quality conversation data from HuggingFace datasets for agent training.
+
+| Feature | Details |
+|---------|---------|
+| Datasets | 14 HuggingFace datasets (OpenAssistant, Alpaca, SlimOrca, etc.) |
+| Quality Rate | 94% high quality |
+| Topics | Business, AI, creative, programming, tech |
+| Automation | Daily at 1 AM (50 records), Weekly Sundays (200 records) |
+| Token | Uses `HUGGING_FACE_API` from .env |
+
+### Datasets Configured
+
+**Tier 1 - Best Public (No auth):**
+- OpenAssistant/oasst1, databricks/databricks-dolly-15k, tatsu-lab/alpaca
+- HuggingFaceH4/no_robots, Open-Orca/SlimOrca, LDJnr/Capybara
+
+**Tier 2 - Good Public:**
+- wizard_vicuna_70k, OpenHermes-2.5, WizardLM_evol_instruct, Topical-Chat, airoboros
+
+**Tier 3 - Gated (Requires HF token + terms):**
+- lmsys/lmsys-chat-1m (1M+ conversations!), ultrachat_200k, chatbot_arena
 
 ---
 
@@ -14,14 +40,15 @@ The Spider Network consists of **64 registered spiders**, with **59 actually wor
 
 | Metric | Count |
 |--------|-------|
-| Total Registered | 64 |
-| **Actually Working** | **59** |
-| With Configured URLs | 50 |
+| Total Registered | 65 |
+| **Actually Working** | **60** |
+| With Configured URLs | 51 |
 | Legal Spiders (working) | 5 |
+| Training Data Spider | 1 (14 HuggingFace datasets) |
 | Playwright-Enabled | 2 |
 | Need API Keys | 6 |
-| Records in DB | ~7,100 |
-| Searchable (with embeddings) | ~1,800 |
+| Records in DB | ~12,250+ |
+| Searchable (with embeddings) | ~11,076+ (91% coverage) |
 
 **Session 403:** Added 2 new Playwright-enabled spiders for Colorado family law:
 - `colorado_family_law` - Colorado Judicial Branch JDF forms

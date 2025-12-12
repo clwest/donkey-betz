@@ -509,6 +509,22 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+    # Session 420: Training Data Collection from HuggingFace
+    # Collects conversation data from public datasets for agent training
+    'collect-training-data-daily': {
+        'task': 'core.tasks.collect_training_data',
+        'schedule': crontab(hour=1, minute=0),  # Daily at 1 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
+    'collect-training-data-weekly-full': {
+        'task': 'core.tasks.collect_training_data_full',
+        'schedule': crontab(day_of_week=0, hour=2, minute=30),  # Sunday 2:30 AM - full refresh
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration
