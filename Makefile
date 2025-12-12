@@ -393,6 +393,55 @@ health-check: ## Run system health check (agents, spiders, database, etc.)
 	@echo "==> Running system health check..."
 	@.venv/bin/python scripts/health_check.py
 
+# ---------- Discord Bot (Session 426) ----------
+DISCORD_BOT_PIDFILE ?= .discord-bot.pid
+DISCORD_BOT_LOG ?= discord-bot.log
+
+discord-bot: ## Start Discord bot (background)
+	@echo "==> Starting Discord bot..."
+	@if [ -z "$$DISCORD_BOT_TOKEN" ]; then \
+		echo "✗ DISCORD_BOT_TOKEN not set!"; \
+		echo "  Set it in your environment:"; \
+		echo "  export DISCORD_BOT_TOKEN='your-bot-token-here'"; \
+		exit 1; \
+	fi
+	@if pgrep -f "run_discord_bot" >/dev/null 2>&1; then \
+		echo "-> Discord bot already running"; \
+	else \
+		echo "-> Starting Discord bot (background)..."; \
+		nohup $(DJANGO_MANAGE) run_discord_bot > $(DISCORD_BOT_LOG) 2>&1 & echo $$! > $(DISCORD_BOT_PIDFILE); \
+		sleep 2; \
+		echo "✓ Discord bot started (PID: $$(cat $(DISCORD_BOT_PIDFILE)))"; \
+		echo "  - Log: $(DISCORD_BOT_LOG)"; \
+	fi
+
+discord-bot-stop: ## Stop Discord bot
+	@echo "==> Stopping Discord bot..."
+	@if [ -f $(DISCORD_BOT_PIDFILE) ]; then \
+		PID=$$(cat $(DISCORD_BOT_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Discord bot (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(DISCORD_BOT_PIDFILE); \
+	else \
+		pkill -f "run_discord_bot" 2>/dev/null || true; \
+	fi
+	@echo "✓ Discord bot stopped."
+
+discord-bot-status: ## Check Discord bot status
+	@echo "==> Discord bot status"
+	@if pgrep -f "run_discord_bot" >/dev/null 2>&1; then \
+		echo "✓ Discord bot running"; \
+	else \
+		echo "✗ Discord bot not running"; \
+	fi
+
+discord-bot-logs: ## Tail Discord bot logs
+	@echo "==> Tailing $(DISCORD_BOT_LOG) (ctrl-c to stop)"
+	@touch $(DISCORD_BOT_LOG)
+	@tail -f $(DISCORD_BOT_LOG)
+
 # ---------- Utility / help ----------
 help:
 	@echo "Usage: make <target>"
