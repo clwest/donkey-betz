@@ -458,7 +458,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `#gallery` | Auto-delivery of created images (Phase 1) | - |
 | `#client-*` | Per-client delivery channels (Phase 3) | - |
 
-### Discord Bot Commands (21 Total - Sessions 426-432)
+### Discord Bot Commands (23 Total - Sessions 426-433)
 
 | Command | Description | Phase |
 |---------|-------------|-------|
@@ -482,6 +482,8 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/client-list` | List all your clients with stats | Phase 3 |
 | `/client-deliver <client> <id>` | Send deliverable to client (uploads image!) | Phase 3 |
 | `/client-invite <client>` | Generate 7-day invite link for client | Phase 3 |
+| `/apply <id> [message]` | Apply to an income opportunity | Phase 4 |
+| `/track [status]` | Track your job applications | Phase 4 |
 | `/help` | Show all commands | Core |
 
 ### Discord-First Platform Phases
@@ -491,7 +493,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | 1. Content Delivery | `/gallery`, `/profile`, `/opportunities`, auto-delivery | ✅ Done (Session 430) |
 | 2. Server Setup | `/setup`, `/server-info`, 3 templates | ✅ Done (Session 431) |
 | 3. Client Management | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` | ✅ Done (Session 432) |
-| 4. Income Pipeline | `/apply`, opportunity notifications | Pending |
+| 4. Income Pipeline | `/apply`, `/track`, user-friendly opportunity IDs | 🔄 In Progress (Session 433) |
 | 5. Full Agent Access | All 27 agents via Discord | Pending |
 | 6. Automation | Proactive notifications, daily digests | Pending |
 

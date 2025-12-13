@@ -1,5 +1,5 @@
 """
-Discord Bot Service - Sessions 426-430
+Discord Bot Service - Sessions 426-433
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
@@ -25,6 +25,10 @@ Session 430 Commands (Phase 1: Discord-First):
 - /gallery [count] - View recent AI-generated images
 - /profile - View AI Studio profile and stats
 - /opportunities [count] [category] - Browse income opportunities
+
+Session 433 Commands (Phase 4: Income Pipeline):
+- /apply <id> [message] - Apply to an opportunity
+- /track [status] - Track your job applications
 
 Usage:
     # Run the bot
@@ -1569,7 +1573,7 @@ class ContentCommands(commands.Cog):
 
                 queryset = Opportunity.objects.filter(
                     status='active'
-                ).order_by('-score', '-created_at')
+                ).order_by('-match_score', '-created_at')
 
                 # Filter by category if specified
                 if cat_filter:
@@ -1583,14 +1587,15 @@ class ContentCommands(commands.Cog):
                 results = []
                 for opp in opps:
                     results.append({
-                        'id': opp.id,
+                        'id': opp.user_friendly_id or 0,  # Session 433: Use user-friendly ID
+                        'uuid': str(opp.id),
                         'title': (opp.title or 'Untitled')[:60],
                         'description': (opp.description or '')[:100],
-                        'category': opp.category or 'General',
+                        'category': getattr(opp, 'category', None) or 'General',
                         'source': opp.source or 'Unknown',
                         'url': opp.url or '',
-                        'score': opp.score or 0,
-                        'potential_value': float(opp.potential_value) if opp.potential_value else 0,
+                        'score': opp.match_score or 0,  # Fixed: use match_score
+                        'potential_value': float(opp.potential_revenue) if opp.potential_revenue else 0,  # Fixed: use potential_revenue
                         'created_at': opp.created_at.strftime('%Y-%m-%d') if opp.created_at else 'Unknown',
                     })
                 return results
@@ -1628,7 +1633,7 @@ class ContentCommands(commands.Cog):
                         score_emoji = "📌"
 
                     value = f"{opp['description'][:80]}..." if len(opp['description']) > 80 else opp['description']
-                    value += f"\n📂 {opp['category']} | {score_emoji} Score: {opp['score']}"
+                    value += f"\n📂 {opp['category']} | {score_emoji} Match: {opp['score']}%"
 
                     if opp['potential_value'] > 0:
                         value += f" | 💰 ${opp['potential_value']:.0f}"
@@ -1636,8 +1641,9 @@ class ContentCommands(commands.Cog):
                     if opp['url']:
                         value += f"\n[🔗 View Details]({opp['url']})"
 
+                    # Show ID in field name for easy reference
                     embed.add_field(
-                        name=f"{opp['title']}",
+                        name=f"#{opp['id']} - {opp['title']}",
                         value=value,
                         inline=False
                     )
@@ -1649,6 +1655,242 @@ class ContentCommands(commands.Cog):
             logger.error(f"/opportunities command error: {e}")
             await interaction.followup.send(
                 f"Error loading opportunities: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="apply", description="Apply to an opportunity")
+    @app_commands.describe(
+        opportunity_id="The opportunity ID (shown in /opportunities as #1, #2, etc.)",
+        message="Optional message to include with your application"
+    )
+    async def apply(self, interaction: discord.Interaction, opportunity_id: int, message: str = None):
+        """Apply to an income opportunity."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    "❌ You need to link your Discord account first!\n\n"
+                    "Use `/link` to connect your AI Studio account.",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def create_application(web_user, opp_id, app_message):
+                from core.models_unified_system import Opportunity, Application
+                from django.utils import timezone
+
+                # Find opportunity by user-friendly ID
+                opportunity = Opportunity.objects.filter(user_friendly_id=opp_id).first()
+                if not opportunity:
+                    return None, "Opportunity not found. Use `/opportunities` to see available IDs."
+
+                # Check if already applied
+                existing = Application.objects.filter(
+                    user=web_user,
+                    opportunity=opportunity
+                ).first()
+                if existing:
+                    applied_date = existing.submitted_at.strftime('%Y-%m-%d') if existing.submitted_at else 'recently'
+                    return None, f"You already applied to this opportunity on {applied_date}."
+
+                # Create application and submit it
+                application = Application.objects.create(
+                    user=web_user,
+                    opportunity=opportunity,
+                    cover_letter=app_message or '',
+                )
+                application.submit_application()  # Sets status='submitted' and submitted_at
+
+                return {
+                    'app_id': application.id,
+                    'opp_title': opportunity.title[:50],
+                    'opp_source': opportunity.source or 'Unknown',
+                    'opp_url': opportunity.url or '',
+                    'potential_revenue': float(opportunity.potential_revenue) if opportunity.potential_revenue else 0,
+                }, None
+
+            result, error = await create_application(user, opportunity_id, message)
+
+            if error:
+                await interaction.followup.send(
+                    f"❌ {error}",
+                    ephemeral=True
+                )
+                return
+
+            embed = discord.Embed(
+                title="✅ Application Submitted!",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="📋 Opportunity",
+                value=f"**{result['opp_title']}**\n📂 Source: {result['opp_source']}",
+                inline=False
+            )
+
+            if result['potential_revenue'] > 0:
+                embed.add_field(
+                    name="💰 Potential Revenue",
+                    value=f"${result['potential_revenue']:.0f}",
+                    inline=True
+                )
+
+            if message:
+                embed.add_field(
+                    name="💬 Your Message",
+                    value=message[:100] + ("..." if len(message) > 100 else ""),
+                    inline=False
+                )
+
+            if result['opp_url']:
+                embed.add_field(
+                    name="🔗 Next Steps",
+                    value=f"[Complete Application on {result['opp_source']}]({result['opp_url']})",
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Use /track to monitor your applications")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/apply command error: {e}")
+            await interaction.followup.send(
+                f"Error submitting application: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="track", description="Track your job applications")
+    @app_commands.describe(
+        status="Filter by status (all, submitted, reviewed, accepted, rejected)"
+    )
+    @app_commands.choices(status=[
+        app_commands.Choice(name="All Applications", value="all"),
+        app_commands.Choice(name="Submitted", value="submitted"),
+        app_commands.Choice(name="Under Review", value="reviewed"),
+        app_commands.Choice(name="Accepted", value="accepted"),
+        app_commands.Choice(name="Rejected", value="rejected"),
+    ])
+    async def track(self, interaction: discord.Interaction, status: str = "all"):
+        """Track your job applications."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    "❌ You need to link your Discord account first!\n\n"
+                    "Use `/link` to connect your AI Studio account.",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def get_applications(web_user, status_filter):
+                from core.models_unified_system import Application
+                from django.db.models import Sum
+
+                queryset = Application.objects.filter(user=web_user).select_related('opportunity')
+
+                if status_filter != 'all':
+                    queryset = queryset.filter(status=status_filter)
+
+                apps = queryset.order_by('-submitted_at')[:10]
+
+                results = []
+                for app in apps:
+                    opp = app.opportunity
+                    results.append({
+                        'app_id': app.id,
+                        'opp_id': opp.user_friendly_id or 0,
+                        'title': (opp.title or 'Untitled')[:40],
+                        'source': opp.source or 'Unknown',
+                        'status': app.status,
+                        'submitted_at': app.submitted_at.strftime('%m/%d') if app.submitted_at else 'Unknown',
+                        'potential_revenue': float(opp.potential_revenue) if opp.potential_revenue else 0,
+                    })
+
+                # Get summary stats
+                total = Application.objects.filter(user=web_user).count()
+                accepted = Application.objects.filter(user=web_user, status='accepted').count()
+                reviewed = Application.objects.filter(user=web_user, status='reviewed').count()
+                pending = Application.objects.filter(user=web_user, status='submitted').count()
+
+                return results, {
+                    'total': total,
+                    'accepted': accepted,
+                    'reviewed': reviewed,
+                    'pending': pending,
+                }
+
+            applications, stats = await get_applications(user, status)
+
+            if not applications and status == 'all':
+                embed = discord.Embed(
+                    title="📋 No Applications Yet",
+                    description="You haven't applied to any opportunities.\n\n"
+                                "Use `/opportunities` to browse available opportunities\n"
+                                "Then `/apply <id>` to submit an application!",
+                    color=discord.Color.light_gray(),
+                    timestamp=datetime.now()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            # Build embed
+            title = "📋 Your Applications"
+            if status != 'all':
+                title += f" ({status.title()})"
+
+            embed = discord.Embed(
+                title=title,
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            # Summary stats
+            embed.add_field(
+                name="📊 Summary",
+                value=f"✅ Accepted: **{stats['accepted']}** | 👀 In Review: **{stats['reviewed']}** | ⏳ Pending: **{stats['pending']}** | 📝 Total: **{stats['total']}**",
+                inline=False
+            )
+
+            # Status emoji mapping
+            status_emojis = {
+                'draft': '📝',
+                'submitted': '⏳',
+                'reviewed': '👀',
+                'accepted': '✅',
+                'rejected': '❌',
+            }
+
+            for app in applications:
+                emoji = status_emojis.get(app['status'], '📋')
+                value = f"{emoji} {app['status'].title()} | 📅 Applied: {app['submitted_at']}"
+                if app['potential_revenue'] > 0:
+                    value += f" | 💰 ${app['potential_revenue']:.0f}"
+
+                embed.add_field(
+                    name=f"#{app['opp_id']} - {app['title']}",
+                    value=value,
+                    inline=False
+                )
+
+            if len(applications) == 10:
+                embed.set_footer(text="Showing 10 most recent | Use status filter for specific results")
+            else:
+                embed.set_footer(text=f"Showing {len(applications)} application{'s' if len(applications) != 1 else ''}")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/track command error: {e}")
+            await interaction.followup.send(
+                f"Error loading applications: {str(e)[:200]}",
                 ephemeral=True
             )
 
@@ -2439,8 +2681,18 @@ class HelpCommands(commands.Cog):
             name="🖼️ Content",
             value=(
                 "**/gallery** [count] - View your recent images\n"
-                "**/profile** - View your AI Studio profile\n"
-                "**/opportunities** [count] [category] - Browse income opportunities"
+                "**/profile** - View your AI Studio profile"
+            ),
+            inline=False
+        )
+
+        # Income Pipeline (Session 433)
+        embed.add_field(
+            name="💰 Income Pipeline",
+            value=(
+                "**/opportunities** [count] [category] - Browse income opportunities\n"
+                "**/apply** <id> [message] - Apply to an opportunity\n"
+                "**/track** [status] - Track your applications"
             ),
             inline=False
         )

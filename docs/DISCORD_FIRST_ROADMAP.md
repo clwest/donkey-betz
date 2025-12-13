@@ -36,9 +36,9 @@
 
 ---
 
-## Current State (Session 432)
+## Current State (Session 433)
 
-### All Commands (21 Total)
+### All Commands (23 Total)
 | Command | Description | Status |
 |---------|-------------|--------|
 | `/status` | System health check | ✅ Working |
@@ -61,6 +61,8 @@
 | `/client-list` | List all clients | ✅ Working (Phase 3) |
 | `/client-deliver <client> <image_id>` | Send deliverable | ✅ Working (Phase 3) |
 | `/client-invite <client>` | Generate client invite | ✅ Working (Phase 3) |
+| `/apply <id> [message]` | Apply to opportunity | ✅ Working (Phase 4) |
+| `/track [status]` | Track applications | ✅ Working (Phase 4) |
 | `/help` | Command reference | ✅ Working |
 
 ### Existing Integrations
@@ -69,6 +71,7 @@
 - **Auto-delivery to #gallery channel (Phase 1)**
 - **Server setup wizard with 3 templates (Phase 2)**
 - **Client management with dedicated channels (Phase 3)**
+- **Income pipeline - apply and track jobs (Phase 4)**
 - Bot token authentication for secure API calls
 
 ---
@@ -234,19 +237,21 @@ Clients Page:
 
 ---
 
-## Phase 4: Opportunity & Income Pipeline (Sessions 438-440)
+## Phase 4: Opportunity & Income Pipeline (Session 433) 🔄 IN PROGRESS
 
 **Goal:** Surface income opportunities and enable quick action via Discord.
 
-### New Commands
+### Implemented Commands
 ```
-/opportunities [filter]         - List matching opportunities
-/opportunity <id>               - View opportunity details
-/apply <id>                     - Quick apply to opportunity
-/apply <id> custom              - Apply with custom message
-/track                          - View application statuses
-/earnings [period]              - View earnings summary
-/earnings breakdown             - Detailed earnings by source
+/opportunities [count] [category] - Browse income opportunities ✅
+/apply <id> [message]             - Apply to an opportunity ✅
+/track [status]                   - Track your applications ✅
+```
+
+### Planned Commands
+```
+/earnings [period]              - View earnings summary (Pending)
+/earnings breakdown             - Detailed earnings by source (Pending)
 ```
 
 ### Opportunity Notifications
