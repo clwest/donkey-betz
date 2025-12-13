@@ -455,15 +455,45 @@ def get_agent_conversations(request):
         for session in hivemind_qs[:limit]:
             # Get participant names from participant_ids
             participant_names = []
+            agent_name_map = {}  # Map name -> emoji
             if session.participant_ids:
                 try:
                     agents = Agent.objects.filter(id__in=session.participant_ids)
-                    participant_names = [
-                        {'name': a.name, 'emoji': _get_agent_emoji(a.specialization)}
-                        for a in agents
-                    ]
+                    for a in agents:
+                        emoji = _get_agent_emoji(a.specialization)
+                        participant_names.append({'name': a.name, 'emoji': emoji})
+                        agent_name_map[a.name] = emoji
                 except Exception:
                     pass
+
+            # Session 435: Parse synthesis into individual messages
+            # Format is "AgentName: message" on each paragraph
+            messages_data = []
+            if session.synthesis:
+                import re
+                # Split by double newline or single newline followed by AgentName:
+                paragraphs = re.split(r'\n\n|\n(?=[A-Z][a-zA-Z]+Agent:)', session.synthesis)
+                seq = 0
+                for para in paragraphs:
+                    para = para.strip()
+                    if not para:
+                        continue
+                    # Try to extract agent name and content
+                    match = re.match(r'^([A-Z][a-zA-Z]+(?:Agent)?):?\s*(.+)', para, re.DOTALL)
+                    if match:
+                        agent_name = match.group(1)
+                        content = match.group(2).strip()
+                        seq += 1
+                        messages_data.append({
+                            'id': f'{session.id}-{seq}',
+                            'agent': agent_name,
+                            'agent_emoji': agent_name_map.get(agent_name, '🤖'),
+                            'content': content,
+                            'type': 'contribution',
+                            'sequence': seq,
+                            'relevance': 0.8,
+                            'created_at': session.created_at.isoformat() if session.created_at else None
+                        })
 
             conversations_data.append({
                 'id': str(session.id),
@@ -475,13 +505,13 @@ def get_agent_conversations(request):
                 'initiator': participant_names[0]['name'] if participant_names else 'System',
                 'initiator_emoji': participant_names[0]['emoji'] if participant_names else '🤖',
                 'participants': participant_names,
-                'message_count': session.contribution_count or 0,
+                'message_count': session.contribution_count or len(messages_data),
                 'quality_score': 0.85,
                 'conclusion': session.synthesis_summary or '',
                 'insights': session.synthesis[:500] if session.synthesis else '',
                 'started_at': session.created_at.isoformat() if session.created_at else None,
                 'ended_at': session.completed_at.isoformat() if session.completed_at else None,
-                'messages': [],  # HiveMind stores synthesis, not individual messages
+                'messages': messages_data,  # Session 435: Now includes parsed messages
                 'source': 'hivemind'  # Mark source for UI
             })
 
@@ -502,7 +532,8 @@ def get_agent_conversations(request):
 
             for conv in legacy_qs[:remaining_slots]:
                 messages_data = []
-                for msg in conv.messages.all()[:10]:
+                # Session 435: Return ALL messages, not just first 10
+                for msg in conv.messages.all().order_by('sequence_number'):
                     messages_data.append({
                         'id': str(msg.id),
                         'agent': msg.agent.name,
@@ -647,15 +678,12 @@ def trigger_agent_conversation(request):
 @require_http_methods(["GET"])
 def get_knowledge_transfer_feed(request):
     """
-    Get the live agent learning activity feed.
+    Get the live agent learning activity feed based on KnowledgeTransfer records.
 
     GET /api/agent-learning/activity/
 
     Query params:
     - limit: max items to return (default 20)
-
-    Session 431: Now includes AgentKnowledgeSource records (from force_agent_cycle)
-    in addition to KnowledgeTransfer records.
     """
     try:
         from django.utils import timezone
@@ -674,8 +702,6 @@ def get_knowledge_transfer_feed(request):
             'total_connections': AgentLearningConnection.objects.filter(is_active=True).count(),
             'transfers_last_hour': KnowledgeTransfer.objects.filter(created_at__gte=last_hour).count(),
             'transfers_last_day': KnowledgeTransfer.objects.filter(created_at__gte=last_day).count(),
-            'knowledge_last_hour': AgentKnowledgeSource.objects.filter(first_discovered_at__gte=last_hour).count(),
-            'knowledge_last_day': AgentKnowledgeSource.objects.filter(first_discovered_at__gte=last_day).count(),
             'active_learners': Agent.objects.filter(
                 teachers__last_transfer_at__gte=last_hour
             ).distinct().count(),
@@ -695,69 +721,41 @@ def get_knowledge_transfer_feed(request):
                 'learns_from': agent.teachers.count()
             })
 
+        # Recent knowledge transfers as feed items
         feed_items = []
+        for transfer in KnowledgeTransfer.objects.select_related(
+            'connection__teacher_agent',
+            'connection__student_agent'
+        ).order_by('-created_at')[:limit]:
+            teacher = transfer.connection.teacher_agent
+            student = transfer.connection.student_agent
 
-        # =====================================================================
-        # FIRST: Get AgentKnowledgeSource records (from force_agent_cycle)
-        # =====================================================================
-        for knowledge in AgentKnowledgeSource.objects.select_related('agent').order_by('-first_discovered_at')[:limit]:
-            agent_name = knowledge.agent.name if knowledge.agent else 'Unknown Agent'
+            # Determine learning source type
+            if teacher.id == student.id:
+                source = 'self_learning'
+                description = f"{teacher.name} acquired new knowledge"
+            else:
+                source = 'knowledge_transfer'
+                description = f"{teacher.name} shared knowledge with {student.name}"
+
             feed_items.append({
-                'timestamp': knowledge.first_discovered_at.isoformat() if knowledge.first_discovered_at else now.isoformat(),
-                'type': 'knowledge_acquired',
-                'source': 'Agent Knowledge',
-                'description': f"{agent_name} learned: {knowledge.title or 'New insight'}",
-                'knowledge': knowledge.summary[:200] if knowledge.summary else 'Knowledge acquired',
-                'teacher': agent_name,
-                'student': agent_name,
-                'was_useful': True,
-                'effectiveness_gain': knowledge.confidence_score or 0.0,
-                'knowledge_type': knowledge.knowledge_type,
-                'data_source': 'knowledge_source'
+                'timestamp': transfer.created_at.isoformat(),
+                'type': source,
+                'source': 'Knowledge transfer',
+                'description': description,
+                'knowledge': transfer.transfer_summary[:100] if transfer.transfer_summary else 'Knowledge shared',
+                'teacher': teacher.name,
+                'student': student.name,
+                'was_useful': transfer.was_useful,
+                'effectiveness_gain': 0.0  # Could calculate if stored
             })
-
-        # =====================================================================
-        # SECOND: Add KnowledgeTransfer records
-        # =====================================================================
-        remaining_slots = limit - len(feed_items)
-        if remaining_slots > 0:
-            for transfer in KnowledgeTransfer.objects.select_related(
-                'connection__teacher_agent',
-                'connection__student_agent'
-            ).order_by('-created_at')[:remaining_slots]:
-                teacher = transfer.connection.teacher_agent
-                student = transfer.connection.student_agent
-
-                # Determine learning source type
-                if teacher.id == student.id:
-                    source = 'self_learning'
-                    description = f"{teacher.name} acquired new knowledge"
-                else:
-                    source = 'knowledge_transfer'
-                    description = f"{teacher.name} shared knowledge with {student.name}"
-
-                feed_items.append({
-                    'timestamp': transfer.created_at.isoformat(),
-                    'type': source,
-                    'source': 'Knowledge transfer',
-                    'description': description,
-                    'knowledge': transfer.transfer_summary[:100] if transfer.transfer_summary else 'Knowledge shared',
-                    'teacher': teacher.name,
-                    'student': student.name,
-                    'was_useful': transfer.was_useful,
-                    'effectiveness_gain': 0.0,
-                    'data_source': 'transfer'
-                })
-
-        # Sort combined results by timestamp (newest first)
-        feed_items.sort(key=lambda x: x['timestamp'], reverse=True)
 
         return JsonResponse({
             'success': True,
-            'feed_items': feed_items[:limit],
+            'feed_items': feed_items,
             'stats': stats,
             'top_learners': top_learners,
-            'total_count': len(feed_items[:limit]),
+            'total_count': len(feed_items),
             'timestamp': now.isoformat()
         })
 
@@ -1187,15 +1185,11 @@ def get_boardroom_decisions(request):
     - impact_area: Filter by area (prompting, memory, etc.)
     - status: Filter by status (draft, canonical, etc.)
     - canonical_only: If 'true', only return canonical policies
-    - source: Filter by source (conversation, hive_session, strategic_session, all)
-
-    Session 431: Now includes strategic HiveMindSession records (from force_agent_cycle)
-    when they match strategic keywords (strategy, future, improve, best practice, etc.)
+    - source: Filter by source (conversation, hive_session, all)
     """
     try:
-        from core.models_unified_system import AgentDecisionSummary, HiveMindSession
-        from core.models import Agent
-        from django.db.models import Count, Q
+        from core.models_unified_system import AgentDecisionSummary
+        from django.db.models import Count
 
         limit = int(request.GET.get('limit', 20))
         decision_type = request.GET.get('decision_type')
@@ -1204,141 +1198,63 @@ def get_boardroom_decisions(request):
         canonical_only = request.GET.get('canonical_only', 'false').lower() == 'true'
         source = request.GET.get('source', 'all')
 
+        queryset = AgentDecisionSummary.objects.select_related(
+            'conversation', 'hive_session'
+        ).order_by('-created_at')
+
+        if decision_type:
+            queryset = queryset.filter(decision_type=decision_type)
+        if impact_area:
+            queryset = queryset.filter(impact_area=impact_area)
+        if status:
+            queryset = queryset.filter(status=status)
+        if canonical_only:
+            queryset = queryset.filter(is_canonical=True)
+        if source == 'conversation':
+            queryset = queryset.filter(conversation__isnull=False)
+        elif source == 'hive_session':
+            queryset = queryset.filter(hive_session__isnull=False)
+
+        decisions = queryset[:limit]
+
         decisions_data = []
+        for d in decisions:
+            # Determine source type
+            if d.conversation:
+                source_type = 'conversation'
+                source_id = str(d.conversation.id)
+                source_topic = d.conversation.topic
+            elif d.hive_session:
+                source_type = 'hive_session'
+                source_id = str(d.hive_session.id)
+                source_topic = d.hive_session.topic
+            else:
+                source_type = 'unknown'
+                source_id = None
+                source_topic = None
 
-        # =====================================================================
-        # FIRST: Get AgentDecisionSummary records (formal decisions)
-        # =====================================================================
-        if source in ('all', 'conversation', 'hive_session'):
-            queryset = AgentDecisionSummary.objects.select_related(
-                'conversation', 'hive_session'
-            ).order_by('-created_at')
-
-            if decision_type:
-                queryset = queryset.filter(decision_type=decision_type)
-            if impact_area:
-                queryset = queryset.filter(impact_area=impact_area)
-            if status:
-                queryset = queryset.filter(status=status)
-            if canonical_only:
-                queryset = queryset.filter(is_canonical=True)
-            if source == 'conversation':
-                queryset = queryset.filter(conversation__isnull=False)
-            elif source == 'hive_session':
-                queryset = queryset.filter(hive_session__isnull=False)
-
-            for d in queryset[:limit]:
-                # Determine source type
-                if d.conversation:
-                    source_type = 'conversation'
-                    source_id = str(d.conversation.id)
-                    source_topic = d.conversation.topic
-                elif d.hive_session:
-                    source_type = 'hive_session'
-                    source_id = str(d.hive_session.id)
-                    source_topic = d.hive_session.topic if hasattr(d.hive_session, 'topic') else d.hive_session.conversation_topic
-                else:
-                    source_type = 'unknown'
-                    source_id = None
-                    source_topic = None
-
-                decisions_data.append({
-                    'id': str(d.id),
-                    'topic': d.topic,
-                    'decision_type': d.decision_type,
-                    'decision_type_display': d.get_decision_type_display(),
-                    'impact_area': d.impact_area,
-                    'impact_area_display': d.get_impact_area_display(),
-                    'key_insights': d.key_insights,
-                    'recommended_stance': d.recommended_stance,
-                    'suggested_feature': d.suggested_feature,
-                    'rationale': d.rationale,
-                    'participants': d.participants,
-                    'status': d.status,
-                    'status_display': d.get_status_display(),
-                    'is_canonical': d.is_canonical,
-                    'promoted_at': d.promoted_at.isoformat() if d.promoted_at else None,
-                    'promoted_by': d.promoted_by,
-                    'source_type': source_type,
-                    'source_id': source_id,
-                    'source_topic': source_topic,
-                    'created_at': d.created_at.isoformat(),
-                    'data_source': 'decision_summary'
-                })
-
-        # =====================================================================
-        # SECOND: Get strategic HiveMindSession records (from force_agent_cycle)
-        # These match the keywords sent to Discord #boardroom channel
-        # =====================================================================
-        remaining_slots = limit - len(decisions_data)
-        if remaining_slots > 0 and source in ('all', 'strategic_session'):
-            # Strategic keywords (same as force_agent_cycle)
-            strategic_keywords = ['strategy', 'future', 'improve', 'best practice', 'common mistake', 'emerging trend']
-
-            # Build Q filter for keywords
-            keyword_filter = Q()
-            for kw in strategic_keywords:
-                keyword_filter |= Q(conversation_topic__icontains=kw)
-
-            strategic_sessions = HiveMindSession.objects.filter(
-                session_mode='conversation',
-                status='completed'
-            ).filter(keyword_filter).order_by('-created_at')[:remaining_slots]
-
-            for session in strategic_sessions:
-                # Get participant names
-                participant_names = []
-                if session.participant_ids:
-                    try:
-                        agents = Agent.objects.filter(id__in=session.participant_ids)
-                        participant_names = [a.name for a in agents]
-                    except Exception:
-                        pass
-
-                # Determine decision type from topic
-                topic_lower = (session.conversation_topic or '').lower()
-                if 'strategy' in topic_lower or 'future' in topic_lower:
-                    d_type = 'strategy'
-                    d_type_display = 'Strategy'
-                elif 'best practice' in topic_lower:
-                    d_type = 'best_practice'
-                    d_type_display = 'Best Practice'
-                elif 'common mistake' in topic_lower:
-                    d_type = 'lesson_learned'
-                    d_type_display = 'Lesson Learned'
-                elif 'improve' in topic_lower:
-                    d_type = 'improvement'
-                    d_type_display = 'Improvement'
-                else:
-                    d_type = 'insight'
-                    d_type_display = 'Insight'
-
-                decisions_data.append({
-                    'id': str(session.id),
-                    'topic': session.conversation_topic or session.question or 'Strategic Discussion',
-                    'decision_type': d_type,
-                    'decision_type_display': d_type_display,
-                    'impact_area': 'general',
-                    'impact_area_display': 'General',
-                    'key_insights': session.synthesis[:500] if session.synthesis else '',
-                    'recommended_stance': session.synthesis_summary or '',
-                    'suggested_feature': None,
-                    'rationale': session.synthesis[:1000] if session.synthesis else '',
-                    'participants': participant_names,
-                    'status': 'draft',
-                    'status_display': 'Draft',
-                    'is_canonical': False,
-                    'promoted_at': None,
-                    'promoted_by': None,
-                    'source_type': 'strategic_session',
-                    'source_id': str(session.id),
-                    'source_topic': session.conversation_topic,
-                    'created_at': session.created_at.isoformat() if session.created_at else None,
-                    'data_source': 'hivemind_strategic'
-                })
-
-        # Sort combined results by created_at (newest first)
-        decisions_data.sort(key=lambda x: x['created_at'] or '1970-01-01', reverse=True)
+            decisions_data.append({
+                'id': str(d.id),
+                'topic': d.topic,
+                'decision_type': d.decision_type,
+                'decision_type_display': d.get_decision_type_display(),
+                'impact_area': d.impact_area,
+                'impact_area_display': d.get_impact_area_display(),
+                'key_insights': d.key_insights,
+                'recommended_stance': d.recommended_stance,
+                'suggested_feature': d.suggested_feature,
+                'rationale': d.rationale,
+                'participants': d.participants,
+                'status': d.status,
+                'status_display': d.get_status_display(),
+                'is_canonical': d.is_canonical,
+                'promoted_at': d.promoted_at.isoformat() if d.promoted_at else None,
+                'promoted_by': d.promoted_by,
+                'source_type': source_type,
+                'source_id': source_id,
+                'source_topic': source_topic,
+                'created_at': d.created_at.isoformat(),
+            })
 
         # Get counts by type for filters
         type_counts = dict(
@@ -1351,26 +1267,16 @@ def get_boardroom_decisions(request):
         conv_count = AgentDecisionSummary.objects.filter(conversation__isnull=False).count()
         hive_count = AgentDecisionSummary.objects.filter(hive_session__isnull=False).count()
 
-        # Count strategic sessions
-        strategic_keywords = ['strategy', 'future', 'improve', 'best practice', 'common mistake', 'emerging trend']
-        keyword_filter = Q()
-        for kw in strategic_keywords:
-            keyword_filter |= Q(conversation_topic__icontains=kw)
-        strategic_count = HiveMindSession.objects.filter(
-            session_mode='conversation', status='completed'
-        ).filter(keyword_filter).count()
-
         return JsonResponse({
             'success': True,
-            'decisions': decisions_data[:limit],
-            'count': len(decisions_data[:limit]),
-            'total': AgentDecisionSummary.objects.count() + strategic_count,
+            'decisions': decisions_data,
+            'count': len(decisions_data),
+            'total': AgentDecisionSummary.objects.count(),
             'canonical_count': AgentDecisionSummary.objects.filter(is_canonical=True).count(),
             'type_counts': type_counts,
             'source_counts': {
                 'conversation': conv_count,
                 'hive_session': hive_count,
-                'strategic_session': strategic_count,
             },
         })
 
