@@ -36,7 +36,7 @@
 
 ---
 
-## Current State (Session 431)
+## Current State (Session 432)
 
 ### All Commands (21 Total)
 | Command | Description | Status |
@@ -52,14 +52,14 @@
 | `/clear` | Clear conversation history | ✅ Working |
 | `/link <code>` | Link Discord to web account | ✅ Working |
 | `/unlink` | Check link status | ✅ Working |
-| `/gallery [count]` | View recent images (inline display) | ✅ Working (Phase 1) |
+| `/gallery [count]` | View recent images | ✅ Working (Phase 1) |
 | `/profile` | View AI Studio profile | ✅ Working (Phase 1) |
 | `/opportunities [count]` | Browse income opportunities | ✅ Working (Phase 1) |
 | `/setup [template]` | Set up server channels | ✅ Working (Phase 2) |
 | `/server-info` | View server configuration | ✅ Working (Phase 2) |
 | `/client-add <name> [email]` | Create client with channel | ✅ Working (Phase 3) |
 | `/client-list` | List all clients | ✅ Working (Phase 3) |
-| `/client-deliver <client> <id>` | Send deliverable to client | ✅ Working (Phase 3) |
+| `/client-deliver <client> <image_id>` | Send deliverable | ✅ Working (Phase 3) |
 | `/client-invite <client>` | Generate client invite | ✅ Working (Phase 3) |
 | `/help` | Command reference | ✅ Working |
 
@@ -69,8 +69,6 @@
 - **Auto-delivery to #gallery channel (Phase 1)**
 - **Server setup wizard with 3 templates (Phase 2)**
 - **Client management with dedicated channels (Phase 3)**
-- **Inline image display (like Midjourney) - images displayed directly in Discord**
-- **User-friendly sequential IDs** - `/gallery` shows #1, #2 instead of UUIDs
 - Bot token authentication for secure API calls
 
 ---
@@ -183,56 +181,42 @@ async def deliver_to_discord(user, image_url, prompt, metadata):
 
 ---
 
-## Phase 3: Client Management (Session 431) ✅ COMPLETE
+## Phase 3: Client Management (Session 432) ✅ COMPLETE
 
 **Goal:** Enable users to manage clients directly through Discord channels.
 
-### Implemented Commands
-```
-/client-add <name> [email]      - Create new client + channel ✅
-/client-list                    - List all clients ✅
-/client-invite <name>           - Generate invite link for client ✅
-/client-deliver <name> <id>     - Send deliverable to client channel ✅
-```
-
 ### Client Channel Features
-- Each client gets a dedicated channel in CLIENTS category
+- Each client gets a dedicated channel
 - All deliverables posted to client's channel
 - Client can be invited to ONLY their channel
+- Built-in video/voice for client calls
 - Message history = project documentation
 
-### New Models
-- `DiscordClient` - Tracks clients (name, email, channel_id, status, revenue)
-- `ClientDeliverable` - Tracks deliverables sent to clients
-
-### Technical Implementation
-```python
-# Client channel created under CLIENTS category
-category = discord.utils.get(interaction.guild.categories, name="CLIENTS")
-channel = await category.create_text_channel(
-    name=f"client-{slug}",
-    topic=f"Deliverables for {name}"
-)
-
-# Deliverable with rich embed
-embed = discord.Embed(
-    title=f"📦 New Deliverable",
-    description=f"Created: {image.prompt[:200]}...",
-    color=discord.Color.green()
-)
-embed.set_image(url=image.url)
-await channel.send(embed=embed)
+### New Commands
 ```
-
-### Future Enhancements (Optional)
-```
+/client add <name> [email]      - Create new client + channel
+/client list                    - List all clients
+/client invite <name>           - Generate invite link for client
 /client archive <name>          - Archive client channel
+/client deliver <name> <image>  - Send deliverable to client channel
+
 /project create <client> <name> - Create project for client
 /project list [client]          - List projects
 /project status <id>            - Get project status
+/project deliver <id>           - Deliver project to client channel
 ```
 
-### Web App Integration (Future)
+### Client Channel Structure
+```
+#client-acme-corp
+├── 📌 Pinned: Project brief, brand guidelines
+├── 💬 Chat history with client
+├── 🎨 Delivered images/content
+├── 📁 Threaded discussions per project
+└── 🎥 Voice/Video channel for calls
+```
+
+### Web App Integration
 ```
 Clients Page:
 ┌─────────────────────────────────────────────┐
@@ -522,12 +506,12 @@ Top Opportunity:
 2. ✅ `/gallery`, `/profile`, `/opportunities` commands (Session 430 - Phase 1)
 3. ✅ Auto-delivery to gallery channel (Session 430 - Phase 1)
 4. ✅ `/setup` and `/server-info` commands (Session 431 - Phase 2)
-5. ✅ **Phase 3: Client Management** - `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` (Session 431)
+5. ✅ `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` (Session 432 - Phase 3)
 6. 🔲 Route deliveries to user's configured server (not just main server)
-7. 🔲 **Phase 4: Income Pipeline** - `/apply`, opportunity notifications
+7. 🔲 Phase 4: Income Pipeline
 
 ---
 
 *This roadmap positions Discord as the primary operational interface while the web app remains the configuration and analytics hub.*
 
-**Updated:** Session 431 - Discord-First Phase 3 Complete (Client Management + Inline Images + Sequential IDs)
+**Updated:** Session 432 - Discord-First Phase 3 Complete
