@@ -269,7 +269,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(InteractiveCommands(self))  # Session 427
         await self.add_cog(ContentCommands(self))  # Session 430: Phase 1 Discord-First
         await self.add_cog(ServerSetupCommands(self))  # Session 431: Phase 2 Server Setup
-        await self.add_cog(ClientCommands(self))  # Session 431: Phase 3 Client Management
+        await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
         await self.add_cog(HelpCommands(self))
 
         # Sync slash commands with Discord
@@ -1324,7 +1324,6 @@ class ContentCommands(commands.Cog):
             def get_images(web_user, limit):
                 from content.models import ImageHistory
                 from django.conf import settings
-                import os
 
                 if web_user:
                     # Get linked user's images
@@ -1337,30 +1336,26 @@ class ContentCommands(commands.Cog):
 
                 results = []
                 for img in images:
-                    # Get local file path for uploading to Discord
-                    local_path = None
+                    # Build full URL from file_path field
                     if img.file_path:
-                        if img.file_path.startswith('data:'):
-                            # Data URI - can't display easily
-                            local_path = None
+                        if img.file_path.startswith('/media/'):
+                            url = f"http://localhost:8000{img.file_path}"
                         elif img.file_path.startswith('http'):
-                            # External URL - can't upload as file
-                            local_path = None
-                        elif img.file_path.startswith('/media/'):
-                            # Convert /media/... to actual file path
-                            local_path = os.path.join(settings.BASE_DIR, img.file_path.lstrip('/'))
+                            url = img.file_path
+                        elif img.file_path.startswith('data:'):
+                            url = img.file_path  # Data URI
                         else:
-                            # Relative path from media root
-                            local_path = os.path.join(settings.MEDIA_ROOT, img.file_path)
+                            url = f"http://localhost:8000/media/{img.file_path}"
+                    else:
+                        url = None
 
-                        # Verify file exists
-                        if local_path and not os.path.exists(local_path):
-                            local_path = None
-
+                    # Use sequential_number for user-friendly display
+                    seq_id = img.sequential_number or img.get_sequential_number()
                     results.append({
-                        'id': img.get_sequential_number(),  # Use sequential number, not UUID
+                        'id': seq_id,
+                        'uuid': str(img.id),
                         'prompt': (img.prompt or 'No prompt')[:100],
-                        'local_path': local_path,
+                        'url': url,
                         'created_at': img.created_at.strftime('%Y-%m-%d %H:%M') if img.created_at else 'Unknown',
                         'model': img.model_used or 'Unknown',
                     })
@@ -1381,51 +1376,29 @@ class ContentCommands(commands.Cog):
                         value="Link your account with `/link <code>` to see your web gallery here!",
                         inline=False
                     )
-                embed.set_footer(text=f"Requested by {interaction.user.display_name}")
-                await interaction.followup.send(embed=embed)
-                return
-
-            # Send each image as a separate embed with the file attached (like Midjourney)
-            import os
-            linked_status = f"Linked as **{user.username}**" if user else "Recent public images"
-
-            for idx, img in enumerate(images):
-                prompt_preview = img['prompt'][:150] + "..." if len(img['prompt']) > 150 else img['prompt']
-
+            else:
+                linked_status = f"Linked as **{user.username}**" if user else "Not linked - showing recent public images"
                 embed = discord.Embed(
-                    title=f"#{img['id']}",
-                    description=f"📝 {prompt_preview}",
+                    title=f"🖼️ Your Gallery ({len(images)} images)",
+                    description=linked_status,
                     color=discord.Color.purple(),
                     timestamp=datetime.now()
                 )
-                embed.add_field(name="🤖 Model", value=img['model'], inline=True)
-                embed.add_field(name="🕐 Created", value=img['created_at'], inline=True)
 
-                if idx == 0:
-                    embed.set_author(name=f"🖼️ Your Gallery ({len(images)} images) | {linked_status}")
+                for idx, img in enumerate(images, 1):
+                    prompt_preview = img['prompt'][:80] + "..." if len(img['prompt']) > 80 else img['prompt']
+                    value = f"📝 `{prompt_preview}`\n🕐 {img['created_at']} | 🤖 {img['model']}"
+                    if img['url']:
+                        value += f"\n[🔗 View Image]({img['url']})"
 
-                embed.set_footer(text=f"Image {idx + 1}/{len(images)} | Use /client-deliver to send to clients")
-
-                # Try to upload the image file directly to Discord
-                file_to_send = None
-                if img.get('local_path'):
-                    file_path = img['local_path']
-                    if os.path.exists(file_path):
-                        filename = os.path.basename(file_path)
-                        file_to_send = discord.File(file_path, filename=filename)
-                        embed.set_image(url=f"attachment://{filename}")
-
-                if file_to_send:
-                    await interaction.followup.send(embed=embed, file=file_to_send)
-                else:
                     embed.add_field(
-                        name="⚠️ Image",
-                        value="File not available locally. View in [AI Studio](http://localhost:8000/ai-studio/)",
+                        name=f"#{img['id']}",
+                        value=value,
                         inline=False
                     )
-                    await interaction.followup.send(embed=embed)
 
-            return
+            embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+            await interaction.followup.send(embed=embed)
 
         except Exception as e:
             logger.error(f"/gallery command error: {e}")
@@ -1938,9 +1911,10 @@ class ServerSetupCommands(commands.Cog):
 
 class ClientCommands(commands.Cog):
     """
-    Session 431: Client Management Commands (Phase 3).
+    Session 432: Client Management Commands (Phase 3).
 
-    Manage freelance/agency clients through Discord channels.
+    Allows freelancers and agencies to manage clients via Discord,
+    including dedicated channels and deliverable tracking.
     """
 
     def __init__(self, bot: DonkeyBetzBot):
@@ -1955,139 +1929,146 @@ class ClientCommands(commands.Cog):
             return User.objects.filter(discord_id=discord_id).first()
         return await get_user()
 
-    async def _get_server(self, guild_id: str):
-        """Get the DiscordServer record for a guild."""
+    async def _get_user_server(self, guild_id: str):
+        """Get the DiscordServer for this guild."""
         @sync_to_async
         def get_server():
             from core.models.base import DiscordServer
             return DiscordServer.objects.filter(guild_id=guild_id).first()
         return await get_server()
 
-    async def _get_clients_category(self, guild):
-        """Find or create the CLIENTS category."""
-        # Look for existing CLIENTS category
-        for category in guild.categories:
-            if 'CLIENT' in category.name.upper():
-                return category
+    async def _slugify(self, name: str) -> str:
+        """Convert name to URL-safe slug."""
+        import re
+        slug = name.lower().strip()
+        slug = re.sub(r'[^\w\s-]', '', slug)
+        slug = re.sub(r'[\s_]+', '-', slug)
+        return slug[:50]
 
-        # Create if not exists
-        return await guild.create_category('CLIENTS')
-
-    @app_commands.command(name="client-add", description="Add a new client with their own channel")
+    @app_commands.command(name="client-add", description="Create a new client with dedicated channel")
     @app_commands.describe(
         name="Client name (e.g., 'Acme Corp')",
-        email="Client email (optional)"
+        email="Client email for notifications (optional)"
     )
     async def client_add(self, interaction: discord.Interaction, name: str, email: str = None):
-        """Create a new client with a dedicated Discord channel."""
+        """Create a new client and their dedicated channel."""
         await interaction.response.defer(ephemeral=True)
 
         try:
-            # Check permissions
-            if not interaction.user.guild_permissions.manage_channels:
-                await interaction.followup.send(
-                    "You need 'Manage Channels' permission to add clients.",
-                    ephemeral=True
-                )
-                return
-
             # Check if user is linked
             linked_user = await self._get_linked_user(str(interaction.user.id))
             if not linked_user:
                 await interaction.followup.send(
-                    "Please link your Discord account first using `/link`.",
+                    "Please link your Discord account first using `/link` command.\n"
+                    "Generate a link code at: http://localhost:8000/ai-studio/ → Settings → Discord",
                     ephemeral=True
                 )
                 return
 
-            # Get server record
-            server = await self._get_server(str(interaction.guild.id))
+            # Check if server is set up
+            server = await self._get_user_server(str(interaction.guild.id))
             if not server:
                 await interaction.followup.send(
-                    "Please run `/setup` first to configure your server.",
+                    "Please set up your server first using `/setup` command.",
                     ephemeral=True
                 )
                 return
 
-            # Create slug from name
-            import re
-            slug = re.sub(r'[^a-z0-9-]', '-', name.lower())
-            slug = re.sub(r'-+', '-', slug).strip('-')
+            # Generate slug
+            slug = await self._slugify(name)
+            channel_name = f"client-{slug}"
 
             # Check if client already exists
             @sync_to_async
             def check_existing():
                 from core.models.base import DiscordClient
-                return DiscordClient.objects.filter(server=server, slug=slug).first()
+                return DiscordClient.objects.filter(server=server, slug=slug).exists()
 
-            existing = await check_existing()
-            if existing:
+            if await check_existing():
                 await interaction.followup.send(
-                    f"Client '{name}' already exists! Channel: <#{existing.channel_id}>",
+                    f"A client with this name already exists. Use `/client-list` to see your clients.",
                     ephemeral=True
                 )
                 return
 
             # Find or create CLIENTS category
-            category = await self._get_clients_category(interaction.guild)
+            guild = interaction.guild
+            clients_category = discord.utils.get(guild.categories, name='CLIENTS')
+
+            if not clients_category:
+                clients_category = await guild.create_category('CLIENTS')
 
             # Create client channel
-            channel_name = f"client-{slug}"
-            channel = await interaction.guild.create_text_channel(
+            channel = await guild.create_text_channel(
                 name=channel_name,
-                category=category,
-                topic=f"Client channel for {name}"
+                category=clients_category,
+                topic=f"Dedicated channel for {name}"
             )
 
             # Save client to database
             @sync_to_async
             def create_client():
                 from core.models.base import DiscordClient
-                return DiscordClient.objects.create(
+                client = DiscordClient.objects.create(
                     server=server,
                     name=name,
                     slug=slug,
                     email=email,
-                    channel_id=str(channel.id),
-                    status='active'
+                    channel_id=str(channel.id)
                 )
+                # Update server client count
+                server.client_count = server.clients.count()
+                server.save()
+                return client
 
             client = await create_client()
 
-            # Send welcome message to client channel
-            welcome_embed = discord.Embed(
-                title=f"Welcome - {name}",
-                description=(
-                    f"This is the dedicated channel for **{name}**.\n\n"
-                    "All deliverables and updates will be posted here."
-                ),
+            # Success embed
+            embed = discord.Embed(
+                title="✅ Client Created!",
+                description=f"**{name}** has been added as a client.",
                 color=discord.Color.green()
             )
-            welcome_embed.add_field(
-                name="Quick Actions",
+            embed.add_field(name="Channel", value=f"<#{channel.id}>", inline=True)
+            if email:
+                embed.add_field(name="Email", value=email, inline=True)
+            embed.add_field(
+                name="Next Steps",
                 value=(
-                    "• `/client-deliver` - Send a deliverable\n"
-                    "• `/client-info` - View client details"
+                    f"• Use `/client-deliver {name} <image_id>` to send deliverables\n"
+                    f"• Use `/client-invite {name}` to generate an invite link"
+                ),
+                inline=False
+            )
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+            # Send welcome message to client channel
+            welcome_embed = discord.Embed(
+                title=f"🎨 Welcome, {name}!",
+                description="This is your dedicated channel for project deliverables and communication.",
+                color=discord.Color.blue()
+            )
+            welcome_embed.add_field(
+                name="What to expect",
+                value=(
+                    "• All your project deliverables will appear here\n"
+                    "• Direct communication with the creative team\n"
+                    "• Easy access to all your content"
                 ),
                 inline=False
             )
             await channel.send(embed=welcome_embed)
 
-            # Confirm to user
-            success_embed = discord.Embed(
-                title="Client Added!",
-                description=f"Created client **{name}** with channel {channel.mention}",
-                color=discord.Color.green()
-            )
-            if email:
-                success_embed.add_field(name="Email", value=email, inline=True)
-
-            await interaction.followup.send(embed=success_embed, ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"/client-add error: {e}")
+        except discord.Forbidden:
             await interaction.followup.send(
-                f"Error adding client: {str(e)[:200]}",
+                "I don't have permission to create channels. Please give me 'Manage Channels' permission.",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.error(f"/client-add command error: {e}")
+            await interaction.followup.send(
+                f"Error creating client: {str(e)[:200]}",
                 ephemeral=True
             )
 
@@ -2097,10 +2078,10 @@ class ClientCommands(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            server = await self._get_server(str(interaction.guild.id))
+            server = await self._get_user_server(str(interaction.guild.id))
             if not server:
                 await interaction.followup.send(
-                    "Please run `/setup` first to configure your server.",
+                    "Please set up your server first using `/setup` command.",
                     ephemeral=True
                 )
                 return
@@ -2108,49 +2089,61 @@ class ClientCommands(commands.Cog):
             @sync_to_async
             def get_clients():
                 from core.models.base import DiscordClient
-                return list(DiscordClient.objects.filter(server=server).order_by('name'))
+                return list(DiscordClient.objects.filter(server=server).values(
+                    'name', 'slug', 'status', 'deliverables_count', 'total_revenue', 'channel_id'
+                ))
 
             clients = await get_clients()
 
             if not clients:
                 embed = discord.Embed(
-                    title="No Clients Yet",
-                    description="Use `/client-add <name>` to add your first client!",
+                    title="📋 Your Clients",
+                    description="No clients yet. Use `/client-add <name>` to add your first client!",
                     color=discord.Color.blue()
                 )
             else:
                 embed = discord.Embed(
-                    title=f"Your Clients ({len(clients)})",
+                    title=f"📋 Your Clients ({len(clients)} total)",
                     color=discord.Color.blue()
                 )
 
-                for client in clients[:20]:  # Limit to 20
-                    status_emoji = "🟢" if client.status == 'active' else "🟡" if client.status == 'paused' else "⚫"
-                    channel_link = f"<#{client.channel_id}>" if client.channel_id else "No channel"
+                for client in clients[:10]:  # Show first 10
+                    status_emoji = {
+                        'active': '🟢',
+                        'paused': '🟡',
+                        'archived': '⚪'
+                    }.get(client['status'], '⚪')
+
+                    value = f"Status: {status_emoji} {client['status'].title()}\n"
+                    value += f"Deliverables: {client['deliverables_count']}\n"
+                    if client['total_revenue'] > 0:
+                        value += f"Revenue: ${client['total_revenue']:.2f}\n"
+                    if client['channel_id']:
+                        value += f"Channel: <#{client['channel_id']}>"
 
                     embed.add_field(
-                        name=f"{status_emoji} {client.name}",
-                        value=f"{channel_link}\nDeliverables: {client.deliverables_count}",
+                        name=client['name'],
+                        value=value,
                         inline=True
                     )
 
-                if len(clients) > 20:
-                    embed.set_footer(text=f"Showing 20 of {len(clients)} clients")
+                if len(clients) > 10:
+                    embed.set_footer(text=f"Showing 10 of {len(clients)} clients")
 
             await interaction.followup.send(embed=embed, ephemeral=True)
 
         except Exception as e:
-            logger.error(f"/client-list error: {e}")
+            logger.error(f"/client-list command error: {e}")
             await interaction.followup.send(
                 f"Error listing clients: {str(e)[:200]}",
                 ephemeral=True
             )
 
-    @app_commands.command(name="client-deliver", description="Send a deliverable to a client")
+    @app_commands.command(name="client-deliver", description="Send a deliverable to a client's channel")
     @app_commands.describe(
         client_name="Client name to deliver to",
-        image_id="Image ID from your gallery (use /gallery to find IDs)",
-        message="Optional message to include"
+        image_id="Image number from /gallery (e.g., 320)",
+        message="Optional message to include with the delivery"
     )
     async def client_deliver(
         self,
@@ -2159,36 +2152,28 @@ class ClientCommands(commands.Cog):
         image_id: int,
         message: str = None
     ):
-        """Deliver an image to a client's channel."""
+        """Send an image deliverable to a client's channel."""
         await interaction.response.defer(ephemeral=True)
 
         try:
-            linked_user = await self._get_linked_user(str(interaction.user.id))
-            if not linked_user:
-                await interaction.followup.send(
-                    "Please link your Discord account first using `/link`.",
-                    ephemeral=True
-                )
-                return
-
-            server = await self._get_server(str(interaction.guild.id))
+            server = await self._get_user_server(str(interaction.guild.id))
             if not server:
                 await interaction.followup.send(
-                    "Please run `/setup` first to configure your server.",
+                    "Please set up your server first using `/setup` command.",
                     ephemeral=True
                 )
                 return
 
-            # Find client (case-insensitive partial match)
+            # Find client
             @sync_to_async
-            def find_client():
+            def get_client():
                 from core.models.base import DiscordClient
                 return DiscordClient.objects.filter(
                     server=server,
-                    name__icontains=client_name
+                    name__iexact=client_name
                 ).first()
 
-            client = await find_client()
+            client = await get_client()
             if not client:
                 await interaction.followup.send(
                     f"Client '{client_name}' not found. Use `/client-list` to see your clients.",
@@ -2196,175 +2181,184 @@ class ClientCommands(commands.Cog):
                 )
                 return
 
-            if not client.channel_id:
-                await interaction.followup.send(
-                    f"Client '{client.name}' doesn't have a channel. Re-add them with `/client-add`.",
-                    ephemeral=True
-                )
-                return
-
-            # Get image from gallery by sequential number
+            # Get image from database by sequential_number
             @sync_to_async
             def get_image():
                 from content.models import ImageHistory
-                # Look up by sequential_number (the user-friendly ID shown in /gallery)
-                return ImageHistory.objects.filter(
-                    sequential_number=image_id,
-                    user=linked_user
-                ).first()
+                return ImageHistory.objects.filter(sequential_number=image_id).first()
 
             image = await get_image()
             if not image:
                 await interaction.followup.send(
-                    f"Image #{image_id} not found in your gallery. Use `/gallery` to see your images.",
+                    f"Image #{image_id} not found. Use `/gallery` to see your recent images.",
                     ephemeral=True
                 )
                 return
 
             # Get client channel
-            channel = interaction.guild.get_channel(int(client.channel_id))
-            if not channel:
+            if not client.channel_id:
                 await interaction.followup.send(
-                    f"Client channel not found. It may have been deleted.",
+                    "This client doesn't have a channel. Please contact support.",
                     ephemeral=True
                 )
                 return
 
-            # Build deliverable embed
-            deliver_embed = discord.Embed(
-                title="📦 New Deliverable",
-                description=message or "Here's your latest deliverable!",
-                color=discord.Color.purple()
-            )
+            channel = interaction.guild.get_channel(int(client.channel_id))
+            if not channel:
+                await interaction.followup.send(
+                    "Could not find client channel. It may have been deleted.",
+                    ephemeral=True
+                )
+                return
 
-            deliver_embed.add_field(name="Prompt", value=image.prompt[:200] if image.prompt else "N/A", inline=False)
-            deliver_embed.set_footer(text=f"Delivered by {interaction.user.display_name}")
-
-            # Upload the image file directly to Discord (like /gallery does)
+            # Build local file path for upload
             import os
             from django.conf import settings
-            file_to_send = None
+
+            local_file_path = None
             image_url = None
 
             if image.file_path:
                 if image.file_path.startswith('http'):
-                    # External URL - can't upload directly
+                    # External URL - use directly
                     image_url = image.file_path
                 elif image.file_path.startswith('data:'):
-                    # Data URI - can't easily upload
+                    # Data URI - skip (can't upload easily)
                     pass
-                elif image.file_path.startswith('/media/'):
-                    local_path = os.path.join(settings.BASE_DIR, image.file_path.lstrip('/'))
-                    if os.path.exists(local_path):
-                        filename = os.path.basename(local_path)
-                        file_to_send = discord.File(local_path, filename=filename)
-                        deliver_embed.set_image(url=f"attachment://{filename}")
                 else:
-                    local_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
-                    if os.path.exists(local_path):
-                        filename = os.path.basename(local_path)
-                        file_to_send = discord.File(local_path, filename=filename)
-                        deliver_embed.set_image(url=f"attachment://{filename}")
+                    # Local file - build path for upload
+                    if image.file_path.startswith('/media/'):
+                        local_file_path = os.path.join(settings.BASE_DIR, image.file_path.lstrip('/'))
+                    else:
+                        local_file_path = os.path.join(settings.MEDIA_ROOT, image.file_path)
 
-            # Send to client channel
-            if file_to_send:
-                sent_msg = await channel.send(embed=deliver_embed, file=file_to_send)
+            # Create delivery embed
+            embed = discord.Embed(
+                title="🎨 New Deliverable!",
+                description=message if message else "Here's your latest creation:",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+
+            if image.prompt:
+                embed.add_field(name="Description", value=image.prompt[:200], inline=False)
+            embed.set_footer(text=f"Delivered by {interaction.user.display_name}")
+
+            # Send to client channel with image attachment
+            file_attachment = None
+            if local_file_path and os.path.exists(local_file_path):
+                file_attachment = discord.File(local_file_path, filename="deliverable.png")
+                embed.set_image(url="attachment://deliverable.png")
+                delivery_message = await channel.send(embed=embed, file=file_attachment)
+            elif image_url:
+                embed.set_image(url=image_url)
+                delivery_message = await channel.send(embed=embed)
             else:
-                deliver_embed.add_field(
-                    name="⚠️ Note",
-                    value="Image file not available for inline display.",
-                    inline=False
-                )
-                sent_msg = await channel.send(embed=deliver_embed)
+                delivery_message = await channel.send(embed=embed)
 
             # Record deliverable
             @sync_to_async
-            def record_deliverable():
+            def save_deliverable():
                 from core.models.base import ClientDeliverable
-                client.deliverables_count += 1
-                client.save()
-                return ClientDeliverable.objects.create(
+                deliverable = ClientDeliverable.objects.create(
                     client=client,
                     deliverable_type='image',
                     title=image.prompt[:200] if image.prompt else f"Image #{image_id}",
-                    image_history_id=image_id,  # Store sequential number for reference
-                    url=image.file_path or image_url,  # Store file path or URL
-                    discord_message_id=str(sent_msg.id)
+                    image_history_id=image_id,
+                    url=image_url,
+                    discord_message_id=str(delivery_message.id)
                 )
+                # Update client stats
+                client.deliverables_count = client.deliverables.count()
+                client.save()
+                return deliverable
 
-            await record_deliverable()
+            await save_deliverable()
 
-            # Confirm
-            success_embed = discord.Embed(
-                title="Deliverable Sent!",
-                description=f"Image #{image_id} delivered to **{client.name}** in {channel.mention}",
+            # Confirm to user
+            confirm_embed = discord.Embed(
+                title="✅ Deliverable Sent!",
+                description=f"Image #{image_id} has been delivered to **{client.name}**'s channel.",
                 color=discord.Color.green()
             )
-            await interaction.followup.send(embed=success_embed, ephemeral=True)
+            confirm_embed.add_field(name="Channel", value=f"<#{client.channel_id}>", inline=True)
+
+            await interaction.followup.send(embed=confirm_embed, ephemeral=True)
 
         except Exception as e:
-            logger.error(f"/client-deliver error: {e}")
+            logger.error(f"/client-deliver command error: {e}")
             await interaction.followup.send(
-                f"Error delivering: {str(e)[:200]}",
+                f"Error delivering to client: {str(e)[:200]}",
                 ephemeral=True
             )
 
     @app_commands.command(name="client-invite", description="Generate an invite link for a client")
-    @app_commands.describe(client_name="Client name to create invite for")
+    @app_commands.describe(client_name="Client name to generate invite for")
     async def client_invite(self, interaction: discord.Interaction, client_name: str):
-        """Generate a Discord invite link that only gives access to the client's channel."""
+        """Generate a Discord invite link for a client's channel."""
         await interaction.response.defer(ephemeral=True)
 
         try:
-            server = await self._get_server(str(interaction.guild.id))
+            server = await self._get_user_server(str(interaction.guild.id))
             if not server:
                 await interaction.followup.send(
-                    "Please run `/setup` first.",
+                    "Please set up your server first using `/setup` command.",
                     ephemeral=True
                 )
                 return
 
+            # Find client
             @sync_to_async
-            def find_client():
+            def get_client():
                 from core.models.base import DiscordClient
                 return DiscordClient.objects.filter(
                     server=server,
-                    name__icontains=client_name
+                    name__iexact=client_name
                 ).first()
 
-            client = await find_client()
-            if not client or not client.channel_id:
+            client = await get_client()
+            if not client:
                 await interaction.followup.send(
-                    f"Client '{client_name}' not found or has no channel.",
+                    f"Client '{client_name}' not found. Use `/client-list` to see your clients.",
+                    ephemeral=True
+                )
+                return
+
+            # Get client channel
+            if not client.channel_id:
+                await interaction.followup.send(
+                    "This client doesn't have a channel configured.",
                     ephemeral=True
                 )
                 return
 
             channel = interaction.guild.get_channel(int(client.channel_id))
             if not channel:
-                await interaction.followup.send("Client channel not found.", ephemeral=True)
+                await interaction.followup.send(
+                    "Could not find client channel. It may have been deleted.",
+                    ephemeral=True
+                )
                 return
 
-            # Create invite to the client's channel
+            # Create invite (expires in 7 days, max 1 use)
             invite = await channel.create_invite(
                 max_age=604800,  # 7 days
-                max_uses=5,
+                max_uses=1,
                 unique=True,
                 reason=f"Client invite for {client.name}"
             )
 
             embed = discord.Embed(
-                title=f"Client Invite - {client.name}",
-                description=(
-                    f"Share this link with your client:\n\n"
-                    f"**{invite.url}**\n\n"
-                    f"This invite expires in 7 days and can be used up to 5 times."
-                ),
+                title="🔗 Client Invite Link",
+                description=f"Invite link for **{client.name}**:",
                 color=discord.Color.blue()
             )
+            embed.add_field(name="Invite URL", value=invite.url, inline=False)
+            embed.add_field(name="Expires", value="7 days", inline=True)
+            embed.add_field(name="Max Uses", value="1", inline=True)
             embed.add_field(
-                name="Note",
-                value="The client will need Discord server permissions configured to restrict them to only their channel.",
+                name="⚠️ Note",
+                value="This link gives access only to the client's channel.",
                 inline=False
             )
 
@@ -2372,11 +2366,11 @@ class ClientCommands(commands.Cog):
 
         except discord.Forbidden:
             await interaction.followup.send(
-                "I don't have permission to create invites.",
+                "I don't have permission to create invites. Please give me 'Create Instant Invite' permission.",
                 ephemeral=True
             )
         except Exception as e:
-            logger.error(f"/client-invite error: {e}")
+            logger.error(f"/client-invite command error: {e}")
             await interaction.followup.send(
                 f"Error creating invite: {str(e)[:200]}",
                 ephemeral=True
@@ -2471,13 +2465,13 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
-        # Client Management (Session 431 Phase 3)
+        # Client Management (Session 432: Phase 3)
         embed.add_field(
             name="👥 Client Management",
             value=(
-                "**/client-add** <name> [email] - Create a new client with dedicated channel\n"
+                "**/client-add** <name> [email] - Create client with dedicated channel\n"
                 "**/client-list** - List all your clients\n"
-                "**/client-deliver** <client> <image_id> [message] - Deliver image to client\n"
+                "**/client-deliver** <client> <image_id> [message] - Send deliverable\n"
                 "**/client-invite** <client> - Generate invite link for client"
             ),
             inline=False
@@ -2490,7 +2484,7 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text="Session 431 | Discord-First Platform Phase 3")
+        embed.set_footer(text="Session 432 | Discord-First Platform Phase 3")
 
         await interaction.response.send_message(embed=embed)
 
