@@ -1,5 +1,5 @@
 """
-Discord Bot Service - Sessions 426-433
+Discord Bot Service - Sessions 426-434
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
@@ -29,6 +29,14 @@ Session 430 Commands (Phase 1: Discord-First):
 Session 433 Commands (Phase 4: Income Pipeline):
 - /apply <id> [message] - Apply to an opportunity
 - /track [status] - Track your job applications
+
+Session 434 Commands (Phase 5: Full Agent Access):
+- /agent-list [category] - List agents by category
+- /agent-task <name> <task> - Execute a task with specific agent
+- /advisors - List all legendary advisors
+- /consult <advisor> <question> - Consult an advisor
+- /workflow-list - List available workflows
+- /workflow-run <name> <input> - Run a workflow
 
 Usage:
     # Run the bot
@@ -70,6 +78,9 @@ class RateLimiter:
             'ask': 10,       # 10 seconds between /ask calls
             'create': 30,    # 30 seconds between /create calls
             'research': 15,  # 15 seconds between /research calls
+            'agent_task': 15,  # 15 seconds between /agent-task calls
+            'consult': 20,   # 20 seconds between /consult calls
+            'workflow': 60,  # 60 seconds between /workflow-run calls
             'default': 3,    # Default 3 seconds
         }
 
@@ -274,6 +285,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ContentCommands(self))  # Session 430: Phase 1 Discord-First
         await self.add_cog(ServerSetupCommands(self))  # Session 431: Phase 2 Server Setup
         await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
+        await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
         await self.add_cog(HelpCommands(self))
 
         # Sync slash commands with Discord
@@ -2619,6 +2631,542 @@ class ClientCommands(commands.Cog):
             )
 
 
+# =============================================================================
+# Phase 5: Full Agent Access - Session 434
+# =============================================================================
+
+class AgentAccessCommands(commands.Cog):
+    """
+    Phase 5: Full Agent Access - Direct access to all agents, advisors, and workflows.
+
+    Commands:
+    - /agent-task <name> <task> - Execute a task with a specific agent
+    - /agent-list [category] - List agents by category
+    - /consult <advisor> <question> - Consult a legendary advisor
+    - /workflow-list - List available workflows
+    - /workflow-run <name> <input> - Run a workflow
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="agent-list", description="List all agents by category")
+    @app_commands.describe(category="Filter by category (creative, executive, research, etc.)")
+    @app_commands.choices(category=[
+        app_commands.Choice(name="All Categories", value="all"),
+        app_commands.Choice(name="Creative (Image, Video, Audio, 3D)", value="creative"),
+        app_commands.Choice(name="Executive (CTO, COO, Director)", value="executive"),
+        app_commands.Choice(name="Research & Analysis", value="research"),
+        app_commands.Choice(name="Business Strategy", value="business"),
+        app_commands.Choice(name="Content & Marketing", value="content"),
+    ])
+    async def agent_list(self, interaction: discord.Interaction, category: str = "all"):
+        """List all available agents organized by category."""
+        await interaction.response.defer()
+
+        try:
+            from core.agent_router import AgentRouter
+
+            # Agent categories mapped to agent names
+            agent_categories = {
+                "creative": {
+                    "name": "🎨 Creative Agents",
+                    "agents": ["ImageAgent", "VideoAgent", "AudioAgent", "ThreeDAgent",
+                              "CreativeDirectorAgent", "BrandIdentityAgent"]
+                },
+                "executive": {
+                    "name": "👔 Executive Agents",
+                    "agents": ["CTOAgent", "COOAgent", "MeetingCoordinatorAgent"]
+                },
+                "research": {
+                    "name": "🔬 Research & Analysis",
+                    "agents": ["ResearchAgent", "TrendAnalysisAgent", "OpportunityScoringAgent"]
+                },
+                "business": {
+                    "name": "💼 Business Strategy",
+                    "agents": ["CompetitorAnalysisAgent", "CustomerResearchAgent",
+                              "BrandStrategyAgent", "MarketingStrategyAgent"]
+                },
+                "content": {
+                    "name": "📝 Content & Marketing",
+                    "agents": ["ContentStrategyAgent", "SEOOptimizerAgent", "SocialMediaAgent"]
+                },
+                "editing": {
+                    "name": "✂️ Editing",
+                    "agents": ["ImageEditingAgent", "VideoEditingAgent"]
+                },
+                "training": {
+                    "name": "🎓 Training",
+                    "agents": ["CharacterTrainingAgent", "TrainedCreationAgent"]
+                }
+            }
+
+            # Get available agents from router
+            available_agents = set(AgentRouter.AGENT_MAP.keys())
+
+            embed = discord.Embed(
+                title="🤖 Available Agents",
+                description="Use `/agent-task <name> <task>` to execute tasks",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            if category == "all":
+                # Show all categories
+                for cat_key, cat_data in agent_categories.items():
+                    agents_in_cat = [a for a in cat_data["agents"] if a in available_agents]
+                    if agents_in_cat:
+                        agent_list = "\n".join(f"• `{a}`" for a in agents_in_cat)
+                        embed.add_field(
+                            name=cat_data["name"],
+                            value=agent_list,
+                            inline=True
+                        )
+            else:
+                # Show specific category
+                cat_data = agent_categories.get(category)
+                if cat_data:
+                    agents_in_cat = [a for a in cat_data["agents"] if a in available_agents]
+                    if agents_in_cat:
+                        agent_list = "\n".join(f"• `{a}`" for a in agents_in_cat)
+                        embed.add_field(
+                            name=cat_data["name"],
+                            value=agent_list,
+                            inline=False
+                        )
+
+            embed.set_footer(text=f"Total: {len(available_agents)} agents available")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/agent-list error: {e}")
+            await interaction.followup.send(f"Error listing agents: {str(e)[:100]}", ephemeral=True)
+
+    @app_commands.command(name="agent-task", description="Execute a task with a specific agent")
+    @app_commands.describe(
+        agent="Agent name (e.g., ImageAgent, CTOAgent, ResearchAgent)",
+        task="The task to execute"
+    )
+    async def agent_task(self, interaction: discord.Interaction, agent: str, task: str):
+        """Execute a task using a specific agent."""
+        await interaction.response.defer()
+
+        # Rate limit check
+        can_use, remaining = rate_limiter.check_cooldown(interaction.user.id, 'agent_task')
+        if not can_use:
+            await interaction.followup.send(
+                f"⏳ Please wait {remaining:.1f}s before running another agent task.",
+                ephemeral=True
+            )
+            return
+
+        try:
+            from core.agent_router import AgentRouter, AgentNotFoundError
+            from core.models import User
+
+            # Get linked user
+            @sync_to_async
+            def get_linked_user(discord_id):
+                try:
+                    return User.objects.filter(discord_id=str(discord_id)).first()
+                except Exception:
+                    return None
+
+            user = await get_linked_user(interaction.user.id)
+
+            # Normalize agent name (allow partial match)
+            agent_name = agent.strip()
+            if not agent_name.endswith("Agent"):
+                agent_name = agent_name + "Agent"
+
+            # Create router and execute
+            @sync_to_async
+            def execute_agent(agent_name, task, user):
+                router = AgentRouter(user=user)
+                return router.route(agent_name, task)
+
+            # Show thinking message
+            thinking_embed = discord.Embed(
+                title=f"🤖 {agent_name}",
+                description=f"Processing: *{task[:100]}{'...' if len(task) > 100 else ''}*",
+                color=discord.Color.yellow()
+            )
+            await interaction.followup.send(embed=thinking_embed)
+
+            # Execute the agent
+            result = await execute_agent(agent_name, task, user)
+            rate_limiter.record_use(interaction.user.id, 'agent_task')
+
+            if result.success:
+                # Format successful response
+                response_text = result.message or result.data.get('response', 'Task completed successfully.')
+                if len(response_text) > 4000:
+                    response_text = response_text[:4000] + "...\n\n*[Response truncated]*"
+
+                embed = discord.Embed(
+                    title=f"✅ {agent_name} Response",
+                    description=response_text,
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+
+                # Add execution time if available
+                if result.execution_time_ms:
+                    embed.set_footer(text=f"Completed in {result.execution_time_ms}ms")
+
+                # Check for generated content
+                if result.data:
+                    if result.data.get('image_url'):
+                        embed.set_image(url=result.data['image_url'])
+                    if result.data.get('video_url'):
+                        embed.add_field(name="Video", value=f"[View Video]({result.data['video_url']})", inline=True)
+
+                await interaction.edit_original_response(embed=embed)
+            else:
+                # Format error response
+                error_msg = result.error or "Unknown error occurred"
+                embed = discord.Embed(
+                    title=f"❌ {agent_name} Error",
+                    description=f"```{error_msg[:500]}```",
+                    color=discord.Color.red()
+                )
+                await interaction.edit_original_response(embed=embed)
+
+        except AgentNotFoundError as e:
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Agent Not Found",
+                    description=f"Agent `{agent}` not found.\n\nUse `/agent-list` to see available agents.",
+                    color=discord.Color.red()
+                )
+            )
+        except Exception as e:
+            logger.error(f"/agent-task error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to execute agent: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="consult", description="Consult a legendary advisor")
+    @app_commands.describe(
+        advisor="Advisor name (e.g., warren, elon, steve)",
+        question="Your question for the advisor"
+    )
+    async def consult(self, interaction: discord.Interaction, advisor: str, question: str):
+        """Consult one of the legendary advisors."""
+        await interaction.response.defer()
+
+        # Rate limit check
+        can_use, remaining = rate_limiter.check_cooldown(interaction.user.id, 'consult')
+        if not can_use:
+            await interaction.followup.send(
+                f"⏳ Please wait {remaining:.1f}s before another consultation.",
+                ephemeral=True
+            )
+            return
+
+        try:
+            from core.models_unified_system import Advisor
+            from core.models import User
+            import openai
+            import os
+
+            # Find advisor (case-insensitive partial match)
+            @sync_to_async
+            def find_advisor(name):
+                return Advisor.objects.filter(name__icontains=name).first()
+
+            @sync_to_async
+            def get_linked_user(discord_id):
+                try:
+                    return User.objects.filter(discord_id=str(discord_id)).first()
+                except Exception:
+                    return None
+
+            advisor_obj = await find_advisor(advisor)
+            user = await get_linked_user(interaction.user.id)
+
+            if not advisor_obj:
+                # List available advisors
+                @sync_to_async
+                def get_advisor_list():
+                    return list(Advisor.objects.values_list('name', flat=True)[:10])
+
+                advisor_names = await get_advisor_list()
+                embed = discord.Embed(
+                    title="❌ Advisor Not Found",
+                    description=f"Advisor `{advisor}` not found.\n\n**Available advisors:**\n" +
+                                "\n".join(f"• {name.split()[0].lower()}" for name in advisor_names),
+                    color=discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            # Show thinking message
+            thinking_embed = discord.Embed(
+                title=f"🎩 Consulting {advisor_obj.name}...",
+                description=f"*{question[:200]}{'...' if len(question) > 200 else ''}*",
+                color=discord.Color.gold()
+            )
+            await interaction.followup.send(embed=thinking_embed)
+
+            # Get specialty
+            specialty = getattr(advisor_obj, 'specialty', '') or getattr(advisor_obj, 'expertise', '') or 'General advice'
+
+            # Build advisor prompt
+            advisor_prompt = f"""You are {advisor_obj.name}, a legendary advisor known for {specialty}.
+
+Respond to questions in the distinctive voice and perspective of {advisor_obj.name}.
+Draw on your known philosophies, strategies, and experiences. Be authentic to the persona.
+
+User's question: {question}
+
+Provide thoughtful, actionable advice that reflects {advisor_obj.name}'s unique perspective.
+Keep the response concise but insightful (max 300 words)."""
+
+            # Call OpenAI
+            @sync_to_async
+            def get_advisor_response():
+                client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": advisor_prompt},
+                        {"role": "user", "content": question}
+                    ],
+                    max_tokens=500
+                )
+                return response.choices[0].message.content
+
+            response_text = await get_advisor_response()
+            rate_limiter.record_use(interaction.user.id, 'consult')
+
+            # Format response
+            embed = discord.Embed(
+                title=f"🎩 {advisor_obj.name}",
+                description=response_text,
+                color=discord.Color.gold(),
+                timestamp=datetime.now()
+            )
+            embed.add_field(name="Expertise", value=specialty[:100], inline=True)
+            embed.set_footer(text="Legendary Advisor Consultation")
+
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/consult error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to consult advisor: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="advisors", description="List all available advisors")
+    async def advisors(self, interaction: discord.Interaction):
+        """List all legendary advisors available for consultation."""
+        await interaction.response.defer()
+
+        try:
+            from core.models_unified_system import Advisor
+
+            @sync_to_async
+            def get_advisors():
+                return list(Advisor.objects.all()[:25])
+
+            advisors = await get_advisors()
+
+            embed = discord.Embed(
+                title="🎩 Legendary Advisors",
+                description="Use `/consult <name> <question>` to consult an advisor",
+                color=discord.Color.gold(),
+                timestamp=datetime.now()
+            )
+
+            # Group advisors by first letter or category
+            advisor_lines = []
+            for adv in advisors:
+                specialty = getattr(adv, 'specialty', '') or getattr(adv, 'expertise', '') or ''
+                specialty_short = specialty[:35] + '...' if len(specialty) > 35 else specialty
+                # Use first name as command shortcut
+                shortcut = adv.name.split()[0].lower()
+                advisor_lines.append(f"• **{adv.name}** (`{shortcut}`)\n  _{specialty_short}_")
+
+            # Split into columns
+            mid = len(advisor_lines) // 2
+            embed.add_field(name="Advisors (1-13)", value="\n".join(advisor_lines[:13]), inline=True)
+            embed.add_field(name="Advisors (14-25)", value="\n".join(advisor_lines[13:]), inline=True)
+
+            embed.set_footer(text=f"Total: {len(advisors)} advisors")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/advisors error: {e}")
+            await interaction.followup.send(f"Error listing advisors: {str(e)[:100]}", ephemeral=True)
+
+    @app_commands.command(name="workflow-list", description="List available workflows")
+    async def workflow_list(self, interaction: discord.Interaction):
+        """List all available multi-step workflows."""
+        await interaction.response.defer()
+
+        try:
+            # Available workflows (from CLAUDE.md)
+            workflows = {
+                "research_and_create_logos": {
+                    "name": "Research & Logo Pack",
+                    "description": "Research topic + generate 3 logo variations",
+                    "steps": ["Research", "Generate logos (1024x1024)"]
+                },
+                "youtube_thumbnail_package": {
+                    "name": "YouTube Thumbnail Pack",
+                    "description": "Research topic + create thumbnails",
+                    "steps": ["Research", "Generate thumbnails (1280x720)"]
+                },
+                "brand_identity_package": {
+                    "name": "Brand Identity Pack",
+                    "description": "Research + complete brand identity",
+                    "steps": ["Research", "Logo", "Color palette", "Style guide"]
+                },
+                "product_photography_kit": {
+                    "name": "Product Photography Kit",
+                    "description": "Research + product photo variations",
+                    "steps": ["Research", "Generate product photos"]
+                },
+                "video_thumbnail_series": {
+                    "name": "Video Thumbnail Series",
+                    "description": "Create consistent thumbnail series",
+                    "steps": ["Style analysis", "Generate 5 thumbnails"]
+                },
+                "logo_to_video": {
+                    "name": "Logo to Video",
+                    "description": "Animate a logo into a video intro",
+                    "steps": ["Analyze logo", "Generate animation"]
+                }
+            }
+
+            embed = discord.Embed(
+                title="🔄 Available Workflows",
+                description="Use `/workflow-run <name> <input>` to run a workflow",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            for wf_id, wf in workflows.items():
+                steps = " → ".join(wf["steps"])
+                embed.add_field(
+                    name=f"📋 {wf['name']}",
+                    value=f"**ID:** `{wf_id}`\n{wf['description']}\n*Steps: {steps}*",
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Total: {len(workflows)} workflows")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/workflow-list error: {e}")
+            await interaction.followup.send(f"Error listing workflows: {str(e)[:100]}", ephemeral=True)
+
+    @app_commands.command(name="workflow-run", description="Run a multi-step workflow")
+    @app_commands.describe(
+        workflow="Workflow ID (e.g., research_and_create_logos)",
+        input_text="Input for the workflow (topic, prompt, etc.)"
+    )
+    async def workflow_run(self, interaction: discord.Interaction, workflow: str, input_text: str):
+        """Run a multi-step workflow."""
+        await interaction.response.defer()
+
+        # Rate limit check
+        can_use, remaining = rate_limiter.check_cooldown(interaction.user.id, 'workflow')
+        if not can_use:
+            await interaction.followup.send(
+                f"⏳ Please wait {remaining:.1f}s before running another workflow.",
+                ephemeral=True
+            )
+            return
+
+        try:
+            from core.agent_router import AgentRouter
+            from core.models import User
+
+            # Get linked user
+            @sync_to_async
+            def get_linked_user(discord_id):
+                try:
+                    return User.objects.filter(discord_id=str(discord_id)).first()
+                except Exception:
+                    return None
+
+            user = await get_linked_user(interaction.user.id)
+
+            # Show starting message
+            embed = discord.Embed(
+                title=f"🔄 Running Workflow: {workflow}",
+                description=f"Input: *{input_text[:100]}{'...' if len(input_text) > 100 else ''}*\n\n⏳ Processing...",
+                color=discord.Color.yellow()
+            )
+            await interaction.followup.send(embed=embed)
+
+            # Execute via WorkflowAgent
+            @sync_to_async
+            def run_workflow(workflow_name, input_text, user):
+                router = AgentRouter(user=user)
+                task = f"Run the {workflow_name} workflow with input: {input_text}"
+                return router.route("WorkflowAgent", task)
+
+            result = await run_workflow(workflow, input_text, user)
+            rate_limiter.record_use(interaction.user.id, 'workflow')
+
+            if result.success:
+                response_text = result.message or result.data.get('response', 'Workflow completed successfully.')
+                if len(response_text) > 4000:
+                    response_text = response_text[:4000] + "...\n\n*[Response truncated]*"
+
+                embed = discord.Embed(
+                    title=f"✅ Workflow Complete: {workflow}",
+                    description=response_text,
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+
+                # Add any generated content
+                if result.data:
+                    if result.data.get('images'):
+                        embed.add_field(
+                            name="Generated Images",
+                            value=f"{len(result.data['images'])} images created",
+                            inline=True
+                        )
+                    if result.data.get('image_url'):
+                        embed.set_image(url=result.data['image_url'])
+
+                if result.execution_time_ms:
+                    embed.set_footer(text=f"Completed in {result.execution_time_ms}ms")
+
+                await interaction.edit_original_response(embed=embed)
+            else:
+                error_msg = result.error or "Unknown error occurred"
+                embed = discord.Embed(
+                    title=f"❌ Workflow Failed: {workflow}",
+                    description=f"```{error_msg[:500]}```",
+                    color=discord.Color.red()
+                )
+                await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/workflow-run error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to run workflow: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
 class HelpCommands(commands.Cog):
     """Help and documentation commands."""
 
@@ -2659,10 +3207,32 @@ class HelpCommands(commands.Cog):
 
         # Agent commands
         embed.add_field(
-            name=" Agents",
+            name="🤖 Agents",
             value=(
                 "**/agents** [limit] - List active agents\n"
-                "**/agent** <name> - Get agent details"
+                "**/agent** <name> - Get agent details\n"
+                "**/agent-list** [category] - List agents by category\n"
+                "**/agent-task** <name> <task> - Execute agent task"
+            ),
+            inline=False
+        )
+
+        # Advisors (Phase 5)
+        embed.add_field(
+            name="🎩 Advisors",
+            value=(
+                "**/advisors** - List all legendary advisors\n"
+                "**/consult** <advisor> <question> - Consult an advisor"
+            ),
+            inline=False
+        )
+
+        # Workflows (Phase 5)
+        embed.add_field(
+            name="🔄 Workflows",
+            value=(
+                "**/workflow-list** - List available workflows\n"
+                "**/workflow-run** <name> <input> - Run a workflow"
             ),
             inline=False
         )
@@ -2736,7 +3306,7 @@ class HelpCommands(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text="Session 432 | Discord-First Platform Phase 3")
+        embed.set_footer(text="Session 434 | Discord-First Platform Phase 5 - Full Agent Access")
 
         await interaction.response.send_message(embed=embed)
 
