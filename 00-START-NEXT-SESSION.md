@@ -1,33 +1,33 @@
 # Start Next Session Here
 
-**Last Session:** 432 - Discord-First Phase 3 (Client Management)
+**Last Session:** 433 - Discord-First Phase 4 (Income Pipeline)
 **Date:** December 12, 2025
-**Status:** Phase 3 Complete - Full Client Management via Discord!
+**Status:** Phase 4 In Progress - Apply & Track Commands Working!
 
 ---
 
-## Session 432 Accomplishments
+## Session 433 Accomplishments
 
-### Discord-First Platform - Phase 3 (COMPLETE!)
+### Discord-First Platform - Phase 4 (IN PROGRESS)
 
-Implemented client management allowing freelancers and agencies to manage clients directly through Discord.
+Implemented income pipeline commands allowing users to apply to opportunities and track their applications directly from Discord.
 
-**New Discord Commands (4):**
+**New Discord Commands (2):**
 | Command | Description |
 |---------|-------------|
-| `/client-add <name> [email]` | Create client with dedicated channel |
-| `/client-list` | List all clients with status and stats |
-| `/client-deliver <client> <image_id> [message]` | Send deliverable to client channel |
-| `/client-invite <client>` | Generate 7-day invite link for client |
+| `/apply <id> [message]` | Apply to an opportunity by its ID |
+| `/track [status]` | Track your job applications (filter by status) |
 
-**Models Added:**
-- `DiscordClient` - Tracks clients per server (name, email, channel, revenue, status)
-- `ClientDeliverable` - Tracks deliverables sent to clients
+**Model Updates:**
+- Added `user_friendly_id` to Opportunity model (sequential: 1, 2, 3...)
+- Added `url` field to Opportunity for external links
+- Updated `/opportunities` to show IDs like `#1 - Title`
 
 **Files Modified:**
-- `core/models/base/models.py` - Added DiscordClient, ClientDeliverable models
-- `core/models/base/__init__.py` - Export new models
-- `core/services/discord_bot.py` - Added ClientCommands Cog (4 commands)
+- `core/models_unified_system.py` - Added user_friendly_id, url to Opportunity
+- `core/services/discord_bot.py` - Added /apply, /track commands
+- `docs/DISCORD_FIRST_ROADMAP.md` - Updated Phase 4 status
+- `docs/CAPABILITIES.md` - Added new commands (23 total)
 
 ---
 
@@ -40,13 +40,14 @@ Implemented client management allowing freelancers and agencies to manage client
 | HiveMind Sessions | Working | 117+ |
 | Knowledge Sources | Active | 940+ |
 | Spider Data | Active | 12,250+ |
-| **Discord Bot Commands** | **Working** | **21** |
+| **Discord Bot Commands** | **Working** | **23** |
 | Discord User Linking | Active | Working |
 | Discord Auto-Delivery | Active | Working |
 | Discord Server Setup | Active | Working |
-| **Discord Client Management** | **NEW** | **Active** |
+| Discord Client Management | Active | Working |
+| **Discord Income Pipeline** | **NEW** | **Active** |
 | User Profile System | Active | 24 questions |
-| Migrations | Applied | 0085 |
+| Migrations | Applied | 0086 |
 
 ---
 
@@ -56,8 +57,8 @@ Implemented client management allowing freelancers and agencies to manage client
 |-------|-------|--------|
 | 1. Content Delivery | /gallery, /profile, /opportunities, auto-delivery | **DONE** |
 | 2. Server Setup Wizard | Auto-create channels from templates | **DONE** |
-| **3. Client Management** | **Per-client channels, delivery, invites** | **DONE** |
-| 4. Income Pipeline | /apply, opportunity notifications | Pending |
+| 3. Client Management | Per-client channels, delivery, invites | **DONE** |
+| **4. Income Pipeline** | **/apply, /track, user-friendly IDs** | **IN PROGRESS** |
 | 5. Full Agent Access | All 27 agents via Discord | Pending |
 | 6. Automation | Proactive notifications, digests | Pending |
 | 7. Monetization | Discord roles = subscription tiers | Pending |
@@ -67,25 +68,25 @@ See `docs/DISCORD_FIRST_ROADMAP.md` for full details.
 
 ---
 
-## Session 433: Next Steps
+## Session 434: Next Steps
 
 ### Priority Tasks
 
-1. **Route Deliveries to User's Server**
-   - When user creates image in web app, check if they have a configured server
-   - Route to their server's gallery channel instead of main server
-   - Support both linked accounts and server-based routing
+1. **Complete Phase 4 (Optional)**
+   - Add `/earnings` command for revenue summary
+   - Implement opportunity match notifications to #opportunities channel
+   - Add daily digest of new opportunities
 
-2. **Test Client Management End-to-End**
-   - `/client-add` - Create test client
-   - `/client-list` - Verify it appears
-   - `/gallery` - Note an image ID
-   - `/client-deliver` - Send image to client channel
-   - `/client-invite` - Generate invite link
+2. **Test Income Pipeline End-to-End**
+   - `/opportunities` - View available opportunities (note ID like #1)
+   - `/apply 1` - Apply to opportunity #1
+   - `/track` - See your applications
+   - `/track submitted` - Filter by status
 
-3. **Phase 4: Income Pipeline** (Optional)
-   - `/apply <opportunity_id>` command
-   - Opportunity match notifications
+3. **Phase 5: Full Agent Access**
+   - `/agent <name> <task>` - Direct agent task
+   - `/workflow <name>` - Run a workflow
+   - All 27 agents accessible via Discord
 
 ---
 
@@ -104,12 +105,11 @@ make discord-bot
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Discord commands
-/client-add name:Acme Corp email:contact@acme.com
-/client-list
-/gallery count:5    # Note an image ID
-/client-deliver client_name:Acme Corp image_id:123 message:Here's your logo!
-/client-invite client_name:Acme Corp
+# Test Phase 4 Income Pipeline
+/opportunities count:5       # View opportunities (note IDs like #1, #2)
+/apply 1                     # Apply to opportunity #1
+/track                       # See all your applications
+/track submitted             # Filter by status
 /help
 ```
 
@@ -128,7 +128,7 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Discord Commands (21 Total)
+## Discord Commands (23 Total)
 
 | Category | Commands |
 |----------|----------|
@@ -136,10 +136,11 @@ open http://localhost:8000/ai-studio/
 | System | `/status`, `/spiders` |
 | Agents | `/agents`, `/agent` |
 | Data | `/trending` |
-| Content | `/gallery`, `/profile`, `/opportunities` |
+| Content | `/gallery`, `/profile` |
+| **Income Pipeline** | `/opportunities`, `/apply`, `/track` |
 | Account | `/link`, `/unlink` |
 | Server Setup | `/setup`, `/server-info` |
-| **Client Mgmt** | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` |
+| Client Mgmt | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` |
 | Help | `/help` |
 
 ---

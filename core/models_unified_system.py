@@ -666,6 +666,31 @@ class Opportunity(models.Model):
         help_text="Efficiency gain (e.g., 3.5x faster) (optional)"
     )
 
+    # Session 433: User-friendly ID for Discord commands
+    user_friendly_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        unique=True,
+        help_text="User-friendly sequential ID (e.g., 1, 2, 3)"
+    )
+
+    # Session 433: Direct URL to opportunity source
+    url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Direct link to opportunity listing"
+    )
+
+    def save(self, *args, **kwargs):
+        """Auto-assign user_friendly_id on creation."""
+        if self._state.adding and self.user_friendly_id is None:
+            from django.db.models import Max
+            max_id = Opportunity.objects.aggregate(Max('user_friendly_id'))['user_friendly_id__max']
+            self.user_friendly_id = (max_id or 0) + 1
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.title} - ${self.potential_revenue}"
 
