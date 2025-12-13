@@ -28,11 +28,10 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **21 Commands + Bot** | **Production (Session 431)** |
+| **Discord Integration** | **21 Commands + Client Mgmt** | **Production (Session 432)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
-| **Discord Client Management** | **Yes** | **Production (Session 431)** |
-| **Discord Inline Images** | **Yes** | **Production (Session 431)** |
+| **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
 | **Training Data Collection** | **14 Datasets** | **Production (Session 420)** |
 
 ---
@@ -445,9 +444,9 @@ Legal Assistant Tab → My Case Files sub-tab
 
 ---
 
-## Discord Integration (Sessions 419-429)
+## Discord Integration (Sessions 419-432)
 
-Real-time notifications to Discord when agents are active, plus interactive bot commands.
+Real-time notifications to Discord when agents are active, plus interactive bot commands. Full Discord-First platform with server setup, client management, and content delivery.
 
 ### Discord Channels
 
@@ -456,23 +455,72 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `#agent-dreams` | Agent dream notifications | Purple |
 | `#agent-conversations` | HiveMind sessions + knowledge sharing | Pink/Blue |
 | `#system-status` | System health and status updates | Variable |
+| `#gallery` | Auto-delivery of created images (Phase 1) | - |
+| `#client-*` | Per-client delivery channels (Phase 3) | - |
 
-### Discord Bot Commands (Sessions 426-429)
+### Discord Bot Commands (21 Total - Sessions 426-432)
 
-| Command | Description |
-|---------|-------------|
-| `/status` | System health check |
-| `/agents [limit]` | List active agents with stats |
-| `/agent <name>` | Get details for a specific agent |
-| `/trending [category]` | Get trending topics from spider data |
-| `/spiders` | Spider network stats |
-| `/ask <question>` | Ask the Personal Assistant (remembers context!) |
-| `/create <prompt>` | Generate an image with AI |
-| `/research <topic>` | Search spider data |
-| `/clear` | Clear conversation history |
-| `/link <code>` | Link Discord to web account (Session 429) |
-| `/unlink` | Check link status |
-| `/help` | Show all commands |
+| Command | Description | Phase |
+|---------|-------------|-------|
+| `/status` | System health check | Core |
+| `/agents [limit]` | List active agents with stats | Core |
+| `/agent <name>` | Get details for a specific agent | Core |
+| `/trending [category]` | Get trending topics from spider data | Core |
+| `/spiders` | Spider network stats | Core |
+| `/ask <question>` | Ask the Personal Assistant (remembers context!) | Core |
+| `/create <prompt>` | Generate an image with AI | Core |
+| `/research <topic>` | Search spider data | Core |
+| `/clear` | Clear conversation history | Core |
+| `/link <code>` | Link Discord to web account | Core |
+| `/unlink` | Check link status | Core |
+| `/gallery [count]` | View your recent images (#320, #321...) | Phase 1 |
+| `/profile` | View your AI Studio profile and stats | Phase 1 |
+| `/opportunities [count]` | Browse matching income opportunities | Phase 1 |
+| `/setup [template]` | Set up AI Studio channels in your server | Phase 2 |
+| `/server-info` | View your server's configuration | Phase 2 |
+| `/client-add <name> [email]` | Create client with dedicated channel | Phase 3 |
+| `/client-list` | List all your clients with stats | Phase 3 |
+| `/client-deliver <client> <id>` | Send deliverable to client (uploads image!) | Phase 3 |
+| `/client-invite <client>` | Generate 7-day invite link for client | Phase 3 |
+| `/help` | Show all commands | Core |
+
+### Discord-First Platform Phases
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1. Content Delivery | `/gallery`, `/profile`, `/opportunities`, auto-delivery | ✅ Done (Session 430) |
+| 2. Server Setup | `/setup`, `/server-info`, 3 templates | ✅ Done (Session 431) |
+| 3. Client Management | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` | ✅ Done (Session 432) |
+| 4. Income Pipeline | `/apply`, opportunity notifications | Pending |
+| 5. Full Agent Access | All 27 agents via Discord | Pending |
+| 6. Automation | Proactive notifications, daily digests | Pending |
+
+### Server Setup Templates (Phase 2)
+
+| Template | Description | Channels Created |
+|----------|-------------|------------------|
+| Solo Creator | Personal workspace | #creations, #research, #assistant, #dashboard |
+| Freelancer | With client management | + CLIENTS category for per-client channels |
+| Agency | Team + clients | + TEAM category with #general, #projects, #resources |
+
+### Client Management (Phase 3)
+
+Freelancers and agencies can manage clients directly via Discord:
+
+1. **Add Client:** `/client-add "Acme Corp" contact@acme.com`
+   - Creates `#client-acme-corp` channel
+   - Sends welcome message to client
+
+2. **View Clients:** `/client-list`
+   - Shows all clients with status, deliverables count, revenue
+
+3. **Send Deliverable:** `/client-deliver "Acme Corp" 320`
+   - Uses image ID from `/gallery` (e.g., #320)
+   - Uploads image directly to client's channel
+   - Tracks delivery in database
+
+4. **Invite Client:** `/client-invite "Acme Corp"`
+   - Generates 7-day, single-use invite link
 
 ### Discord User Linking (Session 429)
 

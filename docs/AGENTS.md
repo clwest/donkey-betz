@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 403 (December 9, 2025)
+**Last Updated:** Session 432 (December 12, 2025)
 
 ---
 
