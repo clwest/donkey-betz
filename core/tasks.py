@@ -3025,12 +3025,44 @@ def run_agent_learning_cycle():
                 )
 
                 # Session 429: Send Discord notification for knowledge transfer
+                # Session 435: Format summary nicely instead of showing raw JSON
                 try:
                     from core.services.discord_notifications import discord_notify
+
+                    # Parse JSON summary into human-readable format
+                    formatted_summary = f"{teacher.name} shared knowledge with {student.name}"
+                    if knowledge.summary:
+                        try:
+                            import json
+                            data = json.loads(knowledge.summary)
+                            if isinstance(data, dict):
+                                parts = []
+                                if data.get('query'):
+                                    parts.append(f"Query: \"{data['query'][:80]}\"")
+                                if data.get('sources_used'):
+                                    sources = data['sources_used']
+                                    if isinstance(sources, list):
+                                        parts.append(f"Sources: {', '.join(sources[:3])}")
+                                if data.get('result_count'):
+                                    parts.append(f"Results: {data['result_count']} items")
+                                if data.get('insight'):
+                                    parts.append(f"Insight: {data['insight'][:100]}")
+                                if data.get('recommendation'):
+                                    parts.append(f"Recommendation: {data['recommendation'][:100]}")
+                                if parts:
+                                    formatted_summary = "\n".join(parts)
+                                else:
+                                    # Fallback: show first few key-value pairs
+                                    formatted_summary = "\n".join([
+                                        f"{k}: {str(v)[:50]}" for k, v in list(data.items())[:3]
+                                    ])
+                        except (json.JSONDecodeError, TypeError):
+                            formatted_summary = knowledge.summary[:200]
+
                     discord_notify.send_knowledge(
                         agent_name=f"{teacher.name} → {student.name}",
                         title=clean_title[:100],
-                        summary=f"{teacher.name} shared knowledge with {student.name}: {knowledge.summary[:200] if knowledge.summary else 'Knowledge transfer'}",
+                        summary=formatted_summary,
                         knowledge_type=knowledge.knowledge_type or 'insight',
                         confidence=usefulness
                     )
@@ -4099,10 +4131,23 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
             ).order_by('-last_updated_at')[:10]
 
             # Session 417: Allow agents without knowledge to participate using their specialty
+            # Session 435: Improved topic extraction with better fallbacks
             knowledge_item = None
             if initiator_knowledge.exists():
                 knowledge_item = random.choice(list(initiator_knowledge))
-                topic = knowledge_item.title or "recent insights"
+                # Try title first, then extract from summary, then use knowledge type
+                topic = knowledge_item.title
+                if not topic or topic == "recent insights":
+                    # Try to extract topic from summary (first line or key insight)
+                    if knowledge_item.summary:
+                        try:
+                            import json
+                            data = json.loads(knowledge_item.summary)
+                            topic = data.get('query') or data.get('topic') or data.get('insight', '')[:80]
+                        except (json.JSONDecodeError, TypeError):
+                            topic = knowledge_item.summary[:80]
+                if not topic:
+                    topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
             else:
                 # Use agent's specialty or description as conversation topic
                 topic = initiator.specialization or initiator.description or f"{initiator.name}'s area of expertise"
@@ -4715,7 +4760,18 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                 continue
 
             knowledge_item = random.choice(list(moderator_knowledge))
-            topic = knowledge_item.title or "recent insights"
+            # Session 435: Improved topic extraction with better fallbacks
+            topic = knowledge_item.title
+            if not topic or topic == "recent insights":
+                if knowledge_item.summary:
+                    try:
+                        import json
+                        data = json.loads(knowledge_item.summary)
+                        topic = data.get('query') or data.get('topic') or data.get('insight', '')[:80]
+                    except (json.JSONDecodeError, TypeError):
+                        topic = knowledge_item.summary[:80]
+            if not topic:
+                topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {moderator.name}"
 
             # Choose panel template
             template = random.choice(panel_templates)
@@ -6402,7 +6458,18 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                             knowledge = random.choice(knowledge_list)
                     else:
                         knowledge = random.choice(knowledge_list)
-                    topic = knowledge.title or knowledge.source_type or "general insights"
+                    # Session 435: Improved topic extraction with better fallbacks
+                    topic = knowledge.title
+                    if not topic or topic in ("general insights", "recent insights"):
+                        if knowledge.summary:
+                            try:
+                                import json
+                                data = json.loads(knowledge.summary)
+                                topic = data.get('query') or data.get('topic') or data.get('insight', '')[:80]
+                            except (json.JSONDecodeError, TypeError):
+                                topic = knowledge.summary[:80]
+                    if not topic:
+                        topic = knowledge.source_type or f"{knowledge.knowledge_type.replace('_', ' ').title()}"
                 else:
                     # Session 417: No knowledge yet - use agent's specialty as dream topic
                     topic = agent.specialization or agent.description or f"{agent.name}'s expertise"

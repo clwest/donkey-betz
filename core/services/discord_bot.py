@@ -2762,7 +2762,8 @@ class AgentAccessCommands(commands.Cog):
 
         try:
             from core.agent_router import AgentRouter, AgentNotFoundError
-            from core.models import User
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
 
             # Get linked user
             @sync_to_async
@@ -2798,8 +2799,53 @@ class AgentAccessCommands(commands.Cog):
             rate_limiter.record_use(interaction.user.id, 'agent_task')
 
             if result.success:
-                # Format successful response
-                response_text = result.message or result.data.get('response', 'Task completed successfully.')
+                # Format successful response - handle different agent result formats
+                response_text = ""
+
+                # Check for research results (ResearchAgent returns data in 'results')
+                if result.data and result.data.get('results'):
+                    research_results = result.data['results']
+                    parts = [f"**Query:** {result.data.get('query', task)}\n"]
+                    for i, res in enumerate(research_results[:5], 1):  # Limit to 5 results
+                        source = res.get('source', 'Unknown')
+                        data = res.get('data', {})
+
+                        # Handle different data formats from various tools
+                        if isinstance(data, list):
+                            # spider_query returns a list directly
+                            items = data
+                        elif isinstance(data, dict):
+                            # analyze_trends returns dict with 'discussions', 'projects'
+                            # web_search returns dict with 'items' or 'results'
+                            items = (
+                                data.get('discussions', []) or
+                                data.get('projects', []) or
+                                data.get('items', []) or
+                                data.get('results', [])
+                            )
+                        else:
+                            items = []
+
+                        if items and isinstance(items, list):
+                            parts.append(f"\n**{source.upper()}:**")
+                            for item in items[:5]:  # 5 items per source
+                                if isinstance(item, dict):
+                                    title = item.get('title', item.get('name', ''))[:100]
+                                    url = item.get('url', item.get('link', ''))
+                                    if title:
+                                        if url:
+                                            parts.append(f"• [{title}]({url})")
+                                        else:
+                                            parts.append(f"• {title}")
+                        elif isinstance(data, dict) and data.get('summary'):
+                            parts.append(f"\n**{source.upper()}:** {data['summary'][:300]}")
+                        elif isinstance(data, str):
+                            parts.append(f"\n**{source.upper()}:** {data[:300]}")
+                    response_text = "\n".join(parts)
+                else:
+                    # Default: use message or response field
+                    response_text = result.message or result.data.get('response', 'Task completed successfully.')
+
                 if len(response_text) > 4000:
                     response_text = response_text[:4000] + "...\n\n*[Response truncated]*"
 
@@ -2870,7 +2916,8 @@ class AgentAccessCommands(commands.Cog):
 
         try:
             from core.models_unified_system import Advisor
-            from core.models import User
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
             import openai
             import os
 
@@ -3090,7 +3137,8 @@ Keep the response concise but insightful (max 300 words)."""
 
         try:
             from core.agent_router import AgentRouter
-            from core.models import User
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
 
             # Get linked user
             @sync_to_async
