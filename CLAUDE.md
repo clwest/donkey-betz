@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 12, 2025 - Session 432 (Discord Client Management)
+**Last Updated:** December 12, 2025 - Session 433 (Discord Income Pipeline)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
@@ -400,6 +400,7 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 433:** Discord-First Phase 4 (Income Pipeline) - Added 2 new Discord commands: `/apply <id> [message]` to apply to opportunities, `/track [status]` to track applications. Added `user_friendly_id` and `url` fields to Opportunity model. Fixed critical Celery queue backlog (9,056 stuck tasks causing system stall), purged queue and triggered embedding catch-up (796 new embeddings). Phase 4 complete - all 4 Discord-First phases done! Handoff: `docs/handoffs/SESSION_433_INCOME_PIPELINE.md`
 - **Session 432:** Discord-First Phase 3 (Client Management) - Added 4 new Discord commands: `/client-add`, `/client-list`, `/client-deliver`, `/client-invite`. Fixed `/gallery` to show user-friendly sequential IDs (#320, #321) instead of UUIDs. Fixed image display in `/client-deliver` by uploading files directly to Discord instead of using localhost URLs. Added `DiscordClient` and `ClientDeliverable` models for tracking client deliveries.
 - **Session 430:** User Profile System - Added "My Profile" card to Preferences tab with profile completeness bar, interview modal (24 questions, 6 phases), profile editor modal, and full profile view. Created 5 new API endpoints (`/api/interview/start/`, `/api/interview/respond/`, `/api/interview/status/`, `/api/interview/resume/`, `/api/profile/summary/`). Leverages existing `EnhancedUserProfile` model and `PersonalAssistantInterviewer` class. Handoff: `docs/handoffs/SESSION_430_USER_PROFILE_SYSTEM.md`
 - **Session 417:** Clickable Agent Activity + Embedding Coverage - Agent dreams, conversations, and decisions in Agent Profile are now clickable with full detail view in modal. Added 4 new API endpoints (`/api/dreams/<id>/`, `/api/conversations/<id>/`, `/api/hivemind/<id>/`, `/api/decisions/<id>/`). Created `embed_agent_activity` Celery task running every 30 minutes to embed all agent activity. Added `force_agent_cycle` management command to generate agent dreams, conversations, and knowledge. Backfilled 2,875 embeddings. Handoff: `docs/handoffs/SESSION_417_CLICKABLE_AGENT_ACTIVITY.md`
