@@ -1,8 +1,34 @@
 # Start Next Session Here
 
-**Last Session:** 434 - Discord-First Phase 5 (Full Agent Access)
+**Last Session:** 435 - Discord Research Formatting + Notification Fixes
 **Date:** December 13, 2025
-**Status:** Phase 5 COMPLETE - 29 Discord Commands!
+**Status:** Phase 5 COMPLETE - 29 Discord Commands + Research Results Working!
+
+---
+
+## Session 435 Accomplishments
+
+### Discord Research & Notification Fixes
+
+Fixed three Discord-related display issues to improve user experience:
+
+**1. Research Results Now Show Content**
+- `/agent-task ResearchAgent "query"` now displays actual search results with clickable links
+- Fixed handling for `spider_query` (returns list) and `analyze_trends` (returns dict with discussions/projects)
+
+**2. Knowledge Sharing Notifications Formatted**
+- Before: Raw JSON `{"query": "...", "sources_used": [...], "result_count": 2}`
+- After: Human-readable format with Query, Sources, Results
+
+**3. Conversation Topics Improved**
+- HiveMind conversations now show meaningful topics extracted from knowledge summaries
+- Fallback chain: title → JSON query/topic → knowledge_type
+
+**Files Modified:**
+- `core/services/discord_bot.py` - Research result data format handling (lines 2813-2843)
+- `core/tasks.py` - Knowledge notification formatting + topic extraction (3 locations)
+
+**Handoff:** `docs/handoffs/SESSION_435_DISCORD_RESEARCH_FORMATTING.md`
 
 ---
 
@@ -88,7 +114,7 @@ See `docs/DISCORD_FIRST_ROADMAP.md` for full details.
 
 ---
 
-## Session 435: Next Steps
+## Session 436: Next Steps
 
 ### Priority Tasks
 
@@ -97,13 +123,10 @@ See `docs/DISCORD_FIRST_ROADMAP.md` for full details.
    - Daily/weekly digest commands
    - Smart alerts based on user profile
 
-2. **Test Phase 5 Commands**
-   - `/agent-list` - View all agents by category
-   - `/agent-task CTOAgent "Review my tech stack"` - Execute agent task
-   - `/advisors` - List all 25 advisors
-   - `/consult warren "Should I invest in AI?"` - Consult Warren Buffett
-   - `/workflow-list` - View available workflows
-   - `/workflow-run research_and_create_logos "AI startup"` - Run workflow
+2. **Test Session 435 Fixes**
+   - `/agent-task ResearchAgent "AI trends"` - Should show clickable results
+   - Trigger agent cycle to verify knowledge notifications are formatted
+   - Check HiveMind conversations for meaningful topics
 
 3. **Optional Enhancements**
    - Add `/earnings` command for revenue summary
