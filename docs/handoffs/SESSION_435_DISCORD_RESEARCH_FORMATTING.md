@@ -126,6 +126,53 @@ if not topic:
 
 ---
 
+## Web App Sync (`core/views_agent_learning.py`)
+
+Ensured web app displays same full conversation content as Discord:
+
+### 1. AgentConversation Messages - No More Truncation
+
+**Before:** `conv.messages.all()[:10]` - Only first 10 messages returned
+**After:** `conv.messages.all().order_by('sequence_number')` - ALL messages returned
+
+### 2. HiveMindSession Messages - Parsed from Synthesis
+
+**Before:** `messages: []` - Empty array, only synthesis_summary shown
+**After:** Synthesis text parsed into individual messages
+
+```python
+# Parse "AgentName: message" paragraphs from synthesis
+paragraphs = re.split(r'\n\n|\n(?=[A-Z][a-zA-Z]+Agent:)', session.synthesis)
+for para in paragraphs:
+    match = re.match(r'^([A-Z][a-zA-Z]+(?:Agent)?):?\s*(.+)', para, re.DOTALL)
+    if match:
+        messages_data.append({
+            'agent': match.group(1),
+            'content': match.group(2).strip(),
+            ...
+        })
+```
+
+### Dream Promotion to Boardroom
+
+Also implemented dream promotion workflow:
+1. Found WorkflowAgent's "Agents That Build Agents" prediction dream
+2. Promoted to Boardroom with high scores (84.3% composite)
+3. Generated 15-message panel discussion with 5 agents
+4. Sent full transcript to Discord in multiple messages (bypassing 4096 char limit)
+
+---
+
+## Files Modified (Complete List)
+
+| File | Change |
+|------|--------|
+| `core/services/discord_bot.py` | Research result data format handling |
+| `core/tasks.py` | Knowledge formatting + topic extraction |
+| `core/views_agent_learning.py` | Full messages for web app |
+
+---
+
 ## Next Session
 
 - Continue Discord-First development (Phase 6 if planned)
