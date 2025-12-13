@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 431 (December 12, 2025)
+**Last Updated:** Session 433 (December 12, 2025)
 
 ---
 
@@ -28,7 +28,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **21 Commands + Client Mgmt** | **Production (Session 432)** |
+| **Discord Integration** | **23 Commands + Income Pipeline** | **Production (Session 433)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
@@ -493,7 +493,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | 1. Content Delivery | `/gallery`, `/profile`, `/opportunities`, auto-delivery | ✅ Done (Session 430) |
 | 2. Server Setup | `/setup`, `/server-info`, 3 templates | ✅ Done (Session 431) |
 | 3. Client Management | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` | ✅ Done (Session 432) |
-| 4. Income Pipeline | `/apply`, `/track`, user-friendly opportunity IDs | 🔄 In Progress (Session 433) |
+| 4. Income Pipeline | `/apply`, `/track`, user-friendly opportunity IDs | ✅ Done (Session 433) |
 | 5. Full Agent Access | All 27 agents via Discord | Pending |
 | 6. Automation | Proactive notifications, daily digests | Pending |
 
