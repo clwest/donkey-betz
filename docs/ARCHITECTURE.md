@@ -1,507 +1,642 @@
-# Platform Architecture
+# System Architecture
 
-**Last Updated:** Session 303 (December 1, 2025)
-
----
-
-## Overview
-
-The AI Content Studio is a Django-based platform that combines AI content creation with real-time intelligence gathering. The architecture follows a **layered approach** where specialized agents handle specific tasks, coordinated by a central brain.
+**Platform:** Unified Donkey Betz - AI Content Creation Empire
+**Last Updated:** December 12, 2025 (Session 432)
+**Total Lines of Code:** 200,000+
 
 ---
 
-## Architecture Diagram
+## Table of Contents
+
+1. [Three-Layer Architecture](#three-layer-architecture)
+2. [Super Platform Coordinator](#super-platform-coordinator)
+3. [Agent Layer](#agent-layer)
+4. [Data Layer](#data-layer)
+5. [External Integrations](#external-integrations)
+6. [Request Flow](#request-flow)
+7. [Database Schema](#database-schema)
+8. [File Structure](#file-structure)
+
+---
+
+## Three-Layer Architecture
+
+The platform is organized into three primary layers:
 
 ```
-User Request
-    |
-    v
-+----------------------------------------------------------+
-|                 SUPER PLATFORM COORDINATOR                |
-|                                                           |
-|  +------------------+  +------------------+               |
-|  | QueryClassifier  |  | ContextAggregator|               |
-|  | (Intent detect)  |  | (Spider+Memory)  |               |
-|  +------------------+  +------------------+               |
-|                                                           |
-|  +------------------+  +------------------+               |
-|  | PromptBuilder    |  | AgentRouter      |               |
-|  | (Dynamic prompts)|  | (Deterministic)  |               |
-|  +------------------+  +------------------+               |
-|                                                           |
-|  +------------------+  +------------------+               |
-|  | SemanticRouting  |  | MemoryEmbedding  |               |
-|  | (Embedding-based)|  | (Memory search)  |               |
-|  +------------------+  +------------------+               |
-+----------------------------------------------------------+
-    |
-    v
-+----------------------------------------------------------+
-|               PERSONAL ASSISTANT AGENT                    |
-|                                                           |
-|  3-Tier Routing:                                          |
-|  Tier 0: Workflow patterns (checked first)                |
-|  Tier 1: Semantic routing (embeddings, 0.45 threshold)    |
-|  Tier 2: Keyword fallback                                 |
-|                                                           |
-|  Role: Traffic cop - routes to specialized agents         |
-|                                                           |
-|  Question? -> Answer directly (no delegation)             |
-|  Creation? -> Delegate to ImageAgent/VideoAgent/etc.      |
-|  Research? -> Delegate to ResearchAgent                   |
-|  Complex?  -> Delegate to WorkflowAgent                   |
-+----------------------------------------------------------+
-    |
-    +------------------+------------------+------------------+
-    |                  |                  |                  |
-    v                  v                  v                  v
-+----------+    +----------+    +----------+    +----------+
-| Image    |    | Video    |    | Audio    |    | Research |
-| Agent    |    | Agent    |    | Agent    |    | Agent    |
-+----------+    +----------+    +----------+    +----------+
-    |                  |                  |                  |
-    v                  v                  v                  v
-+----------+    +----------+    +----------+    +----------+
-|Stability |    | Runway   |    |ElevenLabs|    | Spider   |
-| AI API   |    | ML API   |    | API      |    | Network  |
-+----------+    +----------+    +----------+    +----------+
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 1: ORCHESTRATION                       │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │           Super Platform Coordinator                     │   │
+│  │  QueryClassifier | ContextAggregator | PromptBuilder    │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 2: AGENTS                              │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
+│  │  Creation │ │  Editing  │ │ Research  │ │ Strategy  │       │
+│  │  Agents   │ │  Agents   │ │  Agents   │ │  Agents   │       │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
+│  │ Executive │ │  Business │ │  Analysis │ │   Legal   │       │
+│  │  Agents   │ │  Agents   │ │  Agents   │ │  Agents   │       │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 3: DATA & SERVICES                     │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
+│  │  Spiders  │ │  External │ │ Knowledge │ │  Sci-Fi   │       │
+│  │  Network  │ │   APIs    │ │  Pipeline │ │ Features  │       │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Layer 1: Super Platform Coordinator
+## Super Platform Coordinator
 
 **Location:** `core/super_platform/`
+**Created:** Session 264
 
-The unified brain that orchestrates everything.
+The unified intelligence hub that orchestrates all platform capabilities.
 
 ### Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| SuperPlatformCoordinator | `coordinator.py` | Main entry point |
-| QueryClassifier | `query_classifier.py` | Detect user intent |
-| ContextAggregator | `context_aggregator.py` | Gather spider data, memories, mood |
-| DynamicPromptBuilder | `prompt_builder.py` | Build agent-specific prompts |
-| SemanticRoutingService | `semantic_routing.py` | Embedding-based agent routing |
-| MemoryEmbeddingService | `memory_embedding_service.py` | Semantic memory search |
-| SpiderSemanticSearch | `spider_semantic_search.py` | Semantic spider data search |
+#### 1. Query Classifier (`query_classifier.py`)
+Determines user intent without using LLM:
 
-### Query Types
-- `QUESTION` - User asking for information
-- `CREATION` - User wants content generated
-- `EDITING` - User wants to modify existing content
-- `RESEARCH` - User wants trend/market data
-- `WORKFLOW` - Multi-step complex request
+```python
+QUERY_TYPES = [
+    'QUESTION',    # User asking for information
+    'CREATION',    # Generate new content (image, video, audio)
+    'EDITING',     # Modify existing content
+    'RESEARCH',    # Trend/market analysis
+    'WORKFLOW',    # Multi-step requests
+]
+```
+
+**Detection Logic:**
+- Questions: Contains "what", "how", "why", "?", etc.
+- Creation: Contains "create", "generate", "make", etc.
+- Editing: Contains "edit", "modify", "change", etc.
+- Research: Contains "research", "analyze", "trends", etc.
+- Workflow: Contains "and", multiple action verbs
+
+#### 2. Context Aggregator (`context_aggregator.py`)
+Gathers relevant context from multiple sources:
+
+```python
+context = {
+    'spider_data': [...],      # Recent spider intelligence
+    'memories': [...],         # Relevant agent memories
+    'mood': {...},             # Current agent mood state
+    'prior_research': [...],   # Previous business research
+    'user_profile': {...},     # User preferences
+}
+```
+
+#### 3. Dynamic Prompt Builder (`prompt_builder.py`)
+Constructs agent-specific prompts with injected context:
+
+```python
+def build_prompt(agent, task, context):
+    return f"""
+    {AGENT_SYSTEM_PROMPT}
+
+    ## Relevant Knowledge
+    {context['memories']}
+
+    ## Recent Spider Intelligence
+    {context['spider_data']}
+
+    ## Current Task
+    {task}
+    """
+```
+
+#### 4. Semantic Routing Service
+Uses embeddings for intelligent agent selection (0.45 similarity threshold).
 
 ---
 
-## Layer 2: Clean Agent Architecture
+## Agent Layer
 
 **Location:** `core/agents/`
+**Base Class:** `core/agents/base_agent.py`
 
-Each agent is specialized with isolated tools - cannot call other agents' tools.
-
-### Agent Registry
-
-| Agent | Tools | Cannot Access |
-|-------|-------|---------------|
-| PersonalAssistantAgent | delegate_to_agent | Any creation tools |
-| ImageAgent | generate_image | Video, audio, 3D |
-| VideoAgent | generate_video, animate_image | Image, audio, 3D |
-| AudioAgent | generate_voice, generate_sfx | Image, video, 3D |
-| ThreeDAgent | convert_to_3d | Image, video, audio |
-| ImageEditingAgent | upscale, remove_bg, recolor | Creation tools |
-| VideoEditingAgent | trim, add_text, effects | Creation tools |
-| ResearchAgent | web_search, spider_query | Creation tools |
-| WorkflowAgent | delegate_to_agent | Direct API calls |
-| CompetitorAnalysisAgent | refresh_spider_data, get_prior_research, web_search, spider_query, analyze_competitor, generate_swot | Creation tools |
-| CustomerResearchAgent | refresh_spider_data, get_prior_research, spider_query, web_search, analyze_pain_points, build_persona, extract_quotes | Creation tools |
-
-### Base Agent Class
-
-**Location:** `core/agents/base_agent.py`
+### Agent Inheritance
 
 ```python
 class BaseAgent(ABC):
-    name: str
-    system_prompt: str
-    tools: List[Dict]
+    """Abstract base class for all agents"""
 
-    def execute(self, task, context, scifi_context, spider_context) -> AgentResult
-    def _call_openai(self, prompt) -> Dict  # GPT-4o-mini
-    def _execute_tool_call(self, tool_name, arguments) -> Dict
+    # TimeTravelMixin for decision tracking
+    # Learning hooks for collective intelligence
+
+    def execute(self, task, context=None, scifi_context=None, spider_context=None):
+        """Main execution method - all agents implement this"""
+        pass
+
+    def _get_relevant_knowledge_for_task(self, task, limit=5):
+        """Semantic search on learned knowledge"""
+        pass
+
+    def _get_fresh_spider_intelligence(self, categories, hours=24):
+        """Real-time spider data"""
+        pass
+
+    def _build_prompt(self):
+        """Auto-injects knowledge + context"""
+        pass
+
+    def _record_learning_outcome(self, result, task, context):
+        """Records for XP/evolution system"""
+        pass
+
+    def _create_execution_memory(self, result, task, memory_type):
+        """Creates persistent memories"""
+        pass
+
+    def _share_knowledge(self, knowledge_type, title, knowledge_value):
+        """Shares with collective intelligence"""
+        pass
 ```
 
-All agents inherit `TimeTravelMixin` for decision replay.
+### Agent Router
+
+**Location:** `core/agent_router.py`
+
+Deterministic routing without LLM involvement:
+
+```python
+AGENT_MAP = {
+    "ImageAgent": ImageAgent,
+    "VideoAgent": VideoAgent,
+    "AudioAgent": AudioAgent,
+    "ThreeDAgent": ThreeDAgent,
+    "ImageEditingAgent": ImageEditingAgent,
+    "VideoEditingAgent": VideoEditingAgent,
+    "ResearchAgent": ResearchAgent,
+    # ... 25 total agents
+}
+
+def route(agent_name: str, task: str, context: dict) -> AgentResult:
+    """Route to specific agent with injected context"""
+    agent_class = AGENT_MAP.get(agent_name)
+    agent = agent_class()
+
+    # Inject sci-fi context (mood, memories, relationships)
+    # Inject spider context (trends, market data)
+
+    return agent.execute(task, context)
+```
+
+### Agent Categories
+
+| Category | Agents | Purpose |
+|----------|--------|---------|
+| **Creation** | ImageAgent, VideoAgent, AudioAgent, ThreeDAgent | Generate new content |
+| **Editing** | ImageEditingAgent, VideoEditingAgent | Modify existing content |
+| **Research** | ResearchAgent | Web + spider queries |
+| **Strategy** | ContentStrategy, BrandIdentity, SEO, SocialMedia | Planning & optimization |
+| **Executive** | CTO, COO, CreativeDirector, MeetingCoordinator | Business guidance |
+| **Analysis** | TrendAnalysis, OpportunityScoring | Data analysis |
+| **Training** | CharacterTraining, TrainedCreation | FLUX LoRA |
+| **Business** | Competitor, Customer, BrandStrategy, Marketing, BusinessContent | Business research |
+| **Legal** | LegalDocDrafter | Colorado family law |
+| **Workflow** | WorkflowAgent | Multi-step orchestration |
+| **Entry** | PersonalAssistant | User interaction |
 
 ---
 
-## Layer 3: Spider Intelligence
+## Data Layer
 
-**Location:** `core/services/spider_intelligence.py`
+### Spider Network
 
-Real-time data collection from 70 spiders across 24 sources.
+**Location:** `ai_core/spiders/`
+**Registry:** `ai_core/spiders/spider_registry.py`
 
-### Spider Categories
-
-| Category | Count | Sources |
-|----------|-------|---------|
-| Tech | 9 | HackerNews, TechCrunch, DevTo, Wired, etc. |
-| Financial | 8 | CoinGecko, Yahoo Finance |
-| Jobs | 7 | RemoteOK, WeWorkRemotely, Adzuna |
-| Creative | 5 | Dribbble, Behance, Unsplash |
-| Community | 1 | Reddit (20+ subreddits) |
-| + 15 more... | | |
-
-### SpiderIntelligenceService Methods
-
-```python
-service = SpiderIntelligenceService()
-
-# Get trending topics
-service.get_trending_topics(hours=24, limit=10)
-
-# Get tech trends with topic filter
-service.get_tech_trends(hours=72, limit=15, topic_filter='ai')
-# topic_filter options: 'ai', 'web', 'security', 'cloud', 'design'
-
-# Search spider data
-service.search_spider_data(query="machine learning", category="tech")
-
-# Get market insights
-service.get_market_insights()  # Crypto, stocks
-
-# Get job market
-service.get_job_market_summary()
+```
+Spider Network (64 spiders)
+    │
+    ▼
+Celery Beat (every 30 minutes)
+    │
+    ▼
+SpiderData Model (8,424 records)
+    │
+    ▼
+Embedding Service (text-embedding-3-small)
+    │
+    ▼
+SpiderData.embedding (3,313 embedded)
+    │
+    ▼
+spider_data_bridge.py (post_save signal)
+    │
+    ▼
+AgentKnowledgeSource (953 knowledge items)
 ```
 
-### SpiderSemanticSearch (Session 293)
+### Knowledge Pipeline
 
-**Location:** `core/services/spider_semantic_search.py`
-
-Embedding-based search across spider data using OpenAI `text-embedding-3-small`.
+**Location:** `core/services/`
 
 ```python
-from core.services.spider_semantic_search import get_spider_semantic_search
-
-search = get_spider_semantic_search()
-
-# Fast search using pre-computed DB embeddings
-results = search.semantic_search_with_db_embeddings("AI writing tools", limit=10)
-
-# Backfill embeddings for existing data
-stats = search.backfill_embeddings(batch_size=100)
-
-# Get embedding coverage stats
-stats = search.get_embedding_stats()
-# Returns: {total_entries, with_embedding, coverage_percent}
-
-# Enhance agent context with relevant spider data
-context = search.enhance_agent_context("machine learning trends", max_items=3)
-```
-
-### UnifiedIntelligenceSearch (Session 303)
-
-**Location:** `core/services/unified_intelligence_search.py`
-
-Combines SpiderData AND BusinessResearchResult into one searchable index.
-
-```python
+# Unified Intelligence Search (Session 303)
 from core.services.unified_intelligence_search import get_unified_intelligence_search
 
 search = get_unified_intelligence_search()
 
 # Search both spider data AND business research
-results = search.unified_search(
-    query="AI content generation",
-    include_spiders=True,
-    include_research=True,
-    spider_limit=20,
-    research_limit=10
+results = search.unified_search("AI content generation")
+
+# Get context for prompt injection
+context = search.get_research_context("AI tools")
+
+# Trigger fresh spider crawls
+search.refresh_spiders_for_query("market analysis")
+```
+
+### Learning Bridges (8 Signals)
+
+**Location:** `core/apps.py`
+
+1. **Agent Execution Bridge** - Captures successful agent outputs
+2. **Application Outcome Bridge** - Tracks real-world results
+3. **Revenue Attribution Bridge** - Connects actions to revenue
+4. **Advisor Feedback Bridge** - Incorporates expert guidance
+5. **Collaboration Bridge** - Records multi-agent work
+6. **Personalization Bridge** - User preference learning
+7. **Sports Betting Bridge** - Betting outcome learning
+8. **Spider Data Bridge** - Spider -> Agent knowledge
+
+---
+
+## External Integrations
+
+### API Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       AGENT LAYER                               │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+         ┌──────────────────┼──────────────────┐
+         │                  │                  │
+         ▼                  ▼                  ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Stability  │    │  Runway ML  │    │ ElevenLabs  │
+│     AI      │    │             │    │             │
+│             │    │             │    │             │
+│ - Generate  │    │ - Text2Vid  │    │ - TTS       │
+│ - Edit      │    │ - Img2Vid   │    │ - SFX       │
+│ - Upscale   │    │ - Extend    │    │             │
+│ - Remove BG │    │ - Upscale   │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘
+
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   OpenAI    │    │  Replicate  │    │  DaVinci    │
+│             │    │             │    │  Resolve    │
+│             │    │             │    │             │
+│ - GPT-5-mini│    │ - FLUX LoRA │    │ - Render    │
+│ - Whisper   │    │ - Training  │    │ - Color     │
+│ - DALL-E 3  │    │             │    │ (UNUSED!)   │
+└─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### Provider Files
+
+| Provider | Integration File | Lines |
+|----------|------------------|-------|
+| Stability AI | `content/image_generation.py` | 1,500+ |
+| Runway ML | `content/video_provider.py` | 800+ |
+| ElevenLabs | `content/elevenlabs_provider.py` | 331 |
+| OpenAI | `core/views_image.py` | 7,000+ |
+| Replicate | `content/replicate_provider.py` | 370 |
+| DaVinci | `content/davinci_provider.py` | 900+ |
+
+### Discord Integration (Sessions 419-432)
+
+The Discord-First platform provides an alternative interface to the web app.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    DISCORD BOT                                   │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                  21 Slash Commands                       │    │
+│  │  /ask /create /research /gallery /profile /opportunities │    │
+│  │  /setup /server-info /client-add /client-deliver ...    │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│         ┌───────────────────┼────────────────────┐              │
+│         ▼                   ▼                    ▼              │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │ Notifications│    │  Server     │    │   Client    │         │
+│  │    System    │    │   Setup     │    │ Management  │         │
+│  │              │    │             │    │             │         │
+│  │ - Dreams     │    │ - Templates │    │ - Channels  │         │
+│  │ - Convos     │    │ - Channels  │    │ - Delivery  │         │
+│  │ - Status     │    │ - Config    │    │ - Invites   │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Bot Core | `core/services/discord_bot.py` | 21 slash commands, 7 Cogs |
+| Notifications | `core/services/discord_notifications.py` | Dreams, conversations, status |
+| User Linking | `core/views_discord.py` | Link Discord ↔ Web accounts |
+| Models | `core/models/base/models.py` | DiscordServer, DiscordClient |
+
+---
+
+## Request Flow
+
+### Example: "Create a cyberpunk logo"
+
+```
+1. User Request
+   │
+   ▼
+2. PersonalAssistantAgent
+   │ - Parses intent
+   │ - Detects: "creation" + "logo" -> ImageAgent
+   │
+   ▼
+3. AgentRouter.route("ImageAgent", task)
+   │ - Injects sci-fi context (mood, memories)
+   │ - Injects spider context (trends)
+   │
+   ▼
+4. ImageAgent.execute()
+   │ - _get_relevant_knowledge_for_task()
+   │ - _get_fresh_spider_intelligence(['creative'])
+   │ - _build_prompt() with injected context
+   │
+   ▼
+5. GPT-5-mini Function Call
+   │ - Decides: generate_image tool
+   │ - Parameters: {prompt: "cyberpunk logo...", model: "sd3"}
+   │
+   ▼
+6. Stability AI API
+   │ - POST /v2beta/stable-image/generate/sd3
+   │ - Returns: base64 image
+   │
+   ▼
+7. ImageAgent._record_learning_outcome()
+   │ - Stores execution memory
+   │ - Updates XP/evolution
+   │
+   ▼
+8. Response to User
+   │ - Image displayed in UI
+   │ - History entry created
+```
+
+### Example: "What's trending in AI?"
+
+```
+1. User Request
+   │
+   ▼
+2. PersonalAssistantAgent._is_question() = True
+   │ - No agent delegation needed
+   │ - Direct spider query
+   │
+   ▼
+3. SpiderIntelligenceService.get_tech_trends(topic_filter='ai')
+   │ - Queries SpiderData with embeddings
+   │ - Filters: AI/ML keywords, word boundaries
+   │ - Excludes: Shopping, weather, GIFs
+   │
+   ▼
+4. Return trending articles with clickable links
+```
+
+---
+
+## Database Schema
+
+### Core Models (`core/models_unified_system.py` - 10,596 lines)
+
+```python
+# Spider Data
+class SpiderData(models.Model):
+    spider_name = models.CharField(max_length=255)
+    category = models.CharField(max_length=100)
+    title = models.TextField()
+    description = models.TextField()
+    url = models.URLField()
+    embedding = models.JSONField(null=True)  # OpenAI embedding
+    fetched_at = models.DateTimeField()
+
+# Agent System
+class Agent(models.Model):
+    name = models.CharField(max_length=255)
+    agent_type = models.CharField(max_length=50)
+    capabilities = models.JSONField()
+    mood = models.CharField(max_length=50)
+    xp = models.IntegerField(default=0)
+    level = models.CharField(max_length=50)
+
+# Knowledge
+class AgentKnowledgeSource(models.Model):
+    agent = models.ForeignKey(Agent)
+    knowledge_type = models.CharField(max_length=50)
+    title = models.CharField(max_length=255)
+    knowledge_value = models.TextField()
+    embedding = models.JSONField(null=True)
+
+# Sci-Fi Features
+class AgentMemory(models.Model):
+    agent = models.ForeignKey(Agent)
+    memory_type = models.CharField(max_length=50)
+    content = models.TextField()
+    embedding = models.JSONField(null=True)
+
+class AgentConversation(models.Model):
+    participants = models.ManyToManyField(Agent)
+    topic = models.CharField(max_length=255)
+    messages = models.JSONField()
+    conclusion = models.TextField()
+
+class AgentDream(models.Model):
+    agent = models.ForeignKey(Agent)
+    dream_content = models.TextField()
+    dream_type = models.CharField(max_length=50)
+
+# Revenue Pipeline
+class Opportunity(models.Model):
+    title = models.CharField(max_length=255)
+    score = models.FloatField()
+    source = models.CharField(max_length=100)
+    status = models.CharField(max_length=50)
+```
+
+### Legal Models (`core/models_legal.py`)
+
+```python
+class CaseProfile(models.Model):
+    user = models.ForeignKey(User)
+    case_number = models.CharField(max_length=100)
+    court_name = models.CharField(max_length=255)
+    case_type = models.CharField(max_length=50)
+
+class Party(models.Model):
+    case = models.ForeignKey(CaseProfile)
+    role = models.CharField(max_length=50)  # petitioner/respondent
+    name = models.CharField(max_length=255)
+
+class LitigationDocument(models.Model):
+    case = models.ForeignKey(CaseProfile)
+    document_type = models.CharField(max_length=50)
+    litigation_role = models.CharField(max_length=50)  # motion/response/reply
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+```
+
+---
+
+## File Structure
+
+```
+unified-donkey-betz/
+├── core/                          # Main Django app
+│   ├── agents/                    # 27 clean agents
+│   │   ├── __init__.py
+│   │   ├── base_agent.py          # Abstract base
+│   │   ├── personal_assistant_agent.py
+│   │   ├── image_agent.py
+│   │   ├── video_agent.py
+│   │   ├── audio_agent.py
+│   │   ├── research_agent.py
+│   │   ├── legal/
+│   │   │   └── legal_doc_drafter_agent.py
+│   │   └── ...
+│   ├── super_platform/            # Orchestration
+│   │   ├── coordinator.py
+│   │   ├── query_classifier.py
+│   │   ├── context_aggregator.py
+│   │   └── prompt_builder.py
+│   ├── services/                  # Business logic
+│   │   ├── spider_intelligence.py
+│   │   ├── unified_intelligence_search.py
+│   │   └── ...
+│   ├── prompts/                   # Prompt registry
+│   │   ├── registry.py
+│   │   └── tool_descriptions.py
+│   ├── models_unified_system.py   # 10,596 lines
+│   ├── models_legal.py
+│   ├── agent_router.py
+│   ├── views_image.py             # 13,700 lines
+│   ├── views_video.py             # 8,800 lines
+│   └── views_legal.py
+│
+├── ai_core/                       # AI subsystem
+│   ├── spiders/                   # Spider network
+│   │   ├── spider_registry.py     # 64 spiders
+│   │   ├── specialized/           # Individual spiders
+│   │   └── real_data_collector.py
+│   └── templates/
+│       └── ai_image_studio.html   # 55,625 lines
+│
+├── content/                       # Media handling
+│   ├── image_generation.py        # Stability AI
+│   ├── video_provider.py          # Runway ML
+│   ├── elevenlabs_provider.py     # ElevenLabs
+│   └── replicate_provider.py      # Replicate
+│
+├── resolve_node/                  # DaVinci Resolve (UNUSED!)
+│   ├── app.py                     # FastAPI server
+│   ├── resolve_controller.py
+│   └── README.md
+│
+├── docs/                          # Documentation
+│   ├── INDEX.md                   # Main index
+│   ├── ARCHITECTURE.md            # This file
+│   ├── AGENTS.md
+│   ├── SPIDERS.md
+│   └── ...
+│
+└── CLAUDE.md                      # Session entry point
+```
+
+---
+
+## Technical Notes
+
+### GPT-5-mini Configuration
+
+**Important:** GPT-5-mini is a reasoning model with different parameters!
+
+```python
+# CORRECT for gpt-5-mini
+response = client.chat.completions.create(
+    model="gpt-5-mini",
+    messages=messages,
+    max_completion_tokens=6000,  # High for reasoning + output
+    timeout=120
 )
 
-# Get formatted context for agent prompt injection
-context = search.get_research_context("AI tools", max_spider_items=3, max_research_items=2)
-
-# Trigger fresh spider crawls before analysis
-search.refresh_spiders_for_query("market analysis", categories=["tech", "news"])
-
-# Get intelligence stats
-stats = search.get_intelligence_stats()
-# Returns: {spider_data: {...}, business_research: {...}}
-```
-
-**Used By:** CompetitorAnalysisAgent, CustomerResearchAgent
-
-**Benefits:**
-- New research builds on prior analyses
-- Auto-refresh ensures fresh data
-- Prior context injected into agent prompts
-
----
-
-## Layer 3.5: Semantic Services (Session 293, Enhanced 303)
-
-**Location:** `core/services/`
-
-Three embedding-based services for semantic intelligence.
-
-### SemanticRoutingService
-
-Routes user queries to appropriate agents using cosine similarity.
-
-```python
-from core.services.semantic_routing import SemanticRoutingService
-
-router = SemanticRoutingService()
-router.initialize()  # Pre-compute agent embeddings
-
-result = router.route_query("Create a logo for my tech startup")
-# Returns: RoutingResult(agent_name="ImageAgent", confidence=0.62, method="semantic")
-```
-
-**Embedded Agents (12):** ImageAgent, VideoAgent, AudioAgent, ThreeDAgent, ImageEditingAgent, VideoEditingAgent, ResearchAgent, CompetitorAnalysisAgent, CustomerResearchAgent, WorkflowAgent, ContentStrategyAgent, BrandIdentityAgent
-
-### MemoryEmbeddingService
-
-Semantic search across agent memories (Memory Palace).
-
-```python
-from core.services.memory_embedding_service import get_memory_embedding_service
-
-service = get_memory_embedding_service()
-
-# Create memory with auto-embedding
-memory = service.create_memory(
-    agent=my_agent,
-    title="User prefers minimalist logos",
-    content="When creating logos, user consistently chooses...",
-    memory_type="preference"
+# WRONG - will cause errors
+response = client.chat.completions.create(
+    model="gpt-5-mini",
+    max_tokens=1000,      # Wrong parameter name
+    temperature=0.7       # Not supported for reasoning models
 )
-
-# Search memories semantically
-results = service.search_memories(agent, "What does the user like?", top_k=5)
-
-# Get memory context for agent prompts
-context = service.get_memory_context(agent, "logo design preferences")
 ```
 
-**Features:**
-- Auto-connects related memories (similarity > 0.7)
-- Supports backfill for existing memories
-- Memory types: success, failure, preference, technique, insight, interaction, feedback
-
----
-
-## Layer 4: Sci-Fi Features
-
-**Location:** `core/models_unified_system.py`
-
-15 advanced AI features that enrich every agent interaction.
-
-### Feature Integration
-
-```
-Agent Request
-    |
-    v
-+----------------------------------+
-| SciFiIntegrationService          |
-|                                  |
-| +------------+ +---------------+ |
-| | Mood       | | Memory Palace | |
-| | (affects   | | (past context)| |
-| | behavior)  | |               | |
-| +------------+ +---------------+ |
-|                                  |
-| +------------+ +---------------+ |
-| | Evolution  | | Relationships | |
-| | (XP/level) | | (allies/rivals| |
-| +------------+ +---------------+ |
-+----------------------------------+
-    |
-    v
-Enriched Agent Context
-```
-
----
-
-## Layer 5: Tool Execution
-
-### External APIs
-
-| API | Purpose | Key File |
-|-----|---------|----------|
-| Stability AI | Image generation/editing | `content/image_generation.py` |
-| Runway ML | Video generation | `content/video_generation.py` |
-| ElevenLabs | Audio/TTS | `content/audio_generation.py` |
-| Replicate | 3D generation | `content/threed_generation.py` |
-| Serper | Web search | `core/tools/web_search.py` |
-| OpenAI | GPT-4o-mini for agents | All agents |
-
-### Backend Wrappers
-
-**Location:** `core/views_image.py` (lines 13815-14435)
+### Celery Beat Schedules
 
 ```python
-_execute_generate_image()      # Stability AI
-_execute_generate_video()      # Runway ML
-_execute_upscale()             # Stability AI
-_execute_remove_background()   # Stability AI
-_execute_convert_to_3d()       # Replicate
-_execute_generate_voice()      # ElevenLabs
-_execute_edit_video()          # FFmpeg
-```
-
----
-
-## Data Flow
-
-### 1. Question Flow (No Creation)
-```
-User: "What's trending in AI?"
-    |
-    v
-PersonalAssistantAgent._is_question() = True
-    |
-    v
-ResearchAgent.execute()
-    |
-    v
-SpiderIntelligenceService.get_tech_trends(topic_filter='ai')
-    |
-    v
-Return: Trending articles with clickable links
-```
-
-### 2. Creation Flow
-```
-User: "Create a cyberpunk logo"
-    |
-    v
-PersonalAssistantAgent._detect_agent() = "ImageAgent"
-    |
-    v
-AgentRouter.route("ImageAgent", task)
-    |
-    v
-ImageAgent.execute()
-    |
-    v
-_execute_generate_image() -> Stability AI
-    |
-    v
-Return: Generated image + metadata
-```
-
-### 3. Workflow Flow
-```
-User: "Research AI trends and create 3 logos"
-    |
-    v
-PersonalAssistantAgent._detect_agent() = "WorkflowAgent"
-    |
-    v
-WorkflowAgent.execute()
-    |
-    v
-Step 1: delegate_to_agent("ResearchAgent", "AI trends")
-Step 2: delegate_to_agent("ImageAgent", "3 logos based on trends")
-    |
-    v
-Return: Research summary + 3 images
-```
-
----
-
-## Key Configuration
-
-### Feature Flag
-```python
-# Enable clean architecture
-USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'False') == 'True'
-```
-
-### Environment Variables
-```bash
-# Required
-OPENAI_API_KEY=sk-...
-STABILITY_AI_API_KEY=sk-...
-RUNWAY_API_KEY=...
-ELEVENLABS_API_KEY=...
-
-# Optional
-SERPER_API_KEY=...  # For web search
-REPLICATE_API_TOKEN=...  # For 3D
-```
-
----
-
-## Frontend Integration
-
-**Location:** `ai_core/templates/ai_image_studio.html`
-
-### API Endpoints
-
-| Endpoint | Purpose |
-|----------|---------|
-| `/api/super-platform/process/` | Main chat endpoint (clean arch) |
-| `/api/super-platform/status/` | System status |
-| `/api/assistant/chat/` | Legacy endpoint |
-
-### Response Format (Clean Architecture)
-```json
-{
-  "success": true,
-  "response": "Created 3 cyberpunk logos",
-  "execution_mode": "agent",
-  "agents_used": ["ImageAgent"],
-  "artifacts": [
-    {"type": "image", "data": {...}, "thumbnail": "..."}
-  ],
-  "execution_time_ms": 2500,
-  "metadata": {
-    "clean_architecture": true,
-    "decisions_made": 3,
-    "tool_calls": [...]
-  }
+# core/celery.py
+CELERY_BEAT_SCHEDULE = {
+    'run-spider-network': {
+        'task': 'core.tasks.run_spider_network',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+    },
+    'generate-agent-dreams': {
+        'task': 'core.tasks.generate_agent_dreams',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+    },
+    'trigger-agent-conversations': {
+        'task': 'core.tasks.trigger_agent_conversations',
+        'schedule': crontab(minute=0, hour='*/1'),  # Every hour
+    },
 }
 ```
 
 ---
 
-## Database Models
+## Performance Considerations
 
-### Core Models
-- `ImageHistory` - Generated images
-- `VideoHistory` - Generated videos
-- `AudioHistory` - Generated audio (MISSING - Session 303 audit)
-- `SpiderData` - Spider-collected data (+ embedding, item_embeddings, embedding_text - Session 293)
-- `BusinessResearchResult` - Competitor/customer research with embeddings (Session 293)
-- `PartnershipProject` - Projects with M2M to BusinessResearchResult (Session 302)
+### Database Indexes
+- `SpiderData.embedding` - GIN index for similarity search
+- `AgentKnowledgeSource.embedding` - GIN index
+- `SpiderData.fetched_at` - B-tree for recency queries
 
-### Sci-Fi Models
-- `AgentMood` - Emotional states
-- `AgentMemory` - Memory Palace
-- `AgentEvolution` - XP/levels
-- `AgentRelationship` - Allies/rivals
-- `AgentConversation` - AI-to-AI chat
-- `AgentDream` - Idle thoughts
-- `AgentPrediction` - Prophecies
-- `TimeCapsule` - Future messages
+### Caching
+- Redis for session data
+- Embedding cache for repeated queries
+- Spider data cache (15-minute TTL)
 
-### Agent Models (Session 303 Audit)
-- `UnifiedAgentTemplate` - Agent definitions
-- `AgentExecution` - Execution tracking
-- `AgentContribution` - Links agents → content (images, videos, projects)
-- `AgentOrchestration` - Multi-agent workflows
+### Rate Limits
+- Stability AI: Concurrent request limits
+- Runway ML: Task polling intervals
+- OpenAI: Token limits per minute
 
 ---
 
-## See Also
+## Related Documentation
 
-- [CAPABILITIES.md](CAPABILITIES.md) - Full feature list
-- [AGENTS.md](AGENTS.md) - Agent reference
-- [SPIDERS.md](SPIDERS.md) - Spider network
-- [SCIFI_FEATURES.md](SCIFI_FEATURES.md) - 15 sci-fi features
+- [AGENTS.md](AGENTS.md) - Detailed agent documentation
+- [SPIDERS.md](SPIDERS.md) - Spider network details
+- [EXTERNAL_APIS.md](EXTERNAL_APIS.md) - API integration details
+- [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) - Learning flow
+- [DAVINCI_RESOLVE.md](DAVINCI_RESOLVE.md) - Unused $300 render node
