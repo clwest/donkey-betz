@@ -10582,13 +10582,14 @@ def generate_ai_series(self, series_id: str):
         # Get the series
         series = AISeries.objects.get(id=series_id)
 
-        if series.status != SeriesStatus.QUEUED:
-            logger.warning(f"🎬 [SESSION 445] Series {series_id} not in QUEUED status, skipping")
+        # Series starts in PLANNING status - check it's not already generating or complete
+        if series.status not in [SeriesStatus.PLANNING]:
+            logger.warning(f"🎬 [SESSION 445] Series {series_id} not in PLANNING status, skipping")
             return {'status': 'skipped', 'reason': f'Series status is {series.status}'}
 
-        # Start planning
-        series.start_planning()
-        logger.info(f"🎬 [SESSION 445] Series '{series.name}' moved to PLANNING status")
+        # Move to GENERATING status
+        series.start_generation()
+        logger.info(f"🎬 [SESSION 445] Series '{series.name}' moved to GENERATING status")
 
         # Get the agent
         agent = get_ai_series_workflow_agent(user=series.created_by)
