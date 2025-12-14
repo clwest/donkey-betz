@@ -46,6 +46,11 @@ Session 438 Commands (Phase 7: Monetization):
 - /subscribe <tier> - Subscribe to Pro or Premium tier
 - /tier - View your subscription tier and daily usage
 
+Session 438 Commands (Phase 8: Voice AI):
+- /voice <action> [voice] - Join/leave voice channels, list voices
+- /speak <message> [voice] - Make bot speak in voice channel
+- /ask-voice <question> - Ask AI and hear response spoken
+
 Usage:
     # Run the bot
     python manage.py run_discord_bot
@@ -294,6 +299,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ServerSetupCommands(self))  # Session 431: Phase 2 Server Setup
         await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
         await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
+        await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
         await self.add_cog(HelpCommands(self))
 
         # Sync slash commands with Discord
@@ -2404,6 +2410,272 @@ class ContentCommands(commands.Cog):
 
         except Exception as e:
             logger.error(f"/tier command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+
+class VoiceCommands(commands.Cog):
+    """
+    Session 438: Voice AI Commands (Phase 8).
+
+    Enables voice channel interaction with AI assistant.
+    Uses ElevenLabs for TTS and OpenAI Whisper for STT.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+        self.voice_service = None
+
+    def _ensure_voice_service(self):
+        """Lazily initialize voice service."""
+        if self.voice_service is None:
+            from core.services.discord_voice import init_voice_service
+            self.voice_service = init_voice_service(self.bot)
+        return self.voice_service
+
+    @app_commands.command(name="voice", description="Voice AI: Join a voice channel for voice interaction")
+    @app_commands.describe(
+        action="What to do",
+        voice="Voice to use for speaking (optional)"
+    )
+    @app_commands.choices(action=[
+        app_commands.Choice(name="Join - Join your voice channel", value="join"),
+        app_commands.Choice(name="Leave - Leave voice channel", value="leave"),
+        app_commands.Choice(name="Voices - List available voices", value="voices"),
+    ])
+    async def voice(
+        self,
+        interaction: discord.Interaction,
+        action: str,
+        voice: Optional[str] = None
+    ):
+        """Voice AI commands for voice channel interaction."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            service = self._ensure_voice_service()
+
+            if action == "join":
+                # Check if user is in a voice channel
+                if not interaction.user.voice or not interaction.user.voice.channel:
+                    await interaction.followup.send(
+                        "You need to be in a voice channel first!\n"
+                        "Join a voice channel, then use `/voice join` again.",
+                        ephemeral=True
+                    )
+                    return
+
+                channel = interaction.user.voice.channel
+
+                # Check permissions
+                permissions = channel.permissions_for(interaction.guild.me)
+                if not permissions.connect or not permissions.speak:
+                    await interaction.followup.send(
+                        "I don't have permission to join or speak in that channel!",
+                        ephemeral=True
+                    )
+                    return
+
+                # Join the channel
+                session = await service.join_channel(channel, voice or 'rachel')
+
+                if session:
+                    embed = discord.Embed(
+                        title="Voice AI Active",
+                        description=f"Joined **{channel.name}**!",
+                        color=discord.Color.green(),
+                        timestamp=datetime.now()
+                    )
+                    embed.add_field(name="Voice", value=session.current_voice.title(), inline=True)
+                    embed.add_field(name="Channel", value=channel.name, inline=True)
+                    embed.add_field(
+                        name="How to Use",
+                        value=(
+                            "I'm now listening in the voice channel.\n"
+                            "Use `/speak <message>` to make me talk.\n"
+                            "Say 'goodbye' to disconnect."
+                        ),
+                        inline=False
+                    )
+                    embed.set_footer(text="Powered by ElevenLabs TTS")
+
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                else:
+                    await interaction.followup.send(
+                        "Failed to join voice channel. Please try again.",
+                        ephemeral=True
+                    )
+
+            elif action == "leave":
+                if not service.is_in_voice(interaction.guild.id):
+                    await interaction.followup.send(
+                        "I'm not in a voice channel!",
+                        ephemeral=True
+                    )
+                    return
+
+                success = await service.leave_channel(interaction.guild)
+
+                if success:
+                    await interaction.followup.send(
+                        "Left the voice channel. See you next time!",
+                        ephemeral=True
+                    )
+                else:
+                    await interaction.followup.send(
+                        "Error leaving voice channel.",
+                        ephemeral=True
+                    )
+
+            elif action == "voices":
+                voices = service.get_available_voices()
+
+                embed = discord.Embed(
+                    title="Available Voices",
+                    description="Use `/voice join voice:<name>` to select a voice",
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+
+                voice_descriptions = {
+                    'rachel': 'Warm, professional female',
+                    'antoni': 'Authoritative male',
+                    'bella': 'Friendly female',
+                    'callum': 'Confident British male',
+                    'charlotte': 'Warm British female',
+                    'daniel': 'Clear, neutral male',
+                    'domi': 'Strong female',
+                    'elli': 'Expressive female',
+                    'josh': 'Deep male',
+                    'sam': 'Neutral young male',
+                }
+
+                voice_list = "\n".join([
+                    f"**{v.title()}** - {voice_descriptions.get(v, 'AI voice')}"
+                    for v in voices
+                ])
+
+                embed.add_field(name="Voices", value=voice_list, inline=False)
+                embed.set_footer(text="Powered by ElevenLabs")
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/voice command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="speak", description="Make the bot speak a message in voice channel")
+    @app_commands.describe(
+        message="What to say",
+        voice="Voice to use (optional)"
+    )
+    async def speak(
+        self,
+        interaction: discord.Interaction,
+        message: str,
+        voice: Optional[str] = None
+    ):
+        """Make the bot speak a message in the voice channel."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            service = self._ensure_voice_service()
+
+            if not service.is_in_voice(interaction.guild.id):
+                await interaction.followup.send(
+                    "I'm not in a voice channel!\n"
+                    "Use `/voice join` first.",
+                    ephemeral=True
+                )
+                return
+
+            session = service.get_session(interaction.guild.id)
+
+            # Change voice if specified
+            if voice:
+                if not await service.set_voice(interaction.guild.id, voice):
+                    await interaction.followup.send(
+                        f"Unknown voice: {voice}. Use `/voice voices` to see available voices.",
+                        ephemeral=True
+                    )
+                    return
+
+            # Speak the message
+            success = await service.speak(session, message, voice)
+
+            if success:
+                await interaction.followup.send(
+                    f"Speaking: \"{message[:100]}{'...' if len(message) > 100 else ''}\"",
+                    ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    "Failed to speak. ElevenLabs might be unavailable.",
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            logger.error(f"/speak command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="ask-voice", description="Ask AI and hear the response in voice channel")
+    @app_commands.describe(question="Your question for the AI")
+    async def ask_voice(self, interaction: discord.Interaction, question: str):
+        """Ask the AI and hear the response spoken in voice channel."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            service = self._ensure_voice_service()
+
+            if not service.is_in_voice(interaction.guild.id):
+                await interaction.followup.send(
+                    "I'm not in a voice channel!\n"
+                    "Use `/voice join` first, then ask your question.",
+                    ephemeral=True
+                )
+                return
+
+            session = service.get_session(interaction.guild.id)
+
+            # Process the question with AI
+            response = await service.process_voice_command(
+                session,
+                question,
+                interaction.user
+            )
+
+            if response == "__EXIT__":
+                await service.leave_channel(interaction.guild)
+                await interaction.followup.send(
+                    "Goodbye! I've left the voice channel.",
+                    ephemeral=True
+                )
+                return
+
+            # Speak the response
+            await service.speak(session, response)
+
+            # Also show text response
+            embed = discord.Embed(
+                title="AI Response",
+                description=response,
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+            embed.set_footer(text=f"Voice: {session.current_voice.title()}")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/ask-voice command error: {e}")
             await interaction.followup.send(
                 f"Error: {str(e)[:200]}",
                 ephemeral=True
