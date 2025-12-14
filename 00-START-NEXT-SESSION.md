@@ -1,8 +1,8 @@
 # Start Next Session Here
 
-**Last Session:** 447 - AISeriesWorkflowAgent Duplicate Series Bug Fix
+**Last Session:** 447 - AISeriesWorkflowAgent Duplicate Series Bug Fix + `/series-view` Command
 **Date:** December 14, 2025
-**Status:** AI Series Workflow FULLY WORKING | Discord `/series-create` now saves scripts correctly!
+**Status:** AI Series Workflow FULLY WORKING | Discord `/series-create` saves scripts + `/series-view` shows content!
 
 ---
 
@@ -25,7 +25,7 @@ This document outlines the complete business strategy for going to market:
 | Voice Marketplace | LIVE | 70/30 revenue split |
 | Content Pipeline | 6 tiers | $5-$50K per project |
 | AISeriesWorkflowAgent | **NEW** | YouTube Empire automation |
-| 51+ Discord Commands | Production | Full AI agency capability |
+| 52+ Discord Commands | Production | Full AI agency capability |
 | 32 Clean Agents | Production | Automated workflows |
 | 65 Spiders | Active | Real-time intelligence |
 
@@ -66,7 +66,21 @@ if existing_series_id:
 - Episode status: `complete` (was `queued`)
 - `episodes_generated: 1` (was 0)
 
-**Handoff:** `docs/handoffs/SESSION_446_AI_SERIES_DB_PERSISTENCE_FIXES.md` (updated)
+### New Discord Command: `/series-view`
+
+Added ability to view generated episode content directly in Discord:
+
+```
+/series-view series_id:46ad6720 episode:1
+```
+
+**Displays:**
+- Episode title and status emoji (✅ complete, ⏳ queued, etc.)
+- Synopsis (500 char preview)
+- Script (900 char preview with full char count)
+- Generated assets (character images, voiceover, video)
+
+**Handoff:** `docs/handoffs/SESSION_446_AI_SERIES_DB_PERSISTENCE_FIXES.md` (updated for Sessions 446+447)
 
 ---
 
@@ -261,6 +275,17 @@ sleep 2
 | `/voice-market publish <name>` | Make voice public | Working |
 | `/voice-market unpublish <name>` | Make voice private | Working |
 | `/voice-market preview <voice>` | Hear voice sample | Working |
+
+---
+
+## Series Commands Reference
+
+| Command | Action | Status |
+|---------|--------|--------|
+| `/series-create <type> <episodes> <prompt>` | Create multi-episode series | Working |
+| `/series-status [series_id]` | Check generation progress | Working |
+| `/series-list` | List your series | Working |
+| `/series-view <series_id> [episode]` | View episode content | **NEW S447** |
 
 ---
 

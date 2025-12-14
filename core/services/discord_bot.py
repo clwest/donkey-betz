@@ -4470,6 +4470,144 @@ class SeriesCommands(commands.Cog):
                 )
             )
 
+    @app_commands.command(name="series-view", description="View the content of a series episode")
+    @app_commands.describe(
+        series_id="The series ID (first 8 chars is enough)",
+        episode="Episode number to view (default: 1)"
+    )
+    async def series_view(
+        self,
+        interaction: discord.Interaction,
+        series_id: str,
+        episode: int = 1
+    ):
+        """View the generated content (script, synopsis) for a series episode."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def get_episode_content():
+                from core.models_ai_series import AISeries, SeriesEpisode
+
+                # Find series by partial ID match
+                series = AISeries.objects.filter(
+                    created_by=user,
+                    id__startswith=series_id
+                ).first()
+
+                if not series:
+                    # Try exact match
+                    try:
+                        series = AISeries.objects.get(id=series_id, created_by=user)
+                    except AISeries.DoesNotExist:
+                        return None, None
+
+                ep = SeriesEpisode.objects.filter(
+                    series=series,
+                    episode_number=episode
+                ).first()
+
+                return series, ep
+
+            series, ep = await get_episode_content()
+
+            if not series:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Series Not Found",
+                        description=f"No series found with ID `{series_id}`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            if not ep:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Episode Not Found",
+                        description=f"Episode {episode} not found in this series",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Build the view embed
+            status_emoji = {
+                'queued': '⏳',
+                'generating': '🔄',
+                'complete': '✅',
+                'failed': '❌'
+            }.get(ep.status, '❓')
+
+            embed = discord.Embed(
+                title=f"{status_emoji} {ep.title or f'Episode {ep.episode_number}'}",
+                description=f"**Series:** {series.name[:50]}",
+                color=discord.Color.green() if ep.status == 'complete' else discord.Color.blue()
+            )
+
+            # Synopsis
+            if ep.synopsis:
+                embed.add_field(
+                    name="Synopsis",
+                    value=ep.synopsis[:500] + ("..." if len(ep.synopsis) > 500 else ""),
+                    inline=False
+                )
+
+            # Script
+            if ep.script:
+                # Discord field limit is 1024, so truncate if needed
+                script_preview = ep.script[:900]
+                if len(ep.script) > 900:
+                    script_preview += f"\n\n*... ({len(ep.script)} chars total)*"
+                embed.add_field(
+                    name="Script",
+                    value=f"```\n{script_preview}\n```",
+                    inline=False
+                )
+            else:
+                embed.add_field(
+                    name="Script",
+                    value="*No script generated*",
+                    inline=False
+                )
+
+            # Assets summary
+            assets = []
+            if ep.character_result:
+                assets.append("Character images")
+            if ep.voice_result:
+                assets.append("Voiceover")
+            if ep.video_result:
+                assets.append("Video")
+
+            if assets:
+                embed.add_field(name="Generated Assets", value=", ".join(assets), inline=True)
+
+            embed.set_footer(text=f"Episode {episode}/{series.episode_count} | ID: {str(series.id)[:8]}...")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Series view error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to view episode: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
 
 class ServerSetupCommands(commands.Cog):
     """

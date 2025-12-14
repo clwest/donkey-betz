@@ -1,8 +1,8 @@
-# Session 446: AISeriesWorkflowAgent Database Persistence Fixes
+# Session 446-447: AISeriesWorkflowAgent Database Persistence Fixes
 
 **Date:** December 14, 2025
 **Status:** COMPLETE
-**Focus:** Fix database persistence for scripts, episodes, and results
+**Focus:** Fix database persistence for scripts, episodes, and results + Add `/series-view` command
 
 ---
 
@@ -118,7 +118,29 @@ def _create_series_record(self, task: str, context: Dict[str, Any]) -> Optional[
 
 | File | Changes |
 |------|---------|
-| `core/agents/ai_series_workflow_agent.py` | Added `make_json_serializable()` helper, `self._series_id` tracking, explicit `save()` before `complete_generation()`, added logging |
+| `core/agents/ai_series_workflow_agent.py` | Added `make_json_serializable()` helper, `self._series_id` tracking, explicit `save()` before `complete_generation()`, check for existing series in context |
+| `core/services/discord_bot.py` | Added `/series-view` command to view episode content |
+
+---
+
+## New Discord Command: `/series-view`
+
+**Added in Session 447** - View generated episode content (script, synopsis, assets).
+
+**Usage:**
+```
+/series-view series_id:46ad6720 episode:1
+```
+
+**Parameters:**
+- `series_id` - First 8 characters of series ID is enough
+- `episode` - Episode number (default: 1)
+
+**Displays:**
+- Episode title and status
+- Synopsis (500 char preview)
+- Script (900 char preview with char count)
+- Generated assets (character images, voiceover, video if available)
 
 ---
 
