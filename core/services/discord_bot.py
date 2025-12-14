@@ -301,6 +301,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
         await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
         await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
+        await self.add_cog(ContentPipelineCommands(self))  # Session 440: Content Pipeline
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
 
@@ -3184,6 +3185,321 @@ class VoiceMarketplaceCommands(commands.Cog):
 
         except Exception as e:
             logger.error(f"/voice-clone error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+
+
+# =============================================================================
+# Session 440: Content Pipeline Commands - The AI Content Factory
+# =============================================================================
+
+class ContentPipelineCommands(commands.Cog):
+    """
+    Session 440: Content Pipeline Commands.
+
+    The AI Content Factory - generate complete content packages from $5 to $50K.
+    Same infrastructure powers birthday messages and Pixar pitches.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+        return await get_user()
+
+    @app_commands.command(name="create-content", description="AI Content Factory: Create complete content packages")
+    @app_commands.describe(
+        tier="Content tier (determines scope and price)",
+        prompt="What to create (e.g., 'Tony's Pizza, Brooklyn, $2 Tuesdays')"
+    )
+    @app_commands.choices(tier=[
+        app_commands.Choice(name="Quick ($5-29) - Birthday messages, simple content", value="quick"),
+        app_commands.Choice(name="Ad ($29-99) - Small business ads", value="ad"),
+        app_commands.Choice(name="Brand ($99-499) - Full brand packages", value="brand"),
+        app_commands.Choice(name="Series ($499-2999) - Content series", value="series"),
+        app_commands.Choice(name="Pitch ($2999-9999) - Series/movie pitches", value="pitch"),
+    ])
+    async def create_content(
+        self,
+        interaction: discord.Interaction,
+        tier: str,
+        prompt: str
+    ):
+        """Create a complete content package using the AI pipeline."""
+        await interaction.response.defer()
+
+        try:
+            # Get linked user
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link`\n"
+                    "Go to AI Studio > Preferences > Discord to get your link code.",
+                    ephemeral=True
+                )
+                return
+
+            # Get tier info
+            @sync_to_async
+            def create_package():
+                from core.services.content_pipeline import get_tier_config, TIER_CONFIGS
+                from core.models_content_pipeline import ContentPackage, ContentGenerationJob, PackageStatus
+
+                tier_config = TIER_CONFIGS.get(tier)
+                if not tier_config:
+                    return None, "Invalid tier"
+
+                # Create the package
+                package = ContentPackage.objects.create(
+                    name=f"{prompt[:50]}... ({tier.title()})" if len(prompt) > 50 else f"{prompt} ({tier.title()})",
+                    description=prompt,
+                    tier=tier,
+                    category='other',
+                    prompt=prompt,
+                    base_price=tier_config.default_price,
+                    status=PackageStatus.QUEUED,
+                    is_public=True,
+                    created_by=user,
+                    generation_config={
+                        "tier": tier,
+                        "tier_config": {
+                            "num_images": tier_config.num_images,
+                            "num_videos": tier_config.num_videos,
+                            "video_durations": tier_config.video_durations,
+                        }
+                    }
+                )
+
+                # Create generation job
+                ContentGenerationJob.objects.create(
+                    package=package,
+                    current_stage="queued"
+                )
+
+                return package, tier_config
+
+            package, tier_config = await create_package()
+
+            if package is None:
+                await interaction.followup.send(f"Error: {tier_config}", ephemeral=True)
+                return
+
+            # Start generation task
+            @sync_to_async
+            def start_generation(pkg_id):
+                from core.tasks import generate_content_package
+                generate_content_package.delay(str(pkg_id))
+
+            await start_generation(package.id)
+
+            # Build response embed
+            embed = discord.Embed(
+                title=f"Content Package Created",
+                description=f"**{package.name}**\n\nYour content is being generated!",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(name="Tier", value=tier.title(), inline=True)
+            embed.add_field(name="Price", value=f"${tier_config.default_price}", inline=True)
+            embed.add_field(name="Status", value="Generating...", inline=True)
+
+            embed.add_field(
+                name="What's Being Created",
+                value=(
+                    f"Images: {tier_config.num_images}\n"
+                    f"Videos: {tier_config.num_videos}\n"
+                    f"Voice Options: {tier_config.num_voice_options}"
+                ),
+                inline=False
+            )
+
+            embed.add_field(
+                name="Package ID",
+                value=f"`{str(package.id)[:8]}`",
+                inline=True
+            )
+
+            embed.set_footer(text="Use /content-status to check progress")
+
+            await interaction.followup.send(embed=embed)
+
+            logger.info(f"Content package created: {package.name} (tier={tier})")
+
+        except Exception as e:
+            logger.error(f"/create-content error: {e}")
+            await interaction.followup.send(f"Error creating content: {str(e)[:200]}", ephemeral=True)
+
+    @app_commands.command(name="content-status", description="Check status of your content packages")
+    @app_commands.describe(package_id="Package ID (optional - shows all if not provided)")
+    async def content_status(
+        self,
+        interaction: discord.Interaction,
+        package_id: Optional[str] = None
+    ):
+        """Check status of content generation."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link`",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def get_packages(web_user, pkg_id):
+                from core.models_content_pipeline import ContentPackage
+
+                if pkg_id:
+                    return list(ContentPackage.objects.filter(
+                        id__startswith=pkg_id,
+                        created_by=web_user
+                    )[:1])
+                else:
+                    return list(ContentPackage.objects.filter(
+                        created_by=web_user
+                    ).order_by('-created_at')[:5])
+
+            packages = await get_packages(user, package_id)
+
+            if not packages:
+                await interaction.followup.send(
+                    "No content packages found. Use `/create-content` to create one!",
+                    ephemeral=True
+                )
+                return
+
+            embed = discord.Embed(
+                title="Your Content Packages",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            status_emojis = {
+                'queued': '',
+                'generating': '',
+                'ready': '',
+                'sold': '',
+                'delivered': '',
+                'failed': '',
+            }
+
+            for pkg in packages:
+                emoji = status_emojis.get(pkg.status, '')
+                progress = f" ({pkg.generation_progress}%)" if pkg.status == 'generating' else ""
+
+                embed.add_field(
+                    name=f"{emoji} {pkg.name[:40]}",
+                    value=(
+                        f"**Tier:** {pkg.tier.title()} | **Price:** ${pkg.base_price}\n"
+                        f"**Status:** {pkg.status.title()}{progress}\n"
+                        f"**ID:** `{str(pkg.id)[:8]}`"
+                    ),
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/content-status error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+
+    @app_commands.command(name="showroom", description="Browse the content marketplace")
+    @app_commands.describe(
+        category="Filter by category",
+        tier="Filter by tier"
+    )
+    @app_commands.choices(category=[
+        app_commands.Choice(name="All Categories", value="all"),
+        app_commands.Choice(name="Restaurant & Food", value="restaurant"),
+        app_commands.Choice(name="Tech & Startups", value="tech"),
+        app_commands.Choice(name="Healthcare", value="healthcare"),
+        app_commands.Choice(name="Education", value="education"),
+        app_commands.Choice(name="Entertainment", value="entertainment"),
+    ])
+    @app_commands.choices(tier=[
+        app_commands.Choice(name="All Tiers", value="all"),
+        app_commands.Choice(name="Quick ($5-29)", value="quick"),
+        app_commands.Choice(name="Ad ($29-99)", value="ad"),
+        app_commands.Choice(name="Brand ($99-499)", value="brand"),
+        app_commands.Choice(name="Series ($499-2999)", value="series"),
+        app_commands.Choice(name="Pitch ($2999-9999)", value="pitch"),
+    ])
+    async def showroom(
+        self,
+        interaction: discord.Interaction,
+        category: str = "all",
+        tier: str = "all"
+    ):
+        """Browse ready-to-buy content packages in the marketplace."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_marketplace_packages(cat, t):
+                from core.models_content_pipeline import ContentPackage, PackageStatus
+
+                queryset = ContentPackage.objects.filter(
+                    status=PackageStatus.READY,
+                    is_public=True
+                )
+
+                if cat != "all":
+                    queryset = queryset.filter(category=cat)
+                if t != "all":
+                    queryset = queryset.filter(tier=t)
+
+                return list(queryset.order_by('-is_featured', '-created_at')[:10])
+
+            packages = await get_marketplace_packages(category, tier)
+
+            if not packages:
+                embed = discord.Embed(
+                    title="Content Showroom",
+                    description="No packages available yet. Be the first to create content!",
+                    color=discord.Color.light_gray(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(
+                    name="Create Your Own",
+                    value="Use `/create-content` to generate content packages",
+                    inline=False
+                )
+            else:
+                embed = discord.Embed(
+                    title="Content Showroom",
+                    description=f"Browse {len(packages)} ready-to-buy content packages",
+                    color=discord.Color.gold(),
+                    timestamp=datetime.now()
+                )
+
+                for pkg in packages:
+                    featured = " FEATURED" if pkg.is_featured else ""
+                    preview = f"[Preview]({pkg.preview_video_url})" if pkg.preview_video_url else "No preview"
+
+                    embed.add_field(
+                        name=f"{pkg.name}{featured}",
+                        value=(
+                            f"**${pkg.final_price}** | {pkg.tier.title()} | {pkg.category.title()}\n"
+                            f"{pkg.description[:80]}...\n"
+                            f"{preview} | `{str(pkg.id)[:8]}`"
+                        ),
+                        inline=False
+                    )
+
+            embed.set_footer(text="Use /buy-content <id> to purchase")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/showroom error: {e}")
             await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
 
 
