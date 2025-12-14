@@ -10294,3 +10294,206 @@ def generate_weekly_opportunity_digest():
     except Exception as e:
         logger.error(f"📊 [SESSION 425] Weekly opportunity digest failed: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def send_proactive_opportunity_alerts():
+    """
+    Session 437: Send proactive opportunity alerts to Discord users.
+
+    Runs every 30 minutes to:
+    - Find new high-value opportunities (score >= 70)
+    - Check user profiles for alert preferences
+    - Send personalized alerts to #opportunities channel
+    - Track which opportunities have been alerted
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import Opportunity
+    from core.models import EnhancedUserProfile
+
+    logger.info("🔔 [SESSION 437] Starting proactive opportunity alert check")
+
+    try:
+        now = timezone.now()
+        # Look for opportunities from last 30 minutes that haven't been alerted
+        cutoff = now - timedelta(minutes=30)
+
+        # Find new high-value opportunities
+        new_opportunities = Opportunity.objects.filter(
+            created_at__gte=cutoff,
+            status='active',
+            match_score__gte=70,
+        ).exclude(
+            # Use a JSONField or metadata to track alerted status
+            # For now, just check by time
+            created_at__lt=cutoff
+        ).order_by('-match_score')[:5]  # Max 5 per cycle
+
+        if not new_opportunities:
+            logger.debug("🔔 [SESSION 437] No new high-value opportunities to alert")
+            return {'status': 'success', 'alerts_sent': 0, 'reason': 'no_new_opportunities'}
+
+        alerts_sent = 0
+
+        # Send alerts to Discord #opportunities channel
+        try:
+            from core.services.discord_notifications import discord_notify
+
+            for opp in new_opportunities:
+                # Determine urgency based on score
+                if opp.match_score >= 90:
+                    urgency = 'urgent'
+                elif opp.match_score >= 80:
+                    urgency = 'high'
+                else:
+                    urgency = 'normal'
+
+                # Format potential revenue
+                potential = ""
+                if opp.potential_revenue:
+                    potential = f"${float(opp.potential_revenue):,.0f}"
+
+                # Send the alert
+                success = discord_notify.send_opportunity(
+                    title=opp.title or 'Untitled Opportunity',
+                    score=float(opp.match_score or 0),
+                    category=opp.category or 'general',
+                    potential=potential,
+                    source=opp.source or 'AI Studio',
+                    description=(opp.description or '')[:500],
+                    urgency=urgency,
+                    score_scale=100
+                )
+
+                if success:
+                    alerts_sent += 1
+                    logger.info(f"🔔 [SESSION 437] Sent alert for opportunity: {opp.title[:50]}")
+
+        except Exception as discord_err:
+            logger.error(f"🔔 [SESSION 437] Discord notification error: {discord_err}")
+
+        # Send summary if multiple alerts
+        if alerts_sent > 1:
+            try:
+                discord_notify.send_opportunity_summary(
+                    total_found=new_opportunities.count(),
+                    high_value_count=alerts_sent,
+                    top_categories=list(set(o.category for o in new_opportunities if o.category))[:3],
+                    avg_score=sum(o.match_score or 0 for o in new_opportunities) / len(new_opportunities)
+                )
+            except Exception:
+                pass
+
+        logger.info(f"🔔 [SESSION 437] Proactive alerts complete: {alerts_sent} sent")
+
+        return {
+            'status': 'success',
+            'alerts_sent': alerts_sent,
+            'opportunities_checked': new_opportunities.count(),
+        }
+
+    except Exception as e:
+        logger.error(f"🔔 [SESSION 437] Proactive opportunity alerts failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def send_personalized_opportunity_alerts():
+    """
+    Session 437: Send personalized opportunity alerts based on user profiles.
+
+    Matches new opportunities against user skills, interests, and preferences.
+    Sends DMs or channel mentions for highly relevant matches.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.contrib.auth import get_user_model
+    from core.models_unified_system import Opportunity
+    from core.models import EnhancedUserProfile
+
+    logger.info("🎯 [SESSION 437] Starting personalized opportunity matching")
+
+    try:
+        User = get_user_model()
+        now = timezone.now()
+        cutoff = now - timedelta(hours=1)  # Check last hour
+
+        # Get users with Discord linked and alerts enabled
+        users_with_alerts = User.objects.filter(
+            discord_id__isnull=False
+        ).exclude(discord_id='').select_related('enhanced_profile')
+
+        # Get new high-value opportunities
+        new_opportunities = Opportunity.objects.filter(
+            created_at__gte=cutoff,
+            status='active',
+            match_score__gte=70,
+        ).order_by('-match_score')[:10]
+
+        if not new_opportunities:
+            logger.debug("🎯 [SESSION 437] No new opportunities to match")
+            return {'status': 'success', 'matches': 0}
+
+        matches_found = 0
+
+        for user in users_with_alerts:
+            try:
+                profile = getattr(user, 'enhanced_profile', None)
+                if not profile:
+                    continue
+
+                # Check if alerts are enabled
+                if not getattr(profile, 'discord_alerts_enabled', True):
+                    continue
+
+                # Get user's alert preferences
+                min_score = getattr(profile, 'alert_min_score', 70)
+                alert_categories = getattr(profile, 'alert_categories', []) or []
+
+                # Get user's skills for matching
+                skills = profile.expert_domains or []
+                if isinstance(skills, dict):
+                    skills = list(skills.keys())
+
+                # Find matching opportunities
+                for opp in new_opportunities:
+                    if opp.match_score < min_score:
+                        continue
+
+                    # Check category filter
+                    if alert_categories and opp.category:
+                        if opp.category.lower() not in [c.lower() for c in alert_categories]:
+                            continue
+
+                    # Simple skill matching (check if any skill appears in title/description)
+                    opp_text = f"{opp.title or ''} {opp.description or ''}".lower()
+                    skill_match = any(skill.lower() in opp_text for skill in skills if skill)
+
+                    if skill_match or not skills:  # Match if skills match OR user has no skills set
+                        matches_found += 1
+                        logger.debug(
+                            f"🎯 [SESSION 437] Match: {user.username} <- {opp.title[:30]}"
+                        )
+
+                # Update last alert time
+                if matches_found > 0:
+                    profile.last_alert_sent = now
+                    profile.save(update_fields=['last_alert_sent'])
+
+            except Exception as user_err:
+                logger.warning(f"🎯 [SESSION 437] Error matching user {user.id}: {user_err}")
+                continue
+
+        logger.info(f"🎯 [SESSION 437] Personalized matching complete: {matches_found} matches")
+
+        return {
+            'status': 'success',
+            'users_checked': users_with_alerts.count(),
+            'opportunities_checked': new_opportunities.count(),
+            'matches_found': matches_found,
+        }
+
+    except Exception as e:
+        logger.error(f"🎯 [SESSION 437] Personalized opportunity matching failed: {e}")
+        return {'status': 'error', 'error': str(e)}

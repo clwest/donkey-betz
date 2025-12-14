@@ -1,5 +1,5 @@
 """
-Discord Bot Service - Sessions 426-434
+Discord Bot Service - Sessions 426-437
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
@@ -37,6 +37,10 @@ Session 434 Commands (Phase 5: Full Agent Access):
 - /consult <advisor> <question> - Consult an advisor
 - /workflow-list - List available workflows
 - /workflow-run <name> <input> - Run a workflow
+
+Session 437 Commands (Phase 6: Automation):
+- /digest [period] - Get daily/weekly activity digest
+- /alerts [action] - Manage proactive opportunity alerts
 
 Usage:
     # Run the bot
@@ -1903,6 +1907,285 @@ class ContentCommands(commands.Cog):
             logger.error(f"/track command error: {e}")
             await interaction.followup.send(
                 f"Error loading applications: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    # =========================================================================
+    # Session 437: Phase 6 Automation Commands
+    # =========================================================================
+
+    @app_commands.command(name="digest", description="Get your daily/weekly activity digest")
+    @app_commands.describe(period="Time period for the digest")
+    @app_commands.choices(period=[
+        app_commands.Choice(name="Today (24 hours)", value="daily"),
+        app_commands.Choice(name="This Week (7 days)", value="weekly"),
+    ])
+    async def digest(self, interaction: discord.Interaction, period: str = "daily"):
+        """Get a personalized activity digest."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            @sync_to_async
+            def get_digest_data(web_user, period_type):
+                from core.models_unified_system import (
+                    Opportunity, Application, AgentDream,
+                    AgentConversation, SharedKnowledge
+                )
+                from django.utils import timezone
+                from django.db.models import Count, Avg, Sum
+                from datetime import timedelta
+
+                now = timezone.now()
+                if period_type == 'daily':
+                    start_time = now - timedelta(hours=24)
+                    period_label = "Last 24 Hours"
+                else:
+                    start_time = now - timedelta(days=7)
+                    period_label = "Last 7 Days"
+
+                # Opportunities stats
+                new_opportunities = Opportunity.objects.filter(
+                    created_at__gte=start_time,
+                    status='active'
+                ).count()
+
+                high_value_opportunities = Opportunity.objects.filter(
+                    created_at__gte=start_time,
+                    status='active',
+                    match_score__gte=70
+                ).count()
+
+                # Top 3 opportunities
+                top_opps = Opportunity.objects.filter(
+                    status='active'
+                ).order_by('-match_score')[:3]
+
+                top_opportunities = [
+                    {
+                        'id': o.user_friendly_id or 0,
+                        'title': (o.title or 'Untitled')[:40],
+                        'score': o.match_score or 0,
+                        'category': o.category or 'General',
+                    }
+                    for o in top_opps
+                ]
+
+                # User's applications if linked
+                user_apps = {'submitted': 0, 'accepted': 0, 'total': 0}
+                if web_user:
+                    user_apps['submitted'] = Application.objects.filter(
+                        user=web_user,
+                        submitted_at__gte=start_time
+                    ).count()
+                    user_apps['accepted'] = Application.objects.filter(
+                        user=web_user,
+                        status='accepted',
+                        submitted_at__gte=start_time
+                    ).count()
+                    user_apps['total'] = Application.objects.filter(user=web_user).count()
+
+                # Agent activity
+                dreams_count = AgentDream.objects.filter(
+                    created_at__gte=start_time
+                ).count()
+
+                conversations_count = AgentConversation.objects.filter(
+                    created_at__gte=start_time
+                ).count()
+
+                knowledge_shared = SharedKnowledge.objects.filter(
+                    created_at__gte=start_time
+                ).count()
+
+                # Top dreaming agents
+                top_dreamers = AgentDream.objects.filter(
+                    created_at__gte=start_time
+                ).values('agent__name').annotate(
+                    count=Count('id')
+                ).order_by('-count')[:3]
+
+                return {
+                    'period_label': period_label,
+                    'new_opportunities': new_opportunities,
+                    'high_value_opportunities': high_value_opportunities,
+                    'top_opportunities': top_opportunities,
+                    'user_apps': user_apps,
+                    'dreams_count': dreams_count,
+                    'conversations_count': conversations_count,
+                    'knowledge_shared': knowledge_shared,
+                    'top_dreamers': list(top_dreamers),
+                    'is_linked': web_user is not None,
+                }
+
+            data = await get_digest_data(user, period)
+
+            # Build the digest embed
+            embed = discord.Embed(
+                title=f"📊 Your AI Studio Digest",
+                description=f"**{data['period_label']}**",
+                color=discord.Color.gold() if data['high_value_opportunities'] > 0 else discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            # Opportunities section
+            opp_value = (
+                f"🆕 New: **{data['new_opportunities']}**\n"
+                f"🌟 High-Value (70+): **{data['high_value_opportunities']}**"
+            )
+            embed.add_field(name="💰 Opportunities", value=opp_value, inline=True)
+
+            # Applications section (if linked)
+            if data['is_linked']:
+                apps_value = (
+                    f"📤 Submitted: **{data['user_apps']['submitted']}**\n"
+                    f"✅ Accepted: **{data['user_apps']['accepted']}**\n"
+                    f"📋 Total: **{data['user_apps']['total']}**"
+                )
+                embed.add_field(name="📝 Your Applications", value=apps_value, inline=True)
+            else:
+                embed.add_field(
+                    name="📝 Applications",
+                    value="Link account to track!\n`/link <code>`",
+                    inline=True
+                )
+
+            # Agent activity section
+            agent_value = (
+                f"💭 Dreams: **{data['dreams_count']}**\n"
+                f"💬 Conversations: **{data['conversations_count']}**\n"
+                f"📚 Knowledge Shared: **{data['knowledge_shared']}**"
+            )
+            embed.add_field(name="🤖 Agent Activity", value=agent_value, inline=True)
+
+            # Top opportunities
+            if data['top_opportunities']:
+                top_opps_text = "\n".join([
+                    f"#{o['id']} - {o['title']} ({o['score']}/100)"
+                    for o in data['top_opportunities']
+                ])
+                embed.add_field(
+                    name="🏆 Top Opportunities",
+                    value=top_opps_text,
+                    inline=False
+                )
+
+            # Top dreaming agents
+            if data['top_dreamers']:
+                dreamers_text = " | ".join([
+                    f"{d['agent__name']}: {d['count']}"
+                    for d in data['top_dreamers']
+                ])
+                embed.add_field(
+                    name="💭 Most Active Dreamers",
+                    value=dreamers_text,
+                    inline=False
+                )
+
+            # Quick actions footer
+            embed.set_footer(
+                text="💡 Use /opportunities to browse | /apply <id> to apply | /track to see applications"
+            )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/digest command error: {e}")
+            await interaction.followup.send(
+                f"Error generating digest: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="alerts", description="Manage your opportunity alerts")
+    @app_commands.describe(action="What to do with alerts")
+    @app_commands.choices(action=[
+        app_commands.Choice(name="View Settings", value="view"),
+        app_commands.Choice(name="Enable Alerts", value="enable"),
+        app_commands.Choice(name="Disable Alerts", value="disable"),
+    ])
+    async def alerts(self, interaction: discord.Interaction, action: str = "view"):
+        """Manage proactive opportunity alerts."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            @sync_to_async
+            def manage_alerts(web_user, action_type):
+                if not web_user:
+                    return {'error': 'not_linked'}
+
+                from core.models_unified_system import EnhancedUserProfile
+
+                profile, _ = EnhancedUserProfile.objects.get_or_create(user=web_user)
+
+                if action_type == 'view':
+                    # Check if alerts enabled (use discord_alerts_enabled field or default)
+                    enabled = getattr(profile, 'discord_alerts_enabled', True)
+                    min_score = getattr(profile, 'alert_min_score', 70)
+                    categories = getattr(profile, 'alert_categories', []) or ['all']
+                    return {
+                        'enabled': enabled,
+                        'min_score': min_score,
+                        'categories': categories,
+                        'action': 'view'
+                    }
+                elif action_type == 'enable':
+                    profile.discord_alerts_enabled = True
+                    profile.save()
+                    return {'enabled': True, 'action': 'enable'}
+                elif action_type == 'disable':
+                    profile.discord_alerts_enabled = False
+                    profile.save()
+                    return {'enabled': False, 'action': 'disable'}
+
+                return {'action': action_type}
+
+            result = await manage_alerts(user, action)
+
+            if result.get('error') == 'not_linked':
+                await interaction.followup.send(
+                    "❌ You need to link your Discord account first!\n\n"
+                    "Use `/link` to connect your AI Studio account.",
+                    ephemeral=True
+                )
+                return
+
+            if result['action'] == 'view':
+                status = "✅ Enabled" if result['enabled'] else "❌ Disabled"
+                embed = discord.Embed(
+                    title="🔔 Alert Settings",
+                    color=discord.Color.green() if result['enabled'] else discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Status", value=status, inline=True)
+                embed.add_field(name="Min Score", value=f"{result['min_score']}/100", inline=True)
+                categories = ", ".join(result['categories'][:5]) if result['categories'] else "All"
+                embed.add_field(name="Categories", value=categories, inline=True)
+                embed.set_footer(text="Use /alerts enable or /alerts disable to change")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif result['action'] == 'enable':
+                await interaction.followup.send(
+                    "✅ **Alerts Enabled!**\n\n"
+                    "You'll receive notifications when high-value opportunities (70+) are found.\n"
+                    "Alerts are sent to your DMs or the #opportunities channel.",
+                    ephemeral=True
+                )
+
+            elif result['action'] == 'disable':
+                await interaction.followup.send(
+                    "🔕 **Alerts Disabled**\n\n"
+                    "You won't receive proactive opportunity notifications.\n"
+                    "Use `/alerts enable` to turn them back on.",
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            logger.error(f"/alerts command error: {e}")
+            await interaction.followup.send(
+                f"Error managing alerts: {str(e)[:200]}",
                 ephemeral=True
             )
 

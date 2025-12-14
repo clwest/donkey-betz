@@ -535,6 +535,21 @@ app.conf.beat_schedule = {
             'expires': 14400,  # 4 hours
         }
     },
+    # Session 437: Discord Automation - Phase 6
+    'proactive-opportunity-alerts': {
+        'task': 'core.tasks.send_proactive_opportunity_alerts',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
+    'personalized-opportunity-alerts': {
+        'task': 'core.tasks.send_personalized_opportunity_alerts',
+        'schedule': crontab(minute=15),  # Every hour at :15
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Spider-specific task routing configuration

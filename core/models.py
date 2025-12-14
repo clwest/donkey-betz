@@ -296,6 +296,10 @@ class DiscordLinkCode(models.Model):
         )
 
 
+# Session 431: DiscordServer and DiscordServerChannel models are defined in
+# core/models/base/models.py - imported via core.models.base package
+
+
 class SystemConfiguration(UnifiedBaseModel):
     """
     System-wide configuration settings.
@@ -1578,6 +1582,32 @@ class EnhancedUserProfile(models.Model):
     ai_insights = models.JSONField(
         default=dict,
         help_text="AI-generated insights about user patterns"
+    )
+
+    # ========== SESSION 437: DISCORD AUTOMATION SETTINGS ==========
+    discord_alerts_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable proactive opportunity alerts via Discord"
+    )
+
+    alert_min_score = models.IntegerField(
+        default=70,
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(100)
+        ],
+        help_text="Minimum opportunity score to trigger an alert (0-100)"
+    )
+
+    alert_categories = models.JSONField(
+        default=list,
+        help_text="Categories to receive alerts for (empty = all)"
+    )
+
+    last_alert_sent = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of last proactive alert sent"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
