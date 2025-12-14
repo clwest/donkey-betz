@@ -34,7 +34,7 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Available Agents (31 total):
+Available Agents (35 total):
 
     CREATION AGENTS (4):
         ImageAgent          - Image generation (logos, banners, illustrations)
@@ -79,6 +79,12 @@ Available Agents (31 total):
         BrandStrategyAgent      - Brand positioning, messaging, visual direction
         MarketingStrategyAgent  - Channel strategy, campaigns, funnel optimization
         BusinessContentStrategyAgent - Content pillars, formats, topic ideas
+
+    DEVELOPMENT AGENTS (4) - Session 436:
+        CodeGeneratorAgent       - Generate code from specifications
+        FullStackDeveloperAgent  - Build complete features (frontend + backend)
+        CodeReviewAgent          - Review code for quality, security, best practices
+        DevOpsAgent              - CI/CD, Docker, Kubernetes, infrastructure
 
     ORCHESTRATION AGENTS (4) - Session 393:
         WorkflowAgent               - Multi-step workflow coordination (GPT-driven)
@@ -193,6 +199,12 @@ from core.agents.business import (
     MarketingStrategyAgent,
 )
 
+# Development Agents (Session 436)
+from core.agents.code_generator_agent import CodeGeneratorAgent
+from core.agents.fullstack_developer_agent import FullStackDeveloperAgent
+from core.agents.code_review_agent import CodeReviewAgent
+from core.agents.devops_agent import DevOpsAgent
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -270,4 +282,10 @@ __all__ = [
     'BrandStrategyAgent',
     'BusinessContentStrategyAgent',
     'MarketingStrategyAgent',
+
+    # Development Agents (4) - Session 436
+    'CodeGeneratorAgent',
+    'FullStackDeveloperAgent',
+    'CodeReviewAgent',
+    'DevOpsAgent',
 ]
