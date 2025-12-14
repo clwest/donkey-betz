@@ -13,6 +13,7 @@ from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
 from dotenv import load_dotenv
+from asgiref.sync import sync_to_async
 
 load_dotenv()
 
@@ -46,13 +47,17 @@ class StripeSubscriptionService:
         try:
             from core.models import EnhancedUserProfile
 
-            profile, _ = EnhancedUserProfile.objects.get_or_create(user=user)
+            @sync_to_async
+            def get_or_create_profile():
+                return EnhancedUserProfile.objects.get_or_create(user=user)
+
+            profile, _ = await get_or_create_profile()
 
             # Return existing customer if we have one
             if profile.stripe_customer_id:
                 return profile.stripe_customer_id
 
-            # Create new Stripe customer
+            # Create new Stripe customer (Stripe API is sync, but typically fast)
             customer = stripe.Customer.create(
                 email=user.email,
                 name=f"{user.first_name} {user.last_name}".strip() or user.username,
@@ -63,8 +68,12 @@ class StripeSubscriptionService:
             )
 
             # Save customer ID
-            profile.stripe_customer_id = customer.id
-            profile.save(update_fields=['stripe_customer_id'])
+            @sync_to_async
+            def save_customer_id():
+                profile.stripe_customer_id = customer.id
+                profile.save(update_fields=['stripe_customer_id'])
+
+            await save_customer_id()
 
             logger.info(f"Created Stripe customer {customer.id} for user {user.username}")
             return customer.id
@@ -260,7 +269,11 @@ class StripeSubscriptionService:
         try:
             from core.models import EnhancedUserProfile
 
-            profile = EnhancedUserProfile.objects.filter(user=user).first()
+            @sync_to_async
+            def get_profile():
+                return EnhancedUserProfile.objects.filter(user=user).first()
+
+            profile = await get_profile()
             if not profile or not profile.stripe_subscription_id:
                 logger.warning(f"No active subscription for user {user.username}")
                 return False
@@ -288,7 +301,11 @@ class StripeSubscriptionService:
         try:
             from core.models import EnhancedUserProfile
 
-            profile = EnhancedUserProfile.objects.filter(user=user).first()
+            @sync_to_async
+            def get_profile():
+                return EnhancedUserProfile.objects.filter(user=user).first()
+
+            profile = await get_profile()
             if not profile or not profile.stripe_customer_id:
                 return None
 
