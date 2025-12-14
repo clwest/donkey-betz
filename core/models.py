@@ -11,6 +11,9 @@ from .models_unified_system import *
 # Import voice marketplace models (Session 440)
 from .models_voice_marketplace import *
 
+# Import AI series models (Session 445)
+from .models_ai_series import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
