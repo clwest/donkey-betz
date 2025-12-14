@@ -1,11 +1,11 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 13, 2025 - Session 435 (Discord Research Formatting)
+**Last Updated:** December 13, 2025 - Session 436 (Development Agents + HuggingFace Learning)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
 **Current Focus:** Business Intelligence (Competitive Analysis working!) + Research → Creation Flow
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 62 spiders | 57 working | 6,500+ data records | **Agents USE learned knowledge!**
-**Agent Ecosystem:** 27 clean agents + learning hooks | Time Travel Debugging | Real-time conversations
+**Agent Ecosystem:** 31 clean agents + learning hooks | Time Travel Debugging | Real-time conversations
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
 **Unified Intelligence:** SpiderData + BusinessResearchResult combined search with auto-refresh!
 **Knowledge Pipeline:** Spider → Embeddings → Learning Bridge → Agent Prompts (Session 400)
@@ -207,6 +207,12 @@ Ask about specific topics and get relevant, clickable article links:
 - `BrandStrategyAgent` - Brand positioning, messaging, visual direction
 - `MarketingStrategyAgent` - Channel strategy, campaigns, funnel optimization
 - `BusinessContentStrategyAgent` - Content pillars, formats, topic ideas
+
+**Development Agents (4) - Session 436:**
+- `CodeGeneratorAgent` - Generate code from specifications (Python, JS, TypeScript, etc.)
+- `FullStackDeveloperAgent` - Build complete features (frontend + backend + database)
+- `CodeReviewAgent` - Review code for quality, security, performance, best practices
+- `DevOpsAgent` - CI/CD pipelines, Docker, Kubernetes, infrastructure automation
 
 **Orchestration Agents (1):**
 - `WorkflowAgent` - Multi-step workflow coordination
