@@ -10497,3 +10497,60 @@ def send_personalized_opportunity_alerts():
     except Exception as e:
         logger.error(f"🎯 [SESSION 437] Personalized opportunity matching failed: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+# ==================== SESSION 440: CONTENT PIPELINE ====================
+
+@shared_task(bind=True, max_retries=3)
+def generate_content_package(self, package_id: str):
+    """
+    Session 440: Generate a complete content package through the AI pipeline.
+
+    This is the core task that powers the "AI Content Factory" - taking a prompt
+    through all stages: Research → Script → Character → Voice → Video → Package.
+
+    Same task powers everything from $5 birthday messages to $50K productions.
+
+    Args:
+        package_id: UUID of the ContentPackage to generate
+    """
+    import asyncio
+
+    logger.info(f"🎬 [SESSION 440] Starting content generation for package: {package_id}")
+
+    try:
+        from core.services.content_pipeline import UnifiedContentPipeline
+
+        pipeline = UnifiedContentPipeline()
+
+        # Run the async pipeline in a sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            result = loop.run_until_complete(pipeline.run_pipeline(package_id))
+            logger.info(f"🎬 [SESSION 440] Content generation complete: {result.name}")
+
+            return {
+                'status': 'success',
+                'package_id': str(package_id),
+                'package_name': result.name,
+                'asset_count': result.assets.count(),
+            }
+        finally:
+            loop.close()
+
+    except Exception as e:
+        logger.error(f"🎬 [SESSION 440] Content generation failed: {e}")
+
+        # Update package status to failed
+        try:
+            from core.models_content_pipeline import ContentPackage, PackageStatus
+            package = ContentPackage.objects.get(id=package_id)
+            package.status = PackageStatus.FAILED
+            package.save(update_fields=['status'])
+        except Exception:
+            pass
+
+        # Retry with exponential backoff
+        raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))

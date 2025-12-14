@@ -29,6 +29,9 @@ from ..models_unified_system import *
 # Import voice marketplace models (Session 440)
 from ..models_voice_marketplace import *
 
+# Import content pipeline models (Session 440)
+from ..models_content_pipeline import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -106,4 +109,11 @@ __all__ = [
     'VoiceTransaction',
     'VoiceReview',
     'VoiceCloneRequest',
+
+    # Content Pipeline (Session 440)
+    'ContentPackage',
+    'ContentAsset',
+    'ContentPurchase',
+    'ContentShowroom',
+    'ContentGenerationJob',
 ]
