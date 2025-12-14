@@ -887,12 +887,13 @@ Start by researching the topic to understand trends and audience preferences.
         self,
         title: str,
         synopsis: str,
-        arc_position: str
+        arc_position: str,
+        max_retries: int = 3
     ) -> str:
-        """Generate a script for the episode using GPT."""
+        """Generate a script for the episode using GPT with retry logic."""
         logger.info(f"Generating script for: {title}")
-        try:
-            script_prompt = f"""Write a short script/narration for an episode titled "{title}".
+
+        script_prompt = f"""Write a short script/narration for an episode titled "{title}".
 
 Synopsis: {synopsis}
 Story Arc Position: {arc_position}
@@ -907,19 +908,35 @@ Write a 200-300 word script that:
 
 Script:"""
 
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=[{"role": "user", "content": script_prompt}],
-                max_completion_tokens=1000
-            )
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=[{"role": "user", "content": script_prompt}],
+                    max_completion_tokens=1000
+                )
 
-            content = response.choices[0].message.content or ""
-            logger.info(f"GPT script response: {len(content)} chars")
-            return content
+                content = response.choices[0].message.content or ""
+                logger.info(f"GPT script response (attempt {attempt + 1}): {len(content)} chars")
 
-        except Exception as e:
-            logger.error(f"Script generation error: {e}")
-            return f"Welcome to {title}. {synopsis}"
+                # Validate we got actual content (at least 50 chars for a real script)
+                if len(content.strip()) >= 50:
+                    return content
+                else:
+                    logger.warning(f"Empty/short script response on attempt {attempt + 1}, retrying...")
+                    if attempt < max_retries - 1:
+                        import time
+                        time.sleep(1)  # Brief pause before retry
+
+            except Exception as e:
+                logger.error(f"Script generation error (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(1)
+
+        # All retries failed - return fallback
+        logger.error(f"All {max_retries} script generation attempts failed, using fallback")
+        return f"Welcome to {title}. {synopsis}"
 
     def _get_arc_positions(self, episode_count: int) -> List[str]:
         """Get story arc positions based on episode count."""
