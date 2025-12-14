@@ -4592,7 +4592,7 @@ class SeriesCommands(commands.Cog):
             assets = []
             if ep.character_result:
                 assets.append("Character images")
-            if ep.voice_result:
+            if ep.voice_result and isinstance(ep.voice_result, dict) and ep.voice_result.get('audio_url'):
                 assets.append("Voiceover")
             if ep.video_result:
                 assets.append("Video")
@@ -4602,7 +4602,22 @@ class SeriesCommands(commands.Cog):
 
             embed.set_footer(text=f"Episode {episode}/{series.episode_count} | ID: {str(series.id)[:8]}...")
 
-            await interaction.followup.send(embed=embed)
+            # Check for audio file to attach
+            audio_file = None
+            if ep.voice_result and isinstance(ep.voice_result, dict):
+                file_path = ep.voice_result.get('file_path')
+                if file_path:
+                    import os
+                    from django.conf import settings
+                    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+                    if os.path.exists(full_path):
+                        audio_file = discord.File(full_path, filename=f"episode_{episode}_voice.mp3")
+
+            if audio_file:
+                embed.add_field(name="Audio", value="Voiceover attached below", inline=True)
+                await interaction.followup.send(embed=embed, file=audio_file)
+            else:
+                await interaction.followup.send(embed=embed)
 
         except Exception as e:
             logger.error(f"Series view error: {e}", exc_info=True)
