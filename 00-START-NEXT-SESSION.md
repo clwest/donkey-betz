@@ -1,8 +1,53 @@
 # Start Next Session Here
 
-**Last Session:** 435 - Discord Research Formatting + Notification Fixes
+**Last Session:** 436 - Development Agents + HuggingFace Learning Loop
 **Date:** December 13, 2025
-**Status:** Phase 5 COMPLETE - 29 Discord Commands + Research Results Working!
+**Status:** 31 Clean Agents | 4 New Development Agents | AI/ML Learning Pipeline Fixed
+
+---
+
+## Session 436 Accomplishments
+
+### 1. Four New Development Agents
+
+Added 4 coding/development agents to the clean architecture:
+
+| Agent | Purpose | Key Tools |
+|-------|---------|-----------|
+| CodeGeneratorAgent | Generate code from specs | `generate_code`, `explain_code`, `refactor_code` |
+| FullStackDeveloperAgent | Build complete features | `design_feature`, `implement_backend`, `implement_frontend` |
+| CodeReviewAgent | Review code quality | `review_code`, `check_security`, `check_performance` |
+| DevOpsAgent | CI/CD, Docker, K8s | `create_dockerfile`, `create_pipeline`, `create_k8s_manifests` |
+
+**Supported Languages:** Python, JavaScript, TypeScript, Go, Rust, Java, C#, PHP, Ruby
+
+**Supported Platforms:** Docker, Docker Compose, Kubernetes, GitHub Actions, GitLab CI, Jenkins, AWS (ECS, EKS), GCP (Cloud Run, GKE)
+
+**Files Created:**
+- `core/agents/code_generator_agent.py`
+- `core/agents/fullstack_developer_agent.py`
+- `core/agents/code_review_agent.py`
+- `core/agents/devops_agent.py`
+
+### 2. HuggingFace Learning Loop Fix
+
+Fixed spider data bridge to properly route AI/ML data to agents:
+
+**Problem:** HuggingFace spider data (207 records) wasn't being routed to agents for learning because `ai_ml` category was missing.
+
+**Solution:**
+- Added `ai_ml` category mapping to 5 agents: ResearchAgent, TrendAnalysisAgent, ImageAgent, VideoAgent, CTOAgent
+- Fixed sample_items extraction to use `modelId` for AI/ML data (not just `title`)
+- Added `ai_model_intelligence` learning domain
+
+**File Modified:** `core/learning_bridges/spider_data_bridge.py`
+
+### 3. Documentation Updates
+
+Updated all documentation with new agent information:
+- `CLAUDE.md` - Session 436, agent count 27→31, Development Agents section
+- `docs/AGENTS.md` - Clean agents 13→17, full documentation for all 4 agents
+- `docs/CAPABILITIES.md` - Development Agents section with supported languages/platforms
 
 ---
 
@@ -10,70 +55,11 @@
 
 ### Discord Research & Notification Fixes
 
-Fixed three Discord-related display issues to improve user experience:
-
-**1. Research Results Now Show Content**
 - `/agent-task ResearchAgent "query"` now displays actual search results with clickable links
-- Fixed handling for `spider_query` (returns list) and `analyze_trends` (returns dict with discussions/projects)
-
-**2. Knowledge Sharing Notifications Formatted**
-- Before: Raw JSON `{"query": "...", "sources_used": [...], "result_count": 2}`
-- After: Human-readable format with Query, Sources, Results
-
-**3. Conversation Topics Improved**
-- HiveMind conversations now show meaningful topics extracted from knowledge summaries
-- Fallback chain: title → JSON query/topic → knowledge_type
-
-**Files Modified:**
-- `core/services/discord_bot.py` - Research result data format handling (lines 2813-2843)
-- `core/tasks.py` - Knowledge notification formatting + topic extraction (3 locations)
+- Knowledge sharing notifications formatted (not raw JSON)
+- HiveMind conversations show meaningful topics
 
 **Handoff:** `docs/handoffs/SESSION_435_DISCORD_RESEARCH_FORMATTING.md`
-
----
-
-## Session 434 Accomplishments
-
-### Discord-First Platform - Phase 5 (COMPLETE)
-
-Implemented full agent access via Discord, allowing users to execute tasks with any of the 27+ agents, consult 25 legendary advisors, and run multi-step workflows.
-
-**New Discord Commands (6):**
-| Command | Description |
-|---------|-------------|
-| `/agent-list [category]` | List agents by category (creative, executive, research, etc.) |
-| `/agent-task <name> <task>` | Execute a task with a specific agent |
-| `/advisors` | List all 25 legendary advisors |
-| `/consult <advisor> <question>` | Consult an advisor (Warren Buffett, Elon Musk, etc.) |
-| `/workflow-list` | List available multi-step workflows |
-| `/workflow-run <name> <input>` | Run a workflow |
-
-**Total Discord Commands: 29**
-
----
-
-## Session 433 Accomplishments
-
-### Discord-First Platform - Phase 4 (COMPLETE)
-
-Implemented income pipeline commands allowing users to apply to opportunities and track their applications directly from Discord. Also fixed critical Celery queue backlog (9,056 stuck tasks) and triggered embedding catch-up (796 new embeddings).
-
-**New Discord Commands (2):**
-| Command | Description |
-|---------|-------------|
-| `/apply <id> [message]` | Apply to an opportunity by its ID |
-| `/track [status]` | Track your job applications (filter by status) |
-
-**Model Updates:**
-- Added `user_friendly_id` to Opportunity model (sequential: 1, 2, 3...)
-- Added `url` field to Opportunity for external links
-- Updated `/opportunities` to show IDs like `#1 - Title`
-
-**Files Modified:**
-- `core/models_unified_system.py` - Added user_friendly_id, url to Opportunity
-- `core/services/discord_bot.py` - Added /apply, /track commands
-- `docs/DISCORD_FIRST_ROADMAP.md` - Updated Phase 4 status
-- `docs/CAPABILITIES.md` - Added new commands (23 total)
 
 ---
 
@@ -81,18 +67,15 @@ Implemented income pipeline commands allowing users to apply to opportunities an
 
 | Component | Status | Count |
 |-----------|--------|-------|
-| Agents | Active | 28 clean + legacy |
+| **Agents** | **Active** | **31 clean + legacy** |
 | Dreams | Active | 2,080+ |
 | HiveMind Sessions | Working | 117+ |
 | Knowledge Sources | Active | 940+ |
 | Spider Data | Active | 12,250+ |
-| **Discord Bot Commands** | **Working** | **29** |
+| Discord Bot Commands | Working | 29 |
 | Discord User Linking | Active | Working |
-| Discord Auto-Delivery | Active | Working |
-| Discord Server Setup | Active | Working |
-| Discord Client Management | Active | Working |
-| **Discord Income Pipeline** | **COMPLETE** | **Phase 4 Done** |
 | User Profile System | Active | 24 questions |
+| **Development Agents** | **NEW** | **4** |
 | Migrations | Applied | 0086 |
 
 ---
@@ -104,8 +87,8 @@ Implemented income pipeline commands allowing users to apply to opportunities an
 | 1. Content Delivery | /gallery, /profile, /opportunities, auto-delivery | **DONE** |
 | 2. Server Setup Wizard | Auto-create channels from templates | **DONE** |
 | 3. Client Management | Per-client channels, delivery, invites | **DONE** |
-| 4. Income Pipeline | /apply, /track, user-friendly IDs | DONE |
-| **5. Full Agent Access** | **/agent-task, /consult, /workflow-run** | **DONE** |
+| 4. Income Pipeline | /apply, /track, user-friendly IDs | **DONE** |
+| 5. Full Agent Access | /agent-task, /consult, /workflow-run | **DONE** |
 | 6. Automation | Proactive notifications, digests | Pending |
 | 7. Monetization | Discord roles = subscription tiers | Pending |
 | 8. Advanced | Voice AI, white-label | Pending |
@@ -114,24 +97,30 @@ See `docs/DISCORD_FIRST_ROADMAP.md` for full details.
 
 ---
 
-## Session 436: Next Steps
+## Session 437: Next Steps
 
 ### Priority Tasks
 
-1. **Phase 6: Automation** (Recommended)
+1. **Test New Development Agents**
+   - Test CodeReviewAgent with real code
+   - Test CodeGeneratorAgent for Python/JS output
+   - Test DevOpsAgent for Dockerfile generation
+   - Add Discord shortcuts for dev agents (`/code`, `/review`, `/devops`)
+
+2. **Phase 6: Automation** (Recommended)
    - Proactive opportunity notifications to #opportunities
    - Daily/weekly digest commands
    - Smart alerts based on user profile
 
-2. **Test Session 435 Fixes**
-   - `/agent-task ResearchAgent "AI trends"` - Should show clickable results
-   - Trigger agent cycle to verify knowledge notifications are formatted
-   - Check HiveMind conversations for meaningful topics
+3. **Verify HuggingFace Learning**
+   - Check UserAgentLearning for ai_ml entries
+   - Run `force_agent_cycle` to trigger new learning
+   - Verify agents receive AI/ML knowledge in prompts
 
-3. **Optional Enhancements**
+4. **Optional Enhancements**
    - Add `/earnings` command for revenue summary
-   - Agent-specific shortcuts (`/cto`, `/design`, etc.)
-   - Improve error handling and response formatting
+   - Integrate dev agents with Discord (`/agent-task CodeReviewAgent "review this code"`)
+   - Create handoff document for Session 436
 
 ---
 
@@ -141,35 +130,34 @@ See `docs/DISCORD_FIRST_ROADMAP.md` for full details.
 # Read this file first!
 cat 00-START-NEXT-SESSION.md
 
-# Start services (with Discord token)
-export DISCORD_BOT_TOKEN="..."
+# Start services
 make start
 make celery
+
+# Optional: Discord bot
+export DISCORD_BOT_TOKEN="..."
 make discord-bot
 
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Phase 4 Income Pipeline
-/opportunities count:5       # View opportunities (note IDs like #1, #2)
-/apply 1                     # Apply to opportunity #1
-/track                       # See all your applications
-/track submitted             # Filter by status
-/help
+# Test new dev agents
+.venv/bin/python manage.py shell
+>>> from core.agents import CodeReviewAgent
+>>> agent = CodeReviewAgent()
+>>> result = agent.execute("Review this: def foo(): pass", {}, {}, {})
+>>> print(result.message)
 ```
 
 ---
 
-## Discord Channel IDs (Main Server)
+## Recent Commits (Session 436)
 
-| Channel | ID | Purpose |
-|---------|-----|---------|
-| #gallery | 1449059813765021859 | Image delivery |
-| #profile | 1449059839581098135 | Profile info |
-| #opportunities | 1448867150948335777 | Job alerts |
-| #agent-dreams | 1448809858274033684 | Agent dreams |
-| #agent-conversations | 1448809914783895583 | HiveMind sessions |
-| #system-status | 1448809955326169149 | System updates |
+```
+2f5c581 docs(Session 436): Update documentation for 4 new Development Agents
+8f46da4 feat(Session 436): Improve HuggingFace learning loop in spider_data_bridge
+c8ff9e9 feat(Session 436): Add 4 new coding/development agents
+```
 
 ---
 
@@ -180,8 +168,8 @@ open http://localhost:8000/ai-studio/
 | Interactive | `/ask`, `/create`, `/research`, `/clear` |
 | System | `/status`, `/spiders` |
 | Agents | `/agents`, `/agent`, `/agent-list`, `/agent-task` |
-| **Advisors** | `/advisors`, `/consult` |
-| **Workflows** | `/workflow-list`, `/workflow-run` |
+| Advisors | `/advisors`, `/consult` |
+| Workflows | `/workflow-list`, `/workflow-run` |
 | Data | `/trending` |
 | Content | `/gallery`, `/profile` |
 | Income Pipeline | `/opportunities`, `/apply`, `/track` |
@@ -189,6 +177,27 @@ open http://localhost:8000/ai-studio/
 | Server Setup | `/setup`, `/server-info` |
 | Client Mgmt | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` |
 | Help | `/help` |
+
+---
+
+## Agent Count Summary
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| Creation | 4 | ImageAgent, VideoAgent, AudioAgent, ThreeDAgent |
+| Editing | 2 | ImageEditingAgent, VideoEditingAgent |
+| Research | 1 | ResearchAgent |
+| Strategy | 4 | ContentStrategyAgent, BrandIdentityAgent, SEOOptimizerAgent, SocialMediaAgent |
+| Executive | 4 | CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent |
+| Analysis | 3 | TrendAnalysisAgent, OpportunityScoringAgent, MarketIntelligenceAgent |
+| Training | 2 | CharacterTrainingAgent, TrainedCreationAgent |
+| Security | 1 | MemoryIsolationAgent |
+| Business | 5 | CompetitorAnalysisAgent, CustomerResearchAgent, BrandStrategyAgent, MarketingStrategyAgent, BusinessContentStrategyAgent |
+| **Development** | **4** | **CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent** |
+| Orchestration | 4 | WorkflowAgent, WorkflowOrchestrationAgent, OpportunityPipelineAgent, ContentExecutorAgent |
+| Entry Point | 1 | PersonalAssistantAgent |
+| Legal | 1 | LegalDocDrafterAgent |
+| **TOTAL** | **36** | (31 in core/agents, some in subpackages) |
 
 ---
 
