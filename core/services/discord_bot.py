@@ -1,5 +1,5 @@
 """
-Discord Bot Service - Sessions 426-437
+Discord Bot Service - Sessions 426-438
 
 Interactive Discord bot with slash commands for system monitoring and data access.
 
@@ -41,6 +41,10 @@ Session 434 Commands (Phase 5: Full Agent Access):
 Session 437 Commands (Phase 6: Automation):
 - /digest [period] - Get daily/weekly activity digest
 - /alerts [action] - Manage proactive opportunity alerts
+
+Session 438 Commands (Phase 7: Monetization):
+- /subscribe <tier> - Subscribe to Pro or Premium tier
+- /tier - View your subscription tier and daily usage
 
 Usage:
     # Run the bot
@@ -2186,6 +2190,222 @@ class ContentCommands(commands.Cog):
             logger.error(f"/alerts command error: {e}")
             await interaction.followup.send(
                 f"Error managing alerts: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    # ========== SESSION 438: SUBSCRIPTION COMMANDS ==========
+
+    @app_commands.command(name="subscribe", description="Subscribe to Pro or Premium for more features")
+    @app_commands.describe(tier="Subscription tier to subscribe to")
+    @app_commands.choices(tier=[
+        app_commands.Choice(name="Pro ($9.99/mo) - 50 tasks/day, priority alerts", value="pro"),
+        app_commands.Choice(name="Premium ($29.99/mo) - Unlimited, all features", value="premium"),
+    ])
+    async def subscribe(self, interaction: discord.Interaction, tier: str):
+        """Subscribe to a paid tier for more features."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            if not user:
+                await interaction.followup.send(
+                    "❌ You need to link your Discord account first!\n\n"
+                    "Use `/link` to connect your AI Studio account, then try subscribing.",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def create_checkout(web_user, selected_tier):
+                from core.services.stripe_subscription import stripe_subscription_service
+                import asyncio
+
+                # Run the async function
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    result = loop.run_until_complete(
+                        stripe_subscription_service.create_checkout_session(
+                            web_user,
+                            selected_tier,
+                            success_url="https://localhost:8000/ai-studio/?subscription=success",
+                            cancel_url="https://localhost:8000/ai-studio/?subscription=canceled",
+                        )
+                    )
+                    return result
+                finally:
+                    loop.close()
+
+            checkout = await create_checkout(user, tier)
+
+            if checkout and checkout.get('url'):
+                tier_info = {
+                    'pro': {'name': 'Pro', 'price': '$9.99/mo', 'tasks': '50', 'features': ['Priority alerts', 'DM notifications']},
+                    'premium': {'name': 'Premium', 'price': '$29.99/mo', 'tasks': 'Unlimited', 'features': ['All alerts', 'Advisor access', 'Custom workflows']},
+                }
+                info = tier_info.get(tier, tier_info['pro'])
+
+                embed = discord.Embed(
+                    title=f"🎉 Subscribe to {info['name']}",
+                    description=f"Click the link below to complete your subscription!",
+                    color=discord.Color.gold() if tier == 'premium' else discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Price", value=info['price'], inline=True)
+                embed.add_field(name="Daily Tasks", value=info['tasks'], inline=True)
+                embed.add_field(name="Features", value="\n".join(f"✅ {f}" for f in info['features']), inline=False)
+                embed.add_field(
+                    name="🔗 Checkout Link",
+                    value=f"[Click here to subscribe]({checkout['url']})",
+                    inline=False
+                )
+                embed.set_footer(text="Secure payment via Stripe • Cancel anytime")
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.followup.send(
+                    "❌ Could not create checkout session. Please try again later.",
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            logger.error(f"/subscribe command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="tier", description="View your subscription tier and usage")
+    async def tier(self, interaction: discord.Interaction):
+        """View your current subscription tier and daily usage."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            @sync_to_async
+            def get_tier_info(web_user):
+                if not web_user:
+                    return {'tier': 'free', 'linked': False}
+
+                from core.models import EnhancedUserProfile
+
+                profile, _ = EnhancedUserProfile.objects.get_or_create(user=web_user)
+
+                can_use, message = profile.can_use_task()
+                limits = profile.get_tier_limits()
+
+                return {
+                    'linked': True,
+                    'tier': profile.subscription_tier,
+                    'status': profile.subscription_status,
+                    'daily_tasks': profile.daily_task_count,
+                    'daily_limit': limits['daily_tasks'],
+                    'priority_alerts': limits['priority_alerts'],
+                    'dm_notifications': limits['dm_notifications'],
+                    'advisor_access': limits['advisor_access'],
+                    'custom_workflows': limits['custom_workflows'],
+                    'discord_role': limits['discord_role'],
+                    'price': limits['price'],
+                    'can_use_task': can_use,
+                    'task_message': message,
+                    'ends_at': profile.subscription_ends_at,
+                }
+
+            info = await get_tier_info(user)
+
+            if not info.get('linked'):
+                # Show tiers for non-linked users
+                embed = discord.Embed(
+                    title="📊 Subscription Tiers",
+                    description="Link your account with `/link` to see your subscription.",
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(
+                    name="🆓 Free",
+                    value="• 5 tasks/day\n• Basic alerts\n• Standard support",
+                    inline=True
+                )
+                embed.add_field(
+                    name="⭐ Pro ($9.99/mo)",
+                    value="• 50 tasks/day\n• Priority alerts\n• DM notifications",
+                    inline=True
+                )
+                embed.add_field(
+                    name="👑 Premium ($29.99/mo)",
+                    value="• Unlimited tasks\n• All alerts\n• Advisor access\n• Custom workflows",
+                    inline=True
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            # Tier colors and emojis
+            tier_styles = {
+                'free': {'color': discord.Color.greyple(), 'emoji': '🆓', 'name': 'Free'},
+                'pro': {'color': discord.Color.blue(), 'emoji': '⭐', 'name': 'Pro'},
+                'premium': {'color': discord.Color.gold(), 'emoji': '👑', 'name': 'Premium'},
+            }
+            style = tier_styles.get(info['tier'], tier_styles['free'])
+
+            embed = discord.Embed(
+                title=f"{style['emoji']} Your Subscription: {style['name']}",
+                color=style['color'],
+                timestamp=datetime.now()
+            )
+
+            # Usage bar
+            if info['daily_limit'] == -1:
+                usage_text = f"**{info['daily_tasks']}** tasks used (Unlimited)"
+            else:
+                pct = int((info['daily_tasks'] / info['daily_limit']) * 100) if info['daily_limit'] > 0 else 0
+                bar_filled = int(pct / 10)
+                bar = "█" * bar_filled + "░" * (10 - bar_filled)
+                usage_text = f"**{info['daily_tasks']}/{info['daily_limit']}** tasks [{bar}] {pct}%"
+
+            embed.add_field(name="📊 Daily Usage", value=usage_text, inline=False)
+
+            # Features
+            features = []
+            features.append(f"{'✅' if info['priority_alerts'] else '❌'} Priority Alerts")
+            features.append(f"{'✅' if info['dm_notifications'] else '❌'} DM Notifications")
+            features.append(f"{'✅' if info['advisor_access'] else '❌'} Advisor Access")
+            features.append(f"{'✅' if info['custom_workflows'] else '❌'} Custom Workflows")
+
+            embed.add_field(name="🎁 Features", value="\n".join(features), inline=True)
+
+            # Status
+            status_text = info['status'].title()
+            if info.get('ends_at'):
+                status_text += f"\n(Ends: {info['ends_at'].strftime('%Y-%m-%d')})"
+
+            embed.add_field(name="📌 Status", value=status_text, inline=True)
+
+            # Discord role
+            if info['discord_role']:
+                embed.add_field(name="🎭 Discord Role", value=info['discord_role'], inline=True)
+
+            # Upgrade prompt for free/pro users
+            if info['tier'] == 'free':
+                embed.add_field(
+                    name="⬆️ Upgrade",
+                    value="Use `/subscribe pro` or `/subscribe premium` for more features!",
+                    inline=False
+                )
+            elif info['tier'] == 'pro':
+                embed.add_field(
+                    name="⬆️ Go Premium",
+                    value="Use `/subscribe premium` for unlimited tasks & advisor access!",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/tier command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
                 ephemeral=True
             )
 

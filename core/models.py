@@ -1610,6 +1610,78 @@ class EnhancedUserProfile(models.Model):
         help_text="Timestamp of last proactive alert sent"
     )
 
+    # ========== SESSION 438: SUBSCRIPTION & MONETIZATION ==========
+    SUBSCRIPTION_TIERS = [
+        ('free', 'Free'),
+        ('pro', 'Pro ($9.99/mo)'),
+        ('premium', 'Premium ($29.99/mo)'),
+    ]
+
+    SUBSCRIPTION_STATUS = [
+        ('active', 'Active'),
+        ('canceled', 'Canceled'),
+        ('past_due', 'Past Due'),
+        ('trialing', 'Trialing'),
+        ('incomplete', 'Incomplete'),
+    ]
+
+    subscription_tier = models.CharField(
+        max_length=20,
+        choices=SUBSCRIPTION_TIERS,
+        default='free',
+        help_text="User's subscription tier"
+    )
+
+    stripe_customer_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Stripe customer ID for billing"
+    )
+
+    stripe_subscription_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Stripe subscription ID for recurring billing"
+    )
+
+    subscription_status = models.CharField(
+        max_length=20,
+        choices=SUBSCRIPTION_STATUS,
+        default='active',
+        help_text="Current subscription status"
+    )
+
+    subscription_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When subscription started"
+    )
+
+    subscription_ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When subscription ends (for canceled subscriptions)"
+    )
+
+    discord_role_synced = models.BooleanField(
+        default=False,
+        help_text="Whether Discord role matches subscription tier"
+    )
+
+    # Usage tracking for tier limits
+    daily_task_count = models.IntegerField(
+        default=0,
+        help_text="Number of agent tasks used today"
+    )
+
+    daily_task_reset = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When daily task counter was last reset"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1730,6 +1802,82 @@ class EnhancedUserProfile(models.Model):
         }
 
         return days_since_update >= update_intervals.get(self.update_frequency, 7)
+
+    # ========== SESSION 438: SUBSCRIPTION METHODS ==========
+    def get_tier_limits(self) -> dict:
+        """Get feature limits for the user's subscription tier."""
+        tier_configs = {
+            'free': {
+                'daily_tasks': 5,
+                'priority_alerts': False,
+                'dm_notifications': False,
+                'advisor_access': False,
+                'custom_workflows': False,
+                'discord_role': None,
+                'price': 0,
+            },
+            'pro': {
+                'daily_tasks': 50,
+                'priority_alerts': True,
+                'dm_notifications': True,
+                'advisor_access': False,
+                'custom_workflows': False,
+                'discord_role': 'Pro Member',
+                'price': 9.99,
+            },
+            'premium': {
+                'daily_tasks': -1,  # Unlimited
+                'priority_alerts': True,
+                'dm_notifications': True,
+                'advisor_access': True,
+                'custom_workflows': True,
+                'discord_role': 'Premium Member',
+                'price': 29.99,
+            },
+        }
+        return tier_configs.get(self.subscription_tier, tier_configs['free'])
+
+    def can_use_task(self) -> tuple[bool, str]:
+        """Check if user can use another agent task today."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        limits = self.get_tier_limits()
+        daily_limit = limits['daily_tasks']
+
+        # Unlimited for premium
+        if daily_limit == -1:
+            return True, "Unlimited tasks available"
+
+        # Reset counter if it's a new day
+        now = timezone.now()
+        if self.daily_task_reset is None or self.daily_task_reset.date() < now.date():
+            self.daily_task_count = 0
+            self.daily_task_reset = now
+            self.save(update_fields=['daily_task_count', 'daily_task_reset'])
+
+        if self.daily_task_count >= daily_limit:
+            return False, f"Daily limit of {daily_limit} tasks reached. Upgrade to Pro or Premium for more!"
+
+        return True, f"{daily_limit - self.daily_task_count} tasks remaining today"
+
+    def use_task(self) -> bool:
+        """Increment task counter. Returns True if successful."""
+        can_use, _ = self.can_use_task()
+        if can_use:
+            self.daily_task_count += 1
+            self.save(update_fields=['daily_task_count'])
+            return True
+        return False
+
+    def has_feature(self, feature: str) -> bool:
+        """Check if user's tier includes a specific feature."""
+        limits = self.get_tier_limits()
+        return limits.get(feature, False)
+
+    def get_discord_role_name(self) -> str | None:
+        """Get the Discord role name for this subscription tier."""
+        return self.get_tier_limits().get('discord_role')
 
     def __str__(self):
         return f"{self.user.username} - {self.primary_role} ({self.profile_completeness:.0f}% complete)"
