@@ -29,7 +29,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **33 Commands + Monetization** | **Production (Session 438)** |
+| **Discord Integration** | **36 Commands + Voice AI** | **Production (Session 438)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
