@@ -75,6 +75,8 @@ class SpiderDataLearningLoop:
             'health': ['ResearchAgent', 'ContentStrategyAgent'],
             'science': ['ResearchAgent', 'TrendAnalysisAgent'],
             'business': ['OpportunityScoringAgent', 'CTOAgent', 'COOAgent'],
+            # Session 436: Added ai_ml category for HuggingFace and AI model data
+            'ai_ml': ['ResearchAgent', 'TrendAnalysisAgent', 'ImageAgent', 'VideoAgent', 'CTOAgent'],
         }
 
         data_type = spider_data.data_type.lower() if spider_data.data_type else 'general'
@@ -121,8 +123,11 @@ class SpiderDataLearningLoop:
                 'data_source_reliability': self._calculate_source_reliability(spider_data.spider_name),
                 'opportunity_potential': self._estimate_opportunity_potential(spider_data),
 
-                # Sample titles from items for context
-                'sample_items': [item.get('title', '')[:100] for item in items[:3]] if items else [],
+                # Sample items from data for context - use modelId for AI/ML data, title for others
+                'sample_items': [
+                    (item.get('modelId', '') or item.get('title', '') or item.get('name', ''))[:100]
+                    for item in items[:3]
+                ] if items else [],
             }
 
             # Determine learning domain
@@ -286,6 +291,8 @@ class SpiderDataLearningLoop:
             'news': 'news_monitoring',
             'tool_discovery': 'tool_intelligence',
             'learning_resource': 'skill_development',
+            # Session 436: Added AI/ML domain for HuggingFace data
+            'ai_ml': 'ai_model_intelligence',
         }
 
         return mapping.get(data_type, 'general_intelligence')
