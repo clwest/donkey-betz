@@ -770,6 +770,14 @@ from core.views_neural_orchestra import (
 # Session 439: Stripe Webhook
 from core.views_stripe import stripe_webhook, subscription_status
 
+# Session 440: Voice Marketplace
+from core.views_voice_marketplace import (
+    marketplace_browse, voice_detail, my_voices, publish_voice, unpublish_voice,
+    update_voice, generate_speech, preview_voice, add_review, earnings_summary,
+    transaction_history, create_voice_from_elevenlabs, start_clone_request,
+    clone_request_status,
+)
+
 from core import views_portfolio
 from core.views_profile import (
     ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
@@ -2680,6 +2688,22 @@ urlpatterns = [
     # Session 439: Stripe Subscription Webhook
     path('api/stripe/webhook/', stripe_webhook, name='stripe-webhook'),
     path('api/stripe/subscription-status/', subscription_status, name='stripe-subscription-status'),
+
+    # Session 440: Voice Marketplace API
+    path('api/voice-marketplace/', marketplace_browse, name='voice-marketplace-browse'),
+    path('api/voice-marketplace/my-voices/', my_voices, name='voice-marketplace-my-voices'),
+    path('api/voice-marketplace/earnings/', earnings_summary, name='voice-marketplace-earnings'),
+    path('api/voice-marketplace/transactions/', transaction_history, name='voice-marketplace-transactions'),
+    path('api/voice-marketplace/create/', create_voice_from_elevenlabs, name='voice-marketplace-create'),
+    path('api/voice-marketplace/clone/start/', start_clone_request, name='voice-clone-start'),
+    path('api/voice-marketplace/clone/<uuid:request_id>/status/', clone_request_status, name='voice-clone-status'),
+    path('api/voice-marketplace/<uuid:voice_id>/', voice_detail, name='voice-marketplace-detail'),
+    path('api/voice-marketplace/<uuid:voice_id>/publish/', publish_voice, name='voice-marketplace-publish'),
+    path('api/voice-marketplace/<uuid:voice_id>/unpublish/', unpublish_voice, name='voice-marketplace-unpublish'),
+    path('api/voice-marketplace/<uuid:voice_id>/update/', update_voice, name='voice-marketplace-update'),
+    path('api/voice-marketplace/<uuid:voice_id>/generate/', generate_speech, name='voice-marketplace-generate'),
+    path('api/voice-marketplace/<uuid:voice_id>/preview/', preview_voice, name='voice-marketplace-preview'),
+    path('api/voice-marketplace/<uuid:voice_id>/reviews/', add_review, name='voice-marketplace-add-review'),
 ]
 
 # Add WebSocket test endpoint if available

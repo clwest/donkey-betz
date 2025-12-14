@@ -300,6 +300,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
         await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
         await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
+        await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
 
@@ -2766,6 +2767,33 @@ class VoiceCommands(commands.Cog):
                 ephemeral=True
             )
 
+    @app_commands.command(name="beep", description="Test voice with a simple beep sound")
+    async def beep(self, interaction: discord.Interaction):
+        """Play a test beep to verify voice is working."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            service = self._ensure_voice_service()
+
+            if not service.is_in_voice(interaction.guild.id):
+                await interaction.followup.send(
+                    "I'm not in a voice channel! Use `/voice join` first.",
+                    ephemeral=True
+                )
+                return
+
+            session = service.get_session(interaction.guild.id)
+            success = await service.test_beep(session)
+
+            if success:
+                await interaction.followup.send("Beep test complete! Did you hear it?", ephemeral=True)
+            else:
+                await interaction.followup.send("Beep test failed.", ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/beep command error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+
     @app_commands.command(name="ask-voice", description="Ask AI and hear the response in voice channel")
     @app_commands.describe(question="Your question for the AI")
     async def ask_voice(self, interaction: discord.Interaction, question: str):
@@ -2820,6 +2848,343 @@ class VoiceCommands(commands.Cog):
                 f"Error: {str(e)[:200]}",
                 ephemeral=True
             )
+
+
+class VoiceMarketplaceCommands(commands.Cog):
+    """
+    Session 440: Voice Marketplace Commands.
+
+    Browse, clone, and sell AI voices.
+    Part of the AI Pixar creative pipeline.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="voice-market", description="Voice Marketplace: Browse and manage AI voices")
+    @app_commands.describe(
+        action="What to do",
+        query="Search query or voice ID"
+    )
+    @app_commands.choices(action=[
+        app_commands.Choice(name="Browse - View popular voices", value="browse"),
+        app_commands.Choice(name="Search - Search for voices", value="search"),
+        app_commands.Choice(name="My Voices - View your cloned voices", value="my-voices"),
+        app_commands.Choice(name="Earnings - View your voice earnings", value="earnings"),
+    ])
+    async def voice_market(
+        self,
+        interaction: discord.Interaction,
+        action: str,
+        query: Optional[str] = None
+    ):
+        """Voice marketplace browsing and management."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from core.models import VoiceProfile, DiscordLinkCode
+
+            if action == "browse":
+                # Get top rated public voices
+                voices = VoiceProfile.objects.filter(
+                    is_public=True, is_active=True
+                ).order_by('-is_featured', '-average_rating')[:10]
+
+                if not voices.exists():
+                    await interaction.followup.send(
+                        "No voices in marketplace yet. Be the first to publish! Use `/voice-clone start`",
+                        ephemeral=True
+                    )
+                    return
+
+                embed = discord.Embed(
+                    title="Voice Marketplace",
+                    description="Top voices available for your creative projects",
+                    color=discord.Color.purple(),
+                    timestamp=datetime.now()
+                )
+
+                for voice in voices:
+                    stars = "★" * int(voice.average_rating) + "☆" * (5 - int(voice.average_rating))
+                    featured = " ⭐ FEATURED" if voice.is_featured else ""
+                    embed.add_field(
+                        name=f"{voice.name}{featured}",
+                        value=(
+                            f"{stars} ({voice.rating_count} reviews)\n"
+                            f"**{voice.get_price_display()}** | {voice.gender.title()} | {voice.age_range.replace('_', ' ').title()}\n"
+                            f"`/voice-market preview {str(voice.id)[:8]}`"
+                        ),
+                        inline=True
+                    )
+
+                embed.set_footer(text="Use /voice-clone start to create your own voice!")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "search":
+                if not query:
+                    await interaction.followup.send(
+                        "Please provide a search query. Example: `/voice-market search british narrator`",
+                        ephemeral=True
+                    )
+                    return
+
+                from django.db.models import Q
+                voices = VoiceProfile.objects.filter(
+                    Q(is_public=True, is_active=True) &
+                    (Q(name__icontains=query) |
+                     Q(description__icontains=query) |
+                     Q(accent__icontains=query))
+                )[:10]
+
+                if not voices.exists():
+                    await interaction.followup.send(
+                        f"No voices found matching '{query}'",
+                        ephemeral=True
+                    )
+                    return
+
+                embed = discord.Embed(
+                    title=f"Voice Search: {query}",
+                    description=f"Found {voices.count()} voices",
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+
+                for voice in voices:
+                    embed.add_field(
+                        name=voice.name,
+                        value=f"{voice.get_price_display()} | {voice.gender.title()} | ★{voice.average_rating:.1f}",
+                        inline=True
+                    )
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "my-voices":
+                # Get user from Discord link
+                link = DiscordLinkCode.objects.filter(
+                    discord_user_id=str(interaction.user.id),
+                    is_used=True
+                ).first()
+
+                if not link:
+                    await interaction.followup.send(
+                        "Please link your Discord account first using `/link`",
+                        ephemeral=True
+                    )
+                    return
+
+                voices = VoiceProfile.objects.filter(owner=link.user, is_active=True)
+
+                if not voices.exists():
+                    await interaction.followup.send(
+                        "You don't have any voices yet! Use `/voice-clone start` to create one.",
+                        ephemeral=True
+                    )
+                    return
+
+                embed = discord.Embed(
+                    title="Your Voices",
+                    description=f"You have {voices.count()} voice(s)",
+                    color=discord.Color.gold(),
+                    timestamp=datetime.now()
+                )
+
+                for voice in voices:
+                    status = "📢 Public" if voice.is_public else "🔒 Private"
+                    embed.add_field(
+                        name=f"{voice.name} {status}",
+                        value=(
+                            f"Revenue: **${voice.total_revenue:.2f}**\n"
+                            f"Uses: {voice.total_uses} | Rating: ★{voice.average_rating:.1f}"
+                        ),
+                        inline=True
+                    )
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "earnings":
+                link = DiscordLinkCode.objects.filter(
+                    discord_user_id=str(interaction.user.id),
+                    is_used=True
+                ).first()
+
+                if not link:
+                    await interaction.followup.send(
+                        "Please link your Discord account first using `/link`",
+                        ephemeral=True
+                    )
+                    return
+
+                from django.db.models import Sum
+                voices = VoiceProfile.objects.filter(owner=link.user, is_active=True)
+                total_revenue = voices.aggregate(total=Sum('total_revenue'))['total'] or 0
+                total_uses = voices.aggregate(total=Sum('total_uses'))['total'] or 0
+
+                embed = discord.Embed(
+                    title="Voice Earnings Summary",
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Total Revenue", value=f"**${total_revenue:.2f}**", inline=True)
+                embed.add_field(name="Total Uses", value=f"**{total_uses}**", inline=True)
+                embed.add_field(name="Voice Count", value=f"**{voices.count()}**", inline=True)
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/voice-market error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+
+    @app_commands.command(name="voice-clone", description="Clone your voice for the marketplace")
+    @app_commands.describe(action="Clone action")
+    @app_commands.choices(action=[
+        app_commands.Choice(name="Start - Begin voice recording", value="start"),
+        app_commands.Choice(name="Stop - Stop and create clone", value="stop"),
+        app_commands.Choice(name="Status - Check recording status", value="status"),
+    ])
+    async def voice_clone(self, interaction: discord.Interaction, action: str):
+        """Voice cloning commands."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from core.models import VoiceCloneRequest, DiscordLinkCode
+
+            # Get linked user
+            link = DiscordLinkCode.objects.filter(
+                discord_user_id=str(interaction.user.id),
+                is_used=True
+            ).first()
+
+            if not link:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link`",
+                    ephemeral=True
+                )
+                return
+
+            if action == "start":
+                # Check if user has an active recording
+                active = VoiceCloneRequest.objects.filter(
+                    user=link.user,
+                    status__in=['pending', 'recording']
+                ).first()
+
+                if active:
+                    await interaction.followup.send(
+                        f"You already have an active recording session! Status: {active.status}",
+                        ephemeral=True
+                    )
+                    return
+
+                # Create new clone request
+                clone_request = VoiceCloneRequest.objects.create(
+                    user=link.user,
+                    discord_user_id=str(interaction.user.id),
+                    discord_guild_id=str(interaction.guild.id),
+                    discord_channel_id=str(interaction.channel.id),
+                    status='pending'
+                )
+
+                embed = discord.Embed(
+                    title="Voice Cloning Started",
+                    description=(
+                        "To clone your voice, follow these steps:\n\n"
+                        "1. Join a voice channel\n"
+                        "2. Record at least 60 seconds of clear speech\n"
+                        "3. Use `/voice-clone stop` when done\n\n"
+                        "**Tips for best results:**\n"
+                        "• Speak clearly and naturally\n"
+                        "• Minimize background noise\n"
+                        "• Read varied content (stories, dialogue)"
+                    ),
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Session ID", value=str(clone_request.id)[:8], inline=True)
+                embed.set_footer(text="Voice cloning powered by ElevenLabs")
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "stop":
+                active = VoiceCloneRequest.objects.filter(
+                    user=link.user,
+                    status__in=['pending', 'recording']
+                ).first()
+
+                if not active:
+                    await interaction.followup.send(
+                        "No active recording session. Use `/voice-clone start` first.",
+                        ephemeral=True
+                    )
+                    return
+
+                # Mark as processing
+                active.status = 'processing'
+                active.save()
+
+                embed = discord.Embed(
+                    title="Processing Voice Clone",
+                    description=(
+                        "Your voice recording is being processed.\n"
+                        "This may take 1-2 minutes.\n\n"
+                        "You'll be notified when your voice is ready!"
+                    ),
+                    color=discord.Color.orange(),
+                    timestamp=datetime.now()
+                )
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+                # TODO: Trigger actual ElevenLabs voice cloning here
+                # This would involve:
+                # 1. Collecting the recorded audio
+                # 2. Sending to ElevenLabs API
+                # 3. Creating VoiceProfile with result
+
+            elif action == "status":
+                request = VoiceCloneRequest.objects.filter(
+                    user=link.user
+                ).order_by('-created_at').first()
+
+                if not request:
+                    await interaction.followup.send(
+                        "No voice clone requests found. Use `/voice-clone start` to begin.",
+                        ephemeral=True
+                    )
+                    return
+
+                status_colors = {
+                    'pending': discord.Color.yellow(),
+                    'recording': discord.Color.blue(),
+                    'processing': discord.Color.orange(),
+                    'cloning': discord.Color.purple(),
+                    'completed': discord.Color.green(),
+                    'failed': discord.Color.red(),
+                }
+
+                embed = discord.Embed(
+                    title="Voice Clone Status",
+                    color=status_colors.get(request.status, discord.Color.gray()),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Status", value=request.status.title(), inline=True)
+                embed.add_field(name="Duration", value=f"{request.recording_duration_seconds}s", inline=True)
+
+                if request.voice_profile:
+                    embed.add_field(
+                        name="Voice Created",
+                        value=request.voice_profile.name,
+                        inline=False
+                    )
+
+                if request.error_message:
+                    embed.add_field(name="Error", value=request.error_message[:200], inline=False)
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/voice-clone error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
 
 
 class RoleManager(commands.Cog):

@@ -26,6 +26,9 @@ from .projects import *
 # Import models from the unified system as well
 from ..models_unified_system import *
 
+# Import voice marketplace models (Session 440)
+from ..models_voice_marketplace import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -97,4 +100,10 @@ __all__ = [
 
     # Agent Dreams (Session 247)
     'AgentDream',
+
+    # Voice Marketplace (Session 440)
+    'VoiceProfile',
+    'VoiceTransaction',
+    'VoiceReview',
+    'VoiceCloneRequest',
 ]
