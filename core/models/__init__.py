@@ -32,6 +32,9 @@ from ..models_voice_marketplace import *
 # Import content pipeline models (Session 440)
 from ..models_content_pipeline import *
 
+# Import AI series models (Session 445)
+from ..models_ai_series import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -116,4 +119,12 @@ __all__ = [
     'ContentPurchase',
     'ContentShowroom',
     'ContentGenerationJob',
+
+    # AI Series (Session 445)
+    'AISeries',
+    'SeriesEpisode',
+    'SeriesCharacter',
+    'SeriesType',
+    'SeriesStatus',
+    'EpisodeStatus',
 ]
