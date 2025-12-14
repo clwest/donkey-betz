@@ -6344,18 +6344,38 @@ MAGISTRATE / JUDGE
 
         Session 404: Implements the Non-Party Rule Check.
         Session 405 Enhancement #1: AUTO-REWRITE third-party relief requests.
+        Session 419 Fix: Added judicial entity whitelist to prevent rewriting court orders.
 
         Courts CANNOT issue orders against people who are not parties to the case.
         Common mistake: Asking court to order girlfriend/boyfriend/grandparent to do something.
 
         NEW: Now automatically rewrites problematic text like:
           "Camille shall not..." → "Respondent shall ensure that Camille does not..."
+
+        Session 419: CRITICAL - DO NOT rewrite judicial content like:
+          "Magistrate shall not be altered" (from court order)
+          "The Court finds..." (judge's ruling)
         """
         non_parties_found = []
         corrections = []
         auto_rewrites = []  # Session 405: Store auto-rewrite transformations
 
         motion_lower = motion_text.lower()
+
+        # =========================================================================
+        # Session 419: PRE-FILTER - Skip judicial/denial order content entirely
+        # This prevents the system from trying to "fix" the judge's own language
+        # =========================================================================
+        if self._is_denial_order_content(motion_text):
+            logger.info("SESSION 419: Skipping non-party check - content is from denial order")
+            return {
+                'has_issues': False,
+                'non_parties': [],
+                'analysis': '',
+                'corrections': [],
+                'auto_rewrites': [],
+                'skipped_reason': 'denial_order_content'
+            }
 
         # Check for non-party indicators
         for indicator in NON_PARTY_INDICATORS:
@@ -6365,8 +6385,26 @@ MAGISTRATE / JUDGE
         # =========================================================================
         # Session 405 Enhancement #1: AUTO-REWRITE patterns
         # Find EXACT problematic text and generate corrected version
+        # Session 419: Added judicial entity whitelist to prevent rewriting court orders
         # =========================================================================
         import re
+
+        # Session 419: Expanded whitelist to include judicial entities
+        # These should NEVER be rewritten - they are parties or judicial officials
+        PARTY_AND_JUDICIAL_WHITELIST = [
+            # Parties to the case
+            'petitioner', 'respondent', 'father', 'mother', 'the court', 'court',
+            # Judicial entities (Session 419 fix)
+            'magistrate', 'judge', 'justice', 'honorable', 'commissioner',
+            # Court-appointed professionals
+            'gal', 'clr', 'guardian', 'guardian ad litem', 'child representative',
+            # Experts and officials
+            'expert', 'evaluator', 'mediator', 'arbitrator', 'officer',
+            # Legal/procedural terms that appear in judicial rulings
+            'findings', 'order', 'ruling', 'determination', 'record', 'evidence',
+            # Statutory references
+            'section', 'statute', 'rule', 'crm', 'crs',
+        ]
 
         # Pattern 1: "[Name] shall not [action]" → "Respondent shall ensure that [Name] does not [action]"
         shall_not_pattern = re.compile(
@@ -6376,8 +6414,8 @@ MAGISTRATE / JUDGE
         for match in shall_not_pattern.finditer(motion_text):
             name = match.group(1).strip()
             action = match.group(2).strip()
-            # Check if this name is a non-party (not Petitioner/Respondent/Father/Mother)
-            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+            # Check if this name is a non-party (Session 419: expanded whitelist)
+            if name.lower() not in PARTY_AND_JUDICIAL_WHITELIST:
                 original = match.group(0)
                 corrected = f"Respondent shall ensure that {name} does not {action}"
                 auto_rewrites.append({
@@ -6397,7 +6435,7 @@ MAGISTRATE / JUDGE
         for match in must_not_pattern.finditer(motion_text):
             name = match.group(1).strip()
             action = match.group(2).strip()
-            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+            if name.lower() not in PARTY_AND_JUDICIAL_WHITELIST:
                 original = match.group(0)
                 corrected = f"Respondent shall ensure that {name} does not {action}"
                 auto_rewrites.append({
@@ -6417,7 +6455,7 @@ MAGISTRATE / JUDGE
         for match in order_to_pattern.finditer(motion_text):
             name = match.group(1).strip()
             action = match.group(2).strip()
-            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+            if name.lower() not in PARTY_AND_JUDICIAL_WHITELIST:
                 original = match.group(0)
                 # Reframe as directing the party to ensure the non-party behavior
                 corrected = f"Order Respondent to ensure that {name} [complies with appropriate conduct during parenting time]"
@@ -6438,7 +6476,7 @@ MAGISTRATE / JUDGE
         for match in require_to_pattern.finditer(motion_text):
             name = match.group(1).strip()
             action = match.group(2).strip()
-            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+            if name.lower() not in PARTY_AND_JUDICIAL_WHITELIST:
                 original = match.group(0)
                 corrected = f"Require Respondent to ensure that {name} {action}"
                 auto_rewrites.append({
@@ -6459,7 +6497,7 @@ MAGISTRATE / JUDGE
         for match in prohibit_pattern.finditer(motion_text):
             name = match.group(1).strip()
             action = match.group(2).strip()
-            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+            if name.lower() not in PARTY_AND_JUDICIAL_WHITELIST:
                 original = match.group(0)
                 # Convert gerund to proper form: "being present" → "is not present"
                 corrected = f"Order Respondent to ensure that {name} is not {action}"
@@ -6480,7 +6518,7 @@ MAGISTRATE / JUDGE
         for match in is_ordered_pattern.finditer(motion_text):
             name = match.group(1).strip()
             action = match.group(2).strip()
-            if name.lower() not in ['petitioner', 'respondent', 'father', 'mother', 'the court', 'court']:
+            if name.lower() not in PARTY_AND_JUDICIAL_WHITELIST:
                 original = match.group(0)
                 corrected = f"Respondent is ordered to ensure that {name} {action}"
                 auto_rewrites.append({

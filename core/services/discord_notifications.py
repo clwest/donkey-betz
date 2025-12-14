@@ -38,6 +38,8 @@ class DiscordNotificationService:
     CHANNEL_LEARNING = "1448819275459465257"  # Dedicated agent learning channel
     CHANNEL_BOARDROOM = "1448819855557136595"  # Boardroom decisions channel
     CHANNEL_OPPORTUNITIES = "1448867150948335777"  # Session 424: High-value opportunity alerts
+    CHANNEL_GALLERY = "1449059813765021859"  # Session 430: User gallery for image delivery
+    CHANNEL_PROFILE = "1449059839581098135"  # Session 430: User profile channel
 
     # Discord API base URL
     API_BASE = "https://discord.com/api/v10"
@@ -771,6 +773,182 @@ class DiscordNotificationService:
             decision_type="policy",
             impact="low"
         )
+
+        return results
+
+    # =========================================================================
+    # Session 430: Image Delivery to Gallery
+    # =========================================================================
+
+    def send_image_to_gallery(self, username: str, prompt: str, image_url: str,
+                               image_id: int = None, model: str = "Unknown",
+                               generation_time: float = 0, discord_user_id: str = None) -> bool:
+        """
+        Send a generated image to the #gallery channel (Session 430: Discord-First).
+
+        This notifies the gallery channel when any user creates an image.
+        For personalized delivery, use send_image_to_user() instead.
+
+        Args:
+            username: Username of the creator
+            prompt: The prompt used to generate the image
+            image_url: Full URL to the image
+            image_id: Database ID of the image (for reference)
+            model: Model used for generation
+            generation_time: Time taken to generate (seconds)
+            discord_user_id: Optional Discord user ID to mention
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Truncate prompt for title
+        prompt_preview = prompt[:100] + "..." if len(prompt) > 100 else prompt
+
+        # Build embed with image
+        embed = {
+            "title": f"🎨 New Creation",
+            "description": f"**Prompt:** {prompt_preview}",
+            "color": 0x9B59B6,  # Purple for creations
+            "author": {
+                "name": f"👤 {username}"
+            },
+            "image": {
+                "url": image_url
+            },
+            "fields": [
+                {"name": "🤖 Model", "value": model, "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Gallery"
+            }
+        }
+
+        # Add image ID for reference
+        if image_id:
+            embed["fields"].append({"name": "🆔 ID", "value": f"#{image_id}", "inline": True})
+
+        # Add generation time if available
+        if generation_time > 0:
+            embed["fields"].append({"name": "⏱️ Time", "value": f"{generation_time:.1f}s", "inline": True})
+
+        # Add mention if discord_user_id provided
+        content = ""
+        if discord_user_id:
+            content = f"<@{discord_user_id}> Your image is ready!"
+
+        return self._send_message(self.CHANNEL_GALLERY, content, embed=embed)
+
+    def send_image_dm(self, discord_user_id: str, prompt: str, image_url: str,
+                       image_id: int = None, model: str = "Unknown") -> bool:
+        """
+        Send a generated image directly to a user's DMs (Session 430).
+
+        Args:
+            discord_user_id: Discord user ID to DM
+            prompt: The prompt used to generate the image
+            image_url: Full URL to the image
+            image_id: Database ID of the image
+            model: Model used for generation
+
+        Returns:
+            True if DM sent successfully
+        """
+        if not self.enabled:
+            logger.debug(f"Discord disabled, would DM {discord_user_id}")
+            return False
+
+        # First, create a DM channel with the user
+        dm_url = f"{self.API_BASE}/users/@me/channels"
+        dm_payload = {"recipient_id": discord_user_id}
+
+        try:
+            dm_response = requests.post(dm_url, headers=self._get_headers(), json=dm_payload, timeout=10)
+            if dm_response.status_code != 200:
+                logger.error(f"Failed to create DM channel: {dm_response.status_code} - {dm_response.text}")
+                return False
+
+            dm_channel_id = dm_response.json().get("id")
+            if not dm_channel_id:
+                logger.error("No DM channel ID returned")
+                return False
+
+            # Build embed
+            prompt_preview = prompt[:100] + "..." if len(prompt) > 100 else prompt
+            embed = {
+                "title": f"🎨 Your Image is Ready!",
+                "description": f"**Prompt:** {prompt_preview}",
+                "color": 0x2ECC71,  # Green for success
+                "image": {
+                    "url": image_url
+                },
+                "fields": [
+                    {"name": "🤖 Model", "value": model, "inline": True},
+                ],
+                "footer": {
+                    "text": "AI Studio • Use /gallery to see all your creations"
+                }
+            }
+
+            if image_id:
+                embed["fields"].append({"name": "🆔 ID", "value": f"#{image_id}", "inline": True})
+
+            # Send the DM
+            return self._send_message(dm_channel_id, "", embed=embed)
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to send image DM: {e}")
+            return False
+
+    def deliver_image_to_user(self, user, image_url: str, prompt: str,
+                               image_id: int = None, model: str = "Unknown",
+                               generation_time: float = 0) -> dict:
+        """
+        Deliver an image to a user via Discord (Session 430).
+
+        This is the main method to call after image generation.
+        It will:
+        1. Post to #gallery channel (public)
+        2. Send DM to user if they have Discord linked
+
+        Args:
+            user: Django User object (must have discord_id attribute)
+            image_url: Full URL to the image
+            prompt: The generation prompt
+            image_id: Database ID
+            model: Model used
+            generation_time: Generation time in seconds
+
+        Returns:
+            dict with 'gallery' and 'dm' keys indicating success
+        """
+        results = {"gallery": False, "dm": False}
+
+        discord_user_id = getattr(user, 'discord_id', None) if user else None
+        username = getattr(user, 'username', 'Anonymous') if user else 'Anonymous'
+
+        # Always post to gallery channel
+        results["gallery"] = self.send_image_to_gallery(
+            username=username,
+            prompt=prompt,
+            image_url=image_url,
+            image_id=image_id,
+            model=model,
+            generation_time=generation_time,
+            discord_user_id=discord_user_id
+        )
+
+        # Send DM if user has Discord linked
+        if discord_user_id:
+            results["dm"] = self.send_image_dm(
+                discord_user_id=discord_user_id,
+                prompt=prompt,
+                image_url=image_url,
+                image_id=image_id,
+                model=model
+            )
+            logger.info(f"Image delivered to Discord user {discord_user_id}: gallery={results['gallery']}, dm={results['dm']}")
+        else:
+            logger.debug(f"User {username} has no Discord linked, skipping DM")
 
         return results
 

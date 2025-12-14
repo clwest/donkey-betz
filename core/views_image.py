@@ -455,6 +455,30 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             # Don't fail image creation if contribution tracking fails
 
         logger.info(f"✅ Saved to history: {image_type} - {history.filename} (ID: {history.id})")
+
+        # Session 430: Auto-deliver to Discord if user has linked account
+        try:
+            from core.services.discord_notifications import discord_notify
+            # Build the full image URL
+            if history.image_url:
+                image_url = history.image_url
+                if image_url.startswith('/media/'):
+                    image_url = f"http://localhost:8000{image_url}"
+                elif not image_url.startswith('http'):
+                    image_url = f"http://localhost:8000/media/{image_url}"
+
+                # Deliver to Discord (gallery channel + DM if linked)
+                discord_notify.deliver_image_to_user(
+                    user=user,
+                    image_url=image_url,
+                    prompt=prompt or 'No prompt',
+                    image_id=history.id,
+                    model=model_used or 'Unknown'
+                )
+        except Exception as discord_error:
+            logger.warning(f"Discord delivery failed (non-fatal): {discord_error}")
+            # Don't fail image creation if Discord delivery fails
+
         return history
 
     except Exception as e:

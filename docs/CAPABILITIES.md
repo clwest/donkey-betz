@@ -531,6 +531,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/voice` | List available AI voices | Voice |
 | `/speak <text> [voice]` | Generate voice audio | Voice |
 | `/ask-voice <question> [voice]` | Ask with spoken response | Voice |
+| `/voice-ask <question> [agent] [voice]` | Ask any agent, hear response in your cloned voice | Voice (S442) |
 | `/voice-market [action]` | Browse/search voice marketplace | Voice (S440) |
 | `/voice-clone [action]` | Clone your voice | Voice (S440) |
 | `/create-content <tier> <prompt>` | AI Content Factory - create packages | Content (S440) |

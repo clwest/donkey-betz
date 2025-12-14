@@ -979,10 +979,10 @@ def learning_stats(request):
         agent_memories = AgentMemory.objects.count()
         knowledge_sources = AgentKnowledgeSource.objects.count()
 
-        # Count agents by type (clean architecture vs legacy)
-        # Clean agents are in core/agents/, legacy are in agents/
-        clean_agents = 11  # Clean architecture agents (Session 268-270)
-        deprecated_agents = 14  # Legacy agents with learning hooks (Session 305-308)
+        # Session 417: Count agents from database (not hardcoded)
+        # Note: Agent is already imported at the top of this file
+        clean_agents = Agent.objects.filter(is_active=True).count()
+        deprecated_agents = 0  # No longer tracking legacy counts
 
         return Response({
             'success': True,

@@ -169,19 +169,15 @@ class Command(BaseCommand):
                         # Session 419: Send Discord notification
                         try:
                             from core.services.discord_notifications import discord_notify
-                            result = discord_notify.send_dream(
+                            discord_notify.send_dream(
                                 agent_name=agent.name,
                                 dream_title=title,
                                 dream_content=dream_content,
                                 dream_type=dream_type,
                                 vividness=vividness
                             )
-                            if result:
-                                self.stdout.write(self.style.SUCCESS(f"    📢 Discord: dream posted"))
-                            else:
-                                self.stdout.write(self.style.WARNING(f"    ⚠️ Discord: failed to post dream"))
-                        except Exception as discord_err:
-                            self.stdout.write(self.style.WARNING(f"    ⚠️ Discord error: {discord_err}"))
+                        except Exception:
+                            pass  # Don't fail the cycle if Discord is down
 
                     except Exception as e:
                         self.stdout.write(self.style.ERROR(f"  Error creating dream: {e}"))
@@ -378,19 +374,15 @@ class Command(BaseCommand):
                     # Session 419: Send Discord notification
                     try:
                         from core.services.discord_notifications import discord_notify
-                        result = discord_notify.send_knowledge(
+                        discord_notify.send_knowledge(
                             agent_name=agent.name,
                             title=title,
                             summary=knowledge_content,
                             knowledge_type='best_practice',
                             confidence=confidence
                         )
-                        if result:
-                            self.stdout.write(self.style.SUCCESS(f"    📢 Discord: knowledge posted"))
-                        else:
-                            self.stdout.write(self.style.WARNING(f"    ⚠️ Discord: failed to post knowledge"))
-                    except Exception as discord_err:
-                        self.stdout.write(self.style.WARNING(f"    ⚠️ Discord error: {discord_err}"))
+                    except Exception:
+                        pass  # Don't fail the cycle if Discord is down
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"  Error creating knowledge: {e}"))
@@ -413,40 +405,5 @@ class Command(BaseCommand):
 
         if dry_run:
             self.stdout.write(self.style.WARNING(f"\n  [DRY RUN - No changes were made]"))
-
-        # =====================================================================
-        # BROADCAST TO WEB APP (WebSocket)
-        # =====================================================================
-        if not dry_run:
-            self.stdout.write(self.style.HTTP_INFO(f"\n{'='*40}"))
-            self.stdout.write(self.style.HTTP_INFO("  BROADCASTING TO WEB APP"))
-            self.stdout.write(self.style.HTTP_INFO(f"{'='*40}"))
-
-            broadcasts_sent = 0
-            try:
-                from core.tasks import broadcast_learning_status
-                broadcast_learning_status.delay()
-                broadcasts_sent += 1
-                self.stdout.write(self.style.SUCCESS(f"  📡 Learning feed: broadcast sent"))
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"  ⚠️ Learning feed: {e}"))
-
-            try:
-                from core.tasks import broadcast_evolution_status
-                broadcast_evolution_status.delay()
-                broadcasts_sent += 1
-                self.stdout.write(self.style.SUCCESS(f"  📡 Evolution status: broadcast sent"))
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"  ⚠️ Evolution status: {e}"))
-
-            try:
-                from core.tasks import broadcast_relationship_status
-                broadcast_relationship_status.delay()
-                broadcasts_sent += 1
-                self.stdout.write(self.style.SUCCESS(f"  📡 Relationships: broadcast sent"))
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"  ⚠️ Relationships: {e}"))
-
-            self.stdout.write(f"\n  Total broadcasts: {broadcasts_sent}")
 
         self.stdout.write("")
