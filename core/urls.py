@@ -767,6 +767,9 @@ from core.views_neural_orchestra import (
     neural_orchestra_websocket_bridge,
     neural_orchestra_debug_info
 )
+# Session 439: Stripe Webhook
+from core.views_stripe import stripe_webhook, subscription_status
+
 from core import views_portfolio
 from core.views_profile import (
     ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
@@ -789,6 +792,11 @@ from core.views_unified_assistant import (
 from core.views_enhanced_profile import (
     get_enhanced_profile, update_enhanced_profile,
     get_user_memories, get_profile_suggestions
+)
+# Session 430: Import Interview views
+from core.views_interview import (
+    start_interview, respond_interview, interview_status,
+    resume_interview, get_user_profile_summary
 )
 # Import Unified Bridge views for REAL money-making functionality
 from core.views_unified_bridge import (
@@ -1858,6 +1866,13 @@ urlpatterns = [
     path('api/profile/memories/', get_user_memories, name='user-memories'),
     path('api/profile/suggestions/', get_profile_suggestions, name='profile-suggestions'),
 
+    # Session 430: User Interview System
+    path('api/interview/start/', start_interview, name='interview-start'),
+    path('api/interview/respond/', respond_interview, name='interview-respond'),
+    path('api/interview/status/', interview_status, name='interview-status'),
+    path('api/interview/resume/', resume_interview, name='interview-resume'),
+    path('api/profile/summary/', get_user_profile_summary, name='profile-summary'),
+
     # ===== UNIFIED BRIDGE: REAL MONEY-MAKING ENDPOINTS =====
     # These endpoints connect all components and enable actual revenue generation
     path('api/bridge/profile/sync/', sync_user_profile, name='bridge-profile-sync'),
@@ -2661,6 +2676,10 @@ urlpatterns = [
     # TEST ROUTE DONE HERE line 973
     # REST framework browsable API (development only)
     path('api-auth/', include('rest_framework.urls')),
+
+    # Session 439: Stripe Subscription Webhook
+    path('api/stripe/webhook/', stripe_webhook, name='stripe-webhook'),
+    path('api/stripe/subscription-status/', subscription_status, name='stripe-subscription-status'),
 ]
 
 # Add WebSocket test endpoint if available

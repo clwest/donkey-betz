@@ -70,7 +70,7 @@ from dataclasses import dataclass, field
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
@@ -300,6 +300,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
         await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
         await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
+        await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
 
         # Sync slash commands with Discord
@@ -2415,6 +2416,145 @@ class ContentCommands(commands.Cog):
                 ephemeral=True
             )
 
+    # Session 439: Subscription management commands
+    @app_commands.command(name="cancel", description="Cancel your subscription")
+    async def cancel(self, interaction: discord.Interaction):
+        """Cancel the user's subscription at end of billing period."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from django.contrib.auth import get_user_model
+            from core.models import EnhancedUserProfile
+            from core.services.stripe_subscription import cancel_subscription
+
+            User = get_user_model()
+
+            @sync_to_async
+            def get_user_profile(discord_id):
+                user = User.objects.filter(discord_id=str(discord_id)).first()
+                if not user:
+                    return None, None
+                profile = EnhancedUserProfile.objects.filter(user=user).first()
+                return user, profile
+
+            user, profile = await get_user_profile(interaction.user.id)
+
+            if not user:
+                await interaction.followup.send(
+                    "Please link your account first with `/link`.",
+                    ephemeral=True
+                )
+                return
+
+            if not profile or profile.subscription_tier == 'free':
+                await interaction.followup.send(
+                    "You don't have an active subscription to cancel.",
+                    ephemeral=True
+                )
+                return
+
+            # Cancel subscription
+            success = await cancel_subscription(user, at_period_end=True)
+
+            if success:
+                embed = discord.Embed(
+                    title="Subscription Cancellation Scheduled",
+                    description=(
+                        f"Your **{profile.subscription_tier.title()}** subscription "
+                        "will be canceled at the end of your current billing period.\n\n"
+                        "You'll continue to have access until then."
+                    ),
+                    color=discord.Color.orange()
+                )
+                embed.add_field(
+                    name="Changed your mind?",
+                    value="Use `/subscribe` to resubscribe anytime!",
+                    inline=False
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.followup.send(
+                    "Failed to cancel subscription. Please try again or contact support.",
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            logger.error(f"/cancel command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="billing", description="Access your billing portal")
+    async def billing(self, interaction: discord.Interaction):
+        """Get link to Stripe Customer Portal for billing management."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from django.contrib.auth import get_user_model
+            from core.models import EnhancedUserProfile
+            from core.services.stripe_subscription import stripe_subscription_service
+
+            User = get_user_model()
+
+            @sync_to_async
+            def get_user_profile(discord_id):
+                user = User.objects.filter(discord_id=str(discord_id)).first()
+                if not user:
+                    return None, None
+                profile = EnhancedUserProfile.objects.filter(user=user).first()
+                return user, profile
+
+            user, profile = await get_user_profile(interaction.user.id)
+
+            if not user:
+                await interaction.followup.send(
+                    "Please link your account first with `/link`.",
+                    ephemeral=True
+                )
+                return
+
+            if not profile or not profile.stripe_customer_id:
+                await interaction.followup.send(
+                    "No billing history found. Subscribe first with `/subscribe`.",
+                    ephemeral=True
+                )
+                return
+
+            # Get billing portal URL
+            portal_url = await stripe_subscription_service.get_billing_portal_url(
+                user,
+                return_url="https://discord.com/channels/@me"
+            )
+
+            if portal_url:
+                embed = discord.Embed(
+                    title="Billing Portal",
+                    description=(
+                        "Manage your subscription, update payment methods, "
+                        "and view invoices in the Stripe Customer Portal."
+                    ),
+                    color=discord.Color.blue()
+                )
+                embed.add_field(
+                    name="Access Portal",
+                    value=f"[Click here to open Billing Portal]({portal_url})",
+                    inline=False
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.followup.send(
+                    "Failed to access billing portal. Please try again.",
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            logger.error(f"/billing command error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
+
 
 class VoiceCommands(commands.Cog):
     """
@@ -2680,6 +2820,150 @@ class VoiceCommands(commands.Cog):
                 f"Error: {str(e)[:200]}",
                 ephemeral=True
             )
+
+
+class RoleManager(commands.Cog):
+    """
+    Session 439: Subscription Role Management.
+
+    Handles automatic role assignment based on subscription tier.
+    Polls cache for role sync requests from Stripe webhooks.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+        self.role_sync_task.start()
+
+    def cog_unload(self):
+        self.role_sync_task.cancel()
+
+    @tasks.loop(seconds=10)
+    async def role_sync_task(self):
+        """Background task to process role sync requests from cache."""
+        try:
+            await self._process_role_sync_queue()
+        except Exception as e:
+            logger.error(f"Role sync task error: {e}")
+
+    @role_sync_task.before_loop
+    async def before_role_sync(self):
+        await self.bot.wait_until_ready()
+
+    async def _process_role_sync_queue(self):
+        """Process any pending role sync requests from cache."""
+        from django.core.cache import cache
+
+        # Get all pending role syncs from cache
+        # The Stripe webhook queues these
+        @sync_to_async
+        def get_pending_syncs():
+            from core.models import DiscordLinkCode
+            pending = []
+
+            # Get all linked Discord users
+            links = DiscordLinkCode.objects.filter(is_used=True).select_related('user')
+
+            for link in links:
+                sync_key = f"discord_role_sync:{link.discord_user_id}"
+                sync_data = cache.get(sync_key)
+                if sync_data:
+                    pending.append({
+                        'discord_user_id': link.discord_user_id,
+                        'tier': sync_data.get('tier', 'free'),
+                        'cache_key': sync_key,
+                    })
+
+            return pending
+
+        pending_syncs = await get_pending_syncs()
+
+        for sync in pending_syncs:
+            await self._sync_role(
+                sync['discord_user_id'],
+                sync['tier'],
+                sync['cache_key']
+            )
+
+    async def _sync_role(self, discord_user_id: str, tier: str, cache_key: str):
+        """Sync Discord role for a user based on their subscription tier."""
+        import os
+        from django.core.cache import cache
+
+        # Get role IDs from environment
+        pro_role_id = os.getenv('DISCORD_ROLE_PRO_ID')
+        premium_role_id = os.getenv('DISCORD_ROLE_PREMIUM_ID')
+
+        if not pro_role_id or not premium_role_id:
+            logger.warning("Discord role IDs not configured in environment")
+            return
+
+        pro_role_id = int(pro_role_id)
+        premium_role_id = int(premium_role_id)
+
+        # Find the user across all guilds
+        for guild in self.bot.guilds:
+            try:
+                member = guild.get_member(int(discord_user_id))
+                if not member:
+                    # Try fetching
+                    try:
+                        member = await guild.fetch_member(int(discord_user_id))
+                    except discord.NotFound:
+                        continue
+
+                if not member:
+                    continue
+
+                # Get role objects
+                pro_role = guild.get_role(pro_role_id)
+                premium_role = guild.get_role(premium_role_id)
+
+                # Remove existing subscription roles
+                roles_to_remove = []
+                if pro_role and pro_role in member.roles:
+                    roles_to_remove.append(pro_role)
+                if premium_role and premium_role in member.roles:
+                    roles_to_remove.append(premium_role)
+
+                if roles_to_remove:
+                    await member.remove_roles(*roles_to_remove, reason="Subscription tier change")
+
+                # Add new role based on tier
+                if tier == 'pro' and pro_role:
+                    await member.add_roles(pro_role, reason="Pro subscription activated")
+                    logger.info(f"Added Pro role to {member.display_name}")
+                elif tier == 'premium' and premium_role:
+                    await member.add_roles(premium_role, reason="Premium subscription activated")
+                    logger.info(f"Added Premium role to {member.display_name}")
+                elif tier == 'free':
+                    logger.info(f"Removed subscription roles from {member.display_name}")
+
+                # Clear the cache entry - sync complete
+                @sync_to_async
+                def clear_cache():
+                    cache.delete(cache_key)
+                await clear_cache()
+
+                # Update profile to mark as synced
+                @sync_to_async
+                def mark_synced():
+                    from core.models import EnhancedUserProfile, DiscordLinkCode
+                    link = DiscordLinkCode.objects.filter(discord_user_id=discord_user_id).first()
+                    if link and link.user:
+                        profile = EnhancedUserProfile.objects.filter(user=link.user).first()
+                        if profile:
+                            profile.discord_role_synced = True
+                            profile.save(update_fields=['discord_role_synced'])
+                await mark_synced()
+
+                break  # Found and processed the user
+
+            except Exception as e:
+                logger.error(f"Error syncing role for {discord_user_id} in {guild.name}: {e}")
+
+    async def sync_user_role(self, discord_user_id: str, tier: str):
+        """Public method to manually sync a user's role."""
+        await self._sync_role(discord_user_id, tier, f"manual_sync:{discord_user_id}")
 
 
 class ServerSetupCommands(commands.Cog):
@@ -3550,6 +3834,46 @@ class AgentAccessCommands(commands.Cog):
 
             user = await get_linked_user(interaction.user.id)
 
+            # Session 439: Check subscription tier limits
+            @sync_to_async
+            def check_subscription_limit(user):
+                from core.models import EnhancedUserProfile
+                if not user:
+                    # Not linked - use free tier limits
+                    return True, "Please link your account with `/link` for more daily tasks!", 5, 0
+
+                try:
+                    profile = EnhancedUserProfile.objects.filter(user=user).first()
+                    if not profile:
+                        return True, None, 5, 0
+
+                    can_use, message = profile.can_use_task()
+                    limits = profile.get_tier_limits()
+                    return can_use, message if not can_use else None, limits['daily_tasks'], profile.daily_task_count
+                except Exception as e:
+                    logger.error(f"Error checking subscription limit: {e}")
+                    return True, None, 5, 0
+
+            can_use_task, limit_msg, daily_limit, used_today = await check_subscription_limit(user)
+
+            if not can_use_task:
+                tier_embed = discord.Embed(
+                    title="Daily Task Limit Reached",
+                    description=limit_msg or "You've used all your daily tasks.",
+                    color=discord.Color.orange()
+                )
+                tier_embed.add_field(
+                    name="Upgrade Options",
+                    value=(
+                        "**Pro** ($9.99/mo) - 50 tasks/day\n"
+                        "**Premium** ($29.99/mo) - Unlimited tasks\n\n"
+                        "Use `/subscribe pro` or `/subscribe premium` to upgrade!"
+                    ),
+                    inline=False
+                )
+                await interaction.followup.send(embed=tier_embed, ephemeral=True)
+                return
+
             # Normalize agent name (allow partial match)
             agent_name = agent.strip()
             if not agent_name.endswith("Agent"):
@@ -3572,6 +3896,17 @@ class AgentAccessCommands(commands.Cog):
             # Execute the agent
             result = await execute_agent(agent_name, task, user)
             rate_limiter.record_use(interaction.user.id, 'agent_task')
+
+            # Session 439: Increment task counter on success
+            @sync_to_async
+            def increment_task_count(user):
+                if user:
+                    from core.models import EnhancedUserProfile
+                    profile = EnhancedUserProfile.objects.filter(user=user).first()
+                    if profile:
+                        profile.use_task()
+
+            await increment_task_count(user)
 
             if result.success:
                 # Format successful response - handle different agent result formats
@@ -3691,25 +4026,59 @@ class AgentAccessCommands(commands.Cog):
 
         try:
             from core.models_unified_system import Advisor
+            from core.models import EnhancedUserProfile
             from django.contrib.auth import get_user_model
             User = get_user_model()
             import openai
             import os
+
+            # Session 439: Check Premium subscription for advisor access
+            @sync_to_async
+            def check_advisor_access(discord_id):
+                try:
+                    user = User.objects.filter(discord_id=str(discord_id)).first()
+                    if not user:
+                        return False, None
+
+                    profile = EnhancedUserProfile.objects.filter(user=user).first()
+                    if not profile:
+                        return False, None
+
+                    # Premium users have advisor access
+                    if profile.has_feature('advisor_access'):
+                        return True, user
+                    return False, user
+                except Exception:
+                    return False, None
+
+            has_access, user = await check_advisor_access(interaction.user.id)
+
+            if not has_access:
+                premium_embed = discord.Embed(
+                    title="Premium Feature",
+                    description="Advisor consultations are available to **Premium** subscribers only.",
+                    color=discord.Color.gold()
+                )
+                premium_embed.add_field(
+                    name="Premium Benefits",
+                    value=(
+                        "• Access to 25 legendary advisors\n"
+                        "• Warren Buffett, Elon Musk, Steve Jobs...\n"
+                        "• Unlimited agent tasks\n"
+                        "• Custom workflows\n\n"
+                        "**$29.99/month** - Use `/subscribe premium`"
+                    ),
+                    inline=False
+                )
+                await interaction.followup.send(embed=premium_embed, ephemeral=True)
+                return
 
             # Find advisor (case-insensitive partial match)
             @sync_to_async
             def find_advisor(name):
                 return Advisor.objects.filter(name__icontains=name).first()
 
-            @sync_to_async
-            def get_linked_user(discord_id):
-                try:
-                    return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
-                    return None
-
             advisor_obj = await find_advisor(advisor)
-            user = await get_linked_user(interaction.user.id)
 
             if not advisor_obj:
                 # List available advisors

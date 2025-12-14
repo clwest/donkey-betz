@@ -1,73 +1,62 @@
 # Start Next Session Here
 
-**Last Session:** 438 - Discord Voice AI (Phase 7 + 8 Complete!)
+**Last Session:** 439 - Subscription Enforcement (Complete!)
 **Date:** December 13, 2025
-**Status:** 36 Discord Commands | Phase 7 + 8 COMPLETE | Monetization + Voice AI Active
+**Status:** 38 Discord Commands | Full Subscription System | Feature Gating Active
 
 ---
 
-## Session 438 Accomplishments
+## Session 439 Accomplishments
 
-### Discord Monetization - Phase 7 COMPLETE!
+### Subscription Enforcement - COMPLETE!
 
-Implemented subscription tiers with Stripe integration for the Discord-First platform.
+Built on Phase 7 (Monetization) by implementing full subscription enforcement:
 
 **New Discord Commands (2):**
 
 | Command | Description |
 |---------|-------------|
-| `/subscribe [tier]` | Subscribe to Pro ($9.99/mo) or Premium ($29.99/mo) |
-| `/tier` | View subscription status, daily usage, and features |
+| `/cancel` | Cancel subscription at end of billing period |
+| `/billing` | Access Stripe Customer Portal for billing management |
 
-**Subscription Tiers:**
+**Stripe Webhook Endpoint:**
+- `POST /api/stripe/webhook/` - Handles subscription lifecycle events
+- Processes: created, updated, deleted, payment success/failure
+- Signature verification for security
 
-| Tier | Price | Tasks/Day | Features |
-|------|-------|-----------|----------|
-| Free | $0 | 5 | Basic alerts |
-| Pro | $9.99/mo | 50 | Priority alerts, DM notifications |
-| Premium | $29.99/mo | Unlimited | All features, advisor access, custom workflows |
+**Discord Role Manager:**
+- Background task polls every 10 seconds
+- Automatic role assignment: Pro Member / Premium Member
+- Role removal on downgrade/cancellation
 
-**Database Changes:**
-- `EnhancedUserProfile`: Added 9 subscription fields
-- Migration: `0088_session_438_subscription_monetization`
+**Feature Gating:**
+- `/agent-task`: Enforces daily task limits (Free: 5, Pro: 50, Premium: Unlimited)
+- `/consult`: Premium-only advisor access
+- Shows upgrade prompts when limits reached
 
-**New Service:**
-- `core/services/stripe_subscription.py` - Stripe checkout, webhooks, billing portal
+**New Files:**
+- `core/views_stripe.py` - Webhook handlers
+- `RoleManager` cog in discord_bot.py
 
-**Handoff:** `docs/handoffs/SESSION_438_MONETIZATION.md`
-
-### Discord Voice AI - Phase 8 COMPLETE!
-
-Implemented voice channel integration with ElevenLabs TTS and AI conversation.
-
-**New Discord Commands (3):**
-
-| Command | Description |
-|---------|-------------|
-| `/voice [action] [voice]` | Join/leave voice channels, list available voices |
-| `/speak <message> [voice]` | Make bot speak a message in voice channel |
-| `/ask-voice <question>` | Ask AI and hear the response spoken |
-
-**Features:**
-- 10 ElevenLabs voices (Rachel, Antoni, Bella, etc.)
-- Voice channel join/leave with greeting
-- AI conversation in voice with GPT-4o-mini
-- Text-to-Speech using ElevenLabs API
-- Speech-to-Text ready (OpenAI Whisper)
-
-**New Service:**
-- `core/services/discord_voice.py` - Voice AI service with ElevenLabs TTS
+**Handoff:** `docs/handoffs/SESSION_439_SUBSCRIPTION_ENFORCEMENT.md`
 
 ---
 
-## Session 437 Accomplishments
+## Session 438 Accomplishments (Previous)
 
-### Phase 6: Automation Commands
+### Discord Monetization - Phase 7
 
-| Command | Description |
-|---------|-------------|
-| `/digest [period]` | Daily/weekly activity digest |
-| `/alerts [action]` | Manage proactive opportunity alerts |
+- `/subscribe [tier]` - Subscribe to Pro or Premium
+- `/tier` - View subscription status and usage
+- Stripe checkout integration
+- 9 new subscription fields on EnhancedUserProfile
+
+### Discord Voice AI - Phase 8
+
+- `/voice [action] [voice]` - Join/leave voice channels
+- `/speak <message>` - Bot speaks with ElevenLabs TTS
+- `/ask-voice <question>` - AI voice conversation
+- 10 voices available
 
 ---
 
@@ -79,14 +68,15 @@ Implemented voice channel integration with ElevenLabs TTS and AI conversation.
 | Dreams | Active | 2,080+ |
 | HiveMind Sessions | Working | 117+ |
 | Knowledge Sources | Active | 940+ |
-| Spider Data | Active | 12,250+ |
-| **Discord Bot Commands** | **Working** | **36** |
+| Spider Data | Active | 15,620+ |
+| **Discord Bot Commands** | **Working** | **38** |
 | Discord User Linking | Active | Working |
 | User Profile System | Active | 24 questions |
 | Development Agents | Production | 4 |
 | Proactive Alerts | Active | 2 Celery tasks |
-| **Subscription Tiers** | **NEW** | **3 tiers** |
-| **Stripe Integration** | **NEW** | **Checkout + Portal** |
+| **Subscription System** | **COMPLETE** | **3 tiers** |
+| **Stripe Webhook** | **COMPLETE** | **6 events** |
+| **Role Manager** | **COMPLETE** | **Auto-sync** |
 | Migrations | Applied | 0088 |
 
 ---
@@ -101,40 +91,42 @@ Implemented voice channel integration with ElevenLabs TTS and AI conversation.
 | 4. Income Pipeline | /apply, /track | **DONE** |
 | 5. Full Agent Access | /agent-task, /consult, /workflow-run | **DONE** |
 | 6. Automation | /digest, /alerts, proactive alerts | **DONE** |
-| **7. Monetization** | **/subscribe, /tier, Stripe integration** | **DONE** |
-| **8. Voice AI** | **/voice, /speak, /ask-voice** | **DONE** |
-| 9. White-label | Custom branding, multi-tenant | Pending |
+| 7. Monetization | /subscribe, /tier, Stripe integration | **DONE** |
+| 8. Voice AI | /voice, /speak, /ask-voice | **DONE** |
+| **9. White-label** | **Custom branding, multi-tenant** | **Pending** |
 
 ---
 
-## Session 439: Next Steps
+## Session 440: Next Steps
 
 ### Priority Tasks
 
-1. **Set Up Stripe Products**
-   - Create Pro product ($9.99/month) in Stripe Dashboard
-   - Create Premium product ($29.99/month)
-   - Add price IDs to `.env`
+1. **Production Stripe Setup**
+   - Create webhook in Stripe Dashboard
+   - Configure production webhook secret
+   - Test end-to-end subscription flow
 
-2. **Implement Stripe Webhook**
-   - Create `/api/stripe/webhook` endpoint
-   - Handle `customer.subscription.created/updated/deleted` events
+2. **Discord Role Setup**
+   - Create "Pro Member" role in Discord server
+   - Create "Premium Member" role
+   - Add role IDs to environment
 
-3. **Discord Role Assignment**
-   - Create "Pro Member" and "Premium Member" roles
-   - Implement automatic role assignment on subscription
+3. **Usage Analytics Dashboard**
+   - Track daily/weekly usage per tier
+   - Monitor conversion rates
+   - Identify upgrade opportunities
 
-4. **Feature Gating**
-   - Enforce task limits in `/agent-task`
-   - Block advisor access for non-premium users
-   - Track daily usage in agent commands
+4. **White-label Preparation (Phase 9)**
+   - Custom branding per server
+   - Multi-tenant architecture
+   - White-label subscription management
 
 ### Optional Improvements
 
-- Add `/cancel` command to cancel subscription
-- Add `/billing` command to access Stripe Customer Portal
-- Weekly usage summary notifications
-- Tier upgrade prompts when limits reached
+- Weekly usage summary in `/digest`
+- Proactive upgrade prompts at 80% limit
+- Referral system for discounts
+- Annual subscription option
 
 ---
 
@@ -155,23 +147,34 @@ make discord-bot
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Phase 7 commands
+# Test subscription commands
 # In Discord:
 /tier
-/subscribe pro
+/agent-task ResearchAgent "Test feature gating"
+/consult warren "Test premium check"
 ```
 
 ---
 
-## Recent Commits (Session 438)
+## Environment Variables Required
 
-```
-[pending] feat(Session 438): Monetization - Phase 7
+```env
+# Stripe (existing)
+STRIPE_SECRET_KEY=sk_live_xxxxx
+STRIPE_PRICE_PRO=price_xxxxx
+STRIPE_PRICE_PREMIUM=price_xxxxx
+
+# NEW: Stripe Webhook
+STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+
+# NEW: Discord Roles
+DISCORD_ROLE_PRO_ID=123456789012345678
+DISCORD_ROLE_PREMIUM_ID=987654321098765432
 ```
 
 ---
 
-## Discord Commands (36 Total)
+## Discord Commands (38 Total)
 
 | Category | Commands |
 |----------|----------|
@@ -184,8 +187,8 @@ open http://localhost:8000/ai-studio/
 | Content | `/gallery`, `/profile` |
 | Income Pipeline | `/opportunities`, `/apply`, `/track` |
 | Automation | `/digest`, `/alerts` |
-| Monetization | `/subscribe`, `/tier` |
-| **Voice AI** | **`/voice`, `/speak`, `/ask-voice`** |
+| **Monetization** | `/subscribe`, `/tier`, `/cancel`, `/billing` |
+| Voice AI | `/voice`, `/speak`, `/ask-voice` |
 | Account | `/link`, `/unlink` |
 | Server Setup | `/setup`, `/server-info` |
 | Client Mgmt | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` |
@@ -193,80 +196,16 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Subscription Tier Details
+## Database Backup
 
-### Free Tier (Default)
-- 5 agent tasks per day
-- Basic opportunity alerts
-- Standard support
+**Latest Backup:** `backups/session_439/`
 
-### Pro Tier ($9.99/month)
-- 50 agent tasks per day
-- Priority opportunity alerts
-- DM notifications
-- Discord role: "Pro Member"
+| File | Size |
+|------|------|
+| database_full_backup.sql | 489 MB |
+| media_backup.tar.gz | 4.0 GB |
 
-### Premium Tier ($29.99/month)
-- Unlimited agent tasks
-- All alert types
-- Advisor access (25 legendary advisors)
-- Custom workflow creation
-- Discord role: "Premium Member"
-
----
-
-## Stripe Setup Required
-
-```env
-# Add to .env after creating products in Stripe Dashboard
-STRIPE_PRICE_PRO=price_xxxxxxxxxxxxx
-STRIPE_PRICE_PREMIUM=price_xxxxxxxxxxxxx
-
-# Add after creating Discord roles
-DISCORD_ROLE_PRO_ID=123456789012345678
-DISCORD_ROLE_PREMIUM_ID=123456789012345678
-```
-
----
-
-## Voice AI Details
-
-### Available Voices (ElevenLabs)
-
-| Voice | Description |
-|-------|-------------|
-| Rachel | Warm, professional female (default) |
-| Antoni | Authoritative male |
-| Bella | Friendly female |
-| Callum | Confident British male |
-| Charlotte | Warm British female |
-| Daniel | Clear, neutral male |
-| Domi | Strong female |
-| Elli | Expressive female |
-| Josh | Deep male |
-| Sam | Neutral young male |
-
-### Voice Commands
-
-```bash
-# Join voice channel with default voice
-/voice join
-
-# Join with specific voice
-/voice join voice:callum
-
-# Make bot speak
-/speak "Hello everyone, welcome to the meeting!"
-
-# Ask AI and hear response
-/ask-voice "What's the weather like today?"
-
-# Leave voice channel
-/voice leave
-
-# List available voices
-/voice voices
-```
+**Restore:** See `backups/session_439/RESTORE_PROCEDURE.md`
 
 ---
 
