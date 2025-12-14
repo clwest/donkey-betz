@@ -90,6 +90,7 @@ class RateLimiter:
         self._cooldown_times = {
             'ask': 10,       # 10 seconds between /ask calls
             'voice_ask': 15, # 15 seconds between /voice-ask calls (TTS is expensive)
+            'voice_chat': 20, # 20 seconds between /voice-chat calls (recording + TTS)
             'create': 30,    # 30 seconds between /create calls
             'research': 15,  # 15 seconds between /research calls
             'agent_task': 15,  # 15 seconds between /agent-task calls
@@ -5424,6 +5425,343 @@ Spoken response:"""
                 )
             )
 
+    @app_commands.command(name="voice-chat", description="Speak to the AI and hear a spoken response")
+    @app_commands.describe(
+        duration="Recording duration in seconds (default: 10, max: 30)",
+        agent="Agent to use (default: Research)",
+    )
+    async def voice_chat(
+        self,
+        interaction: discord.Interaction,
+        duration: int = 10,
+        agent: str = "Research"
+    ):
+        """
+        Full voice conversation: Speak your question, hear the AI's answer.
+
+        1. Records your voice from Discord voice channel
+        2. Transcribes using Whisper
+        3. Routes to the specified agent
+        4. Speaks the response using your cloned voice
+        """
+        await interaction.response.defer()
+
+        # Rate limit check
+        can_use, remaining = rate_limiter.check_cooldown(interaction.user.id, 'voice_chat')
+        if not can_use:
+            await interaction.followup.send(
+                f"⏳ Please wait {remaining:.1f}s before another voice chat.",
+                ephemeral=True
+            )
+            return
+
+        # Validate duration
+        duration = max(5, min(30, duration))  # Clamp between 5-30 seconds
+
+        try:
+            import discord.ext.voice_recv as voice_recv
+            from core.services.discord_voice import (
+                get_voice_recorder,
+                VoiceRecordingSink,
+                VOICE_RECV_AVAILABLE,
+                OPENAI_API_KEY
+            )
+            from core.agent_router import AgentRouter
+            from core.models_voice_marketplace import VoiceProfile
+            from content.elevenlabs_provider import elevenlabs_provider
+            from django.contrib.auth import get_user_model
+            from openai import OpenAI
+            import io
+
+            User = get_user_model()
+
+            if not VOICE_RECV_AVAILABLE:
+                await interaction.followup.send(
+                    "❌ Voice receiving is not available. Missing `discord-ext-voice-recv` package.",
+                    ephemeral=True
+                )
+                return
+
+            if not OPENAI_API_KEY:
+                await interaction.followup.send(
+                    "❌ Whisper transcription not available. Missing OpenAI API key.",
+                    ephemeral=True
+                )
+                return
+
+            # Check if user is in a voice channel
+            if not interaction.user.voice or not interaction.user.voice.channel:
+                await interaction.followup.send(
+                    "❌ You need to be in a voice channel!\n"
+                    "Join a voice channel and try again.",
+                    ephemeral=True
+                )
+                return
+
+            voice_channel = interaction.user.voice.channel
+            user_id = interaction.user.id
+
+            # Get linked user
+            @sync_to_async
+            def get_linked_user(discord_id):
+                try:
+                    return User.objects.filter(discord_id=str(discord_id)).first()
+                except Exception:
+                    return None
+
+            linked_user = await get_linked_user(interaction.user.id)
+
+            # Get user's cloned voice
+            @sync_to_async
+            def get_user_voice(user):
+                if user:
+                    voice = VoiceProfile.objects.filter(owner=user, is_active=True).first()
+                    if voice:
+                        return voice.elevenlabs_voice_id, voice.name
+                return None, "Rachel"
+
+            voice_id, voice_name = await get_user_voice(linked_user)
+
+            # Send initial status
+            status_embed = discord.Embed(
+                title="🎙️ Voice Chat",
+                description=f"Joining voice channel and recording for **{duration} seconds**...\n\n"
+                           f"**Speak your question clearly!**",
+                color=discord.Color.blue()
+            )
+            status_embed.add_field(name="Agent", value=agent, inline=True)
+            status_embed.add_field(name="Voice", value=voice_name, inline=True)
+            await interaction.followup.send(embed=status_embed)
+
+            # Get existing voice client or connect
+            voice_client = interaction.guild.voice_client
+
+            # Disconnect and reconnect with VoiceRecvClient for recording
+            if voice_client:
+                await voice_client.disconnect(force=True)
+                await asyncio.sleep(0.5)
+
+            # Connect with VoiceRecvClient
+            voice_client = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
+
+            # Set up recording
+            recorder = get_voice_recorder()
+            recorder.start_recording(user_id, interaction.guild.id, voice_channel.id)
+
+            # Create sink for capturing audio
+            sink = VoiceRecordingSink(recorder, user_id)
+            voice_client.listen(sink)
+
+            # Update status
+            recording_embed = discord.Embed(
+                title="🔴 Recording...",
+                description=f"**Speak your question now!**\n\nRecording for {duration} seconds...",
+                color=discord.Color.red()
+            )
+            await interaction.edit_original_response(embed=recording_embed)
+
+            # Wait for duration
+            await asyncio.sleep(duration)
+
+            # Stop recording
+            voice_client.stop_listening()
+            audio_path = recorder.stop_recording(user_id)
+
+            # Disconnect from voice
+            await voice_client.disconnect()
+
+            if not audio_path:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ No Audio Captured",
+                        description="No audio was recorded. Make sure you're speaking!",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Update status - transcribing
+            transcribe_embed = discord.Embed(
+                title="📝 Transcribing...",
+                description="Converting your speech to text with Whisper...",
+                color=discord.Color.orange()
+            )
+            await interaction.edit_original_response(embed=transcribe_embed)
+
+            # Transcribe with Whisper
+            openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+            @sync_to_async
+            def transcribe_audio(file_path):
+                with open(file_path, 'rb') as audio_file:
+                    transcript = openai_client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file
+                    )
+                return transcript.text
+
+            transcribed_text = await transcribe_audio(audio_path)
+
+            # Clean up audio file
+            try:
+                import os
+                os.unlink(audio_path)
+            except Exception:
+                pass
+
+            if not transcribed_text or len(transcribed_text.strip()) < 3:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ Couldn't Understand",
+                        description="Couldn't transcribe your speech. Please speak more clearly.",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Update status - processing
+            process_embed = discord.Embed(
+                title="🤔 Processing...",
+                description=f"**You said:** \"{transcribed_text}\"\n\nGetting response from {agent} agent...",
+                color=discord.Color.purple()
+            )
+            await interaction.edit_original_response(embed=process_embed)
+
+            # Route to agent
+            @sync_to_async
+            def execute_agent(agent_name, task, user):
+                router = AgentRouter()
+                result = router.execute_task(
+                    task=task,
+                    target_agent=agent_name,
+                    user=user
+                )
+                return result
+
+            # Map agent names
+            agent_mapping = {
+                'research': 'ResearchAgent',
+                'image': 'ImageAgent',
+                'video': 'VideoAgent',
+                'audio': 'AudioAgent',
+                'cto': 'CTOAgent',
+                'strategy': 'ContentStrategyAgent',
+            }
+            agent_name = agent_mapping.get(agent.lower(), agent)
+
+            result = await execute_agent(agent_name, transcribed_text, linked_user)
+            rate_limiter.record_use(interaction.user.id, 'voice_chat')
+
+            # Extract text response
+            raw_response = ""
+            if isinstance(result, dict):
+                raw_response = result.get('response', result.get('result', str(result)))
+            else:
+                raw_response = str(result)
+
+            # Convert to natural speech
+            @sync_to_async
+            def make_speakable(raw_text, question):
+                client = OpenAI(api_key=OPENAI_API_KEY)
+                prompt = f"""Convert this data into a natural, conversational spoken response.
+
+Rules:
+- DO NOT read URLs or links aloud
+- Summarize the key findings in 2-4 sentences
+- Speak naturally as if talking to a friend
+- Focus on the most interesting/relevant information
+- Keep it under 150 words for good audio length
+
+Original question: {question}
+
+Raw data to summarize:
+{raw_text[:3000]}
+
+Conversational response:"""
+
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=300
+                )
+                return response.choices[0].message.content
+
+            speakable_response = await make_speakable(raw_response, transcribed_text)
+
+            # Update status - generating audio
+            audio_embed = discord.Embed(
+                title="🔊 Generating Response...",
+                description=f"Creating audio with **{voice_name}** voice...",
+                color=discord.Color.green()
+            )
+            await interaction.edit_original_response(embed=audio_embed)
+
+            # Generate TTS
+            @sync_to_async
+            def generate_tts(text, vid):
+                return elevenlabs_provider.generate_speech(
+                    text=text,
+                    voice_id=vid or "EXAVITQu4vr4xnSDxMaL",  # Rachel as fallback
+                    model_id="eleven_multilingual_v2"
+                )
+
+            audio_result = await generate_tts(speakable_response, voice_id)
+
+            if not audio_result.get('success'):
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ TTS Failed",
+                        description=f"Couldn't generate audio: {audio_result.get('error', 'Unknown error')}\n\n"
+                                   f"**Text response:** {speakable_response[:500]}",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Send success response with audio
+            success_embed = discord.Embed(
+                title="🎙️ Voice Chat Complete",
+                color=discord.Color.green()
+            )
+            success_embed.add_field(
+                name="You Asked",
+                value=f"\"{transcribed_text[:200]}{'...' if len(transcribed_text) > 200 else ''}\"",
+                inline=False
+            )
+            success_embed.add_field(
+                name="AI Response",
+                value=speakable_response[:500] + ("..." if len(speakable_response) > 500 else ""),
+                inline=False
+            )
+            success_embed.add_field(name="Agent", value=agent_name, inline=True)
+            success_embed.add_field(name="Voice", value=voice_name, inline=True)
+            success_embed.set_footer(text="Full voice conversation powered by Whisper + ElevenLabs")
+
+            await interaction.edit_original_response(embed=success_embed)
+
+            # Send audio file
+            audio_data = audio_result.get('audio_data')
+            if audio_data:
+                audio_file = discord.File(
+                    io.BytesIO(audio_data),
+                    filename="voice_response.mp3"
+                )
+                await interaction.followup.send(file=audio_file)
+
+            logger.info(f"/voice-chat completed: '{transcribed_text[:50]}...' -> {agent_name} -> {voice_name}")
+
+        except Exception as e:
+            logger.error(f"/voice-chat error: {e}")
+            import traceback
+            traceback.print_exc()
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Voice chat failed: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
     @app_commands.command(name="consult", description="Consult a legendary advisor")
     @app_commands.describe(
         advisor="Advisor name (e.g., warren, elon, steve)",
@@ -5823,7 +6161,8 @@ class HelpCommands(commands.Cog):
                 "**/agent** <name> - Get agent details\n"
                 "**/agent-list** [category] - List agents by category\n"
                 "**/agent-task** <name> <task> - Execute agent task\n"
-                "**/voice-ask** <question> [agent] [voice] - Ask & hear spoken answer"
+                "**/voice-ask** <question> [agent] [voice] - Ask & hear spoken answer\n"
+                "**/voice-chat** [duration] [agent] - Speak & hear AI respond (Whisper)"
             ),
             inline=False
         )
