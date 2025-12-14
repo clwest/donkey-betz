@@ -1,8 +1,8 @@
 # Start Next Session Here
 
-**Last Session:** 446 - AISeriesWorkflowAgent Database Persistence Fixes
+**Last Session:** 447 - AISeriesWorkflowAgent Duplicate Series Bug Fix
 **Date:** December 14, 2025
-**Status:** AI Series Workflow FULLY WORKING | Scripts & episodes now save to database!
+**Status:** AI Series Workflow FULLY WORKING | Discord `/series-create` now saves scripts correctly!
 
 ---
 
@@ -37,6 +37,36 @@ From `docs/GOLDEN_GOOSE_STRATEGY.md`:
 2. ~~**AISeriesWorkflowAgent**~~ - ✅ DONE (Session 445)
 3. **User Video Upload** - Inject user content into pipeline
 4. **Learning Loops** - Feedback at every stage
+
+---
+
+## Session 447 Accomplishments
+
+### AISeriesWorkflowAgent Duplicate Series Bug Fix
+
+Fixed critical bug where Discord `/series-create` showed episodes as "queued" with 0 chars:
+
+**Problem:** Agent was creating DUPLICATE series instead of using existing one from Celery task.
+- Original series' episodes stayed "queued" with 0 script chars
+- Task showed `episodes_generated: 0` despite generation succeeding
+- Scripts were being saved to the wrong (duplicate) series
+
+**Root Cause:** `_create_series_record()` always called `objects.create()`, ignoring `series_id` in context.
+
+**Fix:** Modified to check for existing series first:
+```python
+existing_series_id = context.get('series_id')
+if existing_series_id:
+    series = AISeries.objects.get(id=existing_series_id)
+    return series
+```
+
+**Test Results:**
+- Script: 1274 chars (was 0)
+- Episode status: `complete` (was `queued`)
+- `episodes_generated: 1` (was 0)
+
+**Handoff:** `docs/handoffs/SESSION_446_AI_SERIES_DB_PERSISTENCE_FIXES.md` (updated)
 
 ---
 
