@@ -366,14 +366,17 @@ Available agents to delegate to:
 - Episode Count: {episode_count}
 - Target Audience: {target_audience}
 
-## Instructions
+## Instructions (FOLLOW ALL STEPS - DO NOT STOP EARLY)
 1. First, use delegate_to_agent to research the topic with ResearchAgent
 2. Then use plan_series to create the series structure
 3. Use lock_style to define the visual style
-4. Use define_character for each main character
-5. For each episode (1 to {episode_count}):
-   - Use generate_episode to create the episode
-   - This will automatically delegate to ImageAgent, AudioAgent, and VideoAgent
+4. Use define_character for each main character (at least 1)
+5. **CRITICAL: You MUST call generate_episode for EACH episode from 1 to {episode_count}**
+   - Call generate_episode with episode_number=1, then episode_number=2, etc.
+   - Do NOT stop until you have called generate_episode for ALL {episode_count} episodes
+   - Each generate_episode call creates the script, images, voice, and video
+
+**IMPORTANT: The task is NOT complete until you have called generate_episode {episode_count} times.**
 
 Start by researching the topic to understand trends and audience preferences.
 """
@@ -434,9 +437,16 @@ Start by researching the topic to understand trends and audience preferences.
                         )
                         series.save(update_fields=['generation_progress', 'updated_at'])
 
-                # Complete the series
+                # Complete the series only if episodes were actually generated
                 if series:
-                    series.complete_generation()
+                    generated_count = len(self._episode_results)
+                    expected_count = episode_count
+                    if generated_count >= expected_count:
+                        series.complete_generation()
+                        logger.info(f"Series completed: {generated_count}/{expected_count} episodes generated")
+                    else:
+                        logger.warning(f"Series incomplete: only {generated_count}/{expected_count} episodes generated")
+                        # Don't mark complete - keep in generating status
 
                 # Build final result
                 execution_time = int((time.time() - start_time) * 1000)
@@ -504,9 +514,19 @@ Start by researching the topic to understand trends and audience preferences.
                 )
 
     def _create_series_record(self, task: str, context: Dict[str, Any]) -> Optional[Any]:
-        """Create AISeries record in database."""
+        """Get existing series or create AISeries record in database."""
         try:
             from core.models_ai_series import AISeries, SeriesType
+
+            # Check if series_id was passed in context (from Celery task)
+            existing_series_id = context.get('series_id')
+            if existing_series_id:
+                try:
+                    series = AISeries.objects.get(id=existing_series_id)
+                    logger.info(f"Using existing AISeries: {series.id}")
+                    return series
+                except AISeries.DoesNotExist:
+                    logger.warning(f"Series {existing_series_id} not found, creating new one")
 
             # Map series type
             type_mapping = {

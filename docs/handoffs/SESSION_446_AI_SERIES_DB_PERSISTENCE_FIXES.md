@@ -71,14 +71,43 @@ db_episode.video_result = make_json_serializable(video_result_data)
 self._series_id = str(series.id)  # Track for DB updates in tool handlers
 ```
 
+### 4. Duplicate Series Bug (Session 447)
+
+**Problem:** When called via Discord/Celery, the agent was creating DUPLICATE series instead of using the existing one. This caused:
+- Agent's script saves went to the NEW duplicate series
+- Original series' episodes remained `queued` with 0 chars
+- Task result showed `episodes_generated: 0` even though generation succeeded
+
+**Root Cause:** `_create_series_record()` always created a new `AISeries` via `objects.create()`, ignoring the `series_id` passed in context from the Celery task.
+
+**Fix:** Modified `_create_series_record()` to check for existing series first:
+
+```python
+def _create_series_record(self, task: str, context: Dict[str, Any]) -> Optional[Any]:
+    """Get existing series or create AISeries record in database."""
+    # Check if series_id was passed in context (from Celery task)
+    existing_series_id = context.get('series_id')
+    if existing_series_id:
+        try:
+            series = AISeries.objects.get(id=existing_series_id)
+            logger.info(f"Using existing AISeries: {series.id}")
+            return series
+        except AISeries.DoesNotExist:
+            logger.warning(f"Series {existing_series_id} not found, creating new one")
+
+    # ... create new series only if no existing one
+```
+
 ---
 
 ## Test Results
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Script length | 0 chars | 1151 chars |
-| Episode status | failed | complete |
+| Script length | 0 chars | 1274 chars |
+| Episode status | queued | complete |
+| Episodes generated | 0 | 1 |
+| Duplicate series | Created duplicate | Uses existing |
 | Error message | "UUID is not JSON serializable" | None |
 | Series status | complete | complete |
 | Style Config | True | True |
