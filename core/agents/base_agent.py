@@ -151,10 +151,14 @@ class BaseAgent(ABC, TimeTravelMixin):
 
     @property
     def client(self) -> OpenAI:
-        """Lazy-load OpenAI client."""
+        """Lazy-load OpenAI client with timeout to prevent hanging requests."""
         if self._client is None:
             from django.conf import settings
-            self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            # Session 411: Add 120 second timeout to prevent indefinite hangs
+            self._client = OpenAI(
+                api_key=settings.OPENAI_API_KEY,
+                timeout=120.0  # 2 minute timeout for API calls
+            )
         return self._client
 
     @property
@@ -336,22 +340,28 @@ class BaseAgent(ABC, TimeTravelMixin):
         results = []
 
         # Try semantic search on spider data first
-        try:
-            from core.services.spider_semantic_search import get_spider_semantic_search
-            search = get_spider_semantic_search()
-            semantic_results = search.semantic_search(task, limit=3)
+        # Session 434: DISABLED - semantic search generates embeddings on-the-fly
+        # which is extremely slow with 15k+ spider data items. Use keyword search instead.
+        # TODO: Re-enable once embeddings are pre-generated via Celery task
+        ENABLE_SEMANTIC_SEARCH = False  # Set to True when embeddings are ready
 
-            for sr in semantic_results:
-                results.append({
-                    'source_agent': 'SpiderNetwork',
-                    'title': sr.title[:60] if sr.title else 'Spider Intelligence',
-                    'summary': sr.content[:200] if sr.content else '',
-                    'knowledge_type': 'spider_data',
-                    'confidence': sr.similarity,
-                    'spider_sources': [sr.source] if sr.source else [],
-                })
-        except Exception as e:
-            logger.debug(f"Semantic search not available: {e}")
+        if ENABLE_SEMANTIC_SEARCH:
+            try:
+                from core.services.spider_semantic_search import get_spider_semantic_search
+                search = get_spider_semantic_search()
+                semantic_results = search.semantic_search(task, limit=3)
+
+                for sr in semantic_results:
+                    results.append({
+                        'source_agent': 'SpiderNetwork',
+                        'title': sr.title[:60] if sr.title else 'Spider Intelligence',
+                        'summary': sr.content[:200] if sr.content else '',
+                        'knowledge_type': 'spider_data',
+                        'confidence': sr.similarity,
+                        'spider_sources': [sr.source] if sr.source else [],
+                    })
+            except Exception as e:
+                logger.debug(f"Semantic search not available: {e}")
 
         # Also query AgentKnowledgeSource for learned knowledge
         try:
@@ -582,6 +592,16 @@ class BaseAgent(ABC, TimeTravelMixin):
                     sources_str = ', '.join(spider_sources[:3])
                     parts.append(f"   (from: {sources_str})")
 
+        # Session 412: Add canonical policies from Boardroom Decisions
+        try:
+            from core.services.policy_context import get_policy_context_service
+            policy_service = get_policy_context_service()
+            policy_context = policy_service.get_policies_for_agent(self.name, max_policies=3)
+            if policy_context:
+                parts.append(policy_context)
+        except Exception as e:
+            logger.debug(f"Could not get policy context for {self.name}: {e}")
+
         # Add mood modifier if available
         if scifi_context:
             mood = scifi_context.get('mood')
@@ -699,6 +719,10 @@ class BaseAgent(ABC, TimeTravelMixin):
                 'finish_reason': choice.finish_reason,
             }
 
+        except TimeoutError as e:
+            # Session 411: Handle timeout specifically
+            logger.error(f"OpenAI API timeout in {self.name} after 120s: {e}")
+            raise TimeoutError(f"OpenAI API request timed out after 120 seconds in {self.name}")
         except Exception as e:
             logger.error(f"OpenAI API error in {self.name}: {e}")
             raise

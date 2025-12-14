@@ -1,6 +1,7 @@
 """
 Policy Context Service
 Session 323: Boardroom Decisions - Phase 3
+Session 412: Updated with new impact areas (legal, research, spider) and agents
 
 Retrieves canonical policies to inject into agent prompts.
 This creates the feedback loop where agent decisions influence future agent behavior.
@@ -16,6 +17,8 @@ class PolicyContextService:
     """Provides canonical policy context for agent prompts."""
 
     # Map agent names to relevant impact areas
+    # Impact areas: prompting, memory, image, video, audio, workflow, agents,
+    #               security, infrastructure, product, legal, research, spider
     AGENT_IMPACT_AREAS = {
         # Image agents
         'ImageAgent': ['image', 'workflow', 'prompting'],
@@ -25,6 +28,7 @@ class PolicyContextService:
         # Video agents
         'VideoAgent': ['video', 'workflow'],
         'video_generation_agent': ['video', 'workflow'],
+        'VideoEditingAgent': ['video', 'workflow'],
 
         # Audio agents
         'AudioAgent': ['audio', 'workflow'],
@@ -48,18 +52,35 @@ class PolicyContextService:
         'SocialMediaAgent': ['product'],
 
         # Research agents
-        'ResearchAgent': ['prompting', 'agents'],
-        'TrendAnalysisAgent': ['product'],
-        'CompetitorAnalysisAgent': ['product'],
-        'CustomerResearchAgent': ['product'],
+        'ResearchAgent': ['prompting', 'agents', 'research', 'spider'],
+        'TrendAnalysisAgent': ['product', 'research', 'spider'],
+        'CompetitorAnalysisAgent': ['product', 'research'],
+        'CustomerResearchAgent': ['product', 'research'],
+        'BrandStrategyAgent': ['product', 'research'],
+        'MarketingStrategyAgent': ['product', 'research'],
+        'BusinessContentStrategyAgent': ['product', 'research'],
 
         # Workflow agents
         'WorkflowOrchestrationAgent': ['workflow', 'agents'],
+        'WorkflowAgent': ['workflow', 'agents'],
 
         # Executive agents
         'CTOAgent': ['architecture', 'infrastructure', 'security'],
         'COOAgent': ['workflow', 'product'],
         'MeetingCoordinatorAgent': ['agents', 'workflow'],
+
+        # Legal agents (Session 403-410)
+        'LegalDocDrafterAgent': ['legal', 'agents', 'prompting'],
+
+        # Training agents
+        'CharacterTrainingAgent': ['image', 'workflow'],
+        'TrainedCreationAgent': ['image', 'workflow'],
+
+        # 3D agents
+        'ThreeDAgent': ['image', 'workflow'],
+
+        # Personal Assistant
+        'PersonalAssistantAgent': ['agents', 'workflow', 'prompting'],
 
         # Specialized
         'BookmakerAgent': ['prompting', 'agents'],

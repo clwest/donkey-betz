@@ -998,17 +998,16 @@ def dashboard_stats(request):
         spider_counts = registry.get_spider_count()
 
         # === AGENT STATS ===
-        # Count legacy agents
-        agents_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'agents')
-        legacy_agents = len([f for f in os.listdir(agents_dir)
-                           if f.endswith('.py') and not f.startswith('__')])
+        # Session 417: Use database agent count instead of filesystem count
+        # This matches what the Profile dropdown shows and is more accurate
+        from core.models_unified_system import Agent
+        db_agent_count = Agent.objects.filter(is_active=True).count()
+        total_db_agents = Agent.objects.count()
 
-        # Count clean agents
-        core_agents_dir = os.path.join(os.path.dirname(__file__), 'agents')
-        clean_agents = len([f for f in os.listdir(core_agents_dir)
-                          if f.endswith('_agent.py')])
-
-        total_agents = legacy_agents + clean_agents
+        # Keep legacy/clean distinction for backwards compatibility
+        total_agents = db_agent_count
+        legacy_agents = 0  # No longer tracking filesystem counts
+        clean_agents = db_agent_count
 
         # === DATA STATS ===
         from core.models_unified_system import SpiderData, AgentMemory, AgentKnowledgeSource

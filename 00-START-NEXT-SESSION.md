@@ -1,107 +1,125 @@
 # Start Next Session Here
 
-**Last Session:** 441 - Discord Voice Recording for Voice Cloning
-**Date:** December 13, 2025
-**Status:** 43 Discord Commands | Voice Recording Complete | ElevenLabs Clone API Integrated
+**Last Session:** 442 - Voice Cloning Pipeline COMPLETE
+**Date:** December 14, 2025
+**Status:** Voice Cloned Successfully! | DonkeyKing's Voice Created | All Async Fixes Applied
 
 ---
 
-## Session 441 Accomplishments
+## Session 442 Accomplishments
 
-### Discord Voice Recording - COMPLETE
+### Voice Cloning - FULLY WORKING!
 
-Implemented full voice recording capability for voice cloning:
+Successfully cloned user's voice through Discord:
 
-1. **VoiceRecorder Class** - Captures user audio from Discord voice channels
-2. **ElevenLabsVoiceCloner** - Sends audio to ElevenLabs IVC API
-3. **`/voice-clone` Command** - Complete rewrite with real functionality
+1. **VoiceRecvClient Fix** - Force disconnect/reconnect for proper audio capture
+2. **ffmpeg Compression** - WAV → MP3 for files >8MB (ElevenLabs 10MB limit)
+3. **ElevenLabs Integration** - Creator tier API with `voices_write` permission
+4. **Async ORM Fixes** - All `/voice-market` actions wrapped with `sync_to_async`
+5. **Disk Cleanup** - Recovered 18GB (2.9GB → 21GB free)
 
-### Voice Cloning Flow
+### NEW: `/voice-ask` Command - Voice-Enabled Agent Responses!
 
-```
-User joins voice channel
-        │
-        ▼
-/voice-clone start
-        │
-        ▼
-Bot joins & records user audio
-        │
-        ▼
-User speaks for 60+ seconds
-        │
-        ▼
-/voice-clone stop my_voice
-        │
-        ▼
-Audio saved as WAV → Sent to ElevenLabs
-        │
-        ▼
-VoiceProfile created → Ready to use!
-```
-
-### Dependencies Added
+Ask any agent a question and hear the response spoken in your cloned voice:
 
 ```bash
-pip install discord-ext-voice-recv
+/voice-ask question:"What's trending in AI?" agent:Research voice:DonkeyKing
+```
+
+- Uses your cloned voice (or falls back to Rachel)
+- Works with any agent (Research, Image, CTO, etc.)
+- Returns audio file + text preview
+
+### Voice Created
+
+| Voice Name | Status | Privacy |
+|------------|--------|---------|
+| DonkeyKing's Voice | Active | Private |
+
+---
+
+## Quick Start - "Let's do this!"
+
+```bash
+# 1. Start services
+make start
+make celery
+
+# 2. Start Discord bot (IMPORTANT: kill old processes first!)
+pkill -f "run_discord_bot"
+source .venv/bin/activate
+.venv/bin/python manage.py run_discord_bot
+
+# 3. Test in Discord
+/voice-market my-voices    # Should show "DonkeyKing's Voice"
+/voice-ask question:"What's trending in AI?"  # Hear response in your voice!
+/voice-market browse       # Browse public voices
+
+# 4. Access AI Studio
+open http://localhost:8000/ai-studio/
 ```
 
 ---
 
 ## Current System State
 
-| Component | Status | Count |
-|-----------|--------|-------|
-| Agents | Active | 31 clean + legacy |
-| Discord Commands | Working | 43 |
-| Voice Marketplace | Complete | 14 endpoints |
-| Voice Recording | **NEW** | Full implementation |
-| Content Pipeline | Complete | 6 tiers |
-| Spider Data | Active | 15,620+ |
-| Migrations | Applied | 0091 |
+| Component | Status | Details |
+|-----------|--------|---------|
+| Voice Cloning | **WORKING** | Full pipeline tested |
+| Discord Bot | Active | 44+ commands (NEW: /voice-ask) |
+| Voice Marketplace | Working | All actions async-safe |
+| Agents | Active | 31 clean agents |
+| Spider Data | Active | 15,620+ records |
+| Disk Space | Good | ~21GB free |
 
 ---
 
-## Files Changed This Session
+## Session 443 Priority Tasks
+
+1. **Make Voice Public** - Add toggle for voice privacy (marketplace listing)
+2. **Voice Preview** - Generate sample audio from cloned voice
+3. **Text-to-Speech Integration** - Use cloned voices in content creation
+4. **Voice Marketplace Polish** - Preview action, purchase flow
+5. **Stripe Payment** - Monetize voice usage
+
+---
+
+## Key Technical Notes
+
+### Discord Bot Restart (IMPORTANT!)
+```bash
+# Always kill existing processes first!
+pkill -f "run_discord_bot"
+sleep 2
+.venv/bin/python manage.py run_discord_bot
+```
+
+### ElevenLabs Requirements
+- **Subscription:** Creator tier or higher ($22/mo)
+- **API Key:** Must have `voices_write` permission
+- **File Limit:** 10MB max (we compress to MP3)
+
+### Async/Django ORM
+All Discord command ORM calls MUST use `sync_to_async`:
+```python
+from asgiref.sync import sync_to_async
+
+@sync_to_async
+def get_data():
+    return list(Model.objects.filter(...))
+
+result = await get_data()
+```
+
+---
+
+## Files Changed Session 442
 
 | File | Changes |
 |------|---------|
-| `core/services/discord_voice.py` | Added VoiceRecorder, VoiceRecordingSink, ElevenLabsVoiceCloner |
-| `core/services/discord_bot.py` | Rewrote `/voice-clone` with full implementation |
-| `docs/handoffs/SESSION_441_VOICE_RECORDING.md` | Session handoff |
-
----
-
-## Session 442 Priority Tasks
-
-1. **Test Voice Recording** - Test with real Discord voice channel
-2. **Voice Sample Generation** - Generate sample audio after cloning
-3. **Video Generation** - Wire up Runway ML for actual video output
-4. **Payment Integration** - Stripe for content purchases
-5. **UI Panel** - Content Pipeline panel in AI Studio
-
----
-
-## Quick Start
-
-```bash
-# Start services
-make start
-make celery
-
-# Start Discord bot
-export DISCORD_BOT_TOKEN="..."
-make discord-bot
-
-# Test voice cloning (in Discord):
-# 1. Join a voice channel
-# 2. /voice-clone start
-# 3. Speak for 60+ seconds
-# 4. /voice-clone stop MyVoice
-
-# Access AI Studio
-open http://localhost:8000/ai-studio/
-```
+| `core/services/discord_voice.py` | ffmpeg compression, enhanced logging |
+| `core/services/discord_bot.py` | VoiceRecvClient fix, async ORM wrapping |
+| `docs/handoffs/SESSION_442_VOICE_CLONING_COMPLETE.md` | Full session handoff |
 
 ---
 
@@ -109,35 +127,40 @@ open http://localhost:8000/ai-studio/
 
 | Document | Purpose |
 |----------|---------|
-| `docs/handoffs/SESSION_441_VOICE_RECORDING.md` | Voice recording details |
-| `docs/UNIFIED_CONTENT_PIPELINE.md` | AI Content Factory master doc |
-| `docs/GOLDEN_GOOSE_STRATEGY.md` | Business strategy |
-| `docs/handoffs/SESSION_440_VOICE_MARKETPLACE.md` | Voice marketplace API |
+| `docs/handoffs/SESSION_442_VOICE_CLONING_COMPLETE.md` | This session's details |
+| `docs/handoffs/SESSION_441_VOICE_RECORDING.md` | Voice recording implementation |
+| `docs/UNIFIED_CONTENT_PIPELINE.md` | AI Content Factory |
 | `CLAUDE.md` | Project context |
 
 ---
 
-## Voice Cloning Tech Stack
+## Voice Cloning Tech Stack (Working!)
 
 ```
-Discord.py 2.6.4 + discord-ext-voice-recv 0.5.2
+Discord Voice Channel
         │
         ▼
-VoiceRecvClient (captures audio)
+VoiceRecvClient (discord-ext-voice-recv)
         │
         ▼
-VoiceRecordingSink (filters by user)
+VoiceRecordingSink (captures target user only)
         │
         ▼
 WAV file (48kHz, stereo, 16-bit PCM)
         │
         ▼
+ffmpeg compression (if >8MB → MP3)
+        │
+        ▼
 ElevenLabs IVC API (POST /v1/voices/add)
         │
         ▼
-VoiceProfile (stored in DB)
+VoiceProfile (stored in Django DB)
+        │
+        ▼
+/voice-market my-voices (shows your clones!)
 ```
 
 ---
 
-**Voice cloning is live! Test it in Discord.**
+**Voice cloning is LIVE! DonkeyKing's Voice is ready to use!**

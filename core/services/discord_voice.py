@@ -256,15 +256,28 @@ class VoiceRecordingSink:
     def __init__(self, recorder: VoiceRecorder, target_user_id: int):
         self.recorder = recorder
         self.target_user_id = target_user_id
+        self.packet_count = 0
+        logger.info(f"VoiceRecordingSink created for user {target_user_id}")
 
-    def write(self, user: discord.User, data: voice_recv.VoiceData):
+    def write(self, user, data):
         """Called when audio data is received from a user."""
-        if user.id == self.target_user_id:
+        self.packet_count += 1
+        if self.packet_count <= 5 or self.packet_count % 100 == 0:
+            logger.info(f"Audio packet #{self.packet_count} from user {user} (target: {self.target_user_id})")
+
+        # Filter to only capture from target user
+        user_id = getattr(user, 'id', None) if user else None
+        if user_id == self.target_user_id:
             # data.pcm contains the raw PCM audio data
-            self.recorder.add_audio_chunk(user.id, data.pcm)
+            pcm_data = getattr(data, 'pcm', None)
+            if pcm_data:
+                self.recorder.add_audio_chunk(user_id, pcm_data)
+                if self.packet_count <= 5:
+                    logger.info(f"Captured {len(pcm_data)} bytes of PCM data")
 
     def cleanup(self):
         """Called when the sink is stopped."""
+        logger.info(f"VoiceRecordingSink cleanup - total packets: {self.packet_count}")
         pass
 
 
@@ -314,42 +327,65 @@ class ElevenLabsVoiceCloner:
         if not os.path.exists(audio_file_path):
             return {"error": f"Audio file not found: {audio_file_path}"}
 
-        # Check file size (ElevenLabs has limits)
+        # Check file size and compress if needed (ElevenLabs has 10MB limit)
         file_size = os.path.getsize(audio_file_path)
-        if file_size > 10 * 1024 * 1024:  # 10MB limit
-            return {"error": "Audio file too large (max 10MB)"}
+        upload_path = audio_file_path
+        content_type = 'audio/wav'
+
+        if file_size > 8 * 1024 * 1024:  # Compress if > 8MB to be safe
+            logger.info(f"Audio file is {file_size / 1024 / 1024:.1f}MB, compressing to MP3...")
+            try:
+                import subprocess
+                mp3_path = audio_file_path.replace('.wav', '.mp3')
+                # Use ffmpeg to compress to MP3 (128kbps mono)
+                result = subprocess.run([
+                    'ffmpeg', '-y', '-i', audio_file_path,
+                    '-ac', '1',  # Mono
+                    '-ar', '22050',  # 22kHz sample rate
+                    '-b:a', '128k',  # 128kbps bitrate
+                    mp3_path
+                ], capture_output=True, text=True)
+
+                if result.returncode == 0 and os.path.exists(mp3_path):
+                    new_size = os.path.getsize(mp3_path)
+                    logger.info(f"Compressed to {new_size / 1024 / 1024:.1f}MB MP3")
+                    upload_path = mp3_path
+                    content_type = 'audio/mpeg'
+                else:
+                    logger.warning(f"ffmpeg compression failed: {result.stderr}")
+            except Exception as e:
+                logger.warning(f"Could not compress audio: {e}")
+
+        # Final size check
+        final_size = os.path.getsize(upload_path)
+        if final_size > 10 * 1024 * 1024:
+            return {"error": "Audio file too large (max 10MB even after compression)"}
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                # Prepare multipart form data
-                with open(audio_file_path, 'rb') as f:
-                    files = {
-                        'files': (os.path.basename(audio_file_path), f, 'audio/wav')
-                    }
-
-                    data = {
-                        'name': voice_name,
-                        'remove_background_noise': str(remove_background_noise).lower()
-                    }
-
-                    if description:
-                        data['description'] = description
-
-                    if labels:
-                        import json
-                        data['labels'] = json.dumps(labels)
-
-                    headers = {
-                        'xi-api-key': self.api_key
-                    }
-
-                    # Read file content for the request
-                    f.seek(0)
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                # Read file content
+                with open(upload_path, 'rb') as f:
                     file_content = f.read()
+
+                data = {
+                    'name': voice_name,
+                    'remove_background_noise': str(remove_background_noise).lower()
+                }
+
+                if description:
+                    data['description'] = description
+
+                if labels:
+                    import json
+                    data['labels'] = json.dumps(labels)
+
+                headers = {
+                    'xi-api-key': self.api_key
+                }
 
                 # Make the request
                 files = [
-                    ('files', (os.path.basename(audio_file_path), file_content, 'audio/wav'))
+                    ('files', (os.path.basename(upload_path), file_content, content_type))
                 ]
 
                 response = await client.post(

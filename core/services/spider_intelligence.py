@@ -683,11 +683,32 @@ class SpiderIntelligenceService:
         for operator in [' or ', ' and ', '"', "'", '(', ')']:
             clean_query = clean_query.replace(operator, ' ')
 
-        # Split into individual search terms (min 2 chars)
-        search_terms = [term.strip() for term in clean_query.split() if len(term.strip()) >= 2]
+        # Session 411: Whitelist of important short terms that should always be searched
+        # These are valid tech/business terms that would otherwise be filtered
+        important_short_terms = {'ai', 'ml', 'vr', 'ar', 'ux', 'ui', 'cv', 'nlp', 'api', 'sdk', 'b2b', 'b2c', 'saas', 'iot'}
+
+        # Split into individual search terms (min 3 chars, but allow whitelisted short terms)
+        # Session 411: Increased min length from 2 to 3 to reduce false positives
+        search_terms = []
+        for term in clean_query.split():
+            term = term.strip()
+            if len(term) >= 3:
+                search_terms.append(term)
+            elif term in important_short_terms:
+                search_terms.append(term)
 
         # Filter out common words that are too generic
-        stopwords = {'the', 'for', 'and', 'with', 'that', 'this', 'from', 'are', 'was', 'were'}
+        # Session 411: Expanded stopwords list significantly
+        stopwords = {
+            'the', 'for', 'and', 'with', 'that', 'this', 'from', 'are', 'was', 'were',
+            'has', 'have', 'had', 'been', 'being', 'will', 'would', 'could', 'should',
+            'may', 'might', 'must', 'can', 'shall', 'need', 'how', 'what', 'when',
+            'where', 'why', 'who', 'which', 'all', 'any', 'both', 'each', 'few',
+            'more', 'most', 'other', 'some', 'such', 'only', 'own', 'same', 'than',
+            'too', 'very', 'just', 'also', 'now', 'new', 'your', 'our', 'his', 'her',
+            'its', 'their', 'about', 'into', 'over', 'after', 'under', 'above',
+            'pro', 'use', 'get', 'got', 'make', 'made', 'take', 'set', 'way', 'see'
+        }
         search_terms = [t for t in search_terms if t not in stopwords]
 
         if not search_terms:
@@ -700,6 +721,11 @@ class SpiderIntelligenceService:
             spider_names = self.CATEGORY_MAPPINGS.get(category, [])
             if spider_names:
                 queryset = queryset.filter(spider_name__in=spider_names)
+
+        # Session 411: Exclude noisy spiders from general search
+        # Weather, GIFs, and music don't help with business research
+        noisy_spiders = {'noaa_weather', 'giphy', 'spotify', 'discord'}
+        queryset = queryset.exclude(spider_name__in=noisy_spiders)
 
         results = []
         seen = set()
@@ -717,8 +743,15 @@ class SpiderIntelligenceService:
 
                 searchable = f"{title} {description} {tags}".lower()
 
-                # Session 294: Match if ANY term is found
-                matching_terms = [term for term in search_terms if term in searchable]
+                # Session 411: Use word boundary matching instead of substring
+                # This prevents "ai" matching "advis-ai-ry" or "f-ai-led"
+                matching_terms = []
+                for term in search_terms:
+                    # Check if term appears as a whole word (with word boundaries)
+                    pattern = r'\b' + re.escape(term) + r'\b'
+                    if re.search(pattern, searchable):
+                        matching_terms.append(term)
+
                 if matching_terms:
                     # Deduplicate
                     item_key = f"{title}:{item.get('url', '')}".lower()

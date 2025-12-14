@@ -8,6 +8,9 @@ including base classes that will be inherited by all other apps.
 # Import unified system models
 from .models_unified_system import *
 
+# Import voice marketplace models (Session 440)
+from .models_voice_marketplace import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser

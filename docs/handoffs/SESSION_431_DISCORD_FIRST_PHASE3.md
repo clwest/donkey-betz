@@ -1,17 +1,13 @@
-# Session 431: Discord-First Platform - Phase 3 Client Management + UX Improvements
+# Session 431: Discord-First Platform - Phase 3 Client Management
 
 **Date:** December 12, 2025
-**Status:** Complete (Phase 3 + Inline Images + Sequential IDs)
+**Status:** Complete
 
 ---
 
 ## Summary
 
 Implemented Phase 3 of the Discord-First platform: Client Management. Users can now manage freelance/agency clients directly through Discord with dedicated channels, deliverable tracking, and invite generation.
-
-**Additional UX Improvements:**
-- **Inline Image Display** - Images now display directly in Discord like Midjourney (not external links)
-- **Sequential IDs** - Images use user-friendly `#1`, `#2` format instead of UUIDs
 
 ---
 
@@ -55,20 +51,6 @@ Implemented Phase 3 of the Discord-First platform: Client Management. Users can 
 ### Documentation
 - `00-START-NEXT-SESSION.md` - Updated for Session 432
 - `docs/DISCORD_FIRST_ROADMAP.md` - Marked Phase 3 complete
-
-### UX Improvements (Late Session 431)
-
-**Inline Image Display:**
-- Images uploaded as `discord.File` attachments instead of external URLs
-- Uses `embed.set_image(url=f"attachment://{filename}")` pattern
-- Works for both `/gallery` and `/client-deliver` commands
-- Images appear directly in Discord like Midjourney does
-
-**Sequential IDs:**
-- ImageHistory model has `sequential_number` field (added Session 182)
-- `/gallery` now displays `Image #1 of 142` format
-- `/client-deliver` looks up images by sequential_number, not UUID
-- Users can reference images by simple integers: `/client-deliver "Acme" 1`
 
 ---
 
@@ -152,54 +134,6 @@ async def client_deliver(interaction, client_name: str, image_id: int, message: 
 | DiscordServerChannel | Tracking created channels |
 | DiscordClient | Ready for clients |
 | ClientDeliverable | Ready for deliverables |
-
----
-
----
-
-## Discord Agent Notifications Fix (Late Session 431)
-
-**Problem Identified:**
-- Agent dreams were posting to Discord, but conversations, knowledge, and boardroom updates weren't
-- Root cause: `except Exception: pass` blocks in `force_agent_cycle.py` were silently swallowing errors
-
-**Fix Applied:**
-- Modified `core/management/commands/force_agent_cycle.py`:
-  - Dream notifications (lines 169-184): Added result capture and logging
-  - Conversation notifications (lines 274-297): Added result capture and logging
-  - Boardroom notifications: Added result capture and logging
-  - Knowledge notifications (lines 378-389): Added result capture and logging
-
-**Testing Results:**
-| Notification Type | Count | Channel | Status |
-|-------------------|-------|---------|--------|
-| Dreams | ✓ | #agent-dreams | Working |
-| Conversations | 17 | #agent-conversations | ✅ All posted |
-| Boardroom | 17 | #boardroom | ✅ All posted |
-| Knowledge | 34 | #agent-learning | ✅ All posted |
-
-**Commit:** `5986206` - fix(Session 431): Add Discord notification logging to force_agent_cycle
-
----
-
-## WebSocket Broadcast Feature (Late Session 431)
-
-**Problem Identified:**
-- Discord was updating with agent activity but web app was NOT updating
-- Web app relies on WebSocket broadcasts to receive real-time updates
-- `force_agent_cycle` only sent Discord notifications, not WebSocket broadcasts
-
-**Solution:**
-- Added WebSocket broadcast phase after cycle completes
-- Broadcasts to 3 WebSocket groups:
-  - `broadcast_learning_status` - Learning feed (agent knowledge/transfers)
-  - `broadcast_evolution_status` - Evolution status (agent XP/levels)
-  - `broadcast_relationship_status` - Relationships (alliances/rivalries)
-
-**Result:**
-Both Discord AND web app now update simultaneously after running `force_agent_cycle`.
-
-**Commit:** `a580592` - feat(Session 431): Add WebSocket broadcasts to force_agent_cycle
 
 ---
 

@@ -466,7 +466,7 @@ class ResearchOrchestrator:
 
             task = f"""Research this business idea thoroughly: {business_idea}
 
-IMPORTANT: Use MULTIPLE tools for comprehensive research:
+IMPORTANT: You MUST use ALL THREE tools for comprehensive research:
 
 1. **web_search** (REQUIRED) - Search for:
    - "{business_idea}" market analysis
@@ -474,20 +474,23 @@ IMPORTANT: Use MULTIPLE tools for comprehensive research:
    - Recent news about this industry
 {search_hints['web_queries']}
 
-2. **reddit_search** (REQUIRED) - Search relevant communities:
+2. **spider_query** (REQUIRED) - Query our spider network of 64 data sources:
+   - Query for: "{business_idea}"
+   - This includes: TechCrunch, DevTo, HackerNews, Reddit, GitHub, NewsAPI, financial data, job boards, and more
+   - Look for: tech trends, market signals, industry news, community discussions
+
+3. **reddit_search** (REQUIRED) - Search specific communities for user insights:
    - Use subreddits: "{search_hints['subreddits']}"
    - Query: "{search_hints['reddit_query']}"
    - Look for: user pain points, product feedback, market demand
 
-3. **spider_query** (OPTIONAL) - Only if relevant to tech/creative trends
-
-Focus on gathering:
+Focus on gathering from ALL sources:
 - Market size and growth indicators
 - Existing competitors and their approaches
 - User discussions about needs/frustrations
 - Industry news and developments
 
-Return actionable insights that inform competitive positioning."""
+You MUST call all three tools. Return actionable insights that inform competitive positioning."""
 
             result = self.research_agent.execute(
                 task=task,

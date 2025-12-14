@@ -89,6 +89,7 @@ class RateLimiter:
         # Cooldowns in seconds per command
         self._cooldown_times = {
             'ask': 10,       # 10 seconds between /ask calls
+            'voice_ask': 15, # 15 seconds between /voice-ask calls (TTS is expensive)
             'create': 30,    # 30 seconds between /create calls
             'research': 15,  # 15 seconds between /research calls
             'agent_task': 15,  # 15 seconds between /agent-task calls
@@ -2886,12 +2887,19 @@ class VoiceMarketplaceCommands(commands.Cog):
             from core.models import VoiceProfile, DiscordLinkCode
 
             if action == "browse":
-                # Get top rated public voices
-                voices = VoiceProfile.objects.filter(
-                    is_public=True, is_active=True
-                ).order_by('-is_featured', '-average_rating')[:10]
+                # Get top rated public voices (async-safe)
+                from asgiref.sync import sync_to_async
 
-                if not voices.exists():
+                @sync_to_async
+                def get_public_voices():
+                    voices = list(VoiceProfile.objects.filter(
+                        is_public=True, is_active=True
+                    ).order_by('-is_featured', '-average_rating')[:10])
+                    return voices
+
+                voices = await get_public_voices()
+
+                if not voices:
                     await interaction.followup.send(
                         "No voices in marketplace yet. Be the first to publish! Use `/voice-clone start`",
                         ephemeral=True
@@ -2930,14 +2938,21 @@ class VoiceMarketplaceCommands(commands.Cog):
                     return
 
                 from django.db.models import Q
-                voices = VoiceProfile.objects.filter(
-                    Q(is_public=True, is_active=True) &
-                    (Q(name__icontains=query) |
-                     Q(description__icontains=query) |
-                     Q(accent__icontains=query))
-                )[:10]
+                from asgiref.sync import sync_to_async
 
-                if not voices.exists():
+                @sync_to_async
+                def search_voices(search_query):
+                    voices = list(VoiceProfile.objects.filter(
+                        Q(is_public=True, is_active=True) &
+                        (Q(name__icontains=search_query) |
+                         Q(description__icontains=search_query) |
+                         Q(accent__icontains=search_query))
+                    )[:10])
+                    return voices
+
+                voices = await search_voices(query)
+
+                if not voices:
                     await interaction.followup.send(
                         f"No voices found matching '{query}'",
                         ephemeral=True
@@ -2946,7 +2961,7 @@ class VoiceMarketplaceCommands(commands.Cog):
 
                 embed = discord.Embed(
                     title=f"Voice Search: {query}",
-                    description=f"Found {voices.count()} voices",
+                    description=f"Found {len(voices)} voices",
                     color=discord.Color.blue(),
                     timestamp=datetime.now()
                 )
@@ -2961,22 +2976,28 @@ class VoiceMarketplaceCommands(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
             elif action == "my-voices":
-                # Get user from Discord link
-                link = DiscordLinkCode.objects.filter(
-                    discord_user_id=str(interaction.user.id),
-                    is_used=True
-                ).first()
+                # Get user from Discord ID (async-safe)
+                from core.models import UnifiedUser
+                from asgiref.sync import sync_to_async
 
-                if not link:
+                @sync_to_async
+                def get_user_voices(discord_id):
+                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
+                    if not user:
+                        return None, []
+                    voices = list(VoiceProfile.objects.filter(owner=user, is_active=True))
+                    return user, voices
+
+                user, voices = await get_user_voices(interaction.user.id)
+
+                if not user:
                     await interaction.followup.send(
                         "Please link your Discord account first using `/link`",
                         ephemeral=True
                     )
                     return
 
-                voices = VoiceProfile.objects.filter(owner=link.user, is_active=True)
-
-                if not voices.exists():
+                if not voices:
                     await interaction.followup.send(
                         "You don't have any voices yet! Use `/voice-clone start` to create one.",
                         ephemeral=True
@@ -2985,7 +3006,7 @@ class VoiceMarketplaceCommands(commands.Cog):
 
                 embed = discord.Embed(
                     title="Your Voices",
-                    description=f"You have {voices.count()} voice(s)",
+                    description=f"You have {len(voices)} voice(s)",
                     color=discord.Color.gold(),
                     timestamp=datetime.now()
                 )
@@ -3004,22 +3025,29 @@ class VoiceMarketplaceCommands(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
             elif action == "earnings":
-                link = DiscordLinkCode.objects.filter(
-                    discord_user_id=str(interaction.user.id),
-                    is_used=True
-                ).first()
+                from core.models import UnifiedUser
+                from asgiref.sync import sync_to_async
+                from django.db.models import Sum
 
-                if not link:
+                @sync_to_async
+                def get_earnings(discord_id):
+                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
+                    if not user:
+                        return None, 0, 0, 0
+                    voices = VoiceProfile.objects.filter(owner=user, is_active=True)
+                    total_revenue = voices.aggregate(total=Sum('total_revenue'))['total'] or 0
+                    total_uses = voices.aggregate(total=Sum('total_uses'))['total'] or 0
+                    voice_count = voices.count()
+                    return user, total_revenue, total_uses, voice_count
+
+                user, total_revenue, total_uses, voice_count = await get_earnings(interaction.user.id)
+
+                if not user:
                     await interaction.followup.send(
                         "Please link your Discord account first using `/link`",
                         ephemeral=True
                     )
                     return
-
-                from django.db.models import Sum
-                voices = VoiceProfile.objects.filter(owner=link.user, is_active=True)
-                total_revenue = voices.aggregate(total=Sum('total_revenue'))['total'] or 0
-                total_uses = voices.aggregate(total=Sum('total_uses'))['total'] or 0
 
                 embed = discord.Embed(
                     title="Voice Earnings Summary",
@@ -3028,7 +3056,7 @@ class VoiceMarketplaceCommands(commands.Cog):
                 )
                 embed.add_field(name="Total Revenue", value=f"**${total_revenue:.2f}**", inline=True)
                 embed.add_field(name="Total Uses", value=f"**{total_uses}**", inline=True)
-                embed.add_field(name="Voice Count", value=f"**{voices.count()}**", inline=True)
+                embed.add_field(name="Voice Count", value=f"**{voice_count}**", inline=True)
 
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -3056,7 +3084,9 @@ class VoiceMarketplaceCommands(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            from core.models import VoiceCloneRequest, VoiceProfile, DiscordLinkCode
+            from asgiref.sync import sync_to_async
+            from core.models import VoiceCloneRequest, VoiceProfile
+            from django.contrib.auth import get_user_model
             from core.services.discord_voice import (
                 get_voice_recorder,
                 get_voice_cloner,
@@ -3064,13 +3094,16 @@ class VoiceMarketplaceCommands(commands.Cog):
                 VOICE_RECV_AVAILABLE
             )
 
-            # Get linked user
-            link = DiscordLinkCode.objects.filter(
-                discord_user_id=str(interaction.user.id),
-                is_used=True
-            ).first()
+            User = get_user_model()
 
-            if not link:
+            # Get linked user by discord_id on User model (wrapped for async)
+            @sync_to_async
+            def get_linked_user(discord_id):
+                return User.objects.filter(discord_id=str(discord_id)).first()
+
+            linked_user = await get_linked_user(interaction.user.id)
+
+            if not linked_user:
                 await interaction.followup.send(
                     "Please link your Discord account first using `/link`",
                     ephemeral=True
@@ -3079,6 +3112,18 @@ class VoiceMarketplaceCommands(commands.Cog):
 
             recorder = get_voice_recorder()
             cloner = get_voice_cloner()
+
+            # Define helper functions for async DB access (available to all actions)
+            @sync_to_async
+            def get_active_recording(user):
+                return VoiceCloneRequest.objects.filter(
+                    user=user,
+                    status__in=['pending', 'recording']
+                ).first()
+
+            @sync_to_async
+            def mark_failed(request, message):
+                request.mark_failed(message)
 
             if action == "start":
                 # Check if voice receiving is available
@@ -3090,10 +3135,7 @@ class VoiceMarketplaceCommands(commands.Cog):
                     return
 
                 # Check if user has an active recording
-                active = VoiceCloneRequest.objects.filter(
-                    user=link.user,
-                    status__in=['pending', 'recording']
-                ).first()
+                active = await get_active_recording(linked_user)
 
                 if active:
                     await interaction.followup.send(
@@ -3114,15 +3156,20 @@ class VoiceMarketplaceCommands(commands.Cog):
 
                 voice_channel = interaction.user.voice.channel
 
-                # Create new clone request
-                clone_request = VoiceCloneRequest.objects.create(
-                    user=link.user,
-                    discord_user_id=str(interaction.user.id),
-                    discord_guild_id=str(interaction.guild.id),
-                    discord_channel_id=str(voice_channel.id),
-                    status='recording'
-                )
-                clone_request.start_recording()
+                # Create new clone request (wrapped for async)
+                @sync_to_async
+                def create_clone_request():
+                    req = VoiceCloneRequest.objects.create(
+                        user=linked_user,
+                        discord_user_id=str(interaction.user.id),
+                        discord_guild_id=str(interaction.guild.id),
+                        discord_channel_id=str(voice_channel.id),
+                        status='recording'
+                    )
+                    req.start_recording()
+                    return req
+
+                clone_request = await create_clone_request()
 
                 # Start recording the user
                 recorder.start_recording(
@@ -3138,21 +3185,30 @@ class VoiceMarketplaceCommands(commands.Cog):
                     # Check if already connected
                     voice_client = interaction.guild.voice_client
 
-                    if voice_client and voice_client.is_connected():
-                        # Already connected, just update the sink
-                        pass
-                    else:
-                        # Connect with voice_recv client for receiving audio
-                        voice_client = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
+                    # ALWAYS disconnect first if connected (force clean slate)
+                    if voice_client:
+                        logger.info("Disconnecting existing voice client for clean VoiceRecvClient connection")
+                        try:
+                            await voice_client.disconnect(force=True)
+                        except Exception:
+                            pass
+                        await asyncio.sleep(0.5)  # Brief delay for clean disconnect
+                        voice_client = None
+
+                    # Connect with voice_recv client for receiving audio
+                    logger.info(f"Connecting to {voice_channel.name} with VoiceRecvClient")
+                    voice_client = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
 
                     # Create and set the sink for this user
                     sink = VoiceRecordingSink(recorder, interaction.user.id)
 
                     # Start listening to this specific user
+                    logger.info(f"Starting to listen to user {interaction.user.id}")
                     voice_client.listen(voice_recv.BasicSink(sink.write))
+                    logger.info("Voice recording sink attached successfully!")
 
                 except Exception as ve:
-                    logger.error(f"Failed to connect to voice channel: {ve}")
+                    logger.error(f"Failed to connect to voice channel: {ve}", exc_info=True)
                     # Still mark as recording - user can speak, we'll try to capture
                     pass
 
@@ -3180,10 +3236,8 @@ class VoiceMarketplaceCommands(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
             elif action == "stop":
-                active = VoiceCloneRequest.objects.filter(
-                    user=link.user,
-                    status__in=['pending', 'recording']
-                ).first()
+                # Get active recording (wrapped for async)
+                active = await get_active_recording(linked_user)
 
                 if not active:
                     await interaction.followup.send(
@@ -3196,7 +3250,7 @@ class VoiceMarketplaceCommands(commands.Cog):
                 audio_path = recorder.stop_recording(interaction.user.id)
 
                 if not audio_path:
-                    active.mark_failed("No audio data captured. Please try again and speak while recording.")
+                    await mark_failed(active, "No audio data captured. Please try again and speak while recording.")
                     await interaction.followup.send(
                         "❌ No audio was captured! Make sure you're speaking while in the voice channel.\n"
                         "Try `/voice-clone start` again.",
@@ -3209,22 +3263,26 @@ class VoiceMarketplaceCommands(commands.Cog):
                 file_size = os.path.getsize(audio_path)
                 duration_seconds = file_size / 192000  # 48kHz * 2 channels * 2 bytes
 
-                if duration_seconds < 30:
-                    active.mark_failed(f"Recording too short ({duration_seconds:.0f}s). Need at least 60 seconds.")
+                if duration_seconds < 15:
+                    await mark_failed(active, f"Recording too short ({duration_seconds:.0f}s). Need at least 15 seconds.")
                     await interaction.followup.send(
                         f"❌ Recording too short ({duration_seconds:.0f} seconds).\n"
-                        "ElevenLabs needs at least 60 seconds of audio for good quality.\n"
+                        "Need at least 15 seconds of audio (60+ recommended for best quality).\n"
                         "Try `/voice-clone start` again and speak for longer.",
                         ephemeral=True
                     )
                     return
 
-                # Update the clone request
-                active.stop_recording()
-                active.audio_file_path = audio_path
-                active.recording_duration_seconds = int(duration_seconds)
-                active.status = 'cloning'
-                active.save()
+                # Update the clone request (wrapped for async)
+                @sync_to_async
+                def update_clone_request(request, path, duration):
+                    request.stop_recording()
+                    request.audio_file_path = path
+                    request.recording_duration_seconds = int(duration)
+                    request.status = 'cloning'
+                    request.save()
+
+                await update_clone_request(active, audio_path, duration_seconds)
 
                 # Disconnect from voice channel
                 if interaction.guild.voice_client:
@@ -3256,7 +3314,7 @@ class VoiceMarketplaceCommands(commands.Cog):
                 )
 
                 if "error" in result:
-                    active.mark_failed(result["error"])
+                    await mark_failed(active, result["error"])
                     await interaction.followup.send(
                         f"❌ Voice cloning failed: {result['error']}\n"
                         "Please try again or contact support.",
@@ -3264,21 +3322,30 @@ class VoiceMarketplaceCommands(commands.Cog):
                     )
                     return
 
-                # Create VoiceProfile in database
-                voice_profile = VoiceProfile.objects.create(
-                    owner=link.user,
-                    name=final_voice_name,
-                    description=f"Voice cloned from Discord recording ({duration_seconds:.0f}s)",
-                    elevenlabs_voice_id=result["voice_id"],
-                    gender='neutral',  # Could be detected
-                    age_range='adult',
-                    creation_method='discord_clone',
-                    is_public=False,  # Start as private
-                    is_active=True
-                )
+                # Create VoiceProfile in database (wrapped for async)
+                @sync_to_async
+                def create_voice_profile():
+                    profile = VoiceProfile.objects.create(
+                        owner=linked_user,
+                        name=final_voice_name,
+                        description=f"Voice cloned from Discord recording ({duration_seconds:.0f}s)",
+                        elevenlabs_voice_id=result["voice_id"],
+                        gender='neutral',
+                        age_range='adult',
+                        creation_method='discord_clone',
+                        is_public=False,
+                        is_active=True
+                    )
+                    return profile
 
-                # Complete the clone request
-                active.complete(voice_profile)
+                voice_profile = await create_voice_profile()
+
+                # Complete the clone request (wrapped for async)
+                @sync_to_async
+                def complete_request(request, profile):
+                    request.complete(profile)
+
+                await complete_request(active, voice_profile)
 
                 # Clean up the audio file
                 try:
@@ -3306,11 +3373,26 @@ class VoiceMarketplaceCommands(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
             elif action == "status":
-                request = VoiceCloneRequest.objects.filter(
-                    user=link.user
-                ).order_by('-created_at').first()
+                # Get latest clone request (wrapped for async)
+                @sync_to_async
+                def get_latest_request(user):
+                    req = VoiceCloneRequest.objects.filter(
+                        user=user
+                    ).order_by('-created_at').first()
+                    if req:
+                        # Prefetch related voice_profile to avoid lazy loading issues
+                        return {
+                            'status': req.status,
+                            'recording_duration_seconds': req.recording_duration_seconds,
+                            'voice_profile_name': req.voice_profile.name if req.voice_profile else None,
+                            'voice_profile_id': str(req.voice_profile.id)[:8] if req.voice_profile else None,
+                            'error_message': req.error_message,
+                        }
+                    return None
 
-                if not request:
+                request_data = await get_latest_request(linked_user)
+
+                if not request_data:
                     await interaction.followup.send(
                         "No voice clone requests found. Use `/voice-clone start` to begin.",
                         ephemeral=True
@@ -3319,7 +3401,7 @@ class VoiceMarketplaceCommands(commands.Cog):
 
                 # Check current recording duration if active
                 current_duration = None
-                if request.status == 'recording' and recorder.is_recording(interaction.user.id):
+                if request_data['status'] == 'recording' and recorder.is_recording(interaction.user.id):
                     current_duration = recorder.get_recording_duration(interaction.user.id)
 
                 status_colors = {
@@ -3341,28 +3423,28 @@ class VoiceMarketplaceCommands(commands.Cog):
                 }
 
                 embed = discord.Embed(
-                    title=f"{status_emojis.get(request.status, '❓')} Voice Clone Status",
-                    color=status_colors.get(request.status, discord.Color.gray()),
+                    title=f"{status_emojis.get(request_data['status'], '❓')} Voice Clone Status",
+                    color=status_colors.get(request_data['status'], discord.Color.gray()),
                     timestamp=datetime.now()
                 )
-                embed.add_field(name="Status", value=request.status.title(), inline=True)
+                embed.add_field(name="Status", value=request_data['status'].title(), inline=True)
 
                 if current_duration:
                     embed.add_field(name="Current Duration", value=f"{current_duration:.0f}s (recording...)", inline=True)
-                elif request.recording_duration_seconds:
-                    embed.add_field(name="Duration", value=f"{request.recording_duration_seconds}s", inline=True)
+                elif request_data['recording_duration_seconds']:
+                    embed.add_field(name="Duration", value=f"{request_data['recording_duration_seconds']}s", inline=True)
 
-                if request.voice_profile:
+                if request_data['voice_profile_name']:
                     embed.add_field(
                         name="Voice Created",
-                        value=f"{request.voice_profile.name}\nID: `{str(request.voice_profile.id)[:8]}`",
+                        value=f"{request_data['voice_profile_name']}\nID: `{request_data['voice_profile_id']}`",
                         inline=False
                     )
 
-                if request.error_message:
-                    embed.add_field(name="Error", value=request.error_message[:200], inline=False)
+                if request_data['error_message']:
+                    embed.add_field(name="Error", value=request_data['error_message'][:200], inline=False)
 
-                if request.status == 'recording':
+                if request_data['status'] == 'recording':
                     embed.set_footer(text="Use /voice-clone stop when you're done recording")
 
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -4875,6 +4957,210 @@ class AgentAccessCommands(commands.Cog):
                 )
             )
 
+    @app_commands.command(name="voice-ask", description="Ask a question and hear the AI speak the answer")
+    @app_commands.describe(
+        question="Your question",
+        agent="Agent to use (default: Research)",
+        voice="Voice name (default: your cloned voice or Rachel)"
+    )
+    async def voice_ask(self, interaction: discord.Interaction, question: str, agent: str = "Research", voice: str = None):
+        """Ask a question and get a spoken audio response using your cloned voice."""
+        await interaction.response.defer()
+
+        # Rate limit check
+        can_use, remaining = rate_limiter.check_cooldown(interaction.user.id, 'voice_ask')
+        if not can_use:
+            await interaction.followup.send(
+                f"⏳ Please wait {remaining:.1f}s before asking another question.",
+                ephemeral=True
+            )
+            return
+
+        try:
+            from core.agent_router import AgentRouter
+            from core.models_voice_marketplace import VoiceProfile
+            from content.elevenlabs_provider import elevenlabs_provider
+            from django.contrib.auth import get_user_model
+            import io
+            User = get_user_model()
+
+            # Get linked user
+            @sync_to_async
+            def get_linked_user(discord_id):
+                try:
+                    return User.objects.filter(discord_id=str(discord_id)).first()
+                except Exception:
+                    return None
+
+            user = await get_linked_user(interaction.user.id)
+
+            # Get user's cloned voice or use default
+            @sync_to_async
+            def get_user_voice(user, voice_name):
+                if voice_name:
+                    # Try to find by name
+                    vp = VoiceProfile.objects.filter(name__icontains=voice_name).first()
+                    if vp:
+                        return vp.elevenlabs_voice_id, vp.name
+                if user:
+                    # Get user's own voice
+                    vp = VoiceProfile.objects.filter(owner=user).first()
+                    if vp:
+                        return vp.elevenlabs_voice_id, vp.name
+                # Fallback to default
+                return None, "Rachel"
+
+            voice_id, voice_name = await get_user_voice(user, voice)
+
+            # Normalize agent name
+            agent_name = agent.strip()
+            if not agent_name.endswith("Agent"):
+                agent_name = agent_name + "Agent"
+
+            # Show thinking embed
+            thinking_embed = discord.Embed(
+                title=f"🎤 Asking {agent_name}...",
+                description=f"*{question[:100]}{'...' if len(question) > 100 else ''}*\n\nVoice: **{voice_name}**",
+                color=discord.Color.blue()
+            )
+            await interaction.followup.send(embed=thinking_embed)
+
+            # Execute the agent
+            @sync_to_async
+            def execute_agent(agent_name, task, user):
+                router = AgentRouter(user=user)
+                return router.route(agent_name, task)
+
+            result = await execute_agent(agent_name, question, user)
+            rate_limiter.record_use(interaction.user.id, 'voice_ask')
+
+            # Extract text response
+            raw_response = ""
+            if isinstance(result, dict):
+                raw_response = result.get('response', result.get('result', str(result)))
+            else:
+                raw_response = str(result)
+
+            # Convert to natural speech using GPT
+            @sync_to_async
+            def make_speakable(raw_text, question):
+                """Convert agent output to natural conversational speech."""
+                import openai
+                import os
+
+                client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+                prompt = f"""Convert this research data into a natural, conversational spoken response.
+
+Rules:
+- DO NOT read URLs or links aloud
+- Summarize the key findings in 2-4 sentences
+- Speak naturally as if you're telling a friend what you found
+- Focus on the most interesting/relevant information
+- Keep it under 200 words for good audio length
+
+Original question: {question}
+
+Raw data to summarize:
+{raw_text[:3000]}
+
+Spoken response:"""
+
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=300,
+                        temperature=0.7
+                    )
+                    return response.choices[0].message.content.strip()
+                except Exception as e:
+                    logger.error(f"Error making response speakable: {e}")
+                    # Fallback: just clean up the raw text
+                    import re
+                    cleaned = re.sub(r'https?://\S+', '', raw_text)
+                    cleaned = re.sub(r'\[.*?\]', '', cleaned)
+                    return cleaned[:500]
+
+            response_text = await make_speakable(raw_response, question)
+
+            # Truncate for TTS (ElevenLabs limit ~5000 chars, keep it shorter for audio length)
+            max_tts_chars = 1500
+            if len(response_text) > max_tts_chars:
+                response_text = response_text[:max_tts_chars] + "..."
+
+            # Generate TTS
+            @sync_to_async
+            def generate_speech(text, voice_id):
+                if voice_id:
+                    # Use cloned voice - call API directly
+                    import requests
+                    from django.conf import settings
+                    api_key = settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY', '')
+                    response = requests.post(
+                        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                        headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+                        json={"text": text, "model_id": "eleven_multilingual_v2"},
+                        timeout=60
+                    )
+                    if response.status_code == 200:
+                        return response.content, None
+                    return None, f"TTS failed: {response.status_code}"
+                else:
+                    # Use default voice through provider
+                    result = elevenlabs_provider.text_to_speech(text, voice="Rachel")
+                    if result.get('success'):
+                        # Download the audio from URL
+                        import requests
+                        audio_url = result.get('audio_url', '')
+                        if audio_url:
+                            resp = requests.get(audio_url, timeout=30)
+                            if resp.status_code == 200:
+                                return resp.content, None
+                    return None, result.get('error_message', 'TTS failed')
+
+            audio_data, error = await generate_speech(response_text, voice_id)
+
+            if error or not audio_data:
+                error_embed = discord.Embed(
+                    title="❌ TTS Error",
+                    description=f"Text response received but audio generation failed:\n{error}",
+                    color=discord.Color.red()
+                )
+                error_embed.add_field(name="Text Response", value=response_text[:500] + "..." if len(response_text) > 500 else response_text, inline=False)
+                await interaction.edit_original_response(embed=error_embed)
+                return
+
+            # Send audio file
+            audio_file = discord.File(io.BytesIO(audio_data), filename="response.mp3")
+
+            # Update embed with success
+            success_embed = discord.Embed(
+                title=f"🎤 {agent_name} Response",
+                description=f"**Question:** {question[:200]}{'...' if len(question) > 200 else ''}\n\n**Voice:** {voice_name}",
+                color=discord.Color.green()
+            )
+            # Add truncated text preview
+            text_preview = response_text[:300] + "..." if len(response_text) > 300 else response_text
+            success_embed.add_field(name="📝 Response Preview", value=text_preview, inline=False)
+
+            await interaction.edit_original_response(embed=success_embed)
+            await interaction.followup.send(file=audio_file)
+
+            logger.info(f"/voice-ask completed: {agent_name} answered with {voice_name} voice")
+
+        except Exception as e:
+            logger.error(f"/voice-ask error: {e}")
+            import traceback
+            traceback.print_exc()
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to process question: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
     @app_commands.command(name="consult", description="Consult a legendary advisor")
     @app_commands.describe(
         advisor="Advisor name (e.g., warren, elon, steve)",
@@ -5273,7 +5559,8 @@ class HelpCommands(commands.Cog):
                 "**/agents** [limit] - List active agents\n"
                 "**/agent** <name> - Get agent details\n"
                 "**/agent-list** [category] - List agents by category\n"
-                "**/agent-task** <name> <task> - Execute agent task"
+                "**/agent-task** <name> <task> - Execute agent task\n"
+                "**/voice-ask** <question> [agent] [voice] - Ask & hear spoken answer"
             ),
             inline=False
         )
