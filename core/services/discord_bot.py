@@ -2857,18 +2857,20 @@ class RoleManager(commands.Cog):
         # The Stripe webhook queues these
         @sync_to_async
         def get_pending_syncs():
-            from core.models import DiscordLinkCode
+            from core.models import UnifiedUser
             pending = []
 
-            # Get all linked Discord users
-            links = DiscordLinkCode.objects.filter(is_used=True).select_related('user')
+            # Get all linked Discord users (those with discord_id set on UnifiedUser)
+            users = UnifiedUser.objects.filter(
+                discord_id__isnull=False
+            ).exclude(discord_id='')
 
-            for link in links:
-                sync_key = f"discord_role_sync:{link.discord_user_id}"
+            for user in users:
+                sync_key = f"discord_role_sync:{user.discord_id}"
                 sync_data = cache.get(sync_key)
                 if sync_data:
                     pending.append({
-                        'discord_user_id': link.discord_user_id,
+                        'discord_user_id': user.discord_id,
                         'tier': sync_data.get('tier', 'free'),
                         'cache_key': sync_key,
                     })
