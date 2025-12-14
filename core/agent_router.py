@@ -133,6 +133,9 @@ from core.agents.legal import (
     LegalDocDrafterAgent,
 )
 
+# Session 445: Series Workflow Agent
+from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
+
 logger = logging.getLogger(__name__)
 
 
@@ -201,6 +204,9 @@ class AgentRouter:
 
         # Legal Agents (Session 403)
         "LegalDocDrafterAgent": LegalDocDrafterAgent,
+
+        # Series Workflow Agent (Session 445)
+        "AISeriesWorkflowAgent": AISeriesWorkflowAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,

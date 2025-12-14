@@ -10554,3 +10554,118 @@ def generate_content_package(self, package_id: str):
 
         # Retry with exponential backoff
         raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
+
+
+# ==================== SESSION 445: AI SERIES WORKFLOW ====================
+
+@shared_task(bind=True, max_retries=3)
+def generate_ai_series(self, series_id: str):
+    """
+    Session 445: Generate a complete AI series through the AISeriesWorkflowAgent.
+
+    This task orchestrates multi-episode content series by:
+    1. Researching the series topic/niche
+    2. Planning episode structure and story arcs
+    3. Generating characters with style consistency
+    4. Creating episode content (images, videos, voice)
+    5. Packaging everything for delivery
+
+    Args:
+        series_id: UUID of the AISeries to generate
+    """
+    logger.info(f"🎬 [SESSION 445] Starting AI series generation: {series_id}")
+
+    try:
+        from core.models_ai_series import AISeries, SeriesStatus, EpisodeStatus
+        from core.agents.ai_series_workflow_agent import get_ai_series_workflow_agent
+
+        # Get the series
+        series = AISeries.objects.get(id=series_id)
+
+        if series.status != SeriesStatus.QUEUED:
+            logger.warning(f"🎬 [SESSION 445] Series {series_id} not in QUEUED status, skipping")
+            return {'status': 'skipped', 'reason': f'Series status is {series.status}'}
+
+        # Start planning
+        series.start_planning()
+        logger.info(f"🎬 [SESSION 445] Series '{series.name}' moved to PLANNING status")
+
+        # Get the agent
+        agent = get_ai_series_workflow_agent(user=series.created_by)
+
+        # Build the task prompt
+        task = f"""Create a {series.series_type} series called "{series.name}".
+
+Description: {series.description}
+Target Audience: {series.target_audience}
+Number of Episodes: {series.episode_count}
+
+Generate all {series.episode_count} episodes with consistent characters, style, and story progression.
+Each episode should have: title, synopsis, images, script, voiceover, and video.
+"""
+
+        # Execute the agent
+        context = {
+            'series_id': str(series.id),
+            'series_type': series.series_type,
+            'episode_count': series.episode_count,
+            'style_config': series.style_config,
+            'character_config': series.character_config,
+        }
+
+        result = agent.execute(
+            task=task,
+            context=context,
+            scifi_context={},
+            spider_context={},
+        )
+
+        if result.success:
+            logger.info(f"🎬 [SESSION 445] Series generation complete: {series.name}")
+
+            # Update series with generated config
+            if result.data:
+                if 'style_config' in result.data:
+                    series.style_config = result.data['style_config']
+                if 'character_config' in result.data:
+                    series.character_config = result.data['character_config']
+                if 'episodes' in result.data:
+                    series.episode_data = result.data.get('episodes', [])
+                series.save()
+
+            # Complete the series
+            series.complete_generation()
+
+            return {
+                'status': 'success',
+                'series_id': str(series_id),
+                'series_name': series.name,
+                'episodes_generated': series.episodes.filter(status=EpisodeStatus.COMPLETE).count(),
+            }
+        else:
+            logger.error(f"🎬 [SESSION 445] Series generation failed: {result.error}")
+            series.fail(result.error or "Agent execution failed")
+
+            return {
+                'status': 'failed',
+                'series_id': str(series_id),
+                'error': result.error,
+            }
+
+    except AISeries.DoesNotExist:
+        logger.error(f"🎬 [SESSION 445] Series not found: {series_id}")
+        return {'status': 'failed', 'error': f'Series {series_id} not found'}
+
+    except Exception as e:
+        logger.error(f"🎬 [SESSION 445] Series generation error: {e}")
+
+        # Update series status to failed
+        try:
+            from core.models_ai_series import AISeries
+            series = AISeries.objects.get(id=series_id)
+            series.fail(str(e))
+        except Exception:
+            pass
+
+        # Retry with exponential backoff
+        raise self.retry(exc=e, countdown=120 * (2 ** self.request.retries))

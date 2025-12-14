@@ -304,6 +304,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
         await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
         await self.add_cog(ContentPipelineCommands(self))  # Session 440: Content Pipeline
+        await self.add_cog(SeriesCommands(self))  # Session 445: AI Series Workflow
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
 
@@ -4179,6 +4180,299 @@ class RoleManager(commands.Cog):
     async def sync_user_role(self, discord_user_id: str, tier: str):
         """Public method to manually sync a user's role."""
         await self._sync_role(discord_user_id, tier, f"manual_sync:{discord_user_id}")
+
+
+class SeriesCommands(commands.Cog):
+    """
+    Session 445: AI Series Creation Commands.
+
+    Create multi-episode content series with consistent characters and style.
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            from core.models import DiscordLinkCode
+            User = get_user_model()
+            link = DiscordLinkCode.objects.filter(
+                discord_user_id=str(discord_id),
+                is_verified=True
+            ).select_related('user').first()
+            return link.user if link else None
+        return await get_user()
+
+    @app_commands.command(name="series-create", description="Create a multi-episode AI content series")
+    @app_commands.describe(
+        series_type="Type of series to create",
+        episodes="Number of episodes (1-5)",
+        prompt="Description of your series concept"
+    )
+    @app_commands.choices(series_type=[
+        app_commands.Choice(name="Educational - Tutorials, explainers", value="educational"),
+        app_commands.Choice(name="Entertainment - Cartoons, stories", value="entertainment"),
+        app_commands.Choice(name="Marketing - Ad campaigns, brand series", value="marketing"),
+    ])
+    async def series_create(
+        self,
+        interaction: discord.Interaction,
+        series_type: app_commands.Choice[str],
+        episodes: app_commands.Range[int, 1, 5],
+        prompt: str
+    ):
+        """Create a multi-episode AI content series."""
+        await interaction.response.defer()
+
+        try:
+            # Check user is linked
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Create series via agent
+            @sync_to_async
+            def create_series():
+                from core.models_ai_series import AISeries, SeriesType, SeriesEpisode
+                from core.tasks import generate_ai_series
+
+                # Map type
+                type_map = {
+                    'educational': SeriesType.EDUCATIONAL,
+                    'entertainment': SeriesType.ENTERTAINMENT,
+                    'marketing': SeriesType.MARKETING,
+                }
+
+                series = AISeries.objects.create(
+                    name=prompt[:200],
+                    description=prompt,
+                    prompt=prompt,
+                    series_type=type_map.get(series_type.value, SeriesType.EDUCATIONAL),
+                    episode_count=episodes,
+                    target_audience="Discord community",
+                    created_by=user,
+                    discord_channel_id=str(interaction.channel_id),
+                )
+
+                # Create episode records
+                arc_positions = ['intro'] if episodes == 1 else \
+                               ['intro', 'conclusion'] if episodes == 2 else \
+                               ['intro', 'climax', 'conclusion'] if episodes == 3 else \
+                               ['intro', 'rising', 'climax', 'conclusion'] if episodes == 4 else \
+                               ['intro', 'rising', 'climax', 'falling', 'conclusion']
+
+                for i, arc_pos in enumerate(arc_positions, 1):
+                    SeriesEpisode.objects.create(
+                        series=series,
+                        episode_number=i,
+                        title=f"Episode {i}",
+                        synopsis=f"Episode {i} - {arc_pos} phase",
+                        arc_position=arc_pos,
+                        generation_order=i
+                    )
+
+                # Start generation task
+                generate_ai_series.delay(str(series.id))
+
+                return series
+
+            series = await create_series()
+
+            # Send confirmation
+            embed = discord.Embed(
+                title="AI Series Creation Started",
+                description=f"Creating your **{series_type.name}** series!",
+                color=discord.Color.purple()
+            )
+            embed.add_field(name="Series ID", value=f"`{str(series.id)[:8]}...`", inline=True)
+            embed.add_field(name="Episodes", value=str(episodes), inline=True)
+            embed.add_field(name="Type", value=series_type.name, inline=True)
+            embed.add_field(name="Prompt", value=prompt[:200] + "..." if len(prompt) > 200 else prompt, inline=False)
+            embed.set_footer(text="Use /series-status to check progress")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Series create error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to create series: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="series-status", description="Check status of your AI series")
+    @app_commands.describe(series_id="Optional series ID (shows latest if not provided)")
+    async def series_status(
+        self,
+        interaction: discord.Interaction,
+        series_id: Optional[str] = None
+    ):
+        """Check status of an AI series."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def get_series():
+                from core.models_ai_series import AISeries
+                if series_id:
+                    return AISeries.objects.filter(id__startswith=series_id, created_by=user).first()
+                else:
+                    return AISeries.objects.filter(created_by=user).order_by('-created_at').first()
+
+            series = await get_series()
+
+            if not series:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="No Series Found",
+                        description="No series found. Use `/series-create` to start one!",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Get episode status
+            @sync_to_async
+            def get_episodes():
+                return list(series.episodes.all().values('episode_number', 'title', 'status'))
+
+            episodes = await get_episodes()
+
+            # Build status embed
+            status_colors = {
+                'planning': discord.Color.blue(),
+                'generating': discord.Color.yellow(),
+                'complete': discord.Color.green(),
+                'failed': discord.Color.red(),
+            }
+
+            embed = discord.Embed(
+                title=f"Series: {series.name[:50]}",
+                description=f"**Type:** {series.get_series_type_display()}\n**Status:** {series.get_status_display()}",
+                color=status_colors.get(series.status, discord.Color.grey())
+            )
+
+            # Progress bar
+            progress = series.generation_progress
+            bar_filled = int(progress / 10)
+            bar_empty = 10 - bar_filled
+            progress_bar = "█" * bar_filled + "░" * bar_empty
+            embed.add_field(name="Progress", value=f"{progress_bar} {progress}%", inline=False)
+
+            # Episode list
+            episode_status = "\n".join([
+                f"Ep {ep['episode_number']}: {ep['title'][:30]} - {ep['status']}"
+                for ep in episodes
+            ])
+            if episode_status:
+                embed.add_field(name="Episodes", value=episode_status, inline=False)
+
+            embed.add_field(name="Series ID", value=f"`{str(series.id)[:8]}...`", inline=True)
+            embed.set_footer(text=f"Created {series.created_at.strftime('%Y-%m-%d %H:%M')}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Series status error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="series-list", description="List your AI series")
+    async def series_list(self, interaction: discord.Interaction):
+        """List all AI series created by the user."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def get_series_list():
+                from core.models_ai_series import AISeries
+                return list(AISeries.objects.filter(created_by=user).order_by('-created_at')[:10].values(
+                    'id', 'name', 'series_type', 'episode_count', 'status', 'generation_progress', 'created_at'
+                ))
+
+            series_list = await get_series_list()
+
+            if not series_list:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="No Series Found",
+                        description="You haven't created any series yet.\nUse `/series-create` to start your first series!",
+                        color=discord.Color.blue()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="Your AI Series",
+                description=f"Showing {len(series_list)} series",
+                color=discord.Color.purple()
+            )
+
+            for s in series_list:
+                status_emoji = {
+                    'planning': '📝',
+                    'generating': '⏳',
+                    'complete': '✅',
+                    'failed': '❌'
+                }.get(s['status'], '❓')
+
+                embed.add_field(
+                    name=f"{status_emoji} {s['name'][:40]}",
+                    value=f"ID: `{str(s['id'])[:8]}...` | Episodes: {s['episode_count']} | {s['generation_progress']}%",
+                    inline=False
+                )
+
+            embed.set_footer(text="Use /series-status <id> for details")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Series list error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to list series: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
 
 
 class ServerSetupCommands(commands.Cog):

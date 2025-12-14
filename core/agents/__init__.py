@@ -205,6 +205,9 @@ from core.agents.fullstack_developer_agent import FullStackDeveloperAgent
 from core.agents.code_review_agent import CodeReviewAgent
 from core.agents.devops_agent import DevOpsAgent
 
+# Series Workflow Agent (Session 445)
+from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent, get_ai_series_workflow_agent
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -288,4 +291,8 @@ __all__ = [
     'FullStackDeveloperAgent',
     'CodeReviewAgent',
     'DevOpsAgent',
+
+    # Series Workflow Agent (1) - Session 445
+    'AISeriesWorkflowAgent',
+    'get_ai_series_workflow_agent',
 ]
