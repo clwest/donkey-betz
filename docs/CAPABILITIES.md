@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 433 (December 12, 2025)
+**Last Updated:** Session 436 (December 13, 2025)
 
 ---
 
@@ -16,7 +16,8 @@
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
 | Spiders | 65 | Active (60 working) |
-| Clean Agents | 13 | Production |
+| Clean Agents | 17 | Production |
+| **Development Agents** | **4** | **Production (Session 436)** |
 | Legacy Agents | 22 | Production |
 | Advisors | 25 | Production |
 | Sci-Fi Features | 15 | Production |
@@ -224,7 +225,7 @@ Filter spider results by topic:
 
 ---
 
-## Clean Agent Architecture (9 Agents)
+## Clean Agent Architecture (17 Agents)
 
 | Agent | Purpose | Isolated Tools |
 |-------|---------|----------------|
@@ -237,6 +238,35 @@ Filter spider results by topic:
 | VideoEditingAgent | Video editing | trim, add_text, etc. |
 | ResearchAgent | Web + spider search | web_search, spider_query |
 | WorkflowAgent | Multi-step orchestration | delegate_to_agent |
+| CompetitorAnalysisAgent | Competitive intelligence | web_search, spider_query, analyze |
+| CustomerResearchAgent | Customer personas | web_search, build_persona |
+| LegalDocDrafterAgent | Legal document assistance | draft_motion, analyze_motion |
+| **CodeGeneratorAgent** | Code generation | generate_code, explain_code |
+| **FullStackDeveloperAgent** | Full-stack features | design_feature, implement_* |
+| **CodeReviewAgent** | Code review | review_code, check_security |
+| **DevOpsAgent** | CI/CD, Docker, K8s | create_dockerfile, create_pipeline |
+
+---
+
+## Development Agents (Session 436)
+
+Four new agents for software development tasks:
+
+| Agent | Purpose | Key Tools |
+|-------|---------|-----------|
+| CodeGeneratorAgent | Generate code from specs | `generate_code`, `explain_code`, `refactor_code` |
+| FullStackDeveloperAgent | Build complete features | `design_feature`, `implement_backend`, `implement_frontend` |
+| CodeReviewAgent | Review code quality | `review_code`, `check_security`, `check_performance` |
+| DevOpsAgent | Infrastructure automation | `create_dockerfile`, `create_pipeline`, `create_k8s_manifests` |
+
+### Supported Languages
+Python, JavaScript, TypeScript, Go, Rust, Java, C#, PHP, Ruby
+
+### Supported Platforms
+- Docker, Docker Compose
+- Kubernetes (deployment, service, ingress)
+- GitHub Actions, GitLab CI, Jenkins
+- AWS (ECS, EKS), GCP (Cloud Run, GKE)
 
 ---
 

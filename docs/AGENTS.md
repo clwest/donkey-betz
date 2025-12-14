@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 432 (December 12, 2025)
+**Last Updated:** Session 436 (December 13, 2025)
 
 ---
 
@@ -62,7 +62,7 @@ self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...}
 
 ---
 
-## Clean Architecture Agents (13)
+## Clean Architecture Agents (17)
 
 ### PersonalAssistantAgent
 
@@ -354,6 +354,130 @@ Step 4: Generate social media banners
 ```
 
 **Cannot Access:** Image, video, audio, editing tools
+
+---
+
+### CodeGeneratorAgent (Session 436)
+
+**Purpose:** Generate code from natural language specifications
+
+**Location:** `core/agents/code_generator_agent.py`
+
+**Tools:**
+- `generate_code` - Generate code from specification
+- `explain_code` - Explain existing code
+- `refactor_code` - Improve code structure
+
+**Parameters:**
+```python
+{
+    "specification": "Create a REST API endpoint for user authentication",
+    "language": "python",  # python, javascript, typescript, go, rust, java
+    "framework": "django",  # django, fastapi, express, react, vue
+    "style": "modern"  # modern, legacy, minimal
+}
+```
+
+**Supported Languages:** Python, JavaScript, TypeScript, Go, Rust, Java, C#, PHP, Ruby
+
+**Cannot Access:** Image, video, audio, editing, research tools
+
+---
+
+### FullStackDeveloperAgent (Session 436)
+
+**Purpose:** Build complete features spanning frontend, backend, and database
+
+**Location:** `core/agents/fullstack_developer_agent.py`
+
+**Tools:**
+- `design_feature` - Create feature architecture
+- `implement_backend` - Generate backend code (API, models, services)
+- `implement_frontend` - Generate frontend code (components, pages)
+- `generate_migrations` - Create database migrations
+- `create_tests` - Generate test suites
+
+**Parameters:**
+```python
+{
+    "feature": "User profile management with avatar upload",
+    "stack": {
+        "frontend": "react",
+        "backend": "django",
+        "database": "postgresql"
+    }
+}
+```
+
+**Special Powers:** Can coordinate frontend + backend + database in single execution
+
+**Cannot Access:** Image generation, video, audio tools
+
+---
+
+### CodeReviewAgent (Session 436)
+
+**Purpose:** Review code for quality, security, performance, and best practices
+
+**Location:** `core/agents/code_review_agent.py`
+
+**Tools:**
+- `review_code` - Comprehensive code review
+- `check_security` - Security vulnerability scan
+- `check_performance` - Performance analysis
+- `check_style` - Style and convention check
+- `suggest_improvements` - Improvement recommendations
+
+**Parameters:**
+```python
+{
+    "code": "...",  # Code to review
+    "language": "python",
+    "focus": ["security", "performance", "style"],  # Review focus areas
+    "severity": "all"  # all, critical, high, medium
+}
+```
+
+**Review Categories:**
+- Security (OWASP Top 10, injection, XSS, CSRF)
+- Performance (N+1 queries, memory leaks, complexity)
+- Style (PEP8, ESLint, naming conventions)
+- Best Practices (SOLID, DRY, error handling)
+
+**Cannot Access:** Code generation, image, video, audio tools
+
+---
+
+### DevOpsAgent (Session 436)
+
+**Purpose:** CI/CD pipelines, Docker, Kubernetes, infrastructure automation
+
+**Location:** `core/agents/devops_agent.py`
+
+**Tools:**
+- `create_dockerfile` - Generate Dockerfiles
+- `create_compose` - Generate docker-compose.yml
+- `create_pipeline` - Generate CI/CD pipelines (GitHub Actions, GitLab CI)
+- `create_k8s_manifests` - Generate Kubernetes manifests
+- `diagnose_deployment` - Troubleshoot deployment issues
+
+**Parameters:**
+```python
+{
+    "project_type": "django",
+    "deployment_target": "kubernetes",  # docker, kubernetes, aws, gcp
+    "ci_platform": "github_actions",  # github_actions, gitlab_ci, jenkins
+    "environment": "production"  # development, staging, production
+}
+```
+
+**Supported Platforms:**
+- Docker, Docker Compose
+- Kubernetes (deployment, service, ingress, configmap, secrets)
+- GitHub Actions, GitLab CI, Jenkins
+- AWS (ECS, EKS, Lambda), GCP (Cloud Run, GKE)
+
+**Cannot Access:** Code generation, image, video, audio tools
 
 ---
 
