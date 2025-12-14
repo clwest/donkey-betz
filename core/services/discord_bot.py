@@ -4499,18 +4499,24 @@ class SeriesCommands(commands.Cog):
             @sync_to_async
             def get_episode_content():
                 from core.models_ai_series import AISeries, SeriesEpisode
+                from django.db.models import CharField
+                from django.db.models.functions import Cast
 
-                # Find series by partial ID match
-                series = AISeries.objects.filter(
+                # Find series by partial ID match (cast UUID to string first)
+                series = AISeries.objects.annotate(
+                    id_str=Cast('id', CharField())
+                ).filter(
                     created_by=user,
-                    id__startswith=series_id
+                    id_str__startswith=series_id
                 ).first()
 
                 if not series:
-                    # Try exact match
+                    # Try exact match with full UUID
                     try:
+                        import uuid
+                        uuid.UUID(series_id)  # Validate it's a full UUID
                         series = AISeries.objects.get(id=series_id, created_by=user)
-                    except AISeries.DoesNotExist:
+                    except (ValueError, AISeries.DoesNotExist):
                         return None, None
 
                 ep = SeriesEpisode.objects.filter(
