@@ -72,6 +72,8 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/creative-projects/',  # Session 350: Creative Projects - supports session auth
         '/api/workflow-analytics/',  # Session 375: Workflow Analytics - supports session auth
         '/api/income/',  # Session 388: Income Action Pipeline - supports session auth
+        '/api/discord/verify-link-code/',  # Session 430: Discord bot link verification (uses bot_secret)
+        '/api/voice-marketplace/',  # Session 440: Voice Marketplace - browse is public
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
