@@ -7035,6 +7035,114 @@
                         </div>
                     </div>
 
+                    <!-- Session 430: User Profile Card -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                            <h5 class="mb-0" style="color: #10b981;">👤 My Profile</h5>
+                            <small class="text-muted">Session 430</small>
+                        </div>
+                        <div class="card-body">
+                            <!-- Loading State -->
+                            <div id="user-profile-loading" class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2 text-muted">Loading your profile...</span>
+                            </div>
+
+                            <!-- Profile Content (hidden until loaded) -->
+                            <div id="user-profile-content" style="display: none;">
+                                <!-- Profile Completeness Bar -->
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Profile Completeness</span>
+                                        <span id="profile-completeness-percent" class="badge" style="background: #10b981;">0%</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px; background: #333;">
+                                        <div id="profile-completeness-bar" class="progress-bar" role="progressbar"
+                                             style="width: 0%; background: linear-gradient(90deg, #10b981, #06b6d4);"
+                                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small id="profile-completeness-hint" class="text-muted d-block mt-1"></small>
+                                </div>
+
+                                <!-- Profile Summary Grid -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small mb-1">Primary Role</label>
+                                            <div id="profile-primary-role" class="text-white">
+                                                <span class="text-muted fst-italic">Not set</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small mb-1">Core Skills</label>
+                                            <div id="profile-skills">
+                                                <span class="text-muted fst-italic">Not set</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small mb-1">Availability</label>
+                                            <div id="profile-availability" class="text-white">
+                                                <span class="text-muted fst-italic">Not set</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small mb-1">Income Goal</label>
+                                            <div id="profile-income-goal" class="text-white">
+                                                <span class="text-muted fst-italic">Not set</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small mb-1">Work Preferences</label>
+                                            <div id="profile-work-prefs">
+                                                <span class="text-muted fst-italic">Not set</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small mb-1">Commitment Level</label>
+                                            <div id="profile-commitment" class="text-white">
+                                                <span class="text-muted fst-italic">Not set</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button id="start-interview-btn" class="btn btn-success" onclick="startUserInterview()" style="background: #10b981; border-color: #10b981;">
+                                        <span id="interview-btn-icon">🎯</span>
+                                        <span id="interview-btn-text">Complete Your Profile</span>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="openProfileEditor()">
+                                        ✏️ Edit Manually
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="viewFullProfile()">
+                                        📋 View Full Profile
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Interview In Progress State -->
+                            <div id="user-profile-interview-active" style="display: none;">
+                                <div class="alert mb-3" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981;">
+                                    <div class="d-flex align-items-center">
+                                        <span class="fs-4 me-3">💬</span>
+                                        <div>
+                                            <strong class="text-success">Interview In Progress</strong>
+                                            <p class="mb-0 small text-muted">You have an active interview session</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success" onclick="resumeUserInterview()" style="background: #10b981; border-color: #10b981;">
+                                    ▶️ Continue Interview
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Domain Preferences Cards -->
                     <div class="row mb-4">
                         <!-- Image Preferences -->
@@ -7337,6 +7445,283 @@
                             <button class="btn btn-outline-info" onclick="learnFromProject()">
                                 📚 Learn from Project
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Session 430: User Interview Modal -->
+                    <div class="modal fade" id="userInterviewModal" tabindex="-1" data-bs-backdrop="static">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid #10b981;">
+                                <div class="modal-header" style="background: rgba(16, 185, 129, 0.2); border-bottom: 1px solid #10b981;">
+                                    <h5 class="modal-title" style="color: #10b981;">
+                                        <span id="interview-modal-icon">👋</span>
+                                        <span id="interview-modal-title">Let's Get to Know You</span>
+                                    </h5>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="progress" style="width: 100px; height: 6px; background: #333;">
+                                            <div id="interview-progress-bar" class="progress-bar" style="width: 0%; background: #10b981;"></div>
+                                        </div>
+                                        <span id="interview-progress-text" class="badge" style="background: #10b981;">0%</span>
+                                    </div>
+                                </div>
+                                <div class="modal-body" style="min-height: 300px;">
+                                    <!-- Interview Loading -->
+                                    <div id="interview-loading" class="text-center py-5">
+                                        <div class="spinner-border" style="color: #10b981;" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="mt-3 text-muted">Starting interview...</p>
+                                    </div>
+
+                                    <!-- Interview Content -->
+                                    <div id="interview-content" style="display: none;">
+                                        <!-- AI Acknowledgment (shown after user responds) -->
+                                        <div id="interview-acknowledgment" class="mb-4" style="display: none;">
+                                            <div class="d-flex align-items-start">
+                                                <span class="fs-4 me-3">🤖</span>
+                                                <div class="p-3 rounded" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981;">
+                                                    <p id="interview-ack-text" class="mb-0 text-white"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Current Question -->
+                                        <div id="interview-question-container">
+                                            <div class="d-flex align-items-start mb-4">
+                                                <span class="fs-4 me-3">💬</span>
+                                                <div>
+                                                    <p id="interview-question-text" class="text-white fs-5 mb-0"></p>
+                                                    <small id="interview-question-phase" class="text-muted"></small>
+                                                </div>
+                                            </div>
+
+                                            <!-- Text Input -->
+                                            <div id="interview-input-text" class="mb-3" style="display: none;">
+                                                <textarea id="interview-text-response" class="form-control bg-dark text-white"
+                                                          rows="3" placeholder="Type your answer..."
+                                                          style="border: 1px solid #333;"></textarea>
+                                            </div>
+
+                                            <!-- Yes/No Input -->
+                                            <div id="interview-input-yesno" class="mb-3" style="display: none;">
+                                                <div class="d-flex gap-3">
+                                                    <button class="btn btn-lg flex-grow-1" onclick="submitInterviewResponse('Yes')"
+                                                            style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981;">
+                                                        ✅ Yes, let's go!
+                                                    </button>
+                                                    <button class="btn btn-lg flex-grow-1" onclick="submitInterviewResponse('No')"
+                                                            style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444;">
+                                                        ❌ Not right now
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Multiple Choice Input -->
+                                            <div id="interview-input-choice" class="mb-3" style="display: none;">
+                                                <div id="interview-choice-options" class="d-grid gap-2"></div>
+                                            </div>
+
+                                            <!-- Multi-Select Input -->
+                                            <div id="interview-input-multiselect" class="mb-3" style="display: none;">
+                                                <div id="interview-multiselect-options" class="row g-2"></div>
+                                                <button class="btn btn-success mt-3" onclick="submitMultiSelectResponse()" style="background: #10b981; border-color: #10b981;">
+                                                    Continue →
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Interview Complete -->
+                                    <div id="interview-complete" style="display: none;">
+                                        <div class="text-center py-4">
+                                            <div class="mb-4" style="font-size: 4rem;">🎉</div>
+                                            <h4 class="text-success mb-3">Profile Complete!</h4>
+                                            <p id="interview-complete-message" class="text-muted mb-4"></p>
+                                            <div class="d-flex justify-content-center gap-3">
+                                                <div class="text-center px-4">
+                                                    <h3 id="interview-strength-score" class="mb-0" style="color: #10b981;">0%</h3>
+                                                    <small class="text-muted">Profile Strength</small>
+                                                </div>
+                                                <div class="text-center px-4">
+                                                    <h3 id="interview-skills-count" class="mb-0" style="color: #8b5cf6;">0</h3>
+                                                    <small class="text-muted">Skills Found</small>
+                                                </div>
+                                                <div class="text-center px-4">
+                                                    <h3 id="interview-recommendations" class="mb-0" style="color: #f59e0b;">0</h3>
+                                                    <small class="text-muted">Recommendations</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" onclick="pauseInterview()">
+                                        Save & Exit
+                                    </button>
+                                    <button id="interview-submit-btn" type="button" class="btn btn-success" onclick="submitTextResponse()"
+                                            style="background: #10b981; border-color: #10b981; display: none;">
+                                        Continue →
+                                    </button>
+                                    <button id="interview-finish-btn" type="button" class="btn btn-success" data-bs-dismiss="modal"
+                                            onclick="finishInterview()" style="background: #10b981; border-color: #10b981; display: none;">
+                                        View My Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session 430: Profile Editor Modal -->
+                    <div class="modal fade" id="profileEditorModal" tabindex="-1">
+                        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid #06b6d4;">
+                                <div class="modal-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+                                    <h5 class="modal-title" style="color: #06b6d4;">✏️ Edit Your Profile</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <!-- Left Column: Basic Info & Skills -->
+                                        <div class="col-md-6">
+                                            <h6 class="text-info mb-3">Basic Information</h6>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Primary Role</label>
+                                                <input type="text" id="edit-primary-role" class="form-control bg-dark text-white"
+                                                       placeholder="e.g., Software Developer, Marketing Manager">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Current Situation</label>
+                                                <select id="edit-situation" class="form-select bg-dark text-white">
+                                                    <option value="">Select...</option>
+                                                    <option value="Employed - looking for more income">Employed - looking for more income</option>
+                                                    <option value="Unemployed - need income ASAP">Unemployed - need income ASAP</option>
+                                                    <option value="Student - want part-time work">Student - want part-time work</option>
+                                                    <option value="Entrepreneur - scaling my business">Entrepreneur - scaling my business</option>
+                                                    <option value="Retired - exploring opportunities">Retired - exploring opportunities</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Weekly Availability (hours)</label>
+                                                <select id="edit-availability" class="form-select bg-dark text-white">
+                                                    <option value="">Select...</option>
+                                                    <option value="1-5">1-5 hours (side hustle)</option>
+                                                    <option value="10-20">10-20 hours (part-time)</option>
+                                                    <option value="20-40">20-40 hours (serious commitment)</option>
+                                                    <option value="40+">40+ hours (full-time)</option>
+                                                </select>
+                                            </div>
+
+                                            <h6 class="text-info mb-3 mt-4">Skills & Expertise</h6>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Core Skills (comma-separated)</label>
+                                                <input type="text" id="edit-skills" class="form-control bg-dark text-white"
+                                                       placeholder="e.g., Python, Data Analysis, Project Management">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Strongest Skill</label>
+                                                <input type="text" id="edit-strongest-skill" class="form-control bg-dark text-white"
+                                                       placeholder="What you're best at">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Professional Background</label>
+                                                <textarea id="edit-background" class="form-control bg-dark text-white" rows="3"
+                                                          placeholder="Brief summary of your experience"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <!-- Right Column: Goals & Preferences -->
+                                        <div class="col-md-6">
+                                            <h6 class="text-warning mb-3">Goals</h6>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Monthly Income Goal</label>
+                                                <select id="edit-income-goal" class="form-select bg-dark text-white">
+                                                    <option value="">Select...</option>
+                                                    <option value="500">$500 - Testing the waters</option>
+                                                    <option value="1750">$1,000 - $2,500 - Solid side income</option>
+                                                    <option value="3750">$2,500 - $5,000 - Replace part-time job</option>
+                                                    <option value="7500">$5,000+ - Full income replacement</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Long-term Goals</label>
+                                                <textarea id="edit-long-term-goals" class="form-control bg-dark text-white" rows="2"
+                                                          placeholder="What are you working towards?"></textarea>
+                                            </div>
+
+                                            <h6 class="text-warning mb-3 mt-4">Work Preferences</h6>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Preferred Work Types</label>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="pref-remote" value="Remote work only">
+                                                        <label class="form-check-label text-muted small" for="pref-remote">Remote only</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="pref-flexible" value="Flexible schedule">
+                                                        <label class="form-check-label text-muted small" for="pref-flexible">Flexible schedule</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="pref-project" value="Project-based">
+                                                        <label class="form-check-label text-muted small" for="pref-project">Project-based</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="pref-ongoing" value="Ongoing clients">
+                                                        <label class="form-check-label text-muted small" for="pref-ongoing">Ongoing clients</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Things to Avoid</label>
+                                                <input type="text" id="edit-avoid" class="form-control bg-dark text-white"
+                                                       placeholder="Deal-breakers or things you won't do">
+                                            </div>
+
+                                            <h6 class="text-warning mb-3 mt-4">Commitment</h6>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Commitment Level</label>
+                                                <select id="edit-commitment" class="form-select bg-dark text-white">
+                                                    <option value="">Select...</option>
+                                                    <option value="very_serious">Very serious - I'll work on this daily</option>
+                                                    <option value="serious">Serious - I'll dedicate real time</option>
+                                                    <option value="exploring">Exploring - Want to see what's possible</option>
+                                                    <option value="just_browsing">Just browsing</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-info" onclick="saveProfileEdits()" style="background: #06b6d4; border-color: #06b6d4;">
+                                        💾 Save Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session 430: Full Profile View Modal -->
+                    <div class="modal fade" id="fullProfileModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                                <div class="modal-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                                    <h5 class="modal-title" style="color: #8b5cf6;">📋 Your Complete Profile</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body" id="full-profile-content">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-secondary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-info" onclick="openProfileEditor()" data-bs-dismiss="modal">
+                                        ✏️ Edit Profile
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -46965,6 +47350,528 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
+        // =========================================================================
+        // Session 430: User Profile Interview System
+        // =========================================================================
+
+        let currentInterviewState = null;
+        let selectedMultiOptions = [];
+
+        // Load user profile summary on page load
+        async function loadUserProfileSummary() {
+            const loadingEl = document.getElementById('user-profile-loading');
+            const contentEl = document.getElementById('user-profile-content');
+            const interviewActiveEl = document.getElementById('user-profile-interview-active');
+
+            try {
+                // Check for active interview first
+                const statusRes = await authenticatedFetch('/api/interview/status/');
+                const statusData = await statusRes.json();
+
+                if (statusData.success && statusData.has_active_interview) {
+                    // Show interview in progress state
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'none';
+                    interviewActiveEl.style.display = 'block';
+                    return;
+                }
+
+                // Load profile summary
+                const response = await authenticatedFetch('/api/profile/summary/');
+                const data = await response.json();
+
+                if (data.success) {
+                    const profile = data.profile;
+
+                    // Update completeness bar
+                    const completeness = profile.completeness || 0;
+                    document.getElementById('profile-completeness-percent').textContent = `${Math.round(completeness)}%`;
+                    document.getElementById('profile-completeness-bar').style.width = `${completeness}%`;
+                    document.getElementById('profile-completeness-hint').textContent = profile.completeness_hint || '';
+
+                    // Update profile fields
+                    updateProfileField('profile-primary-role', profile.primary_role);
+                    updateProfileField('profile-income-goal', profile.income_goal);
+                    updateProfileField('profile-availability', profile.availability);
+                    updateProfileField('profile-commitment', profile.commitment_level);
+
+                    // Skills as badges
+                    const skillsEl = document.getElementById('profile-skills');
+                    if (profile.core_skills && profile.core_skills.length > 0) {
+                        skillsEl.innerHTML = profile.core_skills.slice(0, 5).map(skill =>
+                            `<span class="badge me-1 mb-1" style="background: #8b5cf6;">${skill}</span>`
+                        ).join('');
+                        if (profile.core_skills.length > 5) {
+                            skillsEl.innerHTML += `<span class="text-muted small">+${profile.core_skills.length - 5} more</span>`;
+                        }
+                    } else {
+                        skillsEl.innerHTML = '<span class="text-muted fst-italic">Not set</span>';
+                    }
+
+                    // Work preferences as badges
+                    const prefsEl = document.getElementById('profile-work-prefs');
+                    if (profile.work_preferences && profile.work_preferences.length > 0) {
+                        prefsEl.innerHTML = profile.work_preferences.slice(0, 3).map(pref =>
+                            `<span class="badge me-1 mb-1" style="background: #f59e0b;">${pref}</span>`
+                        ).join('');
+                    } else {
+                        prefsEl.innerHTML = '<span class="text-muted fst-italic">Not set</span>';
+                    }
+
+                    // Update button text based on completeness
+                    const btnText = document.getElementById('interview-btn-text');
+                    const btnIcon = document.getElementById('interview-btn-icon');
+                    if (completeness >= 80) {
+                        btnText.textContent = 'Update Profile';
+                        btnIcon.textContent = '✏️';
+                    } else if (completeness >= 30) {
+                        btnText.textContent = 'Continue Profile Setup';
+                        btnIcon.textContent = '▶️';
+                    } else {
+                        btnText.textContent = 'Complete Your Profile';
+                        btnIcon.textContent = '🎯';
+                    }
+
+                    // Show content
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+                    interviewActiveEl.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading profile summary:', error);
+                loadingEl.innerHTML = '<span class="text-danger">Failed to load profile</span>';
+            }
+        }
+
+        function updateProfileField(elementId, value) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                if (value) {
+                    el.innerHTML = `<span class="text-white">${value}</span>`;
+                } else {
+                    el.innerHTML = '<span class="text-muted fst-italic">Not set</span>';
+                }
+            }
+        }
+
+        // Start the interview
+        async function startUserInterview() {
+            const modal = new bootstrap.Modal(document.getElementById('userInterviewModal'));
+            modal.show();
+
+            // Show loading state
+            document.getElementById('interview-loading').style.display = 'block';
+            document.getElementById('interview-content').style.display = 'none';
+            document.getElementById('interview-complete').style.display = 'none';
+
+            try {
+                const response = await authenticatedFetch('/api/interview/start/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quick_start: false })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentInterviewState = data.data.state;
+                    displayQuestion(data.data.question);
+                }
+            } catch (error) {
+                console.error('Error starting interview:', error);
+                document.getElementById('interview-loading').innerHTML =
+                    '<div class="text-danger">Failed to start interview. Please try again.</div>';
+            }
+        }
+
+        // Resume existing interview
+        async function resumeUserInterview() {
+            const modal = new bootstrap.Modal(document.getElementById('userInterviewModal'));
+            modal.show();
+
+            document.getElementById('interview-loading').style.display = 'block';
+            document.getElementById('interview-content').style.display = 'none';
+
+            try {
+                const response = await authenticatedFetch('/api/interview/resume/', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentInterviewState = data.data.state;
+                    displayQuestion(data.data.question);
+                }
+            } catch (error) {
+                console.error('Error resuming interview:', error);
+            }
+        }
+
+        // Display a question in the modal
+        function displayQuestion(question) {
+            if (!question || question.complete) {
+                showInterviewComplete();
+                return;
+            }
+
+            document.getElementById('interview-loading').style.display = 'none';
+            document.getElementById('interview-content').style.display = 'block';
+            document.getElementById('interview-complete').style.display = 'none';
+
+            // Update progress
+            const progress = question.progress || currentInterviewState?.completion_percentage || 0;
+            document.getElementById('interview-progress-bar').style.width = `${progress}%`;
+            document.getElementById('interview-progress-text').textContent = `${Math.round(progress)}%`;
+
+            // Update question text
+            document.getElementById('interview-question-text').textContent = question.text;
+            document.getElementById('interview-question-phase').textContent =
+                `Phase: ${question.phase?.replace('_', ' ') || 'Introduction'}`;
+
+            // Hide all input types
+            document.getElementById('interview-input-text').style.display = 'none';
+            document.getElementById('interview-input-yesno').style.display = 'none';
+            document.getElementById('interview-input-choice').style.display = 'none';
+            document.getElementById('interview-input-multiselect').style.display = 'none';
+            document.getElementById('interview-submit-btn').style.display = 'none';
+
+            // Show appropriate input type
+            const inputType = question.input_type || 'text';
+
+            if (inputType === 'yes_no') {
+                document.getElementById('interview-input-yesno').style.display = 'block';
+            } else if (inputType === 'multiple_choice' && question.options) {
+                const optionsEl = document.getElementById('interview-choice-options');
+                optionsEl.innerHTML = question.options.map(opt =>
+                    `<button class="btn btn-outline-light text-start" onclick="submitInterviewResponse('${opt.replace(/'/g, "\\'")}')">${opt}</button>`
+                ).join('');
+                document.getElementById('interview-input-choice').style.display = 'block';
+            } else if (inputType === 'multi_select' && question.options) {
+                selectedMultiOptions = [];
+                const optionsEl = document.getElementById('interview-multiselect-options');
+                optionsEl.innerHTML = question.options.map((opt, idx) =>
+                    `<div class="col-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="multi-opt-${idx}"
+                                   value="${opt}" onchange="toggleMultiOption('${opt.replace(/'/g, "\\'")}')">
+                            <label class="form-check-label text-white" for="multi-opt-${idx}">${opt}</label>
+                        </div>
+                    </div>`
+                ).join('');
+                document.getElementById('interview-input-multiselect').style.display = 'block';
+            } else {
+                // Default to text input
+                document.getElementById('interview-input-text').style.display = 'block';
+                document.getElementById('interview-submit-btn').style.display = 'inline-block';
+                document.getElementById('interview-text-response').value = '';
+                document.getElementById('interview-text-response').focus();
+            }
+        }
+
+        // Toggle multi-select option
+        function toggleMultiOption(option) {
+            const idx = selectedMultiOptions.indexOf(option);
+            if (idx > -1) {
+                selectedMultiOptions.splice(idx, 1);
+            } else {
+                selectedMultiOptions.push(option);
+            }
+        }
+
+        // Submit multi-select response
+        function submitMultiSelectResponse() {
+            if (selectedMultiOptions.length === 0) {
+                alert('Please select at least one option');
+                return;
+            }
+            submitInterviewResponse(selectedMultiOptions);
+        }
+
+        // Submit text response
+        function submitTextResponse() {
+            const response = document.getElementById('interview-text-response').value.trim();
+            if (!response) {
+                alert('Please enter a response');
+                return;
+            }
+            submitInterviewResponse(response);
+        }
+
+        // Submit any response
+        async function submitInterviewResponse(response) {
+            // Show loading
+            document.getElementById('interview-content').style.opacity = '0.5';
+
+            try {
+                const res = await authenticatedFetch('/api/interview/respond/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ response: response })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('interview-content').style.opacity = '1';
+
+                    if (data.data.interview_complete) {
+                        showInterviewComplete(data.data);
+                    } else {
+                        // Show acknowledgment if available
+                        if (data.data.acknowledgment) {
+                            const ackEl = document.getElementById('interview-acknowledgment');
+                            document.getElementById('interview-ack-text').textContent = data.data.acknowledgment;
+                            ackEl.style.display = 'block';
+
+                            // Hide after delay
+                            setTimeout(() => {
+                                ackEl.style.display = 'none';
+                            }, 3000);
+                        }
+
+                        currentInterviewState = data.data.state;
+                        displayQuestion(data.data.question);
+                    }
+                }
+            } catch (error) {
+                console.error('Error submitting response:', error);
+                document.getElementById('interview-content').style.opacity = '1';
+                alert('Failed to submit response. Please try again.');
+            }
+        }
+
+        // Show interview complete state
+        function showInterviewComplete(data) {
+            document.getElementById('interview-loading').style.display = 'none';
+            document.getElementById('interview-content').style.display = 'none';
+            document.getElementById('interview-complete').style.display = 'block';
+
+            // Update modal header
+            document.getElementById('interview-modal-icon').textContent = '🎉';
+            document.getElementById('interview-modal-title').textContent = 'Profile Complete!';
+
+            // Update stats
+            if (data && data.profile) {
+                document.getElementById('interview-strength-score').textContent =
+                    `${Math.round(data.profile.profile_strength_score || 0)}%`;
+                document.getElementById('interview-skills-count').textContent =
+                    (data.profile.all_skills || []).length;
+                document.getElementById('interview-recommendations').textContent =
+                    (data.profile.recommendations || []).length;
+                document.getElementById('interview-complete-message').textContent =
+                    data.final_message || "Your profile has been saved!";
+            }
+
+            // Show finish button
+            document.getElementById('interview-submit-btn').style.display = 'none';
+            document.getElementById('interview-finish-btn').style.display = 'inline-block';
+
+            // Update progress to 100%
+            document.getElementById('interview-progress-bar').style.width = '100%';
+            document.getElementById('interview-progress-text').textContent = '100%';
+        }
+
+        // Pause interview (save & exit)
+        function pauseInterview() {
+            // Interview state is automatically saved, just reload profile
+            loadUserProfileSummary();
+        }
+
+        // Finish interview
+        function finishInterview() {
+            loadUserProfileSummary();
+        }
+
+        // Open profile editor modal
+        async function openProfileEditor() {
+            const modal = new bootstrap.Modal(document.getElementById('profileEditorModal'));
+
+            // Load current profile data
+            try {
+                const response = await authenticatedFetch('/api/profile/enhanced/');
+                const data = await response.json();
+
+                if (data.success && data.profile) {
+                    const p = data.profile;
+
+                    // Populate form fields
+                    document.getElementById('edit-primary-role').value = p.primary_role || '';
+                    document.getElementById('edit-skills').value = (p.core_competencies || []).join(', ');
+                    document.getElementById('edit-long-term-goals').value = (p.long_term_goals || []).join('\n');
+                    document.getElementById('edit-background').value = (p.personal_values || [])[0] || '';
+
+                    // Set select values
+                    if (p.work_schedule) {
+                        const availSelect = document.getElementById('edit-availability');
+                        for (let opt of availSelect.options) {
+                            if (p.work_schedule.includes(opt.value)) {
+                                availSelect.value = opt.value;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Set work preference checkboxes
+                    const prefs = p.preferred_channels || [];
+                    document.getElementById('pref-remote').checked = prefs.includes('Remote work only');
+                    document.getElementById('pref-flexible').checked = prefs.includes('Flexible schedule');
+                    document.getElementById('pref-project').checked = prefs.includes('Project-based');
+                    document.getElementById('pref-ongoing').checked = prefs.includes('Ongoing clients');
+                }
+            } catch (error) {
+                console.error('Error loading profile for editing:', error);
+            }
+
+            modal.show();
+        }
+
+        // Save profile edits
+        async function saveProfileEdits() {
+            const workPrefs = [];
+            if (document.getElementById('pref-remote').checked) workPrefs.push('Remote work only');
+            if (document.getElementById('pref-flexible').checked) workPrefs.push('Flexible schedule');
+            if (document.getElementById('pref-project').checked) workPrefs.push('Project-based');
+            if (document.getElementById('pref-ongoing').checked) workPrefs.push('Ongoing clients');
+
+            const skillsText = document.getElementById('edit-skills').value;
+            const skills = skillsText ? skillsText.split(',').map(s => s.trim()).filter(s => s) : [];
+
+            const goalsText = document.getElementById('edit-long-term-goals').value;
+            const goals = goalsText ? goalsText.split('\n').map(g => g.trim()).filter(g => g) : [];
+
+            const profileData = {
+                primary_role: document.getElementById('edit-primary-role').value,
+                core_competencies: skills,
+                work_schedule: document.getElementById('edit-availability').value,
+                long_term_goals: goals,
+                preferred_channels: workPrefs,
+                personal_values: [document.getElementById('edit-background').value].filter(v => v)
+            };
+
+            try {
+                const response = await authenticatedFetch('/api/profile/enhanced/', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(profileData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('profileEditorModal')).hide();
+                    loadUserProfileSummary();
+                    alert('Profile saved successfully!');
+                } else {
+                    alert('Failed to save profile: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('Failed to save profile. Please try again.');
+            }
+        }
+
+        // View full profile
+        async function viewFullProfile() {
+            const modal = new bootstrap.Modal(document.getElementById('fullProfileModal'));
+            const contentEl = document.getElementById('full-profile-content');
+
+            contentEl.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            modal.show();
+
+            try {
+                const response = await authenticatedFetch('/api/profile/enhanced/');
+                const data = await response.json();
+
+                if (data.success && data.profile) {
+                    const p = data.profile;
+                    contentEl.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-info mb-3">Basic Information</h6>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Primary Role:</strong>
+                                    <div class="text-white">${p.primary_role || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Work Schedule:</strong>
+                                    <div class="text-white">${p.work_schedule || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Time Zone:</strong>
+                                    <div class="text-white">${p.time_zone || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+
+                                <h6 class="text-info mb-3 mt-4">Skills & Learning</h6>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Core Competencies:</strong>
+                                    <div>${(p.core_competencies || []).map(s => `<span class="badge me-1 mb-1" style="background: #8b5cf6;">${s}</span>`).join('') || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Learning Style:</strong>
+                                    <div class="text-white">${p.learning_style || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-warning mb-3">Goals & Preferences</h6>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Long-term Goals:</strong>
+                                    <div>${(p.long_term_goals || []).map(g => `<div class="text-white">• ${g}</div>`).join('') || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Work Preferences:</strong>
+                                    <div>${(p.preferred_channels || []).map(c => `<span class="badge me-1 mb-1" style="background: #f59e0b;">${c}</span>`).join('') || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+                                <div class="mb-2">
+                                    <strong class="text-muted small">Communication Style:</strong>
+                                    <div class="text-white">${p.communication_style || '<em class="text-muted">Not set</em>'}</div>
+                                </div>
+
+                                <h6 class="text-warning mb-3 mt-4">Profile Stats</h6>
+                                <div class="d-flex gap-3">
+                                    <div class="text-center">
+                                        <h4 style="color: #10b981;">${p.profile_completeness || 0}%</h4>
+                                        <small class="text-muted">Complete</small>
+                                    </div>
+                                    <div class="text-center">
+                                        <h4 style="color: #8b5cf6;">${p.interaction_count || 0}</h4>
+                                        <small class="text-muted">Interactions</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading full profile:', error);
+                contentEl.innerHTML = '<div class="text-danger">Failed to load profile</div>';
+            }
+        }
+
+        // Initialize profile on preferences tab show
+        document.getElementById('preferences-tab')?.addEventListener('shown.bs.tab', function() {
+            loadUserProfileSummary();
+        });
+
+        // Also load on page load if preferences tab is visible
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if preferences tab exists and load profile data
+            if (document.getElementById('user-profile-loading')) {
+                loadUserProfileSummary();
+            }
+        });
+
+        // =========================================================================
+        // END Session 430: User Profile Interview System
+        // =========================================================================
+
         // Session 219: Load Agent Learning Data
         async function loadAgentLearning() {
             const listEl = document.getElementById('agent-learning-list');
@@ -50645,45 +51552,54 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Show notification that we're starting
                 showNotification(`Starting research for: ${featureTopic.substring(0, 50)}...`, 'info');
 
-                // Pre-fill the chat input with a research request
-                const chatInput = document.getElementById('personal-assistant-input') ||
-                                 document.querySelector('textarea[id*="chat"]') ||
-                                 document.querySelector('input[type="text"][id*="message"]');
-
-                if (chatInput) {
-                    // Create a research request referencing the boardroom decision
-                    chatInput.value = `Research the market for this product idea from our Boardroom discussions: "${featureTopic}"
-
-Please:
-1. Analyze competitors in this space
-2. Research customer pain points
-3. Provide actionable recommendations
-
-This idea came from agent discussions (Decision ID: ${decisionId}).`;
-
-                    // Scroll to chat and focus
-                    chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    chatInput.focus();
-
-                    // Optionally highlight the chat area
-                    chatInput.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)';
-                    setTimeout(() => {
-                        chatInput.style.boxShadow = '';
-                    }, 2000);
-
-                    showNotification('Research request ready! Press Enter or click Send.', 'success');
-                } else {
-                    // Fallback: use the send_message function if available
-                    const message = `Research the market for this product idea from Boardroom: "${featureTopic}"`;
-                    if (typeof send_message === 'function') {
-                        send_message(message);
-                        showNotification('Research request sent!', 'success');
-                    } else {
-                        // Last fallback: copy to clipboard
-                        navigator.clipboard.writeText(`Research product idea: ${featureTopic}`);
-                        showNotification('Research topic copied to clipboard. Paste in chat to start.', 'info');
-                    }
+                // Session 435: Navigate to Workflows > Pipeline tab instead of chat
+                // 1. First, switch to the Agents main tab
+                const agentsTab = document.getElementById('agents-tab');
+                if (agentsTab) {
+                    const bsTab = new bootstrap.Tab(agentsTab);
+                    bsTab.show();
                 }
+
+                // 2. Then switch to the Workflows sub-tab
+                setTimeout(() => {
+                    const workflowsTab = document.getElementById('agents-workflows-tab');
+                    if (workflowsTab) {
+                        const bsTab = new bootstrap.Tab(workflowsTab);
+                        bsTab.show();
+                    }
+
+                    // 3. Then switch to the Pipeline nested tab
+                    setTimeout(() => {
+                        const pipelineTab = document.getElementById('wf-pipeline-tab');
+                        if (pipelineTab) {
+                            const bsTab = new bootstrap.Tab(pipelineTab);
+                            bsTab.show();
+                        }
+
+                        // 4. Pre-fill the pipeline input with the research topic
+                        setTimeout(() => {
+                            const pipelineInput = document.getElementById('pipeline-idea-input');
+                            if (pipelineInput) {
+                                // Create a research-focused prompt from the boardroom decision
+                                pipelineInput.value = `${featureTopic} (from Boardroom Decision ${decisionId})`;
+
+                                // Scroll to input and focus
+                                pipelineInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                pipelineInput.focus();
+
+                                // Highlight the input
+                                pipelineInput.style.boxShadow = '0 0 15px rgba(236, 72, 153, 0.6)';
+                                setTimeout(() => {
+                                    pipelineInput.style.boxShadow = '';
+                                }, 3000);
+
+                                showNotification('Research topic loaded in Pipeline! Click "Run Research" to start.', 'success');
+                            } else {
+                                showNotification('Pipeline input not found', 'warning');
+                            }
+                        }, 200);
+                    }, 200);
+                }, 200);
 
             } catch (error) {
                 console.error('Error starting research from decision:', error);
