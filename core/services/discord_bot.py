@@ -4197,13 +4197,9 @@ class SeriesCommands(commands.Cog):
         @sync_to_async
         def get_user():
             from django.contrib.auth import get_user_model
-            from core.models import DiscordLinkCode
             User = get_user_model()
-            link = DiscordLinkCode.objects.filter(
-                discord_user_id=str(discord_id),
-                is_verified=True
-            ).select_related('user').first()
-            return link.user if link else None
+            # User model has discord_id field that stores linked Discord ID
+            return User.objects.filter(discord_id=str(discord_id)).first()
         return await get_user()
 
     @app_commands.command(name="series-create", description="Create a multi-episode AI content series")
@@ -4372,7 +4368,7 @@ class SeriesCommands(commands.Cog):
             embed = discord.Embed(
                 title=f"Series: {series.name[:50]}",
                 description=f"**Type:** {series.get_series_type_display()}\n**Status:** {series.get_status_display()}",
-                color=status_colors.get(series.status, discord.Color.grey())
+                color=status_colors.get(series.status, discord.Color.greyple())
             )
 
             # Progress bar
