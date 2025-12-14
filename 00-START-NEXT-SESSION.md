@@ -1,56 +1,51 @@
 # Start Next Session Here
 
-**Last Session:** 437 - Discord Automation (Phase 6 Complete!)
+**Last Session:** 438 - Discord Monetization (Phase 7 Complete!)
 **Date:** December 13, 2025
-**Status:** 31 Discord Commands | Phase 6 COMPLETE | Proactive Alerts Active
+**Status:** 33 Discord Commands | Phase 7 COMPLETE | Subscription Tiers Active
 
 ---
 
-## Session 437 Accomplishments
+## Session 438 Accomplishments
 
-### Discord Automation - Phase 6 COMPLETE!
+### Discord Monetization - Phase 7 COMPLETE!
 
-Implemented proactive automation features for the Discord-First platform.
+Implemented subscription tiers with Stripe integration for the Discord-First platform.
 
 **New Discord Commands (2):**
 
 | Command | Description |
 |---------|-------------|
-| `/digest [period]` | Daily/weekly activity digest (opportunities, apps, agent activity) |
-| `/alerts [action]` | Manage proactive opportunity alert settings |
+| `/subscribe [tier]` | Subscribe to Pro ($9.99/mo) or Premium ($29.99/mo) |
+| `/tier` | View subscription status, daily usage, and features |
 
-**Proactive Features:**
+**Subscription Tiers:**
 
-1. **Auto-Post Opportunities** - High-value (70+) opportunities automatically posted to #opportunities every 30 minutes
-2. **Personalized Matching** - Opportunities matched against user skills/preferences hourly
-3. **Urgency Indicators** - 90+ = urgent, 80+ = high priority
+| Tier | Price | Tasks/Day | Features |
+|------|-------|-----------|----------|
+| Free | $0 | 5 | Basic alerts |
+| Pro | $9.99/mo | 50 | Priority alerts, DM notifications |
+| Premium | $29.99/mo | Unlimited | All features, advisor access, custom workflows |
 
 **Database Changes:**
-- `EnhancedUserProfile`: Added `discord_alerts_enabled`, `alert_min_score`, `alert_categories`, `last_alert_sent`
-- Migration: `0087_session_437_discord_automation`
+- `EnhancedUserProfile`: Added 9 subscription fields
+- Migration: `0088_session_438_subscription_monetization`
 
-**Celery Beat Tasks:**
-- `proactive-opportunity-alerts` - Every 30 minutes
-- `personalized-opportunity-alerts` - Hourly at :15
+**New Service:**
+- `core/services/stripe_subscription.py` - Stripe checkout, webhooks, billing portal
 
-**Handoff:** `docs/handoffs/SESSION_437_DISCORD_AUTOMATION.md`
+**Handoff:** `docs/handoffs/SESSION_438_MONETIZATION.md`
 
 ---
 
-## Session 436 Accomplishments
+## Session 437 Accomplishments
 
-### Four New Development Agents
+### Phase 6: Automation Commands
 
-| Agent | Purpose |
-|-------|---------|
-| CodeGeneratorAgent | Generate code from specs |
-| FullStackDeveloperAgent | Build complete features |
-| CodeReviewAgent | Review code quality |
-| DevOpsAgent | CI/CD, Docker, K8s |
-
-### HuggingFace Learning Loop Fix
-- Added `ai_ml` category routing to 5 agents
-- Fixed `modelId` extraction for AI/ML data
+| Command | Description |
+|---------|-------------|
+| `/digest [period]` | Daily/weekly activity digest |
+| `/alerts [action]` | Manage proactive opportunity alerts |
 
 ---
 
@@ -63,12 +58,14 @@ Implemented proactive automation features for the Discord-First platform.
 | HiveMind Sessions | Working | 117+ |
 | Knowledge Sources | Active | 940+ |
 | Spider Data | Active | 12,250+ |
-| **Discord Bot Commands** | **Working** | **31** |
+| **Discord Bot Commands** | **Working** | **33** |
 | Discord User Linking | Active | Working |
 | User Profile System | Active | 24 questions |
-| Development Agents | NEW | 4 |
-| **Proactive Alerts** | **NEW** | **2 Celery tasks** |
-| Migrations | Applied | 0087 |
+| Development Agents | Production | 4 |
+| Proactive Alerts | Active | 2 Celery tasks |
+| **Subscription Tiers** | **NEW** | **3 tiers** |
+| **Stripe Integration** | **NEW** | **Checkout + Portal** |
+| Migrations | Applied | 0088 |
 
 ---
 
@@ -81,35 +78,40 @@ Implemented proactive automation features for the Discord-First platform.
 | 3. Client Management | Per-client channels, delivery | **DONE** |
 | 4. Income Pipeline | /apply, /track | **DONE** |
 | 5. Full Agent Access | /agent-task, /consult, /workflow-run | **DONE** |
-| **6. Automation** | **/digest, /alerts, proactive alerts** | **DONE** |
-| 7. Monetization | Discord roles = subscription tiers | Pending |
+| 6. Automation | /digest, /alerts, proactive alerts | **DONE** |
+| **7. Monetization** | **/subscribe, /tier, Stripe integration** | **DONE** |
 | 8. Advanced | Voice AI, white-label | Pending |
 
 ---
 
-## Session 438: Next Steps
+## Session 439: Next Steps
 
 ### Priority Tasks
 
-1. **Test Phase 6 in Production**
-   - Test `/digest daily` and `/digest weekly`
-   - Test `/alerts view/enable/disable`
-   - Verify proactive alerts post to #opportunities
+1. **Set Up Stripe Products**
+   - Create Pro product ($9.99/month) in Stripe Dashboard
+   - Create Premium product ($29.99/month)
+   - Add price IDs to `.env`
 
-2. **Phase 7: Monetization** (Recommended)
-   - Discord roles = subscription tiers
-   - Premium features (higher rate limits, priority alerts)
-   - Stripe integration for subscriptions
+2. **Implement Stripe Webhook**
+   - Create `/api/stripe/webhook` endpoint
+   - Handle `customer.subscription.created/updated/deleted` events
 
-3. **Enhance Personalized Alerts**
-   - Send DMs for highly relevant matches
-   - Add skill-based scoring algorithms
-   - Track alert click-through rates
+3. **Discord Role Assignment**
+   - Create "Pro Member" and "Premium Member" roles
+   - Implement automatic role assignment on subscription
 
-4. **Optional Improvements**
-   - Add `/earnings` command for revenue summary
-   - Digest comparison (this week vs last week)
-   - Category-specific digest views
+4. **Feature Gating**
+   - Enforce task limits in `/agent-task`
+   - Block advisor access for non-premium users
+   - Track daily usage in agent commands
+
+### Optional Improvements
+
+- Add `/cancel` command to cancel subscription
+- Add `/billing` command to access Stripe Customer Portal
+- Weekly usage summary notifications
+- Tier upgrade prompts when limits reached
 
 ---
 
@@ -130,27 +132,23 @@ make discord-bot
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Phase 6 commands
+# Test Phase 7 commands
 # In Discord:
-/digest daily
-/digest weekly
-/alerts view
+/tier
+/subscribe pro
 ```
 
 ---
 
-## Recent Commits (Session 437)
+## Recent Commits (Session 438)
 
 ```
-cb6c98c feat(Session 437): Discord Automation - Phase 6
-6520dce docs: Update 00-START-NEXT-SESSION.md for Session 437
-2f5c581 docs(Session 436): Update documentation for 4 new Development Agents
-8f46da4 feat(Session 436): Improve HuggingFace learning loop in spider_data_bridge
+[pending] feat(Session 438): Monetization - Phase 7
 ```
 
 ---
 
-## Discord Commands (31 Total)
+## Discord Commands (33 Total)
 
 | Category | Commands |
 |----------|----------|
@@ -162,7 +160,8 @@ cb6c98c feat(Session 437): Discord Automation - Phase 6
 | Data | `/trending` |
 | Content | `/gallery`, `/profile` |
 | Income Pipeline | `/opportunities`, `/apply`, `/track` |
-| **Automation** | **`/digest`, `/alerts`** |
+| Automation | `/digest`, `/alerts` |
+| **Monetization** | **`/subscribe`, `/tier`** |
 | Account | `/link`, `/unlink` |
 | Server Setup | `/setup`, `/server-info` |
 | Client Mgmt | `/client-add`, `/client-list`, `/client-deliver`, `/client-invite` |
@@ -170,27 +169,39 @@ cb6c98c feat(Session 437): Discord Automation - Phase 6
 
 ---
 
-## Phase 6 Automation Details
+## Subscription Tier Details
 
-### `/digest` Command
-Shows a comprehensive activity summary:
-- New opportunities found
-- High-value opportunities (70+)
-- Your application status (if linked)
-- Agent activity (dreams, conversations, knowledge)
-- Top 3 opportunities by score
-- Most active dreaming agents
+### Free Tier (Default)
+- 5 agent tasks per day
+- Basic opportunity alerts
+- Standard support
 
-### `/alerts` Command
-Manage your proactive alert preferences:
-- Enable/disable automatic opportunity alerts
-- View current settings (min score, categories)
+### Pro Tier ($9.99/month)
+- 50 agent tasks per day
+- Priority opportunity alerts
+- DM notifications
+- Discord role: "Pro Member"
 
-### Proactive Celery Tasks
-| Task | Schedule | Function |
-|------|----------|----------|
-| `proactive-opportunity-alerts` | */30 min | Auto-post high-value opportunities |
-| `personalized-opportunity-alerts` | Hourly :15 | Match to user profiles |
+### Premium Tier ($29.99/month)
+- Unlimited agent tasks
+- All alert types
+- Advisor access (25 legendary advisors)
+- Custom workflow creation
+- Discord role: "Premium Member"
+
+---
+
+## Stripe Setup Required
+
+```env
+# Add to .env after creating products in Stripe Dashboard
+STRIPE_PRICE_PRO=price_xxxxxxxxxxxxx
+STRIPE_PRICE_PREMIUM=price_xxxxxxxxxxxxx
+
+# Add after creating Discord roles
+DISCORD_ROLE_PRO_ID=123456789012345678
+DISCORD_ROLE_PREMIUM_ID=123456789012345678
+```
 
 ---
 
