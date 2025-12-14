@@ -30,12 +30,31 @@ Usage:
 import logging
 import time
 import json
+import uuid
 from typing import Dict, Any, List, Optional
 from decimal import Decimal
 
 from core.agents.base_agent import BaseAgent, AgentResult
 
 logger = logging.getLogger(__name__)
+
+
+def make_json_serializable(obj):
+    """
+    Convert an object to be JSON serializable.
+    Handles UUIDs, Decimals, and nested structures.
+    """
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_serializable(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(make_json_serializable(item) for item in obj)
+    return obj
 
 
 class AISeriesWorkflowAgent(BaseAgent):
@@ -255,6 +274,7 @@ Available agents to delegate to:
         self._style_config = {}
         self._characters = []
         self._episode_results = []
+        self._series_id = None  # Track current series for DB updates
 
     @property
     def router(self):
@@ -297,6 +317,7 @@ Available agents to delegate to:
         self._style_config = {}
         self._characters = []
         self._episode_results = []
+        self._series_id = None
 
         with self.time_travel_session("ai_series_workflow", task, input_data=context):
             try:
@@ -328,6 +349,9 @@ Available agents to delegate to:
                         error="Failed to create series record",
                         agent_name=self.name
                     )
+
+                # Track series ID for database updates in tool handlers
+                self._series_id = str(series.id)
 
                 # Build prompt with all context
                 full_prompt = self._build_prompt_with_mythology_guard(
@@ -611,7 +635,7 @@ Start by researching the topic to understand trends and audience preferences.
         }
 
     def _handle_lock_style(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle lock_style tool call."""
+        """Handle lock_style tool call - saves to AISeries.style_config."""
         style_preset = arguments.get('style_preset', 'pixar')
         color_palette = arguments.get('color_palette', ['#4ECDC4', '#FF6B6B', '#45B7D1'])
         art_direction = arguments.get('art_direction', 'friendly, colorful, professional')
@@ -622,6 +646,17 @@ Start by researching the topic to understand trends and audience preferences.
             'art_direction': art_direction
         }
 
+        # Save to database
+        if self._series_id:
+            try:
+                from core.models_ai_series import AISeries
+                series = AISeries.objects.get(id=self._series_id)
+                series.style_config = self._style_config
+                series.save(update_fields=['style_config', 'updated_at'])
+                logger.info(f"Saved style_config to series {self._series_id}: {style_preset}")
+            except Exception as e:
+                logger.error(f"Failed to save style_config: {e}")
+
         return {
             'success': True,
             'style_config': self._style_config,
@@ -629,7 +664,7 @@ Start by researching the topic to understand trends and audience preferences.
         }
 
     def _handle_define_character(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle define_character tool call."""
+        """Handle define_character tool call - creates SeriesCharacter record."""
         character = {
             'name': arguments.get('name'),
             'role': arguments.get('role', 'main'),
@@ -639,23 +674,45 @@ Start by researching the topic to understand trends and audience preferences.
         }
 
         self._characters.append(character)
+        db_character_id = None
+
+        # Create SeriesCharacter record in database
+        if self._series_id:
+            try:
+                from core.models_ai_series import AISeries, SeriesCharacter
+                series = AISeries.objects.get(id=self._series_id)
+
+                db_character = SeriesCharacter.objects.create(
+                    series=series,
+                    name=character['name'],
+                    role=character['role'],
+                    description=character['description'],
+                    personality_traits=character['personality'],  # Model uses personality_traits
+                    voice_name=character['voice_style']  # Map voice_style to voice_name
+                )
+                db_character_id = str(db_character.id)
+                logger.info(f"Created SeriesCharacter {db_character_id}: {character['name']}")
+            except Exception as e:
+                logger.error(f"Failed to create SeriesCharacter: {e}")
 
         return {
             'success': True,
             'character': character,
+            'character_id': db_character_id,
             'total_characters': len(self._characters),
             'message': f"Defined character: {character['name']} ({character['role']})"
         }
 
     def _handle_generate_episode(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Handle generate_episode tool call.
+        Handle generate_episode tool call - creates/updates SeriesEpisode record.
 
         Orchestrates the full episode generation:
         1. Generate character images (ImageAgent)
         2. Generate script
         3. Generate voiceover (AudioAgent)
         4. Generate video (VideoAgent)
+        5. Save all results to SeriesEpisode in database
         """
         episode_number = arguments.get('episode_number', 1)
         title = arguments.get('title', f'Episode {episode_number}')
@@ -670,7 +727,37 @@ Start by researching the topic to understand trends and audience preferences.
             'assets': {}
         }
 
+        # Get or create the SeriesEpisode record
+        db_episode = None
+        if self._series_id:
+            try:
+                from core.models_ai_series import AISeries, SeriesEpisode, EpisodeStatus
+                series = AISeries.objects.get(id=self._series_id)
+
+                # Get or create episode (episodes created on series creation)
+                db_episode, created = SeriesEpisode.objects.get_or_create(
+                    series=series,
+                    episode_number=episode_number,
+                    defaults={
+                        'title': title,
+                        'synopsis': synopsis,
+                        'arc_position': arc_position
+                    }
+                )
+
+                # Update episode info and start generation
+                db_episode.title = title
+                db_episode.synopsis = synopsis
+                db_episode.arc_position = arc_position
+                db_episode.status = EpisodeStatus.GENERATING
+                db_episode.save(update_fields=['title', 'synopsis', 'arc_position', 'status', 'updated_at'])
+                db_episode.start_generation()
+                logger.info(f"Started generating episode {episode_number}: {title}")
+            except Exception as e:
+                logger.error(f"Failed to get/create SeriesEpisode: {e}")
+
         # 1. Generate character/scene images
+        character_result = None
         if self._characters:
             main_character = self._characters[0]
             image_task = f"Create a scene for '{title}' featuring {main_character['name']}: {main_character['description']}. Style: {self._style_config.get('style_preset', 'pixar')}. Scene: {synopsis[:100]}"
@@ -687,12 +774,20 @@ Start by researching the topic to understand trends and audience preferences.
 
             if image_result.success:
                 episode_result['assets']['images'] = image_result.data.get('images', [])
+                character_result = {
+                    'success': True,
+                    'images': image_result.data.get('images', []),
+                    'character': main_character['name']
+                }
 
         # 2. Generate script (using GPT directly)
         script = self._generate_episode_script(title, synopsis, arc_position)
+        logger.info(f"Script generation returned: {len(script) if script else 0} chars")
         episode_result['script'] = script
+        script_result = {'script': script, 'word_count': len(script.split()) if script else 0}
 
         # 3. Generate voiceover
+        voice_result_data = None
         if script:
             # Take first 500 chars for voice preview
             voice_text = script[:500] if len(script) > 500 else script
@@ -708,8 +803,10 @@ Start by researching the topic to understand trends and audience preferences.
 
             if voice_result.success:
                 episode_result['assets']['voice'] = voice_result.data
+                voice_result_data = voice_result.data
 
         # 4. Generate video (if we have images)
+        video_result_data = None
         if episode_result['assets'].get('images'):
             first_image = episode_result['assets']['images'][0]
             image_id = first_image.get('id') if isinstance(first_image, dict) else None
@@ -727,14 +824,41 @@ Start by researching the topic to understand trends and audience preferences.
 
                 if video_result.success:
                     episode_result['assets']['video'] = video_result.data
+                    video_result_data = video_result.data
 
-        # Store episode result
+        # Store episode result in memory
         self._episode_results.append(episode_result)
+
+        # Save all results to database
+        if db_episode:
+            try:
+                db_episode.script = script or ''
+                # Convert results to be JSON serializable (handles UUIDs, Decimals, etc.)
+                db_episode.script_result = make_json_serializable(script_result)
+                db_episode.character_result = make_json_serializable(character_result)
+                db_episode.voice_result = make_json_serializable(voice_result_data)
+                db_episode.video_result = make_json_serializable(video_result_data)
+                # IMPORTANT: Save all fields BEFORE calling complete_generation()
+                # complete_generation() only saves status fields, not content fields
+                db_episode.save(update_fields=[
+                    'script', 'script_result', 'character_result',
+                    'voice_result', 'video_result', 'updated_at'
+                ])
+                db_episode.complete_generation()  # Sets status to COMPLETE
+                logger.info(f"Saved episode {episode_number} to database: script={len(script or '')} chars, character_result={bool(character_result)}")
+            except Exception as e:
+                logger.error(f"Failed to save episode to database: {e}")
+                if db_episode:
+                    try:
+                        db_episode.fail(str(e), 'save')
+                    except Exception:
+                        pass
 
         return {
             'success': True,
             'episode_number': episode_number,
             'title': title,
+            'episode_id': str(db_episode.id) if db_episode else None,
             'assets_generated': list(episode_result['assets'].keys()),
             'message': f"Generated episode {episode_number}: {title}"
         }
@@ -746,6 +870,7 @@ Start by researching the topic to understand trends and audience preferences.
         arc_position: str
     ) -> str:
         """Generate a script for the episode using GPT."""
+        logger.info(f"Generating script for: {title}")
         try:
             script_prompt = f"""Write a short script/narration for an episode titled "{title}".
 
@@ -768,7 +893,9 @@ Script:"""
                 max_completion_tokens=1000
             )
 
-            return response.choices[0].message.content or ""
+            content = response.choices[0].message.content or ""
+            logger.info(f"GPT script response: {len(content)} chars")
+            return content
 
         except Exception as e:
             logger.error(f"Script generation error: {e}")
