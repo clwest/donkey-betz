@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 436 (December 13, 2025)
+**Last Updated:** Session 437 (December 13, 2025)
 
 ---
 
@@ -29,7 +29,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **29 Commands + Full Agent Access** | **Production (Session 434)** |
+| **Discord Integration** | **31 Commands + Full Agent Access + Automation** | **Production (Session 437)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
