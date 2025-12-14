@@ -188,7 +188,8 @@ open http://localhost:8000/ai-studio/
 
 | Document | Purpose |
 |----------|---------|
-| `docs/UNIFIED_CONTENT_PIPELINE.md` | **THE MASTER DOC** |
+| `docs/UNIFIED_CONTENT_PIPELINE.md` | **THE MASTER DOC** - AI Content Factory |
+| `docs/GOLDEN_GOOSE_STRATEGY.md` | **BUSINESS STRATEGY** - The secret weapon philosophy |
 | `docs/AI_PIXAR_IMPLEMENTATION_PLAN.md` | Vision document |
 | `docs/handoffs/SESSION_440_VOICE_MARKETPLACE.md` | Voice details |
 | `CLAUDE.md` | Project context |

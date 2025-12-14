@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 438 (December 13, 2025)
+**Last Updated:** Session 440 (December 13, 2025)
 
 ---
 
@@ -29,13 +29,15 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **38 Commands + Voice AI** | **Production (Session 439)** |
+| **Discord Integration** | **43 Commands + Voice AI** | **Production (Session 440)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
 | **Subscription Tiers** | **Free/Pro/Premium** | **Production (Session 438)** |
 | **Stripe Integration** | **Subscription Billing** | **Production (Session 438)** |
 | **Training Data Collection** | **14 Datasets** | **Production (Session 420)** |
+| **Voice Marketplace** | **14 API Endpoints** | **Production (Session 440)** |
+| **Content Pipeline** | **6 Tiers ($5-$50K)** | **Production (Session 440)** |
 
 ---
 
@@ -490,7 +492,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `#gallery` | Auto-delivery of created images (Phase 1) | - |
 | `#client-*` | Per-client delivery channels (Phase 3) | - |
 
-### Discord Bot Commands (23 Total - Sessions 426-433)
+### Discord Bot Commands (43 Total - Sessions 426-440)
 
 | Command | Description | Phase |
 |---------|-------------|-------|
@@ -516,6 +518,24 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/client-invite <client>` | Generate 7-day invite link for client | Phase 3 |
 | `/apply <id> [message]` | Apply to an income opportunity | Phase 4 |
 | `/track [status]` | Track your job applications | Phase 4 |
+| `/agent-list [category]` | List agents by category | Phase 5 |
+| `/agent-task <name> <task>` | Execute any agent directly | Phase 5 |
+| `/advisors` | List 25 legendary advisors | Phase 5 |
+| `/consult <advisor> <question>` | Get advice from Warren Buffett, Elon Musk, etc. | Phase 5 |
+| `/workflow-list` | Show available multi-step workflows | Phase 5 |
+| `/workflow-run <name> <input>` | Execute workflow with input | Phase 5 |
+| `/subscribe [tier]` | Subscribe to Pro/Premium tier | Monetization |
+| `/tier` | View current subscription tier | Monetization |
+| `/cancel` | Cancel subscription | Monetization |
+| `/billing` | View billing history | Monetization |
+| `/voice` | List available AI voices | Voice |
+| `/speak <text> [voice]` | Generate voice audio | Voice |
+| `/ask-voice <question> [voice]` | Ask with spoken response | Voice |
+| `/voice-market [action]` | Browse/search voice marketplace | Voice (S440) |
+| `/voice-clone [action]` | Clone your voice | Voice (S440) |
+| `/create-content <tier> <prompt>` | AI Content Factory - create packages | Content (S440) |
+| `/content-status [id]` | Check content generation progress | Content (S440) |
+| `/showroom [category] [tier]` | Browse content marketplace | Content (S440) |
 | `/help` | Show all commands | Core |
 
 ### Discord-First Platform Phases
@@ -625,6 +645,109 @@ Requires `DISCORD_BOT_TOKEN` environment variable. When set, all agent activity 
 - `core/services/discord_notifications.py` - Main notification service
 - `core/services/discord_bot.py` - Interactive bot with slash commands
 - `core/views_discord.py` - User linking API endpoints
+
+---
+
+## Voice Marketplace (Session 440)
+
+AI voice cloning and marketplace for buying/selling custom voices.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| Voice Cloning | Clone your voice via Discord recording |
+| Voice Listings | List voices in marketplace for others to use |
+| Revenue Sharing | 70% to voice owner, 30% platform |
+| Voice Search | Browse and search available voices |
+
+### API Endpoints (14 Total)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/voice-marketplace/voices/` | GET | List all available voices |
+| `/api/voice-marketplace/voices/` | POST | Create new voice listing |
+| `/api/voice-marketplace/voices/<id>/` | GET | Get voice details |
+| `/api/voice-marketplace/voices/my/` | GET | List user's voices |
+| `/api/voice-marketplace/voices/<id>/purchase/` | POST | Purchase voice usage |
+| `/api/voice-marketplace/voices/<id>/generate/` | POST | Generate audio with voice |
+| `/api/voice-marketplace/clone/start/` | POST | Start voice cloning session |
+| `/api/voice-marketplace/clone/status/` | GET | Check cloning progress |
+| `/api/voice-marketplace/earnings/` | GET | View voice earnings |
+| `/api/voice-marketplace/purchases/` | GET | View purchase history |
+
+### Discord Commands
+
+| Command | Description |
+|---------|-------------|
+| `/voice-market browse` | Browse available voices |
+| `/voice-market search <query>` | Search for voices |
+| `/voice-market my-voices` | View your voices |
+| `/voice-market earnings` | View your earnings |
+| `/voice-clone start` | Start recording to clone |
+| `/voice-clone stop` | Stop recording |
+| `/voice-clone status` | Check clone progress |
+
+### Key Files
+
+- `core/models_voice_marketplace.py` - Database models
+- `core/views_voice_marketplace.py` - API endpoints
+
+---
+
+## Content Pipeline (Session 440)
+
+AI Content Factory - generate complete content packages from $5 to $50,000.
+
+### Content Tiers
+
+| Tier | Price Range | What You Get | Production Cost |
+|------|-------------|--------------|-----------------|
+| **Quick** | $5-29 | Birthday messages, simple content | ~$0.17 |
+| **Ad** | $29-99 | Small business ads (15s, 30s, 60s) | ~$0.80 |
+| **Brand** | $99-499 | Full brand packages (logos, videos) | ~$2.90 |
+| **Series** | $499-2999 | Multi-episode content series | ~$14.00 |
+| **Pitch** | $2999-9999 | Series/movie pitch packages | ~$70.00 |
+| **Production** | $9999+ | Full 10-episode productions | ~$700.00 |
+
+**Profit Margins:** 98-99%+
+
+### Pipeline Stages
+
+```
+1. Research (Spiders) → Trending styles, competitor analysis
+2. Script (GPT) → Ad copy, taglines, voiceover text
+3. Character (Stability AI) → Mascots, logos, characters
+4. Voice (ElevenLabs) → Voiceovers, multiple options
+5. Video (Runway ML) → Animated content, ads
+6. Package → Bundle, price, publish to showroom
+```
+
+### Discord Commands
+
+| Command | Description |
+|---------|-------------|
+| `/create-content <tier> <prompt>` | Generate complete package |
+| `/content-status [id]` | Check generation progress |
+| `/showroom [category] [tier]` | Browse content marketplace |
+
+### Example Usage
+
+```
+/create-content ad "Tony's Pizza, Brooklyn, $2 Tuesdays"
+
+Result:
+- 3 mascot images (pizza character in different poses)
+- 3 voiceover options (different styles)
+- 3 video ads (15s, 30s, 60s)
+- All bundled and ready to sell
+```
+
+### Key Files
+
+- `core/models_content_pipeline.py` - Database models
+- `core/services/content_pipeline.py` - Pipeline orchestration
+- `docs/UNIFIED_CONTENT_PIPELINE.md` - Master documentation
 
 ---
 
