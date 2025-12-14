@@ -1,40 +1,32 @@
 # Start Next Session Here
 
-**Last Session:** 442 - Voice Cloning Pipeline COMPLETE
+**Last Session:** 443 - Voice Marketplace
 **Date:** December 14, 2025
-**Status:** Voice Cloned Successfully! | DonkeyKing's Voice Created | All Async Fixes Applied
+**Status:** Voice Marketplace LIVE | DonkeyKing's Voice PUBLIC | Publish/Preview Working
 
 ---
 
-## Session 442 Accomplishments
+## Session 443 Accomplishments
 
-### Voice Cloning - FULLY WORKING!
+### Voice Marketplace - NOW LIVE!
 
-Successfully cloned user's voice through Discord:
+1. **Publish/Unpublish Commands** - Toggle voice visibility in marketplace
+2. **Preview Command** - Generate and play voice samples in Discord
+3. **First Public Voice** - "DonkeyKing's Voice" is live in the marketplace!
 
-1. **VoiceRecvClient Fix** - Force disconnect/reconnect for proper audio capture
-2. **ffmpeg Compression** - WAV → MP3 for files >8MB (ElevenLabs 10MB limit)
-3. **ElevenLabs Integration** - Creator tier API with `voices_write` permission
-4. **Async ORM Fixes** - All `/voice-market` actions wrapped with `sync_to_async`
-5. **Disk Cleanup** - Recovered 18GB (2.9GB → 21GB free)
+### New Commands Added
 
-### NEW: `/voice-ask` Command - Voice-Enabled Agent Responses!
+| Command | Description |
+|---------|-------------|
+| `/voice-market publish <name>` | Make your voice public in marketplace |
+| `/voice-market unpublish <name>` | Make your voice private again |
+| `/voice-market preview <voice>` | Hear a preview of any voice |
 
-Ask any agent a question and hear the response spoken in your cloned voice:
+### Complete Voice Marketplace Flow
 
-```bash
-/voice-ask question:"What's trending in AI?" agent:Research voice:DonkeyKing
 ```
-
-- Uses your cloned voice (or falls back to Rachel)
-- Works with any agent (Research, Image, CTO, etc.)
-- Returns audio file + text preview
-
-### Voice Created
-
-| Voice Name | Status | Privacy |
-|------------|--------|---------|
-| DonkeyKing's Voice | Active | Private |
+Record Voice → Clone → Publish → Browse → Preview → (Purchase - Coming Soon!)
+```
 
 ---
 
@@ -51,9 +43,9 @@ source .venv/bin/activate
 .venv/bin/python manage.py run_discord_bot
 
 # 3. Test in Discord
-/voice-market my-voices    # Should show "DonkeyKing's Voice"
+/voice-market browse           # See public marketplace (DonkeyKing's Voice is there!)
+/voice-market preview DonkeyKing  # Hear a voice preview
 /voice-ask question:"What's trending in AI?"  # Hear response in your voice!
-/voice-market browse       # Browse public voices
 
 # 4. Access AI Studio
 open http://localhost:8000/ai-studio/
@@ -66,21 +58,21 @@ open http://localhost:8000/ai-studio/
 | Component | Status | Details |
 |-----------|--------|---------|
 | Voice Cloning | **WORKING** | Full pipeline tested |
-| Discord Bot | Active | 44+ commands (NEW: /voice-ask) |
-| Voice Marketplace | Working | All actions async-safe |
+| Voice Marketplace | **LIVE** | Publish/Preview working |
+| Discord Bot | Active | 47+ commands |
 | Agents | Active | 31 clean agents |
 | Spider Data | Active | 15,620+ records |
 | Disk Space | Good | ~21GB free |
 
 ---
 
-## Session 443 Priority Tasks
+## Session 444 Priority Tasks
 
-1. **Make Voice Public** - Add toggle for voice privacy (marketplace listing)
-2. **Voice Preview** - Generate sample audio from cloned voice
-3. **Text-to-Speech Integration** - Use cloned voices in content creation
-4. **Voice Marketplace Polish** - Preview action, purchase flow
-5. **Stripe Payment** - Monetize voice usage
+1. **Voice Purchase Flow** - Stripe integration for buying voice usage
+2. **Voice Pricing UI** - Set custom prices per voice
+3. **Usage Tracking** - Track minutes/characters generated per voice
+4. **Revenue Dashboard** - Show earnings from voice sales
+5. **Voice Categories** - Filter marketplace by genre, accent, use case
 
 ---
 
@@ -99,27 +91,19 @@ sleep 2
 - **API Key:** Must have `voices_write` permission
 - **File Limit:** 10MB max (we compress to MP3)
 
-### Async/Django ORM
-All Discord command ORM calls MUST use `sync_to_async`:
-```python
-from asgiref.sync import sync_to_async
-
-@sync_to_async
-def get_data():
-    return list(Model.objects.filter(...))
-
-result = await get_data()
-```
+### Voice Marketplace Revenue Model
+- **70/30 Split**: Voice owners get 70%, platform gets 30%
+- **Default Price**: $0.50/min (configurable)
+- **Pricing Models**: Per minute, per 1000 chars, or flat rate
 
 ---
 
-## Files Changed Session 442
+## Files Changed Session 443
 
 | File | Changes |
 |------|---------|
-| `core/services/discord_voice.py` | ffmpeg compression, enhanced logging |
-| `core/services/discord_bot.py` | VoiceRecvClient fix, async ORM wrapping |
-| `docs/handoffs/SESSION_442_VOICE_CLONING_COMPLETE.md` | Full session handoff |
+| `core/services/discord_bot.py` | Added publish, unpublish, preview actions |
+| `docs/handoffs/SESSION_443_VOICE_MARKETPLACE.md` | Session handoff |
 
 ---
 
@@ -127,40 +111,29 @@ result = await get_data()
 
 | Document | Purpose |
 |----------|---------|
-| `docs/handoffs/SESSION_442_VOICE_CLONING_COMPLETE.md` | This session's details |
-| `docs/handoffs/SESSION_441_VOICE_RECORDING.md` | Voice recording implementation |
+| `docs/handoffs/SESSION_443_VOICE_MARKETPLACE.md` | This session's details |
+| `docs/handoffs/SESSION_442_VOICE_CLONING_COMPLETE.md` | Voice cloning implementation |
 | `docs/UNIFIED_CONTENT_PIPELINE.md` | AI Content Factory |
 | `CLAUDE.md` | Project context |
 
 ---
 
-## Voice Cloning Tech Stack (Working!)
+## Voice Marketplace Commands Reference
 
-```
-Discord Voice Channel
-        │
-        ▼
-VoiceRecvClient (discord-ext-voice-recv)
-        │
-        ▼
-VoiceRecordingSink (captures target user only)
-        │
-        ▼
-WAV file (48kHz, stereo, 16-bit PCM)
-        │
-        ▼
-ffmpeg compression (if >8MB → MP3)
-        │
-        ▼
-ElevenLabs IVC API (POST /v1/voices/add)
-        │
-        ▼
-VoiceProfile (stored in Django DB)
-        │
-        ▼
-/voice-market my-voices (shows your clones!)
-```
+| Command | Action | Status |
+|---------|--------|--------|
+| `/voice-clone start` | Begin recording | Working |
+| `/voice-clone stop <name>` | Stop & create clone | Working |
+| `/voice-clone status` | Check recording | Working |
+| `/voice-market browse` | Browse marketplace | Working |
+| `/voice-market search <query>` | Search voices | Working |
+| `/voice-market my-voices` | Show your voices | Working |
+| `/voice-market earnings` | Show earnings | Working |
+| `/voice-market publish <name>` | Make voice public | **NEW** |
+| `/voice-market unpublish <name>` | Make voice private | **NEW** |
+| `/voice-market preview <voice>` | Hear voice sample | **NEW** |
+| `/voice-ask` | Ask agent, hear response | Working |
 
 ---
 
-**Voice cloning is LIVE! DonkeyKing's Voice is ready to use!**
+**Voice Marketplace is LIVE! DonkeyKing's Voice is the first public listing!**

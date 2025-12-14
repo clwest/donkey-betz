@@ -2873,6 +2873,9 @@ class VoiceMarketplaceCommands(commands.Cog):
         app_commands.Choice(name="Search - Search for voices", value="search"),
         app_commands.Choice(name="My Voices - View your cloned voices", value="my-voices"),
         app_commands.Choice(name="Earnings - View your voice earnings", value="earnings"),
+        app_commands.Choice(name="Publish - Make voice public in marketplace", value="publish"),
+        app_commands.Choice(name="Unpublish - Make voice private", value="unpublish"),
+        app_commands.Choice(name="Preview - Hear a voice sample", value="preview"),
     ])
     async def voice_market(
         self,
@@ -3059,6 +3062,266 @@ class VoiceMarketplaceCommands(commands.Cog):
                 embed.add_field(name="Voice Count", value=f"**{voice_count}**", inline=True)
 
                 await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "publish":
+                # Publish a voice to the marketplace
+                from core.models import UnifiedUser
+                from asgiref.sync import sync_to_async
+
+                if not query:
+                    await interaction.followup.send(
+                        "Please provide your voice name. Example: `/voice-market publish DonkeyKing's Voice`",
+                        ephemeral=True
+                    )
+                    return
+
+                @sync_to_async
+                def publish_voice(discord_id, voice_name):
+                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
+                    if not user:
+                        return None, None, "Please link your Discord account first using `/link`"
+
+                    # Find the voice by name (case-insensitive partial match)
+                    voice = VoiceProfile.objects.filter(
+                        owner=user,
+                        name__icontains=voice_name,
+                        is_active=True
+                    ).first()
+
+                    if not voice:
+                        # List available voices
+                        user_voices = list(VoiceProfile.objects.filter(owner=user, is_active=True).values_list('name', flat=True))
+                        if user_voices:
+                            voice_list = "\n".join(f"• {v}" for v in user_voices)
+                            return None, None, f"Voice '{voice_name}' not found. Your voices:\n{voice_list}"
+                        return None, None, "You don't have any voices. Use `/voice-clone start` to create one."
+
+                    if voice.is_public:
+                        return voice, False, "already_public"
+
+                    # Publish the voice
+                    voice.is_public = True
+                    voice.save(update_fields=['is_public', 'updated_at'])
+                    return voice, True, None
+
+                voice, was_published, error = await publish_voice(interaction.user.id, query)
+
+                if error:
+                    if error == "already_public":
+                        embed = discord.Embed(
+                            title="Already Published",
+                            description=f"**{voice.name}** is already public in the marketplace!",
+                            color=discord.Color.blue()
+                        )
+                        embed.add_field(name="Price", value=voice.get_price_display(), inline=True)
+                        embed.add_field(name="Uses", value=str(voice.total_uses), inline=True)
+                        await interaction.followup.send(embed=embed, ephemeral=True)
+                    else:
+                        await interaction.followup.send(error, ephemeral=True)
+                    return
+
+                # Success! Voice is now public
+                embed = discord.Embed(
+                    title="🎉 Voice Published!",
+                    description=f"**{voice.name}** is now live in the Voice Marketplace!",
+                    color=discord.Color.green()
+                )
+                embed.add_field(name="Price", value=voice.get_price_display(), inline=True)
+                embed.add_field(name="Revenue Split", value="70% to you, 30% platform", inline=True)
+                embed.add_field(
+                    name="Next Steps",
+                    value=(
+                        "• Others can now find your voice with `/voice-market browse`\n"
+                        "• Track earnings with `/voice-market earnings`\n"
+                        "• Use `/voice-market unpublish` to make private again"
+                    ),
+                    inline=False
+                )
+                embed.set_footer(text="Congratulations on joining the Voice Marketplace!")
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "unpublish":
+                # Make a voice private again
+                from core.models import UnifiedUser
+                from asgiref.sync import sync_to_async
+
+                if not query:
+                    await interaction.followup.send(
+                        "Please provide your voice name. Example: `/voice-market unpublish DonkeyKing's Voice`",
+                        ephemeral=True
+                    )
+                    return
+
+                @sync_to_async
+                def unpublish_voice(discord_id, voice_name):
+                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
+                    if not user:
+                        return None, None, "Please link your Discord account first using `/link`"
+
+                    voice = VoiceProfile.objects.filter(
+                        owner=user,
+                        name__icontains=voice_name,
+                        is_active=True
+                    ).first()
+
+                    if not voice:
+                        return None, None, f"Voice '{voice_name}' not found."
+
+                    if not voice.is_public:
+                        return voice, False, "already_private"
+
+                    voice.is_public = False
+                    voice.save(update_fields=['is_public', 'updated_at'])
+                    return voice, True, None
+
+                voice, was_unpublished, error = await unpublish_voice(interaction.user.id, query)
+
+                if error:
+                    if error == "already_private":
+                        await interaction.followup.send(
+                            f"**{voice.name}** is already private.",
+                            ephemeral=True
+                        )
+                    else:
+                        await interaction.followup.send(error, ephemeral=True)
+                    return
+
+                embed = discord.Embed(
+                    title="🔒 Voice Unpublished",
+                    description=f"**{voice.name}** has been removed from the marketplace.",
+                    color=discord.Color.orange()
+                )
+                embed.add_field(
+                    name="What This Means",
+                    value="• Your voice is no longer searchable\n• Existing purchases still work\n• Use `/voice-market publish` to re-list",
+                    inline=False
+                )
+
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
+            elif action == "preview":
+                # Generate and play a voice preview
+                from asgiref.sync import sync_to_async
+                import io
+
+                if not query:
+                    await interaction.followup.send(
+                        "Please provide a voice ID or name. Example: `/voice-market preview DonkeyKing`",
+                        ephemeral=True
+                    )
+                    return
+
+                @sync_to_async
+                def find_voice(voice_query):
+                    # Try UUID first (partial match from browse)
+                    if len(voice_query) == 8:
+                        voice = VoiceProfile.objects.filter(
+                            id__startswith=voice_query,
+                            is_active=True
+                        ).first()
+                        if voice:
+                            return voice, None
+
+                    # Try name match
+                    voice = VoiceProfile.objects.filter(
+                        name__icontains=voice_query,
+                        is_active=True
+                    ).first()
+                    if voice:
+                        return voice, None
+
+                    return None, f"Voice '{voice_query}' not found."
+
+                voice, error = await find_voice(query)
+
+                if error:
+                    await interaction.followup.send(error, ephemeral=True)
+                    return
+
+                # Check if voice is public or owned by user
+                @sync_to_async
+                def check_access(voice, discord_id):
+                    from core.models import UnifiedUser
+                    if voice.is_public:
+                        return True
+                    user = UnifiedUser.objects.filter(discord_id=str(discord_id)).first()
+                    if user and voice.owner_id == user.id:
+                        return True
+                    return False
+
+                has_access = await check_access(voice, interaction.user.id)
+                if not has_access:
+                    await interaction.followup.send(
+                        "This voice is private. Only the owner can preview it.",
+                        ephemeral=True
+                    )
+                    return
+
+                # Generate preview audio
+                preview_text = voice.sample_text or "Hello! This is a preview of my voice. I can help bring your creative projects to life with natural, expressive speech."
+
+                @sync_to_async
+                def generate_preview(voice_id, text):
+                    import requests
+                    from django.conf import settings
+
+                    api_key = settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY', '')
+                    if not api_key:
+                        return None, "ElevenLabs API key not configured"
+
+                    response = requests.post(
+                        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                        headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+                        json={"text": text, "model_id": "eleven_multilingual_v2"},
+                        timeout=60
+                    )
+
+                    if response.status_code == 200:
+                        return response.content, None
+                    return None, f"TTS failed: {response.status_code} - {response.text[:100]}"
+
+                # Show "generating" message
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title=f"🎤 Generating preview for {voice.name}...",
+                        color=discord.Color.blue()
+                    )
+                )
+
+                audio_data, error = await generate_preview(voice.elevenlabs_voice_id, preview_text)
+
+                if error:
+                    await interaction.edit_original_response(
+                        embed=discord.Embed(
+                            title="❌ Preview Failed",
+                            description=error,
+                            color=discord.Color.red()
+                        )
+                    )
+                    return
+
+                # Send the audio file
+                audio_file = discord.File(io.BytesIO(audio_data), filename=f"{voice.name}_preview.mp3")
+
+                embed = discord.Embed(
+                    title=f"🎤 {voice.name} Preview",
+                    description=f"*\"{preview_text[:100]}...\"*" if len(preview_text) > 100 else f"*\"{preview_text}\"*",
+                    color=discord.Color.purple()
+                )
+                embed.add_field(name="Price", value=voice.get_price_display(), inline=True)
+                embed.add_field(name="Rating", value=f"★{voice.average_rating:.1f} ({voice.rating_count} reviews)", inline=True)
+                embed.add_field(name="Uses", value=str(voice.total_uses), inline=True)
+
+                if voice.is_public:
+                    embed.set_footer(text="This voice is available in the marketplace!")
+                else:
+                    embed.set_footer(text="🔒 Private voice")
+
+                await interaction.edit_original_response(embed=embed)
+                await interaction.followup.send(file=audio_file)
+
+                logger.info(f"Voice preview generated: {voice.name}")
 
         except Exception as e:
             logger.error(f"/voice-market error: {e}")
